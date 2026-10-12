@@ -59,8 +59,8 @@ struct WelcomeView: View {
         VStack(spacing: 18) {
             VStack(spacing: 8) {
                 AppGlyph(size: 64)
-                Text("Welcome to mxtiler").font(Theme.display(30)).foregroundStyle(ink).padding(.top, 6)
-                Text("mxtiler needs a little access before it can tile. Each button opens System Settings with a guide beside it.")
+                Text("Welcome to Ouch").font(Theme.display(30)).foregroundStyle(ink).padding(.top, 6)
+                Text("Ouch needs a little access before it can tile. Each button opens System Settings with a guide beside it.")
                     .font(Theme.body(13)).foregroundStyle(Color.black.opacity(0.5))
                     .multilineTextAlignment(.center).frame(maxWidth: 380)
                     .fixedSize(horizontal: false, vertical: true)
@@ -81,7 +81,7 @@ struct WelcomeView: View {
                 permission(granted: model.login, symbol: "power",
                            tint: [Color(red: 0.486, green: 0.478, blue: 0.918), Color(red: 0.345, green: 0.337, blue: 0.839)],
                            title: "Open at login", required: false,
-                           detail: "Starts mxtiler with your Mac. macOS asks you to allow it in Login Items.",
+                           detail: "Starts Ouch with your Mac. macOS asks you to allow it in Login Items.",
                            primary: false, action: model.allowLogin)
             }
             .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.black.opacity(0.035)))
@@ -156,7 +156,7 @@ struct WordmarkView: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            Text("mxtiler").font(Theme.wordmark(size)).foregroundStyle(.white)
+            Text("Ouch").font(Theme.wordmark(size)).foregroundStyle(.white)
                 .shadow(color: .black.opacity(0.3), radius: 12, y: 4)
             tagline(max(16, min(20, size / 7)))
                 .foregroundStyle(Color.white.opacity(0.88))

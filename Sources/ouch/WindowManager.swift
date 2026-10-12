@@ -21,7 +21,7 @@ final class ScreenState {
     init(layout: Layout) { self.layout = layout }
 }
 
-let ipcNotification = Notification.Name("local.mxtiler.command")
+let ipcNotification = Notification.Name("local.ouch.command")
 
 private final class FocusSinkWindow: NSWindow {
     override var canBecomeKey: Bool { true }
@@ -47,12 +47,12 @@ final class WindowManager {
 
     private var windows: [CGWindowID: Window] = [:]
     private var order: [CGWindowID] = []            // tiling order; first window on a screen is "main"
-    // Workspaces. In virtual mode these are mxtiler's own (windows on hidden workspaces are parked
+    // Workspaces. In virtual mode these are Ouch's own (windows on hidden workspaces are parked
     // off-screen); in macOS-Spaces mode each display's current Space is treated as its workspace.
     private var workspaceOf: [CGWindowID: String] = [:] // workspace each window belongs to
     private var monitorOf: [String: String] = [:]        // display UUID each workspace lives on
     private var shown: [String: String] = [:]            // display UUID → workspace it shows right now
-    private var virtualShown: [String: String] = [:]     // display UUID → mxtiler workspace on its home Space
+    private var virtualShown: [String: String] = [:]     // display UUID → Ouch workspace on its home Space
     private var homeSpace: [String: UInt64] = [:]        // display UUID → the macOS Space workspaces live on
     private var present: Set<CGWindowID> = []
     private var lastFocused: [String: CGWindowID] = [:]
@@ -147,7 +147,7 @@ final class WindowManager {
             HUD.shared.show("Keybinds unavailable: grant Accessibility", on: nil)
         }
 
-        // `mxtiler dispatch movefocus l`, `mxtiler dump`, `mxtiler reload` from a terminal (like hyprctl).
+        // `ouch dispatch movefocus l`, `ouch dump`, `ouch reload` from a terminal (like hyprctl).
         DistributedNotificationCenter.default().addObserver(forName: ipcNotification, object: nil, queue: .main) { [weak self] n in
             if let cmd = n.object as? String { self?.ipc(cmd) }
         }
@@ -166,7 +166,7 @@ final class WindowManager {
         if wasVirtual != config.virtualWorkspaces {
             if wasVirtual { restoreHiddenWindows() }
             workspaceOf = [:]; monitorOf = [:]; shown = [:]; virtualShown = [:]; states = [:]; lastFocused = [:]
-            Log.info("workspaces: \(config.virtualWorkspaces ? "mxtiler workspaces" : "macOS Spaces")")
+            Log.info("workspaces: \(config.virtualWorkspaces ? "Ouch workspaces" : "macOS Spaces")")
         }
         Log.verbose = config.debugLogging
         config.errors.forEach { Log.info("config: \($0)") }
@@ -265,9 +265,9 @@ final class WindowManager {
 
     private func shouldFloat(_ w: Window) -> Bool {
         if let p = practice, w.pid == p.pid { return false } // same bundle as us, but these are meant to tile
-        // Our own windows (Settings, guides) always float, even when another copy of mxtiler
+        // Our own windows (Settings, guides) always float, even when another copy of Ouch
         // (a dev build, or the old Hyprthyst) is the one tiling.
-        if let b = w.bundleID, b == Bundle.main.bundleIdentifier || b.hasPrefix("local.mxtiler") || b == "local.hyprthyst" {
+        if let b = w.bundleID, b == Bundle.main.bundleIdentifier || b.hasPrefix("local.ouch") || b == "local.hyprthyst" {
             return true
         }
         if let b = w.bundleID {
@@ -628,7 +628,7 @@ final class WindowManager {
         case "dump": dumpState()
         case "grabtest": grabTest()
         case "poststyle" where parts.count >= 2:
-            // Diagnostics: `mxtiler poststyle 0|1|2` picks how synthetic shortcuts are sent.
+            // Diagnostics: `ouch poststyle 0|1|2` picks how synthetic shortcuts are sent.
             if let n = Int(parts[1]), let style = Hotkeys.PostStyle(rawValue: n) { Hotkeys.postStyle = style }
             Log.info("ipc: post style is now \(Hotkeys.postStyle)")
         case "reload": reload()
@@ -699,7 +699,7 @@ final class WindowManager {
         case "retile", "reevaluate": corrections = [:]; refresh()
         case "reload": reload()
         case "exit": NSApp.terminate(nil)
-        default: NSLog("mxtiler: unknown dispatcher %@", dispatcher)
+        default: NSLog("Ouch: unknown dispatcher %@", dispatcher)
         }
     }
 
@@ -718,7 +718,7 @@ final class WindowManager {
         case "mfact": adjustRatio(parts.dropFirst().joined(separator: " "))
         case "orientationnext": cycleLayout(1)
         case "orientationprev": cycleLayout(-1)
-        default: NSLog("mxtiler: unknown layoutmsg %@", cmd)
+        default: NSLog("Ouch: unknown layoutmsg %@", cmd)
         }
     }
 
@@ -882,7 +882,7 @@ final class WindowManager {
         focus(w)
     }
 
-    // MARK: - mxtiler workspaces
+    // MARK: - Ouch workspaces
 
     private func isShown(_ ws: String?) -> Bool { ws.map { Set(shown.values).contains($0) } ?? false }
 
@@ -943,7 +943,7 @@ final class WindowManager {
 
     /// Keeps workspace bookkeeping consistent with the displays that exist.
     ///
-    /// mxtiler workspaces live on one "home" macOS Space per display. On any other Space a
+    /// Ouch workspaces live on one "home" macOS Space per display. On any other Space a
     /// display behaves like macOS-Spaces mode: that Space is its workspace and nothing is parked,
     /// so having several macOS Spaces can't scramble anything.
     private func syncWorkspaces(screens: [Screen], present: Set<CGWindowID>) {
@@ -976,7 +976,7 @@ final class WindowManager {
             }
             monitorOf[shown[s.uuid]!] = s.uuid
         }
-        // A window we can see but whose workspace isn't showing is either parked (a mxtiler
+        // A window we can see but whose workspace isn't showing is either parked (a Ouch
         // workspace whose display is on its home Space) or has moved between macOS Spaces, in
         // which case it joins whatever is showing where it is now.
         for id in present where !isShown(workspaceOf[id]) {
@@ -993,7 +993,7 @@ final class WindowManager {
         }
     }
 
-    /// Makes the macOS Space each display is showing now the one mxtiler workspaces live on.
+    /// Makes the macOS Space each display is showing now the one Ouch workspaces live on.
     func makeCurrentSpaceHome() {
         guard config.virtualWorkspaces else { return }
         for s in Screen.all() {
@@ -1003,7 +1003,7 @@ final class WindowManager {
         // Windows here join the workspace that's now showing instead of a per-Space one.
         workspaceOf = workspaceOf.filter { isVirtual($0.value) }
         refresh()
-        HUD.shared.show("mxtiler workspaces live on this Desktop", on: currentScreen()?.ns)
+        HUD.shared.show("Ouch workspaces live on this Desktop", on: currentScreen()?.ns)
     }
 
     var homeSpaceSummary: String {
@@ -1016,7 +1016,7 @@ final class WindowManager {
         return names.joined(separator: ", ")
     }
 
-    /// Is this display currently showing its home Space (where mxtiler workspaces live)?
+    /// Is this display currently showing its home Space (where Ouch workspaces live)?
     private func isOnHomeSpace(_ s: Screen) -> Bool {
         guard let home = homeSpace[s.uuid] else { return true }
         return Spaces.current(display: s.uuid) == home
@@ -1169,7 +1169,7 @@ final class WindowManager {
     private func moveFocusedWindow(to ws: String, follow: Bool) {
         guard let w = focusedWindow(), let from = workspaceOf[w.id], from != ws else { return }
         guard isVirtual(from) else {
-            HUD.shared.show("Move this window to your mxtiler Desktop first", on: screen(of: w)?.ns)
+            HUD.shared.show("Move this window to your Ouch Desktop first", on: screen(of: w)?.ns)
             return
         }
         if monitorOf[ws] == nil, let here = currentScreen() { monitorOf[ws] = here.uuid }
@@ -1389,7 +1389,7 @@ final class WindowManager {
         }
     }
 
-    /// Diagnostics (`mxtiler grabtest`): try each grab point on the focused window without
+    /// Diagnostics (`ouch grabtest`): try each grab point on the focused window without
     /// switching spaces, logging which ones pick the window up.
     private func grabTest() {
         guard !movingToSpace, let w = focusedWindow() else { Log.info("grabtest: no focused window"); return }

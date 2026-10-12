@@ -47,7 +47,7 @@ struct Config {
     var animate = true
     var animationDuration: Double = 0.18
     var debugLogging = false
-    /// mxtiler's own workspaces (instant, per monitor, like Hyprland) instead of macOS Spaces.
+    /// Ouch's own workspaces (instant, per monitor, like Hyprland) instead of macOS Spaces.
     var virtualWorkspaces = true
     /// Closing a window keeps you on the current workspace instead of jumping to wherever macOS refocuses.
     var stayOnWorkspaceAfterClose = true
@@ -56,7 +56,7 @@ struct Config {
     var errors: [String] = []
 
     static let url = FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent(".config/mxtiler/mxtiler.conf")
+        .appendingPathComponent(".config/ouch/ouch.conf")
     private static let legacyURL = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent(".config/hyprthyst/hyprthyst.conf")
 
@@ -72,7 +72,7 @@ struct Config {
             }
         }
         let c = parse((try? String(contentsOf: url, encoding: .utf8)) ?? defaultText)
-        c.errors.forEach { NSLog("mxtiler config: %@", $0) }
+        c.errors.forEach { NSLog("Ouch config: %@", $0) }
         return c
     }
 
@@ -290,7 +290,7 @@ let keyCodes: [String: UInt16] = [
 ]
 
 let defaultText = """
-# mxtiler config: Amethyst's options with Hyprland-style syntax.
+# Ouch config: Amethyst's options with Hyprland-style syntax.
 # Edit, then reload from the menu bar or with $mod SHIFT, R.
 
 # SUPER = Command, ALT = Option. Option is the default so app shortcuts (Cmd-Q, Cmd-C...) keep working.

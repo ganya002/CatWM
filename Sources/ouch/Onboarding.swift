@@ -120,7 +120,7 @@ final class Onboarding {
             if attempts > 0 {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in self?.startTour(attempts: attempts - 1) }
             } else {
-                HUD.shared.show("mxtiler needs Accessibility first", on: nil)
+                HUD.shared.show("Ouch needs Accessibility first", on: nil)
             }
             return
         }

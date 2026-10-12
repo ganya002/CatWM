@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// The onboarding tour's practice windows, run as `mxtiler practice <parent pid>`. They live in a
+/// The onboarding tour's practice windows, run as `ouch practice <parent pid>`. They live in a
 /// separate process because the window manager never tiles its own windows; this way the real
 /// window manager tiles, focuses and parks them like any other app's, and the user's apps stay put.
 enum PracticeDesk {
@@ -17,7 +17,7 @@ enum PracticeDesk {
     }
 
     /// The main app posts the indices of finished checklist items ("0,2") so the Notes window can tick them.
-    static let progressNotification = Notification.Name("local.mxtiler.practice.progress")
+    static let progressNotification = Notification.Name("local.ouch.practice.progress")
 
     static func postProgress(_ done: Set<Int>) {
         DistributedNotificationCenter.default().postNotificationName(
@@ -45,7 +45,7 @@ private final class PracticeAppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Theme.registerFonts()
-        // Never outlive the tour, even if mxtiler crashes or is killed.
+        // Never outlive the tour, even if Ouch crashes or is killed.
         if parent <= 1 || kill(parent, 0) != 0 { exit(0) }
         let watch = DispatchSource.makeProcessSource(identifier: parent, eventMask: .exit, queue: .main)
         watch.setEventHandler { exit(0) }
@@ -151,8 +151,8 @@ private struct PracticeWindowView: View {
         let green = Color(red: 138 / 255, green: 226 / 255, blue: 138 / 255)
         func prompt(_ cmd: String) -> Text { Text("~").foregroundColor(green) + Text(" % " + cmd) }
         return VStack(alignment: .leading, spacing: 3) {
-            prompt("mxtiler dispatch movefocus l")
-            prompt("cat ~/.config/mxtiler/mxtiler.conf")
+            prompt("ouch dispatch movefocus l")
+            prompt("cat ~/.config/ouch/ouch.conf")
             Text("# keybinds: bind = MODS, key, dispatcher, args").foregroundColor(Color(white: 0.54))
             Text("bind = $mod, 1..0, workspace, 1..10")
             Text("bind = SUPER, capslock, submap, window")
@@ -193,7 +193,7 @@ private struct PracticeWindowView: View {
 
     private var docs: some View {
         VStack(spacing: 0) {
-            Text("mxtiler.app/docs/workspaces").font(Theme.body(11)).foregroundStyle(Color(white: 0.43))
+            Text("ouch.app/docs/workspaces").font(Theme.body(11)).foregroundStyle(Color(white: 0.43))
                 .frame(maxWidth: 340, minHeight: 20).padding(.horizontal, 12)
                 .background(Capsule().fill(Color.black.opacity(0.06)))
                 .frame(maxWidth: .infinity, minHeight: 30)
@@ -212,7 +212,7 @@ private struct PracticeWindowView: View {
     }
 
     private var inbox: some View {
-        let mail = [("Ada", "Layout ideas for the new monitor"), ("Release bot", "mxtiler 1.4 is out"), ("Sam", "Lunch on Thursday?")]
+        let mail = [("Ada", "Layout ideas for the new monitor"), ("Release bot", "Ouch 1.4 is out"), ("Sam", "Lunch on Thursday?")]
         return VStack(alignment: .leading, spacing: 0) {
             ForEach(mail.indices, id: \.self) { i in
                 VStack(alignment: .leading, spacing: 2) {

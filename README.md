@@ -1,4 +1,4 @@
-# mxtiler
+# Ouch
 
 A small Amethyst-style tiling window manager for macOS with Hyprland-style keybinds and animated window movement.
 
@@ -6,7 +6,7 @@ A small Amethyst-style tiling window manager for macOS with Hyprland-style keybi
 
 ```sh
 ./build.sh
-open build/mxtiler.app
+open build/ouch.app
 ```
 
 On first launch, a short intro plays over the desktop, then a welcome card asks for **Accessibility** (System Settings → Privacy & Security) and offers a keyboard tour. The tour opens practice windows on a free workspace, tiles them for real, and floats hints over them; your own windows wait on their workspace until it ends. Run it again from the menu bar with **Keyboard Tour…**. The app is ad-hoc signed, so after each rebuild you may need to remove and re-add it there.
@@ -20,7 +20,7 @@ One-time setup:
 ```sh
 amore login
 ./build.sh
-amore setup build/mxtiler.app --hosting amore --generate-sparkle-key
+amore setup build/ouch.app --hosting amore --generate-sparkle-key
 ```
 
 Put the feed URL and public key it prints into `SUFeedURL` and `SUPublicEDKey` in `Info.plist`. Until you do, the app has no update checks.
@@ -39,7 +39,7 @@ Settings → Overview has the update toggles, and the menu bar has **Check for U
 
 ## Config
 
-`~/.config/mxtiler/mxtiler.conf` is created on first run. The menu bar icon has buttons to open and reload it.
+`~/.config/ouch/ouch.conf` is created on first run. The menu bar icon has buttons to open and reload it.
 
 It uses Hyprland syntax (`$vars`, `bind = MODS, key, dispatcher, args`, `general { }` blocks) with Amethyst's options (`layouts`, `window-margin-size`, `screen-padding-*`, `mouse-follows-focus`, `focus-follows-mouse`, `mouse-swaps-windows`, `mouse-resizes-windows`, `floating`, `floating-is-blacklist`, `float-small-windows`, `new-windows-to-main`, `enables-layout-hud`, `ignore-menu-bar`, `window-resize-step`, …). It also adds `animate` and `animation-duration`.
 
@@ -96,15 +96,15 @@ bind = $mod CTRL, swipe_left, workspace, +1    # trackpad swipe
 
 ### Workspaces
 
-mxtiler has its own workspaces, like Hyprland and AeroSpace, so switching and moving windows are instant:
+Ouch has its own workspaces, like Hyprland and AeroSpace, so switching and moving windows are instant:
 
 - Each display shows one workspace. A workspace remembers its layout and its last focused window.
 - Windows on hidden workspaces are parked just off-screen in a corner of their display; macOS won't let a window go fully off-screen.
-- If you ⌘-Tab or click the Dock to a window on a hidden workspace, mxtiler switches to that workspace.
+- If you ⌘-Tab or click the Dock to a window on a hidden workspace, Ouch switches to that workspace.
 - The menu bar shows ① ② ❸; the filled number is the workspace you're on. Click it to pick a workspace.
 - `workspace` accepts `N`, `name:foo`, `previous`, `+1` / `-1` and `e+1` / `e-1` (the next workspace that has windows). `movetoworkspace` follows the window; `movetoworkspacesilent` doesn't.
 - Workspaces live on one **home Desktop** per display: the macOS Desktop you were on at first launch, or the one chosen in Settings → Behavior. Other Desktops tile normally, and ⌘1–0 from one of them goes home first. This setup works best with a single macOS Desktop.
-- When mxtiler quits, crashes or is killed, every parked window is put back on screen, and assignments are saved for the next launch.
+- When Ouch quits, crashes or is killed, every parked window is put back on screen, and assignments are saved for the next launch.
 - To use macOS Spaces instead, set `virtual-workspaces = false`. Space switching then uses "Switch to Desktop N" when it's on, and otherwise steps with Ctrl-←/→.
 - `stay-on-workspace-after-close = true` (default) keeps you on your current workspace when you close a window, instead of jumping to the workspace of whichever window macOS refocuses. Also under Settings → Workspaces.
 
@@ -152,13 +152,13 @@ Open it from the menu bar icon with **Settings…**. Changes save and apply auto
 ## Command line
 
 ```sh
-build/mxtiler.app/Contents/MacOS/mxtiler dispatch movefocus l
-build/mxtiler.app/Contents/MacOS/mxtiler dump      # writes tiling state to ~/Library/Logs/mxtiler.log
-build/mxtiler.app/Contents/MacOS/mxtiler reload
+build/ouch.app/Contents/MacOS/ouch dispatch movefocus l
+build/ouch.app/Contents/MacOS/ouch dump      # writes tiling state to ~/Library/Logs/ouch.log
+build/ouch.app/Contents/MacOS/ouch reload
 ```
 
 `exec` only works from keyboard shortcuts, not from the command line.
 
 ## Rebuilding
 
-The app is ad-hoc signed, so every rebuild cancels its Accessibility permission. mxtiler notices this, shows a ⚠️ in the menu bar, and opens Settings. Click **Reset Permission** there, then turn mxtiler on again.
+The app is ad-hoc signed, so every rebuild cancels its Accessibility permission. Ouch notices this, shows a ⚠️ in the menu bar, and opens Settings. Click **Reset Permission** there, then turn Ouch on again.

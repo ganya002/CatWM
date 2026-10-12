@@ -13,7 +13,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
             let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 920, height: 660),
                              styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
                              backing: .buffered, defer: false)
-            w.title = "mxtiler Settings"
+            w.title = "Ouch Settings"
             w.isReleasedWhenClosed = false
             // Unified toolbar over a native sidebar, like Notes. The title stays hidden because each
             // pane draws its own heading; SwiftUI fills the toolbar (search field on Keyboard Shortcuts).
@@ -271,7 +271,7 @@ private struct Sidebar: View {
         .listStyle(.sidebar)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text("mxtiler").font(Theme.display(20))
+                Text("Ouch").font(Theme.display(20))
                 Text(version).font(Theme.body(11)).foregroundStyle(.secondary)
                 Spacer()
             }
@@ -508,14 +508,14 @@ private struct OverviewPane: View {
                 HStack(spacing: 14) {
                     IconTile(symbol: "lock.fill", color: .orange, size: 44)
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("mxtiler needs Accessibility access").font(Theme.display(21))
+                        Text("Ouch needs Accessibility access").font(Theme.display(21))
                         Text("macOS only lets apps move other apps' windows with this permission.")
                             .foregroundStyle(Theme.secondary)
                     }
                 }
                 VStack(alignment: .leading, spacing: 6) {
                     step(1, "Click Open Accessibility Settings. A guide appears next to System Settings.")
-                    step(2, "Turn on mxtiler in the list.")
+                    step(2, "Turn on Ouch in the list.")
                     step(3, "Already on but still not working? Rebuilding the app invalidates the old entry. Click Reset Permission, then turn it on again.")
                 }
                 .font(Theme.body(12.5))
@@ -532,7 +532,7 @@ private struct OverviewPane: View {
                 IconTile(symbol: s.keybindsActive && s.tilingEnabled ? "checkmark" : s.keybindsActive ? "pause.fill" : "keyboard.badge.exclamationmark",
                          color: s.keybindsActive && s.tilingEnabled ? .green : .orange, size: 44)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(!s.tilingEnabled ? "Tiling is paused" : s.keybindsActive ? "mxtiler is running" : "Keyboard shortcuts aren't active")
+                    Text(!s.tilingEnabled ? "Tiling is paused" : s.keybindsActive ? "Ouch is running" : "Keyboard shortcuts aren't active")
                         .font(Theme.display(21))
                     Text(summary(s)).foregroundStyle(Theme.secondary)
                 }
@@ -577,7 +577,7 @@ private struct InputMonitoringRow: View {
 private struct LoginApprovalRow: View {
     var body: some View {
         Row {
-            Label("macOS is waiting for you to allow mxtiler in Login Items", systemImage: "exclamationmark.circle")
+            Label("macOS is waiting for you to allow Ouch in Login Items", systemImage: "exclamationmark.circle")
                 .foregroundStyle(.orange).font(Theme.body(12.5))
         } control: {
             Button("Open Login Items") { LoginItem.openSettings() }
@@ -649,7 +649,7 @@ enum Permissions {
     static func clearStaleEntry() {
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/usr/bin/tccutil")
-        p.arguments = ["reset", "Accessibility", Bundle.main.bundleIdentifier ?? "local.mxtiler"]
+        p.arguments = ["reset", "Accessibility", Bundle.main.bundleIdentifier ?? "local.ouch"]
         try? p.run()
         p.waitUntilExit()
     }
@@ -906,7 +906,7 @@ private struct BehaviorPane: View {
         PaneScroll {
             Block("Startup") {
                 Card {
-                    SwitchRow(title: "Open mxtiler at login", detail: "Also listed in System Settings → General → Login Items.",
+                    SwitchRow(title: "Open Ouch at login", detail: "Also listed in System Settings → General → Login Items.",
                               isOn: Binding(get: { ui.status.launchAtLogin || ui.status.loginNeedsApproval }, set: { on in
                                   LoginItem.set(on)
                                   ui.refreshStatus()
@@ -916,7 +916,7 @@ private struct BehaviorPane: View {
             }
             Block("Workspaces") {
                 Card {
-                    SwitchRow(title: "Use mxtiler workspaces",
+                    SwitchRow(title: "Use Ouch workspaces",
                               detail: "Instant, per-monitor workspaces like Hyprland, instead of macOS Spaces. Windows on hidden workspaces are parked just off-screen. Works best with a single macOS Space.",
                               isOn: $doc.config.virtualWorkspaces)
                     if doc.config.virtualWorkspaces {
@@ -925,7 +925,7 @@ private struct BehaviorPane: View {
                                   isOn: $doc.config.stayOnWorkspaceAfterClose)
                         Row {
                             TitleDetail(title: "Home Desktop",
-                                        detail: WindowManager.shared.homeSpaceSummary.isEmpty ? "The Desktop you're on when mxtiler starts"
+                                        detail: WindowManager.shared.homeSpaceSummary.isEmpty ? "The Desktop you're on when Ouch starts"
                                             : "Workspaces live on \(WindowManager.shared.homeSpaceSummary). Other Desktops tile normally.")
                         } control: {
                             Button("Use This Desktop") { WindowManager.shared.makeCurrentSpaceHome() }
@@ -1398,7 +1398,7 @@ private struct BindRowView: View {
 private struct AdvancedPane: View {
     @ObservedObject var doc: ConfigDocument
 
-    private var binaryPath: String { Bundle.main.executablePath ?? "mxtiler" }
+    private var binaryPath: String { Bundle.main.executablePath ?? "ouch" }
 
     var body: some View {
         PaneScroll {
@@ -1427,7 +1427,7 @@ private struct AdvancedPane: View {
             Block("Command line") {
                 Card(padding: 12) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Control mxtiler from a terminal, like hyprctl:")
+                        Text("Control Ouch from a terminal, like hyprctl:")
                         Text("\(binaryPath) dispatch movefocus l\n\(binaryPath) dump\n\(binaryPath) reload")
                             .font(Theme.mono(11))
                             .lineSpacing(5)

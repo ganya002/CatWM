@@ -34,7 +34,7 @@ enum Theme {
     static func display(_ size: CGFloat) -> Font {
         hasHorizon ? .custom("Horizon-Bold", size: size * displayScale) : body(size, .bold)
     }
-    /// The big "mxtiler" in the intro, at full size.
+    /// The big "Ouch" in the intro, at full size.
     static func wordmark(_ size: CGFloat) -> Font {
         hasHorizon ? .custom("Horizon-Bold", size: size) : body(size, .bold)
     }

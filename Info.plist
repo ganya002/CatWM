@@ -2,9 +2,9 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleIdentifier</key><string>local.mxtiler</string>
-    <key>CFBundleName</key><string>mxtiler</string>
-    <key>CFBundleExecutable</key><string>mxtiler</string>
+    <key>CFBundleIdentifier</key><string>local.ouch</string>
+    <key>CFBundleName</key><string>Ouch</string>
+    <key>CFBundleExecutable</key><string>ouch</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>0.1</string>
     <key>CFBundleVersion</key><string>1</string>
@@ -12,8 +12,8 @@
     <key>LSUIElement</key><true/>
     <key>NSHighResolutionCapable</key><true/>
     <!-- Sparkle + Amore. Fill both from `amore setup` (see README); updates stay off until you do. -->
-    <key>SUFeedURL</key><string>https://api.amore.computer/v1/apps/local.mxtiler/appcast.xml</string>
-    <key>SUPublicEDKey</key><string>NbHCITv6aHyTWe9ZIkOpvJFGzU5BJIynYjISsgNaO08=</string>
+    <key>SUFeedURL</key><string>https://api.amore.computer/v1/apps/local.ouch/appcast.xml</string>
+    <key>SUPublicEDKey</key><string>OEHHPP5gzJfph4/A3l7EpY7xTnvwUe1QRzHnpJHP8dY=</string>
     <key>SUEnableAutomaticChecks</key><true/>
 </dict>
 </plist>

@@ -11,7 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         migrateLegacyDefaults()
         Theme.registerFonts()
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        statusItem.button?.image = NSImage(systemSymbolName: "rectangle.split.3x1", accessibilityDescription: "mxtiler")
+        statusItem.button?.image = NSImage(systemSymbolName: "rectangle.split.3x1", accessibilityDescription: "Ouch")
 
         let menu = NSMenu()
         menu.delegate = self
@@ -28,7 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(withTitle: "Reload Config", action: #selector(reload), keyEquivalent: "")
         menu.addItem(.separator())
         menu.addItem(withTitle: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: "")
-        menu.addItem(withTitle: "Quit mxtiler", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.addItem(withTitle: "Quit Ouch", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.items.forEach { if $0.action != #selector(NSApplication.terminate(_:)) { $0.target = self } }
         statusItem.menu = menu
 
@@ -41,7 +41,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         wasTrusted = AXIsProcessTrusted()
         if wasTrusted { WindowManager.shared.start() } else { Log.info("launch: Accessibility not granted") }
-        // `open mxtiler.app --args --onboarding` plays it regardless, for working on it.
+        // `open ouch.app --args --onboarding` plays it regardless, for working on it.
         if Onboarding.shouldShow(firstRun: firstRun, trusted: wasTrusted) || CommandLine.arguments.contains("--onboarding") {
             Onboarding.shared.start() // its welcome card asks for Accessibility
         } else if !wasTrusted {
@@ -104,7 +104,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let summary = WindowManager.shared.workspaceSummary()
         guard trusted, !summary.all.isEmpty || !Hotkeys.shared.submap.isEmpty else {
             button.image = NSImage(systemSymbolName: trusted ? "rectangle.split.3x1" : "exclamationmark.triangle",
-                                   accessibilityDescription: "mxtiler")
+                                   accessibilityDescription: "Ouch")
             button.attributedTitle = NSAttributedString(string: "")
             return
         }
@@ -170,8 +170,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         updates.target = self
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Close Window", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
-        appMenu.addItem(withTitle: "Quit mxtiler", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
-        main.addItem(withTitle: "mxtiler", action: nil, keyEquivalent: "").submenu = appMenu
+        appMenu.addItem(withTitle: "Quit Ouch", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        main.addItem(withTitle: "Ouch", action: nil, keyEquivalent: "").submenu = appMenu
         let edit = NSMenu(title: "Edit")
         edit.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
         edit.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "Z")
@@ -217,7 +217,7 @@ if CommandLine.arguments.dropFirst().first == "practice" {
     PracticeDesk.run(parent: pid_t(CommandLine.arguments.dropFirst(2).first ?? "") ?? getppid())
 }
 
-// Command-line mode, like hyprctl: `mxtiler dispatch movefocus l`, `mxtiler dump`, `mxtiler reload`.
+// Command-line mode, like hyprctl: `ouch dispatch movefocus l`, `ouch dump`, `ouch reload`.
 let cliArgs = Array(CommandLine.arguments.dropFirst())
 if let cmd = cliArgs.first, ["dispatch", "dump", "reload", "poststyle", "grabtest"].contains(cmd) {
     DistributedNotificationCenter.default().postNotificationName(ipcNotification, object: cliArgs.joined(separator: " "),
