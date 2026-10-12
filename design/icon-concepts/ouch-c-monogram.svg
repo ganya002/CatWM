@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<!-- Ouch app icon: concept C, Monogram. Lettering is Dela Gothic One (SIL OFL 1.1), outlined to paths. -->
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a4a4f"/><stop offset="1" stop-color="#1b1b1e"/></linearGradient>
+<linearGradient id="bgblue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5aa8ff"/><stop offset="1" stop-color="#0a63e8"/></linearGradient>
+<linearGradient id="bglight" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#dcdce2"/></linearGradient>
+<linearGradient id="rim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".25"/><stop offset="1" stop-color="#fff" stop-opacity=".05"/></linearGradient>
+<linearGradient id="blue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8dc3ff"/><stop offset=".45" stop-color="#3f95ff"/><stop offset="1" stop-color="#0a74ff"/></linearGradient>
+<linearGradient id="white" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fdfdfd"/><stop offset="1" stop-color="#e6e6eb"/></linearGradient>
+<linearGradient id="graphite" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a4a50"/><stop offset="1" stop-color="#26262a"/></linearGradient>
+<filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="16"/></filter>
+<filter id="drop" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="14"/></filter>
+</defs>
+<rect x="100" y="112" width="824" height="824" rx="185" fill="#000" opacity=".35" filter="url(#drop)"/>
+<rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bgblue)"/>
+<rect x="101" y="101" width="822" height="822" rx="184" fill="none" stroke="url(#rim)" stroke-width="2"/><path d="M217.5 511.7Q217.5 394.0 288.5 327.9Q359.6 261.8 511.7 261.8Q664.4 261.8 735.5 327.9Q806.5 394.0 806.5 511.7Q806.5 631.3 735.8 696.8Q665.1 762.2 511.7 762.2Q360.3 762.2 288.9 696.5Q217.5 630.7 217.5 511.7ZM649.9 511.7Q649.9 453.5 617.5 425.1Q585.1 396.6 511.7 396.6Q438.9 396.6 406.5 425.1Q374.1 453.5 374.1 511.7Q374.1 570.5 406.5 598.9Q438.9 627.4 511.7 627.4Q585.1 627.4 617.5 599.3Q649.9 571.2 649.9 511.7Z" fill="#000" opacity=".25" filter="url(#soft)" transform="translate(0 18)"/><path d="M217.5 511.7Q217.5 394.0 288.5 327.9Q359.6 261.8 511.7 261.8Q664.4 261.8 735.5 327.9Q806.5 394.0 806.5 511.7Q806.5 631.3 735.8 696.8Q665.1 762.2 511.7 762.2Q360.3 762.2 288.9 696.5Q217.5 630.7 217.5 511.7ZM649.9 511.7Q649.9 453.5 617.5 425.1Q585.1 396.6 511.7 396.6Q438.9 396.6 406.5 425.1Q374.1 453.5 374.1 511.7Q374.1 570.5 406.5 598.9Q438.9 627.4 511.7 627.4Q585.1 627.4 617.5 599.3Q649.9 571.2 649.9 511.7Z" fill="url(#white)"/><rect x="452" y="452" width="56" height="120" rx="12" fill="url(#blue)"/><rect x="516" y="452" width="56" height="56" rx="12" fill="#2a2a2e"/><rect x="516" y="516" width="56" height="56" rx="12" fill="#2a2a2e"/>
+</svg>
