@@ -230,6 +230,9 @@ final class ConfigDocument: ObservableObject {
         ("SUPER CTRL", "⌃⌘ Control + Command"), 
     ]
 
+    /// A throwaway document over some config text: used to normalise and compare config payloads. Never saves.
+    init(text: String) { apply(text: text) }
+
     init() {
         load()
         autosave = objectWillChange
@@ -237,6 +240,7 @@ final class ConfigDocument: ObservableObject {
             .sink { [weak self] in self?.autosaveIfNeeded() }
     }
 
+    var extraLineCount: Int { extraLines.count }
     var isDirty: Bool { serialize() != savedText }
     var hasChangesSinceOpen: Bool { serialize() != openedText }
 
@@ -275,15 +279,51 @@ final class ConfigDocument: ObservableObject {
         return out
     }
 
+    /// The variables and binds as config text: a keyboard config's payload.
+    func keyboardText() -> String {
+        let all = serialize().components(separatedBy: "\n")
+        let lines = vars.map { "\($0.name) = \($0.value.replacingOccurrences(of: "#", with: "##"))" } + [""]
+            + all.filter { $0.hasPrefix("bind") || $0.hasPrefix("submap") || $0.isEmpty }
+        return lines.joined(separator: "\n") + "\n"
+    }
+
+    /// The animation options as config text: an animation config's payload.
+    func animationText() -> String {
+        let c = config
+        return [
+            "animate = \(c.animate ? "true" : "false")",
+            "animation-duration = \(String(format: "%g", (c.animationDuration * 1000).rounded() / 1000))",
+            "animation-curve = \(c.animationCurve.name)",
+            "animation-bounce = \(String(format: "%g", (c.animationBounce * 100).rounded() / 100))",
+            "",
+        ].joined(separator: "\n")
+    }
+
+    /// Swaps in a keyboard config's variables and binds, keeping every other setting.
+    func applyKeyboard(_ text: String) {
+        let other = ConfigDocument(text: text)
+        vars = other.vars
+        binds = other.binds
+    }
+
+    /// Swaps in an animation config's options, keeping every other setting.
+    func applyAnimation(_ text: String) {
+        let c = Config.parse(text)
+        config.animate = c.animate
+        config.animationDuration = c.animationDuration
+        config.animationCurve = c.animationCurve
+        config.animationBounce = c.animationBounce
+    }
+
+    /// Replaces everything with a full config's text.
+    func applyFull(_ text: String) { apply(text: text) }
+
     /// Writes the variables and binds to keybinds-backup-<date>.conf next to the config.
     func backUpShortcuts() -> URL? {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd-HHmm"
         let url = Config.url.deletingLastPathComponent().appendingPathComponent("keybinds-backup-\(f.string(from: Date())).conf")
-        let all = serialize().components(separatedBy: "\n")
-        let lines = ["# Ouch keybind backup, \(Date())"] + vars.map { "\($0.name) = \($0.value.replacingOccurrences(of: "#", with: "##"))" } + [""]
-            + all.filter { $0.hasPrefix("bind") || $0.hasPrefix("submap") || $0.isEmpty }
-        return (try? (lines.joined(separator: "\n") + "\n").write(to: url, atomically: true, encoding: .utf8)) != nil ? url : nil
+        return (try? ("# Ouch keybind backup, \(Date())\n" + keyboardText()).write(to: url, atomically: true, encoding: .utf8)) != nil ? url : nil
     }
 
     // MARK: Main modifier variable
@@ -381,7 +421,8 @@ final class ConfigDocument: ObservableObject {
         return true
     }
 
-    func serialize() -> String {
+    /// `includeKeyboard`/`includeAnimation` off leaves those parts out, to compare "everything else" on its own.
+    func serialize(includeKeyboard: Bool = true, includeAnimation: Bool = true) -> String {
         let c = config
         func b(_ v: Bool) -> String { v ? "true" : "false" }
         func n(_ v: CGFloat) -> String { String(format: "%g", Double(v)) }
@@ -391,7 +432,7 @@ final class ConfigDocument: ObservableObject {
             "# SUPER = Command, ALT = Option, CTRL = Control.",
             "",
         ]
-        out += vars.map { "\($0.name) = \(esc($0.value))" }
+        if includeKeyboard { out += vars.map { "\($0.name) = \(esc($0.value))" } }
         out += [
             "",
             "# tall, tall-right, wide, middle-wide, fullscreen, column, row, floating, bsp, 3column-left,",
@@ -421,12 +462,18 @@ final class ConfigDocument: ObservableObject {
             "floating = " + c.floating.joined(separator: ", "),
             "floating-is-blacklist = \(b(c.floatingIsBlacklist))",
             "",
-            "animate = \(b(c.animate))",
-            "animation-duration = \(String(format: "%g", (c.animationDuration * 1000).rounded() / 1000))",
-            "# ease-out, ease-in-out, linear, spring, bounce, overshoot or cubic-bezier(x1, y1, x2, y2)",
-            "animation-curve = \(c.animationCurve.name)",
-            "animation-bounce = \(String(format: "%g", (c.animationBounce * 100).rounded() / 100))",
-            "",
+        ]
+        if includeAnimation {
+            out += [
+                "animate = \(b(c.animate))",
+                "animation-duration = \(String(format: "%g", (c.animationDuration * 1000).rounded() / 1000))",
+                "# ease-out, ease-in-out, linear, spring, bounce, overshoot or cubic-bezier(x1, y1, x2, y2)",
+                "animation-curve = \(c.animationCurve.name)",
+                "animation-bounce = \(String(format: "%g", (c.animationBounce * 100).rounded() / 100))",
+                "",
+            ]
+        }
+        out += [
             "debug-logging = \(b(c.debugLogging))",
             "virtual-workspaces = \(b(c.virtualWorkspaces))",
             "stay-on-workspace-after-close = \(b(c.stayOnWorkspaceAfterClose))",
@@ -435,6 +482,9 @@ final class ConfigDocument: ObservableObject {
             "# that mode (entered with the submap dispatcher); single keys are fine there, vim style.",
         ]
         func line(_ r: BindRow) -> String { "\(r.kind) = \(esc(r.mods)), \(esc(r.key)), \(r.dispatcher)" + (r.args.isEmpty ? "" : ", \(esc(r.args))") }
+        guard includeKeyboard else {
+            return (out + (extraLines.isEmpty ? [] : ["", "# Lines Ouch doesn't recognise, kept as-is"] + extraLines)).joined(separator: "\n") + "\n"
+        }
         out += binds.filter { $0.submap.isEmpty }.map(line)
         for mode in submaps where !mode.isEmpty {
             out += ["", "submap = \(mode)"] + binds.filter { $0.submap == mode }.map(line) + ["submap = reset"]

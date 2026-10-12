@@ -5,6 +5,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
     static let shared = SettingsWindow()
     private(set) var window: NSWindow?
     let doc = ConfigDocument()
+    private(set) lazy var library = ConfigLibrary(doc: doc)
     private(set) lazy var ui = SettingsUI(doc: doc)
 
     func show(pane: Pane?) {
@@ -76,6 +77,30 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
     /// field on Keyboard Shortcuts), so hide it again on every update.
     func windowDidUpdate(_ notification: Notification) {
         if window?.standardWindowButton(.zoomButton)?.isHidden == false { window?.standardWindowButton(.zoomButton)?.isHidden = true }
+        placeTrafficLights()
+    }
+
+    func windowDidResize(_ notification: Notification) { placeTrafficLights() }
+
+    /// Height of the band the traffic lights sit in. Taller than the stock title bar so they have room,
+    /// like in other modern Mac apps.
+    static let titlebarHeight: CGFloat = 52
+
+    /// Insets the close and minimise buttons from the corner and centres them in the taller band.
+    private func placeTrafficLights() {
+        guard let w = window, let close = w.standardWindowButton(.closeButton), let mini = w.standardWindowButton(.miniaturizeButton),
+              let bar = close.superview, let container = bar.superview else { return }
+        let h = Self.titlebarHeight
+        if container.frame.height != h {
+            container.setFrameSize(NSSize(width: container.frame.width, height: h))
+            container.setFrameOrigin(NSPoint(x: container.frame.minX, y: (container.superview?.frame.height ?? w.frame.height) - h))
+            bar.setFrameSize(NSSize(width: bar.frame.width, height: h))
+        }
+        let y = (h - close.frame.height) / 2
+        for (i, b) in [close, mini].enumerated() {
+            let x = 20 + CGFloat(i) * 20
+            if b.frame.origin != NSPoint(x: x, y: y) { b.setFrameOrigin(NSPoint(x: x, y: y)) }
+        }
     }
 
     /// Double-clicking the title bar would still zoom; Settings keeps the size it was given.
@@ -105,6 +130,10 @@ enum Pane: String, CaseIterable, Identifiable {
         case .keybinds: "command"
         case .advanced: "wrench.fill"
         }
+    }
+    /// The library of saved configs a pane has a selector for.
+    var configKind: ConfigKind? {
+        switch self { case .animation: .animation; case .keybinds: .keyboard; default: nil }
     }
     var color: Color {
         switch self {
@@ -209,6 +238,7 @@ final class SettingsUI: ObservableObject {
 struct SettingsView: View {
     @ObservedObject var doc: ConfigDocument
     @ObservedObject var ui: SettingsUI
+    @ObservedObject private var library = SettingsWindow.shared.library
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -225,6 +255,14 @@ struct SettingsView: View {
             }
         }
         .font(Theme.body())
+        .sheet(item: $library.sheet) { ConfigSheetView(sheet: $0, library: library) }
+        .onDrop(of: [.fileURL], isTargeted: nil) { providers in
+            guard let p = providers.first else { return false }
+            _ = p.loadObject(ofClass: URL.self) { url, _ in
+                if let url { DispatchQueue.main.async { library.importFile(url) } }
+            }
+            return true
+        }
     }
 
     private var panes: some View {
@@ -235,7 +273,14 @@ struct SettingsView: View {
                 .navigationSplitViewColumnWidth(220)
         } detail: {
             VStack(alignment: .leading, spacing: 0) {
-                Text(pane.rawValue).font(Theme.heading(22))
+                HStack(spacing: 8) {
+                    Text(pane.rawValue).font(Theme.heading(22))
+                    Spacer(minLength: 12)
+                    if let kind = pane.configKind {
+                        ConfigSelector(kind: kind, library: library, width: 190)
+                        ConfigTransferMenu(kind: kind, library: library)
+                    }
+                }
                 .padding(.horizontal, 24).padding(.top, 4).padding(.bottom, 12)
                 Group {
                     switch pane {
@@ -273,6 +318,7 @@ private struct SeamlessToolbar: ViewModifier {
 private struct Sidebar: View {
     @ObservedObject var doc: ConfigDocument
     @ObservedObject var ui: SettingsUI
+    @ObservedObject private var library = SettingsWindow.shared.library
 
     private var version: String { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "" }
 
@@ -294,6 +340,15 @@ private struct Sidebar: View {
             .tag(p)
         }
         .listStyle(.sidebar)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            // Full configs. Import/export shares a row with the traffic lights and the selector sits right under.
+            VStack(spacing: 0) {
+                HStack { Spacer(); ConfigTransferMenu(kind: .full, library: library) }
+                    .padding(.trailing, 12).frame(height: 44)
+                ConfigSelector(kind: .full, library: library).padding(.horizontal, 12).padding(.bottom, 8)
+            }
+            .padding(.top, -24) // the list reserves a title bar strip; this starts the row at the window edge
+        }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             HStack {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
