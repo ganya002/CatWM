@@ -619,15 +619,32 @@ enum Permissions {
     /// Optional: without it they still work, after macOS's own Caps Lock delay.
     static var inputMonitoringGranted: Bool { IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) == kIOHIDAccessTypeGranted }
 
+    /// Starts the Input Monitoring grant flow: the first request shows macOS's prompt (and lists us),
+    /// later ones go straight to the list. Either way the guide walks through it.
     static func requestInputMonitoring() {
-        // The first request shows macOS's prompt (and lists us); once answered it never prompts again.
-        if IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) == kIOHIDAccessTypeUnknown {
-            IOHIDRequestAccess(kIOHIDRequestTypeListenEvent)
-            return
+        guard !inputMonitoringGranted else { return }
+        let first = IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) == kIOHIDAccessTypeUnknown
+        if first { IOHIDRequestAccess(kIOHIDRequestTypeListenEvent) }
+        PermissionGuide.shared.show(.inputMonitoring)
+        DispatchQueue.main.asyncAfter(deadline: .now() + (first ? 0.8 : 0)) {
+            if !inputMonitoringGranted { openInputMonitoringPane() }
         }
+    }
+
+    private static func openInputMonitoringPane() {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent") {
             NSWorkspace.shared.open(url)
         }
+    }
+
+    /// Drops a stale Input Monitoring entry (same story as `clearStaleEntry`) and starts over.
+    static func resetInputMonitoring() {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/bin/tccutil")
+        p.arguments = ["reset", "ListenEvent", Bundle.main.bundleIdentifier ?? "local.ouch"]
+        try? p.run()
+        p.waitUntilExit()
+        requestInputMonitoring()
     }
 
     /// Whether this launch already asked macOS to list us (which also shows its own alert). Asking again

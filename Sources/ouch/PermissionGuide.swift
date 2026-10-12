@@ -10,6 +10,13 @@ final class PermissionGuide {
     private var host: NSView?
     private var follow: Timer?
     private let model = GuideModel()
+    /// Which permission the guide is walking through.
+    enum Kind {
+        case accessibility, inputMonitoring
+        var isGranted: Bool { self == .accessibility ? AXIsProcessTrusted() : Permissions.inputMonitoringGranted }
+        var title: String { self == .accessibility ? "Accessibility" : "Input Monitoring" }
+    }
+    private(set) var kind = Kind.accessibility
     private let gap: CGFloat = 12
 
     var isShowing: Bool { (panel?.isVisible ?? false) && (panel?.alphaValue ?? 0) > 0 }
@@ -30,7 +37,10 @@ final class PermissionGuide {
     private var userMoved = false  // dragged by the user: stop following, only resize
     private var movedAt = Date.distantPast // our last move; the frame is in flux right after it
 
-    func show() {
+    func show(_ kind: Kind = .accessibility) {
+        self.kind = kind
+        model.kind = kind
+        finishing = false
         pending = true
         hidden = false
         sawSettings = false
@@ -63,10 +73,10 @@ final class PermissionGuide {
         fadeOut()
     }
 
-    /// Called when Accessibility turns on (by the watchdog and by our own timer, so it runs once):
+    /// Called when the permission turns on (by the watchdog and by our own timer, so it runs once):
     /// flip to a checkmark, then clear away the guide, macOS's alert and the Settings window.
-    func granted() {
-        guard pending, !finishing else { return }
+    func granted(_ granted: Kind = .accessibility) {
+        guard pending, !finishing, granted == kind else { return }
         finishing = true
         follow?.invalidate()
         follow = nil
@@ -75,7 +85,7 @@ final class PermissionGuide {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) { [weak self] in
             guard let self else { return }
             finishing = false
-            guard AXIsProcessTrusted() else { return }
+            guard kind.isGranted else { return }
             stop()
             Permissions.dismissSystemAlert()
             // The alert's button brings Settings forward; close it after that lands.
@@ -88,7 +98,7 @@ final class PermissionGuide {
     var onGranted: (() -> Void)?
 
     private func tick() {
-        if AXIsProcessTrusted() { granted(); return }
+        if kind.isGranted { granted(kind); return }
         let snap = Snapshot()
         // System Settings was closed (or macOS's alert denied) without granting: don't leave the guide
         // floating on its own.
@@ -254,6 +264,7 @@ final class PermissionGuide {
 
 private final class GuideModel: ObservableObject {
     @Published var granted = false
+    @Published var kind = PermissionGuide.Kind.accessibility
     /// macOS's own alert is up; its button is what adds Ouch to the list.
     @Published var alertUp = false
 }
@@ -282,7 +293,7 @@ private struct GuideView: View {
                         row(1, "In the macOS alert, click **Open System Settings**. That adds Ouch to the list.")
                         row(2, "Turn its switch **on**. Enter your password if asked.")
                     } else {
-                        row(1, "Find **Ouch** in the Accessibility list.")
+                        row(1, "Find **Ouch** in the \(model.kind.title) list.")
                         row(2, "Turn its switch **on**. Enter your password if asked.")
                         row(3, "Not in the list? Click **+**, or drag this icon into it:")
                     }
@@ -293,7 +304,7 @@ private struct GuideView: View {
                     ProgressView().controlSize(.small)
                     Text("Waiting for permission…").font(.caption).foregroundStyle(.secondary)
                     Spacer()
-                    Button("Reset") { Permissions.reset() }
+                    Button("Reset") { model.kind == .accessibility ? Permissions.reset() : Permissions.resetInputMonitoring() }
                         .help("Clears a stale entry left by a rebuilt or moved copy of the app")
                     Button("Hide", action: dismiss)
                 }
@@ -319,7 +330,7 @@ private struct GuideView: View {
         // Only the app's location. Offering its contents (NSItemProvider(contentsOf:)) let Settings take
         // a copy of the bundle, so the switch turned on a copy and this app never became trusted.
         .onDrag { NSItemProvider(object: Bundle.main.bundleURL as NSURL) }
-        .help("Drag into the Accessibility list")
+        .help("Drag into the \(model.kind.title) list")
     }
 
     private func row(_ n: Int, _ text: LocalizedStringKey) -> some View {

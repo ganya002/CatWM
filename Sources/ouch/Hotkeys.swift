@@ -25,6 +25,11 @@ final class Hotkeys {
     func setBindings(_ list: [KeyBinding]) {
         tables = [:]
         for b in list { tables[b.submap, default: [:]][Self.key(b.keyCode, b.mods)] = b }
+        let bound = list.contains { $0.keyCode == 57 }
+        if bound != capsBound {
+            capsBound = bound
+            Self.setCapsLockDelay(bound ? 0 : -1)
+        }
         if !submap.isEmpty, tables[submap] == nil { setSubmap("") }
     }
 
@@ -49,7 +54,38 @@ final class Hotkeys {
         CGEvent.tapEnable(tap: t, enable: true)
         startSwipes()
         startRawCaps()
+        refreshCapsLockDelay()
         return true
+    }
+
+    /// macOS makes you hold Caps Lock a moment before it turns the lock *on* (turning it off is
+    /// instant), and the raw HID report is held back the same way. That is why Super + Caps only felt
+    /// instant while the lock was already on. The keyboards' delay override removes it, no permission
+    /// needed. It lasts until the keyboard is unplugged or the Mac restarts, so it's re-applied now and
+    /// then. Only on while a Caps Lock bind exists; -1 is "no override" and gives the normal behaviour back.
+    private(set) var capsBound = false
+
+    func refreshCapsLockDelay() {
+        if capsBound { Self.setCapsLockDelay(0) }
+    }
+
+    private static func setCapsLockDelay(_ ms: Int, wait: Bool = false) {
+        let run = {
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/usr/bin/hidutil")
+            p.arguments = ["property", "--matching", "{\"PrimaryUsagePage\":1,\"PrimaryUsage\":6}",
+                           "--set", "{\"CapsLockDelayOverride\":\(ms)}"]
+            p.standardOutput = FileHandle.nullDevice
+            p.standardError = FileHandle.nullDevice
+            try? p.run()
+            p.waitUntilExit()
+        }
+        if wait { run() } else { DispatchQueue.global(qos: .utility).async(execute: run) }
+    }
+
+    /// Back to macOS's own Caps Lock behaviour (on quit).
+    func restoreCapsLockDelay() {
+        if capsBound { Self.setCapsLockDelay(-1, wait: true) }
     }
 
     /// Caps Lock is debounced by macOS: the key must be held a moment before a flagsChanged shows up,

@@ -6,6 +6,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let tilingItem = NSMenuItem(title: "Tiling Enabled", action: #selector(toggleTiling), keyEquivalent: "")
     private var watchdog: Timer?
     private var wasTrusted = true
+    private var hadInputMonitoring = Permissions.inputMonitoringGranted
+    private var watchdogTicks = 0
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         migrateLegacyDefaults()
@@ -69,6 +71,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func checkPermission() {
         let trusted = AXIsProcessTrusted()
         if trusted, !Hotkeys.shared.rawCapsActive { Hotkeys.shared.startRawCaps() }
+        let monitoring = Permissions.inputMonitoringGranted
+        if monitoring != hadInputMonitoring {
+            hadInputMonitoring = monitoring
+            Log.info("Input Monitoring \(monitoring ? "granted" : "revoked")")
+            if monitoring { PermissionGuide.shared.granted(.inputMonitoring) }
+        }
+        // Keyboards plugged in later start with macOS's Caps Lock delay again.
+        watchdogTicks += 1
+        if watchdogTicks % 20 == 0 { Hotkeys.shared.refreshCapsLockDelay() }
         if trusted && !WindowManager.shared.isStarted {
             Log.info("Accessibility granted")
             WindowManager.shared.start()
@@ -92,6 +103,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         WindowManager.shared.restoreHiddenWindows()
+        Hotkeys.shared.restoreCapsLockDelay()
     }
 
     /// Menu bar indicator, like a Waybar workspaces module: workspaces with windows, the
