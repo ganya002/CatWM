@@ -14,6 +14,16 @@ cp .build/release/ouch "$APP/Contents/MacOS/"
 xcrun vtool -set-build-version macos 14.0 "$(xcrun --show-sdk-version)" -replace \
   -output "$APP/Contents/MacOS/ouch" "$APP/Contents/MacOS/ouch"
 cp Info.plist "$APP/Contents/"
+# Build number is the commit count, so it rises on its own and Sparkle always sees new builds as newer.
+# OUCH_CHANNEL=beta (set by beta.sh) also marks the build so fresh installs follow the beta channel.
+PLIST="$APP/Contents/Info.plist"
+BUILD=$(git rev-list --count HEAD)
+/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD" "$PLIST"
+if [ -n "$OUCH_CHANNEL" ]; then
+  SHORT=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$PLIST")
+  /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $SHORT-$OUCH_CHANNEL.$BUILD" "$PLIST"
+  /usr/libexec/PlistBuddy -c "Add :OuchUpdateChannel string $OUCH_CHANNEL" "$PLIST"
+fi
 cp -R Resources/Fonts "$APP/Contents/Resources/"  # Dela Gothic One (OFL), registered at launch
 cp Resources/Icon/AppIcon.icns "$APP/Contents/Resources/"
 # Sparkle ships as a prebuilt framework inside the SwiftPM artifact bundle.

@@ -23,6 +23,8 @@ final class Updater: NSObject, SPUUpdaterDelegate, ObservableObject {
 
     func start() {
         guard isConfigured, controller == nil else { return }
+        let channel = Bundle.main.infoDictionary?["OuchUpdateChannel"] as? String
+        UserDefaults.standard.register(defaults: [Self.betaKey: channel == "beta"])
         controller = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: self, userDriverDelegate: nil)
         lastChecked = controller?.updater.lastUpdateCheckDate
     }
@@ -45,6 +47,7 @@ final class Updater: NSObject, SPUUpdaterDelegate, ObservableObject {
     }
 
     /// Opt in to releases published to Amore's "beta" channel (`amore release --channel beta`).
+    /// Builds made by beta.sh start opted in, so early-access users keep getting betas.
     var receivesBeta: Bool {
         get { UserDefaults.standard.bool(forKey: Self.betaKey) }
         set { objectWillChange.send(); UserDefaults.standard.set(newValue, forKey: Self.betaKey) }
