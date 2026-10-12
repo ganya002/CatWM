@@ -52,7 +52,8 @@ final class WindowManager {
     private var lastFocused: [String: CGWindowID] = [:]
     private var floatFrames: [CGWindowID: CGRect] = [:]  // floating windows' frames while parked
     private var savedWorkspaceOf: [CGWindowID: String] = [:]
-    private var previousWorkspace: String?
+    private var savedOwnerOf: [CGWindowID: String] = [:]  // "pid bundleID" when saved; window IDs are reused after a logout
+    private var previousWorkspace: [String: String] = [:] // display UUID → workspace it showed before
     private var autoSwitchAfter = Date.distantPast
     private var lastSavedWorkspaces = ""
     private var focusSink: NSWindow?
@@ -97,6 +98,7 @@ final class WindowManager {
         ws.addObserver(forName: NSWorkspace.didTerminateApplicationNotification, object: nil, queue: .main) { [weak self] n in
             guard let self, let app = n.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else { return }
             let pid = app.processIdentifier
+            if let obs = observers[pid] { CFRunLoopRemoveSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(obs), .defaultMode) }
             observers[pid] = nil
             windows.values.filter { $0.pid == pid }.forEach { self.forget($0.id) }
             scheduleRefresh()
@@ -143,6 +145,11 @@ final class WindowManager {
         }
 
         refresh()
+        // Apps that were already running don't send a launch notification, and some (especially
+        // at login) don't answer AX yet. Look again a few times so their windows still get tiled.
+        for delay in [0.5, 1.5, 3.0, 6.0] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in self?.scheduleRefresh() }
+        }
     }
 
     func reload(showHUD: Bool = true) {
@@ -191,6 +198,8 @@ final class WindowManager {
         guard ok else { return } // app not ready yet; we'll retry on the next refresh
         CFRunLoopAddSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(obs), .defaultMode)
         observers[pid] = obs
+        // Windows found before the app answered AX had nothing to register with.
+        windows.values.filter { $0.pid == pid }.forEach(watch)
     }
 
     private func watch(_ w: Window) {
@@ -211,6 +220,9 @@ final class WindowManager {
                 scheduleRefresh(after: 0.25) // the app moved itself: put it back in its slot
             }
         case kAXFocusedWindowChangedNotification:
+            // A window we haven't seen yet (e.g. minimized or on another Space when we started,
+            // now restored): pick it up instead of waiting for some other event.
+            if let id = element.windowID, windows[id] == nil { scheduleRefresh(after: 0.1) }
             followFocus()
             onChange?()
         case kAXWindowCreatedNotification:
@@ -250,7 +262,7 @@ final class WindowManager {
             return true
         }
         if !w.element.isSettable(kAXSizeAttribute) { return true } // fixed-size windows can't tile
-        let f = w.frame
+        let f = w.naturalFrame
         if config.floatSmallWindows, !f.isNull, f.width < 500, f.height < 500 { return true }
         return false
     }
@@ -297,6 +309,7 @@ final class WindowManager {
                 guard el.string(kAXSubroleAttribute) == kAXStandardWindowSubrole,
                       el.bool(kAXMinimizedAttribute) != true, el.bool("AXFullScreen") != true else { continue }
                 let w = Window(id: id, element: el, pid: pid, bundleID: app.bundleIdentifier)
+                w.naturalFrame = el.frame
                 w.autoFloating = shouldFloat(w)
                 windows[id] = w
                 watch(w)
@@ -307,10 +320,11 @@ final class WindowManager {
 
         // Front-most first, so on launch the window you were using becomes main.
         let z = Dictionary(onScreen.enumerated().map { ($1.id, $0) }, uniquingKeysWith: { a, _ in a })
-        for w in fresh.sorted(by: { (z[$0.id] ?? 0) < (z[$1.id] ?? 0) }) {
-            if config.virtualWorkspaces, let saved = savedWorkspaceOf[w.id] { workspaceOf[w.id] = saved }
-            if config.newWindowsToMain && !firstRun { order.insert(w.id, at: 0) } else { order.append(w.id) }
+        let arrivals = fresh.sorted(by: { (z[$0.id] ?? 0) < (z[$1.id] ?? 0) })
+        for w in arrivals where config.virtualWorkspaces {
+            if let saved = savedWorkspaceOf[w.id], savedOwnerOf[w.id] == owner(w) { workspaceOf[w.id] = saved }
         }
+        if config.newWindowsToMain && !firstRun { order.insert(contentsOf: arrivals.map(\.id), at: 0) } else { order.append(contentsOf: arrivals.map(\.id)) }
         for w in fresh {
             Log.debug("new window \(w.id) \(w.bundleID ?? "pid \(w.pid)") floating=\(w.isFloating) frame=\(w.frame)")
         }
@@ -523,20 +537,24 @@ final class WindowManager {
     private func applyMouseResize(_ w: Window, on s: Screen) {
         let st = state(for: s)
         let ids = tiled(on: s)
-        guard let idx = ids.firstIndex(of: w.id), ids.count > st.mainCount, let axis = st.layout.ratioAxis else { return }
-        let isMain = idx < st.mainCount
-        if !isMain, [.threeColumnLeft, .threeColumnRight].contains(st.layout) { return }
         let r = usableRect(s), f = w.frame
+        let mains = [.bsp, .twoPane, .twoPaneRight].contains(st.layout) ? 1 : st.mainCount
+        guard let idx = ids.firstIndex(of: w.id), ids.count > mains, var axis = st.layout.ratioAxis else { return }
+        if st.layout == .bsp { axis = (r.width >= r.height, true) }
+        let isMain = idx < mains
+        if st.layout == .widescreenTall, isMain, mains > 1, idx != mains - 1 { return }
+        if st.layout == .widescreenTallRight, isMain, mains > 1, idx != 0 { return }
+        if !isMain, [.threeColumnLeft, .threeColumnRight].contains(st.layout) { return }
         let gap = config.windowMargins ? config.windowMarginSize : 0
         let total = axis.horizontal ? r.width : r.height
         let boundary: CGFloat // distance of the main/secondary edge from the main pane's outer side
         switch (axis.horizontal, axis.fromStart, isMain) {
-        case (true, true, true): boundary = f.maxX - r.minX + gap / 2
-        case (true, true, false): boundary = f.minX - r.minX - gap / 2
-        case (true, false, true): boundary = r.maxX - f.minX + gap / 2
-        case (true, false, false): boundary = r.maxX - f.maxX - gap / 2
-        case (false, _, true): boundary = f.maxY - r.minY + gap / 2
-        case (false, _, false): boundary = f.minY - r.minY - gap / 2
+        case (true, true, true): boundary = f.maxX - r.minX + gap
+        case (true, true, false): boundary = f.minX - r.minX
+        case (true, false, true): boundary = r.maxX - f.minX + gap
+        case (true, false, false): boundary = r.maxX - f.maxX
+        case (false, _, true): boundary = f.maxY - r.minY + gap
+        case (false, _, false): boundary = f.minY - r.minY
         }
         st.ratio = min(0.9, max(0.1, boundary / (total + gap)))
     }
@@ -700,7 +718,11 @@ final class WindowManager {
         guard let w = focusedWindow(), !w.isFloating else { return }
         let candidates = visible.compactMap { windows[$0] }.filter { !$0.isFloating }
         if let n = neighbor(of: w, d, among: candidates) {
-            swapOrder(w.id, n.id)
+            if let a = screen(of: w), let b = screen(of: n), a.uuid != b.uuid {
+                workspaceOf[w.id] = shown[b.uuid] // across monitors Hyprland moves without swapping
+            } else {
+                swapOrder(w.id, n.id)
+            }
         } else if let src = screen(of: w), let dst = screen(from: src, spec: arg(d), in: Screen.all()) {
             workspaceOf[w.id] = shown[dst.uuid] // nothing that way on this screen: hop to the next monitor
         } else { return }
@@ -805,7 +827,7 @@ final class WindowManager {
         guard let src = currentScreen(), let dst = screen(from: src, spec: spec, in: screens) else { return }
         // Prefer the topmost managed window on that screen, else its main window.
         let p = CGWindowInfo.onScreen().first { info in
-            guard let w = windows[info.id] else { return false }
+            guard visible.contains(info.id), let w = windows[info.id] else { return false }
             return screen(of: w, in: screens)?.uuid == dst.uuid
         }
         if let id = p?.id ?? tiled(on: dst).first, let w = windows[id] {
@@ -826,6 +848,8 @@ final class WindowManager {
             o.y = max(dst.visible.minY, min(o.y, dst.visible.maxY - f.height))
             animator.animate([.init(window: w, to: CGRect(origin: o, size: f.size), bounds: dst.visible)],
                              duration: config.animate ? config.animationDuration : 0)
+            workspaceOf[w.id] = shown[dst.uuid]
+            scheduleRefresh()
         } else {
             workspaceOf[w.id] = shown[dst.uuid]
             refresh()
@@ -873,7 +897,7 @@ final class WindowManager {
         let lower = a.lowercased()
         let cur = currentWorkspace ?? "1"
         if a.isEmpty { return nil }
-        if lower == "previous" { return previousWorkspace }
+        if lower == "previous" { return currentScreen().flatMap { previousWorkspace[$0.uuid] } }
         if lower.hasPrefix("name:") { return String(a.dropFirst(5)) }
         for prefix in ["r", "m", ""] where lower.hasPrefix(prefix + "+") || lower.hasPrefix(prefix + "-") {
             guard let d = Int(lower.dropFirst(prefix.count).replacingOccurrences(of: "+", with: "")) else { break }
@@ -1054,11 +1078,16 @@ final class WindowManager {
         for (k, v) in d.dictionary(forKey: "ws.windows") as? [String: String] ?? [:] {
             if let id = CGWindowID(k) { savedWorkspaceOf[id] = v }
         }
+        for (k, v) in d.dictionary(forKey: "ws.owners") as? [String: String] ?? [:] {
+            if let id = CGWindowID(k) { savedOwnerOf[id] = v }
+        }
         monitorOf = d.dictionary(forKey: "ws.monitors") as? [String: String] ?? [:]
         virtualShown = d.dictionary(forKey: "ws.shown") as? [String: String] ?? [:]
         for (k, v) in d.dictionary(forKey: "ws.home") as? [String: NSNumber] ?? [:] { homeSpace[k] = v.uint64Value }
         monitorOf = monitorOf.filter { isVirtual($0.key) }
     }
+
+    private func owner(_ w: Window) -> String { "\(w.pid) \(w.bundleID ?? "")" }
 
     private func saveWorkspaces() {
         guard config.virtualWorkspaces else { return }
@@ -1070,6 +1099,8 @@ final class WindowManager {
         lastSavedWorkspaces = key
         let d = UserDefaults.standard
         d.set(windowsMap, forKey: "ws.windows")
+        d.set(Dictionary(windowsMap.keys.compactMap { k in CGWindowID(k).flatMap { windows[$0] }.map { (k, owner($0)) } },
+                         uniquingKeysWith: { a, _ in a }), forKey: "ws.owners")
         d.set(monitors, forKey: "ws.monitors")
         d.set(virtualShown, forKey: "ws.shown")
         d.set(homeSpace.mapValues { NSNumber(value: $0) }, forKey: "ws.home")
@@ -1077,21 +1108,22 @@ final class WindowManager {
 
     /// Hyprland's `workspace`: shows it on its display (a new one opens on the focused display)
     /// and focuses the window you last used there.
-    func showWorkspace(_ ws: String, focusing preferred: Window? = nil) {
+    func showWorkspace(_ ws: String, focusing preferred: Window? = nil, attempts: Int = 3) {
         let screens = Screen.all()
         guard let here = currentScreen() ?? screens.first else { return }
         let monitor = monitorOf[ws].flatMap { u in screens.first { $0.uuid == u } } ?? here
-        if let cur = virtualShown[here.uuid], cur != ws { previousWorkspace = cur }
+        if let cur = virtualShown[monitor.uuid], cur != ws { previousWorkspace[monitor.uuid] = cur }
         monitorOf[ws] = monitor.uuid
         virtualShown[monitor.uuid] = ws
         autoSwitchAfter = Date().addingTimeInterval(0.6)
         // On another macOS Space? Go to the home Space first, then show the workspace there.
         if !isOnHomeSpace(monitor), let home = homeSpace[monitor.uuid], let info = Spaces.list(display: monitor.uuid),
            let index = info.ids.firstIndex(of: home), let desktop = info.desktops.firstIndex(of: index) {
+            guard attempts > 0 else { Log.info("workspaces: couldn't reach the home Space for \(ws)"); return }
             CGWarpMouseCursorPosition(monitor.center) // space switching acts on the display under the pointer
-            let steps = goToSpace(desktop + 1) ?? 0
+            guard let steps = goToSpace(desktop + 1) else { Log.info("workspaces: can't switch Spaces for \(ws)"); return }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5 + 0.15 * Double(steps)) { [weak self] in
-                self?.showWorkspace(ws, focusing: preferred)
+                self?.showWorkspace(ws, focusing: preferred, attempts: attempts - 1)
             }
             return
         }
@@ -1416,8 +1448,9 @@ final class WindowManager {
         var best: [CGPoint] = [], ok: [CGPoint] = [], unknown: [CGPoint] = []
         var skipped: [String: Int] = [:]
         let hinted = grabHints[w.bundleID ?? ""] != nil ? 2 : 0
+        var hintedCount = 0
         for (k, p) in raw.enumerated() where f.contains(p) {
-            if k < hinted { best.append(p); continue }
+            if k < hinted { best.append(p); hintedCount += 1; continue }
             var hit: AXUIElement?
             guard AXUIElementCopyElementAtPosition(app, Float(p.x), Float(p.y), &hit) == .success, let hit else {
                 unknown.append(p); continue
@@ -1445,8 +1478,8 @@ final class WindowManager {
             }
             return out
         }
-        let hintedPicks = Array(best[..<min(hinted, best.count)])
-        let rest = Array(best.dropFirst(hinted))
+        let hintedPicks = Array(best[..<hintedCount])
+        let rest = Array(best.dropFirst(hintedCount))
         let picks = Array((hintedPicks + spaced(rest, 14) + spaced(ok, 4) + spaced(unknown, 2)).prefix(20))
         Log.info("move to space: \(picks.count) grab candidates for \(w.bundleID ?? "pid \(w.pid)"); skipped \(skipped)")
         return picks

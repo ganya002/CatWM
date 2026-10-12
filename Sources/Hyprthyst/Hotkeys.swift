@@ -64,12 +64,17 @@ final class Hotkeys {
         let code = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
         let k = Self.key(code, event.flags)
         if !submap.isEmpty {
-            if let b = tables[submap]?[k] ?? tables[""]?[k] { return .bind(b) }
+            if let b = tables[submap]?[k] ?? tables[""]?[k] { return repeatOK(b, event) ? .bind(b) : .swallow }
             // Like vim's normal mode: stray keys do nothing instead of typing into the app,
             // but ⌘/⌃ shortcuts (copy, paste…) still reach it.
             return event.flags.isDisjoint(with: [.maskCommand, .maskControl]) ? .swallow : .pass
         }
-        return tables[""]?[k].map { .bind($0) } ?? .pass
+        return tables[""]?[k].map { repeatOK($0, event) ? .bind($0) : .swallow } ?? .pass
+    }
+
+    /// Only binde-style binds fire on key autorepeat.
+    private func repeatOK(_ b: KeyBinding, _ event: CGEvent) -> Bool {
+        b.repeats || event.getIntegerValueField(.keyboardEventAutorepeat) == 0
     }
 
     private static func key(_ code: UInt16, _ flags: CGEventFlags) -> UInt64 {

@@ -136,6 +136,7 @@ final class Window {
     let bundleID: String?
     var autoFloating = false
     var userFloating: Bool?
+    var naturalFrame = CGRect.null // size when first discovered, before we tiled it
     var isFloating: Bool { userFloating ?? autoFloating }
 
     init(id: CGWindowID, element: AXUIElement, pid: pid_t, bundleID: String?) {

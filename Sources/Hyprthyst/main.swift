@@ -104,12 +104,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
+        menu.items.filter { $0.tag == 42 }.forEach(menu.removeItem)
         guard AXIsProcessTrusted() else {
             layoutItem.title = "Needs Accessibility permission"
             return
         }
         // Workspace list, so a workspace can also be picked with the mouse.
-        menu.items.filter { $0.tag == 42 }.forEach(menu.removeItem)
         let summary = WindowManager.shared.workspaceSummary()
         var at = 1
         for ws in summary.all where ws.windows > 0 || ws.shown {

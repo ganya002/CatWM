@@ -10,6 +10,7 @@ struct BindRow: Identifiable, Equatable {
     var dispatcher: String
     var args: String
     var submap = "" // "" = global; otherwise the mode this bind belongs to
+    var kind = "bind" // bind, binde, bindl…
 }
 
 struct VarRow: Equatable {
@@ -205,7 +206,19 @@ final class ConfigDocument: ObservableObject {
         apply(text: defaultText)
         let defaults = binds
         (vars, config, extraLines) = current
-        binds = defaults
+        // The defaults say `$mod`; the user's modifier variable may be named differently ($mainMod).
+        if !vars.contains(where: { $0.name.lowercased().contains("mod") }) { vars.insert(VarRow(name: "$mod", value: "ALT"), at: 0) }
+        let name = modVarName
+        binds = defaults.map { var r = $0; r.mods = Self.replacingModToken(r.mods, with: name); return r }
+    }
+
+    /// Replaces whole `$mod` tokens (space/_/+ separated), leaving `$mod2` and friends alone.
+    private static func replacingModToken(_ mods: String, with name: String) -> String {
+        var out = "", tok = ""
+        func flush() { out += tok == "$mod" ? name : tok; tok = "" }
+        for ch in mods { if " _+".contains(ch) { flush(); out.append(ch) } else { tok.append(ch) } }
+        flush()
+        return out
     }
 
     /// Writes the variables and binds to keybinds-backup-<date>.conf next to the config.
@@ -214,7 +227,7 @@ final class ConfigDocument: ObservableObject {
         f.dateFormat = "yyyy-MM-dd-HHmm"
         let url = Config.url.deletingLastPathComponent().appendingPathComponent("keybinds-backup-\(f.string(from: Date())).conf")
         let all = serialize().components(separatedBy: "\n")
-        let lines = ["# Hyprthyst keybind backup, \(Date())"] + vars.map { "\($0.name) = \($0.value)" } + [""]
+        let lines = ["# Hyprthyst keybind backup, \(Date())"] + vars.map { "\($0.name) = \($0.value.replacingOccurrences(of: "#", with: "##"))" } + [""]
             + all.filter { $0.hasPrefix("bind") || $0.hasPrefix("submap") || $0.isEmpty }
         return (try? (lines.joined(separator: "\n") + "\n").write(to: url, atomically: true, encoding: .utf8)) != nil ? url : nil
     }
@@ -245,12 +258,14 @@ final class ConfigDocument: ObservableObject {
         var newVars: [VarRow] = [], newBinds: [BindRow] = [], extra: [String] = []
         var resolved: [(String, String)] = []
         var submap = ""
+        var blocks: [String] = [] // same block tracking as Config.parse
 
         for raw in text.components(separatedBy: .newlines) {
-            var line = raw
-            if let hash = line.firstIndex(of: "#") { line = String(line[..<hash]) }
+            var line = stripComment(raw)
             line = line.trimmingCharacters(in: .whitespaces)
-            if line.isEmpty || line.hasSuffix("{") || line == "}" { continue }
+            if line.hasSuffix("{") { blocks.append(String(line.dropLast()).trimmingCharacters(in: .whitespaces)); continue }
+            if line == "}" { _ = blocks.popLast(); continue }
+            if line.isEmpty { continue }
             guard let eq = line.firstIndex(of: "=") else { extra.append(raw); continue }
             let key = line[..<eq].trimmingCharacters(in: .whitespaces)
             let value = line[line.index(after: eq)...].trimmingCharacters(in: .whitespaces)
@@ -270,7 +285,7 @@ final class ConfigDocument: ObservableObject {
                     .map { $0.trimmingCharacters(in: .whitespaces) }
                 if p.count >= 3 {
                     newBinds.append(BindRow(mods: p[0], key: p[1], dispatcher: p[2].lowercased(), args: p.count > 3 ? p[3] : "",
-                                            submap: submap))
+                                            submap: submap, kind: lower))
                 } else {
                     extra.append(raw)
                 }
@@ -278,7 +293,7 @@ final class ConfigDocument: ObservableObject {
                 var probe = Config()
                 var v = value
                 for (k, val) in resolved.sorted(by: { $0.0.count > $1.0.count }) { v = v.replacingOccurrences(of: k, with: val) }
-                if probe.apply(key, v)?.hasPrefix("unknown option") == true { extra.append(raw) }
+                if probe.apply((blocks + [key]).joined(separator: ":"), v)?.hasPrefix("unknown option") == true { extra.append(raw) }
             }
         }
         if !newVars.contains(where: { $0.name.lowercased().contains("mod") }) {
@@ -316,12 +331,13 @@ final class ConfigDocument: ObservableObject {
         let c = config
         func b(_ v: Bool) -> String { v ? "true" : "false" }
         func n(_ v: CGFloat) -> String { String(format: "%g", Double(v)) }
+        func esc(_ s: String) -> String { s.replacingOccurrences(of: "#", with: "##") }
         var out = [
             "# Hyprthyst config. Written by the Settings window; editing by hand is fine too.",
             "# SUPER = Command, ALT = Option, CTRL = Control.",
             "",
         ]
-        out += vars.map { "\($0.name) = \($0.value)" }
+        out += vars.map { "\($0.name) = \(esc($0.value))" }
         out += [
             "",
             "# tall, tall-right, wide, middle-wide, fullscreen, column, row, floating, bsp, 3column-left,",
@@ -360,7 +376,7 @@ final class ConfigDocument: ObservableObject {
             "# bind = MODS, key, dispatcher, args. Binds inside `submap = name` … `submap = reset` only work in",
             "# that mode (entered with the submap dispatcher); single keys are fine there, vim style.",
         ]
-        func line(_ r: BindRow) -> String { "bind = \(r.mods), \(r.key), \(r.dispatcher)" + (r.args.isEmpty ? "" : ", \(r.args)") }
+        func line(_ r: BindRow) -> String { "\(r.kind) = \(esc(r.mods)), \(esc(r.key)), \(r.dispatcher)" + (r.args.isEmpty ? "" : ", \(esc(r.args))") }
         out += binds.filter { $0.submap.isEmpty }.map(line)
         for mode in submaps where !mode.isEmpty {
             out += ["", "submap = \(mode)"] + binds.filter { $0.submap == mode }.map(line) + ["submap = reset"]
