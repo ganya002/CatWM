@@ -6,7 +6,7 @@ import SwiftUI
 enum Theme {
     // MARK: Fonts
 
-    /// Roboto and Roboto Mono (OFL) and Horizon (Fontense; headings and the wordmark) ship in
+    /// Roboto and Roboto Mono (OFL) and Dela Gothic One (OFL; logo and welcome title) ship in
     /// Contents/Resources/Fonts.
     static func registerFonts() {
         guard let dir = Bundle.main.resourceURL?.appendingPathComponent("Fonts"),
@@ -16,7 +16,7 @@ enum Theme {
         CTFontManagerRegisterFontURLs(fonts as CFArray, .process, true, nil)
     }
 
-    private static let hasHorizon = NSFont(name: "Horizon-Bold", size: 12) != nil
+    private static let hasDela = NSFont(name: "DelaGothicOne-Regular", size: 12) != nil
     private static let hasRoboto = NSFont(name: "Roboto", size: 12) != nil
     private static let hasRobotoMono = NSFont(name: "Roboto Mono", size: 12) != nil
 
@@ -26,21 +26,15 @@ enum Theme {
     static func mono(_ size: CGFloat = 12, _ weight: Font.Weight = .medium) -> Font {
         hasRobotoMono ? .custom("Roboto Mono", size: size).weight(weight) : .system(size: size, weight: weight, design: .monospaced)
     }
-    /// Horizon is far wider and taller than a text face at the same point size; headings are sized
-    /// for a text face, so Horizon is drawn this much smaller.
-    private static let displayScale: CGFloat = hasHorizon ? 0.66 : 1
+    /// Pane titles, card headings and HUD text: plain bold body face.
+    static func heading(_ size: CGFloat) -> Font { body(size, .bold) }
 
-    /// Pane titles, card headings and HUD text.
+    /// Dela Gothic One, reserved for the few moments that deserve emphasis: the logo and the welcome title.
     static func display(_ size: CGFloat) -> Font {
-        hasHorizon ? .custom("Horizon-Bold", size: size * displayScale) : body(size, .bold)
-    }
-    /// The big "Ouch" in the intro, at full size.
-    static func wordmark(_ size: CGFloat) -> Font {
-        hasHorizon ? .custom("Horizon-Bold", size: size) : body(size, .bold)
+        hasDela ? .custom("DelaGothicOne-Regular", size: size) : body(size, .bold)
     }
 
-    static func nsDisplay(_ size: CGFloat) -> NSFont {
-        if let horizon = NSFont(name: "Horizon-Bold", size: size * displayScale) { return horizon } // one weight only
+    static func nsHeading(_ size: CGFloat) -> NSFont {
         let base = NSFont(name: "Roboto", size: size) ?? .systemFont(ofSize: size)
         let bold = base.fontDescriptor.addingAttributes([.traits: [NSFontDescriptor.TraitKey.weight: NSFont.Weight.bold]])
         return NSFont(descriptor: bold, size: size) ?? .boldSystemFont(ofSize: size)

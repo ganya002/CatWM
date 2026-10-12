@@ -156,7 +156,7 @@ struct WordmarkView: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            Text("Ouch").font(Theme.wordmark(size)).foregroundStyle(.white)
+            Text("Ouch").font(Theme.display(size)).foregroundStyle(.white)
                 .shadow(color: .black.opacity(0.3), radius: 12, y: 4)
             tagline(max(16, min(20, size / 7)))
                 .foregroundStyle(Color.white.opacity(0.88))
@@ -217,7 +217,7 @@ struct CoachCardView: View {
                     SkipLink(action: model.skip)
                 }
             }
-            Text(model.title).font(Theme.display(27)).foregroundStyle(ink).fixedSize(horizontal: false, vertical: true)
+            Text(model.title).font(Theme.heading(27)).foregroundStyle(ink).fixedSize(horizontal: false, vertical: true)
             Text(model.text).font(Theme.body(13.5)).lineSpacing(3).foregroundStyle(Color.black.opacity(0.6))
                 .fixedSize(horizontal: false, vertical: true)
             if !model.caps.isEmpty {

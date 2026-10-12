@@ -9,7 +9,7 @@ final class HUD {
     func show(_ text: String, on screen: NSScreen?) {
         guard let screen = screen ?? NSScreen.main else { return }
         let label = NSTextField(labelWithString: text)
-        label.font = Theme.nsDisplay(28)
+        label.font = Theme.nsHeading(28)
         label.textColor = .labelColor
         let size = label.fittingSize
         let box = CGRect(x: 0, y: 0, width: size.width + 56, height: size.height + 32)

@@ -207,7 +207,7 @@ struct SettingsView: View {
         } detail: {
             VStack(alignment: .leading, spacing: 0) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(pane.rawValue).font(Theme.display(22))
+                    Text(pane.rawValue).font(Theme.heading(22))
                     Text(pane.subtitle).font(Theme.body(11)).foregroundStyle(Theme.secondary)
                 }
                 .padding(.horizontal, 24).padding(.top, 4).padding(.bottom, 12)
@@ -271,7 +271,7 @@ private struct Sidebar: View {
         .listStyle(.sidebar)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text("Ouch").font(Theme.display(20))
+                Text("Ouch").font(Theme.display(22))
                 Text(version).font(Theme.body(11)).foregroundStyle(.secondary)
                 Spacer()
             }
@@ -508,7 +508,7 @@ private struct OverviewPane: View {
                 HStack(spacing: 14) {
                     IconTile(symbol: "lock.fill", color: .orange, size: 44)
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("Ouch needs Accessibility access").font(Theme.display(21))
+                        Text("Ouch needs Accessibility access").font(Theme.heading(21))
                         Text("macOS only lets apps move other apps' windows with this permission.")
                             .foregroundStyle(Theme.secondary)
                     }
@@ -533,7 +533,7 @@ private struct OverviewPane: View {
                          color: s.keybindsActive && s.tilingEnabled ? .green : .orange, size: 44)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(!s.tilingEnabled ? "Tiling is paused" : s.keybindsActive ? "Ouch is running" : "Keyboard shortcuts aren't active")
-                        .font(Theme.display(21))
+                        .font(Theme.heading(21))
                     Text(summary(s)).foregroundStyle(Theme.secondary)
                 }
                 Spacer()
@@ -709,7 +709,7 @@ private struct LayoutsPane: View {
     var body: some View {
         PaneScroll(spacing: 22) {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Cycle order").font(Theme.display(16))
+                Text("Cycle order").font(Theme.heading(16))
                 Text("Next Layout steps through these from left to right. New spaces start with the first one.")
                     .font(Theme.body(12.5)).foregroundStyle(Theme.secondary)
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -727,7 +727,7 @@ private struct LayoutsPane: View {
             .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Theme.hairline))
 
             VStack(alignment: .leading, spacing: 10) {
-                Text("All layouts").font(Theme.display(16))
+                Text("All layouts").font(Theme.heading(16))
                 Text("Click a layout to add it to the cycle or take it out.").font(Theme.body(12.5)).foregroundStyle(Theme.secondary)
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 14)], spacing: 14) {
                     ForEach(Layout.allCases, id: \.self) { card($0) }

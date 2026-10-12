@@ -170,7 +170,7 @@ private struct PracticeWindowView: View {
     private var notes: some View {
         let items = ["Move focus between windows", "Swap two windows", "Visit another workspace"]
         return VStack(alignment: .leading, spacing: 8) {
-            Text("Practice desk").font(Theme.display(24))
+            Text("Practice desk").font(Theme.heading(24))
             Text("These windows are pretend. Push them around as much as you like — your real apps stay exactly where they are.")
                 .font(Theme.body(13)).foregroundStyle(Color(red: 60 / 255, green: 60 / 255, blue: 67 / 255))
                 .fixedSize(horizontal: false, vertical: true)
@@ -201,7 +201,7 @@ private struct PracticeWindowView: View {
                 .overlay(alignment: .bottom) { Rectangle().fill(Color.black.opacity(0.1)).frame(height: 0.5) }
             VStack(alignment: .leading, spacing: 6) {
                 Text("DOCS").font(Theme.body(11, .semibold)).tracking(0.5).foregroundStyle(Color(white: 0.43))
-                Text("Workspaces").font(Theme.display(26)).foregroundStyle(Color(white: 0.11))
+                Text("Workspaces").font(Theme.heading(26)).foregroundStyle(Color(white: 0.11))
                 Text("Each display shows one workspace. A workspace remembers its layout and its last focused window, so switching is instant.")
                     .font(Theme.body(13)).foregroundStyle(Color(red: 60 / 255, green: 60 / 255, blue: 67 / 255))
                     .fixedSize(horizontal: false, vertical: true)
