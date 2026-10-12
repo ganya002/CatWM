@@ -37,6 +37,20 @@ enum ActionCategory: String, CaseIterable, Identifiable {
         case .custom: "curlybraces"
         }
     }
+    /// Tint for this kind of action on the shortcut map.
+    var color: Color {
+        switch self {
+        case .focus: .blue
+        case .move: .purple
+        case .layout: .teal
+        case .window: .orange
+        case .displays: .indigo
+        case .spaces: .green
+        case .commands: .gray
+        case .app: .pink
+        case .custom: .brown
+        }
+    }
 }
 
 struct Action: Identifiable {
@@ -45,14 +59,18 @@ struct Action: Identifiable {
     let dispatcher: String
     let args: String
     let symbol: String
+    /// Numbered families (workspaces, layouts) share a submenu in the action menus; `short` is the item's name there.
+    var group: String? = nil
+    var short: String? = nil
     var id: String { "\(dispatcher) \(args)" }
 }
 
 enum Actions {
     static let all: [Action] = {
         var a: [Action] = []
-        func add(_ title: String, _ c: ActionCategory, _ d: String, _ args: String = "", _ symbol: String) {
-            a.append(Action(title: title, category: c, dispatcher: d, args: args, symbol: symbol))
+        func add(_ title: String, _ c: ActionCategory, _ d: String, _ args: String = "", _ symbol: String,
+                 group: String? = nil, short: String? = nil) {
+            a.append(Action(title: title, category: c, dispatcher: d, args: args, symbol: symbol, group: group, short: short))
         }
         for (dir, name, arrow) in [("l", "Left", "left"), ("r", "Right", "right"), ("u", "Up", "up"), ("d", "Down", "down")] {
             add("Focus \(name)", .focus, "movefocus", dir, "arrow.\(arrow)")
@@ -72,7 +90,9 @@ enum Actions {
         add("Shrink Main Pane", .layout, "splitratio", "-0.05", "arrow.right.and.line.vertical.and.arrow.left")
         add("More Main Windows", .layout, "layoutmsg", "addmaster", "plus.rectangle")
         add("Fewer Main Windows", .layout, "layoutmsg", "removemaster", "minus.rectangle")
-        for l in Layout.allCases { add("Use \(l.title) Layout", .layout, "layout", l.rawValue, "rectangle.split.2x2") }
+        for l in Layout.allCases {
+            add("Use \(l.title) Layout", .layout, "layout", l.rawValue, "rectangle.split.2x2", group: "Use Layout", short: l.title)
+        }
         add("Toggle Floating", .window, "togglefloating", "", "macwindow.on.rectangle")
         add("Toggle Fullscreen", .window, "fullscreen", "", "arrow.up.left.and.arrow.down.right")
         add("Close Window", .window, "killactive", "", "xmark.square")
@@ -85,13 +105,19 @@ enum Actions {
             add("Move Window to Display \(name)", .displays, "movewindow", "mon:\(dir)", "arrow.\(arrow).square")
         }
         add("Use This Desktop as Home", .spaces, "sethomespace", "", "house")
-        for n in 1...10 { add("Workspace \(n)", .spaces, "workspace", "\(n)", "\(n).square") }
+        for n in 1...10 { add("Workspace \(n)", .spaces, "workspace", "\(n)", "\(n).square", group: "Go to Workspace", short: "Workspace \(n)") }
         add("Previous Workspace", .spaces, "workspace", "previous", "arrow.uturn.backward.square")
         add("Next Workspace", .spaces, "workspace", "+1", "chevron.right.square")
         add("Previous Numbered Workspace", .spaces, "workspace", "-1", "chevron.left.square")
         add("Next Workspace With Windows", .spaces, "workspace", "e+1", "chevron.forward.2")
-        for n in 1...10 { add("Move Window to Workspace \(n)", .spaces, "movetoworkspace", "\(n)", "\(n).square.fill") }
-        for n in 1...10 { add("Send Window to Workspace \(n)", .spaces, "movetoworkspacesilent", "\(n)", "\(n).square.fill") }
+        for n in 1...10 {
+            add("Move Window to Workspace \(n)", .spaces, "movetoworkspace", "\(n)", "\(n).square.fill",
+                group: "Move Window to Workspace", short: "Workspace \(n)")
+        }
+        for n in 1...10 {
+            add("Send Window to Workspace \(n)", .spaces, "movetoworkspacesilent", "\(n)", "\(n).square.fill",
+                group: "Send Window to Workspace", short: "Workspace \(n)")
+        }
         add("Run Command", .commands, "exec", "", "terminal")
         add("Enter Window Mode", .app, "submap", "window", "keyboard")
         add("Leave Mode", .app, "submap", "reset", "escape")
@@ -105,6 +131,26 @@ enum Actions {
     static let byCategory: [(ActionCategory, [Action])] = ActionCategory.allCases.compactMap { c in
         let list = all.filter { $0.category == c }
         return list.isEmpty ? nil : (c, list)
+    }
+
+    /// A category's actions as menu entries, each numbered family folded into one submenu where it first appears.
+    enum MenuEntry: Identifiable {
+        case action(Action), group(String, [Action])
+        var id: String {
+            switch self {
+            case .action(let a): a.id
+            case .group(let name, _): "group " + name
+            }
+        }
+    }
+
+    static func menuEntries(_ list: [Action]) -> [MenuEntry] {
+        var out: [MenuEntry] = []
+        for a in list {
+            guard let g = a.group else { out.append(.action(a)); continue }
+            if !out.contains(where: { $0.id == "group " + g }) { out.append(.group(g, list.filter { $0.group == g })) }
+        }
+        return out
     }
 
     private static func norm(_ s: String) -> String {
@@ -526,22 +572,14 @@ final class ConfigDocument: ObservableObject {
         return best.count == 1 ? best.uppercased() : best
     }
 
-    /// Keycaps for display, e.g. ["⌥", "⇧", "H"].
+    /// Keycaps for display, e.g. ["⌥", "⇧", "H"]. A short `h|j|k|l` list gets a cap per key.
     func prettyShortcut(_ row: BindRow) -> [String] {
         guard let f = Self.flags(resolvedMods(row.mods)) else { return [row.mods, row.key] }
-        var caps: [String] = []
-        if f.contains(.control) { caps.append("⌃") }
-        if f.contains(.option) { caps.append("⌥") }
-        if f.contains(.shift) { caps.append("⇧") }
-        if f.contains(.command) { caps.append("⌘") }
-        let symbols = ["left": "←", "right": "→", "up": "↑", "down": "↓", "return": "↩", "enter": "↩", "tab": "⇥",
-                       "space": "Space", "escape": "⎋", "esc": "⎋", "capslock": "⇪", "caps": "⇪", "caps_lock": "⇪", "backspace": "⌫", "delete": "⌦", "comma": ",",
-                       "period": ".", "minus": "−", "equal": "=", "bracketleft": "[", "bracketright": "]",
-                       "semicolon": ";", "apostrophe": "'", "quote": "'", "slash": "/", "backslash": "\\", "grave": "`",
-                       "pageup": "⇞", "pagedown": "⇟", "home": "↖", "end": "↘"]
-        func cap(_ k: String) -> String { symbols[k.lowercased()] ?? k.uppercased() }
+        var caps = Self.modifierCaps(f)
+        let cap = Self.capLabel
         if row.key.contains("|") {
-            caps.append(row.key.split(separator: "|").map { cap($0.trimmingCharacters(in: .whitespaces)) }.joined(separator: " "))
+            let keys = row.key.split(separator: "|").map { cap($0.trimmingCharacters(in: .whitespaces)) }
+            if keys.count <= 5 { caps += keys } else { caps.append(keys.joined(separator: " ")) }
         } else if let r = row.key.range(of: "..") {
             let b = row.key[r.upperBound...].drop { $0 == "." }
             caps.append("\(cap(String(row.key[..<r.lowerBound]).trimmingCharacters(in: .whitespaces)))…\(cap(b.trimmingCharacters(in: .whitespaces)))")
@@ -549,5 +587,62 @@ final class ConfigDocument: ObservableObject {
             caps.append(cap(row.key))
         }
         return caps
+    }
+
+    /// ⌃⌥⇧⌘, in the order macOS menus use.
+    static func modifierCaps(_ f: NSEvent.ModifierFlags) -> [String] {
+        var caps: [String] = []
+        if f.contains(.control) { caps.append("⌃") }
+        if f.contains(.option) { caps.append("⌥") }
+        if f.contains(.shift) { caps.append("⇧") }
+        if f.contains(.command) { caps.append("⌘") }
+        return caps
+    }
+
+    private static let keySymbols = [
+        "left": "←", "right": "→", "up": "↑", "down": "↓", "return": "↩", "enter": "↩", "tab": "⇥",
+        "space": "Space", "escape": "⎋", "esc": "⎋", "capslock": "⇪", "caps": "⇪", "caps_lock": "⇪", "backspace": "⌫",
+        "delete": "⌦", "comma": ",", "period": ".", "minus": "−", "equal": "=", "bracketleft": "[", "bracketright": "]",
+        "semicolon": ";", "apostrophe": "'", "quote": "'", "slash": "/", "backslash": "\\", "grave": "`",
+        "pageup": "⇞", "pagedown": "⇟", "home": "↖", "end": "↘",
+        "mouse_up": "Scroll ↑", "mouse_down": "Scroll ↓", "mouse_left": "Scroll ←", "mouse_right": "Scroll →",
+        "swipe_left": "Swipe ←", "swipe_right": "Swipe →", "swipe_up": "Swipe ↑", "swipe_down": "Swipe ↓",
+    ]
+
+    /// How one key name is printed on a keycap.
+    static func capLabel(_ key: String) -> String { keySymbols[key.lowercased()] ?? key.uppercased() }
+
+    // MARK: Shortcut map
+
+    /// One key combo and what it does, with range binds split into their keys.
+    struct KeyAction: Identifiable {
+        let code: UInt16
+        let key: String
+        let flags: NSEvent.ModifierFlags
+        let title: String
+        let symbol: String
+        let category: ActionCategory
+        let row: BindRow
+        var isRange: Bool { BindRange.isRange(row.key) }
+        var id: String { "\(row.id) \(code)" }
+    }
+
+    /// Every combo bound in a mode ("" = global). Rows that don't parse are left out.
+    func keyActions(in submap: String) -> [KeyAction] {
+        var out: [KeyAction] = []
+        for row in binds where row.submap == submap {
+            guard let f = Self.flags(resolvedMods(row.mods)),
+                  case .success(let pairs) = BindRange.pairs(key: row.key, dispatcher: row.dispatcher, arg: row.args) else { continue }
+            for p in pairs {
+                guard let code = keyCodes[p.key.lowercased()] else { continue }
+                let single = BindRow(mods: "", key: "", dispatcher: row.dispatcher, args: p.arg)
+                let action = Actions.match(single)
+                let title = row.dispatcher == "exec" ? (p.arg.isEmpty ? "Run Command" : "Run “\(p.arg)”")
+                    : action?.title ?? "\(row.dispatcher) \(p.arg)".trimmingCharacters(in: .whitespaces)
+                out.append(KeyAction(code: code, key: p.key, flags: f, title: title, symbol: action?.symbol ?? "curlybraces",
+                                     category: action?.category ?? .custom, row: row))
+            }
+        }
+        return out
     }
 }

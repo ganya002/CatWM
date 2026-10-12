@@ -123,6 +123,12 @@ final class SettingsUI: ObservableObject {
     @Published var pane: Pane? = .overview
     @Published var search = ""
     @Published var bindMode = "" // which mode the shortcuts pane shows; "" = global
+    /// Range and custom rows whose raw editor is open.
+    @Published var expanded: Set<UUID> = []
+    /// Row to scroll to and flash when the shortcuts pane appears (from the shortcut map).
+    @Published var reveal: UUID?
+    /// The full-window keyboard map is showing instead of the panes.
+    @Published var showMap = false
     @Published var newID = ""
     @Published var previewFlipped = false
     @Published var linkedPadding = true
@@ -149,6 +155,7 @@ final class SettingsUI: ObservableObject {
 
     func endSession() {
         recording = nil
+        showMap = false
         timer?.invalidate()
         timer = nil
     }
@@ -200,9 +207,26 @@ struct SettingsView: View {
     @ObservedObject var doc: ConfigDocument
     @ObservedObject var ui: SettingsUI
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
+        // The map covers the panes rather than replacing them, so the window keeps its toolbar and the
+        // traffic lights stay put.
+        ZStack {
+            panes
+                .allowsHitTesting(!ui.showMap)
+                .accessibilityHidden(ui.showMap)
+            if ui.showMap {
+                ShortcutMap(doc: doc, ui: ui)
+                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.98)))
+            }
+        }
+        .font(Theme.body())
+    }
+
+    private var panes: some View {
         let pane = ui.pane ?? .overview
-        NavigationSplitView {
+        return NavigationSplitView {
             Sidebar(doc: doc, ui: ui)
                 .toolbar(removing: .sidebarToggle)
                 .navigationSplitViewColumnWidth(220)
@@ -228,7 +252,6 @@ struct SettingsView: View {
             .background(Theme.window)
             .modifier(SeamlessToolbar())
         }
-        .font(Theme.body())
     }
 }
 
@@ -269,13 +292,39 @@ private struct Sidebar: View {
         }
         .listStyle(.sidebar)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Wordmark()
-                Text(version).font(Theme.body(11)).foregroundStyle(.secondary)
+            HStack {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Wordmark()
+                    Text(version).font(Theme.body(11)).foregroundStyle(.secondary)
+                }
                 Spacer()
+                MapButton { withAnimation(Motion.snap) { ui.showMap = true } }
             }
-            .padding(.horizontal, 18).padding(.vertical, 12)
+            .padding(.leading, 18).padding(.trailing, 12).padding(.vertical, 12)
         }
+    }
+}
+
+/// Opens the shortcut map. The keyboard hops a little on hover.
+private struct MapButton: View {
+    let action: () -> Void
+    private final class Hover: ObservableObject { @Published var on = false }
+    @StateObject private var hover = Hover()
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "keyboard")
+                .font(.system(size: 15, weight: .medium))
+                .symbolEffect(.bounce, value: hover.on)
+                .foregroundStyle(hover.on ? .primary : .secondary)
+                .frame(width: 30, height: 26)
+                .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Color.primary.opacity(hover.on ? 0.1 : 0)))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hover.on = $0 }
+        .help("Shortcut Map")
+        .accessibilityLabel("Shortcut Map")
     }
 }
 
@@ -1239,6 +1288,26 @@ private struct AnimationPane: View {
 
 // MARK: - Keyboard shortcuts
 
+/// The action catalog as menu items: a submenu per category, numbered families folded into their own submenu.
+struct ActionMenuItems: View {
+    let pick: (Action) -> Void
+
+    var body: some View {
+        ForEach(Actions.byCategory, id: \.0) { cat, actions in
+            Menu {
+                ForEach(Actions.menuEntries(actions)) { entry in
+                    switch entry {
+                    case .action(let a):
+                        Button(a.title) { pick(a) }
+                    case .group(let name, let list):
+                        Menu(name) { ForEach(list) { a in Button(a.short ?? a.title) { pick(a) } } }
+                    }
+                }
+            } label: { Label(cat.rawValue, systemImage: cat.symbol) }
+        }
+    }
+}
+
 private struct KeybindsPane: View {
     @ObservedObject var doc: ConfigDocument
     @ObservedObject var ui: SettingsUI
@@ -1263,40 +1332,20 @@ private struct KeybindsPane: View {
                 Segmented(title: "Shortcut set", options: doc.submaps.map { ($0, $0.isEmpty ? "Global" : "\($0.capitalized) mode") }, selection: $ui.bindMode)
                     .help("Global shortcuts work everywhere. Mode shortcuts need the mode on, so single keys are fine there.")
                 Spacer()
-                Menu {
-                    ForEach(Actions.byCategory, id: \.0) { cat, actions in
-                        Menu {
-                            ForEach(actions) { a in Button(a.title) { add(a.dispatcher, a.args) } }
-                        } label: { Label(cat.rawValue, systemImage: cat.symbol) }
-                    }
-                    Menu {
-                        Button("Switch to Spaces 1–10  (keys 1…0)") { add("workspace", "1..10", key: "1..0") }
-                        Button("Move Window to Spaces 1–10  (keys 1…0)") { add("movetoworkspace", "1..10", key: "1..0") }
-                        Button("Focus with H J K L") { add("movefocus", "l|d|u|r", key: "h|j|k|l") }
-                        Button("Move Window with H J K L") { add("movewindow", "l|d|u|r", key: "h|j|k|l") }
-                        Divider()
-                        Button("Custom Range…") { add("workspace", "1..5", key: "1..5") }
-                    } label: { Label("Ranges", systemImage: "ellipsis.rectangle") }
-                    Divider()
-                    Button("Custom Dispatcher…") { add("layoutmsg", "") } // matches no preset, so the raw editor shows
-                } label: {
-                    Label("Add Shortcut", systemImage: "plus")
-                }
-                .fixedSize()
+                addMenu
             }
             .padding(.horizontal, 24).padding(.top, 6).padding(.bottom, 12)
-            Rectangle().fill(Color.primary.opacity(0.08)).frame(height: 1)
+            Divider()
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 0) {
+                    VStack(alignment: .leading, spacing: 20) {
                         ForEach(sections, id: \.0) { cat, rows in
-                            Text(cat.rawValue).font(Theme.body(11, .semibold)).foregroundStyle(Theme.secondary)
-                                .padding(.horizontal, 2).padding(.top, 14).padding(.bottom, 6)
-                            ForEach(rows) { row in
-                                BindRowView(doc: doc, ui: ui, rowID: row.id)
-                                    .padding(.vertical, 5)
-                                    .overlay(alignment: .top) { Rectangle().fill(Theme.hairline).frame(height: 1) }
-                                    .id(row.id)
+                            Block(cat.rawValue) {
+                                Card {
+                                    ForEach(rows) { row in
+                                        BindRowView(doc: doc, ui: ui, rowID: row.id).id(row.id)
+                                    }
+                                }
                             }
                         }
                         if sections.isEmpty {
@@ -1305,23 +1354,61 @@ private struct KeybindsPane: View {
                                 .frame(maxWidth: .infinity).padding(.vertical, 40)
                         }
                     }
-                    .padding(.horizontal, 24).padding(.top, 4).padding(.bottom, 24)
+                    .padding(.horizontal, 24).padding(.top, 16).padding(.bottom, 24)
                 }
                 .onChange(of: ui.recording) { _, id in
                     if let id { withAnimation { proxy.scrollTo(id, anchor: .center) } }
                 }
+                .onAppear {
+                    guard let id = ui.reveal else { return }
+                    DispatchQueue.main.async { proxy.scrollTo(id, anchor: .center) }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
+                        if ui.reveal == id { withAnimation(.easeOut(duration: 0.4)) { ui.reveal = nil } }
+                    }
+                }
             }
         }
-        .searchable(text: $ui.search, placement: .toolbar, prompt: "Search shortcuts")
+        .modifier(ShortcutSearch(ui: ui))
         .onDisappear { ui.recording = nil }
     }
 
-    private func add(_ dispatcher: String, _ args: String, key: String = "") {
+    private var addMenu: some View {
+        Menu {
+            ActionMenuItems { a in add(a.dispatcher, a.args) }
+            Menu {
+                Button("Go to Workspaces 1–10 with 1…0") { add("workspace", "1..10", key: "1..0") }
+                Button("Move Window to Workspaces 1–10 with 1…0") { add("movetoworkspace", "1..10", key: "1..0") }
+                Divider()
+                Button("Focus with H J K L") { add("movefocus", "l|d|u|r", key: "h|j|k|l") }
+                Button("Focus with Arrow Keys") { add("movefocus", "l|d|u|r", key: "left|down|up|right") }
+                Button("Move Window with H J K L") { add("movewindow", "l|d|u|r", key: "h|j|k|l") }
+                Button("Move Window with Arrow Keys") { add("movewindow", "l|d|u|r", key: "left|down|up|right") }
+                Divider()
+                Button("Custom Range…") { add("workspace", "1..5", key: "1..5", expand: true) }
+            } label: { Label("Ranges", systemImage: "ellipsis.rectangle") }
+            Divider()
+            Button("Custom Dispatcher…") { add("layoutmsg", "") } // matches no preset, so the raw editor shows
+        } label: {
+            Label("Add Shortcut", systemImage: "plus")
+        }
+        .fixedSize()
+    }
+
+    private func add(_ dispatcher: String, _ args: String, key: String = "", expand: Bool = false) {
         let row = BindRow(mods: ui.bindMode.isEmpty ? doc.modVarName : "", key: key, dispatcher: dispatcher, args: args,
                           submap: ui.bindMode)
         doc.binds.append(row)
+        if expand { ui.expanded.insert(row.id) }
         ui.search = ""
         DispatchQueue.main.async { ui.recording = row.id }
+    }
+}
+
+/// The toolbar search field, left out while the shortcut map covers the pane.
+private struct ShortcutSearch: ViewModifier {
+    @ObservedObject var ui: SettingsUI
+    func body(content: Content) -> some View {
+        if ui.showMap { content } else { content.searchable(text: $ui.search, placement: .toolbar, prompt: "Search shortcuts") }
     }
 }
 
@@ -1342,29 +1429,27 @@ private struct BindRowView: View {
             let action = Actions.match(row)
             let issue = doc.issue(row)
             let isRange = BindRange.isRange(row.key)
-            VStack(alignment: .leading, spacing: 0) {
+            let summary = isRange ? Actions.rangeSummary(row) : nil
+            // Range rows read like any other row; their keys and values open on demand (or when they're broken).
+            let editorOpen = isRange && (ui.expanded.contains(rowID) || summary == nil || issue?.severity == .error)
+            VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 12) {
                     recorder(row)
                     if isRange {
-                        HStack(spacing: 8) {
-                            PopUp(title: "Dispatcher", options: dispatcherOptions(row.dispatcher), selection: $doc.binds[i].dispatcher, bordered: true)
-                                .frame(width: 140, alignment: .leading)
-                            TextField("Keys", text: $doc.binds[i].key, prompt: Text("1..0"))
-                                .textFieldStyle(.roundedBorder).font(Theme.mono(12, .regular))
-                                .frame(width: 90)
-                            Image(systemName: "arrow.right").foregroundStyle(Theme.secondary)
-                            TextField("Values", text: $doc.binds[i].args, prompt: Text("1..10"))
-                                .textFieldStyle(.roundedBorder).font(Theme.mono(12, .regular))
-                        }
+                        Text(summary?.title ?? "Custom range").lineLimit(1).truncationMode(.middle)
+                            .padding(.leading, 2)
+                            .foregroundStyle(summary == nil ? Theme.secondary : .primary)
+                        Spacer(minLength: 0)
                     } else {
                         actionMenu(i, action)
                         if row.dispatcher == "exec" {
-                            TextField("", text: $doc.binds[i].args, prompt: Text("open -na Terminal"))
+                            TextField("Command", text: $doc.binds[i].args, prompt: Text("open -na Terminal"))
+                                .labelsHidden()
                                 .textFieldStyle(.roundedBorder).font(Theme.mono(12, .regular))
                         } else if action == nil {
                             PopUp(title: "Dispatcher", options: dispatcherOptions(row.dispatcher), selection: $doc.binds[i].dispatcher, bordered: true)
-                                .frame(width: 140, alignment: .leading)
-                            TextField("", text: $doc.binds[i].args, prompt: Text("arguments"))
+                            TextField("Arguments", text: $doc.binds[i].args, prompt: Text("arguments"))
+                                .labelsHidden()
                                 .textFieldStyle(.roundedBorder).font(Theme.mono(12, .regular))
                         } else {
                             Spacer(minLength: 0)
@@ -1375,29 +1460,82 @@ private struct BindRowView: View {
                             .foregroundStyle(issue.severity == .error ? .red : .orange)
                             .help(issue.message)
                     }
-                    RemoveButton(help: "Delete shortcut") { withAnimation(.snappy) { doc.binds.removeAll { $0.id == rowID } } }
+                    if isRange { editToggle(open: editorOpen, locked: summary == nil || issue?.severity == .error) }
+                    RemoveButton(help: "Delete shortcut") {
+                        withAnimation(.snappy) { doc.binds.removeAll { $0.id == rowID } }
+                        ui.expanded.remove(rowID)
+                    }
                 }
-                if isRange, issue == nil {
-                    Text(rangePreview(row)).font(Theme.body(11)).foregroundStyle(Theme.secondary)
-                        .padding(.leading, 4).padding(.top, 4).padding(.bottom, 1)
+                if editorOpen {
+                    rangeEditor(i, row, valid: issue?.severity != .error)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
                 }
                 if let issue, issue.severity == .error {
-                    Text(issue.message).font(Theme.body(11)).foregroundStyle(.red).padding(.leading, 4).padding(.top, 4)
+                    Text(issue.message).font(Theme.body(11)).foregroundStyle(.red)
+                        .padding(.leading, Self.recorderWidth + 12)
                 }
+            }
+            .padding(.vertical, 8)
+            .background(alignment: .center) {
+                RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.accentColor.opacity(ui.reveal == rowID ? 0.16 : 0))
+                    .padding(.horizontal, -8).padding(.vertical, 2)
             }
         }
     }
 
-    /// "Switch to Space 1…10:  ⌥1 → 1 · ⌥2 → 2 · … · ⌥0 → 10"
+    static let recorderWidth: CGFloat = 150
+
+    /// Dispatcher, keys and values of a range row, with what each key ends up doing.
+    private func rangeEditor(_ i: Int, _ row: BindRow, valid: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 8) {
+                PopUp(title: "Dispatcher", options: dispatcherOptions(row.dispatcher), selection: $doc.binds[i].dispatcher, bordered: true)
+                TextField("Keys", text: $doc.binds[i].key, prompt: Text("1..0"))
+                    .labelsHidden()
+                    .textFieldStyle(.roundedBorder).font(Theme.mono(12, .regular))
+                    .frame(minWidth: 90, maxWidth: 160)
+                Image(systemName: "arrow.right").foregroundStyle(Theme.secondary).accessibilityHidden(true)
+                TextField("Values", text: $doc.binds[i].args, prompt: Text("1..10"))
+                    .labelsHidden()
+                    .textFieldStyle(.roundedBorder).font(Theme.mono(12, .regular))
+                    .frame(minWidth: 90, maxWidth: 160)
+                Spacer(minLength: 0)
+            }
+            if valid {
+                Text(rangePreview(row)).font(Theme.body(11)).foregroundStyle(Theme.secondary).lineLimit(1).truncationMode(.tail)
+            }
+        }
+        .padding(.leading, Self.recorderWidth + 12)
+    }
+
+    private func editToggle(open: Bool, locked: Bool) -> some View {
+        Button {
+            withAnimation(.snappy(duration: 0.2)) {
+                if ui.expanded.contains(rowID) { ui.expanded.remove(rowID) } else { ui.expanded.insert(rowID) }
+            }
+        } label: {
+            Image(systemName: "slider.horizontal.3")
+                .foregroundStyle(open ? Color.accentColor : Theme.secondary)
+                .frame(width: 20, height: 20)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(locked)
+        .help(open ? "Hide keys and values" : "Edit keys and values")
+        .accessibilityLabel(open ? "Hide keys and values" : "Edit keys and values")
+    }
+
+    /// "H → Focus Left · J → Focus Down · …", or the raw values when they aren't catalog actions.
     private func rangePreview(_ row: BindRow) -> String {
         guard case .success(let pairs) = BindRange.pairs(key: row.key, dispatcher: row.dispatcher, arg: row.args) else { return "" }
-        let mods = doc.prettyShortcut(BindRow(mods: row.mods, key: "", dispatcher: "", args: "")).dropLast().joined()
+        let mods = ConfigDocument.flags(doc.resolvedMods(row.mods)).map { ConfigDocument.modifierCaps($0).joined() } ?? ""
         func one(_ p: (key: String, arg: String)) -> String {
-            let key = doc.prettyShortcut(BindRow(mods: "", key: p.key, dispatcher: "", args: "")).last ?? p.key
-            return "\(mods)\(key) → \(p.arg.isEmpty ? row.dispatcher : p.arg)"
+            let target = Actions.match(BindRow(mods: "", key: "", dispatcher: row.dispatcher, args: p.arg))?.title
+                ?? (p.arg.isEmpty ? row.dispatcher : p.arg)
+            return "\(mods)\(ConfigDocument.capLabel(p.key)) → \(target)"
         }
         let shown = pairs.count > 5 ? pairs.prefix(3).map(one) + ["…", one(pairs.last!)] : pairs.map(one)
-        return "\(doc.title(row)):  " + shown.joined(separator: "  ·  ")
+        return shown.joined(separator: "  ·  ")
     }
 
     private func recorder(_ row: BindRow) -> some View {
@@ -1407,42 +1545,39 @@ private struct BindRowView: View {
         } label: {
             Group {
                 if recording {
-                    Text(BindRange.isRange(row.key) ? "Modifiers + key · Esc cancels"
-                         : row.submap.isEmpty ? "Press keys… (Esc cancels)" : "Press keys… (click to cancel)")
-                        .font(Theme.body(11)).foregroundStyle(Color.accentColor)
-                        .lineLimit(1).minimumScaleFactor(0.8)
+                    Text(BindRange.isRange(row.key) ? "Press modifiers…" : "Press keys…")
+                        .font(Theme.body(11.5, .medium)).foregroundStyle(Color.accentColor)
+                        .lineLimit(1)
                 } else if row.key.isEmpty {
-                    Text("Click to record").font(Theme.body(11)).foregroundStyle(Theme.secondary)
+                    Text("Click to record").font(Theme.body(11.5)).foregroundStyle(Theme.secondary)
                 } else {
                     // Freshly recorded keys drop in with a little bump.
                     Keycaps(caps: doc.prettyShortcut(row))
                         .squish(on: row.mods + row.key, anchor: .center)
                 }
             }
-            .padding(.horizontal, 6)
-            .frame(width: 150, alignment: .leading)
-            .frame(minHeight: 26)
-            .background(RoundedRectangle(cornerRadius: 7).fill(recording ? Color.accentColor.opacity(0.14) : Color.clear))
-            .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(recording ? Color.accentColor : Color.gray.opacity(0.25),
-                                                                   style: StrokeStyle(lineWidth: recording ? 1.5 : 1, dash: row.key.isEmpty && !recording ? [3] : [])))
+            .padding(.horizontal, 4)
+            .frame(width: Self.recorderWidth, alignment: .leading)
+            .frame(height: 28)
+            .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(recording ? Color.accentColor.opacity(0.14) : Color.primary.opacity(0.04)))
+            .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous)
+                .strokeBorder(recording ? Color.accentColor : Theme.hairline,
+                              style: StrokeStyle(lineWidth: recording ? 1.5 : 1, dash: row.key.isEmpty && !recording ? [3] : [])))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .help(recording ? (row.submap.isEmpty || BindRange.isRange(row.key) ? "Esc cancels" : "Click to cancel")
+              : "Click to record a new shortcut")
+        .accessibilityLabel(recording ? "Recording shortcut" : "Shortcut \(doc.prettyShortcut(row).joined()). Click to record")
     }
 
     private func actionMenu(_ i: Int, _ action: Action?) -> some View {
         Menu {
-            ForEach(Actions.byCategory, id: \.0) { cat, actions in
-                Menu {
-                    ForEach(actions) { a in
-                        Button(a.title) {
-                            doc.binds[i].dispatcher = a.dispatcher
-                            if a.dispatcher != "exec" || doc.binds[i].args.isEmpty || action?.dispatcher != "exec" {
-                                doc.binds[i].args = a.args
-                            }
-                        }
-                    }
-                } label: { Label(cat.rawValue, systemImage: cat.symbol) }
+            ActionMenuItems { a in
+                doc.binds[i].dispatcher = a.dispatcher
+                if a.dispatcher != "exec" || doc.binds[i].args.isEmpty || action?.dispatcher != "exec" {
+                    doc.binds[i].args = a.args
+                }
             }
         } label: {
             Text(action?.title ?? "Custom")
