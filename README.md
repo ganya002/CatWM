@@ -11,6 +11,32 @@ open build/Hyprthyst.app
 
 On first launch, grant **Accessibility** in System Settings → Privacy & Security. The app is ad-hoc signed, so after each rebuild you may need to remove and re-add it there.
 
+## Releasing with Amore
+
+Updates ship through [Amore](https://amore.computer) and Sparkle. Amore signs, notarizes, builds the DMG, writes the appcast and hosts it.
+
+One-time setup:
+
+```sh
+amore login
+./build.sh
+amore setup build/Hyprthyst.app --hosting amore --generate-sparkle-key
+```
+
+Put the feed URL and public key it prints into `SUFeedURL` and `SUPublicEDKey` in `Info.plist`. Until you do, the app has no update checks.
+
+Each release: bump `CFBundleVersion` in `Info.plist`, then
+
+```sh
+./release.sh "What changed"                      # build, sign, notarize, publish
+./release.sh "Try this first" --channel beta     # beta channel (Settings → Include beta releases)
+./release.sh "Security fix" --critical           # prompts users to update right away
+./release.sh "Big change" --phased-rollout       # gradual rollout
+./release.sh "WIP" --draft                       # upload without publishing
+```
+
+Settings → Overview has the update toggles, and the menu bar has **Check for Updates…**.
+
 ## Config
 
 `~/.config/hyprthyst/hyprthyst.conf` is created on first run. The menu bar icon has buttons to open and reload it.

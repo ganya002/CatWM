@@ -357,6 +357,7 @@ private extension Layout {
 private struct OverviewPane: View {
     @ObservedObject var doc: ConfigDocument
     @ObservedObject var ui: SettingsUI
+    @ObservedObject private var updater = Updater.shared
 
     var body: some View {
         let s = ui.status
@@ -419,6 +420,24 @@ private struct OverviewPane: View {
                     }
                 }
             }
+
+            Section("Updates") {
+                if updater.isConfigured {
+                    Toggle("Check for updates automatically", isOn: Binding(get: { updater.automaticallyChecks }, set: { updater.automaticallyChecks = $0 }))
+                    Toggle("Download updates automatically", isOn: Binding(get: { updater.automaticallyDownloads }, set: { updater.automaticallyDownloads = $0 }))
+                        .disabled(!updater.automaticallyChecks)
+                    Toggle("Include beta releases", isOn: Binding(get: { updater.receivesBeta }, set: { updater.receivesBeta = $0 }))
+                    LabeledContent(updater.lastChecked.map { "Last checked \($0.formatted(.relative(presentation: .named)))" } ?? "Not checked yet") {
+                        Button("Check Now") { updater.checkForUpdates() }
+                    }
+                } else {
+                    Text("This build has no update feed. Release builds published with Amore update themselves.")
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Section { AmoreCredit().frame(maxWidth: .infinity) }
+                .listRowBackground(Color.clear)
         }
         .formStyle(.grouped)
     }
@@ -481,6 +500,34 @@ private struct OverviewPane: View {
                 .frame(width: 18, height: 18).background(Circle().fill(Color.accentColor))
             Text(text).fixedSize(horizontal: false, vertical: true)
         }
+    }
+}
+
+/// Tiny "shipped with" credit; the heart gives a little hop on hover.
+private struct AmoreCredit: View {
+    private final class Hover: ObservableObject { @Published var on = false }
+    @StateObject private var hover = Hover()
+
+    var body: some View {
+        let hovering = hover.on
+        return Link(destination: URL(string: "https://amore.computer")!) {
+            HStack(spacing: 4) {
+                Text("shipped with")
+                Image(systemName: "heart.fill")
+                    .foregroundStyle(.pink)
+                    .scaleEffect(hovering ? 1.35 : 1)
+                    .rotationEffect(.degrees(hovering ? -12 : 0))
+                    .offset(y: hovering ? -2 : 0)
+                    .shadow(color: .pink.opacity(hovering ? 0.7 : 0), radius: 4)
+                Text("Amore").fontWeight(.semibold)
+            }
+            .font(.caption2)
+            .foregroundStyle(hovering ? .primary : .tertiary)
+            .animation(.spring(response: 0.3, dampingFraction: 0.45), value: hovering)
+        }
+        .buttonStyle(.plain)
+        .onHover { hover.on = $0 }
+        .help("Updates delivered by Amore")
     }
 }
 

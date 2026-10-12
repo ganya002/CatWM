@@ -11,5 +11,9 @@
     <key>LSMinimumSystemVersion</key><string>14.0</string>
     <key>LSUIElement</key><true/>
     <key>NSHighResolutionCapable</key><true/>
+    <!-- Sparkle + Amore. Fill both from `amore setup` (see README); updates stay off until you do. -->
+    <key>SUFeedURL</key><string>REPLACE_WITH_FEED_URL</string>
+    <key>SUPublicEDKey</key><string>REPLACE_WITH_PUBLIC_ED_KEY</string>
+    <key>SUEnableAutomaticChecks</key><true/>
 </dict>
 </plist>
