@@ -129,11 +129,13 @@ final class SettingsUI: ObservableObject {
         }
         Hotkeys.shared.paused = true
         if monitor == nil {
-            monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] e in guard let self else { return e }; return self.record(e) }
+            monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { [weak self] e in guard let self else { return e }; return self.record(e) }
         }
     }
 
     private func record(_ e: NSEvent) -> NSEvent? {
+        // Caps Lock only ever arrives as a modifier change; other modifiers alone aren't a shortcut.
+        if e.type == .flagsChanged && e.keyCode != 57 { return e }
         guard let id = recording, let i = doc.binds.firstIndex(where: { $0.id == id }) else { recording = nil; return e }
         let flags = e.modifierFlags.intersection([.command, .option, .control, .shift])
         if e.keyCode == 53 && flags.isEmpty && doc.binds[i].submap.isEmpty { // Esc cancels (global rows)
