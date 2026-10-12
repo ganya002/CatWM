@@ -1,8 +1,8 @@
 import Foundation
 
-/// Plain-text log at ~/Library/Logs/Hyprthyst.log. `debug` lines only appear with `debug-logging = true`.
+/// Plain-text log at ~/Library/Logs/mxtiler.log. `debug` lines only appear with `debug-logging = true`.
 enum Log {
-    static let url = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/Hyprthyst.log")
+    static let url = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/mxtiler.log")
     static var verbose = false
 
     private static let handle: FileHandle? = {

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Builds, then signs, notarizes and publishes through Amore. One-time: amore login && amore setup build/Hyprthyst.app
+# Builds, then signs, notarizes and publishes through Amore. One-time: amore login && amore setup build/mxtiler.app
 # Usage: ./release.sh "release notes" [extra amore flags, e.g. --channel beta | --critical | --phased-rollout | --draft]
 set -e
 cd "$(dirname "$0")"
@@ -7,6 +7,6 @@ NOTES=${1:-}
 [ $# -gt 0 ] && shift
 ./build.sh
 if [ -n "$NOTES" ]; then
-  exec amore release build/Hyprthyst.app --release-notes "$NOTES" "$@"
+  exec amore release build/mxtiler.app --release-notes "$NOTES" "$@"
 fi
-exec amore release build/Hyprthyst.app "$@"
+exec amore release build/mxtiler.app "$@"

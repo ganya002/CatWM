@@ -47,23 +47,30 @@ struct Config {
     var animate = true
     var animationDuration: Double = 0.18
     var debugLogging = false
-    /// Hyprthyst's own workspaces (instant, per monitor, like Hyprland) instead of macOS Spaces.
+    /// mxtiler's own workspaces (instant, per monitor, like Hyprland) instead of macOS Spaces.
     var virtualWorkspaces = true
     var bindings: [KeyBinding] = []
     var currentSubmap = "" // parser state while reading submap blocks
     var errors: [String] = []
 
     static let url = FileManager.default.homeDirectoryForCurrentUser
+        .appendingPathComponent(".config/mxtiler/mxtiler.conf")
+    private static let legacyURL = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent(".config/hyprthyst/hyprthyst.conf")
 
     static func load() -> Config {
         let fm = FileManager.default
         if !fm.fileExists(atPath: url.path) {
             try? fm.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try? defaultText.write(to: url, atomically: true, encoding: .utf8)
+            // The app used to be called Hyprthyst; carry its config over on first launch.
+            if fm.fileExists(atPath: legacyURL.path) {
+                try? fm.copyItem(at: legacyURL, to: url)
+            } else {
+                try? defaultText.write(to: url, atomically: true, encoding: .utf8)
+            }
         }
         let c = parse((try? String(contentsOf: url, encoding: .utf8)) ?? defaultText)
-        c.errors.forEach { NSLog("hyprthyst config: %@", $0) }
+        c.errors.forEach { NSLog("mxtiler config: %@", $0) }
         return c
     }
 
@@ -275,7 +282,7 @@ let keyCodes: [String: UInt16] = [
 ]
 
 let defaultText = """
-# Hyprthyst config: Amethyst's options with Hyprland-style syntax.
+# mxtiler config: Amethyst's options with Hyprland-style syntax.
 # Edit, then reload from the menu bar or with $mod SHIFT, R.
 
 # SUPER = Command, ALT = Option. Option is the default so app shortcuts (Cmd-Q, Cmd-C...) keep working.

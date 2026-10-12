@@ -8,8 +8,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var wasTrusted = true
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        migrateLegacyDefaults()
+        Theme.registerFonts()
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        statusItem.button?.image = NSImage(systemSymbolName: "rectangle.split.3x1", accessibilityDescription: "Hyprthyst")
+        statusItem.button?.image = NSImage(systemSymbolName: "rectangle.split.3x1", accessibilityDescription: "mxtiler")
 
         let menu = NSMenu()
         menu.delegate = self
@@ -25,7 +27,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(withTitle: "Reload Config", action: #selector(reload), keyEquivalent: "")
         menu.addItem(.separator())
         menu.addItem(withTitle: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: "")
-        menu.addItem(withTitle: "Quit Hyprthyst", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.addItem(withTitle: "Quit mxtiler", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.items.forEach { if $0.action != #selector(NSApplication.terminate(_:)) { $0.target = self } }
         statusItem.menu = menu
 
@@ -45,6 +47,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         watchdog = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in self?.checkPermission() }
     }
 
+    /// The app used to be called Hyprthyst (bundle ID local.hyprthyst). Copies its saved workspace
+    /// assignments, grab hints and update choices once, so the rename doesn't lose them.
+    private func migrateLegacyDefaults() {
+        let d = UserDefaults.standard
+        guard !d.bool(forKey: "migratedFromHyprthyst") else { return }
+        d.set(true, forKey: "migratedFromHyprthyst")
+        guard let old = d.persistentDomain(forName: "local.hyprthyst") else { return }
+        // The login item belongs to the app bundle, so the new app still has to register its own.
+        for (key, value) in old where d.object(forKey: key) == nil && !key.hasPrefix("NSWindow Frame") && key != "didSetUpLaunchAtLogin" {
+            d.set(value, forKey: key)
+        }
+        Log.info("migrated \(old.count) settings from Hyprthyst")
+    }
+
     private func checkPermission() {
         let trusted = AXIsProcessTrusted()
         if trusted && !WindowManager.shared.isStarted {
@@ -61,6 +77,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
+    /// Opening the app again (Finder, Spotlight, `open`) while it runs shows Settings.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        SettingsWindow.shared.show(pane: nil)
+        return false
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         WindowManager.shared.restoreHiddenWindows()
     }
@@ -74,7 +96,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let summary = WindowManager.shared.workspaceSummary()
         guard trusted, !summary.all.isEmpty || !Hotkeys.shared.submap.isEmpty else {
             button.image = NSImage(systemSymbolName: trusted ? "rectangle.split.3x1" : "exclamationmark.triangle",
-                                   accessibilityDescription: "Hyprthyst")
+                                   accessibilityDescription: "mxtiler")
             button.attributedTitle = NSAttributedString(string: "")
             return
         }
@@ -82,7 +104,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let title = NSMutableAttributedString()
         if !Hotkeys.shared.submap.isEmpty {
             title.append(NSAttributedString(string: Hotkeys.shared.submap.uppercased() + "  ", attributes: [
-                .font: NSFont.monospacedSystemFont(ofSize: 11, weight: .bold), .foregroundColor: NSColor.controlAccentColor,
+                .font: Theme.nsMono(11), .foregroundColor: NSColor.controlAccentColor,
             ]))
         }
         for (i, ws) in summary.all.enumerated() where ws.windows > 0 || ws.shown {
@@ -140,8 +162,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         updates.target = self
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Close Window", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
-        appMenu.addItem(withTitle: "Quit Hyprthyst", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
-        main.addItem(withTitle: "Hyprthyst", action: nil, keyEquivalent: "").submenu = appMenu
+        appMenu.addItem(withTitle: "Quit mxtiler", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        main.addItem(withTitle: "mxtiler", action: nil, keyEquivalent: "").submenu = appMenu
         let edit = NSMenu(title: "Edit")
         edit.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
         edit.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "Z")
@@ -181,7 +203,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 }
 
-// Command-line mode, like hyprctl: `Hyprthyst dispatch movefocus l`, `Hyprthyst dump`, `Hyprthyst reload`.
+// Command-line mode, like hyprctl: `mxtiler dispatch movefocus l`, `mxtiler dump`, `mxtiler reload`.
 let cliArgs = Array(CommandLine.arguments.dropFirst())
 if let cmd = cliArgs.first, ["dispatch", "dump", "reload", "poststyle", "grabtest"].contains(cmd) {
     DistributedNotificationCenter.default().postNotificationName(ipcNotification, object: cliArgs.joined(separator: " "),

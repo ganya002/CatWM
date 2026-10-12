@@ -22,7 +22,7 @@ struct VarRow: Equatable {
 
 enum ActionCategory: String, CaseIterable, Identifiable {
     case focus = "Focus", move = "Move Windows", layout = "Layout", window = "Window", displays = "Displays"
-    case spaces = "Workspaces", commands = "Commands", app = "Hyprthyst", custom = "Custom"
+    case spaces = "Workspaces", commands = "Commands", app = "mxtiler", custom = "Custom"
     var id: Self { self }
     var symbol: String {
         switch self {
@@ -93,7 +93,7 @@ enum Actions {
         add("Toggle Tiling", .app, "toggletiling", "", "power")
         add("Retile Windows", .app, "retile", "", "arrow.clockwise")
         add("Reload Config", .app, "reload", "", "arrow.triangle.2.circlepath")
-        add("Quit Hyprthyst", .app, "exit", "", "xmark.circle")
+        add("Quit mxtiler", .app, "exit", "", "xmark.circle")
         return a
     }()
 
@@ -227,7 +227,7 @@ final class ConfigDocument: ObservableObject {
         f.dateFormat = "yyyy-MM-dd-HHmm"
         let url = Config.url.deletingLastPathComponent().appendingPathComponent("keybinds-backup-\(f.string(from: Date())).conf")
         let all = serialize().components(separatedBy: "\n")
-        let lines = ["# Hyprthyst keybind backup, \(Date())"] + vars.map { "\($0.name) = \($0.value.replacingOccurrences(of: "#", with: "##"))" } + [""]
+        let lines = ["# mxtiler keybind backup, \(Date())"] + vars.map { "\($0.name) = \($0.value.replacingOccurrences(of: "#", with: "##"))" } + [""]
             + all.filter { $0.hasPrefix("bind") || $0.hasPrefix("submap") || $0.isEmpty }
         return (try? (lines.joined(separator: "\n") + "\n").write(to: url, atomically: true, encoding: .utf8)) != nil ? url : nil
     }
@@ -333,7 +333,7 @@ final class ConfigDocument: ObservableObject {
         func n(_ v: CGFloat) -> String { String(format: "%g", Double(v)) }
         func esc(_ s: String) -> String { s.replacingOccurrences(of: "#", with: "##") }
         var out = [
-            "# Hyprthyst config. Written by the Settings window; editing by hand is fine too.",
+            "# mxtiler config. Written by the Settings window; editing by hand is fine too.",
             "# SUPER = Command, ALT = Option, CTRL = Control.",
             "",
         ]
@@ -382,7 +382,7 @@ final class ConfigDocument: ObservableObject {
             out += ["", "submap = \(mode)"] + binds.filter { $0.submap == mode }.map(line) + ["submap = reset"]
         }
         if !extraLines.isEmpty {
-            out += ["", "# Lines Hyprthyst doesn't recognise, kept as-is"] + extraLines
+            out += ["", "# Lines mxtiler doesn't recognise, kept as-is"] + extraLines
         }
         return out.joined(separator: "\n") + "\n"
     }

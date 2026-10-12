@@ -1,14 +1,16 @@
 #!/bin/sh
-# Builds Hyprthyst.app into ./build. Run it, then grant Accessibility when prompted.
+# Builds mxtiler.app into ./build. Run it, then grant Accessibility when prompted.
 set -e
 cd "$(dirname "$0")"
 swift build -c release
-pkill -x Hyprthyst 2>/dev/null || true  # `open` would just re-activate an old running copy
-APP=build/Hyprthyst.app
+pkill -x mxtiler 2>/dev/null || true  # `open` would just re-activate an old running copy
+pkill -x Hyprthyst 2>/dev/null || true # the app's old name; two tilers would fight over the same windows
+APP=build/mxtiler.app
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Frameworks"
-cp .build/release/Hyprthyst "$APP/Contents/MacOS/"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Frameworks" "$APP/Contents/Resources"
+cp .build/release/mxtiler "$APP/Contents/MacOS/"
 cp Info.plist "$APP/Contents/"
+cp -R Resources/Fonts "$APP/Contents/Resources/"  # Roboto + Roboto Mono (OFL), registered at launch
 # Sparkle ships as a prebuilt framework inside the SwiftPM artifact bundle.
 SPARKLE=$(find .build/artifacts -type d -name Sparkle.framework -path '*macos-arm64_x86_64*' | head -1)
 ditto "$SPARKLE" "$APP/Contents/Frameworks/Sparkle.framework"

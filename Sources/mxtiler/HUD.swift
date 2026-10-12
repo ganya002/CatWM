@@ -9,7 +9,7 @@ final class HUD {
     func show(_ text: String, on screen: NSScreen?) {
         guard let screen = screen ?? NSScreen.main else { return }
         let label = NSTextField(labelWithString: text)
-        label.font = .systemFont(ofSize: 26, weight: .semibold)
+        label.font = Theme.nsDisplay(28)
         label.textColor = .labelColor
         let size = label.fittingSize
         let box = CGRect(x: 0, y: 0, width: size.width + 56, height: size.height + 32)
@@ -17,7 +17,7 @@ final class HUD {
         let p = panel ?? makePanel()
         panel = p
         let effect = NSVisualEffectView(frame: box)
-        effect.material = .hudWindow
+        effect.material = .popover
         effect.state = .active
         effect.blendingMode = .behindWindow
         effect.maskImage = Self.roundedMask(radius: 16) // layer corner radius leaves square blur edges
@@ -81,7 +81,7 @@ final class ModeIndicator {
         let screen = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main
         guard let screen else { return }
         let label = NSTextField(labelWithString: "-- \(mode.uppercased()) --")
-        label.font = .monospacedSystemFont(ofSize: 13, weight: .bold)
+        label.font = Theme.nsMono(13)
         label.textColor = .white
         label.translatesAutoresizingMaskIntoConstraints = false
         let size = label.fittingSize

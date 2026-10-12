@@ -118,22 +118,22 @@ private struct GuideView: View {
                     Image(systemName: "checkmark.circle.fill").font(.title).foregroundStyle(.green)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("All set").font(.headline)
-                        Text("Hyprthyst now has Accessibility access.").font(.callout).foregroundStyle(.secondary)
+                        Text("mxtiler now has Accessibility access.").font(.callout).foregroundStyle(.secondary)
                     }
                 }
             } else {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Allow Hyprthyst").font(.headline)
+                    Text("Allow mxtiler").font(.headline)
                     Text("Follow these steps in System Settings.").font(.callout).foregroundStyle(.secondary)
                 }
                 VStack(alignment: .leading, spacing: 10) {
-                    row(1, "Find **Hyprthyst** in the Accessibility list.")
+                    row(1, "Find **mxtiler** in the Accessibility list.")
                     row(2, "Turn its switch **on**. Enter your password if asked.")
                     row(3, "Not in the list? Click **+**, or drag this icon into it:")
                 }
                 HStack(spacing: 10) {
                     Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 40, height: 40)
-                    Text("Hyprthyst").font(.callout.weight(.medium))
+                    Text("mxtiler").font(.callout.weight(.medium))
                     Spacer()
                     Image(systemName: "hand.draw").foregroundStyle(.secondary)
                 }
