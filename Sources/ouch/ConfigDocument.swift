@@ -236,7 +236,7 @@ final class ConfigDocument: ObservableObject {
     init() {
         load()
         autosave = objectWillChange
-            .debounce(for: .milliseconds(400), scheduler: RunLoop.main)
+            .debounce(for: .milliseconds(50), scheduler: RunLoop.main)
             .sink { [weak self] in self?.autosaveIfNeeded() }
     }
 

@@ -184,7 +184,6 @@ struct ConfigSheetView: View {
         switch sheet {
         case .create(let k, _): [k]
         case .edit(let id): [library.config(id: id)?.kind ?? .keyboard]
-        case .protectedEdit(let ks): ks
         case .export(let k): [k]
         }
     }
@@ -193,7 +192,6 @@ struct ConfigSheetView: View {
         switch sheet {
         case .create(let k, _): "New \(k.title.lowercased()) config"
         case .edit: "Edit config"
-        case .protectedEdit(let ks): "Create a new config to edit " + ks.map(\.noun).joined(separator: " and ")
         case .export(let k): "Export \(k == .full ? "full" : k.title.lowercased()) config"
         }
     }
@@ -213,17 +211,11 @@ struct ConfigSheetView: View {
         }
         .padding(20).frame(width: 380)
         .onAppear(perform: setUp)
-        .interactiveDismissDisabled(isProtected)
     }
-
-    private var isProtected: Bool { if case .protectedEdit = sheet { true } else { false } }
 
     // Name, with the icon to its left and the color dot to its right.
     private var editorBody: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if isProtected {
-                Text("Default and WASD can't be changed. Your change goes into a new config.").font(Theme.body(12)).foregroundStyle(Theme.secondary)
-            }
             HStack(spacing: 8) {
                 Button { model.pickingSymbol.toggle() } label: {
                     Image(systemName: model.symbol ?? kinds[0].genericSymbol).font(.system(size: 16, weight: .medium))
@@ -296,8 +288,6 @@ struct ConfigSheetView: View {
             library.create(kind: kind, baseID: base, name: model.name, symbol: model.symbol, colorHex: model.colorHex)
         case .edit(let id):
             library.update(id: id, name: model.name, symbol: model.symbol, colorHex: model.colorHex)
-        case .protectedEdit(let ks):
-            library.createFromEdit(kinds: ks, name: model.name, symbol: model.symbol, colorHex: model.colorHex)
         case .export:
             return
         }
@@ -305,7 +295,6 @@ struct ConfigSheetView: View {
     }
 
     private func cancel() {
-        if case .protectedEdit(let ks) = sheet { library.revertEdit(kinds: ks) }
         library.sheet = nil
     }
 }
