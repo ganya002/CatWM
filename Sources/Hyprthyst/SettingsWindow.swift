@@ -454,7 +454,7 @@ private struct OverviewPane: View {
                     }
                 }
                 VStack(alignment: .leading, spacing: 6) {
-                    step(1, "Click Open Accessibility Settings.")
+                    step(1, "Click Open Accessibility Settings. A guide appears next to System Settings.")
                     step(2, "Turn on Hyprthyst in the list.")
                     step(3, "Already on but still not working? Rebuilding the app invalidates the old entry. Click Reset Permission, then turn it on again.")
                 }
@@ -536,6 +536,7 @@ enum Permissions {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
             NSWorkspace.shared.open(url)
         }
+        PermissionGuide.shared.show()
     }
 
     /// Clears Hyprthyst's own (possibly stale) Accessibility entry and asks again.

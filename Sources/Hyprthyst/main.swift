@@ -39,7 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         } else {
             Log.info("launch: Accessibility not granted")
             AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary)
-            SettingsWindow.shared.show(pane: .overview)
+            Permissions.openSettings()
         }
         updateIcon()
         // Permission can be granted later, or silently revoked (a rebuild changes the signature).
@@ -58,7 +58,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             Log.info("Accessibility \(trusted ? "granted" : "revoked")")
             wasTrusted = trusted
             updateIcon()
-            if !trusted { SettingsWindow.shared.show(pane: .overview) }
+            if trusted { PermissionGuide.shared.granted() } else { Permissions.openSettings() }
         }
     }
 
