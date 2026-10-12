@@ -25,7 +25,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(tilingItem)
         menu.addItem(.separator())
         menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
-        menu.addItem(withTitle: "Open Config File", action: #selector(openConfig), keyEquivalent: "")
         menu.addItem(withTitle: "Keyboard Tour…", action: #selector(startTour), keyEquivalent: "")
         menu.addItem(withTitle: "Reload Config", action: #selector(reload), keyEquivalent: "")
         menu.addItem(.separator())
@@ -217,11 +216,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func retile() { WindowManager.shared.dispatch("retile", "") }
     @objc private func toggleTiling() { WindowManager.shared.toggleTiling() }
     @objc private func reload() { WindowManager.shared.reload() }
-    @objc private func openConfig() {
-        _ = Config.load() // writes the default file if it's missing
-        NSWorkspace.shared.open([Config.url], withApplicationAt: URL(fileURLWithPath: "/System/Applications/TextEdit.app"),
-                                configuration: NSWorkspace.OpenConfiguration())
-    }
 }
 
 // The onboarding tour's practice windows run as a second copy of this binary (see PracticeDesk).
