@@ -517,7 +517,7 @@ private struct OverviewPane: View {
                 }
                 .font(Theme.body(12.5))
                 HStack(spacing: 8) {
-                    Button("Open Accessibility Settings") { Permissions.openSettings() }.buttonStyle(.borderedProminent)
+                    Button("Open Accessibility Settings") { Permissions.request() }.buttonStyle(.borderedProminent)
                     Button("Reset Permission") { Permissions.reset() }
                     Spacer()
                     ProgressView().controlSize(.small).scaleEffect(0.7).frame(width: 12, height: 12)
@@ -597,11 +597,19 @@ private struct AmoreCredit: View {
 }
 
 enum Permissions {
+    /// Whether this launch already asked macOS to list us (which also shows its own alert). Asking again
+    /// would clear the entry it just added and stack another alert, so later requests only reopen Settings.
+    private static var prompted = false
+
     static func openSettings() {
+        openPane()
+        PermissionGuide.shared.show()
+    }
+
+    private static func openPane() {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
             NSWorkspace.shared.open(url)
         }
-        PermissionGuide.shared.show()
     }
 
     /// Drops any Accessibility entry left by an older build or moved copy; it would show as
@@ -614,31 +622,48 @@ enum Permissions {
         p.waitUntilExit()
     }
 
-    /// Starts the grant flow from a clean slate: clear stale entry, prompt, open Settings + guide.
+    /// Starts the grant flow: the first time, from a clean slate (clear stale entry, prompt so we're
+    /// listed); after that just Settings + guide again.
     static func request() {
         guard !AXIsProcessTrusted() else { return }
-        clearStaleEntry()
-        AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary)
-        openSettings()
+        if prompted { openSettings() } else { promptThenSettings() }
     }
 
-    static func reset() {
+    static func reset() { promptThenSettings() }
+
+    /// macOS only adds us to the list when its alert's "Open System Settings" is clicked, so while that
+    /// alert is up the guide points at it instead of opening a list we aren't in yet. If no alert comes
+    /// (macOS shows it once per entry), open Settings ourselves.
+    private static func promptThenSettings() {
+        prompt()
+        PermissionGuide.shared.show()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            if PermissionGuide.alertFrame() == nil, !AXIsProcessTrusted() { openPane() }
+        }
+    }
+
+    private static func prompt() {
+        prompted = true
         clearStaleEntry()
         AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary)
-        openSettings()
     }
 
     /// Closes the System Settings window (needs Accessibility, which we have by now).
     static func closeSettingsWindows() {
         guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.systempreferences").first else { return }
-        let ax = AXUIElementCreateApplication(app.processIdentifier)
-        var value: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(ax, kAXWindowsAttribute as CFString, &value) == .success,
-              let windows = value as? [AXUIElement] else { return }
-        for window in windows {
-            var button: CFTypeRef?
-            if AXUIElementCopyAttributeValue(window, kAXCloseButtonAttribute as CFString, &button) == .success, let button {
-                AXUIElementPerformAction(button as! AXUIElement, kAXPressAction as CFString)
+        for window in AXUIElementCreateApplication(app.processIdentifier).elements(kAXWindowsAttribute) {
+            window.element(kAXCloseButtonAttribute)?.perform(kAXPressAction)
+        }
+    }
+
+    /// The prompt shows macOS's own "would like to control this computer" alert, which stays up after
+    /// the switch is turned on in Settings. Once we're trusted we can reach it: press its default
+    /// button ("Open System Settings", harmless; Settings is closed right after). Never "Deny".
+    static func dismissSystemAlert() {
+        guard AXIsProcessTrusted() else { return }
+        for app in NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.accessibility.universalAccessAuthWarn") {
+            for window in AXUIElementCreateApplication(app.processIdentifier).elements(kAXWindowsAttribute) {
+                window.element(kAXDefaultButtonAttribute)?.perform(kAXPressAction)
             }
         }
     }

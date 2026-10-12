@@ -24,6 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(.separator())
         menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
         menu.addItem(withTitle: "Open Config File", action: #selector(openConfig), keyEquivalent: "")
+        menu.addItem(withTitle: "Keyboard Tour…", action: #selector(startTour), keyEquivalent: "")
         menu.addItem(withTitle: "Reload Config", action: #selector(reload), keyEquivalent: "")
         menu.addItem(.separator())
         menu.addItem(withTitle: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: "")
@@ -34,13 +35,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         NSApp.mainMenu = makeMainMenu()
         Updater.shared.start()
         WindowManager.shared.onChange = { [weak self] in self?.updateIcon() }
+        let firstRun = UserDefaults.standard.object(forKey: "didSetUpLaunchAtLogin") == nil
         LoginItem.enableOnFirstLaunch()
+        Onboarding.shared.statusButton = statusItem.button
 
         wasTrusted = AXIsProcessTrusted()
-        if wasTrusted {
-            WindowManager.shared.start()
-        } else {
-            Log.info("launch: Accessibility not granted")
+        if wasTrusted { WindowManager.shared.start() } else { Log.info("launch: Accessibility not granted") }
+        // `open mxtiler.app --args --onboarding` plays it regardless, for working on it.
+        if Onboarding.shouldShow(firstRun: firstRun, trusted: wasTrusted) || CommandLine.arguments.contains("--onboarding") {
+            Onboarding.shared.start() // its welcome card asks for Accessibility
+        } else if !wasTrusted {
             Permissions.request()
         }
         updateIcon()
@@ -74,7 +78,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             Log.info("Accessibility \(trusted ? "granted" : "revoked")")
             wasTrusted = trusted
             updateIcon()
-            if trusted { PermissionGuide.shared.granted() } else { Permissions.request() }
+            // Revoked (or a rebuild invalidated it): start over so we're listed again.
+            if trusted { PermissionGuide.shared.granted() } else { Permissions.reset() }
         }
     }
 
@@ -191,6 +196,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         Updater.shared.checkForUpdates()
     }
     @objc private func openSettings() { SettingsWindow.shared.show(pane: nil) }
+    @objc private func startTour() { Onboarding.shared.startTour() }
     @objc private func pickWorkspace(_ sender: NSMenuItem) {
         if let ws = sender.representedObject as? String { WindowManager.shared.showWorkspace(ws) }
     }
@@ -203,6 +209,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         NSWorkspace.shared.open([Config.url], withApplicationAt: URL(fileURLWithPath: "/System/Applications/TextEdit.app"),
                                 configuration: NSWorkspace.OpenConfiguration())
     }
+}
+
+// The onboarding tour's practice windows run as a second copy of this binary (see PracticeDesk).
+if CommandLine.arguments.dropFirst().first == "practice" {
+    PracticeDesk.run(parent: pid_t(CommandLine.arguments.dropFirst(2).first ?? "") ?? getppid())
 }
 
 // Command-line mode, like hyprctl: `mxtiler dispatch movefocus l`, `mxtiler dump`, `mxtiler reload`.

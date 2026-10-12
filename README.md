@@ -9,7 +9,7 @@ A small Amethyst-style tiling window manager for macOS with Hyprland-style keybi
 open build/mxtiler.app
 ```
 
-On first launch, grant **Accessibility** in System Settings → Privacy & Security. The app is ad-hoc signed, so after each rebuild you may need to remove and re-add it there.
+On first launch, a short intro plays over the desktop, then a welcome card asks for **Accessibility** (System Settings → Privacy & Security) and offers a keyboard tour. The tour opens practice windows on a free workspace, tiles them for real, and floats hints over them; your own windows wait on their workspace until it ends. Run it again from the menu bar with **Keyboard Tour…**. The app is ad-hoc signed, so after each rebuild you may need to remove and re-add it there.
 
 ## Releasing with Amore
 

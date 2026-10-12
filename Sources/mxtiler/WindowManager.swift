@@ -38,6 +38,12 @@ final class WindowManager {
     private(set) var config = Config.load()
     private(set) var tilingEnabled = true
     var onChange: (() -> Void)?
+    /// Every command run (and whether a mode was on), and every mode change. The onboarding tour listens.
+    var onDispatch: ((_ dispatcher: String, _ arg: String, _ inMode: Bool) -> Void)?
+    var onModeChange: ((String) -> Void)?
+    /// The onboarding tour's practice windows: their process, and the workspace each window title opens on.
+    /// They come from a helper process because our own windows are never tiled.
+    var practice: (pid: pid_t, workspaces: [String: String])?
 
     private var windows: [CGWindowID: Window] = [:]
     private var order: [CGWindowID] = []            // tiling order; first window on a screen is "main"
@@ -130,6 +136,7 @@ final class WindowManager {
             ModeIndicator.shared.show(name.isEmpty ? nil : name)
             Log.debug("mode: \(name.isEmpty ? "reset" : name)")
             self?.onChange?()
+            self?.onModeChange?(name)
         }
         NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved) { [weak self] _ in self?.mouseMoved() }
 
@@ -257,6 +264,7 @@ final class WindowManager {
     }
 
     private func shouldFloat(_ w: Window) -> Bool {
+        if let p = practice, w.pid == p.pid { return false } // same bundle as us, but these are meant to tile
         // Our own windows (Settings, guides) always float, even when another copy of mxtiler
         // (a dev build, or the old Hyprthyst) is the one tiling.
         if let b = w.bundleID, b == Bundle.main.bundleIdentifier || b.hasPrefix("local.mxtiler") || b == "local.hyprthyst" {
@@ -332,6 +340,10 @@ final class WindowManager {
         let arrivals = fresh.sorted(by: { (z[$0.id] ?? 0) < (z[$1.id] ?? 0) })
         for w in arrivals where config.virtualWorkspaces {
             if let saved = savedWorkspaceOf[w.id], savedOwnerOf[w.id] == owner(w) { workspaceOf[w.id] = saved }
+            if let p = practice, w.pid == p.pid, let ws = w.element.string(kAXTitleAttribute).flatMap({ p.workspaces[$0] }) {
+                workspaceOf[w.id] = ws
+                if monitorOf[ws] == nil, let here = currentScreen() { monitorOf[ws] = here.uuid }
+            }
         }
         if config.newWindowsToMain && !firstRun { order.insert(contentsOf: arrivals.map(\.id), at: 0) } else { order.append(contentsOf: arrivals.map(\.id)) }
         for w in fresh {
@@ -652,6 +664,8 @@ final class WindowManager {
 
     func dispatch(_ dispatcher: String, _ rawArg: String) {
         let arg = rawArg.trimmingCharacters(in: .whitespaces)
+        let inMode = !Hotkeys.shared.submap.isEmpty
+        defer { onDispatch?(dispatcher, arg, inMode) }
         switch dispatcher {
         case "movefocus": if let d = Direction(arg) { moveFocus(d) }
         case "movewindow":
