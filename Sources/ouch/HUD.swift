@@ -91,8 +91,7 @@ struct HUDView: View {
             }
         }
         .padding(.horizontal, model.warning ? 18 : 28).padding(.vertical, model.warning ? 11 : model.layout == nil ? 16 : 20)
-        .background(Blur())
-        .shadow(color: .black.opacity(0.25), radius: 18, y: 8)
+        .modifier(Surface())
         .keyframeAnimator(initialValue: 1.0, trigger: model.pops) { view, scale in
             view.scaleEffect(reduceMotion ? 1 : scale)
         } keyframes: { _ in
@@ -102,6 +101,19 @@ struct HUDView: View {
             }
         }
         .padding(margin)
+    }
+
+    /// Glass on macOS 26 and later (it draws its own edge, so no extra shadow); a blur with a shadow before that.
+    private struct Surface: ViewModifier {
+        func body(content: Content) -> some View {
+            if #available(macOS 26.0, *) {
+                content.glassEffect(.regular, in: .rect(cornerRadius: 16))
+            } else {
+                content
+                    .background(Blur())
+                    .shadow(color: .black.opacity(0.25), radius: 18, y: 8)
+            }
+        }
     }
 
     /// Behind-window blur with rounded corners. A mask image, because a layer corner radius leaves
@@ -158,22 +170,31 @@ final class ModeIndicator {
             p.level = .statusBar
             p.isOpaque = false
             p.backgroundColor = .clear
-            p.hasShadow = true
+            if #unavailable(macOS 26.0) { p.hasShadow = true } // glass draws its own edge
             p.ignoresMouseEvents = true
             p.collectionBehavior = [.canJoinAllSpaces, .transient, .ignoresCycle]
             return p
         }()
         panel = p
-        let bg = NSView(frame: box)
-        bg.wantsLayer = true
-        bg.layer?.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.92).cgColor
-        bg.layer?.cornerRadius = box.height / 2
-        bg.addSubview(label)
+        let content = NSView(frame: box)
+        content.addSubview(label)
         NSLayoutConstraint.activate([
-            label.centerXAnchor.constraint(equalTo: bg.centerXAnchor),
-            label.centerYAnchor.constraint(equalTo: bg.centerYAnchor),
+            label.centerXAnchor.constraint(equalTo: content.centerXAnchor),
+            label.centerYAnchor.constraint(equalTo: content.centerYAnchor),
         ])
-        p.contentView = bg
+        if #available(macOS 26.0, *) {
+            // Accent-tinted glass pill.
+            let glass = NSGlassEffectView(frame: box)
+            glass.cornerRadius = box.height / 2
+            glass.tintColor = .controlAccentColor
+            glass.contentView = content
+            p.contentView = glass
+        } else {
+            content.wantsLayer = true
+            content.layer?.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.92).cgColor
+            content.layer?.cornerRadius = box.height / 2
+            p.contentView = content
+        }
         let v = screen.visibleFrame
         let end = CGRect(x: v.midX - box.width / 2, y: v.minY + 18, width: box.width, height: box.height)
         let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion

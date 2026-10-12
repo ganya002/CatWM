@@ -9,6 +9,10 @@ APP=build/ouch.app
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Frameworks" "$APP/Contents/Resources"
 cp .build/release/ouch "$APP/Contents/MacOS/"
+# SwiftPM records the deployment target (14.0) as the SDK version, so macOS would treat the app as
+# pre-26 and keep the old look for its sidebar, toolbar and controls. Stamp the real SDK in.
+xcrun vtool -set-build-version macos 14.0 "$(xcrun --show-sdk-version)" -replace \
+  -output "$APP/Contents/MacOS/ouch" "$APP/Contents/MacOS/ouch"
 cp Info.plist "$APP/Contents/"
 cp -R Resources/Fonts "$APP/Contents/Resources/"  # Dela Gothic One (OFL), registered at launch
 cp Resources/Icon/AppIcon.icns "$APP/Contents/Resources/"

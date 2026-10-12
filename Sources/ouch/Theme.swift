@@ -55,6 +55,48 @@ enum Theme {
     })
 }
 
+// MARK: - Glass
+
+/// Liquid Glass is for controls and chrome that float above content, never for the content itself
+/// (cards, rows, keycaps, miniatures). Every helper falls back to the pre-macOS 26 look.
+extension View {
+    /// Glass in `shape` on macOS 26 and later, a thin material with a soft edge before that.
+    /// `tint` colors the glass; `interactive` makes it respond to the pointer like a control.
+    @ViewBuilder
+    func glassSurface<S: InsettableShape>(_ shape: S, tint: Color? = nil, interactive: Bool = false) -> some View {
+        if #available(macOS 26.0, *) {
+            self.glassEffect((tint.map { Glass.regular.tint($0) } ?? .regular).interactive(interactive), in: shape)
+        } else {
+            self.background(shape.fill(tint ?? Color.clear)).background(shape.fill(.ultraThinMaterial))
+                .overlay(shape.strokeBorder(LinearGradient(colors: [.white.opacity(0.25), .white.opacity(0.05)], startPoint: .top, endPoint: .bottom), lineWidth: 0.75))
+        }
+    }
+
+    /// `.glass` / `.glassProminent` on macOS 26 and later, `.bordered` / `.borderedProminent` before that.
+    @ViewBuilder
+    func glassButtonStyle(prominent: Bool = false) -> some View {
+        if #available(macOS 26.0, *) {
+            if prominent { self.buttonStyle(.glassProminent) } else { self.buttonStyle(.glass) }
+        } else {
+            if prominent { self.buttonStyle(.borderedProminent) } else { self.buttonStyle(.bordered) }
+        }
+    }
+}
+
+/// Lets glass siblings blend and morph into each other on macOS 26 and later; a plain container before that.
+struct GlassGroup<Content: View>: View {
+    var spacing: CGFloat? = nil
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        if #available(macOS 26.0, *) {
+            GlassEffectContainer(spacing: spacing) { content }
+        } else {
+            content
+        }
+    }
+}
+
 // MARK: - Layout pieces
 
 /// Grouped box: rounded tint with a hairline, and a separator between each child view.

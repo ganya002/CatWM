@@ -295,7 +295,8 @@ struct SettingsView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                StatusBar(doc: doc)
+                // An inset rather than a stacked row, so panes scroll on under the glass bar on macOS 26.
+                .safeAreaInset(edge: .bottom, spacing: 0) { StatusBar(doc: doc) }
             }
             .background(Theme.window)
             .modifier(SeamlessToolbar())
@@ -319,6 +320,10 @@ private struct Sidebar: View {
     @ObservedObject var doc: ConfigDocument
     @ObservedObject var ui: SettingsUI
     @ObservedObject private var library = SettingsWindow.shared.library
+    /// How far the import/export row is nudged up to sit level with the traffic lights. The title
+    /// bar strip the list reserves is taller on macOS 26, which would otherwise leave the row low.
+    private final class Lift: ObservableObject { @Published var y: CGFloat = 0 }
+    @StateObject private var lift = Lift()
 
     private var version: String { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "" }
 
@@ -345,9 +350,15 @@ private struct Sidebar: View {
             VStack(spacing: 0) {
                 HStack { Spacer(); ConfigTransferMenu(kind: .full, library: library) }
                     .padding(.trailing, 12).frame(height: 44)
+                    .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).midY } action: { mid in
+                        // The traffic lights are centred in the title band; close the remaining gap.
+                        let y = lift.y + mid - SettingsWindow.titlebarHeight / 2
+                        if abs(y - lift.y) > 0.5 { lift.y = max(0, y) }
+                    }
                 ConfigSelector(kind: .full, library: library).padding(.horizontal, 12).padding(.bottom, 8)
             }
             .padding(.top, -24) // the list reserves a title bar strip; this starts the row at the window edge
+            .offset(y: -lift.y) // moves only these two rows; the list below keeps its place
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             HStack {
@@ -437,10 +448,37 @@ private struct StatusBar: View {
             }
         }
         .font(Theme.body(12.5))
-        .padding(.leading, 24).padding(.trailing, 16)
-        .frame(height: 38)
-        .background(Theme.statusBar)
-        .overlay(alignment: .top) { Divider() }
+        .modifier(Chrome(isEmpty: isEmpty))
+        .animation(.easeOut(duration: 0.2), value: isEmpty)
+    }
+
+    private var isEmpty: Bool {
+        doc.saveError == nil && doc.problemCount == 0 && !doc.isDirty && doc.fileErrors.isEmpty && !doc.hasChangesSinceOpen
+    }
+
+    /// A glass bar floating over the bottom edge on macOS 26, a solid strip with a divider before that.
+    private struct Chrome: ViewModifier {
+        let isEmpty: Bool
+
+        func body(content: Content) -> some View {
+            if #available(macOS 26.0, *) {
+                // Floating glass has no reason to show while there is nothing to report.
+                if !isEmpty {
+                    content
+                        .padding(.leading, 16).padding(.trailing, 8)
+                        .frame(height: 38)
+                        .glassEffect(.regular, in: .capsule)
+                        .padding(.horizontal, 16).padding(.bottom, 12).padding(.top, 4)
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                }
+            } else {
+                content
+                    .padding(.leading, 24).padding(.trailing, 16)
+                    .frame(height: 38)
+                    .background(Theme.statusBar)
+                    .overlay(alignment: .top) { Divider() }
+            }
+        }
     }
 
     private func dot(_ c: Color) -> some View { Circle().fill(c).frame(width: 8, height: 8) }
@@ -648,7 +686,7 @@ private struct OverviewPane: View {
                 }
                 .font(Theme.body(12.5))
                 HStack(spacing: 8) {
-                    Button("Open Accessibility Settings") { Permissions.request() }.buttonStyle(.borderedProminent)
+                    Button("Open Accessibility Settings") { Permissions.request() }.glassButtonStyle(prominent: true)
                     Button("Reset Permission") { Permissions.reset() }
                     Spacer()
                     ProgressView().controlSize(.small).scaleEffect(0.7).frame(width: 12, height: 12)
