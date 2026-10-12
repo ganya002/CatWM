@@ -11,5 +11,9 @@
     <key>LSMinimumSystemVersion</key><string>14.0</string>
     <key>LSUIElement</key><true/>
     <key>NSHighResolutionCapable</key><true/>
+    <!-- Sparkle + Amore. Fill both from `amore setup` (see README); updates stay off until you do. -->
+    <key>SUFeedURL</key><string>https://api.amore.computer/v1/apps/local.hyprthyst/appcast.xml</string>
+    <key>SUPublicEDKey</key><string>mGd35GehdPUs8+j4eHxj7vI7MJB7KDYJjPou4Sjz6JA=</string>
+    <key>SUEnableAutomaticChecks</key><true/>
 </dict>
 </plist>

@@ -24,11 +24,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(withTitle: "Open Config File", action: #selector(openConfig), keyEquivalent: "")
         menu.addItem(withTitle: "Reload Config", action: #selector(reload), keyEquivalent: "")
         menu.addItem(.separator())
+        menu.addItem(withTitle: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: "")
         menu.addItem(withTitle: "Quit Hyprthyst", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.items.forEach { if $0.action != #selector(NSApplication.terminate(_:)) { $0.target = self } }
         statusItem.menu = menu
 
         NSApp.mainMenu = makeMainMenu()
+        Updater.shared.start()
         WindowManager.shared.onChange = { [weak self] in self?.updateIcon() }
         LoginItem.enableOnFirstLaunch()
 
@@ -135,6 +137,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func makeMainMenu() -> NSMenu {
         let main = NSMenu()
         let appMenu = NSMenu()
+        let updates = appMenu.addItem(withTitle: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: "")
+        updates.target = self
+        appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Close Window", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
         appMenu.addItem(withTitle: "Quit Hyprthyst", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         main.addItem(withTitle: "Hyprthyst", action: nil, keyEquivalent: "").submenu = appMenu
@@ -150,6 +155,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         return main
     }
 
+    @objc private func checkForUpdates() {
+        guard Updater.shared.isConfigured else {
+            let a = NSAlert()
+            a.messageText = "Updates aren't set up in this build"
+            a.informativeText = "This copy was built without an Amore feed. Release builds check for updates automatically."
+            NSApp.activate(ignoringOtherApps: true)
+            a.runModal()
+            return
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        Updater.shared.checkForUpdates()
+    }
     @objc private func openSettings() { SettingsWindow.shared.show(pane: nil) }
     @objc private func pickWorkspace(_ sender: NSMenuItem) {
         if let ws = sender.representedObject as? String { WindowManager.shared.showWorkspace(ws) }
