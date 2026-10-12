@@ -25,7 +25,7 @@ amore setup build/ouch.app --hosting amore --generate-sparkle-key
 
 Put the feed URL and public key it prints into `SUFeedURL` and `SUPublicEDKey` in `Info.plist`. Until you do, the app has no update checks.
 
-Each release: bump `CFBundleVersion` in `Info.plist`, then
+Each release (the build number is stamped from the commit count, so only `CFBundleShortVersionString` needs a manual bump):
 
 ```sh
 ./release.sh "What changed"                      # build, sign, notarize, publish
@@ -34,6 +34,8 @@ Each release: bump `CFBundleVersion` in `Info.plist`, then
 ./release.sh "Big change" --phased-rollout       # gradual rollout
 ./release.sh "WIP" --draft                       # upload without publishing
 ```
+
+For early-access betas, `./beta.sh "What changed"` publishes to the beta channel with no version bump: the build number is the commit count and the version reads `0.1-beta.<build>`. Beta builds start opted in to beta updates. Without a Developer ID certificate it ships an unsigned ZIP, so testers allow it once in System Settings → Privacy & Security → **Open Anyway**.
 
 Settings → Overview has the update toggles, and the menu bar has **Check for Updates…**.
 
