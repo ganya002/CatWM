@@ -226,7 +226,17 @@ final class PermissionGuide {
         p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         let host = NSHostingView(rootView: GuideView(model: model, dismiss: { [weak self] in self?.hide() }))
         host.sizingOptions = [.intrinsicContentSize] // measured by fittingSize; layout() applies it in one move
-        p.contentView = host
+        if #available(macOS 26.0, *) {
+            // A floating glass panel: the window itself goes clear and the glass draws the shape.
+            p.isOpaque = false
+            p.backgroundColor = .clear
+            let glass = NSGlassEffectView()
+            glass.cornerRadius = 16
+            glass.contentView = host
+            p.contentView = glass
+        } else {
+            p.contentView = host
+        }
         p.setContentSize(host.fittingSize)
         self.host = host
         return p

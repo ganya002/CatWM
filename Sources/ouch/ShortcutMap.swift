@@ -73,11 +73,26 @@ struct ShortcutMap: View {
         .overlay(alignment: .bottom) { Divider() }
     }
 
-    /// ⌃ ⌥ ⇧ ⌘ as one strip of toggles, lit like the keys they stand for.
+    /// ⌃ ⌥ ⇧ ⌘ as one strip of toggles, lit like the keys they stand for. On macOS 26 each toggle is
+    /// its own glass, accent-tinted when on, and the four blend as one group.
+    @ViewBuilder
     private var modifierToggles: some View {
+        if #available(macOS 26.0, *) {
+            GlassGroup(spacing: 4) { toggleStrip(spacing: 4) }
+                .animation(.easeOut(duration: 0.12), value: model.flags.rawValue)
+        } else {
+            toggleStrip(spacing: 2)
+                .padding(2)
+                .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.card))
+                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Theme.hairline))
+                .animation(.easeOut(duration: 0.12), value: model.flags.rawValue)
+        }
+    }
+
+    private func toggleStrip(spacing: CGFloat) -> some View {
         let mods: [(NSEvent.ModifierFlags, String, String)] = [(.control, "⌃", "Control"), (.option, "⌥", "Option"),
                                                                (.shift, "⇧", "Shift"), (.command, "⌘", "Command")]
-        return HStack(spacing: 2) {
+        return HStack(spacing: spacing) {
             ForEach(mods, id: \.1) { flag, symbol, name in
                 let on = model.flags.contains(flag)
                 Button { model.toggle(flag) } label: {
@@ -87,7 +102,7 @@ struct ShortcutMap: View {
                     }
                     .foregroundStyle(on ? Color.white : Color.primary.opacity(0.85))
                     .padding(.horizontal, 10).frame(height: 24)
-                    .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(on ? Color.accentColor : .clear))
+                    .modifier(GlassToggle(on: on, shape: RoundedRectangle(cornerRadius: 6, style: .continuous), offFill: .clear))
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -95,10 +110,6 @@ struct ShortcutMap: View {
                 .accessibilityAddTraits(on ? [.isSelected, .isToggle] : .isToggle)
             }
         }
-        .padding(2)
-        .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.card))
-        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Theme.hairline))
-        .animation(.easeOut(duration: 0.12), value: model.flags.rawValue)
     }
 
     /// Jumps to a row in the Keyboard Shortcuts pane and flashes it.
@@ -122,7 +133,7 @@ struct ShortcutMap: View {
         let counts = Dictionary(grouping: all, by: { $0.flags.rawValue }).mapValues(\.count)
         let list = counts.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
             .map { (flags: NSEvent.ModifierFlags(rawValue: $0.key), count: $0.value) }
-        return HStack(spacing: 6) {
+        return GlassGroup(spacing: 6) { HStack(spacing: 6) {
             if !list.isEmpty {
                 Text("In use").font(Theme.body(11.5)).foregroundStyle(Theme.secondary)
             }
@@ -141,8 +152,7 @@ struct ShortcutMap: View {
                     }
                     .foregroundStyle(on ? Color.white : Color.primary)
                     .padding(.horizontal, 9).frame(height: 24)
-                    .background(Capsule().fill(on ? Color.accentColor : Theme.card))
-                    .overlay(Capsule().strokeBorder(on ? Color.clear : Theme.hairline))
+                    .modifier(GlassToggle(on: on, shape: Capsule(), offFill: Theme.card, offBorder: Theme.hairline))
                     .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
@@ -150,7 +160,7 @@ struct ShortcutMap: View {
                 .accessibilityLabel("\(name), \(item.count) shortcuts")
                 .accessibilityAddTraits(on ? .isSelected : [])
             }
-        }
+        } }
         .animation(.easeOut(duration: 0.12), value: model.flags.rawValue)
     }
 
@@ -669,6 +679,25 @@ private struct KeyPopover: View {
                 }
             } label: { Label("Add Shortcut", systemImage: "plus") }
             .fixedSize()
+        }
+    }
+}
+
+/// A toggle's chrome: interactive glass on macOS 26 and later, tinted with the accent colour when on.
+/// Before that, a solid accent fill when on and `offFill` (with an optional border) when off.
+private struct GlassToggle<S: InsettableShape>: ViewModifier {
+    let on: Bool
+    let shape: S
+    var offFill: Color
+    var offBorder: Color = .clear
+
+    func body(content: Content) -> some View {
+        if #available(macOS 26.0, *) {
+            content.glassEffect(on ? Glass.regular.tint(.accentColor).interactive() : Glass.regular.interactive(), in: shape)
+        } else {
+            content
+                .background(shape.fill(on ? Color.accentColor : offFill))
+                .overlay(shape.strokeBorder(on ? Color.clear : offBorder))
         }
     }
 }

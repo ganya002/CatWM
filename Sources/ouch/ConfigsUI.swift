@@ -3,17 +3,10 @@ import SwiftUI
 
 // MARK: - Glyphs
 
-/// Glass on macOS 26 and later, a thin material with a soft edge before that. `tint` colors the glass.
 extension View {
-    @ViewBuilder
+    /// Interactive glass in a rounded rectangle (see `glassSurface`). `tint` colors the glass.
     func configGlass(cornerRadius: CGFloat = 10, tint: Color? = nil) -> some View {
-        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-        if #available(macOS 26.0, *) {
-            self.glassEffect(tint.map { Glass.regular.tint($0).interactive() } ?? Glass.regular.interactive(), in: shape)
-        } else {
-            self.background(shape.fill(tint ?? Color.clear)).background(shape.fill(.ultraThinMaterial))
-                .overlay(shape.strokeBorder(LinearGradient(colors: [.white.opacity(0.25), .white.opacity(0.05)], startPoint: .top, endPoint: .bottom), lineWidth: 0.75))
-        }
+        glassSurface(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous), tint: tint, interactive: true)
     }
 }
 
