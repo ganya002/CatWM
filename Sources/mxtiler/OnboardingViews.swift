@@ -43,8 +43,10 @@ private struct Pill: View {
 
 final class WelcomeModel: ObservableObject {
     @Published var accessibility = false
+    @Published var inputMonitoring = false
     @Published var login = false
     var allowAccessibility: () -> Void = {}
+    var allowInputMonitoring: () -> Void = {}
     var allowLogin: () -> Void = {}
     var skip: () -> Void = {}
     var learn: () -> Void = {}
@@ -69,6 +71,12 @@ struct WelcomeView: View {
                            title: "Accessibility", required: true,
                            detail: "macOS only lets apps move other apps' windows with this permission. It also lets your shortcuts work.",
                            primary: true, action: model.allowAccessibility)
+                Rectangle().fill(Color.black.opacity(0.06)).frame(height: 1).padding(.leading, 58).padding(.trailing, 14)
+                permission(granted: model.inputMonitoring, symbol: "keyboard",
+                           tint: [Color(red: 0.2, green: 0.78, blue: 0.9), Color(red: 0.1, green: 0.55, blue: 0.85)],
+                           title: "Input Monitoring", required: false,
+                           detail: "Makes shortcuts that use Caps Lock instant instead of needing a hold.",
+                           primary: false, action: model.allowInputMonitoring)
                 Rectangle().fill(Color.black.opacity(0.06)).frame(height: 1).padding(.leading, 58).padding(.trailing, 14)
                 permission(granted: model.login, symbol: "power",
                            tint: [Color(red: 0.486, green: 0.478, blue: 0.918), Color(red: 0.345, green: 0.337, blue: 0.839)],

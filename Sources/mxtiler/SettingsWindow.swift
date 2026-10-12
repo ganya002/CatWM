@@ -449,6 +449,7 @@ private struct OverviewPane: View {
                 Card {
                     SwitchRow(title: "Open at login", isOn: loginBinding)
                     if ui.status.loginNeedsApproval { LoginApprovalRow() }
+                    if !s.inputMonitoring { InputMonitoringRow() }
                     SwitchRow(title: "Tiling", isOn: Binding(get: { ui.status.tilingEnabled }, set: { _ in
                         WindowManager.shared.toggleTiling()
                         ui.refreshStatus()
@@ -559,6 +560,20 @@ private struct OverviewPane: View {
     }
 }
 
+private struct InputMonitoringRow: View {
+    var body: some View {
+        Row {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Instant Caps Lock shortcuts")
+                Text("Allow Input Monitoring so Super + Caps Lock fires right away instead of after a hold.")
+                    .font(Theme.body(11)).foregroundStyle(Theme.secondary)
+            }
+        } control: {
+            Button("Allow…") { Permissions.requestInputMonitoring() }
+        }
+    }
+}
+
 private struct LoginApprovalRow: View {
     var body: some View {
         Row {
@@ -599,6 +614,21 @@ private struct AmoreCredit: View {
 }
 
 enum Permissions {
+    /// Input Monitoring lets Caps Lock shortcuts fire at the real key press (see Hotkeys.startRawCaps).
+    /// Optional: without it they still work, after macOS's own Caps Lock delay.
+    static var inputMonitoringGranted: Bool { IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) == kIOHIDAccessTypeGranted }
+
+    static func requestInputMonitoring() {
+        // The first request shows macOS's prompt (and lists us); once answered it never prompts again.
+        if IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) == kIOHIDAccessTypeUnknown {
+            IOHIDRequestAccess(kIOHIDRequestTypeListenEvent)
+            return
+        }
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
     /// Whether this launch already asked macOS to list us (which also shows its own alert). Asking again
     /// would clear the entry it just added and stack another alert, so later requests only reopen Settings.
     private static var prompted = false

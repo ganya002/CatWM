@@ -40,6 +40,7 @@ final class Onboarding {
 
     private func makeWelcome(on screen: NSScreen) -> OverlayPanel {
         welcomeModel.allowAccessibility = { Permissions.request() }
+        welcomeModel.allowInputMonitoring = { Permissions.requestInputMonitoring() }
         welcomeModel.allowLogin = { [weak self] in
             LoginItem.set(true)
             if !LoginItem.isEnabled { // needs approval in System Settings
@@ -72,6 +73,8 @@ final class Onboarding {
     private func refreshWelcome() {
         let ax = AXIsProcessTrusted(), login = LoginItem.isEnabled
         if welcomeModel.accessibility != ax { welcomeModel.accessibility = ax }
+        let im = Permissions.inputMonitoringGranted
+        if welcomeModel.inputMonitoring != im { welcomeModel.inputMonitoring = im }
         if welcomeModel.login != login { welcomeModel.login = login }
         // Approved in the Login Items list we opened: close it again, like the Accessibility flow does.
         if login, openedLoginItems {

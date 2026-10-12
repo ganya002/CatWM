@@ -589,6 +589,7 @@ final class WindowManager {
         var tilingEnabled: Bool
         var launchAtLogin: Bool
         var loginNeedsApproval: Bool
+        var inputMonitoring: Bool
         var tiled: Int
         var floating: Int
         var screens: [(uuid: String, name: String, layout: Layout, workspace: String)]
@@ -600,6 +601,7 @@ final class WindowManager {
         return Status(trusted: AXIsProcessTrusted(), keybindsActive: Hotkeys.shared.isActive, running: isStarted,
                       tilingEnabled: tilingEnabled,
                       launchAtLogin: LoginItem.isEnabled, loginNeedsApproval: LoginItem.needsApproval,
+                      inputMonitoring: Permissions.inputMonitoringGranted,
                       tiled: managed.filter { !$0.isFloating }.count, floating: managed.filter(\.isFloating).count,
                       screens: isStarted ? screens.map { ($0.uuid, $0.ns.localizedName, state(for: $0).layout,
                                                            isVirtual(shown[$0.uuid]) ? (shown[$0.uuid] ?? "") : "") } : [])

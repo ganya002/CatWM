@@ -68,6 +68,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func checkPermission() {
         let trusted = AXIsProcessTrusted()
+        if trusted, !Hotkeys.shared.rawCapsActive { Hotkeys.shared.startRawCaps() }
         if trusted && !WindowManager.shared.isStarted {
             Log.info("Accessibility granted")
             WindowManager.shared.start()
