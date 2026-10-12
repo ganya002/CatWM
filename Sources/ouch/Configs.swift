@@ -54,14 +54,12 @@ extension UTType {
 enum ConfigSheet: Identifiable {
     case create(kind: ConfigKind, baseID: String)
     case edit(id: String)
-    case protectedEdit(kinds: [ConfigKind])
     case export(kind: ConfigKind)
 
     var id: String {
         switch self {
         case .create(let k, let b): "create.\(k.rawValue).\(b)"
         case .edit(let id): "edit.\(id)"
-        case .protectedEdit: "protected"
         case .export(let k): "export.\(k.rawValue)"
         }
     }
@@ -70,10 +68,10 @@ enum ConfigSheet: Identifiable {
 // MARK: - Library
 
 /// Owns every saved config and which one is active per kind. The active config follows the live
-/// settings: changes are written into it, except for built-ins, which ask for a copy first.
+/// settings: changes are written into it, except for built-ins, which get a copy of the edited settings.
 final class ConfigLibrary: ObservableObject {
     static let builtInPrefix = "builtin."
-    static let reservedNames: [ConfigKind: [String]] = [.keyboard: ["Default", "WASD"], .animation: ["Default"], .full: ["Default"]]
+    static let reservedNames: [ConfigKind: [String]] = [.keyboard: ["VIM", "WASD"], .animation: ["Default"], .full: ["Default"]]
 
     @Published private(set) var custom: [SavedConfig] = []
     @Published private(set) var active: [ConfigKind: String] = [:]
@@ -91,7 +89,7 @@ final class ConfigLibrary: ObservableObject {
         builtIns = Self.makeBuiltIns()
         load()
         observer = doc.objectWillChange
-            .debounce(for: .milliseconds(250), scheduler: RunLoop.main)
+            .debounce(for: .milliseconds(50), scheduler: RunLoop.main)
             .sink { [weak self] in self?.reconcile() }
     }
 
@@ -104,7 +102,7 @@ final class ConfigLibrary: ObservableObject {
             SavedConfig(id: builtInPrefix + id, kind: kind, name: name, symbol: nil, colorHex: nil, text: text, keyboardID: kb, animationID: an)
         }
         return [
-            make("keyboard.default", .keyboard, "Default", def.keyboardText()),
+            make("keyboard.default", .keyboard, "VIM", def.keyboardText()),
             make("keyboard.wasd", .keyboard, "WASD", wasd.keyboardText()),
             make("animation.default", .animation, "Default", def.animationText()),
             make("full.default", .full, "Default", def.serialize(), kb: builtInPrefix + "keyboard.default", an: builtInPrefix + "animation.default"),
@@ -184,9 +182,9 @@ final class ConfigLibrary: ObservableObject {
     }
 
     /// Runs after every settings change: custom configs are updated in place, a built-in that no longer
-    /// matches asks for a copy.
+    /// matches is left untouched and the edited settings move into a new config.
     private func reconcile() {
-        guard !applying, sheet == nil else { return }
+        guard !applying else { return }
         var violated: [ConfigKind] = []
         var changed = false
         for kind in ConfigKind.allCases {
@@ -203,7 +201,7 @@ final class ConfigLibrary: ObservableObject {
         let before = custom
         refreshLinks()
         if changed || before != custom { save() }
-        if !violated.isEmpty { sheet = .protectedEdit(kinds: violated) }
+        if !violated.isEmpty { createFromEdit(kinds: violated, name: Self.editCopyName, symbol: nil, colorHex: nil) }
     }
 
     /// Puts a config's settings into the live document. `reconcile` ignores the resulting changes.
@@ -257,6 +255,8 @@ final class ConfigLibrary: ObservableObject {
         return c
     }
 
+    static let editCopyName = "My config"
+
     /// The edit-a-built-in answer: the live settings (already changed) become new configs, one per kind.
     func createFromEdit(kinds: [ConfigKind], name: String, symbol: String?, colorHex: String?) {
         for kind in kinds {
@@ -267,11 +267,6 @@ final class ConfigLibrary: ObservableObject {
         }
         refreshLinks()
         save()
-    }
-
-    /// The edit-a-built-in cancel: put the built-ins back.
-    func revertEdit(kinds: [ConfigKind]) {
-        for kind in kinds { apply(current(kind)) }
     }
 
     func update(id: String, name: String, symbol: String?, colorHex: String?) {
