@@ -131,6 +131,7 @@ final class SettingsUI: ObservableObject {
     @Published var showMap = false
     @Published var newID = ""
     @Published var previewFlipped = false
+    @Published var bezierText = ""
     @Published var linkedPadding = true
     @Published var dragAnywhere = DragAnywhere.isEnabled
     @Published var status = WindowManager.shared.status()
@@ -1215,55 +1216,140 @@ private struct AnimationPane: View {
     @ObservedObject var doc: ConfigDocument
     @ObservedObject var ui: SettingsUI
 
-    private static let presets: [(name: String, seconds: Double)] = [("Snappy", 0.12), ("Smooth", 0.2), ("Relaxed", 0.35)]
+    struct Preset {
+        let name: String
+        var animate = true
+        var curve: AnimationCurve = .easeOut
+        var duration = 0.2
+        var bounce = 0.5
+    }
+
+    static let presets: [Preset] = [
+        Preset(name: "None", animate: false),
+        Preset(name: "Snappy", duration: 0.12),
+        Preset(name: "Smooth", duration: 0.2),
+        Preset(name: "Relaxed", curve: .easeInOut, duration: 0.35),
+        Preset(name: "Springy", curve: .spring, duration: 0.5, bounce: 0.55),
+        Preset(name: "Wobbly", curve: .spring, duration: 0.8, bounce: 0.85),
+        Preset(name: "Bouncy", curve: .bounce, duration: 0.6, bounce: 0.5),
+        Preset(name: "Playful", curve: .overshoot, duration: 0.35, bounce: 0.6),
+    ]
+
+    private func matches(_ p: Preset, _ c: Config) -> Bool {
+        guard p.animate else { return !c.animate }
+        return c.animate && c.animationCurve == p.curve && abs(c.animationDuration - p.duration) < 0.005
+            && (!p.curve.usesBounce || abs(c.animationBounce - p.bounce) < 0.005)
+    }
 
     var body: some View {
         let c = doc.config
-        let preset = Self.presets.first { abs($0.seconds - c.animationDuration) < 0.005 }?.name
         PaneScroll {
-            Card {
-                SwitchRow(title: "Animate windows", isOn: $doc.config.animate)
-                Row("Speed", vertical: 8) {
-                    Segmented(title: "Speed", options: Self.presets.map { ($0.name, $0.name) } + (preset == nil ? [("Custom", "Custom")] : []),
-                              selection: Binding(get: { preset ?? "Custom" }, set: { name in
-                                  guard let p = Self.presets.first(where: { $0.name == name }) else { return }
-                                  doc.config.animationDuration = p.seconds
-                                  play() // feel the new speed right away
-                              }))
-                }
-                .dimmed(!c.animate)
-                Row("Duration", vertical: 8) {
-                    HStack(spacing: 10) {
-                        Slider(value: Binding(get: { c.animationDuration }, set: { doc.config.animationDuration = ($0 * 100).rounded() / 100 }),
-                               in: 0.05...0.6)
-                            .controlSize(.small)
-                            .frame(width: 200)
-                            .accessibilityLabel("Duration")
-                        Text("\(Int((c.animationDuration * 1000).rounded())) ms").monospacedDigit().frame(width: 56, alignment: .trailing)
+            Block("Style", footer: Self.presets.contains { matches($0, c) } ? nil : "Custom: your own mix of the settings below.") {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 4), spacing: 10) {
+                    ForEach(Self.presets, id: \.name) { p in
+                        PresetTile(preset: p, selected: matches(p, c)) {
+                            doc.config.animate = p.animate
+                            if p.animate {
+                                doc.config.animationCurve = p.curve
+                                doc.config.animationDuration = p.duration
+                                if p.curve.usesBounce { doc.config.animationBounce = p.bounce }
+                            }
+                            play() // feel it right away
+                        }
                     }
                 }
-                .dimmed(!c.animate)
+            }
+            Block("Customize") {
+                Card {
+                    SwitchRow(title: "Animate windows", isOn: $doc.config.animate)
+                    Row("Curve", vertical: 8) {
+                        PopUp(title: "Curve",
+                              options: AnimationCurve.named.map { ($0.name, $0.title) } + [("bezier", AnimationCurve.bezier(0, 0, 0, 0).title)],
+                              selection: Binding(get: { c.animationCurve.isBezier ? "bezier" : c.animationCurve.name }, set: { name in
+                                  if name == "bezier" {
+                                      if !c.animationCurve.isBezier { doc.config.animationCurve = .bezier(0.34, 1.56, 0.64, 1) }
+                                  } else if let curve = AnimationCurve(name) {
+                                      doc.config.animationCurve = curve
+                                  }
+                                  play()
+                              }))
+                    }
+                    .dimmed(!c.animate)
+                    if case let .bezier(x1, y1, x2, y2) = c.animationCurve {
+                        Row(vertical: 8) {
+                            TitleDetail(title: "Control points", detail: "x1, y1, x2, y2 as in CSS. x stays within 0–1; y past 1 overshoots.")
+                        } control: {
+                            TextField("Control points", text: $ui.bezierText, prompt: Text("0.34, 1.56, 0.64, 1"))
+                                .labelsHidden()
+                                .textFieldStyle(.roundedBorder)
+                                .monospacedDigit()
+                                .frame(width: 170)
+                                .onAppear { ui.bezierText = Self.points(x1, y1, x2, y2) }
+                                .onChange(of: c.animationCurve) { _, new in
+                                    if case let .bezier(a, b, c, d) = new, AnimationCurve(ui.bezierText) != new { ui.bezierText = Self.points(a, b, c, d) }
+                                }
+                                .onSubmit(play)
+                                .onChange(of: ui.bezierText) { _, text in
+                                    if let curve = AnimationCurve(text), curve.isBezier { doc.config.animationCurve = curve }
+                                }
+                        }
+                        .dimmed(!c.animate)
+                    }
+                    Row("Duration", vertical: 8) {
+                        HStack(spacing: 10) {
+                            Slider(value: Binding(get: { c.animationDuration }, set: { doc.config.animationDuration = ($0 * 100).rounded() / 100 }),
+                                   in: 0.05...1, onEditingChanged: { if !$0 { play() } })
+                                .controlSize(.small)
+                                .frame(width: 200)
+                                .accessibilityLabel("Duration")
+                            Text("\(Int((c.animationDuration * 1000).rounded())) ms").monospacedDigit().frame(width: 56, alignment: .trailing)
+                        }
+                    }
+                    .dimmed(!c.animate)
+                    Row(vertical: 8) {
+                        TitleDetail(title: "Bounciness", detail: "How far springs swing, balls bounce and overshoot goes")
+                    } control: {
+                        HStack(spacing: 10) {
+                            Slider(value: Binding(get: { c.animationBounce }, set: { doc.config.animationBounce = ($0 * 100).rounded() / 100 }),
+                                   in: 0...1, onEditingChanged: { if !$0 { play() } })
+                                .controlSize(.small)
+                                .frame(width: 200)
+                                .accessibilityLabel("Bounciness")
+                            Text("\(Int((c.animationBounce * 100).rounded()))%").monospacedDigit().frame(width: 56, alignment: .trailing)
+                        }
+                    }
+                    .dimmed(!c.animate || !c.animationCurve.usesBounce)
+                }
             }
             Block("Preview") {
                 Card(padding: 14) {
                     VStack(spacing: 12) {
-                        GeometryReader { geo in
-                            let w = geo.size.width, h = geo.size.height, flipped = ui.previewFlipped
-                            let seam = flipped ? w * 0.65 - 2 : w * 0.6 - 2
-                            ZStack(alignment: .topLeading) {
-                                RoundedRectangle(cornerRadius: 8, style: .continuous).fill(GapsPreview.wallpaper)
-                                MiniWindow(main: true, corner: 5, chrome: true)
-                                    .frame(width: (flipped ? w * 0.35 : w * 0.6) - 12, height: h - 16)
-                                    .offset(x: flipped ? w * 0.65 + 4 : 8, y: 8)
-                                MiniWindow(main: false, corner: 5, chrome: true)
-                                    .frame(width: (flipped ? w * 0.65 : w * 0.4) - 12, height: h - 16)
-                                    .offset(x: flipped ? 8 : w * 0.6 + 4, y: 8)
-                                // The windows meet at the seam when they land.
-                                ImpactBurst(trigger: flipped, angle: -90, size: 26, delay: c.animate ? c.animationDuration * 0.8 : 0)
-                                    .offset(x: seam - 13, y: -4)
-                                    .animation(nil, value: flipped)
+                        HStack(spacing: 14) {
+                            GeometryReader { geo in
+                                let w = geo.size.width, h = geo.size.height, flipped = ui.previewFlipped
+                                let seam = flipped ? w * 0.65 - 2 : w * 0.6 - 2
+                                ZStack(alignment: .topLeading) {
+                                    RoundedRectangle(cornerRadius: 8, style: .continuous).fill(GapsPreview.wallpaper)
+                                    MiniWindow(main: true, corner: 5, chrome: true)
+                                        .frame(width: max(1, (flipped ? w * 0.35 : w * 0.6) - 12), height: h - 16)
+                                        .offset(x: flipped ? w * 0.65 + 4 : 8, y: 8)
+                                    MiniWindow(main: false, corner: 5, chrome: true)
+                                        .frame(width: max(1, (flipped ? w * 0.65 : w * 0.4) - 12), height: h - 16)
+                                        .offset(x: flipped ? 8 : w * 0.6 + 4, y: 8)
+                                    // The windows meet at the seam when they land.
+                                    ImpactBurst(trigger: flipped, angle: -90, size: 26,
+                                                delay: c.animate ? c.animationDuration * c.animationCurve.arrival(bounce: c.animationBounce) : 0)
+                                        .offset(x: seam - 13, y: -4)
+                                        .animation(nil, value: flipped)
+                                }
+                                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                .shadow(color: .black.opacity(0.1), radius: 2, y: 1)
                             }
-                            .shadow(color: .black.opacity(0.1), radius: 2, y: 1)
+                            CurveGraph(curve: c.animate ? c.animationCurve : .linear, bounce: c.animationBounce, instant: !c.animate)
+                                .frame(width: 140)
+                                .padding(10)
+                                .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.window.opacity(0.6)))
+                                .accessibilityHidden(true)
                         }
                         .frame(height: 140)
                         .accessibilityHidden(true)
@@ -1277,12 +1363,80 @@ private struct AnimationPane: View {
         }
     }
 
+    private static func points(_ v: Double...) -> String { v.map { String(format: "%g", $0) }.joined(separator: ", ") }
+
     private func play() {
         let c = doc.config
-        // The same ease-out cubic curve the real animator uses.
-        withAnimation(c.animate ? .timingCurve(0.33, 1, 0.68, 1, duration: c.animationDuration) : nil) {
+        // Exactly the curve the real animator uses.
+        withAnimation(c.animate ? Animation(CurveAnimation(curve: c.animationCurve, bounce: c.animationBounce, duration: c.animationDuration)) : nil) {
             ui.previewFlipped.toggle()
         }
+    }
+}
+
+/// SwiftUI animation that follows an `AnimationCurve`, so the preview moves like real windows do.
+private struct CurveAnimation: CustomAnimation {
+    let curve: AnimationCurve
+    let bounce: Double
+    let duration: Double
+
+    func animate<V: VectorArithmetic>(value: V, time: TimeInterval, context: inout AnimationContext<V>) -> V? {
+        guard time < duration else { return nil }
+        return value.scaled(by: curve.progress(time / duration, bounce: bounce))
+    }
+}
+
+/// Plot of a curve's progress over time, with dashed lines at the start and target.
+private struct CurveGraph: View {
+    let curve: AnimationCurve
+    let bounce: Double
+    var instant = false
+    var lineWidth: CGFloat = 2
+
+    var body: some View {
+        Canvas { ctx, size in
+            // Leave headroom above and below for overshoot and anticipation.
+            let samples = (0...120).map { Double($0) / 120 }
+            let values = samples.map { instant ? ($0 > 0 ? 1 : 0) : curve.progress($0, bounce: bounce) }
+            let lo = min(0, values.min() ?? 0), hi = max(1, values.max() ?? 1)
+            func y(_ v: Double) -> CGFloat { size.height - CGFloat((v - lo) / (hi - lo)) * size.height }
+            var guides = Path()
+            for v in [0.0, 1.0] { guides.move(to: CGPoint(x: 0, y: y(v))); guides.addLine(to: CGPoint(x: size.width, y: y(v))) }
+            ctx.stroke(guides, with: .color(.secondary.opacity(0.35)), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+            var line = Path()
+            for (t, v) in zip(samples, values) {
+                let p = CGPoint(x: CGFloat(t) * size.width, y: y(v))
+                if t == 0 { line.move(to: p) } else { line.addLine(to: p) }
+            }
+            ctx.stroke(line, with: .color(.accentColor), style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
+        }
+    }
+}
+
+private struct PresetTile: View {
+    let preset: AnimationPane.Preset
+    let selected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 6) {
+                CurveGraph(curve: preset.animate ? preset.curve : .linear, bounce: preset.bounce, instant: !preset.animate, lineWidth: 1.75)
+                    .frame(height: 34)
+                    .padding(.horizontal, 4)
+                Text(preset.name).font(Theme.body(12, selected ? .semibold : .regular))
+            }
+            .padding(.vertical, 10)
+            .padding(.horizontal, 8)
+            .frame(maxWidth: .infinity)
+            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.card))
+            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .strokeBorder(selected ? Color.accentColor : Theme.hairline, lineWidth: selected ? 2 : 1))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(preset.name)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 

@@ -46,6 +46,9 @@ struct Config {
     var windowResizeStep: CGFloat = 0.05
     var animate = true
     var animationDuration: Double = 0.18
+    var animationCurve: AnimationCurve = .easeOut
+    /// How lively spring, bounce and overshoot curves are, 0...1.
+    var animationBounce: Double = 0.5
     var debugLogging = false
     /// Ouch's own workspaces (instant, per monitor, like Hyprland) instead of macOS Spaces.
     var virtualWorkspaces = true
@@ -161,6 +164,12 @@ struct Config {
             guard fullKey == "animations:enabled" else { return "unknown option `\(rawKey)`" }
             animate = bool
         case "animation_duration": return needNum { animationDuration = Double($0) > 5 ? Double($0) / 1000 : Double($0) }
+        case "animation_curve":
+            guard let curve = AnimationCurve(v) else {
+                return "unknown animation curve `\(v)` (ease-out, ease-in-out, linear, spring, bounce, overshoot or cubic-bezier(x1, y1, x2, y2))"
+            }
+            animationCurve = curve
+        case "animation_bounce": return needNum { animationBounce = min(1, max(0, Double($0) > 1 ? Double($0) / 100 : Double($0))) }
         case "debug_logging": debugLogging = bool
         case "virtual_workspaces": virtualWorkspaces = bool
         case "stay_on_workspace_after_close": stayOnWorkspaceAfterClose = bool
@@ -330,8 +339,13 @@ floating = com.apple.systempreferences, com.apple.SystemSettings, com.apple.calc
 floating-is-blacklist = true
 
 # ---- animation -------------------------------------------------------------
+# animation-curve: ease-out, ease-in-out, linear, spring, bounce, overshoot,
+# or cubic-bezier(x1, y1, x2, y2) like CSS (y past 0...1 overshoots).
+# animation-bounce (0-1) sets how lively spring, bounce and overshoot are.
 animate = true
 animation-duration = 0.18
+animation-curve = ease-out
+animation-bounce = 0.5
 
 # ---- keybinds: bind = MODS, key, dispatcher, args -------------------------
 # Global binds work everywhere. Everything else lives in "window mode" (a Hyprland submap):

@@ -398,7 +398,8 @@ final class WindowManager {
         }
         if !moves.isEmpty { Log.debug("tile: moving \(moves.map { "\($0.window.id)→\($0.to)" }.joined(separator: ", "))") }
         animator.animate(instant, duration: 0) // workspace switches are instant, like Hyprland
-        animator.animate(moves, duration: config.animate ? config.animationDuration : 0)
+        animator.animate(moves, duration: config.animate ? config.animationDuration : 0,
+                         curve: config.animationCurve, bounce: config.animationBounce)
         onChange?()
     }
 
@@ -872,7 +873,8 @@ final class WindowManager {
             o.x = max(dst.visible.minX, min(o.x, dst.visible.maxX - f.width))
             o.y = max(dst.visible.minY, min(o.y, dst.visible.maxY - f.height))
             animator.animate([.init(window: w, to: CGRect(origin: o, size: f.size), bounds: dst.visible)],
-                             duration: config.animate ? config.animationDuration : 0)
+                             duration: config.animate ? config.animationDuration : 0,
+                             curve: config.animationCurve, bounce: config.animationBounce)
             workspaceOf[w.id] = shown[dst.uuid]
             scheduleRefresh()
         } else {

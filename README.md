@@ -41,7 +41,7 @@ Settings → Overview has the update toggles, and the menu bar has **Check for U
 
 `~/.config/ouch/ouch.conf` is created on first run. The menu bar icon has buttons to open and reload it.
 
-It uses Hyprland syntax (`$vars`, `bind = MODS, key, dispatcher, args`, `general { }` blocks) with Amethyst's options (`layouts`, `window-margin-size`, `screen-padding-*`, `mouse-follows-focus`, `focus-follows-mouse`, `mouse-swaps-windows`, `mouse-resizes-windows`, `floating`, `floating-is-blacklist`, `float-small-windows`, `new-windows-to-main`, `enables-layout-hud`, `ignore-menu-bar`, `window-resize-step`, …). It also adds `animate` and `animation-duration`.
+It uses Hyprland syntax (`$vars`, `bind = MODS, key, dispatcher, args`, `general { }` blocks) with Amethyst's options (`layouts`, `window-margin-size`, `screen-padding-*`, `mouse-follows-focus`, `focus-follows-mouse`, `mouse-swaps-windows`, `mouse-resizes-windows`, `floating`, `floating-is-blacklist`, `float-small-windows`, `new-windows-to-main`, `enables-layout-hud`, `ignore-menu-bar`, `window-resize-step`, …). It also adds `animate`, `animation-duration`, `animation-curve` (`ease-out`, `ease-in-out`, `linear`, `spring`, `bounce`, `overshoot` or `cubic-bezier(x1, y1, x2, y2)`) and `animation-bounce` (0–1, how lively springs, bounces and overshoot are).
 
 The default `$mod` is **Option**, so your app shortcuts like ⌘Q and ⌘C keep working. Set `$mod = SUPER` to use Command like Hyprland does.
 
@@ -145,7 +145,7 @@ Open it from the menu bar icon with **Settings…**. Changes save and apply auto
 - **Gaps & Padding:** a preview drawn at your real screen's proportions
 - **Behavior:** focus follows mouse, mouse follows focus, drag to swap or resize, new windows, layout HUD
 - **Floating Windows:** apps that float or are the only ones tiled, with a picker for running apps
-- **Animation:** speed presets and a preview
+- **Animation:** style presets (None, Snappy, Smooth, Relaxed, Springy, Wobbly, Bouncy, Playful), curve, duration and bounciness, plus a preview and a graph of the curve
 - **Keyboard Shortcuts:** grouped by category. Click a shortcut, then press the new keys to record it. Invalid shortcuts are flagged in red; ones that replace a standard app shortcut like ⌘Q are flagged in orange.
 - **Advanced:** config and log files, detailed logging, command-line usage, and resets
 
