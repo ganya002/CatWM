@@ -129,7 +129,7 @@ final class SettingsUI: ObservableObject {
         }
         Hotkeys.shared.paused = true
         if monitor == nil {
-            monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] e in self?.record(e) ?? e }
+            monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] e in guard let self else { return e }; return self.record(e) }
         }
     }
 
@@ -824,7 +824,7 @@ private struct FloatingPane: View {
                     Spacer()
                     Menu {
                         ForEach(runningApps, id: \.id) { app in
-                            Button { doc.config.floating.append(app.id) } label: {
+                            Button { if !doc.config.floating.contains(app.id) { doc.config.floating.append(app.id) } } label: {
                                 if let icon = app.icon { Image(nsImage: resized(icon)) }
                                 Text(app.name)
                             }

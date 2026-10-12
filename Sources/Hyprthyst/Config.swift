@@ -6,6 +6,22 @@ struct KeyBinding {
     let dispatcher: String
     let arg: String
     var submap = "" // "" = global; otherwise only active inside that submap (mode)
+    var repeats = false // binde/bindel/bindle fire on key autorepeat
+}
+
+/// Hyprland comments: a single `#` starts one, `##` is a literal `#`.
+func stripComment(_ line: String) -> String {
+    var out = ""
+    var it = line.makeIterator()
+    while let ch = it.next() {
+        if ch == "#" {
+            var peek = it
+            guard peek.next() == "#" else { break }
+            it = peek
+        }
+        out.append(ch)
+    }
+    return out
 }
 
 /// Amethyst's options, written in a Hyprland-style config file.
@@ -54,12 +70,14 @@ struct Config {
     static func parse(_ text: String) -> Config {
         var c = Config()
         var vars: [(String, String)] = []
+        var blocks: [String] = [] // enclosing Hyprland category blocks, outermost first
         for (n, raw) in text.components(separatedBy: .newlines).enumerated() {
-            var line = raw
-            if let hash = line.firstIndex(of: "#") { line = String(line[..<hash]) }
+            var line = stripComment(raw)
             line = line.trimmingCharacters(in: .whitespaces)
-            // Hyprland category blocks (`general { ... }`) are accepted and flattened.
-            if line.isEmpty || line.hasSuffix("{") || line == "}" { continue }
+            // Hyprland category blocks (`general { ... }`) are accepted; keys inside get the block path as prefix.
+            if line.hasSuffix("{") { blocks.append(String(line.dropLast()).trimmingCharacters(in: .whitespaces)); continue }
+            if line == "}" { _ = blocks.popLast(); continue }
+            if line.isEmpty { continue }
             guard let eq = line.firstIndex(of: "=") else { c.errors.append("line \(n + 1): expected `key = value`"); continue }
             let key = line[..<eq].trimmingCharacters(in: .whitespaces)
             var value = line[line.index(after: eq)...].trimmingCharacters(in: .whitespaces)
@@ -75,13 +93,14 @@ struct Config {
                 c.currentSubmap = value.lowercased() == "reset" ? "" : value
                 continue
             }
-            if let err = c.apply(key, value) { c.errors.append("line \(n + 1): \(err)") }
+            if let err = c.apply((blocks + [key]).joined(separator: ":"), value) { c.errors.append("line \(n + 1): \(err)") }
         }
         return c
     }
 
     mutating func apply(_ rawKey: String, _ v: String) -> String? {
         var key = rawKey.lowercased().replacingOccurrences(of: "-", with: "_")
+        let fullKey = key
         if let colon = key.lastIndex(of: ":") { key = String(key[key.index(after: colon)...]) } // general:gaps_in
         let num = Double(v).map { CGFloat($0) }
         let bool = ["true", "yes", "on", "1"].contains(v.lowercased())
@@ -91,7 +110,7 @@ struct Config {
         }
 
         switch key {
-        case "bind", "binde", "bindr", "bindl", "bindel", "bindle": return parseBind(v)
+        case "bind", "binde", "bindr", "bindl", "bindel", "bindle": return parseBind(v, repeats: ["binde", "bindel", "bindle"].contains(key))
         case "bindm": return nil // mouse binds: dragging already moves/resizes tiles
         case "layouts":
             var list: [Layout] = []
@@ -123,7 +142,10 @@ struct Config {
         case "ignore_menu_bar": ignoreMenuBar = bool
         case "disable_padding_on_builtin_display": disablePaddingOnBuiltinDisplay = bool
         case "window_resize_step": return needNum { windowResizeStep = $0 >= 1 ? $0 / 100 : $0 }
-        case "animate", "animations", "enabled": animate = bool
+        case "animate", "animations": animate = bool
+        case "enabled": // only `animations { enabled }` is ours; `blur { enabled }` etc. are other blocks' options
+            guard fullKey == "animations:enabled" else { return "unknown option `\(rawKey)`" }
+            animate = bool
         case "animation_duration": return needNum { animationDuration = Double($0) > 5 ? Double($0) / 1000 : Double($0) }
         case "debug_logging": debugLogging = bool
         case "virtual_workspaces": virtualWorkspaces = bool
@@ -132,7 +154,7 @@ struct Config {
         return nil
     }
 
-    private mutating func parseBind(_ v: String) -> String? {
+    private mutating func parseBind(_ v: String, repeats: Bool) -> String? {
         let parts = v.split(separator: ",", maxSplits: 3, omittingEmptySubsequences: false)
             .map { $0.trimmingCharacters(in: .whitespaces) }
         guard parts.count >= 3 else { return "bind needs `MODS, key, dispatcher[, args]`" }
@@ -154,7 +176,7 @@ struct Config {
         }
         for (key, arg) in pairs {
             guard let code = keyCodes[key.lowercased()] else { return "unknown key `\(key)`" }
-            bindings.append(KeyBinding(keyCode: code, mods: mods, dispatcher: dispatcher, arg: arg, submap: currentSubmap))
+            bindings.append(KeyBinding(keyCode: code, mods: mods, dispatcher: dispatcher, arg: arg, submap: currentSubmap, repeats: repeats))
         }
         return nil
     }
