@@ -18,5 +18,8 @@ ditto "$SPARKLE" "$APP/Contents/Frameworks/Sparkle.framework"
 # Local ad-hoc signature, Sparkle's helpers first. No hardened runtime here: it would reject Sparkle
 # (library validation needs matching team IDs). `amore release` re-signs with your Developer ID.
 codesign --force --deep --sign - "$APP/Contents/Frameworks/Sparkle.framework"
-codesign --force --sign - "$APP"
+# The designated requirement is pinned to the bundle ID: a plain ad-hoc signature is tied to the exact
+# binary, so every rebuild looked like a new app to macOS and the Accessibility / Input Monitoring
+# grants went stale (toggled on in System Settings, but rejected).
+codesign --force --sign - -r='designated => identifier "local.ouch"' "$APP"
 echo "Built $APP"

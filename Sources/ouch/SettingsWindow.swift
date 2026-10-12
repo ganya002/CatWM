@@ -3,7 +3,7 @@ import SwiftUI
 
 final class SettingsWindow: NSObject, NSWindowDelegate {
     static let shared = SettingsWindow()
-    private var window: NSWindow?
+    private(set) var window: NSWindow?
     let doc = ConfigDocument()
     private(set) lazy var ui = SettingsUI(doc: doc)
 
@@ -31,6 +31,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
             w.standardWindowButton(.zoomButton)?.isHidden = true
             w.delegate = self
             window = w
+            Self.hideSplitDivider
         }
         if let pane { ui.pane = pane }
         if !wasVisible {
@@ -43,6 +44,19 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
     }
+
+    /// The split view between sidebar and detail draws a dark 1pt divider; the panes already differ in
+    /// background, so Settings' own split view gets a clear divider (other split views are untouched).
+    private static let hideSplitDivider: Void = {
+        let sel = #selector(getter: NSSplitView.dividerColor)
+        guard let m = class_getInstanceMethod(NSSplitView.self, sel) else { return }
+        typealias Getter = @convention(c) (AnyObject, Selector) -> NSColor
+        let original = unsafeBitCast(method_getImplementation(m), to: Getter.self)
+        let block: @convention(block) (NSSplitView) -> NSColor = { view in
+            view.window === SettingsWindow.shared.window ? .clear : original(view, sel)
+        }
+        method_setImplementation(m, imp_implementationWithBlock(block))
+    }()
 
     /// Each time the window opens it starts centred on the display under the pointer; while it's
     /// open it can be moved freely. (The tiler always floats our windows, so nothing moves it back.)
