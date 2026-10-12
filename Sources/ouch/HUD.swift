@@ -13,12 +13,22 @@ final class HUD {
     private static let margin: CGFloat = 30
 
     func show(_ text: String, layout: Layout? = nil, on screen: NSScreen?) {
+        show(text, layout: layout, warning: false, on: screen)
+    }
+
+    /// A smaller card with a warning sign, for things that didn't work out (e.g. a window that won't shrink).
+    func warn(_ text: String, on screen: NSScreen?) {
+        show(text, layout: nil, warning: true, on: screen)
+    }
+
+    private func show(_ text: String, layout: Layout?, warning: Bool, on screen: NSScreen?) {
         guard let screen = screen ?? NSScreen.main else { return }
         let p = panel ?? makePanel()
         panel = p
         let wasVisible = p.isVisible && p.alphaValue > 0.5
         model.text = text
         model.layout = layout
+        model.warning = warning
         // A fresh appearance pops in; updates while it's up just morph in place.
         if !wasVisible { model.pops += 1 }
         let host = host ?? NSHostingView(rootView: HUDView(model: model, margin: Self.margin))
@@ -38,7 +48,7 @@ final class HUD {
             }
         }
         hideWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + (layout == nil ? 0.8 : 1), execute: work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + (warning ? 1.6 : layout == nil ? 0.8 : 1), execute: work)
     }
 
     private func makePanel() -> NSPanel {
@@ -56,6 +66,7 @@ final class HUD {
 final class HUDModel: ObservableObject {
     @Published var text = ""
     @Published var layout: Layout?
+    @Published var warning = false
     @Published var pops = 0
 }
 
@@ -70,9 +81,16 @@ struct HUDView: View {
             if let layout = model.layout {
                 LayoutThumbnail(layout: layout, selected: true).frame(width: 120, height: 75)
             }
-            Text(model.text).font(Theme.heading(28)).fixedSize()
+            if model.warning {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.yellow)
+                    Text(model.text).font(Theme.heading(15)).fixedSize()
+                }
+            } else {
+                Text(model.text).font(Theme.heading(28)).fixedSize()
+            }
         }
-        .padding(.horizontal, 28).padding(.vertical, model.layout == nil ? 16 : 20)
+        .padding(.horizontal, model.warning ? 18 : 28).padding(.vertical, model.warning ? 11 : model.layout == nil ? 16 : 20)
         .background(Blur())
         .shadow(color: .black.opacity(0.25), radius: 18, y: 8)
         .keyframeAnimator(initialValue: 1.0, trigger: model.pops) { view, scale in
