@@ -952,9 +952,23 @@ private struct GapsPreview: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Easter egg: the little windows are playable. Ids keep each window's identity while the order
     /// (first is main) changes.
-    @State private var ids = [0, 1, 2]
-    @State private var nextID = 3
-    @State private var hovered: Int?
+    @StateObject private var play = Play()
+
+    /// Play state lives in an object: @State's macro plugin isn't available to SwiftPM builds.
+    final class Play: ObservableObject {
+        @Published var ids = [0, 1, 2]
+        @Published var nextID = 3
+        @Published var hovered: Int?
+    }
+
+    private var ids: [Int] {
+        get { play.ids }
+        nonmutating set { play.ids = newValue }
+    }
+    private var hovered: Int? {
+        get { play.hovered }
+        nonmutating set { play.hovered = newValue }
+    }
 
     /// Desktop backdrop shared with the animation preview.
     static let wallpaper = LinearGradient(colors: [Color(red: 88 / 255, green: 86 / 255, blue: 214 / 255).opacity(0.55),
@@ -1016,7 +1030,7 @@ private struct GapsPreview: View {
 
     private func open() {
         guard ids.count < 6 else { return }
-        ids.append(nextID); nextID += 1
+        ids.append(play.nextID); play.nextID += 1
     }
 
     private func windows(in area: CGRect, scale: CGFloat, count: Int) -> [CGRect] {
