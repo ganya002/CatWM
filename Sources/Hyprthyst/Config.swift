@@ -254,7 +254,7 @@ let keyCodes: [String: UInt16] = [
     "return": 36, "enter": 36, "l": 37, "j": 38, "apostrophe": 39, "quote": 39, "'": 39, "k": 40,
     "semicolon": 41, ";": 41, "backslash": 42, "\\": 42, "comma": 43, "n": 45, "m": 46,
     "slash": 44, "/": 44, "period": 47, ".": 47, "tab": 48, "space": 49, "grave": 50, "`": 50,
-    "backspace": 51, "escape": 53, "esc": 53,
+    "backspace": 51, "escape": 53, "esc": 53, "capslock": 57, "caps": 57, "caps_lock": 57,
     "f1": 122, "f2": 120, "f3": 99, "f4": 118, "f5": 96, "f6": 97, "f7": 98, "f8": 100,
     "f9": 101, "f10": 109, "f11": 103, "f12": 111,
     "home": 115, "pageup": 116, "prior": 116, "delete": 117, "end": 119, "pagedown": 121, "next": 121,
@@ -307,9 +307,9 @@ animation-duration = 0.18
 
 # ---- keybinds: bind = MODS, key, dispatcher, args -------------------------
 # Global binds work everywhere. Everything else lives in "window mode" (a Hyprland submap):
-# press $mod Escape, then single keys, vim style. Esc / i / Return or a mouse click leaves it.
+# press Cmd+Caps Lock, then single keys, vim style. Esc / i / Return or a mouse click leaves it.
 bind = $mod, 1..0, workspace, 1..10
-bind = $mod, escape, submap, window
+bind = SUPER, capslock, submap, window
 
 submap = window
 bind = , h|j|k|l, movefocus, l|d|u|r
@@ -337,6 +337,6 @@ bind = , z, retile
 bind = SHIFT, t, toggletiling
 bind = SHIFT, r, reload
 bind = , escape|i|return, submap, reset
-bind = $mod, escape, submap, reset
+bind = SUPER, capslock, submap, reset
 submap = reset
 """

@@ -529,7 +529,7 @@ final class ConfigDocument: ObservableObject {
         if f.contains(.shift) { caps.append("⇧") }
         if f.contains(.command) { caps.append("⌘") }
         let symbols = ["left": "←", "right": "→", "up": "↑", "down": "↓", "return": "↩", "enter": "↩", "tab": "⇥",
-                       "space": "Space", "escape": "⎋", "esc": "⎋", "backspace": "⌫", "delete": "⌦", "comma": ",",
+                       "space": "Space", "escape": "⎋", "esc": "⎋", "capslock": "⇪", "caps": "⇪", "caps_lock": "⇪", "backspace": "⌫", "delete": "⌦", "comma": ",",
                        "period": ".", "minus": "−", "equal": "=", "bracketleft": "[", "bracketright": "]",
                        "semicolon": ";", "apostrophe": "'", "quote": "'", "slash": "/", "backslash": "\\", "grave": "`",
                        "pageup": "⇞", "pagedown": "⇟", "home": "↖", "end": "↘"]

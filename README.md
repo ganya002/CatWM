@@ -50,7 +50,7 @@ The default `$mod` is **Option**, so your app shortcuts like ⌘Q and ⌘C keep 
 Binds can live in a mode, like Hyprland's submaps or vim's normal mode. A global shortcut enters the mode, and inside it single keys do the work. Outside the mode those keys reach your apps untouched, so vim keeps working.
 
 ```
-bind = $mod, escape, submap, window     # ⌘Esc enters window mode
+bind = SUPER, capslock, submap, window  # ⌘Caps Lock enters window mode (Caps Lock itself is left alone)
 submap = window
 bind = , h|j|k|l, movefocus, l|d|u|r
 bind = SHIFT, h|j|k|l, movewindow, l|d|u|r

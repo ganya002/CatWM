@@ -1,4 +1,6 @@
 import AppKit
+import IOKit
+import IOKit.hid
 
 /// Global keybinds via a CGEventTap. Carbon's RegisterEventHotKey can't be used: since macOS 15 it
 /// rejects Option-only and Option+Shift combos, which are exactly the Hyprland/Amethyst-style binds.
@@ -35,7 +37,7 @@ final class Hotkeys {
     @discardableResult
     func start() -> Bool {
         if tap != nil { return true }
-        let mask = CGEventMask(1 << CGEventType.keyDown.rawValue)
+        let mask = CGEventMask(1 << CGEventType.keyDown.rawValue) | CGEventMask(1 << CGEventType.flagsChanged.rawValue)
         guard let t = CGEvent.tapCreate(tap: .cgSessionEventTap, place: .headInsertEventTap, options: .defaultTap,
                                         eventsOfInterest: mask, callback: tapCallback, userInfo: nil) else { return false }
         tap = t
@@ -58,6 +60,18 @@ final class Hotkeys {
     }
 
     fileprivate func reenable() { if let tap { CGEvent.tapEnable(tap: tap, enable: true) } }
+
+    /// Caps Lock arrives as flagsChanged (keycode 57), never keyDown. Swallowing the event isn't enough
+    /// to keep the lock from toggling, so the lock state is put back through IOKit afterwards.
+    static func setCapsLock(_ on: Bool) {
+        let service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching(kIOHIDSystemClass))
+        guard service != 0 else { return }
+        defer { IOObjectRelease(service) }
+        var conn: io_connect_t = 0
+        guard IOServiceOpen(service, mach_task_self_, UInt32(kIOHIDParamConnectType), &conn) == KERN_SUCCESS else { return }
+        defer { IOServiceClose(conn) }
+        IOHIDSetModifierLockState(conn, Int32(kIOHIDCapsLockState), on)
+    }
 
     func match(_ event: CGEvent) -> Match {
         guard !paused, event.getIntegerValueField(.eventSourceUserData) != Self.syntheticMarker else { return .pass }
@@ -120,8 +134,19 @@ private func tapCallback(proxy: CGEventTapProxy, type: CGEventType, event: CGEve
         Hotkeys.shared.reenable()
         return Unmanaged.passUnretained(event)
     }
-    guard type == .keyDown else { return Unmanaged.passUnretained(event) }
-    switch Hotkeys.shared.match(event) {
+    guard type == .keyDown || type == .flagsChanged else { return Unmanaged.passUnretained(event) }
+    if type == .flagsChanged {
+        // Only Caps Lock can be bound as a key; every other modifier change passes untouched.
+        guard event.getIntegerValueField(.keyboardEventKeycode) == 57 else { return Unmanaged.passUnretained(event) }
+    }
+    let capsNow = event.flags.contains(.maskAlphaShift)
+    let result = Hotkeys.shared.match(event)
+    if type == .flagsChanged {
+        guard case .bind = result else { return Unmanaged.passUnretained(event) }
+        // Undo the toggle this press caused.
+        DispatchQueue.main.async { Hotkeys.setCapsLock(!capsNow) }
+    }
+    switch result {
     case .pass:
         return Unmanaged.passUnretained(event)
     case .swallow:
