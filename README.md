@@ -78,6 +78,22 @@ bind = $mod, a..d, layout, bsp                     # one value is used for every
 
 `exec` arguments are never expanded.
 
+### Scroll wheel and trackpad swipes
+
+Scrolling and swipes are keys in `bind` lines, so they work with modifiers, ranges and window mode like any other bind.
+
+```
+bind = $mod, mouse_down, workspace, e+1        # hold ⌥ and scroll down: next workspace with windows
+bind = $mod, mouse_up, workspace, e-1
+bind = $mod SHIFT, mouse_down, cyclenext
+bind = $mod CTRL, swipe_left, workspace, +1    # trackpad swipe
+```
+
+- Keys: `mouse_up`, `mouse_down`, `mouse_left`, `mouse_right` (scroll) and `swipe_left`, `swipe_right`, `swipe_up`, `swipe_down`.
+- Scrolls without a matching bind reach your apps as usual. A matching scroll is taken, so the app under the pointer doesn't scroll too. Directions follow the system's natural-scrolling setting.
+- A trackpad scroll fires once per short stretch of movement, and the momentum after you lift off is ignored.
+- Swipes can't be intercepted, so macOS's own gesture for the same swipe still happens. Turn it off in System Settings → Trackpad → More Gestures, or use a finger count macOS doesn't use. Swipes need the "Swipe between pages / full-screen apps" gestures enabled to be reported at all.
+
 ### Workspaces
 
 Hyprthyst has its own workspaces, like Hyprland and AeroSpace, so switching and moving windows are instant:

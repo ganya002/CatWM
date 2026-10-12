@@ -245,6 +245,14 @@ enum BindRange {
     }
 }
 
+/// Pseudo key codes for scroll wheel and trackpad swipe binds. Real virtual key codes stop below 0x100.
+enum SpecialKey {
+    static let mouseUp: UInt16 = 0x1000, mouseDown: UInt16 = 0x1001, mouseLeft: UInt16 = 0x1002, mouseRight: UInt16 = 0x1003
+    static let swipeLeft: UInt16 = 0x1010, swipeRight: UInt16 = 0x1011, swipeUp: UInt16 = 0x1012, swipeDown: UInt16 = 0x1013
+    static func isScroll(_ code: UInt16) -> Bool { (0x1000...0x1003).contains(code) }
+    static func isSwipe(_ code: UInt16) -> Bool { (0x1010...0x1013).contains(code) }
+}
+
 /// ANSI virtual key codes, named like xkb keysyms (what Hyprland uses) plus a few aliases.
 let keyCodes: [String: UInt16] = [
     "a": 0, "s": 1, "d": 2, "f": 3, "h": 4, "g": 5, "z": 6, "x": 7, "c": 8, "v": 9, "b": 11, "q": 12,
@@ -259,6 +267,11 @@ let keyCodes: [String: UInt16] = [
     "f9": 101, "f10": 109, "f11": 103, "f12": 111,
     "home": 115, "pageup": 116, "prior": 116, "delete": 117, "end": 119, "pagedown": 121, "next": 121,
     "left": 123, "right": 124, "down": 125, "up": 126,
+    // Scroll wheel (Hyprland's names) and trackpad swipes.
+    "mouse_up": SpecialKey.mouseUp, "mouse_down": SpecialKey.mouseDown,
+    "mouse_left": SpecialKey.mouseLeft, "mouse_right": SpecialKey.mouseRight,
+    "swipe_left": SpecialKey.swipeLeft, "swipe_right": SpecialKey.swipeRight,
+    "swipe_up": SpecialKey.swipeUp, "swipe_down": SpecialKey.swipeDown,
 ]
 
 let defaultText = """
@@ -310,6 +323,10 @@ animation-duration = 0.18
 # press Cmd+Caps Lock, then single keys, vim style. Esc / i / Return or a mouse click leaves it.
 bind = $mod, 1..0, workspace, 1..10
 bind = SUPER, capslock, submap, window
+# Scroll wheel / trackpad scroll while holding the modifier, and trackpad swipes:
+# bind = $mod, mouse_down, workspace, e+1
+# bind = $mod, mouse_up, workspace, e-1
+# bind = $mod CTRL, swipe_left, workspace, e+1
 
 submap = window
 bind = , h|j|k|l, movefocus, l|d|u|r

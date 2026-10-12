@@ -453,7 +453,7 @@ final class ConfigDocument: ObservableObject {
             return (.error, e.message.prefix(1).uppercased() + e.message.dropFirst())
         }
         guard let mine = combos(row) else { return (.error, "Unknown key in “\(row.key)”") }
-        if row.submap.isEmpty, f.subtracting(.shift).isEmpty {
+        if row.submap.isEmpty, f.subtracting(.shift).isEmpty, !mine.allSatisfy({ SpecialKey.isSwipe($0.code) }) {
             return (.error, "Add ⌥, ⌃ or ⌘, or put this in window mode, otherwise it would block normal typing")
         }
         let mineSet = Set(mine)

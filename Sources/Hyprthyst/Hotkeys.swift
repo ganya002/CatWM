@@ -18,6 +18,9 @@ final class Hotkeys {
     private(set) var submap = ""
     var onSubmapChange: ((String) -> Void)?
     private var tap: CFMachPort?
+    private var swipeMonitor: Any?
+    private var scrollAccum: [Int: Double] = [:] // axis → distance since the last fire
+    private var lastScrollFire: [Int: TimeInterval] = [:]
 
     func setBindings(_ list: [KeyBinding]) {
         tables = [:]
@@ -38,13 +41,75 @@ final class Hotkeys {
     func start() -> Bool {
         if tap != nil { return true }
         let mask = CGEventMask(1 << CGEventType.keyDown.rawValue) | CGEventMask(1 << CGEventType.flagsChanged.rawValue)
+            | CGEventMask(1 << CGEventType.scrollWheel.rawValue)
         guard let t = CGEvent.tapCreate(tap: .cgSessionEventTap, place: .headInsertEventTap, options: .defaultTap,
                                         eventsOfInterest: mask, callback: tapCallback, userInfo: nil) else { return false }
         tap = t
         CFRunLoopAddSource(CFRunLoopGetMain(), CFMachPortCreateRunLoopSource(nil, t, 0), .commonModes)
         CGEvent.tapEnable(tap: t, enable: true)
+        startSwipes()
         return true
     }
+
+    /// Trackpad swipes (`swipe_left` … `swipe_down`). Swipe events can't come through the tap, and a global
+    /// monitor can't swallow them, so macOS's own gesture for the same swipe still happens unless it's off.
+    private func startSwipes() {
+        guard swipeMonitor == nil else { return }
+        swipeMonitor = NSEvent.addGlobalMonitorForEvents(matching: .swipe) { [weak self] e in
+            guard let self, !paused else { return }
+            // Cocoa reports a swipe left as deltaX +1 and a swipe up as deltaY +1.
+            let code: UInt16
+            if e.deltaX != 0 { code = e.deltaX > 0 ? SpecialKey.swipeLeft : SpecialKey.swipeRight }
+            else if e.deltaY != 0 { code = e.deltaY > 0 ? SpecialKey.swipeUp : SpecialKey.swipeDown }
+            else { return }
+            let flags = CGEventFlags(rawValue: UInt64(e.modifierFlags.rawValue))
+            if let b = lookup(code, flags) { fire(b) }
+        }
+    }
+
+    private func lookup(_ code: UInt16, _ flags: CGEventFlags) -> KeyBinding? {
+        let k = Self.key(code, flags)
+        return (submap.isEmpty ? nil : tables[submap]?[k]) ?? tables[""]?[k]
+    }
+
+    fileprivate func fire(_ b: KeyBinding) {
+        if b.dispatcher == "submap" {
+            setSubmap(b.arg)
+        } else {
+            // Return immediately so the tap never times out; do the (slow) AX work afterwards.
+            DispatchQueue.main.async { [weak self] in self?.handler?(b) }
+        }
+    }
+
+    /// Scroll wheel binds (`mouse_up`, `mouse_down`, `mouse_left`, `mouse_right`). Only scrolls with a
+    /// matching bind are taken, so scrolling without those modifiers reaches the app as usual.
+    /// Returns true if the event was used. A notched wheel fires once per notch; a trackpad fires
+    /// once per `scrollStep` points, and its momentum tail is swallowed without firing.
+    fileprivate func handleScroll(_ event: CGEvent) -> Bool {
+        guard !paused, event.getIntegerValueField(.eventSourceUserData) != Self.syntheticMarker else { return false }
+        let continuous = event.getIntegerValueField(.scrollWheelEventIsContinuous) != 0
+        let dy = continuous ? event.getDoubleValueField(.scrollWheelEventPointDeltaAxis1) : event.getDoubleValueField(.scrollWheelEventDeltaAxis1)
+        let dx = continuous ? event.getDoubleValueField(.scrollWheelEventPointDeltaAxis2) : event.getDoubleValueField(.scrollWheelEventDeltaAxis2)
+        let axis = abs(dy) >= abs(dx) ? 1 : 2
+        let delta = axis == 1 ? dy : dx
+        guard delta != 0 else { return false }
+        // Positive vertical delta is a scroll up, positive horizontal a scroll left.
+        let code = axis == 1 ? (delta > 0 ? SpecialKey.mouseUp : SpecialKey.mouseDown)
+                             : (delta > 0 ? SpecialKey.mouseLeft : SpecialKey.mouseRight)
+        guard let b = lookup(code, event.flags) else { return false }
+        if event.getIntegerValueField(.scrollWheelEventMomentumPhase) != 0 { return true }
+        if continuous {
+            if event.getIntegerValueField(.scrollWheelEventScrollPhase) == 1 { scrollAccum[axis] = 0 } // began
+            let acc = (scrollAccum[axis] ?? 0) * (delta > 0 ? 1 : -1) >= 0 ? (scrollAccum[axis] ?? 0) + delta : delta
+            let now = ProcessInfo.processInfo.systemUptime
+            guard abs(acc) >= Self.scrollStep, now - (lastScrollFire[axis] ?? 0) > 0.12 else { scrollAccum[axis] = acc; return true }
+            scrollAccum[axis] = 0
+            lastScrollFire[axis] = now
+        }
+        fire(b)
+        return true
+    }
+    static let scrollStep = 40.0
 
     var isActive: Bool { tap.map { CGEvent.tapIsEnabled(tap: $0) } ?? false }
 
@@ -78,7 +143,7 @@ final class Hotkeys {
         let code = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
         let k = Self.key(code, event.flags)
         if !submap.isEmpty {
-            if let b = tables[submap]?[k] ?? tables[""]?[k] { return repeatOK(b, event) ? .bind(b) : .swallow }
+            if let b = lookup(code, event.flags) { return repeatOK(b, event) ? .bind(b) : .swallow }
             // Like vim's normal mode: stray keys do nothing instead of typing into the app,
             // but ⌘/⌃ shortcuts (copy, paste…) still reach it.
             return event.flags.isDisjoint(with: [.maskCommand, .maskControl]) ? .swallow : .pass
@@ -134,6 +199,9 @@ private func tapCallback(proxy: CGEventTapProxy, type: CGEventType, event: CGEve
         Hotkeys.shared.reenable()
         return Unmanaged.passUnretained(event)
     }
+    if type == .scrollWheel {
+        return Hotkeys.shared.handleScroll(event) ? nil : Unmanaged.passUnretained(event)
+    }
     guard type == .keyDown || type == .flagsChanged else { return Unmanaged.passUnretained(event) }
     if type == .flagsChanged {
         // Only Caps Lock can be bound as a key; every other modifier change passes untouched.
@@ -152,12 +220,7 @@ private func tapCallback(proxy: CGEventTapProxy, type: CGEventType, event: CGEve
     case .swallow:
         return nil
     case .bind(let b):
-        if b.dispatcher == "submap" {
-            Hotkeys.shared.setSubmap(b.arg)
-        } else {
-            // Return immediately so the tap never times out; do the (slow) AX work afterwards.
-            DispatchQueue.main.async { Hotkeys.shared.handler?(b) }
-        }
+        Hotkeys.shared.fire(b)
         return nil
     }
 }
