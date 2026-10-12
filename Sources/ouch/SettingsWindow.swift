@@ -23,6 +23,8 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
             w.contentViewController = host
             w.setContentSize(NSSize(width: 920, height: 660))
             w.contentMinSize = NSSize(width: 820, height: 520)
+            // Pinned: stays above every ordinary window while open, even when another app is active.
+            w.level = .floating
             w.titleVisibility = .hidden
             w.titlebarAppearsTransparent = true
             w.toolbarStyle = .unified
