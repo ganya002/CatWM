@@ -87,6 +87,7 @@ final class Onboarding {
     private func showWelcome() {
         guard let p = welcome else { return }
         let end = p.frame
+        welcomeModel.landed = false
         p.alphaValue = 0
         p.setFrame(end.offsetBy(dx: 0, dy: -14), display: false)
         p.orderFrontRegardless()
@@ -95,6 +96,7 @@ final class Onboarding {
             p.animator().alphaValue = 1
             p.animator().setFrame(end, display: true)
         }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in self?.welcomeModel.landed = true }
         poll = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in self?.refreshWelcome() }
     }
 
@@ -356,6 +358,7 @@ private final class Intro {
             for (i, r) in layout(bsp: false).enumerated() { move(i, to: r, alpha: 1, rotation: 0, duration: 0.8, delay: Double(i) * 0.07) }
         case 3:
             for i in tiles.indices { animate(0.6) { tiles[i].animator().alphaValue = 0.45 } }
+            wordModel.landed = true
             animate(1.1) {
                 word.animator().alphaValue = 1
                 word.animator().setFrame(wordFrame, display: true)

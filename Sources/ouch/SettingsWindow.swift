@@ -256,12 +256,35 @@ private struct Sidebar: View {
         .listStyle(.sidebar)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text("Ouch").font(Theme.display(22))
+                Wordmark()
                 Text(version).font(Theme.body(11)).foregroundStyle(.secondary)
                 Spacer()
             }
             .padding(.horizontal, 18).padding(.vertical, 12)
         }
+    }
+}
+
+/// The logo. It tips like the window on the icon when hovered, and takes a bump when clicked.
+private struct Wordmark: View {
+    private final class Model: ObservableObject {
+        @Published var hover = false
+        @Published var bumps = 0
+    }
+    @StateObject private var model = Model()
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        Text("Ouch").font(Theme.display(22))
+            .rotationEffect(.degrees(model.hover && !reduceMotion ? -6 : 0), anchor: .bottomLeading)
+            .squish(on: model.bumps)
+            .overlay(alignment: .topLeading) {
+                ImpactBurst(trigger: model.bumps, size: 16).offset(x: -10, y: -8)
+            }
+            .animation(Motion.snap, value: model.hover)
+            .onHover { model.hover = $0 }
+            .onTapGesture { model.bumps += 1 }
+            .accessibilityAddTraits(.isHeader)
     }
 }
 
@@ -361,34 +384,6 @@ private struct NumberRow: View {
             }
         }
         .opacity(enabled ? 1 : 0.4)
-    }
-}
-
-/// Miniature of a layout, drawn with the real layout code.
-private struct LayoutThumbnail: View {
-    let layout: Layout
-    var count = 4
-    var selected = false
-
-    var body: some View {
-        Canvas { ctx, size in
-            let bg = Path(roundedRect: CGRect(origin: .zero, size: size), cornerRadius: 5)
-            ctx.fill(bg, with: .color(.gray.opacity(0.13)))
-            let px = size.width * 0.035, py = size.height * 0.055
-            let r = CGRect(origin: .zero, size: size).insetBy(dx: px, dy: py)
-            let frames = layout.frames(count: count, in: r.insetBy(dx: -px / 2, dy: -py / 2), ratio: 0.5, mainCount: 1)?
-                .map { $0.insetBy(dx: px / 2, dy: py / 2) }
-                ?? [CGRect(x: size.width * 0.09, y: size.height * 0.15, width: size.width * 0.52, height: size.height * 0.5),
-                    CGRect(x: size.width * 0.39, y: size.height * 0.37, width: size.width * 0.52, height: size.height * 0.5)]
-            let tint = selected ? Color.accentColor : Color.gray
-            for (i, f) in frames.enumerated().reversed() {
-                let p = Path(roundedRect: f, cornerRadius: 2.5)
-                ctx.fill(p, with: .color(tint.opacity(i == 0 ? 0.9 : 0.45)))
-                if layout == .fullscreen || layout == .floating || layout == .twoPane || layout == .twoPaneRight {
-                    ctx.stroke(p, with: .color(.white.opacity(0.6)), lineWidth: 0.75)
-                }
-            }
-        }
     }
 }
 
@@ -505,17 +500,26 @@ private struct OverviewPane: View {
         return o
     }
 
-    @ViewBuilder private func hero(_ s: WindowManager.Status) -> some View {
-        if !s.trusted {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(spacing: 14) {
-                    IconTile(symbol: "lock.fill", color: .orange, size: 44)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Ouch needs Accessibility access").font(Theme.heading(21))
-                        Text("macOS only lets apps move other apps' windows with this permission.")
-                            .foregroundStyle(Theme.secondary)
-                    }
+    /// One layout for every state, so the icon stays put (and can bump) when access is granted.
+    private func hero(_ s: WindowManager.Status) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 14) {
+                statusIcon(s)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(!s.trusted ? "Ouch needs Accessibility access" : !s.tilingEnabled ? "Tiling is paused"
+                         : s.keybindsActive ? "Ouch is running" : "Keyboard shortcuts aren't active")
+                        .font(Theme.heading(21))
+                        .contentTransition(.opacity)
+                    Text(s.trusted ? summary(s) : "macOS only lets apps move other apps' windows with this permission.")
+                        .foregroundStyle(Theme.secondary)
+                        .contentTransition(.numericText())
                 }
+                Spacer()
+                if s.trusted && !s.keybindsActive {
+                    Button("Retry") { Hotkeys.shared.restart(); ui.refreshStatus() }
+                }
+            }
+            if !s.trusted {
                 VStack(alignment: .leading, spacing: 6) {
                     step(1, "Click Open Accessibility Settings. A guide appears next to System Settings.")
                     step(2, "Turn on Ouch in the list.")
@@ -529,22 +533,23 @@ private struct OverviewPane: View {
                     ProgressView().controlSize(.small).scaleEffect(0.7).frame(width: 12, height: 12)
                     Text("Waiting…").font(Theme.body(11)).foregroundStyle(Theme.secondary)
                 }
-            }
-        } else {
-            HStack(spacing: 14) {
-                IconTile(symbol: s.keybindsActive && s.tilingEnabled ? "checkmark" : s.keybindsActive ? "pause.fill" : "exclamationmark.triangle.fill",
-                         color: s.keybindsActive && s.tilingEnabled ? .green : .orange, size: 44)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(!s.tilingEnabled ? "Tiling is paused" : s.keybindsActive ? "Ouch is running" : "Keyboard shortcuts aren't active")
-                        .font(Theme.heading(21))
-                    Text(summary(s)).foregroundStyle(Theme.secondary)
-                }
-                Spacer()
-                if !s.keybindsActive {
-                    Button("Retry") { Hotkeys.shared.restart(); ui.refreshStatus() }
-                }
+                .transition(.opacity)
             }
         }
+        .animation(.easeOut(duration: 0.25), value: s.trusted)
+        .animation(.easeOut(duration: 0.2), value: summary(s))
+    }
+
+    /// The app icon with a status badge. Going live (access granted, tiling back on) gives it a bump.
+    private func statusIcon(_ s: WindowManager.Status) -> some View {
+        let live = s.trusted && s.keybindsActive && s.tilingEnabled
+        let badge = !s.trusted ? "lock.circle.fill" : live ? "checkmark.circle.fill"
+            : s.keybindsActive ? "pause.circle.fill" : "exclamationmark.circle.fill"
+        return BadgedAppIcon(badge: badge, color: live ? .green : .orange, size: 48)
+            .squish(on: live, when: live)
+            .overlay(alignment: .topLeading) {
+                ImpactBurst(trigger: live, size: 22).offset(x: -12, y: -12).opacity(live ? 1 : 0)
+            }
     }
 
     private func summary(_ s: WindowManager.Status) -> String {
@@ -723,6 +728,7 @@ enum Permissions {
 
 private struct LayoutsPane: View {
     @ObservedObject var doc: ConfigDocument
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         PaneScroll(spacing: 22) {
@@ -756,14 +762,18 @@ private struct LayoutsPane: View {
             LayoutThumbnail(layout: l, selected: true).frame(width: 84, height: 52)
             Text("\(i + 1). \(l.title)").font(Theme.body(11, .medium)).lineLimit(1).frame(maxWidth: 96)
             HStack(spacing: 2) {
-                arrow("chevron.left", enabled: i > 0, help: "Move earlier") { doc.config.layouts.swapAt(i, i - 1) }
-                arrow("chevron.right", enabled: i < doc.config.layouts.count - 1, help: "Move later") { doc.config.layouts.swapAt(i, i + 1) }
+                arrow("chevron.left", enabled: i > 0, help: "Move earlier") { move(i, by: -1) }
+                arrow("chevron.right", enabled: i < doc.config.layouts.count - 1, help: "Move later") { move(i, by: 1) }
             }
         }
         .frame(width: 104)
         .padding(.vertical, 8)
         .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.control))
         .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Theme.hairline))
+    }
+
+    private func move(_ i: Int, by d: Int) {
+        withAnimation(Motion.snap(reduceMotion)) { doc.config.layouts.swapAt(i, i + d) }
     }
 
     private func arrow(_ symbol: String, enabled: Bool, help: String, _ action: @escaping () -> Void) -> some View {
@@ -783,17 +793,25 @@ private struct LayoutsPane: View {
         let on = index != nil
         let locked = on && doc.config.layouts.count == 1
         return Button {
-            if let index { if !locked { doc.config.layouts.remove(at: index) } } else { doc.config.layouts.append(l) }
+            withAnimation(Motion.snap(reduceMotion)) {
+                if let index { if !locked { doc.config.layouts.remove(at: index) } } else { doc.config.layouts.append(l) }
+            }
         } label: {
             VStack(alignment: .leading, spacing: 0) {
                 LayoutThumbnail(layout: l, selected: on)
                     .frame(height: 86)
+                    .squish(on: on, when: on)
                     .overlay(alignment: .topTrailing) {
                         if let index {
                             Text("\(index + 1)").font(Theme.body(11, .bold)).foregroundStyle(.white)
+                                .contentTransition(.numericText())
                                 .frame(width: 20, height: 20).background(Circle().fill(Color.accentColor))
                                 .padding(5)
+                                .transition(.scale(scale: 0.4).combined(with: .opacity))
                         }
+                    }
+                    .overlay(alignment: .topLeading) {
+                        ImpactBurst(trigger: on, size: 22).offset(x: -9, y: -9).opacity(on ? 1 : 0)
                     }
                 Text(l.title).font(Theme.body(12.5, .semibold)).foregroundStyle(.primary).padding(.top, 8)
             }
@@ -860,51 +878,58 @@ private struct GapsPane: View {
     }
 }
 
-/// The main display, scaled down, with windows placed exactly as the tiler would place them.
+/// The main display, scaled down, with windows placed exactly as the tiler would place them. They
+/// spring to their new places as gaps and padding change.
 private struct GapsPreview: View {
     let config: Config
     let layout: Layout
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// Desktop backdrop shared with the animation preview.
+    static let wallpaper = LinearGradient(colors: [Color(red: 88 / 255, green: 86 / 255, blue: 214 / 255).opacity(0.55),
+                                                   Color(red: 48 / 255, green: 176 / 255, blue: 199 / 255).opacity(0.45)],
+                                          startPoint: .topLeading, endPoint: .bottomTrailing)
 
     var body: some View {
         let screen = NSScreen.main ?? NSScreen.screens.first
         let full = screen?.frame.size ?? CGSize(width: 1440, height: 900)
         let menuBar = (screen.map { $0.frame.maxY - $0.visibleFrame.maxY }) ?? 24
         let dock = (screen.map { $0.visibleFrame.minY - $0.frame.minY }) ?? 0
-        Canvas { ctx, size in
-            let scale = min(size.width / full.width, size.height / full.height)
+        GeometryReader { g in
+            let scale = min(g.size.width / full.width, g.size.height / full.height)
             let w = full.width * scale, h = full.height * scale
-            let origin = CGPoint(x: (size.width - w) / 2, y: (size.height - h) / 2)
-            let screenRect = CGRect(origin: origin, size: CGSize(width: w, height: h))
-            ctx.fill(Path(roundedRect: screenRect, cornerRadius: 8),
-                     with: .linearGradient(Gradient(colors: [Color(red: 88 / 255, green: 86 / 255, blue: 214 / 255).opacity(0.55),
-                                                             Color(red: 48 / 255, green: 176 / 255, blue: 199 / 255).opacity(0.45)]),
-                                           startPoint: screenRect.origin, endPoint: CGPoint(x: screenRect.maxX, y: screenRect.maxY)))
-            let bar = CGRect(x: screenRect.minX, y: screenRect.minY, width: w, height: menuBar * scale)
-            if !config.ignoreMenuBar { ctx.fill(Path(bar), with: .color(.black.opacity(0.25))) }
-
-            var usable = CGRect(x: screenRect.minX, y: screenRect.minY + (config.ignoreMenuBar ? 0 : menuBar * scale),
-                                width: w, height: h - (config.ignoreMenuBar ? 0 : menuBar * scale) - dock * scale)
-            usable = CGRect(x: usable.minX + config.paddingLeft * scale, y: usable.minY + config.paddingTop * scale,
-                            width: usable.width - (config.paddingLeft + config.paddingRight) * scale,
-                            height: usable.height - (config.paddingTop + config.paddingBottom) * scale)
-            let count = 3
-            let gap = (config.windowMargins && !(config.smartWindowMargins && count == 1) ? config.windowMarginSize : 0) * scale
-            guard usable.width > 4, usable.height > 4,
-                  let frames = layout.frames(count: count, in: usable.insetBy(dx: -gap / 2, dy: -gap / 2), ratio: 0.5, mainCount: 1)
-            else { return }
-            for (i, f) in frames.enumerated() {
-                let r = f.insetBy(dx: gap / 2, dy: gap / 2)
-                let p = Path(roundedRect: r, cornerRadius: 4)
-                ctx.fill(p, with: .color(Theme.window.opacity(0.95)))
-                ctx.stroke(p, with: .color(i == 0 ? Color.accentColor : .black.opacity(0.2)), lineWidth: i == 0 ? 1.5 : 0.5)
-                let title = CGRect(x: r.minX, y: r.minY, width: r.width, height: min(9, r.height))
-                ctx.fill(Path(roundedRect: title, cornerRadius: 3), with: .color(.gray.opacity(0.18)))
-                for (j, col) in [Color.red, .yellow, .green].enumerated() where r.width > 30 {
-                    ctx.fill(Path(ellipseIn: CGRect(x: r.minX + 4 + CGFloat(j) * 6, y: r.minY + 2.5, width: 4, height: 4)),
-                             with: .color(col.opacity(0.8)))
+            let bar = config.ignoreMenuBar ? 0 : menuBar * scale
+            let frames = windows(in: CGRect(x: 0, y: bar, width: w, height: h - bar - dock * scale), scale: scale)
+            ZStack(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Self.wallpaper)
+                Rectangle().fill(.black.opacity(0.25)).frame(width: w, height: menuBar * scale)
+                    .opacity(config.ignoreMenuBar ? 0 : 1)
+                ForEach(Array(frames.enumerated()), id: \.offset) { i, f in
+                    MiniWindow(main: i == 0, corner: 4, chrome: f.width > 30)
+                        .frame(width: f.width, height: f.height)
+                        .offset(x: f.minX, y: f.minY)
+                        .shadow(color: .black.opacity(0.15), radius: 2, y: 1)
                 }
             }
+            .frame(width: w, height: h)
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .frame(width: g.size.width, height: g.size.height)
+            .animation(Motion.snap(reduceMotion), value: frames)
+            .animation(.easeOut(duration: 0.2), value: config.ignoreMenuBar)
         }
+        .accessibilityHidden(true)
+    }
+
+    private func windows(in area: CGRect, scale: CGFloat) -> [CGRect] {
+        let usable = CGRect(x: area.minX + config.paddingLeft * scale, y: area.minY + config.paddingTop * scale,
+                            width: area.width - (config.paddingLeft + config.paddingRight) * scale,
+                            height: area.height - (config.paddingTop + config.paddingBottom) * scale)
+        let count = 3
+        let gap = (config.windowMargins && !(config.smartWindowMargins && count == 1) ? config.windowMarginSize : 0) * scale
+        guard usable.width > 4, usable.height > 4,
+              let frames = layout.frames(count: count, in: usable.insetBy(dx: -gap / 2, dy: -gap / 2), ratio: 0.5, mainCount: 1)
+        else { return [] }
+        return frames.map { $0.insetBy(dx: gap / 2, dy: gap / 2) }
     }
 }
 
@@ -1029,7 +1054,7 @@ private struct FloatingPane: View {
                     Spacer()
                     Menu {
                         ForEach(runningApps, id: \.id) { app in
-                            Button { if !doc.config.floating.contains(app.id) { doc.config.floating.append(app.id) } } label: {
+                            Button { if !doc.config.floating.contains(app.id) { withAnimation(.snappy) { doc.config.floating.append(app.id) } } } label: {
                                 if let icon = app.icon { Image(nsImage: resized(icon)) }
                                 Text(app.name)
                             }
@@ -1056,7 +1081,7 @@ private struct FloatingPane: View {
                                 if appName(id) != nil { Text(id).font(Theme.body(11)).foregroundStyle(Theme.secondary) }
                             }
                             Spacer(minLength: 0)
-                            RemoveButton(help: "Remove") { doc.config.floating.removeAll { $0 == id } }
+                            RemoveButton(help: "Remove") { withAnimation(.snappy) { doc.config.floating.removeAll { $0 == id } } }
                         }
                         .padding(.vertical, 8)
                     }
@@ -1096,7 +1121,7 @@ private struct FloatingPane: View {
     private func add() {
         let id = ui.newID.trimmingCharacters(in: .whitespaces)
         guard !id.isEmpty, !doc.config.floating.contains(id) else { return }
-        doc.config.floating.append(id)
+        withAnimation(.snappy) { doc.config.floating.append(id) }
         ui.newID = ""
     }
 
@@ -1138,7 +1163,9 @@ private struct AnimationPane: View {
                 Row("Speed", vertical: 8) {
                     Segmented(title: "Speed", options: Self.presets.map { ($0.name, $0.name) } + (preset == nil ? [("Custom", "Custom")] : []),
                               selection: Binding(get: { preset ?? "Custom" }, set: { name in
-                                  if let p = Self.presets.first(where: { $0.name == name }) { doc.config.animationDuration = p.seconds }
+                                  guard let p = Self.presets.first(where: { $0.name == name }) else { return }
+                                  doc.config.animationDuration = p.seconds
+                                  play() // feel the new speed right away
                               }))
                 }
                 .dimmed(!c.animate)
@@ -1159,33 +1186,39 @@ private struct AnimationPane: View {
                     VStack(spacing: 12) {
                         GeometryReader { geo in
                             let w = geo.size.width, h = geo.size.height, flipped = ui.previewFlipped
+                            let seam = flipped ? w * 0.65 - 2 : w * 0.6 - 2
                             ZStack(alignment: .topLeading) {
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(LinearGradient(colors: [Color(red: 88 / 255, green: 86 / 255, blue: 214 / 255).opacity(0.5),
-                                                                  Color(red: 48 / 255, green: 176 / 255, blue: 199 / 255).opacity(0.4)],
-                                                         startPoint: .topLeading, endPoint: .bottomTrailing))
-                                RoundedRectangle(cornerRadius: 5).fill(Theme.window)
-                                    .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(Color.accentColor, lineWidth: 1.5))
+                                RoundedRectangle(cornerRadius: 8, style: .continuous).fill(GapsPreview.wallpaper)
+                                MiniWindow(main: true, corner: 5, chrome: true)
                                     .frame(width: (flipped ? w * 0.35 : w * 0.6) - 12, height: h - 16)
                                     .offset(x: flipped ? w * 0.65 + 4 : 8, y: 8)
-                                RoundedRectangle(cornerRadius: 5).fill(Theme.window.opacity(0.9))
+                                MiniWindow(main: false, corner: 5, chrome: true)
                                     .frame(width: (flipped ? w * 0.65 : w * 0.4) - 12, height: h - 16)
                                     .offset(x: flipped ? 8 : w * 0.6 + 4, y: 8)
+                                // The windows meet at the seam when they land.
+                                ImpactBurst(trigger: flipped, angle: -90, size: 26, delay: c.animate ? c.animationDuration * 0.8 : 0)
+                                    .offset(x: seam - 13, y: -4)
+                                    .animation(nil, value: flipped)
                             }
+                            .shadow(color: .black.opacity(0.1), radius: 2, y: 1)
                         }
                         .frame(height: 140)
-                        Button {
-                            // The same ease-out cubic curve the real animator uses.
-                            withAnimation(c.animate ? .timingCurve(0.33, 1, 0.68, 1, duration: c.animationDuration) : nil) {
-                                ui.previewFlipped.toggle()
-                            }
-                        } label: {
-                            HStack(spacing: 6) { Image(systemName: "play.fill").font(.system(size: 9)); Text("Play") }
+                        .accessibilityHidden(true)
+                        Button(action: play) {
+                            Label("Play", systemImage: "play.fill")
                         }
                     }
                     .frame(maxWidth: .infinity)
                 }
             }
+        }
+    }
+
+    private func play() {
+        let c = doc.config
+        // The same ease-out cubic curve the real animator uses.
+        withAnimation(c.animate ? .timingCurve(0.33, 1, 0.68, 1, duration: c.animationDuration) : nil) {
+            ui.previewFlipped.toggle()
         }
     }
 }
@@ -1328,7 +1361,7 @@ private struct BindRowView: View {
                             .foregroundStyle(issue.severity == .error ? .red : .orange)
                             .help(issue.message)
                     }
-                    RemoveButton(help: "Delete shortcut") { doc.binds.removeAll { $0.id == rowID } }
+                    RemoveButton(help: "Delete shortcut") { withAnimation(.snappy) { doc.binds.removeAll { $0.id == rowID } } }
                 }
                 if isRange, issue == nil {
                     Text(rangePreview(row)).font(Theme.body(11)).foregroundStyle(Theme.secondary)
@@ -1367,7 +1400,9 @@ private struct BindRowView: View {
                 } else if row.key.isEmpty {
                     Text("Click to record").font(Theme.body(11)).foregroundStyle(Theme.secondary)
                 } else {
+                    // Freshly recorded keys drop in with a little bump.
                     Keycaps(caps: doc.prettyShortcut(row))
+                        .squish(on: row.mods + row.key, anchor: .center)
                 }
             }
             .padding(.horizontal, 6)

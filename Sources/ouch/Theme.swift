@@ -49,6 +49,10 @@ enum Theme {
     static let card = Color(nsColor: .quaternarySystemFill)
     static let hairline = Color(nsColor: .separatorColor)
     static let secondary = Color(nsColor: .secondaryLabelColor)
+    /// Plain windows in the miniatures: light like the icon's, a step above the card in dark mode.
+    static let miniWindow = Color(nsColor: NSColor(name: nil) { a in
+        a.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? NSColor(white: 0.42, alpha: 1) : .white
+    })
 }
 
 // MARK: - Layout pieces
@@ -258,5 +262,191 @@ struct Keycaps: View {
                     .shadow(color: .black.opacity(0.12), radius: 0, y: 1)
             }
         }
+    }
+}
+
+// MARK: - Motion
+
+/// Ouch's bit of personality, taken from the icon: things land with a small squish and a burst of the
+/// icon's yellow impact lines. Reserved for state changes (a layout joins the cycle, a permission is
+/// granted, a preview window lands), never for navigation, and dropped under Reduce Motion.
+enum Motion {
+    /// Springy settle for things snapping into place.
+    static let snap = Animation.spring(response: 0.34, dampingFraction: 0.7)
+    /// `snap`, or a plain short fade-friendly ease under Reduce Motion.
+    static func snap(_ reduce: Bool) -> Animation { reduce ? .easeOut(duration: 0.15) : snap }
+}
+
+/// Three short strokes bursting from a point, like the ones on the app icon.
+struct SparkLines: Shape {
+    /// Direction of the middle stroke in degrees, y down: -90 points up, -135 up and to the left.
+    var angle: Double = -135
+
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        let c = CGPoint(x: rect.midX, y: rect.midY), r = min(rect.width, rect.height) / 2
+        for (spread, reach) in [(-40.0, 0.78), (0, 1), (40, 0.78)] {
+            let a = (angle + spread) * .pi / 180
+            p.move(to: CGPoint(x: c.x + cos(a) * r * 0.4, y: c.y + sin(a) * r * 0.4))
+            p.addLine(to: CGPoint(x: c.x + cos(a) * r * reach, y: c.y + sin(a) * r * reach))
+        }
+        return p
+    }
+}
+
+/// The icon's impact lines, flashing once each time `trigger` changes.
+struct ImpactBurst<Trigger: Equatable>: View {
+    let trigger: Trigger
+    var angle: Double = -135
+    var size: CGFloat = 22
+    /// Seconds to wait first, e.g. until a moving window lands.
+    var delay: Double = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private enum Phase: CaseIterable { case rest, burst, fade }
+
+    var body: some View {
+        let reduceMotion = reduceMotion, delay = delay
+        return SparkLines(angle: angle)
+            .stroke(Color.yellow, style: StrokeStyle(lineWidth: max(1.5, size / 10), lineCap: .round))
+            .frame(width: size, height: size)
+            .phaseAnimator(Phase.allCases, trigger: trigger) { view, phase in
+                view.scaleEffect(phase == .rest ? 0.3 : phase == .burst ? 1 : 1.2)
+                    .opacity(reduceMotion || phase != .burst ? 0 : 1)
+            } animation: { phase in
+                switch phase {
+                case .rest: nil
+                case .burst: .spring(response: 0.2, dampingFraction: 0.6).delay(delay)
+                case .fade: .easeOut(duration: 0.3).delay(0.08)
+                }
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+}
+
+private struct Squish<Trigger: Equatable>: ViewModifier {
+    let trigger: Trigger
+    let delay: Double
+    let anchor: UnitPoint
+    let enabled: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        let on = enabled && !reduceMotion, delay = delay
+        return content.keyframeAnimator(initialValue: CGSize(width: 1, height: 1), trigger: trigger) { view, s in
+            view.scaleEffect(x: on ? s.width : 1, y: on ? s.height : 1, anchor: anchor)
+        } keyframes: { _ in
+            let wobble = Spring(response: 0.38, dampingRatio: 0.42)
+            KeyframeTrack(\.width) {
+                LinearKeyframe(1, duration: delay)
+                CubicKeyframe(1.09, duration: 0.07)
+                SpringKeyframe(1, duration: 0.5, spring: wobble)
+            }
+            KeyframeTrack(\.height) {
+                LinearKeyframe(1, duration: delay)
+                CubicKeyframe(0.9, duration: 0.07)
+                SpringKeyframe(1, duration: 0.5, spring: wobble)
+            }
+        }
+    }
+}
+
+extension View {
+    /// Squashes and springs back, as if it just bumped into something, each time `trigger` changes
+    /// (only while `when` holds, so e.g. joining bumps but leaving doesn't).
+    func squish<T: Equatable>(on trigger: T, when: Bool = true, delay: Double = 0, anchor: UnitPoint = .bottom) -> some View {
+        modifier(Squish(trigger: trigger, delay: delay, anchor: anchor, enabled: when))
+    }
+}
+
+// MARK: - Miniatures
+
+/// A window in the miniatures, styled like the icon: the main window in the accent colour, the rest
+/// plain. `chrome` adds the title-bar dots on larger ones.
+struct MiniWindow: View {
+    var main: Bool
+    var muted = false
+    var corner: CGFloat = 2.5
+    var chrome = false
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: corner, style: .continuous)
+        shape.fill(fill)
+            .overlay(shape.strokeBorder(main && !muted ? Color.white.opacity(0.3) : Theme.hairline, lineWidth: 0.75))
+            .overlay(alignment: .topLeading) {
+                if chrome {
+                    HStack(spacing: 3) {
+                        ForEach(0..<3, id: \.self) { _ in
+                            Circle().fill(main ? Color.white.opacity(0.5) : Color.primary.opacity(0.18)).frame(width: 4, height: 4)
+                        }
+                    }
+                    .padding(5)
+                }
+            }
+    }
+
+    private var fill: AnyShapeStyle {
+        if main { return AnyShapeStyle((muted ? Color.gray : Color.accentColor).gradient) }
+        return muted ? AnyShapeStyle(Color.gray.opacity(0.4)) : AnyShapeStyle(Theme.miniWindow.gradient)
+    }
+}
+
+/// Miniature of a layout, drawn with the real layout code. When the layout changes, the windows
+/// spring to their new places.
+struct LayoutThumbnail: View {
+    let layout: Layout
+    var count = 4
+    var selected = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        GeometryReader { g in
+            let frames = Self.frames(layout, count: count, size: g.size)
+            ZStack(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Color.primary.opacity(selected ? 0.1 : 0.07))
+                ForEach(Array(frames.enumerated()).reversed(), id: \.offset) { i, f in
+                    MiniWindow(main: i == 0, muted: !selected)
+                        .frame(width: f.width, height: f.height)
+                        .offset(x: f.minX, y: f.minY)
+                }
+            }
+        }
+        .animation(Motion.snap(reduceMotion), value: layout)
+        .animation(.easeOut(duration: 0.2), value: selected)
+        .accessibilityHidden(true)
+    }
+
+    private static func frames(_ layout: Layout, count: Int, size: CGSize) -> [CGRect] {
+        let px = size.width * 0.04, py = size.height * 0.06
+        let r = CGRect(origin: .zero, size: size).insetBy(dx: px, dy: py)
+        return layout.frames(count: count, in: r.insetBy(dx: -px / 2, dy: -py / 2), ratio: 0.5, mainCount: 1)?
+            .map { $0.insetBy(dx: px / 2, dy: py / 2) }
+            ?? [CGRect(x: size.width * 0.09, y: size.height * 0.15, width: size.width * 0.52, height: size.height * 0.5),
+                CGRect(x: size.width * 0.39, y: size.height * 0.37, width: size.width * 0.52, height: size.height * 0.5)]
+    }
+}
+
+/// The app icon with a status badge in its corner; the badge symbol swaps with a bounce.
+struct BadgedAppIcon: View {
+    let badge: String
+    let color: Color
+    var size: CGFloat = 48
+
+    var body: some View {
+        Image(nsImage: NSApp.applicationIconImage)
+            .resizable()
+            .frame(width: size, height: size)
+            .overlay(alignment: .bottomTrailing) {
+                Image(systemName: badge)
+                    .font(.system(size: size * 0.36, weight: .semibold))
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(.white, color)
+                    .background(Circle().fill(Theme.window).padding(-1.5))
+                    .contentTransition(.symbolEffect(.replace))
+                    .offset(x: size * 0.06, y: size * 0.04)
+            }
+            .animation(.default, value: badge)
+            .accessibilityHidden(true)
     }
 }

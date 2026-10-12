@@ -121,7 +121,7 @@ final class WindowManager {
             guard let self else { return }
             scheduleRefresh(after: 0.15)
             if !config.virtualWorkspaces, config.enablesLayoutHUDOnSpaceChange, config.enablesLayoutHUD, let s = currentScreen() {
-                HUD.shared.show(state(for: s).layout.title, on: s.ns)
+                HUD.shared.show(state(for: s).layout.title, layout: state(for: s).layout, on: s.ns)
             }
         }
         NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification,
@@ -614,7 +614,7 @@ final class WindowManager {
         st.zoomed = nil
         corrections = [:]
         refresh()
-        if config.enablesLayoutHUD { HUD.shared.show(l.title, on: s.ns) }
+        if config.enablesLayoutHUD { HUD.shared.show(l.title, layout: l, on: s.ns) }
     }
 
     private func ipc(_ command: String) {
@@ -836,7 +836,7 @@ final class WindowManager {
         c.st.zoomed = nil
         corrections = [:]
         refresh()
-        if config.enablesLayoutHUD { HUD.shared.show(l.title, on: c.s.ns) }
+        if config.enablesLayoutHUD { HUD.shared.show(l.title, layout: l, on: c.s.ns) }
     }
 
     private func exec(_ cmd: String) {

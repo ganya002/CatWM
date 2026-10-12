@@ -45,6 +45,8 @@ final class WelcomeModel: ObservableObject {
     @Published var accessibility = false
     @Published var inputMonitoring = false
     @Published var login = false
+    /// Set once the card is on screen; the icon drops in and lands.
+    @Published var landed = false
     var allowAccessibility: () -> Void = {}
     var allowInputMonitoring: () -> Void = {}
     var allowLogin: () -> Void = {}
@@ -54,11 +56,20 @@ final class WelcomeModel: ObservableObject {
 
 struct WelcomeView: View {
     @ObservedObject var model: WelcomeModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(spacing: 18) {
             VStack(spacing: 8) {
-                AppGlyph(size: 64)
+                Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 84, height: 84)
+                    .offset(y: model.landed || reduceMotion ? 0 : -28)
+                    .opacity(model.landed ? 1 : 0)
+                    .animation(.easeIn(duration: 0.22), value: model.landed)
+                    .squish(on: model.landed, delay: 0.22)
+                    .overlay(alignment: .topLeading) {
+                        ImpactBurst(trigger: model.landed, size: 26, delay: 0.22).offset(x: -6, y: 0)
+                    }
+                    .padding(.vertical, -10) // the icon artwork has its own transparent margin
                 Text("Welcome to Ouch").font(Theme.display(30)).foregroundStyle(ink).padding(.top, 6)
                 Text("Ouch needs a few permissions to tile. Each button opens System Settings with a guide beside it.")
                     .font(Theme.body(13)).foregroundStyle(Color.black.opacity(0.5))
@@ -109,6 +120,9 @@ struct WelcomeView: View {
                 .frame(width: 32, height: 32)
                 .overlay(Image(systemName: granted ? "checkmark" : symbol).font(.system(size: 14, weight: .semibold)).foregroundStyle(.white)
                     .contentTransition(.symbolEffect(.replace)).symbolEffect(.bounce, value: granted))
+                .overlay(alignment: .topLeading) {
+                    ImpactBurst(trigger: granted, size: 18).offset(x: -9, y: -9).opacity(granted ? 1 : 0)
+                }
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(title).font(Theme.body(13, .medium)).foregroundStyle(ink)
@@ -131,23 +145,12 @@ struct WelcomeView: View {
     }
 }
 
-/// The app's mark: a blue tile with a three-column window glyph.
-struct AppGlyph: View {
-    let size: CGFloat
-    var body: some View {
-        RoundedRectangle(cornerRadius: size * 0.234, style: .continuous)
-            .fill(LinearGradient(colors: [Color(red: 0.24, green: 0.55, blue: 1), Color(red: 0, green: 0.384, blue: 0.878)],
-                                 startPoint: .top, endPoint: .bottom))
-            .frame(width: size, height: size)
-            .overlay(Image(systemName: "rectangle.split.3x1").font(.system(size: size * 0.46, weight: .semibold)).foregroundStyle(.white))
-            .shadow(color: Color(red: 0, green: 0.384, blue: 0.878).opacity(0.35), radius: 7, y: 4)
-    }
-}
-
 // MARK: - Intro wordmark
 
 final class WordmarkModel: ObservableObject {
     @Published var subtitle = false
+    /// Flipped when the wordmark arrives; it lands with a bump.
+    @Published var landed = false
 }
 
 struct WordmarkView: View {
@@ -158,6 +161,10 @@ struct WordmarkView: View {
         VStack(spacing: 14) {
             Text("Ouch").font(Theme.display(size)).foregroundStyle(.white)
                 .shadow(color: .black.opacity(0.3), radius: 12, y: 4)
+                .squish(on: model.landed, delay: 0.75)
+                .overlay(alignment: .topLeading) {
+                    ImpactBurst(trigger: model.landed, size: size * 0.45, delay: 0.75).offset(x: -size * 0.3, y: -size * 0.15)
+                }
             tagline(max(16, min(20, size / 7)))
                 .foregroundStyle(Color.white.opacity(0.88))
                 .opacity(model.subtitle ? 1 : 0)
@@ -231,6 +238,9 @@ struct CoachCardView: View {
                         HStack(spacing: 5) {
                             Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.green)
                                 .transition(.symbolEffect(.appear))
+                                .overlay(alignment: .topLeading) {
+                                    ImpactBurst(trigger: model.done, size: 14, delay: 0.05).offset(x: -8, y: -8)
+                                }
                             Text("Nice").font(Theme.body(13, .semibold)).foregroundStyle(okGreen)
                         }
                         .transition(.opacity.combined(with: .scale(scale: 0.8)))
