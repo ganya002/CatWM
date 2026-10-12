@@ -952,9 +952,18 @@ private struct GapsPreview: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Easter egg: the little windows are playable. Ids keep each window's identity while the order
     /// (first is main) changes.
-    @State private var ids = [0, 1, 2]
-    @State private var nextID = 3
-    @State private var hovered: Int?
+    @StateObject private var play = Play()
+
+    /// Play state lives in an object: @State's macro plugin isn't available to SwiftPM builds.
+    final class Play: ObservableObject {
+        @Published var ids = [0, 1, 2]
+        @Published var nextID = 3
+        @Published var hovered: Int?
+        /// Drawn above the others, so a window flying to the main slot passes over its neighbours.
+        @Published var lifted: Int?
+        /// Where the desktop was clicked, as a fraction of the screen: the new window grows out of it.
+        @Published var spawn = UnitPoint.center
+    }
 
     /// Desktop backdrop shared with the animation preview.
     static let wallpaper = LinearGradient(colors: [Color(red: 88 / 255, green: 86 / 255, blue: 214 / 255).opacity(0.55),
@@ -970,53 +979,103 @@ private struct GapsPreview: View {
             let scale = min(g.size.width / full.width, g.size.height / full.height)
             let w = full.width * scale, h = full.height * scale
             let bar = config.ignoreMenuBar ? 0 : menuBar * scale
-            let frames = windows(in: CGRect(x: 0, y: bar, width: w, height: h - bar - dock * scale), scale: scale, count: ids.count)
+            let frames = windows(in: CGRect(x: 0, y: bar, width: w, height: h - bar - dock * scale), scale: scale, count: play.ids.count)
             ZStack(alignment: .topLeading) {
                 RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Self.wallpaper)
                 Rectangle().fill(.black.opacity(0.25)).frame(width: w, height: menuBar * scale)
                     .opacity(config.ignoreMenuBar ? 0 : 1)
                 Color.clear.contentShape(Rectangle())
-                    .onTapGesture { open() }
-                ForEach(Array(zip(ids, frames)), id: \.0) { i, f in
-                    MiniWindow(main: i == ids.first, corner: 4, chrome: f.width > 30)
-                        .frame(width: f.width, height: f.height)
-                        .scaleEffect(hovered == i ? 1.02 : 1)
-                        .offset(x: f.minX, y: f.minY)
-                        .shadow(color: .black.opacity(0.15), radius: 2, y: 1)
-                        .contentShape(Rectangle())
-                        .onHover { hovered = $0 ? i : (hovered == i ? nil : hovered) }
-                        .onTapGesture(count: 2) { close(i) }
-                        .onTapGesture { focus(i) }
-                        .transition(.scale(scale: 0.6).combined(with: .opacity))
+                    .onTapGesture(coordinateSpace: .local) { p in open(at: UnitPoint(x: p.x / w, y: p.y / h)) }
+                ForEach(Array(zip(play.ids, frames)), id: \.0) { i, f in
+                    window(i, frame: f)
+                        .position(x: f.midX, y: f.midY)
+                        .zIndex(play.lifted == i ? 1 : 0)
+                        // Grows out of the click, and on close sinks into its own spot while the rest fill in.
+                        .transition(.asymmetric(
+                            insertion: .scale(scale: 0.15, anchor: play.spawn).combined(with: .opacity),
+                            removal: .scale(scale: 0.85, anchor: UnitPoint(x: f.midX / w, y: f.midY / h)).combined(with: .opacity)))
                 }
-                if ids.isEmpty {
+                if play.ids.isEmpty {
                     Text("Click the desktop for a window")
                         .font(Theme.body(11)).foregroundStyle(.white.opacity(0.7))
                         .frame(width: w, height: h).allowsHitTesting(false)
+                        .transition(.opacity)
                 }
             }
             .frame(width: w, height: h)
             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             .frame(width: g.size.width, height: g.size.height)
-            .animation(Motion.snap(reduceMotion), value: frames)
-            .animation(Motion.snap(reduceMotion), value: ids)
-            .animation(.easeOut(duration: 0.12), value: hovered)
-            .animation(.easeOut(duration: 0.2), value: config.ignoreMenuBar)
+            // Dragging a slider retargets constantly, which a spring takes in stride.
+            .animation(Motion.snap(reduceMotion), value: geometry)
+            .animation(.easeOut(duration: 0.12), value: play.hovered)
         }
-        .help("Click a window to make it main, double-click to close it, click the desktop to open one")
+        .help("Click a window to make it main, × to close it, click the desktop to open one")
         .accessibilityHidden(true)
     }
 
-    private func focus(_ id: Int) {
-        guard let at = ids.firstIndex(of: id), at != 0 else { return }
-        ids.swapAt(0, at)
+    private func window(_ id: Int, frame f: CGRect) -> some View {
+        let hovered = play.hovered == id
+        return ZStack(alignment: .topTrailing) {
+            Button { focus(id) } label: {
+                MiniWindow(main: id == play.ids.first, corner: 4, chrome: f.width > 30)
+                    .brightness(hovered ? 0.06 : 0)
+            }
+            .buttonStyle(PressablePane())
+            if f.width > 30, f.height > 24 {
+                Button { close(id) } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 6.5, weight: .heavy))
+                        .foregroundStyle(.white)
+                        .frame(width: 13, height: 13)
+                        .background(Circle().fill(Color(red: 1, green: 0.37, blue: 0.34)))
+                        .contentShape(Circle())
+                }
+                .buttonStyle(PressablePane())
+                .padding(4)
+                .opacity(hovered ? 1 : 0)
+                .scaleEffect(hovered ? 1 : 0.5)
+                .allowsHitTesting(hovered)
+            }
+        }
+        .focusEffectDisabled()
+        .frame(width: max(f.width, 0), height: max(f.height, 0))
+        .shadow(color: .black.opacity(hovered ? 0.25 : 0.15), radius: hovered ? 4 : 2, y: hovered ? 2 : 1)
+        .onHover { play.hovered = $0 ? id : (play.hovered == id ? nil : play.hovered) }
     }
 
-    private func close(_ id: Int) { ids.removeAll { $0 == id } }
+    /// Plays with the curve set under Animation, so the toy moves like real windows do.
+    private var motion: Animation {
+        if reduceMotion || !config.animate { return Motion.snap(reduceMotion) }
+        // Springs and bounces need a little longer to read at this size.
+        return Animation(CurveAnimation(curve: config.animationCurve, bounce: config.animationBounce,
+                                        duration: max(config.animationDuration, 0.22)))
+    }
 
-    private func open() {
-        guard ids.count < 6 else { return }
-        ids.append(nextID); nextID += 1
+    /// Everything from the settings that moves the windows.
+    private var geometry: [CGFloat] {
+        [config.paddingTop, config.paddingBottom, config.paddingLeft, config.paddingRight, config.windowMarginSize,
+         config.windowMargins ? 1 : 0, config.smartWindowMargins ? 1 : 0, config.ignoreMenuBar ? 1 : 0]
+    }
+
+    private func focus(_ id: Int) {
+        guard let at = play.ids.firstIndex(of: id), at != 0 else { return }
+        play.lifted = id
+        withAnimation(motion) { play.ids.swapAt(0, at) }
+    }
+
+    private func close(_ id: Int) {
+        if play.hovered == id { play.hovered = nil }
+        withAnimation(motion) { play.ids.removeAll { $0 == id } }
+    }
+
+    private func open(at point: UnitPoint) {
+        guard play.ids.count < 6 else { return }
+        play.spawn = point
+        play.lifted = play.nextID
+        withAnimation(motion) {
+            play.ids.append(play.nextID)
+            play.nextID += 1
+        }
     }
 
     private func windows(in area: CGRect, scale: CGFloat, count: Int) -> [CGRect] {
@@ -1029,6 +1088,15 @@ private struct GapsPreview: View {
               let frames = layout.frames(count: count, in: usable.insetBy(dx: -gap / 2, dy: -gap / 2), ratio: 0.5, mainCount: 1)
         else { return [] }
         return frames.map { $0.insetBy(dx: gap / 2, dy: gap / 2) }
+    }
+}
+
+/// Dips a little while held, like pressing on glass.
+private struct PressablePane: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .animation(.spring(response: 0.2, dampingFraction: 0.6), value: configuration.isPressed)
     }
 }
 
