@@ -49,6 +49,8 @@ struct Config {
     var debugLogging = false
     /// mxtiler's own workspaces (instant, per monitor, like Hyprland) instead of macOS Spaces.
     var virtualWorkspaces = true
+    /// Closing a window keeps you on the current workspace instead of jumping to wherever macOS refocuses.
+    var stayOnWorkspaceAfterClose = true
     var bindings: [KeyBinding] = []
     var currentSubmap = "" // parser state while reading submap blocks
     var errors: [String] = []
@@ -156,6 +158,7 @@ struct Config {
         case "animation_duration": return needNum { animationDuration = Double($0) > 5 ? Double($0) / 1000 : Double($0) }
         case "debug_logging": debugLogging = bool
         case "virtual_workspaces": virtualWorkspaces = bool
+        case "stay_on_workspace_after_close": stayOnWorkspaceAfterClose = bool
         default: return "unknown option `\(rawKey)`"
         }
         return nil

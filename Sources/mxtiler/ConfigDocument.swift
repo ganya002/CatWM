@@ -372,6 +372,7 @@ final class ConfigDocument: ObservableObject {
             "",
             "debug-logging = \(b(c.debugLogging))",
             "virtual-workspaces = \(b(c.virtualWorkspaces))",
+            "stay-on-workspace-after-close = \(b(c.stayOnWorkspaceAfterClose))",
             "",
             "# bind = MODS, key, dispatcher, args. Binds inside `submap = name` … `submap = reset` only work in",
             "# that mode (entered with the submap dispatcher); single keys are fine there, vim style.",

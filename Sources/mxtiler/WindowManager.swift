@@ -50,6 +50,7 @@ final class WindowManager {
     private var homeSpace: [String: UInt64] = [:]        // display UUID → the macOS Space workspaces live on
     private var present: Set<CGWindowID> = []
     private var lastFocused: [String: CGWindowID] = [:]
+    private var lastClose = Date.distantPast // when a window last closed (macOS then refocuses the previous app's window)
     private var floatFrames: [CGWindowID: CGRect] = [:]  // floating windows' frames while parked
     private var savedWorkspaceOf: [CGWindowID: String] = [:]
     private var savedOwnerOf: [CGWindowID: String] = [:]  // "pid bundleID" when saved; window IDs are reused after a logout
@@ -212,6 +213,9 @@ final class WindowManager {
 
     fileprivate func handle(_ notification: String, _ element: AXUIElement) {
         switch notification {
+        case kAXUIElementDestroyedNotification:
+            lastClose = Date()
+            scheduleRefresh()
         case kAXWindowMovedNotification, kAXWindowResizedNotification:
             guard let id = element.windowID, let w = windows[id], !animator.isBusy(id), !movingToSpace else { return }
             if NSEvent.pressedMouseButtons & 1 != 0 {
@@ -660,7 +664,7 @@ final class WindowManager {
         case "splitratio": adjustRatio(arg)
         case "togglefloating": toggleFloating()
         case "fullscreen": toggleZoom()
-        case "killactive": focusedWindow()?.close()
+        case "killactive": lastClose = Date(); focusedWindow()?.close()
         case "exec": exec(arg)
         case "focusmonitor": focusMonitor(arg)
         case "movewindowtomonitor": moveToMonitor(arg)
@@ -1179,8 +1183,25 @@ final class WindowManager {
         // Only a window we actually parked means "go to its workspace". One you can already see
         // (e.g. on another macOS Desktop, not yet re-filed) just needs a refresh.
         guard isParked(w.frame, Screen.all()) else { scheduleRefresh(); return }
+        if config.stayOnWorkspaceAfterClose, Date().timeIntervalSince(lastClose) < 1.0 {
+            // A window just closed and macOS handed focus to one on another workspace: stay put.
+            Log.debug("workspaces: ignoring focus on \(ws) right after a close")
+            refocusCurrentWorkspace()
+            return
+        }
         Log.info("workspaces: \(w.bundleID ?? "a window") on workspace \(ws) was focused; switching")
         showWorkspace(ws, focusing: w)
+    }
+
+    /// Focuses the last-used window on the workspace showing on the current display, or parks focus.
+    private func refocusCurrentWorkspace() {
+        guard let s = currentScreen(), let cur = virtualShown[s.uuid] else { return parkFocus() }
+        let candidates = [lastFocused[cur]].compactMap { $0 } + order
+        if let id = candidates.first(where: { visible.contains($0) && workspaceOf[$0] == cur }), let w = windows[id] {
+            focus(w)
+        } else {
+            parkFocus()
+        }
     }
 
     /// With nothing to focus, take keyboard focus ourselves so typing doesn't land in a window

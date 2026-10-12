@@ -106,6 +106,7 @@ mxtiler has its own workspaces, like Hyprland and AeroSpace, so switching and mo
 - Workspaces live on one **home Desktop** per display: the macOS Desktop you were on at first launch, or the one chosen in Settings → Behavior. Other Desktops tile normally, and ⌘1–0 from one of them goes home first. This setup works best with a single macOS Desktop.
 - When mxtiler quits, crashes or is killed, every parked window is put back on screen, and assignments are saved for the next launch.
 - To use macOS Spaces instead, set `virtual-workspaces = false`. Space switching then uses "Switch to Desktop N" when it's on, and otherwise steps with Ctrl-←/→.
+- `stay-on-workspace-after-close = true` (default) keeps you on your current workspace when you close a window, instead of jumping to the workspace of whichever window macOS refocuses. Also under Settings → Workspaces.
 
 ### Dispatchers
 
