@@ -220,7 +220,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
 // The onboarding tour's practice windows run as a second copy of this binary (see PracticeDesk).
 if CommandLine.arguments.dropFirst().first == "practice" {
-    PracticeDesk.run(parent: pid_t(CommandLine.arguments.dropFirst(2).first ?? "") ?? getppid())
+    let args = Array(CommandLine.arguments.dropFirst(2)) // <parent pid> [desk workspace] [other workspace]
+    func named(_ i: Int) -> String? { args.indices.contains(i) && !args[i].isEmpty ? args[i] : nil }
+    PracticeDesk.run(parent: pid_t(args.first ?? "") ?? getppid(), desk: named(1), other: named(2))
 }
 
 // Command-line mode, like hyprctl: `ouch dispatch movefocus l`, `ouch dump`, `ouch reload`.

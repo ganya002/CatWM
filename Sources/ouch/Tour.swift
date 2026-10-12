@@ -6,7 +6,7 @@ import SwiftUI
 /// window, the menu bar item or the mode indicator. Steps finish when the real command runs, so
 /// every shortcut is the user's own (read from their config).
 final class Tour {
-    private enum ID { case intro, mode, focus, move, layout, visit, back, send, exit, global, final }
+    private enum ID { case intro, mode, focus, move, main, resize, zoom, layout, visit, back, send, exit, global, final }
     private enum Target { case center, window, bar, mode }
     private enum Event { case mode(String), command(String, String, inMode: Bool) }
 
@@ -30,6 +30,7 @@ final class Tour {
     private var index = 0
     private var done = false
     private var counter = 0
+    private var resized: Set<Bool> = [] // directions the main pane was resized in this step (true = grow)
     private var ended = false
 
     // Workspaces: the desk, a second one to visit, one to send a window to, and where the user was.
@@ -39,6 +40,7 @@ final class Tour {
     private var original: String?
     private var mode = ""
     private var finalRows: [(caps: [String], label: String)] = []
+    private var extraRows: [(caps: [String], label: String)] = [] // shortcuts the tour doesn't practice
 
     private var helper: Process?
     private var helperPID: pid_t = 0
@@ -97,7 +99,7 @@ final class Tour {
         guard let exe = Bundle.main.executableURL else { return }
         let p = Process()
         p.executableURL = exe
-        p.arguments = ["practice", String(getpid())]
+        p.arguments = ["practice", String(getpid()), desk ?? "", other ?? ""] // for the windows' workspace badges
         p.terminationHandler = { [weak self] _ in
             DispatchQueue.main.async { self?.end() } // quit from its menu: the tour is over too
         }
@@ -109,8 +111,8 @@ final class Tour {
         helperPID = p.processIdentifier
         var map: [String: String] = [:]
         if let desk {
-            for k in [PracticeDesk.Kind.terminal, .notes, .docs] { map[PracticeDesk.title(k)] = desk }
-            map[PracticeDesk.title(.inbox)] = other ?? desk
+            for k in PracticeDesk.deskKinds { map[PracticeDesk.title(k)] = desk }
+            for k in PracticeDesk.otherKinds { map[PracticeDesk.title(k)] = other ?? desk }
         }
         wm.practice = (helperPID, map)
         // Started with Process rather than LaunchServices, so no launch notification may arrive: look for its windows.
@@ -118,7 +120,7 @@ final class Tour {
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in self?.wm.scheduleRefresh() }
         }
         // Once they've tiled, focus the desk's first window through the window manager.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) { [weak self] in
             guard let self, !ended, let desk else { return }
             wm.showWorkspace(desk)
         }
@@ -158,10 +160,10 @@ final class Tour {
         var out: [Step] = []
         let deskText: String
         if let desk, let other {
-            deskText = "Three practice windows are on workspace \(desk) and one on workspace \(other)."
+            deskText = "\(Self.count(PracticeDesk.deskKinds.count)) practice windows are on workspace \(desk) and \(Self.count(PracticeDesk.otherKinds.count).lowercased()) on workspace \(other). The badge in each title bar says which."
                 + (original.map { " Your windows wait on workspace \($0) until you finish." } ?? "")
         } else {
-            deskText = "Four practice windows are open. Nothing you do here changes your apps."
+            deskText = "\(Self.count(PracticeDesk.Kind.allCases.count)) practice windows are open. Nothing you do here changes your apps."
         }
         out.append(Step(id: .intro, kicker: "Keyboard tour", title: "Meet your practice desk", text: deskText, button: "Show me"))
 
@@ -186,6 +188,28 @@ final class Tour {
                 finalRows.append((Self.modLabels(moveL.mods, long: false) + [dirs.map { Self.keyLabel($0.keyCode, long: false) }.joined(separator: " ")],
                                   "Move the window"))
             }
+            if let swap = find(mode, ["layoutmsg"], "swapwithmaster") {
+                let key = Self.keyLabel(swap.keyCode, long: false)
+                out.append(Step(id: .main, kicker: "Main pane", title: "Promote a window",
+                                text: "The biggest pane is the main one, for whatever you're working on. Press \(key) to swap the focused window into it.",
+                                target: .window, caps: Self.caps(swap, long: false), needsMode: true))
+                finalRows.append((Self.caps(swap, long: false), "Swap with the main pane"))
+            }
+            let ratio = binds.filter { $0.submap == mode }.compactMap { b in Self.ratioDirection(b.dispatcher, b.arg).map { (b, $0) } }
+            if let grow = ratio.first(where: { $0.1 })?.0, let shrink = ratio.first(where: { !$0.1 })?.0 {
+                let mouse = wm.config.mouseResizesWindows ? " You can also drag the edge between two windows." : ""
+                out.append(Step(id: .resize, kicker: "Resize", title: "Grow and shrink panes",
+                                text: "\(Self.keyWord(grow)) makes the main pane bigger and \(Self.keyWord(shrink)) makes it smaller. Try both.\(mouse)",
+                                target: .window, caps: Self.caps(shrink, long: false) + Self.caps(grow, long: false), needsMode: true))
+                finalRows.append((Self.caps(shrink, long: false) + Self.caps(grow, long: false), "Shrink / grow the main pane"))
+            }
+            if let zoom = find(mode, ["fullscreen"]) {
+                let key = Self.keyLabel(zoom.keyCode, long: false)
+                out.append(Step(id: .zoom, kicker: "Zoom", title: "Focus on one window",
+                                text: "\(key) lets the focused window fill the screen, for when you need room. Press \(key) again to bring the others back.",
+                                target: .window, caps: Self.caps(zoom, long: false), needsMode: true))
+                finalRows.append((Self.caps(zoom, long: false), "Zoom in and out"))
+            }
             if let next {
                 let keys = [next, prev].compactMap { $0 }.map { Self.keyLabel($0.keyCode, long: false) }
                 out.append(Step(id: .layout, kicker: "Layouts", title: "Try another layout",
@@ -209,6 +233,15 @@ final class Tour {
                                 target: .window, caps: Self.caps(send, long: true), needsMode: true))
                 finalRows.append((Self.modLabels(send.mods, long: false) + ["1–0"], "Send window to a workspace"))
             }
+            // More to explore once the basics feel natural.
+            if let add = find(mode, ["layoutmsg"], "addmaster"), let remove = find(mode, ["layoutmsg"], "removemaster") {
+                extraRows.append((Self.caps(add, long: false) + [Self.keyLabel(remove.keyCode, long: false)], "More / fewer main windows"))
+            }
+            if let float = find(mode, ["togglefloating"]) { extraRows.append((Self.caps(float, long: false), "Float or tile a window")) }
+            if let mon = find(mode, ["focusmonitor"]), NSScreen.screens.count > 1 {
+                extraRows.append((Self.caps(mon, long: false), "Jump to the next display"))
+            }
+            if let retile = find(mode, ["retile", "reevaluate"]) { extraRows.append((Self.caps(retile, long: false), "Snap everything back into place")) }
             let exitKeys = exits.map { Self.keyLabel($0.keyCode, long: false) }
             out.append(Step(id: .exit, kicker: "\(modeName) mode", title: "Leave \(mode.lowercased()) mode",
                             text: (exitKeys.isEmpty ? "Clicking anywhere" : "\(Self.list(exitKeys)) or clicking anywhere")
@@ -242,7 +275,9 @@ final class Tour {
         switch step.id {
         case .focus: tick(0)
         case .move: tick(1)
-        case .visit: tick(2)
+        case .resize: tick(2)
+        case .zoom: tick(3)
+        case .visit: tick(4)
         default: break
         }
         render()
@@ -260,6 +295,17 @@ final class Tour {
         case (.move, .command(let d, let a, _)):
             return ["swapwindow", "swapnext"].contains(d) || (d == "movewindow" && !a.lowercased().hasPrefix("mon:"))
                 || (d == "layoutmsg" && a.lowercased().hasPrefix("swap"))
+        case (.main, .command(let d, let a, _)):
+            return d == "layoutmsg" && a.lowercased() == "swapwithmaster"
+        case (.resize, .command(let d, let a, _)):
+            guard let grow = Self.ratioDirection(d, a) else { return false }
+            resized.insert(grow)
+            flash()
+            return resized.count == 2
+        case (.zoom, .command("fullscreen", _, _)):
+            counter += 1
+            flash()
+            return counter >= 2
         case (.layout, .command(let d, _, _)) where ["cyclelayout", "layout", "setlayout"].contains(d):
             counter += 1
             flash()
@@ -284,6 +330,9 @@ final class Tour {
             case .exit: Hotkeys.shared.setSubmap("")
             case .focus: wm.dispatch("cyclenext", "")
             case .move: wm.dispatch("swapnext", "")
+            case .main: wm.dispatch("layoutmsg", "swapwithmaster")
+            case .resize: wm.dispatch("splitratio", resized.contains(true) ? "-0.1" : "+0.1")
+            case .zoom: wm.dispatch("fullscreen", "")
             case .layout: wm.dispatch("cyclelayout", "next")
             case .visit: if let other { wm.dispatch("workspace", other) }
             case .back: if let desk { wm.dispatch("workspace", desk) }
@@ -318,6 +367,7 @@ final class Tour {
         index += 1
         done = false
         counter = 0
+        resized = []
         render()
     }
 
@@ -328,6 +378,7 @@ final class Tour {
         wm.onDispatch = nil
         wm.onModeChange = nil
         statusButton?.highlight(false)
+        MenuBarTip.shared.suppressed = false
         Hotkeys.shared.setSubmap("")
         if let panel {
             animate(0.25, changes: { panel.animator().alphaValue = 0 }) { panel.orderOut(nil) }
@@ -355,7 +406,7 @@ final class Tour {
         model.button = s.button
         model.final = s.id == .final
         model.canSkip = s.id != .final
-        model.rows = s.id == .final ? finalRows : []
+        model.rows = s.id == .final ? finalRows + (extraRows.isEmpty ? [] : [([], "More to try")] + extraRows) : []
         let lastIndex = Double(max(1, steps.count - 1))
         model.progress = min(1, (Double(index) + (done ? 1 : 0)) / lastIndex)
         let modeOff = Hotkeys.shared.submap.isEmpty
@@ -363,6 +414,7 @@ final class Tour {
             ? "\(mode.capitalized) mode is off. Press \(Self.list(steps.first { $0.id == .mode }?.caps ?? [])) to turn it back on."
             : nil
         statusButton?.highlight(s.target == .bar)
+        MenuBarTip.shared.suppressed = s.target == .bar // the card points there itself
     }
 
     private func reposition(animated: Bool) {
@@ -410,6 +462,34 @@ final class Tour {
         return la == lb || (lb == "prev" && la.hasPrefix("prev"))
     }
 
+    /// For resize binds (`splitratio +0.05`, `layoutmsg mfact -0.05`): true if it grows the main pane.
+    private static func ratioDirection(_ dispatcher: String, _ arg: String) -> Bool? {
+        var a = arg.lowercased().trimmingCharacters(in: .whitespaces)
+        if dispatcher == "layoutmsg" {
+            guard a.hasPrefix("mfact") else { return nil }
+            a = String(a.dropFirst(5)).trimmingCharacters(in: .whitespaces)
+        } else if dispatcher != "splitratio" {
+            return nil
+        }
+        guard !a.hasPrefix("exact") else { return nil }
+        return !a.hasPrefix("-")
+    }
+
+    /// A shortcut as words for a sentence: "Shift-Period" rather than "⇧ .".
+    private static func keyWord(_ b: KeyBinding) -> String {
+        let key: String
+        switch b.keyCode {
+        case 43: key = "Comma"
+        case 47: key = "Period"
+        case 27: key = "Minus"
+        case 24: key = "Equals"
+        case 33: key = "["
+        case 30: key = "]"
+        default: key = keyLabel(b.keyCode, long: false)
+        }
+        return b.mods.isEmpty ? key : "\(modWords(b.mods))-\(key)"
+    }
+
     private static func caps(_ b: KeyBinding, long: Bool) -> [String] {
         modLabels(b.mods, long: long) + [keyLabel(b.keyCode, long: long)]
     }
@@ -443,8 +523,24 @@ final class Tour {
         case 124: return "→"
         case 125: return "↓"
         case 126: return "↑"
+        case 43: return ","
+        case 47: return "."
+        case 27: return "−"
+        case 24: return "="
+        case 33: return "["
+        case 30: return "]"
+        case 41: return ";"
+        case 44: return "/"
         default: return ConfigDocument.keyName(for: code)?.uppercased() ?? "?"
         }
+    }
+
+    /// "Five" rather than "5", for the start of a sentence.
+    private static func count(_ n: Int) -> String {
+        let f = NumberFormatter()
+        f.numberStyle = .spellOut
+        f.locale = Locale(identifier: "en_US") // the tour is in English
+        return (f.string(from: n as NSNumber) ?? String(n)).capitalized
     }
 
     /// "H, J, K and L"

@@ -9,7 +9,9 @@ final class Onboarding {
     private static let doneKey = "didOnboard"
 
     /// The menu bar item, so the tour can point at it.
-    weak var statusButton: NSStatusBarButton?
+    weak var statusButton: NSStatusBarButton? {
+        didSet { MenuBarTip.shared.statusButton = statusButton }
+    }
     private var intro: Intro?
     private var welcome: OverlayPanel?
     private let welcomeModel = WelcomeModel()
@@ -97,6 +99,9 @@ final class Onboarding {
             p.animator().setFrame(end, display: true)
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in self?.welcomeModel.landed = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in // after the card lands
+            if self?.isRunning == true { MenuBarTip.shared.show() }
+        }
         poll = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in self?.refreshWelcome() }
     }
 
@@ -123,6 +128,7 @@ final class Onboarding {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in self?.startTour(attempts: attempts - 1) }
             } else {
                 HUD.shared.show("Ouch needs Accessibility first", on: nil)
+                MenuBarTip.shared.hide()
             }
             return
         }
@@ -132,9 +138,11 @@ final class Onboarding {
         }
         tour = t
         t.start()
+        MenuBarTip.shared.show()
     }
 
     private func finish() {
+        MenuBarTip.shared.hide()
         UserDefaults.standard.set(true, forKey: Self.doneKey)
         if AXIsProcessTrusted() { HUD.shared.show("Tiling On", on: nil) }
     }

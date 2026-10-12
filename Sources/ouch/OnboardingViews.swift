@@ -257,9 +257,16 @@ struct CoachCardView: View {
             if model.final {
                 Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 8) {
                     ForEach(Array(model.rows.enumerated()), id: \.offset) { _, row in
-                        GridRow {
-                            Keycaps(caps: row.caps)
-                            Text(row.label).font(Theme.body(12)).foregroundStyle(Color.black.opacity(0.7))
+                        if row.caps.isEmpty { // a section heading
+                            Text(row.label.uppercased()).font(Theme.mono(10, .bold)).tracking(0.6)
+                                .foregroundStyle(Color.black.opacity(0.45))
+                                .padding(.top, 6)
+                                .gridCellColumns(2)
+                        } else {
+                            GridRow {
+                                Keycaps(caps: row.caps)
+                                Text(row.label).font(Theme.body(12)).foregroundStyle(Color.black.opacity(0.7))
+                            }
                         }
                     }
                 }
@@ -333,5 +340,60 @@ private struct SkipLink: View {
         }
         .buttonStyle(.plain)
         .onHover { hover.on = $0 }
+    }
+}
+
+// MARK: - Menu bar tip
+
+struct MenuBarTipView: View {
+    @ObservedObject var model: MenuBarTipModel
+    private let surface = Color(white: 1, opacity: 0.96)
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 9) {
+            Image(systemName: model.state == .good ? "checkmark.circle.fill" : "menubar.arrow.up.rectangle")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(model.state == .good ? okGreen : blue)
+                .contentTransition(.symbolEffect(.replace))
+                .frame(width: 16)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).font(Theme.body(12, .semibold)).foregroundStyle(ink)
+                if let detail {
+                    Text(detail).font(Theme.body(11.5)).lineSpacing(1.5).foregroundStyle(Color.black.opacity(0.58))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .padding(.horizontal, 12).padding(.vertical, 9)
+        .frame(width: model.state == .good ? nil : 252, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(surface))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.black.opacity(0.13), lineWidth: 0.5))
+        .background(alignment: .topLeading) {
+            if let x = model.caret {
+                RoundedRectangle(cornerRadius: 2).fill(surface).frame(width: 10, height: 10)
+                    .rotationEffect(.degrees(45)).offset(x: x - 14 - 5, y: -4)
+            }
+        }
+        .shadow(color: .black.opacity(0.18), radius: 10, y: 5)
+        // Room for the caret and the shadow; the panel ignores the mouse anyway.
+        .padding(.top, 8).padding(.horizontal, 14).padding(.bottom, 16)
+        .fixedSize()
+        .environment(\.colorScheme, .light)
+    }
+
+    private var title: String {
+        switch model.state {
+        case .move: "Keep Ouch in reach"
+        case .good: "Good spot for Ouch"
+        case .hidden: "Ouch is hidden by the notch"
+        }
+    }
+
+    private var detail: String? {
+        switch model.state {
+        case .good: nil
+        case .move: "Icons further left are hidden first when the menu bar fills up. Open Control Center, click Edit Controls and drag this one to the right."
+        case .hidden: "Open Control Center, click Edit Controls and drag Ouch to the right, near the clock."
+        }
     }
 }
