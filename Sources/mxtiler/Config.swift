@@ -125,7 +125,7 @@ struct Config {
             var list: [Layout] = []
             for name in v.split(separator: ",").map({ $0.trimmingCharacters(in: .whitespaces).lowercased() }) {
                 guard let l = Layout(rawValue: name) else { return "unknown layout `\(name)`" }
-                list.append(l)
+                if !list.contains(l) { list.append(l) } // a layout appears once in the cycle
             }
             if !list.isEmpty { layouts = list }
         case "window_margins": windowMargins = bool
@@ -142,7 +142,12 @@ struct Config {
         case "focus_follows_mouse", "follow_mouse": focusFollowsMouse = bool
         case "mouse_swaps_windows": mouseSwapsWindows = bool
         case "mouse_resizes_windows": mouseResizesWindows = bool
-        case "floating": floating = v.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        case "floating":
+            var ids: [String] = []
+            for id in v.split(separator: ",").map({ $0.trimmingCharacters(in: .whitespaces) }) where !id.isEmpty && !ids.contains(id) {
+                ids.append(id)
+            }
+            floating = ids
         case "floating_is_blacklist": floatingIsBlacklist = bool
         case "float_small_windows": floatSmallWindows = bool
         case "new_windows_to_main", "new_is_master": newWindowsToMain = bool

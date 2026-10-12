@@ -169,15 +169,17 @@ final class SettingsUI: ObservableObject {
         if e.type == .flagsChanged && e.keyCode != 57 { return e }
         guard let id = recording, let i = doc.binds.firstIndex(where: { $0.id == id }) else { recording = nil; return e }
         let flags = e.modifierFlags.intersection([.command, .option, .control, .shift])
-        if e.keyCode == 53 && flags.isEmpty && doc.binds[i].submap.isEmpty { // Esc cancels (global rows)
+        let esc = e.keyCode == 53 && flags.isEmpty
+        let isRange = BindRange.isRange(doc.binds[i].key)
+        if esc && (doc.binds[i].submap.isEmpty || isRange) { // Esc cancels, except on a mode's single-key rows
             recording = nil
             return nil
         }
         guard let name = ConfigDocument.keyName(for: e.keyCode) else { NSSound.beep(); return nil }
-        if doc.binds[i].submap.isEmpty == false, flags.isEmpty, e.keyCode == 53 {
+        if esc {
             // Esc inside a mode row is a legit key to bind (e.g. to leave the mode).
             doc.binds[i].key = "escape"; doc.binds[i].mods = ""
-        } else if BindRange.isRange(doc.binds[i].key) {
+        } else if isRange {
             doc.binds[i].mods = doc.modsString(for: flags) // range rows: only the modifiers are recorded
         } else {
             doc.binds[i].key = name
@@ -1284,8 +1286,10 @@ private struct BindRowView: View {
         } label: {
             Group {
                 if recording {
-                    Text(BindRange.isRange(row.key) ? "Press modifiers + any key" : "Press keys… (Esc cancels)")
+                    Text(BindRange.isRange(row.key) ? "Modifiers + key · Esc cancels"
+                         : row.submap.isEmpty ? "Press keys… (Esc cancels)" : "Press keys… (click to cancel)")
                         .font(Theme.body(11)).foregroundStyle(Color.accentColor)
+                        .lineLimit(1).minimumScaleFactor(0.8)
                 } else if row.key.isEmpty {
                     Text("Click to record").font(Theme.body(11)).foregroundStyle(Theme.secondary)
                 } else {

@@ -36,7 +36,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         WindowManager.shared.onChange = { [weak self] in self?.updateIcon() }
         LoginItem.enableOnFirstLaunch()
 
-        if AXIsProcessTrusted() {
+        wasTrusted = AXIsProcessTrusted()
+        if wasTrusted {
             WindowManager.shared.start()
         } else {
             Log.info("launch: Accessibility not granted")
@@ -90,8 +91,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     /// Menu bar indicator, like a Waybar workspaces module: workspaces with windows, the
     /// focused display's one filled in.
     private func updateIcon() {
+        // Only checkPermission() updates wasTrusted; doing it here too (window events call this)
+        // could swallow a revocation before the watchdog sees it.
         let trusted = AXIsProcessTrusted()
-        wasTrusted = trusted
         guard let button = statusItem.button else { return }
         let summary = WindowManager.shared.workspaceSummary()
         guard trusted, !summary.all.isEmpty || !Hotkeys.shared.submap.isEmpty else {
