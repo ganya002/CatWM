@@ -10,7 +10,7 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Frameworks" "$APP/Contents/Resources"
 cp .build/release/ouch "$APP/Contents/MacOS/"
 cp Info.plist "$APP/Contents/"
-cp -R Resources/Fonts "$APP/Contents/Resources/"  # Roboto + Roboto Mono (OFL) + Dela Gothic One (OFL), registered at launch
+cp -R Resources/Fonts "$APP/Contents/Resources/"  # Dela Gothic One (OFL), registered at launch
 cp Resources/Icon/AppIcon.icns "$APP/Contents/Resources/"
 # Sparkle ships as a prebuilt framework inside the SwiftPM artifact bundle.
 SPARKLE=$(find .build/artifacts -type d -name Sparkle.framework -path '*macos-arm64_x86_64*' | head -1)

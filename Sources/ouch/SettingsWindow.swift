@@ -312,10 +312,10 @@ private struct StatusBar: View {
         .padding(.leading, 24).padding(.trailing, 16)
         .frame(height: 38)
         .background(Theme.statusBar)
-        .overlay(alignment: .top) { Rectangle().fill(Color.primary.opacity(0.08)).frame(height: 1) }
+        .overlay(alignment: .top) { Divider() }
     }
 
-    private func dot(_ c: Color) -> some View { Circle().fill(c).frame(width: 14, height: 14) }
+    private func dot(_ c: Color) -> some View { Circle().fill(c).frame(width: 8, height: 8) }
 }
 
 // MARK: - Shared components
@@ -345,15 +345,35 @@ private struct NumberRow: View {
     var range: ClosedRange<CGFloat> = 0...60
     @Environment(\.isEnabled) private var enabled
 
+    /// Whole points, clamped to the range, so the slider, field and stepper never disagree.
+    private var points: Binding<Double> {
+        Binding(get: { Double(value) }, set: { v in
+            let r = CGFloat(v.rounded())
+            let clamped = min(range.upperBound, max(range.lowerBound, r))
+            if clamped != value { value = clamped }
+        })
+    }
+
     var body: some View {
-        Row(title, vertical: 8) {
-            HStack(spacing: 10) {
-                Slider(value: $value, in: range, step: 1).frame(width: 180)
-                TextField("", value: Binding(get: { Double(value) }, set: { value = CGFloat(min(200, max(0, $0))) }), format: .number)
-                    .textFieldStyle(.roundedBorder)
-                    .multilineTextAlignment(.trailing)
-                    .frame(width: 44)
-                Text("px").foregroundStyle(Theme.secondary)
+        Row(title, vertical: 7) {
+            HStack(spacing: 8) {
+                // No `step:`: on macOS it draws a tick mark per step and makes the knob jump. The binding rounds instead.
+                Slider(value: points, in: Double(range.lowerBound)...Double(range.upperBound))
+                    .controlSize(.small)
+                    .frame(width: 180)
+                    .accessibilityLabel(title)
+                    .accessibilityValue("\(Int(value)) points")
+                HStack(spacing: 2) {
+                    TextField(title, value: points, format: .number)
+                        .labelsHidden()
+                        .textFieldStyle(.roundedBorder)
+                        .multilineTextAlignment(.trailing)
+                        .monospacedDigit()
+                        .frame(width: 44)
+                    Stepper(title, value: points, in: Double(range.lowerBound)...Double(range.upperBound), step: 1)
+                        .labelsHidden()
+                }
+                Text("pt").foregroundStyle(.secondary)
             }
         }
         .opacity(enabled ? 1 : 0.4)
@@ -424,7 +444,7 @@ private struct OverviewPane: View {
             Card(padding: 14) { hero(s) }
 
             if s.trusted && !s.screens.isEmpty {
-                Block("Displays", footer: "Applies to the workspace on that display. Each workspace remembers its own layout.") {
+                Block("Displays", footer: "Each workspace remembers its own layout.") {
                     Card {
                         ForEach(s.screens, id: \.uuid) { screen in
                             HStack(spacing: 12) {
@@ -516,7 +536,7 @@ private struct OverviewPane: View {
                 VStack(alignment: .leading, spacing: 6) {
                     step(1, "Click Open Accessibility Settings. A guide appears next to System Settings.")
                     step(2, "Turn on Ouch in the list.")
-                    step(3, "Already on but still not working? Rebuilding the app invalidates the old entry. Click Reset Permission, then turn it on again.")
+                    step(3, "Still not working after a rebuild? Click Reset Permission, then turn it on again.")
                 }
                 .font(Theme.body(12.5))
                 HStack(spacing: 8) {
@@ -748,7 +768,7 @@ private struct LayoutsPane: View {
         .frame(width: 104)
         .padding(.vertical, 8)
         .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.control))
-        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Color.black.opacity(0.08)))
+        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Theme.hairline))
     }
 
     private func arrow(_ symbol: String, enabled: Bool, help: String, _ action: @escaping () -> Void) -> some View {
@@ -785,9 +805,9 @@ private struct LayoutsPane: View {
                     .lineLimit(2, reservesSpace: true).padding(.top, 3)
             }
             .padding(10)
-            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(on ? Color.accentColor.opacity(0.1) : Color.gray.opacity(0.06)))
+            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(on ? Color.accentColor.opacity(0.1) : Theme.card))
             .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(on ? Color.accentColor : Color.gray.opacity(0.15), lineWidth: on ? 1.5 : 1))
+                .strokeBorder(on ? Color.accentColor : Theme.hairline, lineWidth: on ? 1.5 : 1))
             .contentShape(RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)
@@ -917,11 +937,11 @@ private struct BehaviorPane: View {
             Block("Workspaces") {
                 Card {
                     SwitchRow(title: "Use Ouch workspaces",
-                              detail: "Instant, per-monitor workspaces like Hyprland, instead of macOS Spaces. Windows on hidden workspaces are parked just off-screen. Works best with a single macOS Space.",
+                              detail: "Per-display workspaces like Hyprland, instead of macOS Spaces. Works best with a single macOS Space.",
                               isOn: $doc.config.virtualWorkspaces)
                     if doc.config.virtualWorkspaces {
                         SwitchRow(title: "Stay on this workspace when closing a window",
-                                  detail: "Closing a window won't jump to another workspace just because macOS refocuses a window there.",
+                                  detail: "Don't switch workspaces when macOS focuses another window after a close.",
                                   isOn: $doc.config.stayOnWorkspaceAfterClose)
                         Row {
                             TitleDetail(title: "Home Desktop",
@@ -950,7 +970,7 @@ private struct BehaviorPane: View {
                     SwitchRow(title: "Resize to adjust the main pane", detail: "Dragging the edge between panes changes how much room the main pane gets.",
                               isOn: $doc.config.mouseResizesWindows)
                     SwitchRow(title: "Drag windows from anywhere",
-                              detail: "Hold ⌃⌘ and drag any part of a window to move it. A macOS setting for all apps; restart running apps for it to take effect.",
+                              detail: "Hold ⌃⌘ and drag anywhere in a window to move it. Restart open apps to apply.",
                               isOn: Binding(get: { ui.dragAnywhere }, set: { on in
                                   DragAnywhere.set(on)
                                   ui.dragAnywhere = DragAnywhere.isEnabled
@@ -1135,7 +1155,11 @@ private struct AnimationPane: View {
                 .dimmed(!c.animate)
                 Row("Duration", vertical: 8) {
                     HStack(spacing: 10) {
-                        Slider(value: $doc.config.animationDuration, in: 0.05...0.6, step: 0.01).frame(width: 200)
+                        Slider(value: Binding(get: { c.animationDuration }, set: { doc.config.animationDuration = ($0 * 100).rounded() / 100 }),
+                               in: 0.05...0.6)
+                            .controlSize(.small)
+                            .frame(width: 200)
+                            .accessibilityLabel("Duration")
                         Text("\(Int((c.animationDuration * 1000).rounded())) ms").monospacedDigit().frame(width: 56, alignment: .trailing)
                     }
                 }
@@ -1201,7 +1225,7 @@ private struct KeybindsPane: View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
                 Segmented(title: "Shortcut set", options: doc.submaps.map { ($0, $0.isEmpty ? "Global" : "\($0.capitalized) mode") }, selection: $ui.bindMode)
-                    .help("Global shortcuts work everywhere. Mode shortcuts only work after entering the mode, so single keys are fine there.")
+                    .help("Global shortcuts work everywhere. Mode shortcuts need the mode on, so single keys are fine there.")
                 Spacer()
                 Menu {
                     ForEach(Actions.byCategory, id: \.0) { cat, actions in
@@ -1293,7 +1317,7 @@ private struct BindRowView: View {
                                 .textFieldStyle(.roundedBorder).font(Theme.mono(12, .regular))
                                 .frame(width: 90)
                                 .help("Keys: 1..0 (number row), a..d, f1..f12, or h|j|k|l")
-                            Text("→").foregroundStyle(Theme.secondary)
+                            Image(systemName: "arrow.right").foregroundStyle(Theme.secondary)
                             TextField("Values", text: $doc.binds[i].args, prompt: Text("1..10"))
                                 .textFieldStyle(.roundedBorder).font(Theme.mono(12, .regular))
                                 .help("Values paired with the keys in order: 1..10, l|d|u|r, or one value for all keys")

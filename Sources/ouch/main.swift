@@ -188,7 +188,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         guard Updater.shared.isConfigured else {
             let a = NSAlert()
             a.messageText = "Updates aren't set up in this build"
-            a.informativeText = "This copy was built without an Amore feed. Release builds check for updates automatically."
+            a.informativeText = "This build has no update feed. Release builds check for updates automatically."
             NSApp.activate(ignoringOtherApps: true)
             a.runModal()
             return

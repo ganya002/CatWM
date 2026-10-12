@@ -158,17 +158,17 @@ final class Tour {
         var out: [Step] = []
         let deskText: String
         if let desk, let other {
-            deskText = "We opened three pretend windows on workspace \(desk) and one on workspace \(other)."
-                + (original.map { " Your own windows wait on workspace \($0) until you're done." } ?? "")
+            deskText = "Three practice windows are on workspace \(desk) and one on workspace \(other)."
+                + (original.map { " Your windows wait on workspace \($0) until you finish." } ?? "")
         } else {
-            deskText = "We opened four pretend windows to practise on. Nothing you do here changes your own apps."
+            deskText = "Four practice windows are open. Nothing you do here changes your apps."
         }
         out.append(Step(id: .intro, kicker: "Keyboard tour", title: "Meet your practice desk", text: deskText, button: "Show me"))
 
         if let enter, !mode.isEmpty {
             let modeName = mode.capitalized
             out.append(Step(id: .mode, kicker: "\(modeName) mode", title: "Enter \(mode.lowercased()) mode",
-                            text: "One shortcut turns it on. Then single keys move your windows. When the mode is off, those keys go to your apps as usual.",
+                            text: "One shortcut turns it on, and then single keys move your windows. With the mode off, those keys go to your apps.",
                             caps: Self.caps(enter, long: true)))
             if dirs.count >= 2 {
                 let keys = dirs.map { Self.keyLabel($0.keyCode, long: false) }
@@ -196,10 +196,10 @@ final class Tour {
             if let visit, let back, let other, let desk {
                 let key = Self.keyLabel(visit.keyCode, long: false)
                 out.append(Step(id: .visit, kicker: "Workspaces", title: "Workspaces are separate desks",
-                                text: "Each display shows one workspace, and each one keeps its own layout and focused window. The menu bar shows them all, with yours filled in. Press \(key) to visit workspace \(other).",
+                                text: "Each display shows one workspace, with its own layout and focus. The menu bar shows them all, with yours filled in. Press \(key) to visit workspace \(other).",
                                 target: .bar, caps: Self.caps(visit, long: true), needsMode: true))
                 out.append(Step(id: .back, kicker: "Workspaces", title: "Nothing was closed",
-                                text: "Windows on hidden workspaces are parked just off-screen in a corner. Press \(Self.keyLabel(back.keyCode, long: false)) to bring workspace \(desk) back.",
+                                text: "Windows on hidden workspaces are parked off-screen. Press \(Self.keyLabel(back.keyCode, long: false)) to bring workspace \(desk) back.",
                                 target: .bar, caps: Self.caps(back, long: true), needsMode: true))
                 finalRows.append((["1–0"], "Switch workspace"))
             }

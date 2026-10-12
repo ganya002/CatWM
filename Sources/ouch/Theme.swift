@@ -6,8 +6,8 @@ import SwiftUI
 enum Theme {
     // MARK: Fonts
 
-    /// Roboto and Roboto Mono (OFL) and Dela Gothic One (OFL; logo and welcome title) ship in
-    /// Contents/Resources/Fonts.
+    /// Text uses Apple's system fonts (San Francisco, SF Mono). Only Dela Gothic One (OFL; logo and
+    /// welcome title) ships in Contents/Resources/Fonts.
     static func registerFonts() {
         guard let dir = Bundle.main.resourceURL?.appendingPathComponent("Fonts"),
               let urls = try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)
@@ -17,14 +17,12 @@ enum Theme {
     }
 
     private static let hasDela = NSFont(name: "DelaGothicOne-Regular", size: 12) != nil
-    private static let hasRoboto = NSFont(name: "Roboto", size: 12) != nil
-    private static let hasRobotoMono = NSFont(name: "Roboto Mono", size: 12) != nil
 
     static func body(_ size: CGFloat = 13, _ weight: Font.Weight = .regular) -> Font {
-        hasRoboto ? .custom("Roboto", size: size).weight(weight) : .system(size: size, weight: weight)
+        .system(size: size, weight: weight)
     }
     static func mono(_ size: CGFloat = 12, _ weight: Font.Weight = .medium) -> Font {
-        hasRobotoMono ? .custom("Roboto Mono", size: size).weight(weight) : .system(size: size, weight: weight, design: .monospaced)
+        .system(size: size, weight: weight, design: .monospaced)
     }
     /// Pane titles, card headings and HUD text: plain bold body face.
     static func heading(_ size: CGFloat) -> Font { body(size, .bold) }
@@ -35,30 +33,22 @@ enum Theme {
     }
 
     static func nsHeading(_ size: CGFloat) -> NSFont {
-        let base = NSFont(name: "Roboto", size: size) ?? .systemFont(ofSize: size)
-        let bold = base.fontDescriptor.addingAttributes([.traits: [NSFontDescriptor.TraitKey.weight: NSFont.Weight.bold]])
-        return NSFont(descriptor: bold, size: size) ?? .boldSystemFont(ofSize: size)
+        .systemFont(ofSize: size, weight: .bold)
     }
     static func nsMono(_ size: CGFloat, weight: NSFont.Weight = .bold) -> NSFont {
-        guard let base = NSFont(name: "Roboto Mono", size: size) else { return .monospacedSystemFont(ofSize: size, weight: weight) }
-        let d = base.fontDescriptor.addingAttributes([.traits: [NSFontDescriptor.TraitKey.weight: weight]])
-        return NSFont(descriptor: d, size: size) ?? base
+        .monospacedSystemFont(ofSize: size, weight: weight)
     }
 
-    // MARK: Colours (light values from the design, dark ones to match)
+    // MARK: Colours (system semantic colours, so light/dark, Increase Contrast and accent colour all follow macOS)
 
-    private static func dynamic(_ light: NSColor, _ dark: NSColor) -> Color {
-        Color(nsColor: NSColor(name: nil) { $0.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? dark : light })
-    }
-    static let window = dynamic(NSColor(white: 0.984, alpha: 1), NSColor(white: 0.13, alpha: 1))
-    static let sidebar = dynamic(NSColor(srgbRed: 232 / 255, green: 232 / 255, blue: 237 / 255, alpha: 0.9),
-                                 NSColor(srgbRed: 44 / 255, green: 44 / 255, blue: 47 / 255, alpha: 0.9))
-    static let statusBar = dynamic(NSColor(white: 0.965, alpha: 0.9), NSColor(white: 0.16, alpha: 0.9))
-    /// White controls on the light window: pill buttons, keycaps, text fields.
-    static let control = dynamic(.white, NSColor(white: 0.26, alpha: 1))
-    static let card = Color.primary.opacity(0.035)
-    static let hairline = Color.primary.opacity(0.06)
-    static let secondary = Color.primary.opacity(0.5)
+    static let window = Color(nsColor: .windowBackgroundColor)
+    static let statusBar = Color(nsColor: .windowBackgroundColor)
+    /// Raised controls: chips, keycaps.
+    static let control = Color(nsColor: .controlColor)
+    /// Grouped-form box fill, as in System Settings.
+    static let card = Color(nsColor: .quaternarySystemFill)
+    static let hairline = Color(nsColor: .separatorColor)
+    static let secondary = Color(nsColor: .secondaryLabelColor)
 }
 
 // MARK: - Layout pieces
@@ -105,7 +95,7 @@ struct Block<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let title {
-                Text(title).font(Theme.body(13, .semibold)).foregroundStyle(.primary.opacity(0.85))
+                Text(title).font(Theme.body(13, .semibold)).foregroundStyle(.primary)
                     .padding(.leading, 2).padding(.bottom, 6)
             }
             content

@@ -60,7 +60,7 @@ struct WelcomeView: View {
             VStack(spacing: 8) {
                 AppGlyph(size: 64)
                 Text("Welcome to Ouch").font(Theme.display(30)).foregroundStyle(ink).padding(.top, 6)
-                Text("Ouch needs a little access before it can tile. Each button opens System Settings with a guide beside it.")
+                Text("Ouch needs a few permissions to tile. Each button opens System Settings with a guide beside it.")
                     .font(Theme.body(13)).foregroundStyle(Color.black.opacity(0.5))
                     .multilineTextAlignment(.center).frame(maxWidth: 380)
                     .fixedSize(horizontal: false, vertical: true)
@@ -69,7 +69,7 @@ struct WelcomeView: View {
                 permission(granted: model.accessibility, symbol: "lock.fill",
                            tint: [Color(red: 1, green: 0.667, blue: 0.2), Color(red: 1, green: 0.55, blue: 0)],
                            title: "Accessibility", required: true,
-                           detail: "macOS only lets apps move other apps' windows with this permission. It also lets your shortcuts work.",
+                           detail: "Lets Ouch move other apps' windows and respond to your shortcuts.",
                            primary: true, action: model.allowAccessibility)
                 Rectangle().fill(Color.black.opacity(0.06)).frame(height: 1).padding(.leading, 58).padding(.trailing, 14)
                 permission(granted: model.inputMonitoring, symbol: "keyboard",
@@ -81,7 +81,7 @@ struct WelcomeView: View {
                 permission(granted: model.login, symbol: "power",
                            tint: [Color(red: 0.486, green: 0.478, blue: 0.918), Color(red: 0.345, green: 0.337, blue: 0.839)],
                            title: "Open at login", required: false,
-                           detail: "Starts Ouch with your Mac. macOS asks you to allow it in Login Items.",
+                           detail: "Starts Ouch when you log in. macOS may ask you to allow it in Login Items.",
                            primary: false, action: model.allowLogin)
             }
             .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.black.opacity(0.035)))
@@ -166,8 +166,8 @@ struct WordmarkView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    /// "*Wonderful* hyprland inspired tile manager for macOS." The bundled Roboto has no italic, so
-    /// that word uses the system italic; "hyprland" is in Hyprland's blue.
+    /// "*Wonderful* hyprland inspired tile manager for macOS." "Wonderful" is set in the system italic;
+    /// "hyprland" is in Hyprland's blue.
     private func tagline(_ pt: CGFloat) -> Text {
         Text("Wonderful").font(.system(size: pt).italic())
             + Text(" ").font(Theme.body(pt))

@@ -1,6 +1,6 @@
 # Ouch
 
-A small Amethyst-style tiling window manager for macOS with Hyprland-style keybinds and animated window movement.
+An Amethyst-style tiling window manager for macOS with Hyprland-style keybinds and animated window movement.
 
 ## Build & run
 
@@ -9,7 +9,7 @@ A small Amethyst-style tiling window manager for macOS with Hyprland-style keybi
 open build/ouch.app
 ```
 
-On first launch, a short intro plays over the desktop, then a welcome card asks for **Accessibility** (System Settings → Privacy & Security) and offers a keyboard tour. The tour opens practice windows on a free workspace, tiles them for real, and floats hints over them; your own windows wait on their workspace until it ends. Run it again from the menu bar with **Keyboard Tour…**. The app is ad-hoc signed, so after each rebuild you may need to remove and re-add it there.
+On first launch, a welcome card asks for **Accessibility** (System Settings → Privacy & Security) and offers a keyboard tour. The tour opens practice windows on a free workspace and tiles them for real; your own windows wait on their workspace until it ends. Run it again from the menu bar with **Keyboard Tour…**. The app is ad-hoc signed, so after each rebuild you may need to remove and re-add it there.
 
 ## Releasing with Amore
 
@@ -47,7 +47,7 @@ The default `$mod` is **Option**, so your app shortcuts like ⌘Q and ⌘C keep 
 
 ### Window mode (submaps)
 
-Binds can live in a mode, like Hyprland's submaps or vim's normal mode. A global shortcut enters the mode, and inside it single keys do the work. Outside the mode those keys reach your apps untouched, so vim keeps working.
+Binds can live in a mode, like Hyprland's submaps. A global shortcut enters the mode, and single keys work inside it. Outside the mode, those keys reach your apps untouched.
 
 ```
 bind = SUPER, capslock, submap, window  # ⌘Caps Lock enters window mode (Caps Lock itself is left alone)
@@ -96,7 +96,7 @@ bind = $mod CTRL, swipe_left, workspace, +1    # trackpad swipe
 
 ### Workspaces
 
-Ouch has its own workspaces, like Hyprland and AeroSpace, so switching and moving windows are instant:
+Ouch has its own workspaces, like Hyprland and AeroSpace:
 
 - Each display shows one workspace. A workspace remembers its layout and its last focused window.
 - Windows on hidden workspaces are parked just off-screen in a corner of their display; macOS won't let a window go fully off-screen.
@@ -146,7 +146,7 @@ Open it from the menu bar icon with **Settings…**. Changes save and apply auto
 - **Behavior:** focus follows mouse, mouse follows focus, drag to swap or resize, new windows, layout HUD
 - **Floating Windows:** apps that float or are the only ones tiled, with a picker for running apps
 - **Animation:** speed presets and a preview
-- **Keyboard Shortcuts:** grouped by category with readable action names. Click a shortcut, then press the new keys to record it. Invalid shortcuts are flagged in red; ones that replace a standard app shortcut like ⌘Q are flagged in orange.
+- **Keyboard Shortcuts:** grouped by category. Click a shortcut, then press the new keys to record it. Invalid shortcuts are flagged in red; ones that replace a standard app shortcut like ⌘Q are flagged in orange.
 - **Advanced:** config and log files, detailed logging, command-line usage, and resets
 
 ## Command line
@@ -161,4 +161,4 @@ build/ouch.app/Contents/MacOS/ouch reload
 
 ## Rebuilding
 
-The app is ad-hoc signed, so every rebuild cancels its Accessibility permission. Ouch notices this, shows a ⚠️ in the menu bar, and opens Settings. Click **Reset Permission** there, then turn Ouch on again.
+The app is ad-hoc signed, so every rebuild cancels its Accessibility permission. Ouch shows a ⚠️ in the menu bar and opens Settings. Click **Reset Permission** there, then turn Ouch on again.
