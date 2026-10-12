@@ -12,8 +12,8 @@
     <key>LSUIElement</key><true/>
     <key>NSHighResolutionCapable</key><true/>
     <!-- Sparkle + Amore. Fill both from `amore setup` (see README); updates stay off until you do. -->
-    <key>SUFeedURL</key><string>REPLACE_WITH_FEED_URL</string>
-    <key>SUPublicEDKey</key><string>REPLACE_WITH_PUBLIC_ED_KEY</string>
+    <key>SUFeedURL</key><string>https://api.amore.computer/v1/apps/local.hyprthyst/appcast.xml</string>
+    <key>SUPublicEDKey</key><string>mGd35GehdPUs8+j4eHxj7vI7MJB7KDYJjPou4Sjz6JA=</string>
     <key>SUEnableAutomaticChecks</key><true/>
 </dict>
 </plist>
