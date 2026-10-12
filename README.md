@@ -124,6 +124,7 @@ mxtiler has its own workspaces, like Hyprland and AeroSpace, so switching and mo
 | `cyclelayout` | `next` / `prev` |
 | `layout` | layout name, e.g. `bsp` |
 | `toggletiling`, `retile`, `reload` | |
+| `sethomespace` | makes the current macOS Desktop the home for workspaces |
 
 ## Tiling fixes compared to Amethyst
 

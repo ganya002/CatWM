@@ -124,6 +124,7 @@ final class SettingsUI: ObservableObject {
     @Published var newID = ""
     @Published var previewFlipped = false
     @Published var linkedPadding = true
+    @Published var dragAnywhere = DragAnywhere.isEnabled
     @Published var status = WindowManager.shared.status()
     /// Row whose shortcut is being recorded. Global keybinds are paused meanwhile so the combo
     /// arrives here instead of moving windows.
@@ -138,6 +139,7 @@ final class SettingsUI: ObservableObject {
     func beginSession() {
         let c = doc.config
         linkedPadding = Set([c.paddingTop, c.paddingBottom, c.paddingLeft, c.paddingRight]).count == 1
+        dragAnywhere = DragAnywhere.isEnabled
         refreshStatus()
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in self?.refreshStatus() }
@@ -917,6 +919,12 @@ private struct BehaviorPane: View {
                               isOn: $doc.config.mouseSwapsWindows)
                     SwitchRow(title: "Resize to adjust the main pane", detail: "Dragging the edge between panes changes how much room the main pane gets.",
                               isOn: $doc.config.mouseResizesWindows)
+                    SwitchRow(title: "Drag windows from anywhere",
+                              detail: "Hold ⌃⌘ and drag any part of a window to move it. A macOS setting for all apps; restart running apps for it to take effect.",
+                              isOn: Binding(get: { ui.dragAnywhere }, set: { on in
+                                  DragAnywhere.set(on)
+                                  ui.dragAnywhere = DragAnywhere.isEnabled
+                              }))
                 }
             }
             Block("Windows") {

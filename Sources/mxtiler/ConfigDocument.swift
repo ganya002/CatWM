@@ -80,6 +80,11 @@ enum Actions {
         add("Focus Previous Display", .displays, "focusmonitor", "-1", "display")
         add("Move Window to Next Display", .displays, "movewindow", "mon:+1", "rectangle.portrait.and.arrow.right")
         add("Move Window to Previous Display", .displays, "movewindow", "mon:-1", "rectangle.portrait.and.arrow.right")
+        for (dir, name, arrow) in [("l", "Left", "left"), ("r", "Right", "right"), ("u", "Up", "up"), ("d", "Down", "down")] {
+            add("Focus Display \(name)", .displays, "focusmonitor", dir, "arrow.\(arrow).to.line")
+            add("Move Window to Display \(name)", .displays, "movewindow", "mon:\(dir)", "arrow.\(arrow).square")
+        }
+        add("Use This Desktop as Home", .spaces, "sethomespace", "", "house")
         for n in 1...10 { add("Workspace \(n)", .spaces, "workspace", "\(n)", "\(n).square") }
         add("Previous Workspace", .spaces, "workspace", "previous", "arrow.uturn.backward.square")
         add("Next Workspace", .spaces, "workspace", "+1", "chevron.right.square")
@@ -154,7 +159,7 @@ enum Actions {
     static let dispatchers = ["movefocus", "movewindow", "swapwindow", "cyclenext", "swapnext", "layoutmsg", "splitratio",
                               "togglefloating", "fullscreen", "killactive", "exec", "focusmonitor", "movewindowtomonitor",
                               "workspace", "movetoworkspace", "movetoworkspacesilent", "cyclelayout", "layout", "setlayout",
-                              "toggletiling", "retile", "reevaluate", "reload", "exit", "submap"]
+                              "toggletiling", "retile", "reevaluate", "reload", "exit", "submap", "sethomespace"]
 }
 
 // MARK: - Document
