@@ -73,6 +73,7 @@ final class WindowManager {
     private var refreshWork: DispatchWorkItem?
     private var ffmWork: DispatchWorkItem?
     private var minSizes: [CGWindowID: CGSize] = [:] // learned from windows that refuse to shrink
+    private var ratioChange: (screen: String, until: Date)? // a split resize whose windows are still settling
     private var refreshDeadline = DispatchTime.distantFuture
     private(set) var isStarted = false
     private var ignoreMouseUntil = Date.distantPast
@@ -253,6 +254,10 @@ final class WindowManager {
         minSizes[id] = new
         corrections[id] = nil
         Log.info("window \(id) has a minimum size of \(Int(new.width))×\(Int(new.height)); re-tiling around it")
+        if let r = ratioChange, Date() < r.until {
+            ratioChange = nil
+            warnTooSmall(id, on: Screen.all().first { $0.uuid == r.screen })
+        }
         scheduleRefresh()
     }
 
@@ -372,13 +377,8 @@ final class WindowManager {
             let ids = tiled(on: s)
             if let z = st.zoomed, !ids.contains(z) { st.zoomed = nil }
             let rect = usableRect(s)
-            let gap = config.windowMargins && !(config.smartWindowMargins && ids.count == 1) ? config.windowMarginSize : 0
-            // Lay out in a rect grown by half a gap, then shrink every slot by half a gap: windows get
-            // a full gap between them and sit exactly on the padding at the screen edges.
-            guard let raw = st.layout.frames(count: ids.count, in: rect.insetBy(dx: -gap / 2, dy: -gap / 2),
-                                             ratio: st.ratio, mainCount: st.mainCount) else { continue }
-            let slots = fitMinimums(raw.map { $0.insetBy(dx: gap / 2, dy: gap / 2).pixelAligned },
-                                    mins: ids.map { minSizes[$0] }, gap: gap)
+            guard let (raw, gap) = rawSlots(ids, on: s, st, ratio: st.ratio) else { continue }
+            let slots = fitMinimums(raw, mins: ids.map { minSizes[$0] }, gap: gap)
             for (id, slot) in zip(ids, slots) {
                 let target = id == st.zoomed ? rect.pixelAligned : slot
                 targets[id] = target
@@ -401,6 +401,33 @@ final class WindowManager {
         animator.animate(moves, duration: config.animate ? config.animationDuration : 0,
                          curve: config.animationCurve, bounce: config.animationBounce)
         onChange?()
+    }
+
+    /// Each window's slot before fitting around minimum sizes, and the gap between windows.
+    private func rawSlots(_ ids: [CGWindowID], on s: Screen, _ st: ScreenState, ratio: CGFloat) -> ([CGRect], CGFloat)? {
+        let gap = config.windowMargins && !(config.smartWindowMargins && ids.count == 1) ? config.windowMarginSize : 0
+        // Lay out in a rect grown by half a gap, then shrink every slot by half a gap: windows get
+        // a full gap between them and sit exactly on the padding at the screen edges.
+        guard let raw = st.layout.frames(count: ids.count, in: usableRect(s).insetBy(dx: -gap / 2, dy: -gap / 2),
+                                         ratio: ratio, mainCount: st.mainCount) else { return nil }
+        return (raw.map { $0.insetBy(dx: gap / 2, dy: gap / 2).pixelAligned }, gap)
+    }
+
+    /// The first window whose known minimum size the new ratio squeezes further than the old one did.
+    private func windowRefusingRatio(_ ratio: CGFloat, from old: CGFloat, ids: [CGWindowID], on s: Screen, _ st: ScreenState) -> CGWindowID? {
+        guard ids.contains(where: { minSizes[$0] != nil }),
+              let (before, _) = rawSlots(ids, on: s, st, ratio: old),
+              let (after, _) = rawSlots(ids, on: s, st, ratio: ratio) else { return nil }
+        return zip(ids, zip(before, after)).first { id, slots in
+            guard let m = minSizes[id] else { return false }
+            let (b, a) = slots
+            return (m.width > a.width + 1 && a.width < b.width - 1) || (m.height > a.height + 1 && a.height < b.height - 1)
+        }?.0
+    }
+
+    private func warnTooSmall(_ id: CGWindowID, on s: Screen?) {
+        let name = windows[id].flatMap { NSRunningApplication(processIdentifier: $0.pid)?.localizedName } ?? "This window"
+        HUD.shared.warn("\(name) can't get any smaller", on: s?.ns)
     }
 
     private func tiled(on s: Screen) -> [CGWindowID] {
@@ -795,13 +822,23 @@ final class WindowManager {
     private func adjustRatio(_ arg: String) {
         guard let c = context() else { return }
         let parts = arg.lowercased().split(separator: " ")
+        var ratio = c.st.ratio
         if parts.first == "exact", parts.count > 1, let v = Double(parts[1]) {
-            c.st.ratio = CGFloat(v)
+            ratio = CGFloat(v)
         } else {
             let delta = Double(arg.replacingOccurrences(of: "+", with: "")).map { CGFloat($0) } ?? config.windowResizeStep
-            c.st.ratio += delta
+            ratio += delta
         }
-        c.st.ratio = min(0.9, max(0.1, c.st.ratio))
+        ratio = min(0.9, max(0.1, ratio))
+        // A window we already know won't shrink: say so and keep the ratio, so the presses that
+        // did nothing don't have to be undone before the other direction works again.
+        if let stubborn = windowRefusingRatio(ratio, from: c.st.ratio, ids: c.ids, on: c.s, c.st) {
+            warnTooSmall(stubborn, on: c.s)
+            return
+        }
+        c.st.ratio = ratio
+        // Otherwise a window may only turn out to have a minimum once it's been asked to shrink.
+        ratioChange = (c.s.uuid, Date() + (config.animate ? config.animationDuration : 0) + 0.6)
         refresh()
     }
 
