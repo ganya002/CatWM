@@ -34,7 +34,9 @@ final class PermissionGuide {
         guard isShowing else { return }
         model.granted = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) { [weak self] in
-            if AXIsProcessTrusted() { self?.hide() }
+            guard AXIsProcessTrusted() else { return }
+            self?.hide()
+            Permissions.closeSettingsWindows()
         }
     }
 
@@ -45,8 +47,11 @@ final class PermissionGuide {
 
     private func makePanel() -> NSPanel {
         let p = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 300, height: 10),
-                        styleMask: [.titled, .closable, .fullSizeContentView, .nonactivatingPanel, .utilityWindow],
+                        styleMask: [.titled, .fullSizeContentView, .nonactivatingPanel, .utilityWindow],
                         backing: .buffered, defer: false)
+        for button in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
+            p.standardWindowButton(button)?.isHidden = true
+        }
         p.titleVisibility = .hidden
         p.titlebarAppearsTransparent = true
         p.isMovableByWindowBackground = true

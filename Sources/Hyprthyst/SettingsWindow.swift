@@ -541,15 +541,43 @@ enum Permissions {
         PermissionGuide.shared.show()
     }
 
-    /// Clears Hyprthyst's own (possibly stale) Accessibility entry and asks again.
-    static func reset() {
+    /// Drops any Accessibility entry left by an older build or moved copy; it would show as
+    /// "on" in System Settings while macOS rejects this binary.
+    static func clearStaleEntry() {
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/usr/bin/tccutil")
         p.arguments = ["reset", "Accessibility", Bundle.main.bundleIdentifier ?? "local.hyprthyst"]
         try? p.run()
         p.waitUntilExit()
+    }
+
+    /// Starts the grant flow from a clean slate: clear stale entry, prompt, open Settings + guide.
+    static func request() {
+        guard !AXIsProcessTrusted() else { return }
+        clearStaleEntry()
         AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary)
         openSettings()
+    }
+
+    static func reset() {
+        clearStaleEntry()
+        AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary)
+        openSettings()
+    }
+
+    /// Closes the System Settings window (needs Accessibility, which we have by now).
+    static func closeSettingsWindows() {
+        guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.systempreferences").first else { return }
+        let ax = AXUIElementCreateApplication(app.processIdentifier)
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(ax, kAXWindowsAttribute as CFString, &value) == .success,
+              let windows = value as? [AXUIElement] else { return }
+        for window in windows {
+            var button: CFTypeRef?
+            if AXUIElementCopyAttributeValue(window, kAXCloseButtonAttribute as CFString, &button) == .success, let button {
+                AXUIElementPerformAction(button as! AXUIElement, kAXPressAction as CFString)
+            }
+        }
     }
 }
 
