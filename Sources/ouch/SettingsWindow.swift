@@ -1837,6 +1837,11 @@ private struct AdvancedPane: View {
             Block("Reset") {
                 Card {
                     Row("Keyboard shortcuts", vertical: 8) {
+                        Button("Gaming (WASD)…") {
+                            if confirm("Switch to the gaming shortcuts?", "Window mode moves to W A S D, with Q and E for workspaces. Your own shortcuts will be replaced.", button: "Switch") {
+                                doc.useShortcutSet(wasdText)
+                            }
+                        }
                         Button("Restore Defaults…") {
                             if confirm("Restore the default keyboard shortcuts?", "Your own shortcuts will be replaced.") {
                                 doc.restoreDefaultShortcuts()
@@ -1863,11 +1868,11 @@ private struct AdvancedPane: View {
         }
     }
 
-    private func confirm(_ title: String, _ detail: String) -> Bool {
+    private func confirm(_ title: String, _ detail: String, button: String = "Reset") -> Bool {
         let a = NSAlert()
         a.messageText = title
         a.informativeText = detail
-        a.addButton(withTitle: "Reset")
+        a.addButton(withTitle: button)
         a.addButton(withTitle: "Cancel")
         a.buttons.first?.hasDestructiveAction = true
         return a.runModal() == .alertFirstButtonReturn

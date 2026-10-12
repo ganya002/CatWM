@@ -339,12 +339,12 @@ private struct Squish<Trigger: Equatable>: ViewModifier {
         } keyframes: { _ in
             let wobble = Spring(response: 0.38, dampingRatio: 0.42)
             KeyframeTrack(\.width) {
-                LinearKeyframe(1, duration: delay)
+                LinearKeyframe(1, duration: max(delay, 0.001))
                 CubicKeyframe(1.09, duration: 0.07)
                 SpringKeyframe(1, duration: 0.5, spring: wobble)
             }
             KeyframeTrack(\.height) {
-                LinearKeyframe(1, duration: delay)
+                LinearKeyframe(1, duration: max(delay, 0.001))
                 CubicKeyframe(0.9, duration: 0.07)
                 SpringKeyframe(1, duration: 0.5, spring: wobble)
             }

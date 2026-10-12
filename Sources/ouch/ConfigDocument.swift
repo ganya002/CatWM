@@ -252,9 +252,12 @@ final class ConfigDocument: ObservableObject {
         apply(text: defaultText)
         modValue = mod
     }
-    func restoreDefaultShortcuts() {
+    func restoreDefaultShortcuts() { useShortcutSet(defaultText) }
+
+    /// Swaps in the shortcuts from a built-in config text, keeping everything else.
+    func useShortcutSet(_ text: String) {
         let current = (vars, config, extraLines)
-        apply(text: defaultText)
+        apply(text: text)
         let defaults = binds
         (vars, config, extraLines) = current
         // The defaults say `$mod`; the user's modifier variable may be named differently ($mainMod).
