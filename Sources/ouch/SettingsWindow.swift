@@ -102,18 +102,6 @@ enum Pane: String, CaseIterable, Identifiable {
         case .advanced: .brown
         }
     }
-    var subtitle: String {
-        switch self {
-        case .overview: "Status and quick settings"
-        case .layouts: "Choose the layouts you cycle through"
-        case .gaps: "Space between windows and around the screen"
-        case .behavior: "Startup, focus, mouse and new windows"
-        case .floating: "Apps and windows that are never tiled"
-        case .animation: "How windows move into place"
-        case .keybinds: "Hyprland-style keybinds"
-        case .advanced: "Files, logging and resets"
-        }
-    }
 }
 
 /// View state lives here instead of in @State (the Command Line Tools ship without SwiftUI's macro plugin).
@@ -206,10 +194,7 @@ struct SettingsView: View {
                 .navigationSplitViewColumnWidth(220)
         } detail: {
             VStack(alignment: .leading, spacing: 0) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(pane.rawValue).font(Theme.heading(22))
-                    Text(pane.subtitle).font(Theme.body(11)).foregroundStyle(Theme.secondary)
-                }
+                Text(pane.rawValue).font(Theme.heading(22))
                 .padding(.horizontal, 24).padding(.top, 4).padding(.bottom, 12)
                 Group {
                     switch pane {
@@ -300,8 +285,7 @@ private struct StatusBar: View {
                     .foregroundStyle(.orange)
                     .help(doc.fileErrors.joined(separator: "\n"))
             } else {
-                dot(Color(nsColor: .systemGreen))
-                Text("Changes apply instantly")
+                EmptyView()
             }
             Spacer()
             if doc.hasChangesSinceOpen {
@@ -444,14 +428,13 @@ private struct OverviewPane: View {
             Card(padding: 14) { hero(s) }
 
             if s.trusted && !s.screens.isEmpty {
-                Block("Displays", footer: "Each workspace remembers its own layout.") {
+                Block("Displays") {
                     Card {
                         ForEach(s.screens, id: \.uuid) { screen in
                             HStack(spacing: 12) {
                                 LayoutThumbnail(layout: screen.layout, selected: true).frame(width: 64, height: 40)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(screen.workspace.isEmpty ? screen.name : "\(screen.name) · Workspace \(screen.workspace)")
-                                    Text(screen.layout.blurb).font(Theme.body(11)).foregroundStyle(Theme.secondary)
                                 }
                                 Spacer(minLength: 0)
                                 PopUp(title: "Layout for \(screen.name)", options: Layout.allCases.map { ($0, $0.title) }, selection: Binding(get: { screen.layout }, set: { l in
@@ -549,7 +532,7 @@ private struct OverviewPane: View {
             }
         } else {
             HStack(spacing: 14) {
-                IconTile(symbol: s.keybindsActive && s.tilingEnabled ? "checkmark" : s.keybindsActive ? "pause.fill" : "keyboard.badge.exclamationmark",
+                IconTile(symbol: s.keybindsActive && s.tilingEnabled ? "checkmark" : s.keybindsActive ? "pause.fill" : "exclamationmark.triangle.fill",
                          color: s.keybindsActive && s.tilingEnabled ? .green : .orange, size: 44)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(!s.tilingEnabled ? "Tiling is paused" : s.keybindsActive ? "Ouch is running" : "Keyboard shortcuts aren't active")
@@ -617,9 +600,7 @@ private struct AmoreCredit: View {
                 Text("shipped with")
                 Image(systemName: "heart.fill")
                     .foregroundStyle(.pink)
-                    .scaleEffect(hovering ? 1.35 : 1)
-                    .rotationEffect(.degrees(hovering ? -12 : 0))
-                    .offset(y: hovering ? -2 : 0)
+                    .symbolEffect(.bounce, value: hovering)
                     .shadow(color: .pink.opacity(hovering ? 0.7 : 0), radius: 4)
                 Text("Amore").fontWeight(.bold)
             }
@@ -730,8 +711,6 @@ private struct LayoutsPane: View {
         PaneScroll(spacing: 22) {
             VStack(alignment: .leading, spacing: 10) {
                 Text("Cycle order").font(Theme.heading(16))
-                Text("Next Layout steps through these from left to right. New spaces start with the first one.")
-                    .font(Theme.body(12.5)).foregroundStyle(Theme.secondary)
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 10) {
                         ForEach(Array(doc.config.layouts.enumerated()), id: \.element) { i, l in
@@ -748,7 +727,6 @@ private struct LayoutsPane: View {
 
             VStack(alignment: .leading, spacing: 10) {
                 Text("All layouts").font(Theme.heading(16))
-                Text("Click a layout to add it to the cycle or take it out.").font(Theme.body(12.5)).foregroundStyle(Theme.secondary)
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 14)], spacing: 14) {
                     ForEach(Layout.allCases, id: \.self) { card($0) }
                 }
@@ -801,8 +779,6 @@ private struct LayoutsPane: View {
                         }
                     }
                 Text(l.title).font(Theme.body(12.5, .semibold)).foregroundStyle(.primary).padding(.top, 8)
-                Text(l.blurb).font(Theme.body(11)).foregroundStyle(Theme.secondary).lineSpacing(1.5)
-                    .lineLimit(2, reservesSpace: true).padding(.top, 3)
             }
             .padding(10)
             .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(on ? Color.accentColor.opacity(0.1) : Theme.card))
@@ -811,7 +787,7 @@ private struct LayoutsPane: View {
             .contentShape(RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)
-        .help(locked ? "At least one layout has to stay in the cycle" : on ? "Remove from the cycle" : "Add to the cycle")
+        .help(locked ? "At least one layout has to stay in the cycle" : "\(l.blurb). \(on ? "Click to remove from the cycle" : "Click to add to the cycle")")
     }
 }
 
@@ -839,7 +815,7 @@ private struct GapsPane: View {
                 Card {
                     SwitchRow(title: "Gaps between windows", isOn: $doc.config.windowMargins)
                     NumberRow(title: "Gap", value: $doc.config.windowMarginSize).disabled(!c.windowMargins)
-                    SwitchRow(title: "Smart gaps", detail: "No gap when a screen has only one window", isOn: $doc.config.smartWindowMargins)
+                    SwitchRow(title: "Smart gaps", isOn: $doc.config.smartWindowMargins)
                         .disabled(!c.windowMargins)
                 }
             }
@@ -858,9 +834,8 @@ private struct GapsPane: View {
                         NumberRow(title: "Right", value: $doc.config.paddingRight)
                     }
                     SwitchRow(title: "No padding on the built-in display",
-                              detail: "Useful on a small laptop screen when you also use an external display",
                               isOn: $doc.config.disablePaddingOnBuiltinDisplay)
-                    SwitchRow(title: "Tile over the menu bar", detail: "For setups where the menu bar auto-hides",
+                    SwitchRow(title: "Tile over the menu bar",
                               isOn: $doc.config.ignoreMenuBar)
                 }
             }
@@ -926,7 +901,7 @@ private struct BehaviorPane: View {
         PaneScroll {
             Block("Startup") {
                 Card {
-                    SwitchRow(title: "Open Ouch at login", detail: "Also listed in System Settings → General → Login Items.",
+                    SwitchRow(title: "Open Ouch at login",
                               isOn: Binding(get: { ui.status.launchAtLogin || ui.status.loginNeedsApproval }, set: { on in
                                   LoginItem.set(on)
                                   ui.refreshStatus()
@@ -937,11 +912,10 @@ private struct BehaviorPane: View {
             Block("Workspaces") {
                 Card {
                     SwitchRow(title: "Use Ouch workspaces",
-                              detail: "Per-display workspaces like Hyprland, instead of macOS Spaces. Works best with a single macOS Space.",
+                              detail: "Per-display workspaces instead of macOS Spaces",
                               isOn: $doc.config.virtualWorkspaces)
                     if doc.config.virtualWorkspaces {
                         SwitchRow(title: "Stay on this workspace when closing a window",
-                                  detail: "Don't switch workspaces when macOS focuses another window after a close.",
                                   isOn: $doc.config.stayOnWorkspaceAfterClose)
                         Row {
                             TitleDetail(title: "Home Desktop",
@@ -956,21 +930,19 @@ private struct BehaviorPane: View {
             Block("Focus") {
                 Card {
                     SwitchRow(title: "Focus follows mouse",
-                              detail: "Resting the pointer on a window focuses it. Menus and the Dock are ignored.",
                               isOn: $doc.config.focusFollowsMouse)
                     SwitchRow(title: "Mouse follows focus",
-                              detail: "Moving focus with the keyboard moves the pointer to the window's center.",
                               isOn: $doc.config.mouseFollowsFocus)
                 }
             }
             Block("Mouse") {
                 Card {
-                    SwitchRow(title: "Drag to swap", detail: "Drop a window onto another to swap them, or onto another display to move it there.",
+                    SwitchRow(title: "Drag to swap",
                               isOn: $doc.config.mouseSwapsWindows)
-                    SwitchRow(title: "Resize to adjust the main pane", detail: "Dragging the edge between panes changes how much room the main pane gets.",
+                    SwitchRow(title: "Resize to adjust the main pane",
                               isOn: $doc.config.mouseResizesWindows)
                     SwitchRow(title: "Drag windows from anywhere",
-                              detail: "Hold ⌃⌘ and drag anywhere in a window to move it. Restart open apps to apply.",
+                              detail: "Hold ⌃⌘ and drag. Restart open apps to apply.",
                               isOn: Binding(get: { ui.dragAnywhere }, set: { on in
                                   DragAnywhere.set(on)
                                   ui.dragAnywhere = DragAnywhere.isEnabled
@@ -979,7 +951,7 @@ private struct BehaviorPane: View {
             }
             Block("Windows") {
                 Card {
-                    SwitchRow(title: "New windows become main", detail: "Otherwise they're added at the end.",
+                    SwitchRow(title: "New windows become main",
                               isOn: $doc.config.newWindowsToMain)
                     Row("Main pane resize step", vertical: 8) {
                         let step = Binding(get: { Int((doc.config.windowResizeStep * 100).rounded()) },
@@ -993,7 +965,7 @@ private struct BehaviorPane: View {
             }
             Block("Layout HUD") {
                 Card {
-                    SwitchRow(title: "Show layout name on change", detail: "A short overlay in the middle of the screen.",
+                    SwitchRow(title: "Show layout name on change",
                               isOn: $doc.config.enablesLayoutHUD)
                     SwitchRow(title: "Also when switching spaces", isOn: $doc.config.enablesLayoutHUDOnSpaceChange)
                         .disabled(!doc.config.enablesLayoutHUD)
@@ -1019,7 +991,7 @@ private struct FloatingPane: View {
 
     var body: some View {
         PaneScroll {
-            Block(footer: "Dialogs and windows that can't be resized always float. Use Toggle Floating to float any single window.") {
+            Block() {
                 Card {
                     HStack(alignment: .top, spacing: 12) {
                         Text("Apps in the list below")
@@ -1030,7 +1002,7 @@ private struct FloatingPane: View {
                         }
                     }
                     .padding(.vertical, 10)
-                    SwitchRow(title: "Float small windows", detail: "Windows under 500 × 500 when they open, like preference panes and palettes.",
+                    SwitchRow(title: "Float small windows",
                               isOn: $doc.config.floatSmallWindows)
                 }
             }
@@ -1316,11 +1288,9 @@ private struct BindRowView: View {
                             TextField("Keys", text: $doc.binds[i].key, prompt: Text("1..0"))
                                 .textFieldStyle(.roundedBorder).font(Theme.mono(12, .regular))
                                 .frame(width: 90)
-                                .help("Keys: 1..0 (number row), a..d, f1..f12, or h|j|k|l")
                             Image(systemName: "arrow.right").foregroundStyle(Theme.secondary)
                             TextField("Values", text: $doc.binds[i].args, prompt: Text("1..10"))
                                 .textFieldStyle(.roundedBorder).font(Theme.mono(12, .regular))
-                                .help("Values paired with the keys in order: 1..10, l|d|u|r, or one value for all keys")
                         }
                     } else {
                         actionMenu(i, action)
@@ -1392,7 +1362,6 @@ private struct BindRowView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help("Click, then press the new shortcut")
     }
 
     private func actionMenu(_ i: Int, _ action: Action?) -> some View {
@@ -1444,7 +1413,7 @@ private struct AdvancedPane: View {
                     } control: {
                         Button("Open Log") { NSWorkspace.shared.open(Log.url) }
                     }
-                    SwitchRow(title: "Detailed logging", detail: "Logs every window found, every move and every focus-follows-mouse change.",
+                    SwitchRow(title: "Detailed logging",
                               isOn: $doc.config.debugLogging)
                 }
             }

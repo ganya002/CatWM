@@ -180,6 +180,8 @@ private struct PracticeWindowView: View {
                     HStack(spacing: 7) {
                         Image(systemName: done ? "checkmark.square.fill" : "square")
                             .foregroundStyle(done ? Color.green : Color.secondary)
+                            .contentTransition(.symbolEffect(.replace))
+                            .animation(.default, value: done)
                         Text(items[i]).strikethrough(done, color: .secondary)
                     }
                 }

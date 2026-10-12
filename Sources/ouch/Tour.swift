@@ -224,8 +224,7 @@ final class Tour {
             finalRows.append((Self.modLabels(global.mods, long: false) + ["1–0"], "Switch from anywhere"))
         }
         out.append(Step(id: .final, kicker: "Done", title: "You're ready to tile",
-                        text: "Every shortcut can be changed in Settings → Keyboard Shortcuts."
-                            + (original.map { " Finish takes you back to workspace \($0)." } ?? ""),
+                        text: original.map { "Finish takes you back to workspace \($0)." } ?? "",
                         button: "Finish"))
         return out
     }

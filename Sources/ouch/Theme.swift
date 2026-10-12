@@ -224,10 +224,22 @@ struct IconTile: View {
     var size: CGFloat = 24
 
     var body: some View {
-        RoundedRectangle(cornerRadius: size * 0.25, style: .continuous)
+        RoundedRectangle(cornerRadius: size * 0.225, style: .continuous)
             .fill(color.gradient)
             .frame(width: size, height: size)
-            .overlay(Image(systemName: symbol).font(.system(size: size * 0.5, weight: .semibold)).foregroundStyle(.white))
+            .overlay(
+                RoundedRectangle(cornerRadius: size * 0.225, style: .continuous)
+                    .strokeBorder(LinearGradient(colors: [.white.opacity(0.28), .white.opacity(0)], startPoint: .top, endPoint: .center), lineWidth: 0.75)
+            )
+            .overlay(
+                Image(systemName: symbol)
+                    .font(.system(size: size * 0.56, weight: .medium))
+                    .imageScale(.medium)
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.18), radius: size * 0.03, y: size * 0.02)
+                    .contentTransition(.symbolEffect(.replace))
+            )
+            .animation(.default, value: symbol)
     }
 }
 

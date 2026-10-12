@@ -267,9 +267,9 @@ private struct GuideView: View {
             if model.granted {
                 HStack(spacing: 10) {
                     Image(systemName: "checkmark.circle.fill").font(.title).foregroundStyle(.green)
+                        .transition(.symbolEffect(.appear))
                     VStack(alignment: .leading, spacing: 2) {
                         Text("All set").font(.headline)
-                        Text("Ouch now has Accessibility access.").font(.callout).foregroundStyle(.secondary)
                     }
                 }
             } else {

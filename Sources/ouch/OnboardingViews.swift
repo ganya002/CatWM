@@ -87,7 +87,6 @@ struct WelcomeView: View {
             .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.black.opacity(0.035)))
             .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.black.opacity(0.06)))
             HStack(spacing: 8) {
-                Text("Change these later in Settings → Overview.").font(Theme.body(11)).foregroundStyle(Color.black.opacity(0.5))
                 Spacer(minLength: 0)
                 Pill(title: "Skip tutorial", action: model.skip)
                 Pill(title: "Learn the shortcuts", primary: true, enabled: model.accessibility, action: model.learn)
@@ -108,7 +107,8 @@ struct WelcomeView: View {
                 .fill(LinearGradient(colors: granted ? [Color(red: 0.3, green: 0.85, blue: 0.39), Color(red: 0.18, green: 0.7, blue: 0.31)] : tint,
                                      startPoint: .top, endPoint: .bottom))
                 .frame(width: 32, height: 32)
-                .overlay(Image(systemName: granted ? "checkmark" : symbol).font(.system(size: 14, weight: .bold)).foregroundStyle(.white))
+                .overlay(Image(systemName: granted ? "checkmark" : symbol).font(.system(size: 14, weight: .semibold)).foregroundStyle(.white)
+                    .contentTransition(.symbolEffect(.replace)).symbolEffect(.bounce, value: granted))
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(title).font(Theme.body(13, .medium)).foregroundStyle(ink)
@@ -227,17 +227,16 @@ struct CoachCardView: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .help("Click to try it")
                     if model.done {
                         HStack(spacing: 5) {
                             Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.green)
+                                .transition(.symbolEffect(.appear))
                             Text("Nice").font(Theme.body(13, .semibold)).foregroundStyle(okGreen)
                         }
                         .transition(.opacity.combined(with: .scale(scale: 0.8)))
                     }
                 }
                 .padding(.top, 2)
-                Text(model.hint).font(Theme.body(11)).foregroundStyle(Color.black.opacity(0.42))
             }
             if let warning = model.warning {
                 Text(warning).font(Theme.body(12)).foregroundStyle(Color(red: 0.79, green: 0.2, blue: 0))
