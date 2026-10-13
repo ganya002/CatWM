@@ -219,7 +219,7 @@ struct ShortcutMap: View {
         if let entry = modeEntry { chords.insert(entry, at: 0) }
         let w = model.tipWidth, margin: CGFloat = 28
         let shift = max(0, -margin - (r.midX - w / 2)) + min(0, width + margin - (r.midX + w / 2))
-        return OTooltip(text: action?.title ?? "No shortcut. Click to add one.", chords: chords, caret: .bottomAt(-shift))
+        return OTooltip(text: tooltipText(action: action, code: k.code), chords: chords, caret: .bottomAt(-shift))
             .fixedSize()
             .background(GeometryReader { p in
                 Color.clear
@@ -230,6 +230,14 @@ struct ShortcutMap: View {
             .offset(x: r.midX + shift, y: r.minY - 8)
             .allowsHitTesting(false)
             .transition(.opacity)
+    }
+
+    private func tooltipText(action: ConfigDocument.KeyAction?, code: UInt16?) -> String {
+        if let title = action?.title { return title }
+        guard let code else { return "No shortcut. Click to add one." }
+        if ConfigDocument.keyName(for: code) == nil { return "Can't take a shortcut yet" }
+        if model.mode.isEmpty, model.flags.isEmpty { return "Pick a modifier to add a shortcut" }
+        return "No shortcut. Click to add one."
     }
 
     /// The keys that enter the mode on show, e.g. ⌘⇪, so tooltips read "⌘⇪ then L".
