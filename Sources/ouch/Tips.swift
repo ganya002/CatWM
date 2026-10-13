@@ -106,9 +106,10 @@ final class Tips: ObservableObject {
         case .keyHelp:
             let keys = ShortcutIndex()
             guard canShow(k.rawValue), WindowManager.shared.config.keyboardHelp, !Hotkeys.shared.submap.isEmpty else { return }
+            let helpKey = WindowManager.shared.config.keyboardHelpKey
             let held = keys.modeChord.first.map { " Or hold \($0) after you enter." } ?? ""
-            present(Tip(id: k.rawValue, title: "See every key", body: "In window mode, ? shows what every key does.\(held)",
-                        chords: [["?"]], place: .modeBar))
+            present(Tip(id: k.rawValue, title: "See every key", body: "In window mode, \(helpKey) shows what every key does.\(held)",
+                        chords: [[helpKey]], place: .modeBar))
         }
     }
 

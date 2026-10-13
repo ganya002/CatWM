@@ -55,7 +55,7 @@ struct Config {
     /// Closing a window keeps you on the current workspace instead of jumping to wherever macOS refocuses.
     var stayOnWorkspaceAfterClose = true
     /// Windows on one workspace before Ouch offers to sort them; 0 turns the offer off.
-    var sortNudge = 8
+    var sortNudge = 5
     /// The grouping the Sort panel opens with.
     var sortStrategy: SortStrategy = .task
     /// Screen-edge effect while a mode is on: draw, ripple, corners or none. Config file only for now.
@@ -69,6 +69,8 @@ struct Config {
     var panelAnimation: PanelMotion = .rise
     /// The on-screen keyboard help: hold the mode chord, or press ? in a mode.
     var keyboardHelp = true
+    /// The character that toggles the keyboard help inside a mode.
+    var keyboardHelpKey = "?"
     /// The keyboard drawn in the Shortcut Map and the keyboard help: `auto` (this Mac), a finish such as
     /// `macbook-air-midnight`, or a family (`macbook-pro`, `macbook-air`, `macbook-neo`, `magic-keyboard`).
     var keyboardFinish = "auto"
@@ -210,13 +212,16 @@ struct Config {
         case "debug_logging": debugLogging = bool
         case "virtual_workspaces": virtualWorkspaces = bool
         case "stay_on_workspace_after_close": stayOnWorkspaceAfterClose = bool
-        case "sort_nudge": return needNum { sortNudge = $0.isFinite ? Int(min(max($0, 0), 100)) : 8 }
+        case "sort_nudge": return needNum { sortNudge = $0.isFinite ? Int(min(max($0, 0), 100)) : 5 }
         case "sort_strategy":
             guard let s = SortStrategy(rawValue: v.lowercased()) else {
                 return "unknown sort strategy `\(v)` (\(SortStrategy.allCases.map(\.rawValue).joined(separator: ", ")))"
             }
             sortStrategy = s
         case "keyboard_help": keyboardHelp = bool
+        case "keyboard_help_key":
+            guard v.count == 1 else { return "keyboard-help-key must be a single character, such as ?" }
+            keyboardHelpKey = v
         case "keyboard_finish":
             guard MacKeyboard.isValid(v) else {
                 return "unknown keyboard finish `\(v)` (auto, macbook-pro, macbook-air, macbook-neo, magic-keyboard, or a finish like macbook-pro-space-black)"
@@ -400,6 +405,7 @@ enables-layout-hud-on-space-change = true
 # Keyboard help: keep holding Cmd after Cmd+Caps Lock (or press ? in window mode) to see
 # every window-mode key on an on-screen keyboard.
 keyboard-help = true
+keyboard-help-key = ?
 # Make the focused window stand out: darken the others (strength 0-1) and/or blur them (radius in points).
 dim-other-windows = false
 dim-strength = 0.3

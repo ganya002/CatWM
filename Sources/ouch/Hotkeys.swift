@@ -285,7 +285,7 @@ final class Hotkeys {
             let flags = !heldChord.isEmpty && event.flags.contains(heldChord) ? event.flags.subtracting(heldChord) : event.flags
             if flags != event.flags, let b = lookup(code, flags) { return repeatOK(b, event) ? .bind(b) : .swallow }
             if let help = onHelpKey, flags.isDisjoint(with: [.maskCommand, .maskControl]),
-               event.getIntegerValueField(.keyboardEventAutorepeat) == 0, Self.typed(event) == "?" {
+               event.getIntegerValueField(.keyboardEventAutorepeat) == 0, Self.typed(event) == WindowManager.shared.config.keyboardHelpKey {
                 DispatchQueue.main.async(execute: help)
                 return .swallow
             }

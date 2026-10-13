@@ -17,14 +17,14 @@ struct GeneralPane: View {
             StatusHero(ui: ui).setting("general.status", ui)
 
             OGroup("Startup") {
-                OSwitchRow("Open at login", description: "Starts Ouch when you log in", isOn: loginBinding)
+                OSwitchRow("Open at login", isOn: loginBinding)
                     .setting("general.login", ui)
                 if s.loginNeedsApproval {
                     ORow("Waiting for approval", description: "Allow Ouch in Login Items", symbol: "exclamationmark.triangle.fill") {
                         OButton("Open Login Items", size: .sm) { LoginItem.openSettings() }
                     }
                 }
-                if !s.inputMonitoring {
+                if !s.inputMonitoring && Hotkeys.shared.capsBound {
                     ORow("Instant Caps Lock shortcuts", description: "Needs Input Monitoring; otherwise Caps Lock waits for a hold") {
                         OButton("Allow…", size: .sm) { Permissions.requestInputMonitoring() }
                     }
@@ -33,15 +33,15 @@ struct GeneralPane: View {
             }
 
             OGroup("Tiling") {
-                OSwitchRow("Tile windows", description: s.tilingEnabled ? "Windows are arranged for you" : "Paused: windows stay where they are",
+                OSwitchRow("Tile windows",
                            isOn: Binding(get: { ui.status.tilingEnabled }, set: { _ in
                                WindowManager.shared.toggleTiling()
                                ui.refreshStatus()
                            }))
                     .disabled(!s.running)
                     .setting("general.tiling", ui)
-                ORow("Main modifier", description: "Held for every global shortcut") {
-                    OMenuPicker(title: "Main modifier", options: modifierOptions,
+                ORow("Shortcut key", description: "The key you hold for most shortcuts") {
+                    OMenuPicker(title: "Shortcut key", options: modifierOptions,
                                 selection: Binding(get: { doc.modValue }, set: { doc.modValue = $0 }))
                 }
                 .setting("general.modifier", ui)
@@ -52,10 +52,15 @@ struct GeneralPane: View {
                     OSwitchRow("Check for updates automatically",
                                isOn: Binding(get: { updater.automaticallyChecks }, set: { updater.automaticallyChecks = $0 }))
                         .setting("general.autoCheck", ui)
-                    OSwitchRow("Download updates automatically",
-                               isOn: Binding(get: { updater.automaticallyDownloads }, set: { updater.automaticallyDownloads = $0 }))
-                        .disabled(!updater.automaticallyChecks)
-                        .setting("general.autoDownload", ui)
+                    if updater.automaticallyChecks {
+                        OSwitchRow("Download updates automatically",
+                                   isOn: Binding(get: { updater.automaticallyDownloads }, set: { updater.automaticallyDownloads = $0 }))
+                            .setting("general.autoDownload", ui)
+                            .transition(.opacity)
+                    }
+                    OSwitchRow("Include beta releases", description: "Get new versions early. They may have bugs.",
+                               isOn: Binding(get: { updater.receivesBeta }, set: { updater.receivesBeta = $0 }))
+                        .setting("general.beta", ui)
                     ORow("Check for updates", description: updater.lastChecked.map { "Last checked \($0.formatted(.relative(presentation: .named)))" }
                         ?? "Not checked yet") {
                         OButton("Check Now", icon: "arrow.down.circle", size: .sm) { updater.checkForUpdates() }
@@ -66,20 +71,12 @@ struct GeneralPane: View {
                         .setting("general.checkNow", ui)
                 }
             }
-
-            AdvancedSection(pane: .general, ui: ui) {
-                OGroup("Updates") {
-                    OSwitchRow("Include beta releases", description: "Get new versions early; they may be rough",
-                               isOn: Binding(get: { updater.receivesBeta }, set: { updater.receivesBeta = $0 }))
-                        .disabled(!updater.isConfigured)
-                        .setting("general.beta", ui)
-                }
-            }
+            .animation(Motion.easeOut, value: updater.automaticallyChecks)
 
             OGroup("Reset") {
-                ORow("Reset all settings", description: "Layouts, gaps, floating apps and shortcuts. Your main modifier stays.") {
+                ORow("Reset all settings", description: "Layouts, gaps, floating apps and shortcuts. Your shortcut key stays.") {
                     OButton("Reset…", variant: .danger, size: .sm) {
-                        if confirm("Reset all settings to their defaults?", "Resets layouts, gaps, floating apps and shortcuts. Your main modifier is kept.") {
+                        if confirm("Reset all settings to their defaults?", "Resets layouts, gaps, floating apps and shortcuts. Your shortcut key is kept.") {
                             doc.resetEverything()
                         }
                     }
@@ -163,35 +160,13 @@ private struct StatusHero: View {
     }
 }
 
-/// Tiny "shipped with" credit; the heart gives a little hop on hover.
-private struct AmoreCredit: View {
-    @StateObject private var hover = Flag()
-
-    var body: some View {
-        let hovering = hover.on
-        return Link(destination: URL(string: "https://amore.computer")!) {
-            HStack(spacing: 4) {
-                Text("shipped with")
-                Image(systemName: "heart.fill")
-                    .foregroundStyle(Theme.danger)
-                Text("Amore").fontWeight(.medium)
-            }
-            .font(Theme.body(11))
-            .foregroundStyle(Theme.inkMuted.opacity(hovering ? 1 : 0.6))
-            .animation(.spring(response: 0.3, dampingFraction: 0.45), value: hovering)
-        }
-        .buttonStyle(.plain)
-        .onHover { hover.on = $0 }
-        .tooltip("Updates delivered by Amore")
-    }
-}
-
 // MARK: - Layout
 
 struct LayoutPane: View {
     @ObservedObject var doc: ConfigDocument
     @ObservedObject var ui: SettingsUI
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @StateObject private var drag = CycleDrag()
 
     private var allPadding: Binding<CGFloat> {
         Binding(get: { doc.config.paddingTop }, set: { v in
@@ -207,7 +182,7 @@ struct LayoutPane: View {
                 OGroup("Displays") {
                     ForEach(s.screens, id: \.uuid) { screen in
                         HStack(spacing: 14) {
-                            LayoutThumbnail(layout: screen.layout, selected: true).frame(width: 52)
+                            ScreenThumbnail(layout: screen.layout).frame(width: 56)
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(screen.name).font(Theme.body(14)).oneLine()
                                 Text(screen.workspace.isEmpty ? "Current layout" : "Workspace \(screen.workspace)")
@@ -226,16 +201,26 @@ struct LayoutPane: View {
                 .setting("layout.displays", ui)
             }
 
-            OGroup("Cycle", footer: "Next Layout steps through these in order. Click one below to add or remove it.") {
+            OGroup("Active layouts", footer: "Next Layout goes through these in order. Drag to change the order, or click one to remove it. Click a layout below to add it.") {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
-                        ForEach(Array(c.layouts.enumerated()), id: \.element) { i, l in
-                            CycleChip(index: i, layout: l, count: c.layouts.count) { d in
-                                withAnimation(Motion.snap(reduceMotion)) { doc.config.layouts.swapAt(i, i + d) }
-                            }
+                    HStack(spacing: CycleChip.gap) {
+                        ForEach(c.layouts, id: \.self) { l in
+                            let i = c.layouts.firstIndex(of: l) ?? 0
+                            CycleChip(index: i, layout: l, count: c.layouts.count, drag: drag, keys: moveKeys,
+                                      move: { to in
+                                          let to = min(max(to, 0), doc.config.layouts.count - 1)
+                                          guard let from = doc.config.layouts.firstIndex(of: l), from != to else { return }
+                                          withAnimation(Motion.snap(reduceMotion)) {
+                                              doc.config.layouts.move(fromOffsets: IndexSet(integer: from), toOffset: to > from ? to + 1 : to)
+                                          }
+                                      },
+                                      remove: {
+                                          guard doc.config.layouts.count > 1 else { return }
+                                          withAnimation(Motion.snap(reduceMotion)) { doc.config.layouts.removeAll { $0 == l } }
+                                      })
                         }
                     }
-                    .padding(.vertical, 10).padding(.horizontal, 2)
+                    .padding(.vertical, 10).padding(.horizontal, 8)
                 }
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 6), spacing: 6) {
                     ForEach(Layout.allCases, id: \.self) { cell($0) }
@@ -246,12 +231,15 @@ struct LayoutPane: View {
 
             OGroup("Gaps") {
                 GapsPreview(config: c, layout: c.layouts.first { ![.floating, .fullscreen].contains($0) } ?? .tall)
-                    .frame(height: 220)
+                    .frame(height: 170)
                     .padding(.vertical, 12)
                 OSwitchRow("Gaps between windows", isOn: $doc.config.windowMargins).setting("layout.gaps", ui)
                 ORow("Gap size") { points($doc.config.windowMarginSize, "Gap size") }
                     .disabled(!c.windowMargins)
                     .setting("layout.gapSize", ui)
+                OSwitchRow("Smart gaps", description: "No gaps when a window is alone", isOn: $doc.config.smartWindowMargins)
+                    .disabled(!c.windowMargins)
+                    .setting("layout.smartGaps", ui)
                 if ui.linkedPadding {
                     ORow("Screen padding", description: "Space between windows and the screen edges") { points(allPadding, "Screen padding") }
                         .setting("layout.padding", ui)
@@ -261,6 +249,18 @@ struct LayoutPane: View {
                     ORow("Left padding") { points($doc.config.paddingLeft, "Left padding") }
                     ORow("Right padding") { points($doc.config.paddingRight, "Right padding") }
                 }
+                OSwitchRow("No padding on the built-in display", isOn: $doc.config.disablePaddingOnBuiltinDisplay)
+                    .setting("layout.builtin", ui)
+            }
+
+            OGroup("Main pane") {
+                ORow("Main pane resize step", description: "How much the split moves each time") {
+                    OSlider(value: Binding(get: { Double(doc.config.windowResizeStep * 100) },
+                                           set: { doc.config.windowResizeStep = CGFloat($0.rounded()) / 100 }),
+                            range: 1...25, step: 1, ticks: [5], resetValue: 5, width: 160, label: "Main pane resize step",
+                            format: { "\(Int($0))%" })
+                }
+                .setting("layout.resizeStep", ui)
             }
 
             OGroup("Feedback") {
@@ -271,27 +271,13 @@ struct LayoutPane: View {
 
             AdvancedSection(pane: .layout, ui: ui) {
                 OGroup("Gaps and padding") {
-                    OSwitchRow("Smart gaps", description: "No gaps when a window is alone", isOn: $doc.config.smartWindowMargins)
-                        .disabled(!c.windowMargins)
-                        .setting("layout.smartGaps", ui)
                     OSwitchRow("Same padding on every side", isOn: Binding(get: { ui.linkedPadding }, set: { on in
                         withAnimation(Motion.easeOut) { ui.linkedPadding = on }
                         if on { allPadding.wrappedValue = c.paddingTop }
                     }))
                     .setting("layout.linked", ui)
-                    OSwitchRow("No padding on the built-in display", isOn: $doc.config.disablePaddingOnBuiltinDisplay)
-                        .setting("layout.builtin", ui)
-                    OSwitchRow("Tile over the menu bar", description: "For setups that hide the menu bar", isOn: $doc.config.ignoreMenuBar)
+                    OSwitchRow("Ignore menu bar when tiling", description: "Use this if you hide the menu bar", isOn: $doc.config.ignoreMenuBar)
                         .setting("layout.menuBar", ui)
-                }
-                OGroup("Main pane") {
-                    ORow("Main pane resize step", description: "How far Grow and Shrink Main Pane move the split") {
-                        OSlider(value: Binding(get: { Double(doc.config.windowResizeStep * 100) },
-                                               set: { doc.config.windowResizeStep = CGFloat($0.rounded()) / 100 }),
-                                range: 1...25, step: 1, ticks: [5], resetValue: 5, width: 160, label: "Main pane resize step",
-                                format: { "\(Int($0))%" })
-                    }
-                    .setting("layout.resizeStep", ui)
                 }
                 OGroup("Feedback") {
                     OSwitchRow("Also when switching spaces", isOn: $doc.config.enablesLayoutHUDOnSpaceChange)
@@ -300,6 +286,17 @@ struct LayoutPane: View {
                 }
             }
         }
+    }
+
+    /// The keys bound to focus left and right, so a focused layout moves with them as well as the arrows.
+    private var moveKeys: (left: Set<String>, right: Set<String>) {
+        var left = Set<String>(), right = Set<String>()
+        for submap in doc.submaps {
+            for a in doc.keyActions(in: submap) where a.row.dispatcher == "movefocus" && a.key.count == 1 {
+                if a.arg == "l" { left.insert(a.key.lowercased()) } else if a.arg == "r" { right.insert(a.key.lowercased()) }
+            }
+        }
+        return (left, right)
     }
 
     private func points(_ value: Binding<CGFloat>, _ label: String) -> some View {
@@ -316,19 +313,31 @@ struct LayoutPane: View {
                 if let index { if !locked { doc.config.layouts.remove(at: index) } } else { doc.config.layouts.append(l) }
             }
         }
-        .tooltip(locked ? "At least one layout has to stay in the cycle" : "\(l.title): \(l.blurb)")
     }
 }
 
-/// A layout in the cycle, numbered, with arrows to move it on hover.
+final class CycleDrag: ObservableObject {
+    @Published var layout: Layout?
+    @Published var x: CGFloat = 0
+    var origin = 0
+}
+
+/// An active layout, numbered. Drag it to reorder, click it to remove it, or Tab to it and use the
+/// arrow keys (or the keys you bound to focus left and right).
 private struct CycleChip: View {
+    static let width: CGFloat = 78
+    static let gap: CGFloat = 12
     let index: Int
     let layout: Layout
     let count: Int
+    @ObservedObject var drag: CycleDrag
+    let keys: (left: Set<String>, right: Set<String>)
     let move: (Int) -> Void
+    let remove: () -> Void
     @StateObject private var hover = Flag()
 
     var body: some View {
+        let dragging = drag.layout == layout
         VStack(spacing: 6) {
             LayoutThumbnail(layout: layout, selected: true).frame(width: 72)
                 .overlay(alignment: .topLeading) {
@@ -337,33 +346,63 @@ private struct CycleChip: View {
                         .frame(width: 18, height: 18).background(Circle().fill(Theme.accent))
                         .offset(x: -6, y: -6)
                 }
-            ZStack {
-                Text(layout.shortTitle).font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine().opacity(hover.on ? 0 : 1)
-                HStack(spacing: 2) {
-                    arrow("chevron.left", enabled: index > 0, help: "Move earlier") { move(-1) }
-                    arrow("chevron.right", enabled: index < count - 1, help: "Move later") { move(1) }
+                .overlay(alignment: .topTrailing) {
+                    if count > 1 {
+                        Image(systemName: "xmark").font(.system(size: 7, weight: .heavy)).foregroundStyle(.white)
+                            .frame(width: 16, height: 16).background(Circle().fill(Theme.inkMuted))
+                            .offset(x: 6, y: -6)
+                            .opacity(hover.on && !dragging ? 1 : 0)
+                            .scaleEffect(hover.on && !dragging ? 1 : 0.5)
+                    }
                 }
-                .opacity(hover.on ? 1 : 0)
-            }
-            .frame(width: 96, height: 18)
+            Text(layout.shortTitle).font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine()
+                .frame(width: Self.width)
         }
-        .tooltip(layout.title)
+        .frame(width: Self.width)
+        .scaleEffect(dragging ? 1.06 : 1)
+        .offset(x: dragging ? drag.x : 0)
+        .zIndex(dragging ? 1 : 0)
+        .contentShape(Rectangle())
         .onHover { hover.on = $0 }
         .animation(.easeOut(duration: Theme.fast), value: hover.on)
-    }
-
-    private func arrow(_ symbol: String, enabled: Bool, help: String, _ action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol).font(.system(size: 9, weight: .bold))
-                .foregroundStyle(enabled ? Theme.ink : Theme.inkFaint.opacity(0.5))
-                .frame(width: 26, height: 18)
-                .background(Capsule().fill(Theme.well))
-                .contentShape(Capsule())
+        .animation(.easeOut(duration: Theme.fast), value: dragging)
+        .onTapGesture { remove() }
+        .gesture(DragGesture(minimumDistance: 5)
+            .onChanged { v in
+                if drag.layout != layout { drag.layout = layout; drag.origin = index }
+                let target = min(max(drag.origin + Int((v.translation.width / (Self.width + Self.gap)).rounded()), 0), count - 1)
+                drag.x = v.translation.width - CGFloat(target - drag.origin) * (Self.width + Self.gap)
+                if target != index { move(target) }
+            }
+            .onEnded { _ in
+                withAnimation(Motion.snap) { drag.x = 0 }
+                drag.layout = nil
+            })
+        .focusable()
+        .onKeyPress(phases: .down) { press in
+            let c = press.characters.lowercased()
+            if press.key == .leftArrow || keys.left.contains(c) { move(index - 1); return .handled }
+            if press.key == .rightArrow || keys.right.contains(c) { move(index + 1); return .handled }
+            if press.key == .delete || press.key == .deleteForward { remove(); return .handled }
+            return .ignored
         }
-        .buttonStyle(PressScale(scale: 0.88))
-        .disabled(!enabled)
-        .tooltip(help)
-        .accessibilityLabel("\(help): \(layout.title)")
+        .accessibilityLabel("\(layout.title), \(index + 1) of \(count)")
+        .accessibilityHint("Drag or use the arrow keys to move, click to remove")
+    }
+}
+
+/// A display with its layout on it.
+private struct ScreenThumbnail: View {
+    let layout: Layout
+
+    var body: some View {
+        VStack(spacing: 2) {
+            LayoutThumbnail(layout: layout, selected: true)
+                .padding(3)
+                .background(RoundedRectangle(cornerRadius: 4, style: .continuous).fill(Theme.well))
+                .overlay(RoundedRectangle(cornerRadius: 4, style: .continuous).strokeBorder(Theme.borderControl, lineWidth: 1.5))
+            Capsule().fill(Theme.borderControl).frame(width: 14, height: 2.5)
+        }
     }
 }
 
@@ -395,30 +434,12 @@ private struct LayoutCell: View {
     }
 }
 
-/// The main display, scaled down, with windows placed exactly as the tiler would place them. They
-/// spring to their new places as gaps and padding change. The little windows are playable.
+/// The main display, scaled down, with three windows placed exactly as the tiler would place them. They
+/// spring to their new places as gaps and padding change.
 struct GapsPreview: View {
     let config: Config
     let layout: Layout
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @StateObject private var play = Play()
-
-    /// Play state lives in an object: @State's macro plugin isn't available to SwiftPM builds.
-    final class Play: ObservableObject {
-        @Published var ids = [0, 1, 2]
-        @Published var nextID = 3
-        /// Which app each window plays, picked at random so the desk looks different every time.
-        @Published var apps: [Int: DemoApp] = {
-            var picked: [DemoApp] = []
-            for _ in 0..<3 { picked.append(DemoApp.pick(avoiding: picked)) }
-            return Dictionary(uniqueKeysWithValues: picked.enumerated().map { ($0, $1) })
-        }()
-        @Published var hovered: Int?
-        /// Drawn above the others, so a window flying to the main slot passes over its neighbours.
-        @Published var lifted: Int?
-        /// Where the desktop was clicked, as a fraction of the screen: the new window grows out of it.
-        @Published var spawn = UnitPoint.center
-    }
 
     /// Desktop backdrop shared with the animation preview: a quiet wash of the palette.
     static let wallpaper = LinearGradient(colors: [Theme.accentSoft, Theme.tint], startPoint: .topLeading, endPoint: .bottomTrailing)
@@ -432,27 +453,16 @@ struct GapsPreview: View {
             let scale = min(g.size.width / full.width, g.size.height / full.height)
             let w = full.width * scale, h = full.height * scale
             let bar = config.ignoreMenuBar ? 0 : menuBar * scale
-            let frames = windows(in: CGRect(x: 0, y: bar, width: w, height: h - bar - dock * scale), scale: scale, count: play.ids.count)
+            let frames = windows(in: CGRect(x: 0, y: bar, width: w, height: h - bar - dock * scale), scale: scale)
             ZStack(alignment: .topLeading) {
                 RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Self.wallpaper)
-                Rectangle().fill(Theme.ink.opacity(0.14)).frame(width: w, height: menuBar * scale)
+                Rectangle().fill(Theme.ink.opacity(0.1)).frame(width: w, height: menuBar * scale)
                     .opacity(config.ignoreMenuBar ? 0 : 1)
-                Color.clear.contentShape(Rectangle())
-                    .onTapGesture(coordinateSpace: .local) { p in open(at: UnitPoint(x: p.x / w, y: p.y / h)) }
-                ForEach(Array(zip(play.ids, frames)), id: \.0) { i, f in
-                    window(i, frame: f)
+                ForEach(Array(frames.enumerated()), id: \.offset) { i, f in
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .fill(i == 0 ? Theme.accent : Theme.thumbMain)
+                        .frame(width: max(f.width, 0), height: max(f.height, 0))
                         .position(x: f.midX, y: f.midY)
-                        .zIndex(play.lifted == i ? 1 : 0)
-                        // Grows out of the click, and on close sinks into its own spot while the rest fill in.
-                        .transition(.asymmetric(
-                            insertion: .scale(scale: 0.15, anchor: play.spawn).combined(with: .opacity),
-                            removal: .scale(scale: 0.85, anchor: UnitPoint(x: f.midX / w, y: f.midY / h)).combined(with: .opacity)))
-                }
-                if play.ids.isEmpty {
-                    Text("Click the desktop for a window")
-                        .font(Theme.body(11.5)).foregroundStyle(Theme.inkMuted)
-                        .frame(width: w, height: h).allowsHitTesting(false)
-                        .transition(.opacity)
                 }
             }
             .frame(width: w, height: h)
@@ -460,86 +470,23 @@ struct GapsPreview: View {
             .frame(width: g.size.width, height: g.size.height)
             // Dragging a slider retargets constantly, which a spring takes in stride.
             .animation(Motion.snap(reduceMotion), value: geometry)
-            .animation(.easeOut(duration: 0.12), value: play.hovered)
         }
-        .tooltip("Click a window to make it main, × to close it, click the desktop to open one")
         .accessibilityHidden(true)
-    }
-
-    private func window(_ id: Int, frame f: CGRect) -> some View {
-        let hovered = play.hovered == id
-        return ZStack(alignment: .topTrailing) {
-            Button { focus(id) } label: {
-                DemoWindow(app: play.apps[id] ?? DemoApp.all[0], main: id == play.ids.first, corner: 4)
-                    .brightness(hovered ? 0.06 : 0)
-            }
-            .buttonStyle(PressScale(scale: 0.96))
-            if f.width > 30, f.height > 24 {
-                Button { close(id) } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 6.5, weight: .heavy))
-                        .foregroundStyle(.white)
-                        .frame(width: 13, height: 13)
-                        .background(Circle().fill(Color(red: 1, green: 0.37, blue: 0.34)))
-                        .contentShape(Circle())
-                }
-                .buttonStyle(PressScale(scale: 0.9))
-                .padding(4)
-                .opacity(hovered ? 1 : 0)
-                .scaleEffect(hovered ? 1 : 0.5)
-                .allowsHitTesting(hovered)
-            }
-        }
-        .focusEffectDisabled()
-        .frame(width: max(f.width, 0), height: max(f.height, 0))
-        .shadow(color: .black.opacity(hovered ? 0.22 : 0.12), radius: hovered ? 4 : 2, y: hovered ? 2 : 1)
-        .onHover { play.hovered = $0 ? id : (play.hovered == id ? nil : play.hovered) }
-    }
-
-    /// Plays with the curve set under Motion, so the toy moves like real windows do.
-    private var motion: Animation {
-        if reduceMotion || !config.animate { return Motion.snap(reduceMotion) }
-        // Springs and bounces need a little longer to read at this size.
-        return Animation(CurveAnimation(curve: config.animationCurve, bounce: config.animationBounce,
-                                        duration: max(config.animationDuration, 0.22)))
     }
 
     /// Everything from the settings that moves the windows.
     private var geometry: [CGFloat] {
         [config.paddingTop, config.paddingBottom, config.paddingLeft, config.paddingRight, config.windowMarginSize,
-         config.windowMargins ? 1 : 0, config.smartWindowMargins ? 1 : 0, config.ignoreMenuBar ? 1 : 0]
+         config.windowMargins ? 1 : 0, config.ignoreMenuBar ? 1 : 0]
     }
 
-    private func focus(_ id: Int) {
-        guard let at = play.ids.firstIndex(of: id), at != 0 else { return }
-        play.lifted = id
-        withAnimation(motion) { play.ids.swapAt(0, at) }
-    }
-
-    private func close(_ id: Int) {
-        if play.hovered == id { play.hovered = nil }
-        withAnimation(motion) { play.ids.removeAll { $0 == id } }
-    }
-
-    private func open(at point: UnitPoint) {
-        guard play.ids.count < 6 else { return }
-        play.spawn = point
-        play.lifted = play.nextID
-        play.apps[play.nextID] = DemoApp.pick(avoiding: play.ids.compactMap { play.apps[$0] })
-        withAnimation(motion) {
-            play.ids.append(play.nextID)
-            play.nextID += 1
-        }
-    }
-
-    private func windows(in area: CGRect, scale: CGFloat, count: Int) -> [CGRect] {
-        guard count > 0 else { return [] }
+    private func windows(in area: CGRect, scale: CGFloat) -> [CGRect] {
         let usable = CGRect(x: area.minX + config.paddingLeft * scale, y: area.minY + config.paddingTop * scale,
                             width: area.width - (config.paddingLeft + config.paddingRight) * scale,
                             height: area.height - (config.paddingTop + config.paddingBottom) * scale)
-        let gap = (config.windowMargins && !(config.smartWindowMargins && count == 1) ? config.windowMarginSize : 0) * scale
+        let gap = (config.windowMargins ? config.windowMarginSize : 0) * scale
         guard usable.width > 4, usable.height > 4,
-              let frames = layout.frames(count: count, in: usable.insetBy(dx: -gap / 2, dy: -gap / 2), ratio: 0.5, mainCount: 1)
+              let frames = layout.frames(count: 3, in: usable.insetBy(dx: -gap / 2, dy: -gap / 2), ratio: 0.5, mainCount: 1)
         else { return [] }
         return frames.map { $0.insetBy(dx: gap / 2, dy: gap / 2) }
     }
@@ -591,7 +538,8 @@ struct WindowsPane: View {
             OGroup("Mouse") {
                 OSwitchRow("Drag to swap", description: "Drop a window on another to trade places", isOn: $doc.config.mouseSwapsWindows)
                     .setting("windows.dragSwap", ui)
-                OSwitchRow("Resize to adjust the main pane", isOn: $doc.config.mouseResizesWindows)
+                OSwitchRow("Drag window edges to resize the main pane",
+                           description: "Resize a tiled window with the mouse, and the main pane follows", isOn: $doc.config.mouseResizesWindows)
                     .setting("windows.resizeMain", ui)
             }
 
@@ -633,13 +581,13 @@ struct WindowsPane: View {
                 .disabled(!doc.config.virtualWorkspaces)
                 .setting("windows.sortStrategy", ui)
                 OSwitchRow("Suggest sorting a crowded workspace", description: "A tip under the menu bar icon, at most once a day",
-                           isOn: Binding(get: { doc.config.sortNudge > 0 }, set: { doc.config.sortNudge = $0 ? 8 : 0 }))
+                           isOn: Binding(get: { doc.config.sortNudge > 0 }, set: { doc.config.sortNudge = $0 ? 5 : 0 }))
                     .disabled(!doc.config.virtualWorkspaces)
                     .setting("windows.sortNudge", ui)
                 ORow("Crowded from", description: "Windows on one workspace") {
                     OSlider(value: Binding(get: { Double(doc.config.sortNudge) },
                                            set: { doc.config.sortNudge = Int($0.rounded()) }),
-                            range: Double(min(3, doc.config.sortNudge))...Double(max(20, doc.config.sortNudge)), step: 1, ticks: [8], resetValue: 8, width: 160, label: "Crowded from",
+                            range: Double(min(3, doc.config.sortNudge))...Double(max(20, doc.config.sortNudge)), step: 1, ticks: [5], resetValue: 5, width: 160, label: "Crowded from",
                             format: { "\(Int($0)) windows" })
                 }
                 .disabled(!doc.config.virtualWorkspaces || doc.config.sortNudge == 0)
@@ -755,7 +703,7 @@ struct MotionPane: View {
     var body: some View {
         let c = doc.config
         VStack(alignment: .leading, spacing: 30) {
-            OGroup("Style", footer: Self.presets.contains { matches($0, c) } ? nil : "Custom: your own mix of the settings below") {
+            OGroup("Style") {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
                     ForEach(Self.presets, id: \.name) { p in
                         PresetTile(preset: p, selected: matches(p, c)) {
@@ -774,15 +722,9 @@ struct MotionPane: View {
             .setting("motion.style", ui)
 
             OGroup("Preview") {
-                HStack(spacing: 16) {
-                    preview
-                    CurveGraph(curve: c.animate ? c.animationCurve : .linear, bounce: c.animationBounce, instant: !c.animate)
-                        .frame(width: 120)
-                        .padding(.vertical, 12)
-                        .accessibilityHidden(true)
-                }
-                .frame(height: 150)
-                .padding(.vertical, 10)
+                preview
+                    .frame(height: 150)
+                    .padding(.vertical, 10)
                 ORow("Play it again", description: "Plays with exactly the curve windows use") {
                     OButton("Play", icon: "play.fill", size: .sm, action: play)
                 }
@@ -919,7 +861,7 @@ struct CurveAnimation: CustomAnimation {
     }
 }
 
-/// Plot of a curve's progress over time, with dashed lines at the start and target.
+/// Plot of a curve's progress over time: a soft gradient under a rounded line, ending in a dot.
 private struct CurveGraph: View {
     let curve: AnimationCurve
     let bounce: Double
@@ -929,25 +871,31 @@ private struct CurveGraph: View {
 
     var body: some View {
         Canvas { ctx, size in
-            // Leave headroom above and below for overshoot and anticipation.
+            // Leave headroom above and below for overshoot and anticipation, and room for the end dot.
+            let inset: CGFloat = 4
+            let w = size.width - inset * 2, h = size.height - inset * 2
             let samples = (0...120).map { Double($0) / 120 }
             let values = samples.map { instant ? ($0 > 0 ? 1 : 0) : curve.progress($0, bounce: bounce) }
             let lo = min(0, values.min() ?? 0), hi = max(1, values.max() ?? 1)
-            func y(_ v: Double) -> CGFloat { size.height - CGFloat((v - lo) / (hi - lo)) * size.height }
-            var guides = Path()
-            for v in [0.0, 1.0] { guides.move(to: CGPoint(x: 0, y: y(v))); guides.addLine(to: CGPoint(x: size.width, y: y(v))) }
-            ctx.stroke(guides, with: .color(color.opacity(0.3)), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+            func y(_ v: Double) -> CGFloat { inset + h - CGFloat((v - lo) / (hi - lo)) * h }
+            let points = zip(samples, values).map { CGPoint(x: inset + CGFloat($0) * w, y: y($1)) }
             var line = Path()
-            for (t, v) in zip(samples, values) {
-                let p = CGPoint(x: CGFloat(t) * size.width, y: y(v))
-                if t == 0 { line.move(to: p) } else { line.addLine(to: p) }
-            }
+            for (i, p) in points.enumerated() { if i == 0 { line.move(to: p) } else { line.addLine(to: p) } }
+            var area = line
+            area.addLine(to: CGPoint(x: inset + w, y: y(0)))
+            area.addLine(to: CGPoint(x: inset, y: y(0)))
+            area.closeSubpath()
+            ctx.fill(area, with: .linearGradient(Gradient(colors: [color.opacity(0.22), color.opacity(0)]),
+                                                 startPoint: CGPoint(x: 0, y: inset), endPoint: CGPoint(x: 0, y: size.height)))
             ctx.stroke(line, with: .color(color), style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
+            if let end = points.last {
+                ctx.fill(Path(ellipseIn: CGRect(x: end.x - 3, y: end.y - 3, width: 6, height: 6)), with: .color(color))
+            }
         }
     }
 }
 
-/// A preset as a square tile like the menu's essentials: `accent` when it's the current style.
+/// A preset as a tile with its curve: outlined in `accent` when it's the current style.
 private struct PresetTile: View {
     let preset: MotionPane.Preset
     let selected: Bool
@@ -956,18 +904,20 @@ private struct PresetTile: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 8) {
+            VStack(spacing: 10) {
                 CurveGraph(curve: preset.animate ? preset.curve : .linear, bounce: preset.bounce, instant: !preset.animate,
-                           lineWidth: 1.75, color: selected ? Theme.onAccent : Theme.accentInk)
-                    .frame(height: 30)
-                    .padding(.horizontal, 6)
+                           lineWidth: 2, color: Theme.accent)
+                    .frame(height: 34)
+                    .padding(.horizontal, 8)
                 Text(preset.name).font(Theme.body(12.5, selected ? .medium : .regular)).oneLine()
+                    .foregroundStyle(selected ? Theme.accentInk : Theme.ink)
             }
-            .foregroundStyle(selected ? Theme.onAccent : Theme.ink)
-            .padding(.vertical, 12).padding(.horizontal, 8)
+            .padding(.vertical, 12).padding(.horizontal, 6)
             .frame(maxWidth: .infinity)
             .background(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
-                .fill(selected ? Theme.accent : hover.on ? Theme.wellHover : Theme.well))
+                .fill(selected ? Theme.accentSoft : hover.on ? Theme.wellHover : Theme.well))
+            .overlay(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
+                .strokeBorder(Theme.accent, lineWidth: 1.5).opacity(selected ? 1 : 0))
             .contentShape(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous))
         }
         .buttonStyle(PressScale())
@@ -1019,6 +969,14 @@ struct ShortcutsPane: View {
         return options
     }
 
+    /// How to open keyboard help, from the shortcut that enters window mode right now.
+    private var keyboardHelpHint: String {
+        let enter = doc.binds.first { $0.submap.isEmpty && $0.dispatcher == "submap" && $0.args.lowercased() != "reset" }
+        guard let enter, let flags = ConfigDocument.flags(doc.resolvedMods(enter.mods)) else { return "Press \(doc.config.keyboardHelpKey) in window mode" }
+        let hold = ConfigDocument.modifierCaps(flags.subtracting(.shift)).joined()
+        return hold.isEmpty ? "Press \(doc.config.keyboardHelpKey) in window mode" : "Hold \(hold) after \(doc.prettyShortcut(enter).joined()), or press \(doc.config.keyboardHelpKey) in window mode"
+    }
+
     private func category(_ r: BindRow) -> ActionCategory {
         Actions.match(r)?.category ?? Actions.rangeSummary(r)?.category ?? .custom
     }
@@ -1052,7 +1010,7 @@ struct ShortcutsPane: View {
 
             OGroup("Keyboard") {
                 OSwitchRow("Show keyboard help",
-                           description: "Hold ⌘ after ⌘⇪, or press ? in window mode",
+                           description: keyboardHelpHint,
                            isOn: $doc.config.keyboardHelp)
                     .setting("shortcuts.keyboardHelp", ui)
                 ORow("Keyboard finish", description: "Used by keyboard help and Shortcut Map") {
@@ -1072,25 +1030,6 @@ struct ShortcutsPane: View {
                 Text(ui.shortcutFilter.isEmpty ? "No shortcuts yet" : "No shortcuts match “\(ui.shortcutFilter)”")
                     .font(Theme.body(13.5)).foregroundStyle(Theme.inkMuted)
                     .frame(maxWidth: .infinity).padding(.vertical, 40)
-            }
-
-            OGroup("Start over") {
-                ORow("Gaming shortcuts (WASD)", description: "Window mode on W A S D, with Q and E for workspaces") {
-                    OButton("Switch…", size: .sm) {
-                        if confirm("Switch to the gaming shortcuts?", "Window mode moves to W A S D, with Q and E for workspaces. Your own shortcuts will be replaced.", button: "Switch") {
-                            doc.useShortcutSet(wasdText)
-                        }
-                    }
-                }
-                .setting("shortcuts.wasd", ui)
-                ORow("Default shortcuts", description: "The Vim-style set Ouch ships with") {
-                    OButton("Restore…", variant: .danger, size: .sm) {
-                        if confirm("Restore the default keyboard shortcuts?", "Your own shortcuts will be replaced.") {
-                            doc.restoreDefaultShortcuts()
-                        }
-                    }
-                }
-                .setting("shortcuts.defaults", ui)
             }
         }
         .onDisappear { ui.recording = nil }

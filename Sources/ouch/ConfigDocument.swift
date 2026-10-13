@@ -246,19 +246,6 @@ final class ConfigDocument: ObservableObject {
         apply(text: defaultText)
         modValue = mod
     }
-    func restoreDefaultShortcuts() { useShortcutSet(defaultText) }
-
-    /// Swaps in the shortcuts from a built-in config text, keeping everything else.
-    func useShortcutSet(_ text: String) {
-        let current = (vars, config, extraLines)
-        apply(text: text)
-        let defaults = binds
-        (vars, config, extraLines) = current
-        // The defaults say `$mod`; the user's modifier variable may be named differently ($mainMod).
-        if !vars.contains(where: { $0.name.lowercased().contains("mod") }) { vars.insert(VarRow(name: "$mod", value: "ALT"), at: 0) }
-        let name = modVarName
-        binds = defaults.map { var r = $0; r.mods = Self.replacingModToken(r.mods, with: name); return r }
-    }
 
     /// Replaces whole `$mod` tokens (space/_/+ separated), leaving `$mod2` and friends alone.
     private static func replacingModToken(_ mods: String, with name: String) -> String {
@@ -476,6 +463,7 @@ final class ConfigDocument: ObservableObject {
             "stay-on-workspace-after-close = \(b(c.stayOnWorkspaceAfterClose))",
             "# On-screen keyboard help: keep holding the window-mode chord's modifier, or press ? in the mode",
             "keyboard-help = \(b(c.keyboardHelp))",
+            "keyboard-help-key = \(c.keyboardHelpKey)",
             "# The keyboard drawn there and in Settings: auto (this Mac), a model (macbook-pro, macbook-air,",
             "# macbook-neo, magic-keyboard) or a finish such as macbook-air-midnight or imac-blue",
             "keyboard-finish = \(c.keyboardFinish)",
