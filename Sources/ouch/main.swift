@@ -157,6 +157,17 @@ if CommandLine.arguments.dropFirst().first == "practice" {
     PracticeDesk.run(parent: pid_t(args.first ?? "") ?? getppid(), titles: titles)
 }
 
+// `ouch docs` prints the folder of agent-readable docs bundled in the app.
+if CommandLine.arguments.dropFirst().first == "docs" {
+    if let dir = Bundle.main.resourceURL?.appendingPathComponent("AgentDocs"),
+       FileManager.default.fileExists(atPath: dir.path) {
+        print(dir.path)
+        exit(0)
+    }
+    FileHandle.standardError.write(Data("No bundled docs found\n".utf8))
+    exit(1)
+}
+
 // Command-line mode, like hyprctl: `ouch dispatch movefocus l`, `ouch dump`, `ouch reload`.
 let cliArgs = Array(CommandLine.arguments.dropFirst())
 if let cmd = cliArgs.first, ["dispatch", "dump", "reload", "poststyle", "grabtest", "modefx"].contains(cmd) {

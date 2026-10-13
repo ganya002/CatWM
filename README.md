@@ -160,6 +160,7 @@ Detailed logging is a launch argument now: `open build/ouch.app --args --verbose
 build/ouch.app/Contents/MacOS/ouch dispatch movefocus l
 build/ouch.app/Contents/MacOS/ouch dump      # writes tiling state to ~/Library/Logs/ouch.log
 build/ouch.app/Contents/MacOS/ouch reload
+build/ouch.app/Contents/MacOS/ouch docs      # prints the folder of bundled agent docs
 ```
 
 `exec` only works from keyboard shortcuts, not from the command line.
@@ -167,3 +168,7 @@ build/ouch.app/Contents/MacOS/ouch reload
 ## Rebuilding
 
 The app is ad-hoc signed, so every rebuild cancels its Accessibility permission. Ouch shows a ⚠️ in the menu bar and opens Settings. Click **Reset Permission** there, then turn Ouch on again.
+
+## For AI agents
+
+Condensed, task-oriented docs for agents operating or configuring Ouch live in [Resources/AgentDocs/](Resources/AgentDocs/README.md).

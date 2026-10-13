@@ -1,0 +1,31 @@
+# Dispatchers
+
+Used as `bind = MODS, key, <dispatcher>, <args>` or `ouch dispatch <dispatcher> <args>`.
+
+| Dispatcher | Args | Effect |
+|---|---|---|
+| `movefocus` | `l r u d` | focus the neighbouring window |
+| `movewindow` / `swapwindow` | `l r u d`, or `mon:l`, `mon:+1`, `mon:0` | move/swap a window in a direction, or to another display |
+| `movewindowtomonitor` | monitor spec | move the window to a display |
+| `cyclenext` / `swapnext` | none or `prev` | cycle focus / swap with the next window |
+| `layoutmsg` | `swapwithmaster`, `focusmaster`, `addmaster`, `removemaster`, `cyclenext`, `cycleprev`, `swapnext`, `swapprev`, `mfact ±0.05`, `orientationnext`, `orientationprev` | layout-specific actions (main pane) |
+| `splitratio` | `+0.05`, `-0.05`, `exact 0.6` | resize the main split |
+| `togglefloating` | | float/tile the focused window |
+| `fullscreen` | | zoom the focused window |
+| `killactive` | | close the focused window |
+| `exec` | shell command | run via `sh -c`. Keybinds only; refused from the CLI |
+| `focusmonitor` | `l r u d`, `+1`, `-1`, index | focus another display |
+| `workspace` | `N`, `name:foo`, `previous`, `+1`, `-1`, `e+1`, `e-1` | switch workspace (`e±1`: next one that has windows) |
+| `movetoworkspace` | same as `workspace` | move the window and follow it |
+| `movetoworkspacesilent` | same | move without following |
+| `cyclelayout` | `next` / `prev` | step through the `layouts` list |
+| `layout` / `setlayout` | a layout name, e.g. `bsp` | set the layout of the focused display |
+| `toggletiling` | | pause/resume tiling |
+| `retile` / `reevaluate` | | recompute and reapply frames |
+| `reload` | | re-read the config |
+| `submap` | mode name, or `reset` | enter or leave a keybind mode |
+| `sethomespace` | | make the current macOS Desktop the home for workspaces |
+| `exit` | | quit Ouch (parked windows are restored first) |
+
+Unknown dispatchers and bad args are ignored silently; check the log with `ouch dump` or `--verbose`.
+With `virtual-workspaces = false`, `workspace`/`movetoworkspace` use macOS Spaces and need "Switch to Desktop N" enabled on Ctrl+N in System Settings → Keyboard → Shortcuts → Mission Control.
