@@ -205,7 +205,7 @@ if CommandLine.arguments.dropFirst().first == "practice" {
 
 // Command-line mode, like hyprctl: `ouch dispatch movefocus l`, `ouch dump`, `ouch reload`.
 let cliArgs = Array(CommandLine.arguments.dropFirst())
-if let cmd = cliArgs.first, ["dispatch", "dump", "reload", "poststyle", "grabtest"].contains(cmd) {
+if let cmd = cliArgs.first, ["dispatch", "dump", "reload", "poststyle", "grabtest", "modefx"].contains(cmd) {
     DistributedNotificationCenter.default().postNotificationName(ipcNotification, object: cliArgs.joined(separator: " "),
                                                                  userInfo: nil, deliverImmediately: true)
     if cmd == "dump" { print("State written to \(Log.url.path)") }

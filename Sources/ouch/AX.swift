@@ -3,7 +3,7 @@ import ApplicationServices
 
 // MARK: - Private symbols (looked up at runtime so a missing one degrades instead of failing to link)
 
-private func symbol<T>(_ name: String, in path: String? = nil) -> T? {
+func symbol<T>(_ name: String, in path: String? = nil) -> T? {
     guard let handle = dlopen(path, RTLD_LAZY), let p = dlsym(handle, name) else { return nil }
     return unsafeBitCast(p, to: T.self)
 }
