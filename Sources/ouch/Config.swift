@@ -58,6 +58,9 @@ struct Config {
     var modeEffect: ModeFX.Style = .draw
     /// The on-screen keyboard help: hold the mode chord, or press ? in a mode.
     var keyboardHelp = true
+    /// The keyboard drawn in the Shortcut Map and the keyboard help: `auto` (this Mac), a finish such as
+    /// `macbook-air-midnight`, or a family (`macbook-pro`, `macbook-air`, `macbook-neo`, `magic-keyboard`).
+    var keyboardFinish = "auto"
     var bindings: [KeyBinding] = []
     var currentSubmap = "" // parser state while reading submap blocks
     var errors: [String] = []
@@ -178,6 +181,11 @@ struct Config {
         case "virtual_workspaces": virtualWorkspaces = bool
         case "stay_on_workspace_after_close": stayOnWorkspaceAfterClose = bool
         case "keyboard_help": keyboardHelp = bool
+        case "keyboard_finish":
+            guard MacKeyboard.isValid(v) else {
+                return "unknown keyboard finish `\(v)` (auto, macbook-pro, macbook-air, macbook-neo, magic-keyboard, or a finish like macbook-pro-space-black)"
+            }
+            keyboardFinish = MacKeyboard.slug(v)
         case "mode_effect":
             guard let s = ModeFX.Style(rawValue: v.lowercased()) else {
                 return "unknown mode effect `\(v)` (\(ModeFX.Style.allCases.map(\.rawValue).joined(separator: ", ")))"
@@ -345,6 +353,11 @@ enables-layout-hud-on-space-change = true
 # Keyboard help: keep holding Cmd after Cmd+Caps Lock (or press ? in window mode) to see
 # every window-mode key on an on-screen keyboard.
 keyboard-help = true
+# The keyboard drawn there and in Settings: auto follows this Mac (model, colour, layout). Or pick one,
+# e.g. macbook-pro-space-black, macbook-pro-silver, macbook-air-midnight, macbook-air-starlight,
+# macbook-air-sky-blue, macbook-air-silver, macbook-neo-silver, macbook-neo-blush, macbook-neo-citrus,
+# macbook-neo-indigo, imac-silver, imac-blue, imac-purple, imac-pink, imac-orange, imac-yellow, imac-green.
+keyboard-finish = auto
 
 # Bundle IDs to float (wildcards like com.adobe.* work). Set floating-is-blacklist = false
 # to make this a list of the ONLY apps that get tiled.

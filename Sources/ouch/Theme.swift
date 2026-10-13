@@ -61,6 +61,15 @@ enum Theme {
     }
     private static func token(_ kp: KeyPath<Palette, Palette.Pair>) -> Color { Color(nsColor: ns(kp)) }
 
+    /// A token's light or dark value whatever the appearance: for things with their own ground, like
+    /// the dark keycaps of a MacBook Pro drawn in Light Mode.
+    static func fixed(_ token: KeyPath<Palette, Palette.Pair>, dark: Bool) -> Color {
+        let p = palette[keyPath: token]
+        return Color(nsColor: dark ? hex(p.dark, p.darkAlpha) : hex(p.light, p.lightAlpha))
+    }
+    /// A raw sRGB colour, for drawings of real hardware. Interface colours always come from tokens.
+    static func rgb(_ v: UInt32, _ alpha: CGFloat = 1) -> Color { Color(nsColor: hex(v, alpha)) }
+
     // MARK: Colour tokens
 
     /// Window ground: behind the Settings pane and everything else.

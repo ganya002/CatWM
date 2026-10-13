@@ -9,11 +9,11 @@ final class Flag: ObservableObject { @Published var on = false }
 
 // MARK: - Button
 
-enum ButtonVariant { case primary, secondary, ghost, danger }
+enum ButtonVariant { case primary, secondary, ghost, danger, ghostDanger }
 enum ButtonSize { case sm, regular, lg }
 
 /// The one push button. One `primary` per surface; `ghost` for ways out; `danger` only for destructive
-/// verbs. Set `onAccent` inside an accent surface (the tour card).
+/// verbs, `ghostDanger` for one that sits quietly beside the others. Set `onAccent` inside an accent surface (the tour card).
 struct OButtonStyle: ButtonStyle {
     var variant: ButtonVariant = .secondary
     var size: ButtonSize = .regular
@@ -55,7 +55,7 @@ private struct OButtonBody: View {
         case .primary: style.onAccent ? Theme.accent : Theme.onAccent
         case .secondary: Theme.ink
         case .ghost: style.onAccent ? Theme.onAccent : hover.on ? Theme.ink : Theme.inkMuted
-        case .danger: Theme.danger
+        case .danger, .ghostDanger: Theme.danger
         }
     }
 
@@ -65,6 +65,7 @@ private struct OButtonBody: View {
         case .secondary: hover.on ? Theme.hover : Theme.surfaceSunken
         case .ghost: hover.on ? (style.onAccent ? Theme.onAccent.opacity(0.16) : Theme.hover) : .clear
         case .danger: Theme.dangerSoft
+        case .ghostDanger: hover.on ? Theme.dangerSoft : .clear
         }
     }
 }

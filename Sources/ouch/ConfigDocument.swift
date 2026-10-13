@@ -465,6 +465,9 @@ final class ConfigDocument: ObservableObject {
             "stay-on-workspace-after-close = \(b(c.stayOnWorkspaceAfterClose))",
             "# On-screen keyboard help: keep holding the window-mode chord's modifier, or press ? in the mode",
             "keyboard-help = \(b(c.keyboardHelp))",
+            "# The keyboard drawn there and in Settings: auto (this Mac), a model (macbook-pro, macbook-air,",
+            "# macbook-neo, magic-keyboard) or a finish such as macbook-air-midnight or imac-blue",
+            "keyboard-finish = \(c.keyboardFinish)",
         ]
         // Experimental and not in Settings, so only written once someone has picked a different one.
         if c.modeEffect != Config().modeEffect { out.append("mode-effect = \(c.modeEffect.rawValue)") }

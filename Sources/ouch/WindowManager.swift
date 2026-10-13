@@ -144,6 +144,7 @@ final class WindowManager {
 
         Hotkeys.shared.setBindings(config.bindings)
         ModeFX.shared.style = config.modeEffect
+        MacKeyboard.shared.setting = config.keyboardFinish
         Hotkeys.shared.handler = { [weak self] b in self?.dispatch(b.dispatcher, b.arg) }
         KeyHelp.shared.install()
         if !Hotkeys.shared.start() {
@@ -174,6 +175,7 @@ final class WindowManager {
         }
         Log.verbose = config.debugLogging || Log.verboseLaunch
         ModeFX.shared.style = config.modeEffect
+        MacKeyboard.shared.setting = config.keyboardFinish
         config.errors.forEach { Log.info("config: \($0)") }
         Hotkeys.shared.setBindings(config.bindings)
         for w in windows.values { w.autoFloating = shouldFloat(w) }
