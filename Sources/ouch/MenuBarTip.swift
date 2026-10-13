@@ -45,7 +45,7 @@ final class MenuBarTip {
         if model.state != state { withAnimation(.easeOut(duration: 0.25)) { model.state = state } }
         guard let screen, !suppressed, timer != nil else { return setVisible(false) }
         let size = host.fittingSize
-        let top = screen.visibleFrame.maxY - 4
+        let top = screen.visibleFrame.maxY - 4 + (MenuBarTipView.inset.top - 10) // keeps the card where it was
         var x = (anchor?.midX ?? screen.frame.maxX - 40) - size.width / 2
         x = min(max(x, screen.frame.minX + 8), screen.frame.maxX - size.width - 8)
         let caret = anchor.map { min(max($0.midX - x, 30), size.width - 30) } // clear of the rounded corners
