@@ -221,6 +221,7 @@ struct LayoutPane: View {
                         }
                     }
                     .padding(.vertical, 10).padding(.horizontal, 8)
+                    .coordinateSpace(name: CycleChip.space)
                 }
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 6), spacing: 6) {
                     ForEach(Layout.allCases, id: \.self) { cell($0) }
@@ -327,6 +328,8 @@ final class CycleDrag: ObservableObject {
 private struct CycleChip: View {
     static let width: CGFloat = 78
     static let gap: CGFloat = 12
+    /// The row's own space: a chip's local space moves as it is reordered, which made the drag jitter.
+    static let space = "cycleRow"
     let index: Int
     let layout: Layout
     let count: Int
@@ -367,7 +370,7 @@ private struct CycleChip: View {
         .animation(.easeOut(duration: Theme.fast), value: hover.on)
         .animation(.easeOut(duration: Theme.fast), value: dragging)
         .onTapGesture { remove() }
-        .gesture(DragGesture(minimumDistance: 5)
+        .gesture(DragGesture(minimumDistance: 5, coordinateSpace: .named(Self.space))
             .onChanged { v in
                 if drag.layout != layout { drag.layout = layout; drag.origin = index }
                 let target = min(max(drag.origin + Int((v.translation.width / (Self.width + Self.gap)).rounded()), 0), count - 1)
@@ -375,8 +378,8 @@ private struct CycleChip: View {
                 if target != index { move(target) }
             }
             .onEnded { _ in
-                withAnimation(Motion.snap) { drag.x = 0 }
-                drag.layout = nil
+                // Settle into the slot while it stops being lifted, instead of snapping.
+                withAnimation(Motion.snap) { drag.x = 0; drag.layout = nil }
             })
         .focusable()
         .onKeyPress(phases: .down) { press in
