@@ -618,10 +618,15 @@ final class ConfigDocument: ObservableObject {
     var problemCount: Int { binds.filter { issue($0)?.severity == .error }.count }
 
     static func keyName(for code: UInt16) -> String? {
+        if let name = canonicalKeyNames[code] { return name }
         let names = keyCodes.filter { $0.value == code }.map(\.key).filter { $0.allSatisfy { $0.isLetter || $0.isNumber } }
         guard let best = names.max(by: { $0.count < $1.count }) else { return nil }
         return best.count == 1 ? best.uppercased() : best
     }
+
+    private static let canonicalKeyNames: [UInt16: String] = [
+        10: "section", 93: "yen", 94: "underscore_jis", 102: "eisu", 104: "kana",
+    ]
 
     /// Keycaps for display, e.g. ["⌥", "⇧", "H"]. A short `h|j|k|l` list gets a cap per key.
     func prettyShortcut(_ row: BindRow) -> [String] {
@@ -657,6 +662,7 @@ final class ConfigDocument: ObservableObject {
         "semicolon": ";", "apostrophe": "'", "quote": "'", "slash": "/", "backslash": "\\", "grave": "`",
         "pageup": "⇞", "pagedown": "⇟", "home": "↖", "end": "↘",
         "mouse_up": "Scroll ↑", "mouse_down": "Scroll ↓", "mouse_left": "Scroll ←", "mouse_right": "Scroll →",
+        "section": "§", "yen": "¥", "underscore_jis": "_", "eisu": "英数", "kana": "かな",
         "swipe_left": "Swipe ←", "swipe_right": "Swipe →", "swipe_up": "Swipe ↑", "swipe_down": "Swipe ↓",
     ]
 
