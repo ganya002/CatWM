@@ -226,6 +226,9 @@ final class PermissionGuide {
         p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         let host = NSHostingView(rootView: GuideView(model: model, dismiss: { [weak self] in self?.hide() }))
         host.sizingOptions = [.intrinsicContentSize] // measured by fittingSize; layout() applies it in one move
+        // The hidden title bar's safe area would otherwise count toward fittingSize, leaving a blank strip
+        // under the buttons.
+        host.safeAreaRegions = []
         if #available(macOS 26.0, *) {
             // A floating glass panel: the window itself goes clear and the glass draws the shape.
             p.isOpaque = false
@@ -301,11 +304,12 @@ private struct GuideView: View {
                     }
                     Text("Allow Ouch").font(Theme.body(22)).tracking(-0.2).oneLine().padding(.top, 6)
                     Text(model.alertUp ? "macOS asks first, then System Settings opens." : "Follow these steps in System Settings.")
-                        .font(Theme.body(13)).foregroundStyle(Theme.inkMuted).oneLine()
+                        .font(Theme.body(13)).foregroundStyle(Theme.inkMuted).lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 VStack(alignment: .leading, spacing: 10) {
                     if model.alertUp {
-                        OStep(n: 1, text: "In the macOS alert, click **Open System Settings**. That adds Ouch to the list.")
+                        OStep(n: 1, text: "In the macOS alert, click **Open System Settings**.")
                         OStep(n: 2, text: "Turn its switch **on**. Enter your password if asked.")
                     } else {
                         OStep(n: 1, text: "Find **Ouch** in the \(model.kind.title) list.")
@@ -317,7 +321,7 @@ private struct GuideView: View {
 
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small).scaleEffect(0.7).frame(width: 14, height: 14)
-                    Text("Waiting for permission…").font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine()
+                    Text("Waiting…").font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine()
                     Spacer(minLength: 4)
                     OButton("Reset", variant: .ghost, size: .sm) {
                         model.kind == .accessibility ? Permissions.reset() : Permissions.resetInputMonitoring()
@@ -343,7 +347,7 @@ private struct GuideView: View {
             Image(systemName: "hand.draw").foregroundStyle(Theme.inkMuted)
         }
         .padding(.horizontal, 10).padding(.vertical, 6)
-        .background(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous).fill(Theme.surfaceSunken))
+        .background(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous).fill(Theme.well))
         // Only the app's location. Offering its contents (NSItemProvider(contentsOf:)) let Settings take
         // a copy of the bundle, so the switch turned on a copy and this app never became trusted.
         .onDrag { NSItemProvider(object: Bundle.main.bundleURL as NSURL) }

@@ -61,10 +61,11 @@ final class SortNudge {
         model.caret = min(max(b.midX - x, 30), size.width - 30)
         let top = v.maxY - 4 + (SortNudgeView.inset.top - 10)
         let p = OverlayPanel(frame: NSRect(x: x, y: top - size.height, width: size.width, height: size.height).integral,
-                             level: .floating, clickThrough: false)
+                             level: .floating, clickThrough: false, keyable: true)
         p.contentView = host
         p.alphaValue = 0
         p.orderFrontRegardless()
+        p.makeKey() // Return sorts
         animate(0.35) { p.animator().alphaValue = 1 }
         panel = p
         let work = DispatchWorkItem { [weak self] in self?.dismiss() }
@@ -104,7 +105,7 @@ private struct SortNudgeView: View {
                 Spacer(minLength: 4)
                 OIconButton(symbol: "xmark", label: "Close tip", action: model.later).padding(.trailing, -4)
             }
-            Text("\(model.count) windows share one screen. Sort them into workspaces by what they're for.")
+            Text("\(model.count) windows on one screen. Split them into workspaces by task.")
                 .font(Theme.body(13.5)).foregroundStyle(Theme.inkMuted).lineSpacing(1.5)
                 .fixedSize(horizontal: false, vertical: true).padding(.top, 4)
             HStack(spacing: 2) {
@@ -198,12 +199,13 @@ private struct SortOfferView: View {
                 Spacer(minLength: 8)
             }
             .frame(minHeight: 22)
-            (Text("Your windows are ").font(Theme.body(22)) + Text("back").font(Theme.body(22, .medium)))
+            Text("Your windows are back").font(Theme.body(22))
                 .tracking(-0.2).fixedSize(horizontal: false, vertical: true).padding(.top, 12).padding(.bottom, 4)
-            Text("All \(count) landed on workspace \(workspace). Sort them into a few workspaces before you start?")
+            Text("All \(count) are on workspace \(workspace). Spread them out?")
                 .font(Theme.body(13.5)).lineSpacing(2).opacity(0.86).fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 4) {
-                OButton("Sort my windows", variant: .primary, onAccent: true) { choose(true) }
+                OButton("Sort my windows", variant: .primary, shortcut: ["↩"], onAccent: true) { choose(true) }
+                    .keyboardShortcut(.defaultAction)
                 OButton("Keep as is", variant: .ghost, onAccent: true) { choose(false) }
             }
             .padding(.top, 20)

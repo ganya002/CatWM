@@ -92,7 +92,7 @@ struct ShortcutMap: View {
             }
         }
         .padding(3)
-        .background(Capsule().fill(Theme.surfaceSunken))
+        .background(Capsule().fill(Theme.well))
         .animation(Motion.spring, value: model.flags.rawValue)
     }
 
@@ -136,7 +136,7 @@ struct ShortcutMap: View {
                     }
                     .foregroundStyle(on ? Theme.onAccent : Theme.ink)
                     .padding(.horizontal, 10).frame(height: 26)
-                    .background(Capsule().fill(on ? Theme.accent : Theme.surfaceSunken))
+                    .background(Capsule().fill(on ? Theme.accent : Theme.well))
                     .contentShape(Capsule())
                 }
                 .buttonStyle(PressScale())
@@ -171,7 +171,7 @@ struct ShortcutMap: View {
                     // A click anywhere else on the keyboard closes the editor, like a popover.
                     Color.clear.contentShape(Rectangle())
                         .onTapGesture { withAnimation(.easeOut(duration: Theme.fast)) { model.selected = nil } }
-                    selection(k, code: code, scale: scale, size: g.size)
+                    selection(k, code: code, scale: scale, size: g.size, frame: g.frame(in: .global))
                 }
                 if model.selected == nil, let code = model.tip, let k = KeyHintKeyboard.key(for: code) {
                     tooltip(k, layer: layer, scale: scale, width: g.size.width)
@@ -188,12 +188,19 @@ struct ShortcutMap: View {
         model.selected = model.selected == code ? nil : code
     }
 
-    /// A focus ring around the selected key, and its editor below it (above it for the lower rows),
-    /// nudged in from the keyboard's edges.
+    /// A focus ring around the selected key, and its editor below it or above it, whichever has room
+    /// in the window (pinned inside the window when neither does), nudged in from the keyboard's edges.
     @ViewBuilder
-    private func selection(_ k: KeyHintKeyboard.Key, code: UInt16, scale: CGFloat, size: CGSize) -> some View {
+    private func selection(_ k: KeyHintKeyboard.Key, code: UInt16, scale: CGFloat, size: CGSize, frame: CGRect) -> some View {
         let r = KeyHintKeyboard.rect(of: k, scale: scale)
-        let below = r.midY < size.height * 0.45
+        let windowHeight = SettingsWindow.shared.window?.contentView?.bounds.height ?? 680
+        let h = model.editorHeight, edge: CGFloat = 12
+        let roomBelow = windowHeight - edge - (frame.minY + r.maxY + 8)
+        let roomAbove = frame.minY + r.minY - 8 - edge
+        // Top of the editor in keyboard space.
+        let top: CGFloat = h <= roomBelow ? r.maxY + 8
+            : h <= roomAbove ? r.minY - 8 - h
+            : max(edge, windowHeight - edge - h) - frame.minY
         let w = KeyEditor.width, margin: CGFloat = 20
         let x = min(max(r.midX, w / 2 - margin), size.width - w / 2 + margin)
         RoundedRectangle(cornerRadius: KeyHintKeyboard.cornerRadius(scale: scale) + 2, style: .continuous)
@@ -205,8 +212,13 @@ struct ShortcutMap: View {
                   reveal: reveal)
             .id("\(code) \(model.flags.rawValue) \(model.mode)")
             .fixedSize()
-            .frame(width: 0, height: 0, alignment: below ? .top : .bottom)
-            .offset(x: x, y: below ? r.maxY + 8 : r.minY - 8)
+            .background(GeometryReader { p in
+                Color.clear
+                    .onAppear { model.editorHeight = p.size.height }
+                    .onChange(of: p.size.height) { _, h in model.editorHeight = h }
+            })
+            .frame(width: 0, height: 0, alignment: .top)
+            .offset(x: x, y: top)
             .transition(.opacity)
     }
 
@@ -262,7 +274,13 @@ struct ShortcutMap: View {
                 .fixedSize()
             }
             Spacer(minLength: 12)
-            Text("Hold ⌃ ⌥ ⇧ ⌘ to switch layers, click a key to edit").foregroundStyle(Theme.inkFaint).oneLine()
+            // Whole or shorter, never cut off mid-hint beside a long legend.
+            ViewThatFits(in: .horizontal) {
+                Text("Hold ⌃ ⌥ ⇧ ⌘ to switch layers, click a key to edit").fixedSize()
+                Text("Click a key to edit").fixedSize()
+                Color.clear.frame(width: 0)
+            }
+            .foregroundStyle(Theme.inkFaint)
         }
         .font(Theme.body(12.5))
         .frame(height: 20)
@@ -351,6 +369,8 @@ final class ShortcutMapModel: ObservableObject {
     @Published var hovered: UInt16?
     @Published var tip: UInt16?
     @Published var tipWidth: CGFloat = 0
+    /// The key editor's measured height, to place it where it fits in the window.
+    @Published var editorHeight: CGFloat = 480
     @Published var selected: UInt16?
     /// The key flashing because its shortcut was just pressed.
     @Published var pressed: UInt16?
@@ -863,7 +883,7 @@ private struct KeyEditor: View {
             }
         }
         .padding(3)
-        .background(Capsule().fill(Theme.surfaceSunken))
+        .background(Capsule().fill(Theme.well))
         .fixedSize()
     }
 

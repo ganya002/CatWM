@@ -58,7 +58,7 @@ struct ConfigSelector: View {
                 Image(systemName: "chevron.up.chevron.down").font(.system(size: 9, weight: .semibold)).foregroundStyle(fg.opacity(0.7))
             }
             .padding(.leading, 6).padding(.trailing, 12).frame(width: width, height: 30)
-            .background(Capsule().fill(configFill(for: c) ?? (hover.on ? Theme.hover : Theme.surfaceSunken)))
+            .background(Capsule().fill(configFill(for: c) ?? (hover.on ? Theme.wellHover : Theme.well)))
             .contentShape(Capsule())
         }
         .buttonStyle(PressScale(scale: 0.96))
@@ -115,7 +115,8 @@ private struct ConfigList: View {
             .buttonStyle(.plain)
             if c.isBuiltIn {
                 Button { dismiss(); library.sheet = .create(kind: kind, baseID: c.id) } label: {
-                    Image(systemName: "plus").font(.system(size: 11, weight: .semibold)).frame(width: 24, height: 24).contentShape(Rectangle())
+                    Image(systemName: "plus").font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.inkMuted)
+                        .frame(width: 24, height: 24).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain).help("New config based on “\(c.name)”").accessibilityLabel("New config based on \(c.name)")
             } else {
@@ -125,9 +126,12 @@ private struct ConfigList: View {
                     Divider()
                     Button("Delete…", role: .destructive) { confirmDelete(c) }
                 } label: {
-                    Image(systemName: "ellipsis").font(.system(size: 11, weight: .semibold)).frame(width: 24, height: 24).contentShape(Rectangle())
+                    // Muted like the + beside built-in configs; the borderless style tinted it accent.
+                    Image(systemName: "ellipsis").font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.inkMuted)
+                        .frame(width: 24, height: 24).contentShape(Rectangle())
                 }
-                .menuStyle(.borderlessButton).menuIndicator(.hidden).frame(width: 24)
+                .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).frame(width: 24)
+                .help("Edit, duplicate or delete “\(c.name)”")
             }
         }
     }
@@ -154,7 +158,7 @@ struct ConfigTransferMenu: View {
         } label: {
             Image(systemName: "square.and.arrow.up.on.square").font(.system(size: 13, weight: .medium))
                 .foregroundStyle(Theme.inkMuted)
-                .frame(width: 30, height: 30).background(Circle().fill(Theme.surfaceSunken)).contentShape(Circle())
+                .frame(width: 30, height: 30).background(Circle().fill(Theme.well)).contentShape(Circle())
         }
         .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
         .help("Import / Export").accessibilityLabel("Import or export \(kind.title.lowercased()) config")
@@ -228,7 +232,7 @@ struct ConfigSheetView: View {
                     Image(systemName: model.symbol ?? kinds[0].genericSymbol).font(.system(size: 14, weight: .medium))
                         .foregroundStyle(Theme.accentInk)
                         .frame(width: 34, height: Theme.controlHeight)
-                        .background(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(Theme.surfaceSunken))
+                        .background(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(Theme.well))
                 }
                 .buttonStyle(.plain).help("Icon").accessibilityLabel("Choose icon")
                 .popover(isPresented: $model.pickingSymbol, arrowEdge: .bottom) { SymbolGrid(selection: $model.symbol, close: { model.pickingSymbol = false }) }
@@ -259,7 +263,7 @@ struct ConfigSheetView: View {
 
     private func exportBody(_ kind: ConfigKind) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            ORow("Config", description: kind == .full ? "Includes the keyboard and animation configs it uses" : nil) {
+            ORow("Config", description: kind == .full ? "With its keyboard and animation" : nil) {
                 OMenuPicker(title: "Config", options: library.configs(kind).map { ($0.id, $0.name + (library.isActive($0) ? " (active)" : "")) },
                             selection: $model.exportID)
             }

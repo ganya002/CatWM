@@ -154,7 +154,7 @@ final class MenuModel: ObservableObject {
 
         // Layout.
         var layoutItems: [MenuItem] = [
-            .label("layouts", "Layouts", shortcut: keys.keys("cyclelayout", "next")),
+            .label("layouts", "Layouts"), // Next Layout below shows the key
             MenuItem(id: "picker", kind: .layoutPicker),
             .sep("ls"),
             MenuItem(id: "next-layout", label: "Next Layout", symbol: "chevron.right", shortcut: keys.keys("cyclelayout", "next"),
@@ -735,10 +735,13 @@ private struct MenuRowView: View {
                     Text("Ouch \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "")")
                         .font(Theme.body(12)).foregroundStyle(muted).oneLine()
                     Spacer(minLength: 4)
+                    // The power symbol goes with Quit, not with the version number.
+                    Image(systemName: "power").font(.system(size: 11, weight: .medium)).foregroundStyle(muted)
                     Text(item.label).font(Theme.body(12.5)).foregroundStyle(fg).oneLine()
                 } else {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(item.label).foregroundStyle(fg).oneLine()
+                        // The name wins over the value beside it: "Resume Tutorial…" stays whole, "Window mode" gives way.
+                        Text(item.label).foregroundStyle(fg).oneLine().layoutPriority(1)
                         if let crumb, !crumb.isEmpty {
                             Text(crumb).font(Theme.body(12)).foregroundStyle(muted).oneLine()
                         } else if let value = item.value {
@@ -788,7 +791,7 @@ private struct MenuRowView: View {
         case .radio:
             Circle().fill(hi ? Theme.onAccent : Theme.accentInk).frame(width: 7, height: 7).opacity(item.checked ? 1 : 0)
         case .footer:
-            Image(systemName: "power").font(.system(size: 12, weight: .medium)).foregroundStyle(muted)
+            Color.clear // keeps the version in line with the labels above
         default:
             if let symbol = item.symbol {
                 let image = Image(systemName: symbol).font(.system(size: 13, weight: .medium)).foregroundStyle(muted)

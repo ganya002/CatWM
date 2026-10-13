@@ -249,7 +249,7 @@ struct BugReportView: View {
             .scrollContentBackground(.hidden)
             .padding(.horizontal, 6).padding(.vertical, 8)
             .frame(height: model.fromAgent ? 220 : 90)
-            .background(shape.fill(Theme.surfaceSunken))
+            .background(shape.fill(Theme.well))
             .overlay(alignment: .topLeading) {
                 if model.text.isEmpty {
                     Text("Or write what happened")
@@ -327,7 +327,7 @@ private struct MoreAgents: View {
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(Theme.inkMuted)
                 .frame(width: 48, height: 48)
-                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.surfaceSunken))
+                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.well))
         }
         .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
         .help("More agents")

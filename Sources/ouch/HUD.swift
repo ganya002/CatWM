@@ -11,6 +11,9 @@ final class HUD {
     private var hideWork: DispatchWorkItem?
     /// Room around the card for its shadow; the panel is click-through.
     private static let margin: CGFloat = 30
+    /// Something already in the middle of the screen (the tour's card): the HUD shows below it, or
+    /// above when there's no room, instead of on top of it.
+    var avoid: NSRect?
 
     func show(_ text: String, layout: Layout? = nil, on screen: NSScreen?) {
         show(text, layout: layout, warning: false, on: screen)
@@ -35,8 +38,14 @@ final class HUD {
         if self.host == nil { self.host = host; p.contentView = host }
         host.layoutSubtreeIfNeeded()
         let size = host.fittingSize
-        p.setFrame(CGRect(x: screen.frame.midX - size.width / 2, y: screen.frame.midY - size.height / 2,
-                          width: size.width, height: size.height), display: true)
+        var frame = CGRect(x: screen.frame.midX - size.width / 2, y: screen.frame.midY - size.height / 2,
+                           width: size.width, height: size.height)
+        // The margin is transparent, so only the card itself has to clear the other thing.
+        if let avoid, frame.insetBy(dx: Self.margin, dy: Self.margin).intersects(avoid) {
+            let below = avoid.minY - frame.height + Self.margin - 12
+            frame.origin.y = below >= screen.visibleFrame.minY ? below : avoid.maxY - Self.margin + 12
+        }
+        p.setFrame(frame, display: true)
         p.alphaValue = 1
         p.orderFrontRegardless()
 

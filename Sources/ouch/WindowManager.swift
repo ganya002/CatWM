@@ -156,7 +156,9 @@ final class WindowManager {
             self?.onChange?()
             self?.onModeChange?(name)
         }
-        NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved) { [weak self] _ in self?.mouseMoved() }
+        NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved) { [weak self] e in
+            if !CursorRefresh.isOurs(e) { self?.mouseMoved() }
+        }
 
         Hotkeys.shared.setBindings(config.bindings)
         ModeFX.shared.style = config.modeEffect
@@ -206,7 +208,7 @@ final class WindowManager {
 
     func toggleTiling() {
         tilingEnabled.toggle()
-        HUD.shared.show(tilingEnabled ? "Tiling On" : "Tiling Off", on: currentScreen()?.ns)
+        HUD.shared.show(tilingEnabled ? "Tiling on" : "Tiling off", on: currentScreen()?.ns)
         refresh()
     }
 
@@ -685,6 +687,7 @@ final class WindowManager {
             ignoreMouseUntil = Date().addingTimeInterval(0.3)
             CGWarpMouseCursorPosition(navFrame(w).center)
         }
+        CursorRefresh.soon() // the newly focused app sets its cursor only on a move
     }
 
     /// Focus follows mouse fires once the pointer rests for a moment, so sweeping across several
@@ -1080,6 +1083,7 @@ final class WindowManager {
             focus(w)
         } else {
             CGWarpMouseCursorPosition(dst.center)
+            CursorRefresh.soon()
         }
     }
 
@@ -1419,6 +1423,7 @@ final class WindowManager {
         } else {
             parkFocus()
             if config.mouseFollowsFocus { CGWarpMouseCursorPosition(monitor.center) }
+            CursorRefresh.soon()
         }
         onChange?()
     }
@@ -1972,6 +1977,7 @@ final class WindowManager {
 
     private func finishMove(restore: CGPoint) {
         CGWarpMouseCursorPosition(restore)
+        CursorRefresh.soon()
         drags = [:]
         movingToSpace = false
         scheduleRefresh(after: 0.2)
