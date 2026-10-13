@@ -131,7 +131,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         updates.target = self
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Close Window", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
-        appMenu.addItem(withTitle: "Quit Ouch", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenu.addItem(withTitle: "Quit Ouch", action: #selector(quitOrCloseWindow), keyEquivalent: "q").target = self
         main.addItem(withTitle: "Ouch", action: nil, keyEquivalent: "").submenu = appMenu
         let edit = NSMenu(title: "Edit")
         edit.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
@@ -157,6 +157,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         NSApp.activate(ignoringOtherApps: true)
         Updater.shared.checkForUpdates()
+    }
+    /// ⌘Q inside Settings, Sort Windows or the key help closes just that window; otherwise it quits.
+    @objc private func quitOrCloseWindow() {
+        if SortPanel.shared.isOpen { SortPanel.shared.revert() }
+        else if let w = SettingsWindow.shared.window, w.isVisible, w.isKeyWindow { w.performClose(nil) }
+        else if KeyHelp.shared.isVisible { KeyHelp.shared.hide() }
+        else { NSApp.terminate(nil) }
     }
     @objc private func checkForUpdatesItem() { Self.checkForUpdates() }
     @objc private func toggleMenu() { StatusMenu.shared.toggle() }
