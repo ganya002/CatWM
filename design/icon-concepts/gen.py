@@ -5,14 +5,15 @@ from fontTools.pens.transformPen import TransformPen
 from fontTools.pens.boundsPen import BoundsPen
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-font = TTFont(os.path.join(HERE, "../../Resources/Fonts/DelaGothicOne-Regular.ttf"))
+font = TTFont(os.path.join(HERE, "../../Resources/Fonts/Chillax-Bold.otf"))
+CAP = font["OS/2"].sCapHeight
 gs, cmap = font.getGlyphSet(), font.getBestCmap()
 hmtx = font["hmtx"]
 
 
 def text(s, cx, cy, cap, sx=1.0, track=0):
     """Outline `s`, centred on (cx, cy) by ink bounds, cap height `cap` px. sx squashes horizontally."""
-    k = cap / 726.0
+    k = cap / CAP
     names = [cmap[ord(c)] for c in s]
     bp = BoundsPen(gs)
     x = 0
@@ -68,7 +69,7 @@ INK = "#18181b"
 
 def svg(body, note):
     return f"""<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-<!-- Ouch app icon: {note}. Lettering is Dela Gothic One (SIL OFL 1.1), outlined to paths. -->
+<!-- Ouch app icon: {note}. Lettering is Chillax Bold (ITF Free Font License), outlined to paths. -->
 <defs>{DEFS}</defs>
 {body}
 </svg>"""
@@ -109,7 +110,7 @@ concepts["b-master"] = svg(
     "concept B, Master tile",
 )
 
-# C — Monogram: one heavy Dela "O"; its counter is a tiny tiled desktop.
+# C — Monogram: one bold Chillax "O"; its counter is a tiny tiled desktop.
 o = text("O", 512, 512, 480)
 concepts["c-monogram"] = svg(
     squircle("bgblue")
