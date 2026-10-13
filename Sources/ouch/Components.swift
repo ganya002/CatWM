@@ -9,11 +9,11 @@ final class Flag: ObservableObject { @Published var on = false }
 
 // MARK: - Button
 
-enum ButtonVariant { case primary, secondary, ghost, danger }
+enum ButtonVariant { case primary, secondary, ghost, danger, ghostDanger }
 enum ButtonSize { case sm, regular, lg }
 
 /// The one push button. One `primary` per surface; `ghost` for ways out; `danger` only for destructive
-/// verbs. Set `onAccent` inside an accent surface (the tour card).
+/// verbs, `ghostDanger` for one that sits quietly beside the others. Set `onAccent` inside an accent surface (the tour card).
 struct OButtonStyle: ButtonStyle {
     var variant: ButtonVariant = .secondary
     var size: ButtonSize = .regular
@@ -55,7 +55,7 @@ private struct OButtonBody: View {
         case .primary: style.onAccent ? Theme.accent : Theme.onAccent
         case .secondary: Theme.ink
         case .ghost: style.onAccent ? Theme.onAccent : hover.on ? Theme.ink : Theme.inkMuted
-        case .danger: Theme.danger
+        case .danger, .ghostDanger: Theme.danger
         }
     }
 
@@ -65,6 +65,7 @@ private struct OButtonBody: View {
         case .secondary: hover.on ? Theme.hover : Theme.surfaceSunken
         case .ghost: hover.on ? (style.onAccent ? Theme.onAccent.opacity(0.16) : Theme.hover) : .clear
         case .danger: Theme.dangerSoft
+        case .ghostDanger: hover.on ? Theme.dangerSoft : .clear
         }
     }
 }
@@ -473,6 +474,8 @@ struct Kbd: View {
     var pressed = false
     /// On an accent surface the caps invert.
     var onAccent = false
+    /// Outlined small caps in the surrounding text colour, for the inverted tooltip.
+    var outlined = false
 
     var body: some View {
         HStack(spacing: large ? 6 : 2) {
@@ -503,6 +506,12 @@ struct Kbd: View {
                 }
                 .offset(y: pressed ? 2 : 0)
                 .animation(.easeOut(duration: Theme.fast), value: pressed)
+        } else if outlined {
+            Text(k)
+                .font(Theme.keys(11, .medium)).oneLine()
+                .padding(.horizontal, 4)
+                .frame(minWidth: 18, minHeight: 18)
+                .overlay(RoundedRectangle(cornerRadius: Theme.Radius.xs, style: .continuous).strokeBorder(.secondary, lineWidth: 1))
         } else {
             Text(k)
                 .font(Theme.keys(11.5, .medium)).oneLine()
@@ -511,6 +520,32 @@ struct Kbd: View {
                 .frame(minWidth: 20, minHeight: 20)
                 .background(RoundedRectangle(cornerRadius: Theme.Radius.xs, style: .continuous).fill(Theme.well))
         }
+    }
+}
+
+/// The tooltip: an inverted xs Surface with a caret, a one-line description and its keys as outlined
+/// caps. Each chord after the first reads "then", e.g. "⌘⇪ then L". Show it after `delay`.
+struct OTooltip: View {
+    static let delay = 0.5
+    let text: String
+    var chords: [[String]] = []
+    var caret: Caret = .bottom
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Text(text).font(Theme.body(12.5)).oneLine()
+            if !chords.isEmpty {
+                HStack(spacing: 5) {
+                    ForEach(Array(chords.enumerated()), id: \.offset) { i, keys in
+                        if i > 0 { Text("then").font(Theme.body(11.5)).foregroundStyle(.secondary).oneLine() }
+                        Kbd(keys: keys, outlined: true)
+                    }
+                }
+                .fixedSize()
+            }
+        }
+        .surface(.xs, tone: .inverted, caret: caret)
+        .accessibilityElement(children: .combine)
     }
 }
 

@@ -2,7 +2,8 @@ import AppKit
 import SwiftUI
 
 /// Full-window map of the shortcuts on a MacBook keyboard. Pick a modifier combo (or hold the keys
-/// down) and every key shows what it does with it; click a key to change or add its shortcut.
+/// down) and every bound key shows what it does with it, coloured by group; click a key to change or
+/// add its shortcut. Below, the same layer as a list.
 struct ShortcutMap: View {
     @ObservedObject var doc: ConfigDocument
     @ObservedObject var ui: SettingsUI
@@ -15,10 +16,13 @@ struct ShortcutMap: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
                 header(all)
-                MacKeyboard(doc: doc, model: model, layer: layer, all: all, reveal: reveal)
-                    .frame(maxWidth: 940)
-                    .frame(maxWidth: .infinity)
-                hint(layer)
+                VStack(alignment: .leading, spacing: 14) {
+                    keyboard(layer).zIndex(1) // the key editor hangs over the legend and list
+                    legend(all)
+                }
+                .frame(maxWidth: 940)
+                .frame(maxWidth: .infinity)
+                .zIndex(1)
                 list(layer)
             }
             .padding(.horizontal, 36).padding(.top, 22).padding(.bottom, 40)
@@ -26,9 +30,9 @@ struct ShortcutMap: View {
         .onAppear {
             model.mode = doc.submaps.contains(ui.bindMode) ? ui.bindMode : ""
             model.picked = model.busiest(all: doc.keyActions(in: model.mode))
-            model.startWatchingModifiers()
+            model.startWatching()
         }
-        .onDisappear { model.stopWatchingModifiers() }
+        .onDisappear { model.stopWatching() }
         .onChange(of: model.mode) { _, m in
             model.selected = nil
             model.picked = model.busiest(all: doc.keyActions(in: m))
@@ -54,7 +58,7 @@ struct ShortcutMap: View {
                                selection: $model.mode)
                 }
                 OButton("Done", variant: .primary, shortcut: ["⎋"]) { close() }
-                    .keyboardShortcut(.cancelAction)
+                    .keyboardShortcut(model.selected == nil ? .cancelAction : nil) // ⎋ cancels the key editor first
             }
             HStack(spacing: 14) {
                 modifierToggles
@@ -65,7 +69,7 @@ struct ShortcutMap: View {
         }
     }
 
-    /// ⌃ ⌥ ⇧ ⌘ as one track of toggles, lit in `accent` like the keys they stand for.
+    /// ⌃ ⌥ ⇧ ⌘ as one track of toggles.
     private var modifierToggles: some View {
         let mods: [(NSEvent.ModifierFlags, String, String)] = [(.control, "⌃", "Control"), (.option, "⌥", "Option"),
                                                                (.shift, "⇧", "Shift"), (.command, "⌘", "Command")]
@@ -144,64 +148,188 @@ struct ShortcutMap: View {
         .animation(.easeOut(duration: 0.12), value: model.flags.rawValue)
     }
 
-    /// What the hovered key does, or how to use the map.
-    private func hint(_ layer: [ConfigDocument.KeyAction]) -> some View {
-        let caps = ConfigDocument.modifierCaps(model.flags)
-        return HStack(spacing: 8) {
-            if let code = model.hovered, let key = MacKeyboard.spec(code) {
-                Kbd(keys: caps + [model.legend(key)])
-                if let a = layer.first(where: { $0.code == code }) {
-                    Circle().fill(a.category.color).frame(width: 7, height: 7)
-                    Text(a.title).oneLine()
-                } else {
-                    Text("Nothing yet. Click to add a shortcut.").foregroundStyle(Theme.inkMuted).oneLine()
+    // MARK: Keyboard
+
+    /// The layer written on the keys, with the selected key's editor and the hovered key's tooltip on top.
+    private func keyboard(_ layer: [ConfigDocument.KeyAction]) -> some View {
+        let one = KeyHintKeyboard.size(scale: 1)
+        let codes = Set(layer.map(\.code))
+        // Held or picked modifiers wear a white ring, and so do the keys of the list row under the pointer.
+        var hot = Set(KeyHintKeyboard.keys.filter { !$0.modifier.isEmpty && model.flags.contains($0.modifier) }.compactMap(\.code))
+        if let id = model.hotRow { hot.formUnion(layer.filter { $0.row.id == id }.map(\.code)) }
+        let hints = layer.map { KeyHint($0) }
+        let pressed = model.pressed.flatMap { codes.contains($0) ? $0 : nil }
+        return GeometryReader { g in
+            let scale = g.size.width / one.width
+            ZStack(alignment: .topLeading) {
+                KeyHintKeyboard(binds: hints, style: .labels, pressed: pressed, hot: hot, scale: scale)
+                    .onKeyTap(tap)
+                    .onKeyHover { k, inside in
+                        if k.modifier.isEmpty, let code = k.code { model.hover(code, inside) }
+                    }
+                if let code = model.selected, let k = KeyHintKeyboard.key(for: code) {
+                    // A click anywhere else on the keyboard closes the editor, like a popover.
+                    Color.clear.contentShape(Rectangle())
+                        .onTapGesture { withAnimation(.easeOut(duration: Theme.fast)) { model.selected = nil } }
+                    selection(k, code: code, scale: scale, size: g.size)
                 }
-            } else {
-                Text("Hold ⌃ ⌥ ⇧ ⌘ or pick them above to see their shortcuts. Click any key to change it.")
-                    .foregroundStyle(Theme.inkMuted).oneLine()
+                if model.selected == nil, let code = model.tip, let k = KeyHintKeyboard.key(for: code) {
+                    tooltip(k, layer: layer, scale: scale, width: g.size.width)
+                }
             }
-            Spacer(minLength: 0)
         }
-        .font(Theme.body(13))
-        .frame(height: 22)
-        .frame(maxWidth: 940).frame(maxWidth: .infinity)
+        .aspectRatio(one.width / one.height, contentMode: .fit)
     }
 
-    /// Every shortcut in the layer, in keyboard order, so nothing hides behind a key you can't see.
+    private func tap(_ k: KeyHintKeyboard.Key) {
+        if !k.modifier.isEmpty { model.toggle(k.modifier); return }
+        guard let code = k.code else { return }
+        model.tip = nil
+        model.selected = model.selected == code ? nil : code
+    }
+
+    /// A focus ring around the selected key, and its editor below it (above it for the lower rows),
+    /// nudged in from the keyboard's edges.
+    @ViewBuilder
+    private func selection(_ k: KeyHintKeyboard.Key, code: UInt16, scale: CGFloat, size: CGSize) -> some View {
+        let r = KeyHintKeyboard.rect(of: k, scale: scale)
+        let below = r.midY < size.height * 0.45
+        let w = KeyEditor.width, margin: CGFloat = 20
+        let x = min(max(r.midX, w / 2 - margin), size.width - w / 2 + margin)
+        RoundedRectangle(cornerRadius: KeyHintKeyboard.cornerRadius(scale: scale) + 2, style: .continuous)
+            .strokeBorder(Theme.focus, lineWidth: 2)
+            .frame(width: r.width + 4, height: r.height + 4)
+            .offset(x: r.minX - 2, y: r.minY - 2)
+            .allowsHitTesting(false)
+        KeyEditor(doc: doc, model: model, key: k, code: code, flyoutLeading: x + w / 2 + Theme.submenuWidth > size.width + 120,
+                  reveal: reveal)
+            .id("\(code) \(model.flags.rawValue) \(model.mode)")
+            .fixedSize()
+            .frame(width: 0, height: 0, alignment: below ? .top : .bottom)
+            .offset(x: x, y: below ? r.maxY + 8 : r.minY - 8)
+            .transition(.opacity)
+    }
+
+    /// What the hovered key does and how to press it, over the key. Nudged in from the window's edges,
+    /// with the caret still on the key.
+    private func tooltip(_ k: KeyHintKeyboard.Key, layer: [ConfigDocument.KeyAction], scale: CGFloat, width: CGFloat) -> some View {
+        let r = KeyHintKeyboard.rect(of: k, scale: scale)
+        let action = layer.first { $0.code == k.code }
+        var chords = [ConfigDocument.modifierCaps(model.flags) + [KeyHintKeyboard.legend(k)]]
+        if let entry = modeEntry { chords.insert(entry, at: 0) }
+        let w = model.tipWidth, margin: CGFloat = 28
+        let shift = max(0, -margin - (r.midX - w / 2)) + min(0, width + margin - (r.midX + w / 2))
+        return OTooltip(text: action?.title ?? "No shortcut. Click to add one.", chords: chords, caret: .bottomAt(-shift))
+            .fixedSize()
+            .background(GeometryReader { p in
+                Color.clear
+                    .onAppear { model.tipWidth = p.size.width }
+                    .onChange(of: p.size.width) { _, w in model.tipWidth = w }
+            })
+            .frame(width: 0, height: 0, alignment: .bottom)
+            .offset(x: r.midX + shift, y: r.minY - 8)
+            .allowsHitTesting(false)
+            .transition(.opacity)
+    }
+
+    /// The keys that enter the mode on show, e.g. ⌘⇪, so tooltips read "⌘⇪ then L".
+    private var modeEntry: [String]? {
+        guard !model.mode.isEmpty, let a = doc.keyActions(in: "").first(where: {
+            $0.row.dispatcher == "submap" && $0.arg.lowercased() == model.mode.lowercased()
+        }) else { return nil }
+        return ConfigDocument.modifierCaps(a.flags) + [ConfigDocument.capLabel(a.key)]
+    }
+
+    // MARK: Legend and list
+
+    /// The colour groups in this set on one line, and how to use the map.
+    private func legend(_ all: [ConfigDocument.KeyAction]) -> some View {
+        let present = Set(all.map { KeyHint($0).group })
+        return HStack(spacing: 16) {
+            ForEach(KeyGroup.allCases.filter(present.contains)) { g in
+                HStack(spacing: 6) {
+                    Circle().fill(g.color).frame(width: 7, height: 7)
+                    Text(g.title).foregroundStyle(Theme.inkMuted).oneLine()
+                }
+                .fixedSize()
+            }
+            Spacer(minLength: 12)
+            Text("Hold ⌃ ⌥ ⇧ ⌘ to switch layers, click a key to edit").foregroundStyle(Theme.inkFaint).oneLine()
+        }
+        .font(Theme.body(12.5))
+        .frame(height: 20)
+    }
+
+    /// One bind row in the list; a range row's keys stay together.
+    private struct Entry: Identifiable {
+        let row: BindRow
+        let codes: [UInt16]
+        let group: KeyGroup
+        var id: UUID { row.id }
+    }
+
+    /// Every shortcut in the layer by group, in keyboard order, so nothing hides behind a key you can't see.
     private func list(_ layer: [ConfigDocument.KeyAction]) -> some View {
-        let order = Dictionary(MacKeyboard.keys.enumerated().compactMap { i, k in k.code.map { ($0, i) } }, uniquingKeysWith: { a, _ in a })
-        let sorted = layer.sorted { (order[$0.code] ?? 999, $0.code) < (order[$1.code] ?? 999, $1.code) }
+        let order = Dictionary(KeyHintKeyboard.keys.enumerated().compactMap { i, k in k.code.map { ($0, i) } }, uniquingKeysWith: { a, _ in a })
+        let rank = { (c: UInt16) in (order[c] ?? 999, c) }
+        let entries = Dictionary(grouping: layer, by: { $0.row.id }).values.compactMap { acts -> Entry? in
+            let sorted = acts.sorted { rank($0.code) < rank($1.code) }
+            guard let first = sorted.first else { return nil }
+            return Entry(row: first.row, codes: sorted.map(\.code), group: KeyHint(first).group)
+        }
+        .sorted { rank($0.codes[0]) < rank($1.codes[0]) }
+        let sections = KeyGroup.allCases.compactMap { g -> (group: KeyGroup, rows: [Entry])? in
+            let rows = entries.filter { $0.group == g }
+            return rows.isEmpty ? nil : (g, rows)
+        }
         return Group {
-            if sorted.isEmpty {
+            if sections.isEmpty {
                 Text(model.flags.isEmpty && model.mode.isEmpty ? "Global shortcuts need ⌥, ⌃ or ⌘ so they don't block typing."
                      : "No shortcuts use \(ConfigDocument.modifierCaps(model.flags).joined()) here yet.")
                     .font(Theme.body(13)).foregroundStyle(Theme.inkMuted).oneLine()
                     .frame(maxWidth: .infinity).padding(.vertical, 12)
             } else {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 240), spacing: 16, alignment: .leading)], alignment: .leading, spacing: 4) {
-                    ForEach(sorted) { a in
-                        Button {
-                            if MacKeyboard.spec(a.code) != nil { model.selected = a.code }
-                        } label: {
-                            HStack(spacing: 8) {
-                                Kbd(keys: ConfigDocument.modifierCaps(a.flags) + [ConfigDocument.capLabel(a.key)])
-                                    .frame(minWidth: 64, alignment: .leading)
-                                Circle().fill(a.category.color).frame(width: 7, height: 7)
-                                Text(a.title).font(Theme.body(13)).oneLine()
-                                Spacer(minLength: 0)
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 300), spacing: 40, alignment: .top)], alignment: .leading, spacing: 28) {
+                    ForEach(sections, id: \.group) { section in
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack(spacing: 7) {
+                                Circle().fill(section.group.color).frame(width: 7, height: 7)
+                                Text(section.group.title).font(Theme.body(12, .medium)).tracking(0.24)
+                                    .foregroundStyle(Theme.inkMuted).oneLine()
                             }
-                            .padding(.vertical, 4)
-                            .contentShape(Rectangle())
+                            .padding(.bottom, 2)
+                            OGroup {
+                                ForEach(section.rows) { e in row(e) }
+                            }
                         }
-                        .buttonStyle(.plain)
-                        .onHover { model.hovered = $0 ? a.code : (model.hovered == a.code ? nil : model.hovered) }
                     }
                 }
-                .padding(.vertical, 6)
             }
         }
         .frame(maxWidth: 940).frame(maxWidth: .infinity)
         .transaction { $0.animation = nil } // swap layers at once; fading rows overlapped the empty message
+    }
+
+    /// Label on the left, its keys on the right. Hovering lights the keys; clicking opens the first one.
+    private func row(_ e: Entry) -> some View {
+        Button {
+            if let first = e.codes.first, KeyHintKeyboard.key(for: first) != nil {
+                model.tip = nil
+                model.selected = first
+            }
+        } label: {
+            HStack(spacing: 12) {
+                Text(doc.title(e.row)).font(Theme.body(13.5)).foregroundStyle(Theme.ink).oneLine()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Kbd(keys: doc.prettyShortcut(e.row)).fixedSize()
+            }
+            .frame(minHeight: 36)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { on in
+            if on { model.hotRow = e.id } else if model.hotRow == e.id { model.hotRow = nil }
+        }
     }
 }
 
@@ -211,46 +339,21 @@ final class ShortcutMapModel: ObservableObject {
     @Published var picked: NSEvent.ModifierFlags = []
     /// Modifiers physically held down; they win while held.
     @Published var held: NSEvent.ModifierFlags = []
+    /// The key under the pointer, and the one whose tooltip shows (after `OTooltip.delay`).
     @Published var hovered: UInt16?
+    @Published var tip: UInt16?
+    @Published var tipWidth: CGFloat = 0
     @Published var selected: UInt16?
+    /// The key flashing because its shortcut was just pressed.
+    @Published var pressed: UInt16?
+    /// The list row under the pointer; its keys light up on the keyboard.
+    @Published var hotRow: UUID?
     private var monitor: Any?
+    private var fireObserver: NSObjectProtocol?
+    private var tipTimer: DispatchWorkItem?
+    private var flashTimer: DispatchWorkItem?
 
     var flags: NSEvent.ModifierFlags { held.isEmpty ? picked : held }
-
-    /// What the keys type on the current keyboard layout, so the map matches the keyboard in front of you.
-    private let typed: [UInt16: (base: String, shifted: String?)] = {
-        var out: [UInt16: (String, String?)] = [:]
-        for k in MacKeyboard.keys {
-            guard let code = k.code, case .char = k.label,
-                  let base = ConfigDocument.typedCharacter(keyCode: code, flags: []) else { continue }
-            out[code] = (base, ConfigDocument.typedCharacter(keyCode: code, flags: .shift))
-        }
-        return out
-    }()
-
-    /// Upper and lower legend for a typing key: one letter, or a shifted symbol over the base one.
-    func legends(_ k: MacKeyboard.Key) -> (top: String?, main: String) {
-        guard case .char(let base, let shifted) = k.label else { return (nil, "") }
-        if let code = k.code, let t = typed[code] {
-            if t.base.uppercased() != t.base || t.base.lowercased() != t.base { return (nil, t.base.uppercased()) }
-            return (t.shifted == t.base ? nil : t.shifted, t.base)
-        }
-        return (shifted, base)
-    }
-
-    /// A key's name on a keycap, for the hint and popover.
-    func legend(_ k: MacKeyboard.Key) -> String {
-        switch k.label {
-        case .char: legends(k).main
-        case .word(let w, _): k.code.flatMap { ConfigDocument.keyName(for: $0) }.map(ConfigDocument.capLabel) ?? w
-        case .function(_, let n): "F\(n)"
-        case .arrow: k.code.flatMap { ConfigDocument.keyName(for: $0) }.map(ConfigDocument.capLabel) ?? ""
-        case .modifier(let symbol, _, _): symbol
-        case .globe: "fn"
-        case .space: "Space"
-        case .touchID: ""
-        }
-    }
 
     /// The combo with the most shortcuts, which is where the map opens.
     func busiest(all: [ConfigDocument.KeyAction]) -> NSEvent.ModifierFlags {
@@ -264,407 +367,585 @@ final class ShortcutMapModel: ObservableObject {
         withAnimation(.easeOut(duration: 0.15)) { picked.formSymmetricDifference(f) }
     }
 
-    func startWatchingModifiers() {
+    /// Tooltips wait `OTooltip.delay` on the first key; once one shows it follows the pointer from key to key.
+    func hover(_ code: UInt16, _ inside: Bool) {
+        tipTimer?.cancel()
+        if inside {
+            hovered = code
+            if tip != nil { tip = code; return }
+            let work = DispatchWorkItem { [weak self] in
+                guard let self, self.hovered == code else { return }
+                withAnimation(.easeOut(duration: Theme.fast)) { self.tip = code }
+            }
+            tipTimer = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + OTooltip.delay, execute: work)
+        } else if hovered == code {
+            hovered = nil
+            // A beat before hiding, so sliding onto the next key keeps the tip up.
+            let work = DispatchWorkItem { [weak self] in
+                guard let self, self.hovered == nil else { return }
+                withAnimation(.easeOut(duration: Theme.fast)) { self.tip = nil }
+            }
+            tipTimer = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08, execute: work)
+        }
+    }
+
+    /// Flashes a key whose shortcut was pressed, if it's on the layer showing. `submap` is nil for a key
+    /// that reached the window, which belongs to whichever mode is on show.
+    private func flash(_ code: UInt16, flags f: NSEvent.ModifierFlags, submap: String?) {
+        guard f == flags, submap.map({ $0 == mode }) ?? true else { return }
+        flashTimer?.cancel()
+        withAnimation(.easeOut(duration: Theme.fast)) { pressed = code }
+        let work = DispatchWorkItem { [weak self] in withAnimation(.easeOut(duration: Theme.slow)) { self?.pressed = nil } }
+        flashTimer = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: work)
+    }
+
+    private static let watched: NSEvent.ModifierFlags = [.command, .option, .control, .shift]
+
+    /// Follows held modifiers, and flashes keys as their shortcuts are pressed: ones the window manager
+    /// takes arrive through `Hotkeys.didFire`, the rest as key presses in this window.
+    func startWatching() {
         guard monitor == nil else { return }
-        monitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] e in
-            let f = e.modifierFlags.intersection([.command, .option, .control, .shift])
-            if let self, f != self.held {
-                if !f.isEmpty { self.selected = nil }
+        monitor = NSEvent.addLocalMonitorForEvents(matching: [.flagsChanged, .keyDown]) { [weak self] e in
+            guard let self else { return e }
+            let f = e.modifierFlags.intersection(Self.watched)
+            if e.type == .keyDown {
+                if self.selected == nil, !e.isARepeat { self.flash(e.keyCode, flags: f, submap: nil) }
+            } else if f != self.held, self.selected == nil { // the key editor has its own modifier toggles
                 withAnimation(.easeOut(duration: 0.12)) { self.held = f }
             }
             return e
         }
+        fireObserver = NotificationCenter.default.addObserver(forName: Hotkeys.didFire, object: nil, queue: .main) { [weak self] n in
+            guard let b = n.userInfo?["bind"] as? KeyBinding else { return }
+            let f = NSEvent.ModifierFlags(rawValue: UInt(b.mods.rawValue)).intersection(Self.watched)
+            self?.flash(b.keyCode, flags: f, submap: b.submap)
+        }
     }
 
-    func stopWatchingModifiers() {
+    func stopWatching() {
         if let monitor { NSEvent.removeMonitor(monitor) }
+        if let fireObserver { NotificationCenter.default.removeObserver(fireObserver) }
         monitor = nil
+        fireObserver = nil
+        tipTimer?.cancel()
         held = []
+        tip = nil
+        hovered = nil
     }
 }
 
-// MARK: - Keyboard
+// MARK: - Key editor
 
-/// A MacBook Air keyboard (ANSI), drawn to scale. Sizes are in key units; 1u is one letter key plus its gap.
-struct MacKeyboard: View {
+/// The action menu's categories: one level of nesting over the catalog.
+private enum MenuCategory: String, CaseIterable, Identifiable {
+    case focus = "Focus", move = "Move", workspace = "Workspace", layout = "Layout", window = "Window", mode = "Mode", app = "App"
+    var id: Self { self }
+
+    var symbol: String {
+        switch self {
+        case .focus: "scope"
+        case .move: "arrow.up.and.down.and.arrow.left.and.right"
+        case .workspace: "square.stack.3d.up"
+        case .layout: "rectangle.split.3x1"
+        case .window: "macwindow"
+        case .mode: "keyboard"
+        case .app: "gearshape"
+        }
+    }
+
+    init(_ a: Action) {
+        switch a.category {
+        case .focus: self = .focus
+        case .move: self = .move
+        case .displays: self = a.dispatcher == "focusmonitor" ? .focus : .move
+        case .spaces: self = .workspace
+        case .layout: self = .layout
+        case .window, .commands: self = .window
+        case .app, .custom: self = a.dispatcher == "submap" ? .mode : .app
+        }
+    }
+}
+
+/// The edit in progress. Nothing reaches the config until Save.
+private final class KeyDraft: ObservableObject {
+    @Published var dispatcher: String
+    @Published var args: String
+    @Published var flags: NSEvent.ModifierFlags
+    @Published var mode: String
+    @Published var search = ""
+    /// The category whose submenu is out.
+    @Published var open: MenuCategory?
+    /// The bind being edited (nil for a new one), and whether it's one key of a range.
+    let row: BindRow?
+    let isRange: Bool
+
+    init(_ a: ConfigDocument.KeyAction?, flags: NSEvent.ModifierFlags, mode: String) {
+        row = a?.row
+        isRange = a?.isRange ?? false
+        dispatcher = a?.row.dispatcher ?? ""
+        args = a?.arg ?? ""
+        self.flags = flags
+        self.mode = mode
+    }
+}
+
+private struct CategoryAnchor: PreferenceKey {
+    static var defaultValue: [MenuCategory: Anchor<CGRect>] = [:]
+    static func reduce(value: inout [MenuCategory: Anchor<CGRect>], nextValue: () -> [MenuCategory: Anchor<CGRect>]) {
+        value.merge(nextValue()) { $1 }
+    }
+}
+
+/// Create, change or remove the shortcut on one key: a md Surface with the key itself and its chord
+/// on top, the action as a menu nested by category (with search across all of them), compact
+/// controls for the action's argument, the modifiers and the set, then Remove, Cancel and Save.
+private struct KeyEditor: View {
+    static let width: CGFloat = 340
+    private static let flyoutWidth: CGFloat = 268
+
     @ObservedObject var doc: ConfigDocument
     @ObservedObject var model: ShortcutMapModel
-    /// Shortcuts with the modifiers showing, and every shortcut in the set.
-    let layer: [ConfigDocument.KeyAction]
-    let all: [ConfigDocument.KeyAction]
+    let key: KeyHintKeyboard.Key
+    let code: UInt16
+    /// Submenus open to the left when there's no room on the right.
+    let flyoutLeading: Bool
     let reveal: (BindRow) -> Void
+    @StateObject private var draft: KeyDraft
+    @FocusState private var searching: Bool
 
-    enum Label {
-        case char(String, String?) // US fallback: base and shifted
-        case word(String, trailing: Bool)
-        case function(String, Int)
-        case modifier(String, String, trailing: Bool)
-        case arrow(String)
-        case globe, space, touchID
+    init(doc: ConfigDocument, model: ShortcutMapModel, key: KeyHintKeyboard.Key, code: UInt16, flyoutLeading: Bool,
+         reveal: @escaping (BindRow) -> Void) {
+        self.doc = doc
+        self.model = model
+        self.key = key
+        self.code = code
+        self.flyoutLeading = flyoutLeading
+        self.reveal = reveal
+        let here = doc.keyActions(in: model.mode).first { $0.code == code && $0.flags == model.flags }
+        _draft = StateObject(wrappedValue: KeyDraft(here, flags: model.flags, mode: model.mode))
     }
-
-    struct Key: Identifiable {
-        let code: UInt16?
-        let frame: CGRect
-        let label: Label
-        var modifier: NSEvent.ModifierFlags = []
-        var id: String { "\(frame.minX),\(frame.minY)" }
-    }
-
-    static let width: CGFloat = 14.5
-    static let functionRow: CGFloat = 0.62
-    static let height: CGFloat = functionRow + 5
-
-    static let keys: [Key] = {
-        var out: [Key] = []
-        var y: CGFloat = 0
-        func row(_ h: CGFloat, _ items: [(UInt16?, CGFloat, Label)]) {
-            var x: CGFloat = 0
-            for (code, w, label) in items {
-                var k = Key(code: code, frame: CGRect(x: x, y: y, width: w, height: h), label: label)
-                if case .modifier(let s, _, _) = label {
-                    k.modifier = s == "⌃" ? .control : s == "⌥" ? .option : s == "⌘" ? .command : .shift
-                }
-                out.append(k)
-                x += w
-            }
-            y += h
-        }
-        let fSymbols = ["sun.min", "sun.max", "rectangle.3.group", "magnifyingglass", "mic", "moon",
-                        "backward", "playpause", "forward", "speaker", "speaker.wave.1", "speaker.wave.3"]
-        let fCodes: [UInt16] = [122, 120, 99, 118, 96, 97, 98, 100, 101, 109, 103, 111]
-        row(functionRow, [(53, 1.5, .word("esc", trailing: false))]
-            + (0..<12).map { (fCodes[$0], 1, .function(fSymbols[$0], $0 + 1)) }
-            + [(nil, 1, .touchID)])
-        func chars(_ s: [(UInt16, String, String?)]) -> [(UInt16?, CGFloat, Label)] { s.map { ($0.0, 1, .char($0.1, $0.2)) } }
-        row(1, chars([(50, "`", "~"), (18, "1", "!"), (19, "2", "@"), (20, "3", "#"), (21, "4", "$"), (23, "5", "%"), (22, "6", "^"),
-                      (26, "7", "&"), (28, "8", "*"), (25, "9", "("), (29, "0", ")"), (27, "-", "_"), (24, "=", "+")])
-            + [(51, 1.5, .word("delete", trailing: true))])
-        row(1, [(48, 1.5, .word("tab", trailing: false))]
-            + chars([(12, "Q", nil), (13, "W", nil), (14, "E", nil), (15, "R", nil), (17, "T", nil), (16, "Y", nil), (32, "U", nil),
-                     (34, "I", nil), (31, "O", nil), (35, "P", nil), (33, "[", "{"), (30, "]", "}"), (42, "\\", "|")]))
-        row(1, [(57, 1.75, .word("caps lock", trailing: false))]
-            + chars([(0, "A", nil), (1, "S", nil), (2, "D", nil), (3, "F", nil), (5, "G", nil), (4, "H", nil), (38, "J", nil),
-                     (40, "K", nil), (37, "L", nil), (41, ";", ":"), (39, "'", "\"")])
-            + [(36, 1.75, .word("return", trailing: true))])
-        row(1, [(nil, 2.25, .modifier("⇧", "shift", trailing: false))]
-            + chars([(6, "Z", nil), (7, "X", nil), (8, "C", nil), (9, "V", nil), (11, "B", nil), (45, "N", nil), (46, "M", nil),
-                     (43, ",", "<"), (47, ".", ">"), (44, "/", "?")])
-            + [(nil, 2.25, .modifier("⇧", "shift", trailing: true))])
-        row(1, [(nil, 1, .globe), (nil, 1, .modifier("⌃", "control", trailing: false)), (nil, 1, .modifier("⌥", "option", trailing: false)),
-                (nil, 1.25, .modifier("⌘", "command", trailing: false)), (49, 5, .space),
-                (nil, 1.25, .modifier("⌘", "command", trailing: true)), (nil, 1, .modifier("⌥", "option", trailing: true))])
-        // The inverted-T arrows: half-height keys, up and down sharing one slot.
-        let ay = y - 1, ax: CGFloat = 11.5
-        out += [Key(code: 123, frame: CGRect(x: ax, y: ay + 0.5, width: 1, height: 0.5), label: .arrow("arrowtriangle.left.fill")),
-                Key(code: 126, frame: CGRect(x: ax + 1, y: ay, width: 1, height: 0.5), label: .arrow("arrowtriangle.up.fill")),
-                Key(code: 125, frame: CGRect(x: ax + 1, y: ay + 0.5, width: 1, height: 0.5), label: .arrow("arrowtriangle.down.fill")),
-                Key(code: 124, frame: CGRect(x: ax + 2, y: ay + 0.5, width: 1, height: 0.5), label: .arrow("arrowtriangle.right.fill"))]
-        return out
-    }()
-
-    static func spec(_ code: UInt16) -> Key? { keys.first { $0.code == code } }
 
     var body: some View {
-        let bound = Dictionary(layer.map { ($0.code, $0) }, uniquingKeysWith: { a, _ in a })
-        let elsewhere = Set(all.map(\.code))
-        GeometryReader { g in
-            let pad: CGFloat = 0.32
-            let unit = g.size.width / (Self.width + pad * 2)
-            ZStack(alignment: .topLeading) {
-                // The keyboard deck: a sunken well holding the keys.
-                RoundedRectangle(cornerRadius: unit * 0.42, style: .continuous)
-                    .fill(Theme.surfaceSunken)
-                    .overlay(RoundedRectangle(cornerRadius: unit * 0.42, style: .continuous).strokeBorder(Theme.hairline))
-                ForEach(Self.keys) { k in
-                    let action = k.code.flatMap { bound[$0] }
-                    let gap = unit * 0.1
-                    KeyCap(key: k, unit: unit, model: model, action: action,
-                           hasOthers: action == nil && k.code.map(elsewhere.contains) == true)
-                        .frame(width: k.frame.width * unit - gap, height: k.frame.height * unit - gap)
-                        .popover(isPresented: Binding(get: { k.code != nil && model.selected == k.code },
-                                                      set: { if !$0, model.selected == k.code { model.selected = nil } }),
-                                 arrowEdge: .bottom) {
-                            if let code = k.code { KeyPopover(doc: doc, model: model, key: k, code: code, reveal: reveal) }
-                        }
-                        .offset(x: (pad + k.frame.minX) * unit + gap / 2, y: (pad + k.frame.minY) * unit + gap / 2)
-                }
-            }
-        }
-        .aspectRatio((Self.width + 0.64) / (Self.height + 0.64), contentMode: .fit)
-    }
-}
-
-/// One key. Bound keys glow in their action's colour and show its symbol; held modifiers light up.
-private struct KeyCap: View {
-    let key: MacKeyboard.Key
-    let unit: CGFloat
-    @ObservedObject var model: ShortcutMapModel
-    let action: ConfigDocument.KeyAction?
-    /// Unbound with these modifiers, but bound with others: a small dot says there's more to find.
-    let hasOthers: Bool
-
-
-    var body: some View {
-        let pressed = !key.modifier.isEmpty && model.flags.contains(key.modifier)
-        let hovered = key.code != nil && model.hovered == key.code
-        let selected = key.code != nil && model.selected == key.code
-        let shape = RoundedRectangle(cornerRadius: unit * 0.12, style: .continuous)
-        let interactive = key.code != nil || !key.modifier.isEmpty
-        Button {
-            if !key.modifier.isEmpty { model.toggle(key.modifier) }
-            else if let code = key.code { model.selected = model.selected == code ? nil : code }
-        } label: {
-            ZStack {
-                shape.fill(fill(pressed: pressed))
-                shape.strokeBorder(action != nil || pressed ? Color.white.opacity(0.22) : Theme.hairline, lineWidth: 0.75)
-                if hovered && interactive { shape.fill(Theme.ink.opacity(0.06)) }
-                legend(pressed: pressed)
-                if hasOthers {
-                    Circle().fill(Theme.accent2).frame(width: unit * 0.07, height: unit * 0.07)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                        .padding(unit * 0.08)
-                }
-            }
-            .compositingGroup()
-            .shadow(color: .black.opacity(0.12), radius: 0, y: unit * 0.025)
-            .overlay(shape.strokeBorder(Theme.focus, lineWidth: selected ? 2 : 0).padding(-2))
-            .scaleEffect(pressed ? 0.96 : 1)
-            .contentShape(shape)
-        }
-        .buttonStyle(.plain)
-        .disabled(!interactive)
-        .onHover { on in
-            guard key.code != nil else { return }
-            if on { model.hovered = key.code } else if model.hovered == key.code { model.hovered = nil }
-        }
-        .animation(.easeOut(duration: 0.15), value: action?.title)
-        .animation(.easeOut(duration: 0.12), value: pressed)
-        .help(action.map { "\(ConfigDocument.modifierCaps($0.flags).joined())\(model.legend(key)): \($0.title)" } ?? "")
-        .accessibilityLabel(accessibilityText)
-    }
-
-    private var accessibilityText: String {
-        let name = model.legend(key)
-        if !key.modifier.isEmpty { return "\(name) modifier" }
-        guard let action else { return "\(name), no shortcut" }
-        return "\(name): \(action.title)"
-    }
-
-    private func fill(pressed: Bool) -> AnyShapeStyle {
-        if pressed { return AnyShapeStyle(Theme.accent) }
-        if let action { return AnyShapeStyle(action.category.color.gradient) }
-        return AnyShapeStyle(Theme.surface)
-    }
-
-    @ViewBuilder private func legend(pressed: Bool) -> some View {
-        let small = Font.system(size: unit * 0.17, weight: .regular)
-        let ink = pressed ? Theme.onAccent : action != nil ? Color.white : Theme.inkMuted
-        switch key.label {
-        case .char:
-            let l = model.legends(key)
-            if let action {
-                VStack(spacing: unit * 0.02) {
-                    Text(l.main).font(.system(size: unit * 0.17, weight: .semibold)).opacity(0.85)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    Image(systemName: action.symbol).font(.system(size: unit * 0.3, weight: .semibold))
-                        .frame(maxHeight: .infinity)
-                }
-                .foregroundStyle(ink)
-                .padding(unit * 0.09)
-            } else if let top = l.top {
-                VStack(spacing: unit * 0.04) {
-                    Text(top).font(.system(size: unit * 0.2))
-                    Text(l.main).font(.system(size: unit * 0.24))
-                }
-                .foregroundStyle(ink)
+        VStack(alignment: .leading, spacing: 0) {
+            head
+            hairline
+            if draft.isRange, let row = draft.row {
+                note("One key of “\(doc.title(row))”", detail: "Its keys are edited together in Shortcuts")
+            } else if ConfigDocument.keyName(for: code) == nil {
+                note("This key can't take a shortcut yet", detail: nil)
             } else {
-                Text(l.main).font(.system(size: unit * 0.3)).foregroundStyle(ink)
-            }
-        case .word(let w, let trailing):
-            corner(Text(w).font(small), trailing: trailing, ink: ink)
-        case .function(let symbol, let n):
-            if let action {
-                VStack(spacing: 0) {
-                    Image(systemName: action.symbol).font(.system(size: unit * 0.2, weight: .semibold))
-                    Text("F\(n)").font(.system(size: unit * 0.12))
+                OSearchField(placeholder: "Search actions", text: $draft.search, focus: $searching, onSubmit: pickFirstResult)
+                    .padding(.horizontal, 2)
+                hairline
+                menu
+                if hasArgument {
+                    hairline
+                    argument
                 }
-                .foregroundStyle(ink)
-            } else {
-                VStack(spacing: unit * 0.04) {
-                    Image(systemName: symbol).font(.system(size: unit * 0.15))
-                    Text("F\(n)").font(.system(size: unit * 0.12))
-                }
-                .foregroundStyle(ink)
+                hairline
+                options
             }
-        case .modifier(let symbol, let name, let trailing):
-            VStack(alignment: trailing ? .trailing : .leading, spacing: 0) {
-                Text(symbol).font(.system(size: unit * 0.2))
-                Spacer(minLength: 0)
-                Text(name).font(small)
+            if let issue {
+                hairline
+                OStatus(kind: issue.severity == .error ? .danger : .warning, text: issue.message)
+                    .help(issue.message)
+                    .padding(.horizontal, 8).frame(height: 34)
             }
-            .foregroundStyle(ink)
-            .padding(.horizontal, unit * 0.1).padding(.vertical, unit * 0.08)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: trailing ? .trailing : .leading)
-        case .arrow(let symbol):
-            Image(systemName: action?.symbol ?? symbol)
-                .font(.system(size: unit * (action == nil ? 0.13 : 0.2), weight: .semibold))
-                .foregroundStyle(ink)
-        case .globe:
-            VStack(alignment: .leading, spacing: 0) {
-                Text("fn").font(small).frame(maxWidth: .infinity, alignment: .trailing)
-                Spacer(minLength: 0)
-                Image(systemName: "globe").font(.system(size: unit * 0.2))
-            }
-            .foregroundStyle(ink)
-            .padding(.horizontal, unit * 0.1).padding(.vertical, unit * 0.08)
-        case .space:
-            if let action {
-                Label(action.title, systemImage: action.symbol).font(.system(size: unit * 0.2, weight: .semibold)).foregroundStyle(ink)
-            }
-        case .touchID:
-            Circle().strokeBorder(Theme.hairline, lineWidth: 1).padding(unit * 0.08)
+            others
+            hairline
+            actions
         }
+        .frame(width: Self.width)
+        .surface(.md, glass: true)
+        .overlayPreferenceValue(CategoryAnchor.self) { anchors in flyoutLayer(anchors) }
+        .onChange(of: draft.search) { _, _ in draft.open = nil }
+        .onAppear { DispatchQueue.main.async { searching = !draft.isRange } }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Shortcut on \(KeyHintKeyboard.legend(key))")
     }
 
-    /// Wide keys print their name in a bottom corner; with a shortcut its symbol sits on top.
-    private func corner(_ text: Text, trailing: Bool, ink: Color) -> some View {
-        VStack(alignment: trailing ? .trailing : .leading, spacing: 0) {
-            if let action {
-                Image(systemName: action.symbol).font(.system(size: unit * 0.24, weight: .semibold))
+    private var hairline: some View { Rectangle().fill(Theme.hairline).frame(height: 1) }
+
+    private func note(_ text: String, detail: String?) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(text).font(Theme.body(13)).oneLine()
+            if let detail { Text(detail).font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine() }
+        }
+        .padding(.horizontal, 8).padding(.vertical, 10)
+    }
+
+    // MARK: State
+
+    /// Mode actions for every set in the config, in place of the catalog's single Enter Window Mode.
+    private var catalog: [Action] {
+        var modes = doc.submaps.filter { !$0.isEmpty }
+        if !modes.contains(where: { $0.lowercased() == "window" }) { modes.insert("window", at: 0) }
+        let enter = modes.map { Action(title: "Enter \($0.capitalized) Mode", category: .app, dispatcher: "submap", args: $0, symbol: "keyboard") }
+        let leave = Actions.all.filter { $0.dispatcher == "submap" && $0.args == "reset" }
+        return Actions.all.filter { $0.dispatcher != "submap" } + enter + leave
+    }
+
+    /// The chosen action, if it's one the menu offers.
+    private var action: Action? {
+        guard !draft.dispatcher.isEmpty else { return nil }
+        if draft.dispatcher == "submap" {
+            return catalog.first { $0.dispatcher == "submap" && $0.args.lowercased() == draft.args.lowercased() }
+        }
+        return Actions.match(BindRow(mods: "", key: "", dispatcher: draft.dispatcher, args: draft.args))
+    }
+
+    private var title: String {
+        if draft.dispatcher == "exec" { return draft.args.isEmpty ? "Run Command" : "Run “\(draft.args)”" }
+        if let action { return action.title }
+        if draft.dispatcher.isEmpty { return "New shortcut" }
+        return "\(draft.dispatcher) \(draft.args)".trimmingCharacters(in: .whitespaces)
+    }
+
+    /// The bind as it would be saved.
+    private var candidate: BindRow? {
+        guard let name = ConfigDocument.keyName(for: code), !draft.dispatcher.isEmpty, !draft.isRange else { return nil }
+        var r = draft.row ?? BindRow(mods: "", key: name, dispatcher: "", args: "")
+        // Untouched modifiers keep how they were written ($mod stays $mod).
+        if draft.row == nil || draft.flags != model.flags { r.mods = doc.modsString(for: draft.flags) }
+        r.dispatcher = draft.dispatcher
+        r.args = draft.args
+        r.submap = draft.mode
+        return r
+    }
+
+    private var issue: (severity: ConfigDocument.Severity, message: String)? { candidate.flatMap { doc.issue($0) } }
+
+    private var changed: Bool {
+        guard let row = draft.row, let c = candidate else { return true }
+        return c.mods != row.mods || c.dispatcher != row.dispatcher || c.args != row.args || c.submap != row.submap
+    }
+
+    private var canSave: Bool { candidate != nil && issue?.severity != .error && changed }
+
+    // MARK: Head
+
+    /// The key as it is on the keyboard (wearing the new action), and how to press it.
+    private var head: some View {
+        let capScale = min(1, 96 / key.frame.width)
+        let preview = draft.dispatcher.isEmpty ? nil : KeyHint(code: code, dispatcher: draft.dispatcher, arg: draft.args, title: title)
+        var chords = [ConfigDocument.modifierCaps(draft.flags) + [KeyHintKeyboard.legend(key)]]
+        if let entry = modeEntry(draft.mode) { chords.insert(entry, at: 0) }
+        return HStack(spacing: 12) {
+            KeyHintKeyboard.keycap(key, hint: preview, scale: capScale)
+            VStack(alignment: .leading, spacing: 5) {
+                Text(title).font(Theme.heading(14)).oneLine()
+                    .foregroundStyle(draft.dispatcher.isEmpty ? Theme.inkMuted : Theme.ink)
+                HStack(spacing: 5) {
+                    ForEach(Array(chords.enumerated()), id: \.offset) { i, keys in
+                        if i > 0 { Text("then").font(Theme.body(11.5)).foregroundStyle(Theme.inkMuted).oneLine() }
+                        Kbd(keys: keys)
+                    }
+                }
+                .fixedSize()
             }
             Spacer(minLength: 0)
-            text
         }
-        .foregroundStyle(ink)
-        .padding(.horizontal, unit * 0.1).padding(.vertical, unit * 0.08)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: trailing ? .trailing : .leading)
+        .padding(.horizontal, 8).padding(.top, 8).padding(.bottom, 10)
+        .animation(.easeOut(duration: Theme.fast), value: title)
+    }
+
+    /// The keys that enter a mode, e.g. ⌘⇪, so the chord reads "⌘⇪ then L".
+    private func modeEntry(_ mode: String) -> [String]? {
+        guard !mode.isEmpty, let a = doc.keyActions(in: "").first(where: {
+            $0.row.dispatcher == "submap" && $0.arg.lowercased() == mode.lowercased()
+        }) else { return nil }
+        return ConfigDocument.modifierCaps(a.flags) + [ConfigDocument.capLabel(a.key)]
+    }
+
+    // MARK: Menu
+
+    @ViewBuilder private var menu: some View {
+        let query = draft.search.trimmingCharacters(in: .whitespaces)
+        VStack(spacing: 0) {
+            if query.isEmpty {
+                ForEach(MenuCategory.allCases) { categoryRow($0) }
+            } else {
+                let hits = results(query)
+                ForEach(hits) { a in
+                    MenuRow(action: { pick(a) }) {
+                        symbol(a.symbol)
+                        Text(a.title).oneLine()
+                        Spacer(minLength: 8)
+                        Text(MenuCategory(a).rawValue).foregroundStyle(Theme.inkFaint).oneLine().fixedSize()
+                    }
+                }
+                if hits.isEmpty {
+                    Text("No actions match “\(query)”").foregroundStyle(Theme.inkMuted).oneLine()
+                        .padding(.horizontal, 8).frame(maxWidth: .infinity, minHeight: Theme.rowHeight, alignment: .leading)
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    /// Every word of the query in the title (or the category), best eight.
+    private func results(_ query: String) -> [Action] {
+        let words = query.lowercased().split(separator: " ")
+        return Array(catalog.filter { a in
+            let text = (a.title + " " + MenuCategory(a).rawValue).lowercased()
+            return words.allSatisfy { text.contains($0) }
+        }.prefix(8))
+    }
+
+    private func pickFirstResult() {
+        let query = draft.search.trimmingCharacters(in: .whitespaces)
+        if query.isEmpty { save() } else if let first = results(query).first { pick(first) }
+    }
+
+    private func symbol(_ name: String) -> some View {
+        Image(systemName: name).font(.system(size: 12, weight: .medium)).foregroundStyle(Theme.inkMuted).frame(width: 18)
+    }
+
+    /// A category, with the chosen action on its right when it's in there. Hover or click opens its submenu.
+    private func categoryRow(_ c: MenuCategory) -> some View {
+        let current = action.map(MenuCategory.init) == c
+        return MenuRow(highlighted: draft.open == c, action: { draft.open = draft.open == c ? nil : c }) {
+            symbol(c.symbol)
+            Text(c.rawValue).oneLine().fixedSize()
+            Spacer(minLength: 8)
+            if current, let a = action {
+                Text(a.title).foregroundStyle(Theme.accentInk).oneLine()
+            }
+            Image(systemName: "chevron.right").font(.system(size: 9.5, weight: .semibold)).foregroundStyle(Theme.inkFaint)
+        }
+        .onHover { if $0 { draft.open = c } }
+        .anchorPreference(key: CategoryAnchor.self, value: .bounds) { [c: $0] }
+        .accessibilityLabel("\(c.rawValue) actions")
+    }
+
+    private func flyoutLayer(_ anchors: [MenuCategory: Anchor<CGRect>]) -> some View {
+        GeometryReader { g in
+            if let c = draft.open, let a = anchors[c] {
+                let r = g[a]
+                flyout(c)
+                    .fixedSize()
+                    .offset(x: flyoutLeading ? -Self.flyoutWidth - 2 : g.size.width + 2, y: r.minY - 4)
+                    .transition(.opacity)
+            }
+        }
+    }
+
+    /// One category's actions; numbered families (workspaces, layouts) are one row each, with the
+    /// number picked inline afterwards.
+    private func flyout(_ c: MenuCategory) -> some View {
+        VStack(spacing: 0) {
+            ForEach(Actions.menuEntries(catalog.filter { MenuCategory($0) == c })) { entry in
+                switch entry {
+                case .action(let a):
+                    MenuRow(action: { pick(a) }) {
+                        symbol(a.symbol)
+                        Text(a.title).oneLine()
+                        Spacer(minLength: 8)
+                        if isCurrent(a) { check }
+                    }
+                case .group(let name, let list):
+                    MenuRow(action: { pick(list.first(where: isCurrent) ?? list[0]) }) {
+                        symbol(list[0].symbol)
+                        Text(name).oneLine()
+                        Spacer(minLength: 8)
+                        if list.contains(where: isCurrent) { check } else {
+                            Text("\(list.count)").foregroundStyle(Theme.inkFaint).monospacedDigit()
+                        }
+                    }
+                }
+            }
+        }
+        .frame(width: Self.flyoutWidth)
+        .surface(.md, glass: true)
+    }
+
+    private var check: some View {
+        Image(systemName: "checkmark").font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.accentInk)
+    }
+
+    private func isCurrent(_ a: Action) -> Bool {
+        guard let action else { return false }
+        return action.dispatcher == a.dispatcher && action.args == a.args
+    }
+
+    private func pick(_ a: Action) {
+        let wasExec = draft.dispatcher == "exec"
+        draft.dispatcher = a.dispatcher
+        if a.dispatcher != "exec" { draft.args = a.args } else if !wasExec { draft.args = "" }
+        draft.open = nil
+        draft.search = ""
+    }
+
+    // MARK: Argument and options
+
+    private var hasArgument: Bool {
+        draft.dispatcher == "exec" || action?.group != nil || (action == nil && !draft.dispatcher.isEmpty)
+    }
+
+    /// The command to run, the number in a family, or the raw dispatcher of a bind the menu doesn't know.
+    @ViewBuilder private var argument: some View {
+        HStack(spacing: 10) {
+            if draft.dispatcher == "exec" {
+                Text("Command").foregroundStyle(Theme.inkMuted).oneLine().fixedSize()
+                OTextField(placeholder: "open -na Terminal", text: $draft.args, mono: true)
+            } else if let a = action, let group = a.group {
+                let family = catalog.filter { $0.group == group }
+                Text(group).oneLine()
+                Spacer(minLength: 8)
+                OMenuPicker(title: group, options: family.map { ($0.id, $0.short ?? $0.title) },
+                            selection: Binding(get: { a.id }, set: { id in if let f = family.first(where: { $0.id == id }) { pick(f) } }))
+            } else {
+                Text("\(draft.dispatcher) \(draft.args)").font(Theme.mono(12)).oneLine()
+                Spacer(minLength: 8)
+                if let row = draft.row { OButton("Edit in Shortcuts", size: .sm) { reveal(row) } }
+            }
+        }
+        .font(Theme.body(13))
+        .padding(.horizontal, 8).frame(minHeight: 40)
+        .onHover { if $0 { draft.open = nil } }
+    }
+
+    private var options: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 10) {
+                Text("Modifiers").foregroundStyle(Theme.inkMuted).oneLine()
+                Spacer(minLength: 8)
+                modifierToggles
+            }
+            .frame(height: 38)
+            if doc.submaps.count > 1 {
+                hairline
+                HStack(spacing: 10) {
+                    Text("Shortcut set").foregroundStyle(Theme.inkMuted).oneLine()
+                    Spacer(minLength: 8)
+                    OMenuPicker(title: "Shortcut set", options: doc.submaps.map { ($0, $0.isEmpty ? "Global" : "\($0.capitalized) mode") },
+                                selection: $draft.mode)
+                }
+                .frame(height: 40)
+            }
+        }
+        .font(Theme.body(13))
+        .padding(.horizontal, 8)
+        .onHover { if $0 { draft.open = nil } }
+    }
+
+    /// ⌃ ⌥ ⇧ ⌘ for this shortcut, as one track of toggles.
+    private var modifierToggles: some View {
+        let mods: [(NSEvent.ModifierFlags, String, String)] = [(.control, "⌃", "Control"), (.option, "⌥", "Option"),
+                                                               (.shift, "⇧", "Shift"), (.command, "⌘", "Command")]
+        return HStack(spacing: 2) {
+            ForEach(mods, id: \.1) { flag, symbol, name in
+                let on = draft.flags.contains(flag)
+                Button { withAnimation(Motion.spring) { draft.flags.formSymmetricDifference(flag) } } label: {
+                    Text(symbol).font(Theme.keys(12.5, .medium))
+                        .foregroundStyle(on ? Theme.onAccent : Theme.inkMuted)
+                        .frame(width: 30, height: 22)
+                        .background(Capsule().fill(on ? Theme.accent : .clear))
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .help(name)
+                .accessibilityLabel(name)
+                .accessibilityAddTraits(on ? [.isSelected, .isToggle] : .isToggle)
+            }
+        }
+        .padding(3)
+        .background(Capsule().fill(Theme.surfaceSunken))
+        .fixedSize()
+    }
+
+    /// What the key does with other modifiers in this set; a click shows that layer.
+    @ViewBuilder private var others: some View {
+        let list = doc.keyActions(in: model.mode).filter { $0.code == code && $0.flags != model.flags }
+            .sorted { $0.flags.rawValue < $1.flags.rawValue }
+        if !list.isEmpty {
+            hairline
+            VStack(alignment: .leading, spacing: 0) {
+                Text("With other modifiers").font(Theme.body(12, .medium)).foregroundStyle(Theme.inkMuted).oneLine()
+                    .padding(.horizontal, 8).padding(.top, 8).padding(.bottom, 2)
+                ForEach(list.prefix(4)) { a in
+                    MenuRow(action: {
+                        model.held = []
+                        withAnimation(.easeOut(duration: 0.15)) { model.picked = a.flags }
+                    }) {
+                        Kbd(keys: ConfigDocument.modifierCaps(a.flags) + [KeyHintKeyboard.legend(key)]).fixedSize()
+                        Circle().fill(KeyHint(a).group.color).frame(width: 7, height: 7)
+                        Text(a.title).oneLine()
+                        Spacer(minLength: 0)
+                    }
+                    .help("Show \(ConfigDocument.modifierCaps(a.flags).joined()) shortcuts")
+                }
+            }
+            .padding(.bottom, 4)
+        }
+    }
+
+    // MARK: Actions
+
+    private var actions: some View {
+        HStack(spacing: 6) {
+            if let row = draft.row, !draft.isRange {
+                OButton("Remove", variant: .ghostDanger, size: .sm) { remove(row) }
+            }
+            Spacer(minLength: 8)
+            OButton("Cancel", size: .sm) { close() }
+                .keyboardShortcut(.cancelAction)
+            if draft.isRange, let row = draft.row {
+                OButton("Edit in Shortcuts", icon: "arrow.right", variant: .primary, size: .sm) { reveal(row) }
+            } else {
+                OButton("Save", variant: .primary, size: .sm, shortcut: ["↩"]) { save() }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(!canSave)
+            }
+        }
+        .padding(.horizontal, 4).padding(.top, 8).padding(.bottom, 4)
+    }
+
+    private func close() {
+        withAnimation(.easeOut(duration: Theme.fast)) { model.selected = nil }
+    }
+
+    private func remove(_ row: BindRow) {
+        withAnimation(Motion.easeOut) { doc.binds.removeAll { $0.id == row.id } }
+        close()
+    }
+
+    /// Writes the bind, then shows the layer and set it landed in.
+    private func save() {
+        guard canSave, let r = candidate else { return }
+        if let i = doc.binds.firstIndex(where: { $0.id == r.id }) { doc.binds[i] = r } else { doc.binds.append(r) }
+        let flags = draft.flags, mode = draft.mode
+        close()
+        if mode != model.mode {
+            model.mode = mode
+            DispatchQueue.main.async { model.held = []; model.picked = flags } // after the set change picks its busiest layer
+        } else if flags != model.flags {
+            model.held = []
+            withAnimation(.easeOut(duration: 0.15)) { model.picked = flags }
+        }
     }
 }
 
-// MARK: - Key popover
-
-/// Change, remove or add the shortcut on one key, and see what the key does with other modifiers.
-private struct KeyPopover: View {
-    @ObservedObject var doc: ConfigDocument
-    @ObservedObject var model: ShortcutMapModel
-    let key: MacKeyboard.Key
-    let code: UInt16
-    let reveal: (BindRow) -> Void
+/// A menu row: label on a rounded hover fill, the full width of the surface.
+private struct MenuRow<Label: View>: View {
+    var highlighted = false
+    let action: () -> Void
+    @ViewBuilder let label: Label
+    @StateObject private var hover = Flag()
 
     var body: some View {
-        let flags = model.flags
-        let mine = doc.keyActions(in: model.mode).filter { $0.code == code }
-        let here = mine.filter { $0.flags == flags }
-        let others = mine.filter { $0.flags != flags }
-            .sorted { $0.flags.rawValue < $1.flags.rawValue }
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                Kbd(keys: ConfigDocument.modifierCaps(flags) + [model.legend(key)])
-                Spacer(minLength: 0)
-                Text(model.mode.isEmpty ? "Global" : "\(model.mode.capitalized) mode").kicker(Theme.inkMuted)
-            }
-            if here.isEmpty {
-                addSection(flags)
-            } else {
-                ForEach(here) { a in current(a) }
-            }
-            if !others.isEmpty {
-                Rectangle().fill(Theme.hairline).frame(height: 1)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("With other modifiers").font(Theme.body(12, .medium)).foregroundStyle(Theme.inkMuted)
-                        .padding(.bottom, 4)
-                    ForEach(others) { a in
-                        Button {
-                            model.held = []
-                            withAnimation(.easeOut(duration: 0.15)) { model.picked = a.flags }
-                        } label: {
-                            HStack(spacing: 8) {
-                                Kbd(keys: ConfigDocument.modifierCaps(a.flags) + [model.legend(key)])
-                                Circle().fill(a.category.color).frame(width: 7, height: 7)
-                                Text(a.title).font(Theme.body(13)).oneLine()
-                                Spacer(minLength: 0)
-                            }
-                            .padding(.vertical, 3)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .help("Show \(ConfigDocument.modifierCaps(a.flags).joined()) shortcuts")
-                    }
-                }
-            }
+        Button(action: action) {
+            HStack(spacing: 8) { label }
+                .font(Theme.body(13)).foregroundStyle(Theme.ink)
+                .padding(.horizontal, 8).frame(height: Theme.rowHeight)
+                .background(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+                    .fill(hover.on || highlighted ? Theme.wellHover : .clear))
+                .contentShape(Rectangle())
         }
-        .padding(16)
-        .frame(width: 320)
-        .font(Theme.body())
-        .foregroundStyle(Theme.ink)
-    }
-
-    @ViewBuilder private func current(_ a: ConfigDocument.KeyAction) -> some View {
-        let i = doc.binds.firstIndex { $0.id == a.row.id }
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 10) {
-                Image(systemName: a.symbol).font(.system(size: 12, weight: .semibold)).foregroundStyle(.white)
-                    .frame(width: 26, height: 26).background(Circle().fill(a.category.color.gradient))
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(a.title).font(Theme.heading()).oneLine()
-                    Text(a.category.rawValue).font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine()
-                }
-                Spacer(minLength: 0)
-            }
-            if a.isRange {
-                Text("Part of “\(doc.title(a.row))”. Edit its keys in Shortcuts.")
-                    .font(Theme.body(12)).foregroundStyle(Theme.inkMuted).fixedSize(horizontal: false, vertical: true)
-            } else if let i, doc.binds[i].dispatcher == "exec" {
-                OTextField(placeholder: "open -na Terminal", text: $doc.binds[i].args, mono: true)
-            }
-            if let issue = doc.issue(a.row) {
-                OStatus(kind: issue.severity == .error ? .danger : .warning, text: issue.message)
-            }
-            HStack(spacing: 8) {
-                if let i, !a.isRange {
-                    Menu {
-                        ActionMenuItems { pick in
-                            doc.binds[i].dispatcher = pick.dispatcher
-                            doc.binds[i].args = pick.args
-                        }
-                    } label: {
-                        Text("Change Action").font(Theme.body(12.5, .medium)).foregroundStyle(Theme.ink)
-                            .padding(.horizontal, 11).frame(height: 26)
-                            .background(Capsule().fill(Theme.surfaceSunken))
-                    }
-                    .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
-                    OButton("Remove", variant: .danger, size: .sm) {
-                        withAnimation(Motion.easeOut) { doc.binds.removeAll { $0.id == a.row.id } }
-                    }
-                } else {
-                    OButton("Edit in Shortcuts", icon: "arrow.right", size: .sm) { reveal(a.row) }
-                }
-            }
-        }
-    }
-
-    @ViewBuilder private func addSection(_ flags: NSEvent.ModifierFlags) -> some View {
-        if model.mode.isEmpty && flags.subtracting(.shift).isEmpty {
-            Text("Global shortcuts need ⌥, ⌃ or ⌘ so they don't block typing. Pick a modifier first, or use window mode for single keys.")
-                .font(Theme.body(12.5)).foregroundStyle(Theme.inkMuted).fixedSize(horizontal: false, vertical: true)
-        } else if let name = ConfigDocument.keyName(for: code) {
-            Text("No shortcut yet").font(Theme.body(13.5)).foregroundStyle(Theme.inkMuted)
-            Menu {
-                ActionMenuItems { a in
-                    doc.binds.append(BindRow(mods: doc.modsString(for: flags), key: name, dispatcher: a.dispatcher, args: a.args,
-                                             submap: model.mode))
-                }
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "plus").font(.system(size: 11.5, weight: .semibold))
-                    Text("Add Shortcut")
-                }
-                .font(Theme.body(12.5, .medium)).foregroundStyle(Theme.onAccent)
-                .padding(.horizontal, 11).frame(height: 26)
-                .background(Capsule().fill(Theme.accent))
-            }
-            .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
-        }
+        .buttonStyle(.plain)
+        .onHover { hover.on = $0 }
     }
 }
