@@ -10,6 +10,9 @@ final class Hotkeys {
     static let syntheticMarker: Int64 = 0x4859_5052
 
     var handler: ((KeyBinding) -> Void)?
+    /// Posted on the main queue each time a bind fires, with the `KeyBinding` as `userInfo["bind"]`,
+    /// so open views (the shortcut map) can flash its key.
+    static let didFire = Notification.Name("OuchHotkeyDidFire")
     /// Set while the settings window records a shortcut, so the combo reaches it instead of firing.
     var paused = false
     private var tables: [String: [UInt64: KeyBinding]] = [:] // submap → combo → bind ("" = global)
@@ -192,6 +195,7 @@ final class Hotkeys {
     }
 
     fileprivate func fire(_ b: KeyBinding) {
+        DispatchQueue.main.async { NotificationCenter.default.post(name: Self.didFire, object: nil, userInfo: ["bind": b]) }
         if b.dispatcher == "submap" {
             setSubmap(b.arg)
         } else {

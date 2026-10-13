@@ -37,20 +37,6 @@ enum ActionCategory: String, CaseIterable, Identifiable {
         case .custom: "curlybraces"
         }
     }
-    /// Tint for this kind of action on the shortcut map.
-    var color: Color {
-        switch self {
-        case .focus: .blue
-        case .move: .purple
-        case .layout: .teal
-        case .window: .orange
-        case .displays: .indigo
-        case .spaces: .green
-        case .commands: .gray
-        case .app: .pink
-        case .custom: .brown
-        }
-    }
 }
 
 struct Action: Identifiable {
@@ -679,6 +665,8 @@ final class ConfigDocument: ObservableObject {
         let code: UInt16
         let key: String
         let flags: NSEvent.ModifierFlags
+        /// This key's own argument (one of a range row's).
+        let arg: String
         let title: String
         let symbol: String
         let category: ActionCategory
@@ -699,7 +687,7 @@ final class ConfigDocument: ObservableObject {
                 let action = Actions.match(single)
                 let title = row.dispatcher == "exec" ? (p.arg.isEmpty ? "Run Command" : "Run “\(p.arg)”")
                     : action?.title ?? "\(row.dispatcher) \(p.arg)".trimmingCharacters(in: .whitespaces)
-                out.append(KeyAction(code: code, key: p.key, flags: f, title: title, symbol: action?.symbol ?? "curlybraces",
+                out.append(KeyAction(code: code, key: p.key, flags: f, arg: p.arg, title: title, symbol: action?.symbol ?? "curlybraces",
                                      category: action?.category ?? .custom, row: row))
             }
         }
