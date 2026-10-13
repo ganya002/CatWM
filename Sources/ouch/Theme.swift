@@ -434,6 +434,71 @@ struct MiniWindow: View {
     }
 }
 
+/// A made-up app for the demo windows. The tones are all low-saturation and alternate light and
+/// dark, so any two side by side read as different apps without clashing.
+struct DemoApp: Equatable {
+    let title: String
+    let dark: Bool
+    let r: Double, g: Double, b: Double
+
+    var color: Color { Color(red: r, green: g, blue: b) }
+
+    static let all: [DemoApp] = [
+        DemoApp(title: "Terminal", dark: true, r: 0.13, g: 0.13, b: 0.15),
+        DemoApp(title: "Notes", dark: false, r: 0.95, g: 0.95, b: 0.96),
+        DemoApp(title: "Music", dark: true, r: 0.2, g: 0.21, b: 0.26),
+        DemoApp(title: "Mail", dark: false, r: 0.88, g: 0.92, b: 0.97),
+        DemoApp(title: "Code", dark: true, r: 0.11, g: 0.15, b: 0.21),
+        DemoApp(title: "Messages", dark: false, r: 0.86, g: 0.94, b: 0.9),
+        DemoApp(title: "Photos", dark: true, r: 0.26, g: 0.19, b: 0.26),
+        DemoApp(title: "Calendar", dark: false, r: 0.98, g: 0.93, b: 0.89),
+        DemoApp(title: "Finder", dark: false, r: 0.92, g: 0.9, b: 0.98),
+        DemoApp(title: "Maps", dark: false, r: 0.89, g: 0.93, b: 0.85),
+        DemoApp(title: "Figma", dark: true, r: 0.16, g: 0.2, b: 0.18),
+        DemoApp(title: "Podcasts", dark: true, r: 0.24, g: 0.17, b: 0.14),
+    ]
+
+    /// A random app that isn't already on screen (unless every one is).
+    static func pick(avoiding taken: [DemoApp] = []) -> DemoApp {
+        (all.filter { !taken.contains($0) }.randomElement() ?? all.randomElement())!
+    }
+}
+
+/// A miniature app window like the real thing: traffic lights and a title on a flat tone. The main
+/// window wears a thin accent ring.
+struct DemoWindow: View {
+    let app: DemoApp
+    var main = false
+    var corner: CGFloat = 4
+
+    private static let lights = [Color(red: 1, green: 0.37, blue: 0.34), Color(red: 1, green: 0.74, blue: 0.18),
+                                 Color(red: 0.16, green: 0.79, blue: 0.25)]
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: corner, style: .continuous)
+        GeometryReader { g in
+            HStack(spacing: 2.5) {
+                ForEach(0..<3, id: \.self) { i in
+                    Circle().fill(Self.lights[i].opacity(app.dark ? 0.85 : 1)).frame(width: 4, height: 4)
+                }
+                if g.size.width > 56 {
+                    Text(app.title)
+                        .font(Theme.body(6.5, .semibold))
+                        .foregroundStyle(app.dark ? Color.white.opacity(0.6) : Color.black.opacity(0.55))
+                        .lineLimit(1)
+                        .padding(.leading, 3)
+                }
+            }
+            .padding(.horizontal, 5).padding(.top, 5)
+            .opacity(g.size.width > 26 && g.size.height > 14 ? 1 : 0)
+        }
+        .background(app.color)
+        .clipShape(shape)
+        .overlay(shape.strokeBorder(main ? Color.accentColor : (app.dark ? Color.white : Color.black).opacity(0.1),
+                                    lineWidth: main ? 1.25 : 0.5))
+    }
+}
+
 /// Miniature of a layout, drawn with the real layout code. When the layout changes, the windows
 /// spring to their new places.
 struct LayoutThumbnail: View {

@@ -44,7 +44,6 @@ final class Tour {
 
     private var helper: Process?
     private var helperPID: pid_t = 0
-    private var checklist: Set<Int> = []
 
     private var panel: OverlayPanel!
     private var host: FirstClickHostingView<CoachCardView>!
@@ -99,7 +98,9 @@ final class Tour {
         guard let exe = Bundle.main.executableURL else { return }
         let p = Process()
         p.executableURL = exe
-        p.arguments = ["practice", String(getpid()), desk ?? "", other ?? ""] // for the windows' workspace badges
+        // Picked here so both processes agree on the titles, which is how the windows are told apart.
+        let apps = PracticeDesk.pickApps()
+        p.arguments = ["practice", String(getpid()), apps.map(\.title).joined(separator: ",")]
         p.terminationHandler = { [weak self] _ in
             DispatchQueue.main.async { self?.end() } // quit from its menu: the tour is over too
         }
@@ -111,8 +112,7 @@ final class Tour {
         helperPID = p.processIdentifier
         var map: [String: String] = [:]
         if let desk {
-            for k in PracticeDesk.deskKinds { map[PracticeDesk.title(k)] = desk }
-            for k in PracticeDesk.otherKinds { map[PracticeDesk.title(k)] = other ?? desk }
+            for (i, app) in apps.enumerated() { map[app.title] = i < PracticeDesk.deskCount ? desk : other ?? desk }
         }
         wm.practice = (helperPID, map)
         // Started with Process rather than LaunchServices, so no launch notification may arrive: look for its windows.
@@ -160,10 +160,10 @@ final class Tour {
         var out: [Step] = []
         let deskText: String
         if let desk, let other {
-            deskText = "\(Self.count(PracticeDesk.deskKinds.count)) practice windows are on workspace \(desk) and \(Self.count(PracticeDesk.otherKinds.count).lowercased()) on workspace \(other). The badge in each title bar says which."
+            deskText = "\(Self.count(PracticeDesk.deskCount)) practice windows are on workspace \(desk) and \(Self.count(PracticeDesk.otherCount).lowercased()) more wait on workspace \(other)."
                 + (original.map { " Your windows wait on workspace \($0) until you finish." } ?? "")
         } else {
-            deskText = "\(Self.count(PracticeDesk.Kind.allCases.count)) practice windows are open. Nothing you do here changes your apps."
+            deskText = "\(Self.count(PracticeDesk.deskCount + PracticeDesk.otherCount)) practice windows are open. Nothing you do here changes your apps."
         }
         out.append(Step(id: .intro, kicker: "Keyboard tour", title: "Meet your practice desk", text: deskText, button: "Show me"))
 
@@ -272,14 +272,6 @@ final class Tour {
         guard !done, index < steps.count, satisfied(step.id, e) else { return }
         done = true
         flash()
-        switch step.id {
-        case .focus: tick(0)
-        case .move: tick(1)
-        case .resize: tick(2)
-        case .zoom: tick(3)
-        case .visit: tick(4)
-        default: break
-        }
         render()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) { [weak self] in self?.advance() }
     }
@@ -354,11 +346,6 @@ final class Tour {
     private func flash() {
         model.pressed = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.24) { [weak self] in self?.model.pressed = false }
-    }
-
-    private func tick(_ item: Int) {
-        checklist.insert(item)
-        PracticeDesk.postProgress(checklist)
     }
 
     private func advance() {
