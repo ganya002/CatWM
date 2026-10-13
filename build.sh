@@ -26,6 +26,7 @@ if [ -n "$OUCH_CHANNEL" ]; then
 fi
 cp -R Resources/Fonts "$APP/Contents/Resources/"  # Chillax (ITF), registered at launch
 cp Resources/Icon/AppIcon.icns "$APP/Contents/Resources/"
+cp -R Resources/AgentDocs "$APP/Contents/Resources/"  # docs for AI agents; `ouch docs` prints the path
 # Sparkle ships as a prebuilt framework inside the SwiftPM artifact bundle.
 SPARKLE=$(find .build/artifacts -type d -name Sparkle.framework -path '*macos-arm64_x86_64*' | head -1)
 ditto "$SPARKLE" "$APP/Contents/Frameworks/Sparkle.framework"
