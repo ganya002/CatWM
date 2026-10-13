@@ -18,13 +18,23 @@ enum Layout: String, CaseIterable {
         case .row: "Row"
         case .floating: "Floating"
         case .bsp: "Binary Space Partitioning"
-        case .threeColumnLeft: "3Column Left"
-        case .threeColumnMiddle: "3Column Middle"
-        case .threeColumnRight: "3Column Right"
+        case .threeColumnLeft: "3-Column Left"
+        case .threeColumnMiddle: "3-Column Middle"
+        case .threeColumnRight: "3-Column Right"
         case .twoPane: "Two Pane"
         case .twoPaneRight: "Two Pane Right"
         case .widescreenTall: "Widescreen Tall"
         case .widescreenTallRight: "Widescreen Tall Right"
+        }
+    }
+
+    /// For tight spots like the cycle chips, where the full name would truncate.
+    var shortTitle: String {
+        switch self {
+        case .bsp: "BSP"
+        case .widescreenTall: "Wide Tall"
+        case .widescreenTallRight: "Wide Tall Right"
+        default: title
         }
     }
 

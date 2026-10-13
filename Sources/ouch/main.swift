@@ -41,6 +41,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else if !wasTrusted {
             Permissions.request()
         }
+        Tips.shared.launched()
         updateIcon()
         // Permission can be granted later, or silently revoked (a rebuild changes the signature).
         watchdog = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in self?.checkPermission() }

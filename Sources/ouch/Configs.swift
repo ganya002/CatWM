@@ -71,7 +71,7 @@ enum ConfigSheet: Identifiable {
 /// settings: changes are written into it, except for built-ins, which get a copy of the edited settings.
 final class ConfigLibrary: ObservableObject {
     static let builtInPrefix = "builtin."
-    static let reservedNames: [ConfigKind: [String]] = [.keyboard: ["VIM", "WASD"], .animation: ["Default"], .full: ["Default"]]
+    static let reservedNames: [ConfigKind: [String]] = [.keyboard: ["Vim", "WASD"], .animation: ["Default"], .full: ["Default"]]
 
     @Published private(set) var custom: [SavedConfig] = []
     @Published private(set) var active: [ConfigKind: String] = [:]
@@ -102,7 +102,7 @@ final class ConfigLibrary: ObservableObject {
             SavedConfig(id: builtInPrefix + id, kind: kind, name: name, symbol: nil, colorHex: nil, text: text, keyboardID: kb, animationID: an)
         }
         return [
-            make("keyboard.default", .keyboard, "VIM", def.keyboardText()),
+            make("keyboard.default", .keyboard, "Vim", def.keyboardText()),
             make("keyboard.wasd", .keyboard, "WASD", wasd.keyboardText()),
             make("animation.default", .animation, "Default", def.animationText()),
             make("full.default", .full, "Default", def.serialize(), kb: builtInPrefix + "keyboard.default", an: builtInPrefix + "animation.default"),

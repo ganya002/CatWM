@@ -33,7 +33,7 @@ struct GeneralPane: View {
             }
 
             OGroup("Tiling") {
-                OSwitchRow("Tiling", description: s.tilingEnabled ? "Windows are arranged for you" : "Paused: windows stay where they are",
+                OSwitchRow("Tile windows", description: s.tilingEnabled ? "Windows are arranged for you" : "Paused: windows stay where they are",
                            isOn: Binding(get: { ui.status.tilingEnabled }, set: { _ in
                                WindowManager.shared.toggleTiling()
                                ui.refreshStatus()
@@ -79,7 +79,7 @@ struct GeneralPane: View {
             OGroup("Reset") {
                 ORow("Reset all settings", description: "Layouts, gaps, floating apps and shortcuts. Your main modifier stays.") {
                     OButton("Reset…", variant: .danger, size: .sm) {
-                        if confirm("Reset all settings to their defaults?", "Layouts, gaps, floating apps and shortcuts are all reset. Your main modifier is kept.") {
+                        if confirm("Reset all settings to their defaults?", "Resets layouts, gaps, floating apps and shortcuts. Your main modifier is kept.") {
                             doc.resetEverything()
                         }
                     }
@@ -226,7 +226,7 @@ struct LayoutPane: View {
                 .setting("layout.displays", ui)
             }
 
-            OGroup("Cycle", footer: "Next Layout steps through these in order. Click a layout below to add or remove it.") {
+            OGroup("Cycle", footer: "Next Layout steps through these in order. Click one below to add or remove it.") {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 10) {
                         ForEach(Array(c.layouts.enumerated()), id: \.element) { i, l in
@@ -338,15 +338,16 @@ private struct CycleChip: View {
                         .offset(x: -6, y: -6)
                 }
             ZStack {
-                Text(layout.title).font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine().opacity(hover.on ? 0 : 1)
+                Text(layout.shortTitle).font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine().opacity(hover.on ? 0 : 1)
                 HStack(spacing: 2) {
                     arrow("chevron.left", enabled: index > 0, help: "Move earlier") { move(-1) }
                     arrow("chevron.right", enabled: index < count - 1, help: "Move later") { move(1) }
                 }
                 .opacity(hover.on ? 1 : 0)
             }
-            .frame(width: 80, height: 18)
+            .frame(width: 96, height: 18)
         }
+        .help(layout.title)
         .onHover { hover.on = $0 }
         .animation(.easeOut(duration: Theme.fast), value: hover.on)
     }
@@ -356,7 +357,7 @@ private struct CycleChip: View {
             Image(systemName: symbol).font(.system(size: 9, weight: .bold))
                 .foregroundStyle(enabled ? Theme.ink : Theme.inkFaint.opacity(0.5))
                 .frame(width: 26, height: 18)
-                .background(Capsule().fill(Theme.surfaceSunken))
+                .background(Capsule().fill(Theme.well))
                 .contentShape(Capsule())
         }
         .buttonStyle(PressScale(scale: 0.88))
@@ -380,7 +381,7 @@ private struct LayoutCell: View {
                 .scaleEffect(hover.on ? 1.06 : 1)
                 .padding(6)
                 .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
-                    .fill(on ? Theme.accentSoft : hover.on ? Theme.hover : .clear))
+                    .fill(on ? Theme.accentSoft : hover.on ? Theme.wellHover : .clear))
                 .overlay(alignment: .topLeading) {
                     ImpactBurst(trigger: on, size: 18).offset(x: -6, y: -6).opacity(on ? 1 : 0)
                 }
@@ -669,7 +670,7 @@ struct WindowsPane: View {
             }
             .font(Theme.body(12.5, .medium)).foregroundStyle(Theme.ink)
             .padding(.horizontal, 11).frame(height: 26)
-            .background(Capsule().fill(Theme.surfaceSunken))
+            .background(Capsule().fill(Theme.well))
             .contentShape(Capsule())
         }
         .menuStyle(.button)
@@ -928,7 +929,7 @@ private struct PresetTile: View {
             .padding(.vertical, 12).padding(.horizontal, 8)
             .frame(maxWidth: .infinity)
             .background(RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(selected ? Theme.accent : hover.on ? Theme.hover : Theme.surfaceSunken))
+                .fill(selected ? Theme.accent : hover.on ? Theme.wellHover : Theme.well))
             .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(PressScale())
@@ -998,7 +999,7 @@ struct ShortcutsPane: View {
                 if doc.submaps.count > 1 {
                     OSegmented(title: "Shortcut set", options: doc.submaps.map { ($0, $0.isEmpty ? "Global" : "\($0.capitalized) mode") },
                                selection: $ui.bindMode)
-                        .help("Global shortcuts work everywhere. Mode shortcuts need the mode on, so single keys are fine there.")
+                        .help("Global shortcuts work everywhere. Mode shortcuts only work in the mode, so single keys are fine.")
                 }
                 OTextField(placeholder: "Filter shortcuts", text: $ui.shortcutFilter).frame(maxWidth: 200)
                 Spacer(minLength: 0)
@@ -1043,7 +1044,7 @@ struct ShortcutsPane: View {
                     }
                 }
                 .setting("shortcuts.wasd", ui)
-                ORow("Default shortcuts", description: "The VIM-style set Ouch ships with") {
+                ORow("Default shortcuts", description: "The Vim-style set Ouch ships with") {
                     OButton("Restore…", variant: .danger, size: .sm) {
                         if confirm("Restore the default keyboard shortcuts?", "Your own shortcuts will be replaced.") {
                             doc.restoreDefaultShortcuts()

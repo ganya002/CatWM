@@ -81,13 +81,13 @@ struct WelcomeView: View {
                 .padding(.leading, -6).padding(.vertical, -6) // the icon artwork has its own transparent margin
             Text("Welcome to Ouch").font(Theme.display(40)).tracking(-1).oneLine()
                 .padding(.top, 16).padding(.bottom, 8)
-            Text("Ouch needs a few permissions to tile. Each button opens System Settings with a guide beside it.")
+            Text("Each button opens System Settings, with steps beside it.")
                 .font(Theme.body(13.5)).lineSpacing(2).foregroundStyle(Theme.inkMuted)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.bottom, 16)
             OGroup {
                 permission(granted: model.accessibility, symbol: "lock", title: "Accessibility", required: true,
-                           detail: "Moves windows and hears your shortcuts", primary: true, action: model.allowAccessibility)
+                           detail: "Moves windows, reads shortcuts", primary: true, action: model.allowAccessibility)
                 permission(granted: model.inputMonitoring, symbol: "keyboard", title: "Input Monitoring", required: false,
                            detail: "Makes Caps Lock shortcuts instant", primary: false, action: model.allowInputMonitoring)
                 permission(granted: model.login, symbol: "power", title: "Open at login", required: false,
@@ -101,7 +101,7 @@ struct WelcomeView: View {
                 OButton("Continue", variant: .primary, size: .lg, shortcut: ["↩"], action: model.next)
                     .disabled(!model.accessibility)
                     .help(model.accessibility ? "" : "Allow Accessibility first")
-                    .keyboardShortcut(.defaultAction)
+                    .keyboardShortcut(model.page == .permissions ? .defaultAction : nil) // both pages stay laid out
             }
         }
     }
@@ -109,14 +109,13 @@ struct WelcomeView: View {
     private func permission(granted: Bool, symbol: String, title: String, required: Bool,
                             detail: String, primary: Bool, action: @escaping () -> Void) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: granted ? "checkmark.circle.fill" : symbol)
-                .font(.system(size: 16, weight: .medium))
-                .foregroundStyle(granted ? Theme.success : Theme.accentInk)
+            // The row's own symbol stays (a lock opens); the trailing status carries the check, so the
+            // row doesn't show two of them.
+            Image(systemName: granted && symbol == "lock" ? "lock.open" : symbol)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Theme.accentInk)
                 .contentTransition(.symbolEffect(.replace))
                 .frame(width: 22)
-                .overlay(alignment: .topLeading) {
-                    ImpactBurst(trigger: granted, size: 18).offset(x: -9, y: -9).opacity(granted ? 1 : 0)
-                }
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 6) {
                     Text(title).font(Theme.body(14)).oneLine()
@@ -126,10 +125,16 @@ struct WelcomeView: View {
                 Text(detail).font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine()
             }
             Spacer(minLength: 0)
-            if granted {
-                OStatus(kind: .success, text: "Granted").transition(.opacity.combined(with: .scale(scale: 0.9)))
-            } else {
-                OButton("Allow…", variant: primary ? .primary : .secondary, size: .sm, action: action)
+            ZStack(alignment: .leading) {
+                if granted {
+                    OStatus(kind: .success, text: symbol == "power" ? "On" : "Granted")
+                        .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                } else {
+                    OButton("Allow…", variant: primary ? .primary : .secondary, size: .sm, action: action)
+                }
+            }
+            .overlay(alignment: .leading) { // outlives the swap, so it sees `granted` change
+                ImpactBurst(trigger: granted, size: 16).offset(x: -10, y: -10).opacity(granted ? 1 : 0)
             }
         }
         .frame(minHeight: 52)
@@ -142,7 +147,7 @@ struct WelcomeView: View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Pick your keys").font(Theme.display(40)).tracking(-1).oneLine()
                 .padding(.top, 2).padding(.bottom, 8)
-            Text("They move windows only in window mode, so typing is never in the way. Switch any time under Configs.")
+            Text("They only work in window mode, so typing is never affected. Change them later in Configs.")
                 .font(Theme.body(13.5)).lineSpacing(2).foregroundStyle(Theme.inkMuted)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.bottom, 22)
@@ -159,7 +164,7 @@ struct WelcomeView: View {
                 Spacer(minLength: 0)
                 OButton("Skip tour", variant: .ghost, action: model.skip)
                 OButton("Start the tour", variant: .primary, size: .lg, shortcut: ["↩"], action: model.start)
-                    .keyboardShortcut(.defaultAction)
+                    .keyboardShortcut(model.page == .keys ? .defaultAction : nil)
             }
         }
     }
@@ -168,7 +173,7 @@ struct WelcomeView: View {
     private func dots(_ current: Int) -> some View {
         HStack(spacing: 6) {
             ForEach(0..<2, id: \.self) { i in
-                Capsule().fill(i == current ? Theme.accent : Theme.hairline)
+                Capsule().fill(i == current ? Theme.accent : Theme.inkFaint.opacity(0.45)) // hairline vanished on raised dark
                     .frame(width: i == current ? 16 : 6, height: 6)
             }
         }
@@ -259,18 +264,18 @@ struct WordmarkView: View {
                     ImpactBurst(trigger: model.landed, size: size * 0.45, delay: 0.75).offset(x: -size * 0.3, y: -size * 0.15)
                 }
             tagline(max(16, min(22, size / 6)))
-                .foregroundStyle(Color.white.opacity(0.88))
+                .foregroundStyle(Color.white.opacity(0.92))
+                .shadow(color: .black.opacity(0.45), radius: 8, y: 2) // reads over the tiles behind it
                 .opacity(model.subtitle ? 1 : 0)
                 .animation(.easeOut(duration: 0.9), value: model.subtitle)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    /// "Wonderful *hyprland* inspired tile manager for macOS.", light, with "hyprland" at 500 in Hyprland's blue.
+    /// "*Hyprland*-style tiling for macOS.", light, with "Hyprland" at 500 in Hyprland's blue.
     private func tagline(_ pt: CGFloat) -> Text {
-        Text("Wonderful ").font(Theme.body(pt, .light))
-            + Text("hyprland").font(Theme.body(pt, .medium)).foregroundColor(hyprlandBlue)
-            + Text(" inspired tile manager for macOS.").font(Theme.body(pt, .light))
+        Text("Hyprland").font(Theme.body(pt, .medium)).foregroundColor(hyprlandBlue)
+            + Text("-style tiling for macOS.").font(Theme.body(pt, .light))
     }
 }
 
@@ -324,11 +329,19 @@ struct CoachCardView: View {
                 Image(systemName: model.final ? "checkmark.circle.fill" : model.recall ? "brain" : "keyboard")
                     .font(.system(size: 13, weight: .medium))
                     .contentTransition(.symbolEffect(.replace))
-                Text(model.kicker).kicker(Theme.onAccent).oneLine()
+                // The count never truncates; a long chapter name gives way first.
+                let parts = model.kicker.components(separatedBy: " · ")
+                HStack(spacing: 0) {
+                    Text(parts[0]).kicker(Theme.onAccent).oneLine().fixedSize()
+                    if parts.count > 1 {
+                        Text(" · " + parts.dropFirst().joined(separator: " · ")).kicker(Theme.onAccent).opacity(0.75).oneLine()
+                    }
+                }
                 Spacer(minLength: 8)
                 if model.canHead {
-                    OButton(model.headLabel, icon: model.headSymbol, variant: .ghost, size: .sm, onAccent: true, action: model.headAction)
-                        .padding(.trailing, -8)
+                    // The Surface head's close slot: Skip (×) or Pause, named in the tooltip.
+                    OIconButton(symbol: model.headSymbol ?? "xmark", label: model.headLabel, onAccent: true, action: model.headAction)
+                        .padding(.trailing, -6)
                 }
             }
             .frame(minHeight: 22)
@@ -384,13 +397,13 @@ struct CoachCardView: View {
                 Button(action: model.reveal) {
                     HStack(spacing: 6) {
                         Image(systemName: "lightbulb").breatheEffect()
-                        Text("Hint").font(Theme.body(13, .medium))
+                        Text("Hint")
                     }
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(OButtonStyle(variant: .ghost, size: .sm, onAccent: true))
                 .help("Show the keys")
             } else {
-                Button(action: model.tryKeys) { caps.contentShape(Rectangle()) }
+                Button(action: model.tryKeys) { caps.fixedSize().contentShape(Rectangle()) }
                     .buttonStyle(.plain)
                     .help("Press the keys, or click them.")
                 status
@@ -405,9 +418,12 @@ struct CoachCardView: View {
                     Kbd(keys: [k], large: true, pressed: model.capsDone[i], onAccent: true)
                         .overlay(alignment: .topTrailing) {
                             if model.capsDone[i] {
-                                Image(systemName: "checkmark.circle.fill").font(.system(size: 12, weight: .semibold))
-                                    .foregroundStyle(Theme.onAccent, Theme.accent)
-                                    .offset(x: 5, y: -5)
+                                // An `on-accent` disc with an accent tick: an accent disc vanished into the card.
+                                Image(systemName: "checkmark.circle.fill").font(.system(size: 14, weight: .semibold))
+                                    .symbolRenderingMode(.palette)
+                                    .foregroundStyle(Theme.accent, Theme.onAccent)
+                                    .background(Circle().fill(Theme.accent).padding(-1.5))
+                                    .offset(x: 6, y: -6)
                                     .transition(.symbolEffect(.appear))
                             }
                         }
@@ -419,22 +435,34 @@ struct CoachCardView: View {
         }
     }
 
+    /// The live state beside the caps. When a long chord leaves no room for the words, only the symbol
+    /// shows (with the words as its tooltip) rather than a truncated "Pre…".
     @ViewBuilder private var status: some View {
         if model.done {
-            HStack(spacing: 6) {
-                Image(systemName: "checkmark.circle.fill")
-                    .transition(.symbolEffect(.appear))
-                    .overlay(alignment: .topLeading) {
-                        ImpactBurst(trigger: model.done, size: 14, delay: 0.05).offset(x: -8, y: -8)
-                    }
-                Text(model.doneText).font(Theme.body(13.5, .medium)).oneLine()
+            let icon = Image(systemName: "checkmark.circle.fill")
+                .transition(.symbolEffect(.appear))
+                .overlay(alignment: .topLeading) {
+                    ImpactBurst(trigger: model.done, size: 14, delay: 0.05).offset(x: -8, y: -8)
+                }
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 6) {
+                    icon
+                    Text(model.doneText).font(Theme.body(13.5, .medium)).oneLine().fixedSize()
+                }
+                icon
             }
+            .help(model.doneText)
             .transition(.opacity.combined(with: .scale(scale: 0.8)))
         } else {
-            HStack(spacing: 6) {
-                Image(systemName: "cursorarrow.rays").symbolEffect(.pulse)
-                Text("Press it now").font(Theme.body(13)).oneLine()
+            let icon = Image(systemName: "cursorarrow.rays").symbolEffect(.pulse)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 6) {
+                    icon
+                    Text("Press it now").font(Theme.body(13)).oneLine().fixedSize()
+                }
+                icon
             }
+            .help("Press it now")
             .opacity(0.8)
         }
     }
@@ -513,8 +541,8 @@ struct MenuBarTipView: View {
     private var detail: String? {
         switch model.state {
         case .good: nil
-        case .move: "Items further left hide first. Drag Ouch right in Control Center › Edit Controls."
-        case .hidden: "Drag Ouch right, near the clock, in Control Center › Edit Controls."
+        case .move: "Items on the left hide first. Move Ouch right in Control Center › Edit Controls."
+        case .hidden: "Move it right, near the clock, in Control Center › Edit Controls."
         }
     }
 }

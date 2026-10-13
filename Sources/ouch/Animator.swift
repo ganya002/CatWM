@@ -83,6 +83,7 @@ final class Animator {
 
     private func land(_ m: Move) {
         m.window.setFrame(m.to)
+        CursorRefresh.soon()
         quietUntil[m.window.id] = CACurrentMediaTime() + 0.4
         EnhancedUI.resume(m.window.pid)
         // Many apps apply frames asynchronously or snap to their own grid; check once it settles.
@@ -110,6 +111,36 @@ final class Animator {
             w.setPosition(o)
         }
         EnhancedUI.resume(w.pid)
+    }
+}
+
+/// macOS only picks the pointer's shape when the mouse moves. Windows we move, resize or park under a
+/// still pointer, focus we hand over, and `CGWarpMouseCursorPosition` (which sends no move) all leave
+/// the old shape behind: an I-beam over a button, say, until the mouse is nudged. A synthetic move at
+/// the same spot makes the window under it set its cursor again. Coalesced, since a retile lands many
+/// windows at once.
+enum CursorRefresh {
+    private static var work: DispatchWorkItem?
+
+    static func soon(after delay: Double = 0.08) {
+        work?.cancel()
+        let w = DispatchWorkItem { post() }
+        work = w
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: w)
+    }
+
+    private static func post() {
+        guard NSEvent.pressedMouseButtons == 0, // not mid-drag
+              let here = CGEvent(source: nil)?.location,
+              let e = CGEvent(mouseEventSource: CGEventSource(stateID: .hidSystemState), mouseType: .mouseMoved,
+                              mouseCursorPosition: here, mouseButton: .left) else { return }
+        e.setIntegerValueField(.eventSourceUserData, value: Hotkeys.syntheticMarker)
+        e.post(tap: .cghidEventTap)
+    }
+
+    /// Whether a mouse event is one of ours, so focus follows mouse doesn't act on it.
+    static func isOurs(_ e: NSEvent) -> Bool {
+        e.cgEvent?.getIntegerValueField(.eventSourceUserData) == Hotkeys.syntheticMarker
     }
 }
 

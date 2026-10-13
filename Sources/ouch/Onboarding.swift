@@ -63,7 +63,7 @@ final class Onboarding {
             }
         }
         // Settings and macOS's alert close after a grant; then the card should be in front again.
-        PermissionGuide.shared.onGranted = { [weak self] in self?.welcome?.orderFrontRegardless() }
+        PermissionGuide.shared.onGranted = { [weak self] in self?.welcome?.makeKeyAndOrderFront(nil) }
         welcomeModel.skip = { [weak self] in self?.hideWelcome { self?.finish() } }
         welcomeModel.next = { [weak self] in
             guard AXIsProcessTrusted() else { Permissions.request(); return }
@@ -86,7 +86,7 @@ final class Onboarding {
         // Normal level: System Settings and the permission guide open on top of it.
         let p = OverlayPanel(frame: NSRect(x: v.midX - size.width / 2, y: v.midY - size.height / 2 - 12,
                                            width: size.width, height: size.height),
-                             level: .normal, clickThrough: false)
+                             level: .normal, clickThrough: false, keyable: true)
         p.contentView = host
         p.isMovableByWindowBackground = true
         welcome = p
@@ -103,7 +103,7 @@ final class Onboarding {
         if login, openedLoginItems {
             openedLoginItems = false
             if ax { Permissions.closeSettingsWindows() }
-            welcome?.orderFrontRegardless()
+            welcome?.makeKeyAndOrderFront(nil)
         }
     }
 
@@ -114,6 +114,7 @@ final class Onboarding {
         p.alphaValue = 0
         p.setFrame(end.offsetBy(dx: 0, dy: -14), display: false)
         p.orderFrontRegardless()
+        p.makeKey() // Return reaches the card's default button
         p.invalidateShadow()
         animate(0.5) {
             p.animator().alphaValue = 1
@@ -205,22 +206,24 @@ final class Onboarding {
 
     private func finish() {
         MenuBarTip.shared.hide()
-        let wasFirst = firstRun || !Self.isDone
         firstRun = false
         UserDefaults.standard.set(true, forKey: Self.doneKey)
         guard AXIsProcessTrusted() else { return }
-        HUD.shared.show("Tiling On", on: nil)
-        // Once, after the first run: where the longer tutorial lives.
-        if wasFirst { DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { Tips.shared.show(.tutorial) } }
+        HUD.shared.show("Tiling on", on: nil)
     }
 }
 
 // MARK: - Overlay plumbing
 
-/// Borderless, transparent panel for the onboarding overlays. It never becomes key, so keyboard
-/// focus stays with the practice windows; `clickThrough` lets the mouse reach what's beneath.
+/// Borderless, transparent panel for the onboarding overlays. Most never become key, so keyboard
+/// focus stays with the practice windows; `keyable` ones (cards that ask for an answer) take it so
+/// Return reaches their default button, without activating the app. `clickThrough` lets the mouse
+/// reach what's beneath.
 final class OverlayPanel: NSPanel {
-    init(frame: NSRect, level: NSWindow.Level, clickThrough: Bool) {
+    private let keyable: Bool
+
+    init(frame: NSRect, level: NSWindow.Level, clickThrough: Bool, keyable: Bool = false) {
+        self.keyable = keyable
         super.init(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         self.level = level
         isOpaque = false
@@ -231,7 +234,7 @@ final class OverlayPanel: NSPanel {
         hidesOnDeactivate = false
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
     }
-    override var canBecomeKey: Bool { false }
+    override var canBecomeKey: Bool { keyable }
     override var canBecomeMain: Bool { false }
 }
 
@@ -455,7 +458,8 @@ private final class Intro {
                 land(i, after: delay + 0.36, spark: i == 0)
             }
         case 3:
-            for i in tiles.indices { animate(0.6) { tiles[i].animator().alphaValue = i == 0 ? 0.6 : 0.4 } }
+            // Low enough that the tagline reads over the blue main tile.
+            for i in tiles.indices { animate(0.6) { tiles[i].animator().alphaValue = i == 0 ? 0.4 : 0.3 } }
             wordModel.landed = true
             animate(1.1) {
                 word.animator().alphaValue = 1
@@ -464,7 +468,7 @@ private final class Intro {
         case 4:
             for (i, r) in layout(bsp: true).enumerated() {
                 let delay = Double(i) * 0.05
-                move(i, to: r, alpha: i == 0 ? 0.6 : 0.4, rotation: 0, duration: 0.9, delay: delay)
+                move(i, to: r, alpha: i == 0 ? 0.4 : 0.3, rotation: 0, duration: 0.9, delay: delay)
                 land(i, after: delay + 0.4, spark: false)
             }
             wordModel.subtitle = true

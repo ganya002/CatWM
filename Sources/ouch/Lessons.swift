@@ -64,7 +64,7 @@ enum Steps {
         let name = b.mode.lowercased()
         return PlannedStep(chapter: "\(b.mode.capitalized) mode") { c in
             Step(kicker: "", title: title ?? "Enter \(name) mode",
-                 text: text ?? "One shortcut turns it on. Then single keys move windows, and with it off they go to your apps.",
+                 text: text ?? "While it's on, single keys move windows. Off, they type as usual.",
                  caps: c.book.enterCaps(long: true), accept: { e in
                      if case .mode(let n) = e, !n.isEmpty { return "" }
                      return nil
@@ -79,8 +79,9 @@ enum Steps {
         let name = b.mode.lowercased()
         return PlannedStep(chapter: "\(b.mode.capitalized) mode") { _ in
             Step(kicker: "", title: "Leave \(name) mode",
-                 text: recall ? "From memory." : (keys.isEmpty ? "Clicking anywhere" : "\(KeyWords.list(keys)) or a click anywhere")
-                    + (recall ? "" : " turns it off. The bar at the bottom goes away."),
+                 // The mode shows as a glow around the screen; there's no bar to point at.
+                 text: recall ? "From memory." : (keys.isEmpty ? "Click anywhere. The edge glow fades."
+                    : "Press \(KeyWords.list(keys, or: true)) or click anywhere. The edge glow fades."),
                  target: .mode, caps: Array(keys.prefix(1)), recall: recall, accept: { e in
                      // Also when it's already off: a click turns it off without a mode event reaching us.
                      if case .mode(let n) = e, n.isEmpty { return "" }
@@ -96,8 +97,8 @@ enum Steps {
         let chord = c.book.enterCaps(long: false).first ?? "⌘"
         return PlannedStep(chapter: "Keyboard help") { _ in
             var opened = false
-            return Step(kicker: "", title: "Every key on one keyboard",
-                        text: "? shows what each key does in this mode. Keeping \(chord) held after you enter does it too. Open it, then close it.",
+            return Step(kicker: "", title: "See every key",
+                        text: "? opens a map of every key in the mode; ? again closes it. Holding \(chord) after you enter works too.",
                         caps: ["?", "?"], tokens: ["open", "close"], needsMode: true, accept: { e in
                             guard case .tick = e else { return nil }
                             if KeyHelp.shared.isVisible { opened = true; return "open" }
@@ -111,11 +112,10 @@ enum Steps {
         let dirs = b.directions.compactMap { d in b.find(["movefocus"], d).map { (d, $0) } }
         guard dirs.count == 4 else { return nil }
         let keys = dirs.map { KeyWords.keyLabel($0.1.keyCode, long: false) }
-        let words = KeyWords.list(b.directions.map(KeyWords.dirWord))
         return PlannedStep(chapter: "Focus") { c in
             var left = c.book.directions
-            return Step(kicker: "", title: b.wasd ? "Move focus, WASD style" : "Move focus, vim style",
-                        text: "\(KeyWords.list(keys)) move focus \(words). Press all four.",
+            return Step(kicker: "", title: "Move focus",
+                        text: "\(KeyWords.list(keys)) move focus between windows. Press all four.",
                         target: .window, caps: keys, tokens: b.directions, needsMode: true, count: 4,
                         accept: { e in
                             guard case .command("movefocus", let a, _) = e else { return nil }
@@ -131,8 +131,8 @@ enum Steps {
         guard let next = c.book.find(["cyclenext"], "") else { return nil }
         let key = KeyWords.keyLabel(next.keyCode, long: false)
         return PlannedStep(chapter: "Focus") { c in
-            Step(kicker: "", title: "Step through every window",
-                 text: "\(key) moves focus to the next window, whatever its direction. Press it a few times.",
+            Step(kicker: "", title: "Next window",
+                 text: "\(key) cycles focus through every window. Press it a few times.",
                  target: .window, caps: KeyWords.caps(next, long: false), needsMode: true, count: 3,
                  accept: { e in
                      if case .command("cyclenext", _, _) = e { return "" }
@@ -148,8 +148,8 @@ enum Steps {
         let mods = KeyWords.modLabels(dirs[0].mods, long: true)
         let keys = dirs.map { KeyWords.keyLabel($0.keyCode, long: false) }
         return PlannedStep(chapter: "Move") { c in
-            Step(kicker: "", title: "Move the window itself",
-                 text: "Hold \(KeyWords.modWords(dirs[0].mods)) with a direction to swap the focused window with its neighbour. Try two directions.",
+            Step(kicker: "", title: "Move a window",
+                 text: "\(KeyWords.modWords(dirs[0].mods)) and a direction swaps it with its neighbour. Try two.",
                  target: .window, caps: mods + keys, needsMode: true, count: 2,
                  accept: { e in
                      guard case .command(let d, let a, _) = e else { return nil }
@@ -165,7 +165,7 @@ enum Steps {
         let key = KeyWords.keyLabel(swap.keyCode, long: false)
         return PlannedStep(chapter: "Main pane") { c in
             Step(kicker: "", title: "Promote a window",
-                 text: "The biggest pane is the main one, for what you're working on. \(key) swaps the focused window into it.",
+                 text: "\(key) swaps the focused window into the main pane, the biggest one.",
                  target: .window, caps: KeyWords.caps(swap, long: false), needsMode: true,
                  accept: { e in
                      if case .command("layoutmsg", let a, _) = e, a.lowercased() == "swapwithmaster" { return "" }
@@ -178,8 +178,8 @@ enum Steps {
         guard let add = c.book.find(["layoutmsg"], "addmaster"), let remove = c.book.find(["layoutmsg"], "removemaster") else { return nil }
         return PlannedStep(chapter: "Main pane") { c in
             var adding = true
-            return Step(kicker: "", title: "More than one main window",
-                        text: "\(KeyWords.keyWord(add)) puts one more window in the main pane and \(KeyWords.keyWord(remove)) takes one out. Try both.",
+            return Step(kicker: "", title: "More main windows",
+                        text: "\(KeyWords.keyWord(add)) adds a window to the main pane, \(KeyWords.keyWord(remove)) takes one out. Try both.",
                         target: .window, caps: KeyWords.caps(add, long: false) + [KeyWords.keyLabel(remove.keyCode, long: false)],
                         tokens: [], needsMode: true, count: 2,
                         accept: { e in
@@ -194,11 +194,11 @@ enum Steps {
 
     static func resize(_ c: Coach) -> PlannedStep? {
         guard let (grow, shrink) = c.book.resize else { return nil }
-        let mouse = c.wm.config.mouseResizesWindows ? " Dragging the edge between two windows works too." : ""
+        let mouse = c.wm.config.mouseResizesWindows ? " Or drag the edge between windows." : ""
         return PlannedStep(chapter: "Resize") { c in
             var growing = true
-            return Step(kicker: "", title: "Grow and shrink the main pane",
-                 text: "\(KeyWords.keyWord(grow)) makes it bigger and \(KeyWords.keyWord(shrink)) smaller. Try both.\(mouse)",
+            return Step(kicker: "", title: "Resize the main pane",
+                 text: "\(KeyWords.keyWord(shrink)) shrinks it, \(KeyWords.keyWord(grow)) grows it.\(mouse)",
                  target: .window, caps: KeyWords.caps(shrink, long: false) + KeyWords.caps(grow, long: false),
                  tokens: KeyWords.caps(shrink, long: false).count == 1 && KeyWords.caps(grow, long: false).count == 1 ? ["shrink", "grow"] : [],
                  needsMode: true, count: 2,
@@ -216,8 +216,8 @@ enum Steps {
         guard let zoom = c.book.find(["fullscreen"]) else { return nil }
         let key = KeyWords.keyLabel(zoom.keyCode, long: false)
         return PlannedStep(chapter: "Zoom") { c in
-            Step(kicker: "", title: "Give one window the screen",
-                 text: "\(key) lets the focused window fill the screen. \(key) again brings the others back.",
+            Step(kicker: "", title: "Zoom",
+                 text: "\(key) fills the screen with the focused window. Press it again to undo.",
                  target: .window, caps: KeyWords.caps(zoom, long: false), needsMode: true, count: 2,
                  accept: { e in
                      if case .command("fullscreen", _, _) = e { return "" }
@@ -231,7 +231,7 @@ enum Steps {
         let key = KeyWords.keyLabel(float.keyCode, long: false)
         return PlannedStep(chapter: "Float") { c in
             Step(kicker: "", title: "Float a window",
-                 text: "\(key) lifts the focused window out of the layout so it floats on top. \(key) again tiles it back.",
+                 text: "\(key) lifts the focused window out of the layout. Press it again to tile it.",
                  target: .window, caps: KeyWords.caps(float, long: false), needsMode: true, count: 2,
                  accept: { e in
                      if case .command("togglefloating", _, _) = e { return "" }
@@ -244,8 +244,8 @@ enum Steps {
         guard let retile = c.book.find(["retile", "reevaluate"]) else { return nil }
         let key = KeyWords.keyLabel(retile.keyCode, long: false)
         return PlannedStep(chapter: "Float") { c in
-            Step(kicker: "", title: "Snap everything back",
-                 text: "Dragged something out of place? \(key) puts every window back where the layout wants it.",
+            Step(kicker: "", title: "Snap back",
+                 text: "\(key) puts every window back in the layout.",
                  target: .window, caps: KeyWords.caps(retile, long: false), needsMode: true,
                  accept: { e in
                      if case .command(let d, _, _) = e, ["retile", "reevaluate"].contains(d) { return "" }
@@ -259,8 +259,8 @@ enum Steps {
         let prev = c.book.find(["cyclelayout"], "prev")
         let keys = [next, prev].compactMap { $0 }.map { KeyWords.keyLabel($0.keyCode, long: false) }
         return PlannedStep(chapter: "Layouts") { c in
-            Step(kicker: "", title: "Try another layout",
-                 text: "\(keys[0]) steps forward through your layouts" + (keys.count > 1 ? " and \(keys[1]) steps back. Try both." : ". Press it twice."),
+            Step(kicker: "", title: "Change layout",
+                 text: keys.count > 1 ? "\(keys[0]) is the next layout, \(keys[1]) the previous. Try both." : "\(keys[0]) is the next layout. Press it twice.",
                  target: .window, caps: keys, tokens: keys.count > 1 ? ["next", "prev"] : [], needsMode: true, count: 2,
                  accept: { e in
                      guard case .command("cyclelayout", let a, _) = e else { return nil }
@@ -273,8 +273,8 @@ enum Steps {
         guard let other = c.other, let visit = c.book.find(["workspace"], other) else { return nil }
         let key = KeyWords.keyLabel(visit.keyCode, long: false)
         return PlannedStep(chapter: "Workspaces") { c in
-            Step(kicker: "", title: "Workspaces are separate desks",
-                 text: "Each display shows one workspace, with its own layout. The menu bar shows them all, yours filled in. \(key) visits workspace \(other).",
+            Step(kicker: "", title: "Workspaces",
+                 text: "Each display shows one workspace at a time; the menu bar lists them. \(key) goes to \(other).",
                  target: .bar, caps: KeyWords.caps(visit, long: true), needsMode: true,
                  accept: { e in
                      if case .command("workspace", _, _) = e, c.wm.currentWorkspace == other { return "" }
@@ -286,8 +286,8 @@ enum Steps {
     static func back(_ c: Coach) -> PlannedStep? {
         guard let desk = c.desk, c.other != nil, let back = c.book.find(["workspace"], desk) else { return nil }
         return PlannedStep(chapter: "Workspaces") { c in
-            Step(kicker: "", title: "Nothing was closed",
-                 text: "Windows on hidden workspaces wait off screen. \(KeyWords.keyLabel(back.keyCode, long: false)) brings workspace \(desk) back.",
+            Step(kicker: "", title: "Nothing closed",
+                 text: "Hidden workspaces keep their windows. \(KeyWords.keyLabel(back.keyCode, long: false)) goes back to \(desk).",
                  target: .bar, caps: KeyWords.caps(back, long: true), needsMode: true,
                  accept: { e in
                      if case .command("workspace", _, _) = e, c.wm.currentWorkspace == desk { return "" }
@@ -301,8 +301,8 @@ enum Steps {
         guard let next = c.book.find(["workspace"], "e+1"), let prev = c.book.find(["workspace"], "e-1"), c.desk != nil else { return nil }
         let keys = [prev, next].map { KeyWords.keyLabel($0.keyCode, long: false) }
         return PlannedStep(chapter: "Workspaces") { c in
-            Step(kicker: "", title: "Step between workspaces",
-                 text: "\(keys[1]) goes to the next workspace and \(keys[0]) to the one before. Go over and come back.",
+            Step(kicker: "", title: "Next and previous",
+                 text: "\(keys[1]) is the next workspace, \(keys[0]) the previous. Go and come back.",
                  target: .bar, caps: keys, tokens: ["prev", "next"], needsMode: true, count: 2,
                  accept: { e in
                      guard case .command("workspace", let a, _) = e else { return nil }
@@ -317,8 +317,8 @@ enum Steps {
         guard let sendTo = c.sendTo, let send = c.book.find(["movetoworkspace", "movetoworkspacesilent"], sendTo) else { return nil }
         let follows = send.dispatcher == "movetoworkspace"
         return PlannedStep(chapter: "Workspaces") { c in
-            Step(kicker: "", title: "Send a window somewhere else",
-                 text: "\(KeyWords.modWords(send.mods)) with a number moves the focused window to that workspace\(follows ? ", and you go with it" : ""). Send this one to \(sendTo).",
+            Step(kicker: "", title: "Send a window",
+                 text: "\(KeyWords.modWords(send.mods)) and a number moves the focused window there\(follows ? " and follows it" : ""). Send it to \(sendTo).",
                  target: .window, caps: KeyWords.caps(send, long: true), needsMode: true,
                  accept: { e in
                      if case .command(let d, _, _) = e, d.hasPrefix("movetoworkspace") { return "" }
@@ -331,7 +331,7 @@ enum Steps {
         guard let desk = c.desk, let global = c.book.find(["workspace"], desk, global: true) else { return nil }
         return PlannedStep(chapter: "Global keys") { c in
             Step(kicker: "", title: "Switch from anywhere",
-                 text: "\(KeyWords.modWords(global.mods)) with a number switches workspace without the mode. Go back to workspace \(desk).",
+                 text: "\(KeyWords.modWords(global.mods)) and a number works without the mode. Go to \(desk).",
                  target: .bar, caps: KeyWords.caps(global, long: true),
                  accept: { e in
                      if case .command("workspace", _, let inMode) = e, !inMode, c.wm.currentWorkspace == desk { return "" }
@@ -347,8 +347,8 @@ enum Steps {
         guard NSScreen.screens.count > 1, let mon = c.book.find(["focusmonitor"]) else { return nil }
         let key = KeyWords.keyLabel(mon.keyCode, long: false)
         return PlannedStep(chapter: "Displays") { c in
-            Step(kicker: "", title: "Jump to your other display",
-                 text: "\(key) moves focus to the next display, and \(key) again brings it back here.",
+            Step(kicker: "", title: "Other display",
+                 text: "\(key) moves focus to the next display. Press it again to come back.",
                  target: .window, caps: KeyWords.caps(mon, long: false), needsMode: true, count: 2,
                  accept: { e in
                      if case .command("focusmonitor", _, _) = e { return "" }
@@ -362,8 +362,8 @@ enum Steps {
         guard c.wm.config.virtualWorkspaces, let sort = c.book.find(["sort"], global: true) ?? c.book.find(["sort"]) else { return nil }
         let keys = KeyWords.caps(sort, long: false).joined()
         return PlannedStep(chapter: "Sorting") { _ in
-            Step(kicker: "", title: "Tidy a crowded workspace",
-                 text: "\(keys) opens Sort Windows: it groups a full screen into workspaces by task. Ouch offers it when one gets crowded.",
+            Step(kicker: "", title: "Sort Windows",
+                 text: "\(keys) splits a crowded workspace into several, by task. Ouch offers it when one fills up.",
                  target: .bar, button: "Next", count: 0)
         }
     }
@@ -373,7 +373,7 @@ enum Steps {
         guard c.wm.config.virtualWorkspaces, let sort = c.book.find(["sort"], global: true) else { return [] }
         let open = PlannedStep(chapter: "Sorting") { c in
             Step(kicker: "", title: "Sort Windows",
-                 text: "When a workspace fills up, \(KeyWords.modWords(sort.mods))-\(KeyWords.keyLabel(sort.keyCode, long: false)) groups its windows into workspaces by task. Open it.",
+                 text: "\(KeyWords.modWords(sort.mods))-\(KeyWords.keyLabel(sort.keyCode, long: false)) splits a crowded workspace into several, by task. Open it.",
                  target: .bar, caps: KeyWords.caps(sort, long: true),
                  accept: { e in
                      if case .tick = e, SortPanel.shared.isOpen { return "" }
@@ -381,8 +381,8 @@ enum Steps {
                  }, simulate: { Hotkeys.shared.setSubmap(""); SortPanel.shared.open() }, doneText: "Open")
         }
         let close = PlannedStep(chapter: "Sorting") { _ in
-            Step(kicker: "", title: "Drag, or let it sort",
-                 text: "Each lane is a workspace. Drag windows between them, or pick a grouping. esc closes it and changes nothing.",
+            Step(kicker: "", title: "Lanes are workspaces",
+                 text: "Drag windows between them, or pick a grouping. Esc closes it without changes.",
                  target: .bar, caps: ["esc"],
                  accept: { e in
                      if case .tick = e, !SortPanel.shared.isOpen { return "" }
@@ -401,7 +401,7 @@ enum Steps {
         let keys = b.directions.compactMap { b.find(["movefocus"], $0) }.map { KeyWords.keyLabel($0.keyCode, long: false) }
         return PlannedStep(chapter: "Drill") { c in
             let target = c.visibleTitles.filter { $0 != c.focusedTitle }.randomElement()
-            return Step(kicker: "", title: "Focus \(target ?? "another window")", text: "From memory. Hint shows the keys.",
+            return Step(kicker: "", title: "Focus \(target ?? "another window")", text: "From memory.",
                         target: .window, caps: keys, needsMode: true, recall: true,
                         accept: { e in
                             guard case .command(let d, _, _) = e, ["movefocus", "cyclenext"].contains(d) else { return nil }
@@ -415,7 +415,7 @@ enum Steps {
         guard let swap = c.book.find(["layoutmsg"], "swapwithmaster"), focus(c) != nil else { return nil }
         return PlannedStep(chapter: "Drill") { c in
             let target = c.visibleTitles.filter { $0 != c.mainTitle }.randomElement()
-            return Step(kicker: "", title: "Put \(target ?? "another window") in the main pane", text: "Focus it, then promote it. From memory.",
+            return Step(kicker: "", title: "Put \(target ?? "another window") in the main pane", text: "Focus it, then promote it.",
                         target: .window, caps: KeyWords.caps(swap, long: false), needsMode: true, recall: true,
                         accept: { e in
                             guard case .command(let d, let a, _) = e else { return nil }
@@ -435,7 +435,7 @@ enum Steps {
         return PlannedStep(chapter: "Drill") { c in
             let now = c.wm.menuBarState()?.layout
             let target = options.filter { $0 != now }.randomElement() ?? options[0]
-            return Step(kicker: "", title: "Switch to \(target.title)", text: "From memory. The layout name shows as you go.",
+            return Step(kicker: "", title: "Switch to \(target.title)", text: "From memory.",
                         target: .window, caps: keys, needsMode: true, recall: true,
                         accept: { e in
                             guard case .command = e else { return nil }
@@ -481,10 +481,10 @@ enum Steps {
         PlannedStep(chapter: "Practice desk") { c in
             let text: String
             if let desk = c.desk, let other = c.other {
-                text = "\(KeyWords.count(PracticeDesk.deskCount)) practice windows sit on workspace \(desk), \(KeyWords.count(PracticeDesk.otherCount).lowercased()) more on \(other)."
-                    + (c.original.map { " Your windows wait on \($0) until you're done." } ?? "")
+                text = "\(KeyWords.count(PracticeDesk.deskCount)) practice windows on workspace \(desk), \(KeyWords.count(PracticeDesk.otherCount).lowercased()) on \(other)."
+                    + (c.original.map { " Yours wait on \($0)." } ?? "")
             } else {
-                text = "\(KeyWords.count(PracticeDesk.deskCount + PracticeDesk.otherCount)) practice windows are open. Nothing here touches your apps."
+                text = "\(KeyWords.count(PracticeDesk.deskCount + PracticeDesk.otherCount)) practice windows. Your apps aren't touched."
             }
             return Step(kicker: "", title: title, text: text, button: button, count: 0)
         }
@@ -514,7 +514,7 @@ enum Steps {
         if let g = b.find(["workspace"], "1", global: true) { more.append((KeyWords.modLabels(g.mods, long: false) + ["1–0"], "Switch from anywhere")) }
         return PlannedStep(chapter: "Done") { c in
             Step(kicker: "", title: title,
-                 text: c.original.map { "Finish takes you back to workspace \($0)." } ?? "",
+                 text: c.original.map { "Finish returns you to workspace \($0)." } ?? "",
                  button: "Finish", count: 0, rows: rows + (more.isEmpty ? [] : [([], "More")] + more), final: true)
         }
     }
@@ -530,11 +530,11 @@ final class TourLesson: Lesson {
     var count: Int { plan.count }
 
     func prepare(_ c: Coach) {
-        plan = [Steps.intro(c, title: "Meet your practice desk", button: "Show me")]
+        plan = [Steps.intro(c, title: "Practice desk", button: "Start")]
         plan += [Steps.modeOn(c), Steps.help(c), Steps.focus(c), Steps.move(c), Steps.main(c), Steps.resize(c),
                  Steps.zoom(c), Steps.float(c), Steps.layouts(c), Steps.visit(c), Steps.back(c), Steps.send(c),
                  Steps.modeOff(c), Steps.global(c), Steps.sortIntro(c)].compactMap { $0 }
-        plan.append(Steps.summary(c, title: "You're ready to tile"))
+        plan.append(Steps.summary(c, title: "That's the basics"))
     }
 
     func step(_ i: Int, in coach: Coach) -> Coach.Step { plan[i].build(coach) }
@@ -580,7 +580,7 @@ final class TutorialLesson: Lesson {
             let list = steps.compactMap { $0 }
             if !list.isEmpty { chapters.append(Chapter(id: id, name: name, steps: list)) }
         }
-        chapter("welcome", "Welcome", [Steps.intro(c, title: "Learn the keys for good", button: "Start")])
+        chapter("welcome", "Welcome", [Steps.intro(c, title: "Learn every key", button: "Start")])
         chapter("mode", "Window mode", [Steps.modeOn(c), Steps.modeOff(c), Steps.modeDrill(c), Steps.help(c)])
         chapter("focus", "Focus", [Steps.focus(c), Steps.cycle(c), Steps.focusDrill(c), Steps.focusDrill(c), Steps.focusDrill(c)])
         chapter("move", "Moving windows", [Steps.move(c), Steps.main(c), Steps.mainDrill(c), Steps.mainDrill(c)])
@@ -727,8 +727,8 @@ enum KeyWords {
     }
 
     /// "H, J, K and L"
-    static func list(_ items: [String]) -> String {
+    static func list(_ items: [String], or: Bool = false) -> String {
         guard items.count > 1 else { return items.first ?? "" }
-        return items.dropLast().joined(separator: ", ") + " and " + items.last!
+        return items.dropLast().joined(separator: ", ") + (or ? " or " : " and ") + items.last!
     }
 }

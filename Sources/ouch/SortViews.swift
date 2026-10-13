@@ -231,7 +231,7 @@ private struct SortStrategies: View {
             }
         }
         .padding(3)
-        .background(Capsule().fill(Theme.surfaceSunken))
+        .background(Capsule().fill(Theme.well))
         .fixedSize()
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Group by")
@@ -271,7 +271,7 @@ private struct SortDisplays: View {
             }
         }
         .padding(3)
-        .background(Capsule().fill(Theme.surfaceSunken))
+        .background(Capsule().fill(Theme.well))
         .fixedSize()
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Display to sort")
@@ -442,7 +442,7 @@ private struct SortLayoutPill: View {
             }
             .foregroundStyle(hover.on ? Theme.ink : Theme.inkMuted)
             .padding(.leading, 7).padding(.trailing, 10).frame(height: 24)
-            .background(Capsule().fill(hover.on ? Theme.hover : Theme.surfaceSunken))
+            .background(Capsule().fill(hover.on ? Theme.wellHover : Theme.well))
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -490,7 +490,7 @@ private struct SortThumb: View {
         GeometryReader { g in
             let frames = Self.frames(layout, ids.count, g.size, ratio: ratio, mainCount: mainCount)
             ZStack(alignment: .topLeading) {
-                RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(Theme.surfaceSunken)
+                RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(Theme.well)
                 ForEach(Array(ids.enumerated()), id: \.element) { j, id in
                     if j < frames.count {
                         RoundedRectangle(cornerRadius: 3, style: .continuous)
@@ -572,7 +572,9 @@ private struct SortRowFace: View {
             }
             .frame(width: 20, height: 20)
             (Text(item.title).foregroundColor(closing ? Theme.inkMuted : Theme.ink)
-                + Text("  " + item.app).font(Theme.body(12)).foregroundColor(Theme.inkFaint))
+                // The app's name only when the title doesn't already say it ("Claude  Claude").
+                + Text(item.title.localizedCaseInsensitiveContains(item.app) ? "" : "  " + item.app)
+                    .font(Theme.body(12)).foregroundColor(Theme.inkFaint))
                 .strikethrough(closing, color: Theme.danger)
                 .oneLine()
             Spacer(minLength: 0)

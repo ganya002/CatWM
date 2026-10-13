@@ -88,6 +88,7 @@ final class Coach {
 
         wm.onDispatch = { [weak self] d, a, inMode in self?.handle(.command(d, a, inMode: inMode)) }
         wm.onModeChange = { [weak self] name in self?.handle(.mode(name)) }
+        Hotkeys.shared.onReturn = { [weak self] in self?.returnPressed() ?? false }
 
         model.tryKeys = { [weak self] in self?.simulate() }
         model.next = { [weak self] in self?.advance() }
@@ -235,7 +236,7 @@ final class Coach {
         flash()
         if step.needsMode && Hotkeys.shared.submap.isEmpty && !book.mode.isEmpty {
             Hotkeys.shared.setSubmap(book.mode)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in // let the mode bar show first
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in // let the mode glow show first
                 if self?.ended == false { run() }
             }
         } else {
@@ -246,6 +247,15 @@ final class Coach {
     private func flash() {
         model.pressed = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.24) { [weak self] in self?.model.pressed = false }
+    }
+
+    /// Return presses the card's button, while you're on the practice windows or the card.
+    private func returnPressed() -> Bool {
+        guard !ended, step?.button != nil, panel?.isVisible == true else { return false }
+        let front = NSWorkspace.shared.frontmostApplication?.processIdentifier
+        guard front == helperPID || front == getpid() else { return false }
+        DispatchQueue.main.async { [weak self] in self?.advance() }
+        return true
     }
 
     private func advance() {
@@ -262,7 +272,9 @@ final class Coach {
         follow?.invalidate()
         wm.onDispatch = nil
         wm.onModeChange = nil
+        Hotkeys.shared.onReturn = nil
         statusButton?.highlight(false)
+        HUD.shared.avoid = nil
         MenuBarTip.shared.suppressed = false
         Hotkeys.shared.setSubmap("")
         if KeyHelp.shared.isVisible { KeyHelp.shared.hide() }
@@ -325,13 +337,14 @@ final class Coach {
                 caret = .up(min(max(b.midX - o.x, 20), card.width - 20))
             }
         case .mode:
-            o = NSPoint(x: v.midX - card.width / 2, y: v.minY + 18 + 28 + 16)
-            caret = .down
+            // Low on the screen, out of the way of the glow's fade; nothing there to point at.
+            o = NSPoint(x: v.midX - card.width / 2, y: v.minY + 48)
         }
         o.x = min(max(o.x, v.minX + 16), v.maxX - card.width - 16)
         o.y = min(max(o.y, v.minY + 16), v.maxY - card.height - 16)
         if model.caret != caret { model.caret = caret }
         let frame = NSRect(x: o.x - pad.leading, y: o.y - pad.bottom, width: size.width, height: size.height).integral
+        HUD.shared.avoid = NSRect(origin: o, size: card)
         guard frame != target else { return }
         let moved = abs(frame.minX - target.minX) > 1 || abs(frame.maxY - target.maxY) > 1
         target = frame

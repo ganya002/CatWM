@@ -605,7 +605,13 @@ private struct SearchResults: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Search").font(Theme.body(12)).foregroundStyle(Theme.inkMuted)
+                    // The same breadcrumb as the panes, so the title doesn't jump when results replace a pane.
+                    HStack(spacing: 6) {
+                        Text("Settings")
+                        Image(systemName: "chevron.right").font(.system(size: 9, weight: .semibold))
+                        Text("Search")
+                    }
+                    .font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine()
                     Text("“\(ui.search)”").font(Theme.display(40)).tracking(-1).oneLine()
                 }
                 if results.isEmpty {

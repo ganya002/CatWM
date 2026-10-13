@@ -4,7 +4,9 @@ import SwiftUI
 /// Small tips that turn up once, where they're useful, after onboarding: in Settings beside the pane
 /// they're about, under the menu bar item, or above the mode bar. Each is a Surface `md` with a
 /// breathing lightbulb, a close button and "No more tips". Never more than one at a time, never
-/// during a lesson, and each is shown only once.
+/// during a lesson, and each is shown only once. They're rare on purpose: none until Ouch has been
+/// used on a week of different days, then at most one every five days, and each waits until what
+/// it's about has come up a few times.
 final class Tips: ObservableObject {
     static let shared = Tips()
 
@@ -32,14 +34,27 @@ final class Tips: ObservableObject {
     private var pendingWork: DispatchWorkItem?
     private var modeEntries = 0
 
+    /// Pacing. A day counts when Ouch runs on it.
+    static let minDaysUsed = 7
+    static let cooldown: TimeInterval = 5 * 24 * 3600
+    /// How often a pane must be opened, a menu command clicked, or window mode entered (this run)
+    /// before its tip, and how long the pane must stay open first.
+    static let paneOpens = 5, menuClicks = 8, modeEntriesNeeded = 15
+    static let paneDelay: TimeInterval = 8
+
     private let defaults = UserDefaults.standard
     private static let seenKey = "tips.seen", offKey = "tips.off", clicksKey = "tips.clicks"
+    private static let daysKey = "tips.days", lastKey = "tips.last", panesKey = "tips.panes"
 
     var enabled: Bool {
         get { !defaults.bool(forKey: Self.offKey) }
         set {
             defaults.set(!newValue, forKey: Self.offKey)
-            if newValue { defaults.removeObject(forKey: Self.seenKey); defaults.removeObject(forKey: Self.clicksKey) } else { dismissAll() }
+            if newValue {
+                for k in [Self.seenKey, Self.clicksKey, Self.panesKey, Self.lastKey] { defaults.removeObject(forKey: k) }
+            } else {
+                dismissAll()
+            }
         }
     }
 
@@ -52,8 +67,29 @@ final class Tips: ObservableObject {
 
     func markSeen(_ k: Known) { markSeen(k.rawValue) }
 
+    /// Notes today as a day of use, and counts them.
+    private var daysUsed: Int {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        var days = Set(defaults.stringArray(forKey: Self.daysKey) ?? [])
+        if days.insert(f.string(from: Date())).inserted { defaults.set(Array(days), forKey: Self.daysKey) }
+        return days.count
+    }
+
+    private var rested: Bool {
+        Date().timeIntervalSince1970 - defaults.double(forKey: Self.lastKey) >= Self.cooldown
+    }
+
+    /// At launch: counts the day, and once Ouch has been used for a while, points at the tutorial.
+    func launched() {
+        _ = daysUsed
+        DispatchQueue.main.asyncAfter(deadline: .now() + 90) { [weak self] in
+            if !TutorialLesson.finishedOnce, TutorialLesson.paused == nil { self?.show(.tutorial) }
+        }
+    }
+
     private func canShow(_ id: String) -> Bool {
-        enabled && Onboarding.isDone && !Onboarding.shared.isRunning && !seen.contains(id) && settings == nil && global == nil
+        enabled && daysUsed >= Self.minDaysUsed && rested && Onboarding.isDone && !Onboarding.shared.isRunning && !seen.contains(id) && settings == nil && global == nil
             && !SortPanel.shared.isOpen
     }
 
@@ -65,13 +101,13 @@ final class Tips: ObservableObject {
         case .tutorial:
             guard canShow(k.rawValue) else { return }
             present(Tip(id: k.rawValue, title: "Make the keys stick",
-                        body: "Keyboard Tutorial in this menu drills them a chapter at a time. Pause it whenever you like.",
+                        body: "Keyboard Tutorial, in this menu, drills them a chapter at a time.",
                         place: .menuBar, action: ("Start tutorial", { Onboarding.shared.startTutorial() })))
         case .keyHelp:
             let keys = ShortcutIndex()
             guard canShow(k.rawValue), WindowManager.shared.config.keyboardHelp, !Hotkeys.shared.submap.isEmpty else { return }
-            let held = keys.modeChord.first.map { " Keeping \($0) held after you enter works too." } ?? ""
-            present(Tip(id: k.rawValue, title: "See every key", body: "Press ? in window mode for a keyboard of what each key does.\(held)",
+            let held = keys.modeChord.first.map { " Or hold \($0) after you enter." } ?? ""
+            present(Tip(id: k.rawValue, title: "See every key", body: "In window mode, ? shows what every key does.\(held)",
                         chords: [["?"]], place: .modeBar))
         }
     }
@@ -84,7 +120,7 @@ final class Tips: ObservableObject {
             return
         }
         modeEntries += 1
-        guard modeEntries >= 3, canShow(Known.keyHelp.rawValue) else { return }
+        guard modeEntries >= Self.modeEntriesNeeded, canShow(Known.keyHelp.rawValue) else { return }
         let work = DispatchWorkItem { [weak self] in self?.show(.keyHelp) }
         pendingWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2, execute: work)
@@ -97,14 +133,14 @@ final class Tips: ObservableObject {
         counts[id, default: 0] += 1
         defaults.set(counts, forKey: Self.clicksKey)
         let tipID = "clicked.\(id)"
-        guard counts[id, default: 0] >= 3, canShow(tipID) else { return }
+        guard counts[id, default: 0] >= Self.menuClicks, canShow(tipID) else { return }
         // Window-mode keys are plain letters (maybe with ⇧); those need the mode chord first.
         let keys = ShortcutIndex()
         let global = shortcut.contains { ["⌘", "⌥", "⌃"].contains($0) }
         let chords = global || keys.modeChord.isEmpty ? [shortcut] : [keys.modeChord, shortcut]
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in // after the menu has closed
             guard let self, canShow(tipID) else { return }
-            present(Tip(id: tipID, title: "\(label) has a key", body: "Faster than the menu, once your fingers know it.",
+            present(Tip(id: tipID, title: "\(label) has a key", body: "Faster than the menu.",
                         chords: chords, place: .menuBar))
         }
     }
@@ -118,29 +154,33 @@ final class Tips: ObservableObject {
         switch pane {
         case .shortcuts:
             tip = Tip(id: "settings.shortcuts", title: "Two sets of keys",
-                      body: "Global keys work anywhere. Window-mode keys work after the mode chord, so they never clash with typing.",
+                      body: "Global keys work anywhere. The rest work in window mode, so they never clash with typing.",
                       chords: chord.isEmpty ? [] : [chord], place: .settings("pane.\(pane.rawValue)"))
         case .layout:
             let next = keys.keys("cyclelayout", "next")
             tip = next.isEmpty ? nil : Tip(id: "settings.layout", title: "Step through these layouts",
-                                           body: "In window mode, \(next.joined()) moves to the next layout in this list.",
+                                           body: "In window mode, \(next.joined()) steps through this list.",
                                            chords: chord.isEmpty ? [next] : [chord, next], place: .settings("pane.\(pane.rawValue)"))
         case .windows:
             let float = keys.keys("togglefloating")
             tip = float.isEmpty ? nil : Tip(id: "settings.windows", title: "Float a single window",
-                                            body: "The list here floats whole apps. \(float.joined()) in window mode floats just the focused window.",
+                                            body: "This list floats whole apps. \(float.joined()) in window mode floats one window.",
                                             chords: chord.isEmpty ? [float] : [chord, float], place: .settings("pane.\(pane.rawValue)"))
         default:
             tip = nil
         }
         guard let tip, canShow(tip.id) else { return }
+        var opens = defaults.dictionary(forKey: Self.panesKey) as? [String: Int] ?? [:]
+        opens[tip.id, default: 0] += 1
+        defaults.set(opens, forKey: Self.panesKey)
+        guard opens[tip.id, default: 0] >= Self.paneOpens else { return }
         pendingWork?.cancel()
         let work = DispatchWorkItem { [weak self] in
             guard let self, canShow(tip.id), SettingsWindow.shared.ui.pane == pane else { return }
             present(tip)
         }
         pendingWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8, execute: work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.paneDelay, execute: work)
     }
 
     /// Settings closed.
@@ -153,6 +193,7 @@ final class Tips: ObservableObject {
 
     private func present(_ tip: Tip) {
         markSeen(tip.id)
+        defaults.set(Date().timeIntervalSince1970, forKey: Self.lastKey)
         switch tip.place {
         case .settings:
             withAnimation(Motion.easeOut) { settings = tip }

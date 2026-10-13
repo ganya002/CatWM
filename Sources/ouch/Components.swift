@@ -62,7 +62,8 @@ private struct OButtonBody: View {
     private var fill: Color {
         switch style.variant {
         case .primary: style.onAccent ? Theme.onAccent : hover.on ? Theme.accentHover : Theme.accent
-        case .secondary: hover.on ? Theme.hover : Theme.surfaceSunken
+        // A translucent well, not `surface-sunken`: on a raised surface or glass that reads as a black hole.
+        case .secondary: hover.on ? Theme.wellHover : Theme.well
         case .ghost: hover.on ? (style.onAccent ? Theme.onAccent.opacity(0.16) : Theme.hover) : .clear
         case .danger: Theme.dangerSoft
         case .ghostDanger: hover.on ? Theme.dangerSoft : .clear
@@ -107,13 +108,14 @@ struct OIconButton: View {
     let label: String
     var size: ButtonSize = .sm
     var variant: ButtonVariant = .ghost
+    var onAccent = false
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Image(systemName: symbol).font(.system(size: size == .sm ? 13 : 15, weight: .medium))
         }
-        .buttonStyle(OButtonStyle(variant: variant, size: size, iconOnly: true))
+        .buttonStyle(OButtonStyle(variant: variant, size: size, iconOnly: true, onAccent: onAccent))
         .help(label)
         .accessibilityLabel(label)
     }
@@ -141,7 +143,7 @@ struct OSwitch: View {
         let width: CGFloat = state.pressed ? 18 : 14
         let x = state.drag.map { min($0, 14 - (width - 14)) } ?? (isOn ? 14 - (width - 14) : 0)
         ZStack(alignment: .leading) {
-            Capsule().fill(shownOn ? Theme.accent : Theme.surfaceSunken)
+            Capsule().fill(shownOn ? Theme.accent : Theme.well)
             Capsule().strokeBorder(Theme.borderControl, lineWidth: 1).opacity(shownOn ? 0 : 1)
             Capsule().fill(shownOn ? Theme.onAccent : Theme.borderControl)
                 .frame(width: width, height: 14)
@@ -205,7 +207,7 @@ struct OSegmented<T: Hashable>: View {
             }
         }
         .padding(3)
-        .background(Capsule().fill(Theme.surfaceSunken))
+        .background(Capsule().fill(Theme.well))
         .fixedSize()
         .accessibilityElement(children: .contain)
         .accessibilityLabel(title)
@@ -255,9 +257,9 @@ struct OSlider: View {
         HStack(spacing: 12) {
             track
             Text(format(value))
-                .font(Theme.body(13, .medium)).monospacedDigit().oneLine()
+                .font(Theme.body(13, .medium)).monospacedDigit().oneLine().fixedSize()
                 .foregroundStyle(s.dragging ? Theme.accentInk : Theme.inkMuted)
-                .frame(width: 56, alignment: .trailing)
+                .frame(minWidth: 56, alignment: .trailing) // grows rather than truncating "8 windows"
         }
         .opacity(enabled ? 1 : 0.45)
     }
@@ -398,7 +400,7 @@ struct OBarSlider: View {
         GeometryReader { g in
             let w = g.size.width
             ZStack(alignment: .leading) {
-                Capsule().fill(s.dragging || s.hovering ? Theme.hover : Theme.surfaceSunken)
+                Capsule().fill(s.dragging || s.hovering ? Theme.wellHover : Theme.well)
                 Capsule().strokeBorder(Theme.hairline, lineWidth: 1)
                 Rectangle().fill(Theme.accent).frame(width: w * f)
                     .overlay(alignment: .trailing) {
@@ -487,7 +489,7 @@ struct Kbd: View {
         if large {
             let wide = k.count > 2
             Text(k)
-                .font(Theme.body(wide ? 14 : 17, .medium)).oneLine()
+                .font(Theme.keys(wide ? 14 : 17, .medium)).oneLine().fixedSize()
                 .foregroundStyle(pressed ? (onAccent ? Theme.accent : Theme.onAccent) : onAccent ? Theme.accent : Theme.ink)
                 .padding(.horizontal, 12)
                 .frame(minWidth: 40, minHeight: 40)
@@ -680,7 +682,7 @@ struct OMenuPicker<T: Hashable>: View {
             }
             .foregroundStyle(Theme.ink)
             .padding(.horizontal, 12).frame(height: Theme.controlHeight)
-            .background(Capsule().fill(hover.on ? Theme.hover : Theme.surfaceSunken))
+            .background(Capsule().fill(hover.on ? Theme.wellHover : Theme.well))
             .contentShape(Capsule())
         }
         .menuStyle(.button)
@@ -711,7 +713,7 @@ struct OTextField: View {
             .focused($focused)
             .onSubmit(onSubmit)
             .padding(.horizontal, 10).frame(height: Theme.controlHeight)
-            .background(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(Theme.surfaceSunken))
+            .background(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(Theme.well))
             .overlay(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
                 .strokeBorder(Theme.focus, lineWidth: focused ? 2 : 0))
             .accessibilityLabel(placeholder)
@@ -838,10 +840,15 @@ struct LayoutPicker: View {
                 }
             }
             if let shown {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(shown.title).font(Theme.body(13.5, .medium)).foregroundStyle(Theme.ink).oneLine().fixedSize()
-                    Text(shown.blurb).font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine()
+                // The blurb only shows whole; a long name alone beats "the rest stacked on…".
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(shown.title).font(Theme.body(13.5, .medium)).foregroundStyle(Theme.ink).oneLine().fixedSize()
+                        Text(shown.blurb).font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine().fixedSize()
+                    }
+                    Text(shown.title).font(Theme.body(13.5, .medium)).foregroundStyle(Theme.ink).oneLine()
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 6).padding(.top, 8).padding(.bottom, 2)
             }
         }
@@ -852,22 +859,22 @@ extension Layout {
     /// One line on what the layout does, the app's own copy.
     var blurb: String {
         switch self {
-        case .tall: "Main on the left, the rest stacked on the right"
-        case .tallRight: "Main on the right, the rest stacked on the left"
-        case .wide: "Main on top, the rest side by side below"
-        case .middleWide: "Main in the middle, the rest split left and right"
+        case .tall: "Main left, the rest stacked right"
+        case .tallRight: "Main right, the rest stacked left"
+        case .wide: "Main on top, the rest below"
+        case .middleWide: "Main in the middle, the rest beside"
         case .fullscreen: "Every window fills the screen"
         case .column: "Equal-width columns"
         case .row: "Equal-height rows"
-        case .floating: "Leave windows where you put them"
-        case .bsp: "Each window splits the space of the previous one"
-        case .threeColumnLeft: "Main on the left, two columns to its right"
+        case .floating: "Windows stay where you put them"
+        case .bsp: "Each window halves the last one"
+        case .threeColumnLeft: "Main left, two columns right"
         case .threeColumnMiddle: "Main in the middle column"
-        case .threeColumnRight: "Main on the right, two columns to its left"
-        case .twoPane: "Main on the left, one other window on the right"
-        case .twoPaneRight: "Main on the right, one other window on the left"
-        case .widescreenTall: "Main windows side by side, the rest stacked right"
-        case .widescreenTallRight: "Main windows side by side, the rest stacked left"
+        case .threeColumnRight: "Main right, two columns left"
+        case .twoPane: "Main left, one window right"
+        case .twoPaneRight: "Main right, one window left"
+        case .widescreenTall: "Mains side by side, the rest right"
+        case .widescreenTallRight: "Mains side by side, the rest left"
         }
     }
 }
@@ -935,7 +942,7 @@ struct RemoveButton: View {
             Image(systemName: "minus").font(.system(size: 10, weight: .bold))
                 .foregroundStyle(hover.on ? Theme.danger : Theme.inkMuted)
                 .frame(width: 22, height: 22)
-                .background(Circle().fill(hover.on ? Theme.dangerSoft : Theme.surfaceSunken))
+                .background(Circle().fill(hover.on ? Theme.dangerSoft : Theme.well))
                 .contentShape(Circle())
         }
         .buttonStyle(PressScale(scale: 0.88))
@@ -946,16 +953,26 @@ struct RemoveButton: View {
     }
 }
 
-/// A numbered step: the number in `accent-ink` light display type, then one line of text.
+/// A numbered step: the number in `accent-ink` light display type, then one line of text. `**bold**`
+/// marks what to click, set at 500: plain markdown bold would pick Chillax Bold, the wordmark's weight.
 struct OStep: View {
     let n: Int
-    let text: LocalizedStringKey
+    let text: String
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
             Text("\(n)").font(Theme.display(20)).foregroundStyle(Theme.accentInk).frame(width: 14, alignment: .leading)
-            Text(text).font(Theme.body(13.5)).foregroundStyle(Theme.ink).fixedSize(horizontal: false, vertical: true)
+            Text(Self.styled(text)).font(Theme.body(13.5)).foregroundStyle(Theme.ink).fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    static func styled(_ markdown: String, size: CGFloat = 13.5) -> AttributedString {
+        var s = (try? AttributedString(markdown: markdown)) ?? AttributedString(markdown)
+        for run in s.runs where run.inlinePresentationIntent?.contains(.stronglyEmphasized) == true {
+            s[run.range].inlinePresentationIntent = nil
+            s[run.range].font = Theme.body(size, .medium)
+        }
+        return s
     }
 }
 

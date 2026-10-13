@@ -4,7 +4,7 @@ import SwiftUI
 /// A small hint that hangs under Ouch's menu bar item for the whole onboarding, suggesting it lives
 /// near the right end of the menu bar. On a notched display, items that don't fit left of the
 /// clock vanish behind the notch, and the ones furthest left go first. It follows the item while
-/// the user drags it and turns into a quiet check once the spot is good. Clicks pass through.
+/// the user drags it and turns into a quiet check once the spot is good, then fades. Clicks pass through.
 final class MenuBarTip {
     static let shared = MenuBarTip()
 
@@ -17,6 +17,9 @@ final class MenuBarTip {
     private let model = MenuBarTipModel()
     private var timer: Timer?
     private var shown = false
+    /// When the item reached a good spot. The check shows for a moment and then gets out of the way,
+    /// instead of sitting over the practice windows for the whole tour.
+    private var goodSince: Date?
 
     func show() {
         guard timer == nil else { return }
@@ -34,6 +37,7 @@ final class MenuBarTip {
     }
 
     func hide() {
+        goodSince = nil
         timer?.invalidate()
         timer = nil
         setVisible(false)
@@ -43,7 +47,9 @@ final class MenuBarTip {
         guard let panel, let host else { return }
         let (state, anchor, screen) = locate()
         if model.state != state { withAnimation(.easeOut(duration: 0.25)) { model.state = state } }
-        guard let screen, !suppressed, timer != nil else { return setVisible(false) }
+        if state == .good { goodSince = goodSince ?? Date() } else { goodSince = nil }
+        let settled = goodSince.map { Date().timeIntervalSince($0) > 3 } ?? false
+        guard let screen, !suppressed, !settled, timer != nil else { return setVisible(false) }
         let size = host.fittingSize
         let top = screen.visibleFrame.maxY - 4 + (MenuBarTipView.inset.top - 10) // keeps the card where it was
         var x = (anchor?.midX ?? screen.frame.maxX - 40) - size.width / 2
