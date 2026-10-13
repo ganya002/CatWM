@@ -376,16 +376,14 @@ private struct HintKeyCap: View {
                 .shadow(color: .black.opacity(0.12), radius: 0, y: unit * 0.025)
             if hovering.on && interactive && !pressed { shape.fill(Theme.ink.opacity(0.06)) }
             if hint != nil || hot {
-                // A thin ring with a soft glow of the same colour; white for held modifiers and hot keys.
-                let ring = hot ? Theme.ink : color
-                shape.strokeBorder(ring, lineWidth: 1.5)
-                    .shadow(color: (hint.map { $0.group.color } ?? ring).opacity(0.55), radius: unit * 0.14)
+                // A thin ring in the group's colour; ink for held modifiers and hot keys.
+                shape.strokeBorder(hot ? Theme.ink : color, lineWidth: 1)
             } else {
                 shape.strokeBorder(Theme.hairline, lineWidth: 0.75)
             }
             legend
         }
-        .opacity(lit ? 1 : style == .constellation ? 0 : 0.16)
+        .opacity(lit ? 1 : style == .constellation ? 0 : 0.45)
         .scaleEffect(hot && !key.modifier.isEmpty && !reduceMotion ? 0.96 : 1)
         .contentShape(shape)
         .animation(.easeOut(duration: Theme.fast), value: pressed)
@@ -419,7 +417,7 @@ private struct HintKeyCap: View {
     private var ink: Color {
         if pressed { return Theme.surface }
         if hint != nil { return style == .lit ? color : Theme.inkMuted }
-        return hot ? Theme.ink : Theme.inkMuted
+        return Theme.ink
     }
 
     @ViewBuilder private var legend: some View {
@@ -443,7 +441,7 @@ private struct HintKeyCap: View {
         return ZStack(alignment: .topLeading) {
             if full && !corner.isEmpty {
                 Text(corner).font(.system(size: unit * 0.15)).oneLine()
-                    .foregroundStyle(pressed ? Theme.surface.opacity(0.75) : Theme.inkMuted)
+                    .foregroundStyle(pressed ? Theme.surface.opacity(0.75) : Theme.ink.opacity(0.7))
                     .padding(.leading, unit * 0.09).padding(.top, unit * 0.06)
             }
             Text(label).font(font).oneLine().minimumScaleFactor(0.8)

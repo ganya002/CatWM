@@ -19,6 +19,7 @@ final class KeyHelp {
     /// The modifiers that entered the current mode (⌘ for ⌘⇪); holding them on keeps the help up.
     private var chordMods: NSEvent.ModifierFlags = []
     private static let margin: CGFloat = 40
+    private static let bottomGap: CGFloat = 16
     private static let holdDelay = 0.5
 
     private var enabled: Bool { WindowManager.shared.config.keyboardHelp }
@@ -110,7 +111,8 @@ final class KeyHelp {
         host.layoutSubtreeIfNeeded()
         let size = host.fittingSize
         let area = screen.visibleFrame
-        p.setFrame(CGRect(x: area.midX - size.width / 2, y: area.midY - size.height / 2, width: size.width, height: size.height),
+        // Low on the screen, just above the Dock, so it sits under what you're looking at.
+        p.setFrame(CGRect(x: area.midX - size.width / 2, y: area.minY - Self.margin + Self.bottomGap, width: size.width, height: size.height),
                    display: true)
         p.orderFrontRegardless()
         // A turn later, so the view sees `shown` change and fades and scales in.
@@ -175,7 +177,9 @@ final class KeyHelpModel: ObservableObject {
     private(set) var chord: NSEvent.ModifierFlags = []
     private(set) var binds: [KeyBinding] = []
     private(set) var gestures: [GestureBind] = []
-    private(set) var keyboardWidth: CGFloat = 940
+    /// Small enough to stay out of the way; a standard key is still about 38pt.
+    static let keyboardMax: CGFloat = 580
+    private(set) var keyboardWidth: CGFloat = keyboardMax
     /// The trackpad beside the keyboard, or under it when the screen is too narrow.
     private(set) var padBeside = true
 
@@ -192,8 +196,8 @@ final class KeyHelpModel: ObservableObject {
         base = counts.max { $0.value != $1.value ? $0.value < $1.value : $0.key > $1.key }
             .map { NSEvent.ModifierFlags(rawValue: $0.key) } ?? []
         let pad = gestures.isEmpty ? 0 : GesturePad.width + 20
-        padBeside = room >= 940 + pad
-        keyboardWidth = min(940, max(560, padBeside ? room - pad : room))
+        padBeside = room >= Self.keyboardMax + pad
+        keyboardWidth = min(Self.keyboardMax, max(440, padBeside ? room - pad : room))
     }
 
     var shiftLayer: Bool { held.contains(.shift) }
@@ -220,8 +224,8 @@ struct KeyHelpView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 24, style: .continuous)
-        VStack(alignment: .leading, spacing: 12) {
+        let shape = RoundedRectangle(cornerRadius: 20, style: .continuous)
+        VStack(alignment: .leading, spacing: 8) {
             header
             if model.padBeside {
                 HStack(alignment: .center, spacing: 20) { keyboard; pad }
@@ -229,7 +233,7 @@ struct KeyHelpView: View {
                 VStack(spacing: 14) { keyboard; pad }
             }
         }
-        .padding(.vertical, 12).padding(.horizontal, 16)
+        .padding(.vertical, 10).padding(.horizontal, 12)
         .foregroundStyle(Theme.ink)
         .floatingGlass(shape)
         .opacity(model.shown ? 1 : 0)
@@ -253,8 +257,8 @@ struct KeyHelpView: View {
     /// "Window mode", how it's being shown, and which layer the keys show.
     private var header: some View {
         HStack(spacing: 10) {
-            Text(model.mode.isEmpty ? "Global" : "\(model.mode.capitalized) mode").font(Theme.heading(15)).oneLine()
-            hint.font(Theme.body(12.5)).foregroundStyle(Theme.inkMuted)
+            Text(model.mode.isEmpty ? "Global" : "\(model.mode.capitalized) mode").font(Theme.heading(13.5)).oneLine()
+            hint.font(Theme.body(12)).foregroundStyle(Theme.inkMuted)
             Spacer(minLength: 16)
             layers
         }
