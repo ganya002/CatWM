@@ -231,10 +231,11 @@ final class PermissionGuide {
             p.isOpaque = false
             p.backgroundColor = .clear
             let glass = NSGlassEffectView()
-            glass.cornerRadius = 16
+            glass.cornerRadius = Theme.Radius.xl
             glass.contentView = host
             p.contentView = glass
         } else {
+            p.backgroundColor = Theme.ns(\.surfaceRaised)
             p.contentView = host
         }
         p.setContentSize(host.fittingSize)
@@ -279,6 +280,7 @@ private final class GuideModel: ObservableObject {
     @Published var alertUp = false
 }
 
+/// Steps beside System Settings: numbered rows, the app to drag in, and a quiet waiting line.
 private struct GuideView: View {
     @ObservedObject var model: GuideModel
     let dismiss: () -> Void
@@ -287,67 +289,64 @@ private struct GuideView: View {
         VStack(alignment: .leading, spacing: 14) {
             if model.granted {
                 HStack(spacing: 10) {
-                    Image(systemName: "checkmark.circle.fill").font(.title).foregroundStyle(.green)
+                    Image(systemName: "checkmark.circle.fill").font(.system(size: 22)).foregroundStyle(Theme.success)
                         .transition(.symbolEffect(.appear))
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("All set").font(.headline)
-                    }
+                    Text("All set").font(Theme.body(22)).oneLine()
                 }
             } else {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Allow Ouch").font(.headline)
-                    Text(model.alertUp ? "macOS asks first, then System Settings opens." : "Follow these steps in System Settings.").font(.callout).foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "lock.open").font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.accentInk)
+                        Text(model.kind.title).kicker()
+                    }
+                    Text("Allow Ouch").font(Theme.body(22)).tracking(-0.2).oneLine().padding(.top, 6)
+                    Text(model.alertUp ? "macOS asks first, then System Settings opens." : "Follow these steps in System Settings.")
+                        .font(Theme.body(13)).foregroundStyle(Theme.inkMuted).oneLine()
                 }
                 VStack(alignment: .leading, spacing: 10) {
                     if model.alertUp {
-                        row(1, "In the macOS alert, click **Open System Settings**. That adds Ouch to the list.")
-                        row(2, "Turn its switch **on**. Enter your password if asked.")
+                        OStep(n: 1, text: "In the macOS alert, click **Open System Settings**. That adds Ouch to the list.")
+                        OStep(n: 2, text: "Turn its switch **on**. Enter your password if asked.")
                     } else {
-                        row(1, "Find **Ouch** in the \(model.kind.title) list.")
-                        row(2, "Turn its switch **on**. Enter your password if asked.")
-                        row(3, "Not in the list? Click **+**, or drag this icon into it:")
+                        OStep(n: 1, text: "Find **Ouch** in the \(model.kind.title) list.")
+                        OStep(n: 2, text: "Turn its switch **on**. Enter your password if asked.")
+                        OStep(n: 3, text: "Not in the list? Click **+**, or drag this icon into it:")
                     }
                 }
                 if !model.alertUp { dragTile }
 
                 HStack(spacing: 8) {
-                    ProgressView().controlSize(.small)
-                    Text("Waiting for permission…").font(.caption).foregroundStyle(.secondary)
-                    Spacer()
-                    Button("Reset") { model.kind == .accessibility ? Permissions.reset() : Permissions.resetInputMonitoring() }
-                        .help("Clears a stale entry left by a rebuilt or moved copy of the app")
-                    Button("Hide", action: dismiss)
+                    ProgressView().controlSize(.small).scaleEffect(0.7).frame(width: 14, height: 14)
+                    Text("Waiting for permission…").font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine()
+                    Spacer(minLength: 4)
+                    OButton("Reset", variant: .ghost, size: .sm) {
+                        model.kind == .accessibility ? Permissions.reset() : Permissions.resetInputMonitoring()
+                    }
+                    .help("Clears a stale entry left by a rebuilt or moved copy of the app")
+                    OButton("Hide", size: .sm, action: dismiss)
                 }
-                .controlSize(.small)
             }
         }
-        .padding(16)
-        .frame(width: 300)
+        .padding(20)
+        .frame(width: 320)
+        .foregroundStyle(Theme.ink)
         .ignoresSafeArea() // the title bar is invisible (no traffic lights), so don't reserve room for it
-        .animation(.easeOut(duration: 0.2), value: model.granted)
-        .animation(.easeOut(duration: 0.2), value: model.alertUp)
+        .animation(Motion.easeOut, value: model.granted)
+        .animation(Motion.easeOut, value: model.alertUp)
     }
 
     private var dragTile: some View {
         HStack(spacing: 10) {
-            Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 40, height: 40)
-            Text("Ouch").font(.callout.weight(.medium))
+            Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 36, height: 36)
+            Text("Ouch").font(Theme.body(14, .medium))
             Spacer()
-            Image(systemName: "hand.draw").foregroundStyle(.secondary)
+            Image(systemName: "hand.draw").foregroundStyle(Theme.inkMuted)
         }
-        .padding(8)
-        .background(RoundedRectangle(cornerRadius: 10).fill(.quaternary))
+        .padding(.horizontal, 10).padding(.vertical, 6)
+        .background(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous).fill(Theme.surfaceSunken))
         // Only the app's location. Offering its contents (NSItemProvider(contentsOf:)) let Settings take
         // a copy of the bundle, so the switch turned on a copy and this app never became trusted.
         .onDrag { NSItemProvider(object: Bundle.main.bundleURL as NSURL) }
         .help("Drag into the \(model.kind.title) list")
-    }
-
-    private func row(_ n: Int, _ text: LocalizedStringKey) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text("\(n)").font(.caption.bold()).foregroundStyle(.white)
-                .frame(width: 18, height: 18).background(Circle().fill(Color.accentColor))
-            Text(text).font(.callout).fixedSize(horizontal: false, vertical: true)
-        }
     }
 }

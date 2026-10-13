@@ -1,9 +1,12 @@
 import Foundation
 
-/// Plain-text log at ~/Library/Logs/ouch.log. `debug` lines only appear with `debug-logging = true`.
+/// Plain-text log at ~/Library/Logs/ouch.log. `debug` lines only appear when launched with `--verbose`
+/// (or with the older `debug-logging = true` in the config file).
 enum Log {
     static let url = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/ouch.log")
     static var verbose = false
+    /// `open ouch.app --args --verbose`
+    static let verboseLaunch = CommandLine.arguments.contains("--verbose")
 
     private static let handle: FileHandle? = {
         let fm = FileManager.default

@@ -103,7 +103,7 @@ private struct PracticeWindowView: View {
 
     var body: some View {
         Text(app.title)
-            .font(Theme.body(13, .semibold))
+            .font(Theme.body(13, .medium))
             .foregroundStyle(app.dark ? Color.white.opacity(0.62) : Color.black.opacity(0.55))
             .lineLimit(1)
             .padding(.leading, 78) // clear of the traffic lights
@@ -115,7 +115,7 @@ private struct PracticeWindowView: View {
             .overlay {
                 if active == .key {
                     RoundedRectangle(cornerRadius: 11, style: .continuous)
-                        .strokeBorder(Color(red: 0, green: 122 / 255, blue: 1), lineWidth: 2.5)
+                        .strokeBorder(Theme.accent, lineWidth: 2.5)
                         .padding(2)
                         .ignoresSafeArea()
                         .allowsHitTesting(false)

@@ -2,12 +2,127 @@ import AppKit
 import CoreText
 import SwiftUI
 
-/// Fonts, colours and small controls shared by the Settings window, HUD and menu bar.
-enum Theme {
-    // MARK: Fonts
+// The Ouch design system (https://claude.ai/artifact/GY1GAH7xBUwAzBP1B9mtfY) in SwiftUI: semantic colour
+// tokens, the Chillax type scale, radii, shadows and the one floating Surface. Every view reads the
+// tokens below, never raw colours, so another palette is a swap of `Theme.palette`.
 
-    /// Text uses Apple's system fonts (San Francisco, SF Mono). Only Dela Gothic One (OFL; logo and
-    /// welcome title) ships in Contents/Resources/Fonts.
+// MARK: - Palette
+
+/// One palette: a light and a dark value for every semantic token.
+struct Palette {
+    /// sRGB hex, light then dark, with optional alpha.
+    struct Pair {
+        let light: UInt32, dark: UInt32
+        var lightAlpha: CGFloat = 1, darkAlpha: CGFloat = 1
+        init(_ light: UInt32, _ dark: UInt32, alpha: (CGFloat, CGFloat) = (1, 1)) {
+            self.light = light; self.dark = dark; lightAlpha = alpha.0; darkAlpha = alpha.1
+        }
+    }
+
+    var bg, surface, surfaceRaised, surfaceSunken, hover, hairline, borderControl: Pair
+    var ink, inkMuted, inkFaint: Pair
+    var accent, accentHover, onAccent, accentInk, accentSoft, accent2, tint, focus: Pair
+    var success, warning, danger, dangerSoft: Pair
+    var glass, wash1, wash2: Pair
+
+    /// From the app icon: graphite ground, the main window's electric blue, the white windows' cool
+    /// greys, and the impact marks' yellow as `accent2` (shapes only, never text).
+    static let ouch = Palette(
+        bg: Pair(0xF4F4F6, 0x1B1B1E), surface: Pair(0xFFFFFF, 0x232326), surfaceRaised: Pair(0xFFFFFF, 0x2C2C30),
+        surfaceSunken: Pair(0xECECF0, 0x18181B), hover: Pair(0xECECF0, 0x36363B), hairline: Pair(0xE2E2E7, 0x38383D),
+        borderControl: Pair(0x7E7E87, 0x7A7A82),
+        ink: Pair(0x18181B, 0xF5F5F7), inkMuted: Pair(0x55555C, 0xB4B4BB), inkFaint: Pair(0x6B6B73, 0x97979F),
+        accent: Pair(0x0A68E6, 0x3F95FF), accentHover: Pair(0x0A58C4, 0x5AA8FF), onAccent: Pair(0xFFFFFF, 0x0B0B0D),
+        accentInk: Pair(0x0A5FD1, 0x8DC3FF), accentSoft: Pair(0xE3EEFF, 0x1B2C47), accent2: Pair(0xFFCC00, 0xFFCC00),
+        tint: Pair(0xC7C7CC, 0x4A4A50), focus: Pair(0x0A68E6, 0x8DC3FF),
+        success: Pair(0x1F7A3D, 0x5FD38A), warning: Pair(0x8A5A00, 0xFFCC00), danger: Pair(0xC42B1C, 0xFF7B6B),
+        dangerSoft: Pair(0xFDE8E6, 0x3D2220),
+        glass: Pair(0xFFFFFF, 0x2C2C30, alpha: (0.82, 0.80)), wash1: Pair(0xF7EABB, 0x4D4217), wash2: Pair(0xE5E5E8, 0x2B2B2F))
+}
+
+enum Theme {
+    /// The palette every token reads. Tokens resolve at draw time, so changing it repaints on the next redraw.
+    static var palette = Palette.ouch
+
+    static func isDark(_ a: NSAppearance) -> Bool { a.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua }
+
+    private static func hex(_ v: UInt32, _ alpha: CGFloat) -> NSColor {
+        NSColor(srgbRed: CGFloat((v >> 16) & 0xFF) / 255, green: CGFloat((v >> 8) & 0xFF) / 255,
+                blue: CGFloat(v & 0xFF) / 255, alpha: alpha)
+    }
+
+    /// A token as an AppKit colour that follows light and dark appearance.
+    static func ns(_ token: KeyPath<Palette, Palette.Pair>) -> NSColor {
+        NSColor(name: nil) { a in
+            let p = palette[keyPath: token]
+            return isDark(a) ? hex(p.dark, p.darkAlpha) : hex(p.light, p.lightAlpha)
+        }
+    }
+    private static func token(_ kp: KeyPath<Palette, Palette.Pair>) -> Color { Color(nsColor: ns(kp)) }
+
+    // MARK: Colour tokens
+
+    /// Window ground: behind the Settings pane and everything else.
+    static let bg = token(\.bg)
+    /// The content pane, rows' ground; default for body text.
+    static let surface = token(\.surface)
+    /// Floating things: menus, tips, coach marks, HUD.
+    static let surfaceRaised = token(\.surfaceRaised)
+    /// Wells: search fields, keycaps, segmented tracks, switch tracks.
+    static let surfaceSunken = token(\.surfaceSunken)
+    static let hover = token(\.hover)
+    /// Separators. Decorative only: never the only edge of a control.
+    static let hairline = token(\.hairline)
+    /// Edges of controls: switch off, inputs. 3:1 on surface.
+    static let borderControl = token(\.borderControl)
+    static let ink = token(\.ink)
+    static let inkMuted = token(\.inkMuted)
+    static let inkFaint = token(\.inkFaint)
+    /// One fill per view: the primary button, the switch that is on, the current workspace.
+    static let accent = token(\.accent)
+    static let accentHover = token(\.accentHover)
+    static let onAccent = token(\.onAccent)
+    /// Accent used as text: group titles, links, kickers, checks.
+    static let accentInk = token(\.accentInk)
+    static let accentSoft = token(\.accentSoft)
+    /// The logo's spark yellow. Shapes only: occupied-workspace dots, impact marks. Never text.
+    static let accent2 = token(\.accent2)
+    /// Quiet fill for illustrations and layout thumbnails.
+    static let tint = token(\.tint)
+    static let focus = token(\.focus)
+    static let success = token(\.success)
+    static let warning = token(\.warning)
+    static let danger = token(\.danger)
+    static let dangerSoft = token(\.dangerSoft)
+    /// Floating chrome where Liquid Glass isn't available.
+    static let glass = token(\.glass)
+    static let wash1 = token(\.wash1)
+    static let wash2 = token(\.wash2)
+
+    /// A translucent well: keycaps, tiles and hovered rows on glass, where an opaque `surface-sunken`
+    /// would read as a hole. Works on solid surfaces too.
+    static let well = Color(nsColor: NSColor(name: nil) { a in
+        ns(\.ink).resolved(a).withAlphaComponent(isDark(a) ? 0.09 : 0.06)
+    })
+    static let wellHover = Color(nsColor: NSColor(name: nil) { a in
+        ns(\.ink).resolved(a).withAlphaComponent(isDark(a) ? 0.15 : 0.1)
+    })
+
+    /// The main pane of a layout thumbnail: accent mixed into tint.
+    static let thumbMain = Color(nsColor: NSColor(name: nil) { a in
+        let accent = ns(\.accent).resolved(a), tint = ns(\.tint).resolved(a)
+        return accent.blended(withFraction: 0.45, of: tint) ?? accent
+    })
+
+    /// Zen-style chrome: window chrome and sidebars sit on this wash.
+    static let wash = LinearGradient(stops: [.init(color: wash1, location: 0), .init(color: bg, location: 0.55),
+                                             .init(color: wash2, location: 1)],
+                                     startPoint: UnitPoint(x: 0.1, y: 0), endPoint: UnitPoint(x: 0.9, y: 1))
+
+    // MARK: Type
+
+    /// Chillax (ITF, Fontshare) at 300, 400 and 500 ships in Contents/Resources/Fonts with Dela Gothic One,
+    /// the wordmark's face. Keys use SF Mono.
     static func registerFonts() {
         guard let dir = Bundle.main.resourceURL?.appendingPathComponent("Fonts"),
               let urls = try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)
@@ -17,307 +132,310 @@ enum Theme {
     }
 
     private static let hasDela = NSFont(name: "DelaGothicOne-Regular", size: 12) != nil
+    private static let hasChillax = NSFont(name: "Chillax-Regular", size: 12) != nil
 
-    static func body(_ size: CGFloat = 13, _ weight: Font.Weight = .regular) -> Font {
+    /// Chillax at the nearest of its three weights; nothing heavier than 500.
+    private static func chillax(_ weight: Font.Weight) -> String {
+        switch weight {
+        case .ultraLight, .thin, .light: "Chillax-Light"
+        case .regular: "Chillax-Regular"
+        default: "Chillax-Medium"
+        }
+    }
+
+    /// The one face. 400 for text, 500 for emphasis, 300 for large display.
+    static func body(_ size: CGFloat = 13.5, _ weight: Font.Weight = .regular) -> Font {
+        hasChillax ? .custom(chillax(weight), size: size) : .system(size: size, weight: weight)
+    }
+    /// Key glyphs (⌘ ⌥ ⇧ ⇪ ↩) and the letters beside them, in SF Pro like native menus: SF Mono draws
+    /// the glyphs small and off the baseline.
+    static func keys(_ size: CGFloat = 12.5, _ weight: Font.Weight = .regular) -> Font {
         .system(size: size, weight: weight)
     }
-    static func mono(_ size: CGFloat = 12, _ weight: Font.Weight = .medium) -> Font {
+    /// Code: config snippets, bundle IDs, commands.
+    static func mono(_ size: CGFloat = 11.5, _ weight: Font.Weight = .medium) -> Font {
         .system(size: size, weight: weight, design: .monospaced)
     }
-    /// Pane titles, card headings and HUD text: plain bold body face.
-    static func heading(_ size: CGFloat) -> Font { body(size, .bold) }
-
-    /// Dela Gothic One, reserved for the few moments that deserve emphasis: the logo and the welcome title.
-    static func display(_ size: CGFloat) -> Font {
-        hasDela ? .custom("DelaGothicOne-Regular", size: size) : body(size, .bold)
+    /// Headings inside a pane and tip titles: 15/20 at 500.
+    static func heading(_ size: CGFloat = 15) -> Font { body(size, .medium) }
+    /// Light display type: the welcome title, pane titles, showcase headlines.
+    static func display(_ size: CGFloat) -> Font { body(size, .light) }
+    /// Dela Gothic One, kept for the "Ouch" wordmark only: it is the logo.
+    static func wordmark(_ size: CGFloat) -> Font {
+        hasDela ? .custom("DelaGothicOne-Regular", size: size) : .system(size: size, weight: .heavy)
     }
 
-    static func nsHeading(_ size: CGFloat) -> NSFont {
-        .systemFont(ofSize: size, weight: .bold)
+    static func nsBody(_ size: CGFloat, weight: NSFont.Weight = .regular) -> NSFont {
+        let name = weight.rawValue < NSFont.Weight.regular.rawValue ? "Chillax-Light"
+            : weight == .regular ? "Chillax-Regular" : "Chillax-Medium"
+        return NSFont(name: name, size: size) ?? .systemFont(ofSize: size, weight: weight)
     }
-    static func nsMono(_ size: CGFloat, weight: NSFont.Weight = .bold) -> NSFont {
+    static func nsMono(_ size: CGFloat, weight: NSFont.Weight = .medium) -> NSFont {
         .monospacedSystemFont(ofSize: size, weight: weight)
     }
 
-    // MARK: Colours (system semantic colours, so light/dark, Increase Contrast and accent colour all follow macOS)
+    // MARK: Metrics
 
-    static let window = Color(nsColor: .windowBackgroundColor)
-    static let statusBar = Color(nsColor: .windowBackgroundColor)
-    /// Raised controls: chips, keycaps.
-    static let control = Color(nsColor: .controlColor)
-    /// Grouped-form box fill, as in System Settings.
-    static let card = Color(nsColor: .quaternarySystemFill)
-    static let hairline = Color(nsColor: .separatorColor)
-    static let secondary = Color(nsColor: .secondaryLabelColor)
-    /// Plain windows in the miniatures: light like the icon's, a step above the card in dark mode.
-    static let miniWindow = Color(nsColor: NSColor(name: nil) { a in
-        a.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? NSColor(white: 0.42, alpha: 1) : .white
-    })
+    enum Radius {
+        static let xs: CGFloat = 4, sm: CGFloat = 6, md: CGFloat = 8, lg: CGFloat = 12, xl: CGFloat = 18
+    }
+    /// Menu and command rows.
+    static let rowHeight: CGFloat = 30
+    /// Buttons, inputs, segmented controls.
+    static let controlHeight: CGFloat = 28
+    static let menuWidth: CGFloat = 272
+    static let submenuWidth: CGFloat = 232
+
+    /// Durations: 120 / 180 / 280 ms.
+    static let fast = 0.12, medium = 0.18, slow = 0.28
 }
 
-// MARK: - Glass
+extension NSColor {
+    /// The colour as it draws under `appearance`.
+    func resolved(_ appearance: NSAppearance) -> NSColor {
+        var out = self
+        appearance.performAsCurrentDrawingAppearance { out = self.usingColorSpace(.sRGB) ?? self }
+        return out
+    }
+}
 
-/// Liquid Glass is for controls and chrome that float above content, never for the content itself
-/// (cards, rows, keycaps, miniatures). Every helper falls back to the pre-macOS 26 look.
+// MARK: - Type styles
+
 extension View {
-    /// Glass in `shape` on macOS 26 and later, a thin material with a soft edge before that.
-    /// `tint` colors the glass; `interactive` makes it respond to the pointer like a control.
-    @ViewBuilder
-    func glassSurface<S: InsettableShape>(_ shape: S, tint: Color? = nil, interactive: Bool = false) -> some View {
-        if #available(macOS 26.0, *) {
-            self.glassEffect((tint.map { Glass.regular.tint($0) } ?? .regular).interactive(interactive), in: shape)
-        } else {
-            self.background(shape.fill(tint ?? Color.clear)).background(shape.fill(.ultraThinMaterial))
-                .overlay(shape.strokeBorder(LinearGradient(colors: [.white.opacity(0.25), .white.opacity(0.05)], startPoint: .top, endPoint: .bottom), lineWidth: 0.75))
-        }
-    }
+    /// Single-line text that truncates: labels, captions, buttons, keys and rows never wrap.
+    func oneLine(_ mode: Text.TruncationMode = .tail) -> some View { lineLimit(1).truncationMode(mode) }
 
-    /// `.glass` / `.glassProminent` on macOS 26 and later, `.bordered` / `.borderedProminent` before that.
-    @ViewBuilder
-    func glassButtonStyle(prominent: Bool = false) -> some View {
-        if #available(macOS 26.0, *) {
-            if prominent { self.buttonStyle(.glassProminent) } else { self.buttonStyle(.glass) }
-        } else {
-            if prominent { self.buttonStyle(.borderedProminent) } else { self.buttonStyle(.bordered) }
-        }
-    }
-}
-
-/// Lets glass siblings blend and morph into each other on macOS 26 and later; a plain container before that.
-struct GlassGroup<Content: View>: View {
-    var spacing: CGFloat? = nil
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        if #available(macOS 26.0, *) {
-            GlassEffectContainer(spacing: spacing) { content }
-        } else {
-            content
-        }
-    }
-}
-
-// MARK: - Layout pieces
-
-/// Grouped box: rounded tint with a hairline, and a separator between each child view.
-struct Card<Content: View>: View {
-    var padding: CGFloat = 0
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        _VariadicView.Tree(Separated()) { content }
-            .padding(.horizontal, 12)
-            .padding(.vertical, padding)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.card))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Theme.hairline))
-    }
-
-    private struct Separated: _VariadicView_MultiViewRoot {
-        func body(children: _VariadicView.Children) -> some View {
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(children) { child in
-                    child.overlay(alignment: .top) {
-                        if child.id != children.first?.id { Rectangle().fill(Theme.hairline).frame(height: 1) }
-                    }
-                }
-            }
-        }
-    }
-}
-
-/// Section title above a card, with an optional footnote below it.
-struct Block<Content: View>: View {
-    let title: String?
-    var footer: String? = nil
-    @ViewBuilder var content: Content
-
-    init(_ title: String? = nil, footer: String? = nil, @ViewBuilder content: () -> Content) {
-        self.title = title
-        self.footer = footer
-        self.content = content()
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if let title {
-                Text(title).font(Theme.body(13, .semibold)).foregroundStyle(.primary)
-                    .padding(.leading, 2).padding(.bottom, 6)
-            }
-            content
-            if let footer {
-                Text(footer).font(Theme.body(11)).foregroundStyle(Theme.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.leading, 2).padding(.top, 6)
-            }
-        }
-    }
-}
-
-/// One line in a card: label on the left, control on the right.
-struct Row<Label: View, Control: View>: View {
-    var vertical: CGFloat = 9
-    @ViewBuilder var label: Label
-    @ViewBuilder var control: Control
-
-    var body: some View {
-        HStack(spacing: 12) {
-            label
-            Spacer(minLength: 0)
-            control
-        }
-        .padding(.vertical, vertical)
-    }
-}
-
-extension Row where Label == Text {
-    init(_ title: String, vertical: CGFloat = 9, @ViewBuilder control: () -> Control) {
-        self.init(vertical: vertical, label: { Text(title) }, control: control)
-    }
-}
-
-/// Title with a smaller grey explanation underneath.
-struct TitleDetail: View {
-    let title: String
-    let detail: String
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title)
-            Text(detail).font(Theme.body(11)).foregroundStyle(Theme.secondary).fixedSize(horizontal: false, vertical: true)
-        }
-    }
-}
-
-/// Switch row; dims its label when disabled, like System Settings.
-struct SwitchRow: View {
-    let title: String
-    var detail: String? = nil
-    @Binding var isOn: Bool
-    @Environment(\.isEnabled) private var enabled
-
-    var body: some View {
-        Row {
-            Group { if let detail { TitleDetail(title: title, detail: detail) } else { Text(title) } }
-                .opacity(enabled ? 1 : 0.4)
-        } control: {
-            Toggle(title, isOn: $isOn).toggleStyle(.switch).controlSize(.small).labelsHidden()
-        }
-    }
-}
-
-// MARK: - Controls (native AppKit-backed controls, so focus, keyboard and VoiceOver all work)
-
-/// Segmented control.
-struct Segmented<T: Hashable>: View {
-    /// Spoken by VoiceOver; not shown.
-    let title: String
-    let options: [(value: T, label: String)]
-    @Binding var selection: T
-
-    var body: some View {
-        Picker(title, selection: $selection) {
-            ForEach(options, id: \.value) { Text($0.label).tag($0.value) }
-        }
-        .pickerStyle(.segmented)
-        .labelsHidden()
-        .fixedSize()
-    }
-}
-
-/// Pop-up button. `bordered: false` shows just the value and the ⇕ arrows, as in the design.
-struct PopUp<T: Hashable>: View {
-    /// Spoken by VoiceOver; not shown.
-    let title: String
-    let options: [(value: T, label: String)]
-    @Binding var selection: T
-    var bordered = false
-
-    var body: some View {
-        let picker = Picker(title, selection: $selection) {
-            ForEach(options, id: \.value) { Text($0.label).tag($0.value) }
-        }
-        .pickerStyle(.menu)
-        .labelsHidden()
-        .fixedSize()
-        if bordered { picker } else { picker.buttonStyle(.borderless) }
-    }
-}
-
-/// Grey circle with a white minus, used to delete list rows.
-struct RemoveButton: View {
-    let help: String
-    let action: () -> Void
-    private final class Hover: ObservableObject { @Published var on = false }
-    @StateObject private var hover = Hover()
-
-    var body: some View {
-        Button(action: action) {
-            Circle().fill(Color.primary.opacity(hover.on ? 0.45 : 0.3))
-                .frame(width: 16, height: 16)
-                .overlay(Capsule().fill(Color(nsColor: .windowBackgroundColor)).frame(width: 8, height: 2))
-        }
-        .buttonStyle(.plain)
-        .onHover { hover.on = $0 }
-        .help(help)
-        .accessibilityLabel(help)
-    }
-}
-
-/// Rounded gradient square holding a white glyph (sidebar and hero icons).
-struct IconTile: View {
-    let symbol: String
-    let color: Color
-    var size: CGFloat = 24
-
-    var body: some View {
-        RoundedRectangle(cornerRadius: size * 0.225, style: .continuous)
-            .fill(color.gradient)
-            .frame(width: size, height: size)
-            .overlay(
-                RoundedRectangle(cornerRadius: size * 0.225, style: .continuous)
-                    .strokeBorder(LinearGradient(colors: [.white.opacity(0.28), .white.opacity(0)], startPoint: .top, endPoint: .center), lineWidth: 0.75)
-            )
-            .overlay(
-                Image(systemName: symbol)
-                    .font(.system(size: size * 0.56, weight: .medium))
-                    .imageScale(.medium)
-                    .foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.18), radius: size * 0.03, y: size * 0.02)
-                    .contentTransition(.symbolEffect(.replace))
-            )
-            .animation(.default, value: symbol)
-    }
-}
-
-/// White keycaps for a shortcut.
-struct Keycaps: View {
-    let caps: [String]
-    var body: some View {
-        HStack(spacing: 3) {
-            ForEach(Array(caps.enumerated()), id: \.offset) { _, c in
-                Text(c)
-                    .font(Theme.body(12, .medium))
-                    .padding(.horizontal, 5)
-                    .frame(minWidth: 20, minHeight: 20)
-                    .background(RoundedRectangle(cornerRadius: 5).fill(Theme.control))
-                    .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(Color(.sRGB, red: 60 / 255, green: 60 / 255, blue: 67 / 255).opacity(0.3)))
-                    .shadow(color: .black.opacity(0.12), radius: 0, y: 1)
-            }
-        }
+    /// `kicker`: the only uppercase, for counts like "STEP 2 OF 6".
+    func kicker(_ color: Color = Theme.accentInk) -> some View {
+        font(Theme.mono(11, .medium)).tracking(0.88).textCase(.uppercase).foregroundStyle(color)
     }
 }
 
 // MARK: - Motion
 
+/// Two curves: ease-out for things appearing, a spring for things that move under the hand.
+enum Motion {
+    static let easeOut = Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: Theme.medium)
+    /// SwiftUI's `.spring(response: 0.3, dampingFraction: 0.7)`: switch and slider thumbs, HUD pop, keycaps.
+    static let spring = Animation.spring(response: 0.3, dampingFraction: 0.7)
+    /// Springy settle for things snapping into place.
+    static let snap = Animation.spring(response: 0.34, dampingFraction: 0.7)
+    /// `snap`, or a plain short ease under Reduce Motion.
+    static func snap(_ reduce: Bool) -> Animation { reduce ? .easeOut(duration: 0.15) : snap }
+}
+
+// MARK: - Shadows
+
+enum Elevation { case sm, popover, float }
+
+extension View {
+    /// The design's shadows: a 1px ring plus a soft drop. Apply it to a background shape, never to a view
+    /// with text in it, or the text casts its own shadow (which shows through glass).
+    func elevation<S: Shape>(_ e: Elevation, in shape: S) -> some View {
+        let ring = Color(nsColor: NSColor(name: nil) { a in
+            NSColor.black.withAlphaComponent(Theme.isDark(a) ? (e == .float ? 0.5 : 0.45) : (e == .float ? 0.06 : 0.05))
+        })
+        let drop = Color(nsColor: NSColor(name: nil) { a in
+            let dark = Theme.isDark(a)
+            switch e {
+            case .sm: return NSColor.black.withAlphaComponent(dark ? 0.4 : 0.06)
+            case .popover: return NSColor.black.withAlphaComponent(dark ? 0.6 : 0.2)
+            case .float: return NSColor.black.withAlphaComponent(dark ? 0.7 : 0.3)
+            }
+        })
+        return self
+            .overlay(shape.stroke(ring, lineWidth: e == .sm ? 0 : 1))
+            .shadow(color: drop, radius: e == .sm ? 1 : e == .popover ? 13 : 22, y: e == .sm ? 1 : e == .popover ? 10 : 18)
+    }
+}
+
+// MARK: - Surface
+
+/// The single floating container behind every menu, tooltip, tip, coach mark, HUD and welcome card.
+/// Pick the density by job: tooltip `xs`, confirmation `sm`, menu or tip `md`, tour step `lg`, welcome `xl`.
+enum Density {
+    case xs, sm, md, lg, xl
+
+    var radius: CGFloat {
+        switch self {
+        case .xs: Theme.Radius.md
+        case .sm, .md: Theme.Radius.lg
+        case .lg: Theme.Radius.xl
+        case .xl: 24
+        }
+    }
+    var padding: EdgeInsets {
+        switch self {
+        case .xs: EdgeInsets(top: 6, leading: 10, bottom: 6, trailing: 10)
+        case .sm: EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16)
+        case .md: EdgeInsets(top: 4, leading: 4, bottom: 4, trailing: 4)
+        case .lg: EdgeInsets(top: 20, leading: 20, bottom: 16, trailing: 20)
+        case .xl: EdgeInsets(top: 32, leading: 32, bottom: 32, trailing: 32)
+        }
+    }
+    var elevation: Elevation { self == .xs || self == .md ? .popover : .float }
+}
+
+/// Where a surface's caret points from: a rotated square sharing the surface's fill.
+enum Caret: Equatable {
+    case none
+    /// On the top edge, `x` from the leading edge.
+    case top(CGFloat)
+    /// Centred on the bottom edge.
+    case bottom
+}
+
+enum SurfaceTone { case plain, accent, inverted }
+
+private struct SurfaceModifier: ViewModifier {
+    let density: Density
+    let tone: SurfaceTone
+    let glass: Bool
+    let caret: Caret
+
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: density.radius, style: .continuous)
+        content
+            .padding(density.padding)
+            .foregroundStyle(tone == .accent ? Theme.onAccent : tone == .inverted ? Theme.surface : Theme.ink)
+            .background(alignment: caretAlignment) { caretView }
+            .background { fill(shape) }
+    }
+
+    private var fillColor: Color {
+        switch tone {
+        case .plain: Theme.surfaceRaised
+        case .accent: Theme.accent
+        case .inverted: Theme.ink
+        }
+    }
+
+    @ViewBuilder private func fill(_ shape: RoundedRectangle) -> some View {
+        if glass && tone == .plain {
+            if #available(macOS 26.0, *) {
+                Color.clear.glassEffect(.regular, in: shape) // glass draws its own edge and depth
+            } else {
+                shape.fill(Theme.glass).background(VisualBlur(radius: density.radius))
+                    .background(shape.fill(Color.clear).elevation(density.elevation, in: shape))
+            }
+        } else {
+            shape.fill(fillColor).elevation(density.elevation, in: shape)
+        }
+    }
+
+    private var caretAlignment: Alignment {
+        if case .bottom = caret { return .bottom }
+        return .topLeading
+    }
+
+    @ViewBuilder private var caretView: some View {
+        let diamond = RoundedRectangle(cornerRadius: 3, style: .continuous)
+            .fill(tone == .plain ? Theme.surfaceRaised : fillColor)
+            .frame(width: 14, height: 14).rotationEffect(.degrees(45))
+        switch caret {
+        case .none: EmptyView()
+        case .top(let x): diamond.offset(x: x - 7, y: -6)
+        case .bottom: diamond.offset(y: 6)
+        }
+    }
+}
+
+extension View {
+    /// Wraps the view in a Surface. Slots inside always follow the same order: head, title, body,
+    /// keys, children, actions, progress.
+    func surface(_ density: Density, tone: SurfaceTone = .plain, glass: Bool = false, caret: Caret = .none) -> some View {
+        modifier(SurfaceModifier(density: density, tone: tone, glass: glass, caret: caret))
+    }
+
+    /// The one content pane in a window: `surface`, 14pt radius, popover shadow.
+    func pane() -> some View {
+        let shape = RoundedRectangle(cornerRadius: 14, style: .continuous)
+        return clipShape(shape).background(shape.fill(Theme.surface).elevation(.popover, in: shape))
+    }
+}
+
+private struct FloatingGlass<S: InsettableShape>: ViewModifier {
+    let shape: S
+    func body(content: Content) -> some View {
+        if #available(macOS 26.0, *) {
+            content.glassEffect(.regular, in: shape)
+        } else {
+            content
+                .background(shape.fill(Theme.glass))
+                .background(VisualBlur(radius: 18).clipShape(shape))
+                .background(shape.fill(Theme.glass).elevation(.float, in: shape))
+        }
+    }
+}
+
+extension View {
+    /// Liquid Glass in `shape` on macOS 26 and later; the `glass` token over a blur, with the float
+    /// shadow, before that. For small floating confirmations: the HUD, the save pill.
+    func floatingGlass<S: InsettableShape>(_ shape: S) -> some View { modifier(FloatingGlass(shape: shape)) }
+}
+
+/// Behind-window blur with rounded corners, for glass before macOS 26. A mask image, because a layer
+/// corner radius leaves the blur's edges square.
+struct VisualBlur: NSViewRepresentable {
+    var radius: CGFloat
+    var material: NSVisualEffectView.Material = .popover
+
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let v = NSVisualEffectView()
+        v.material = material
+        v.state = .active
+        v.blendingMode = .behindWindow
+        v.maskImage = Self.mask(radius)
+        return v
+    }
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
+
+    private static func mask(_ radius: CGFloat) -> NSImage {
+        let edge = radius * 2 + 1
+        let image = NSImage(size: NSSize(width: edge, height: edge), flipped: false) { rect in
+            NSColor.black.setFill()
+            NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius).fill()
+            return true
+        }
+        image.capInsets = NSEdgeInsets(top: radius, left: radius, bottom: radius, right: radius)
+        image.resizingMode = .stretch
+        return image
+    }
+}
+
+// MARK: - Symbol effects
+
+/// SF Symbol effects that report something: an action landed, a thing refused, a tip is waiting. The
+/// newer effects fall back to older ones on earlier macOS, and everything stops under Reduce Motion.
+extension View {
+    /// Retile, Reload Config, Settings: a turn each time `value` changes.
+    /// Quick, so it lands while the windows are still settling.
+    @ViewBuilder func rotateEffect<V: Equatable>(value: V) -> some View {
+        if #available(macOS 15.0, *) {
+            symbolEffect(.rotate, options: .speed(2.2), value: value)
+        } else {
+            symbolEffect(.bounce, options: .speed(2), value: value)
+        }
+    }
+    /// Something refused: a window that won't resize.
+    @ViewBuilder func wiggleEffect<V: Equatable>(value: V) -> some View {
+        if #available(macOS 15.0, *) { symbolEffect(.wiggle, value: value) } else { symbolEffect(.bounce, value: value) }
+    }
+    /// A state that lasts, such as a tip waiting.
+    @ViewBuilder func breatheEffect(isActive: Bool = true) -> some View {
+        if #available(macOS 15.0, *) { symbolEffect(.breathe, isActive: isActive) } else { symbolEffect(.pulse, isActive: isActive) }
+    }
+    /// A check being drawn in.
+    @ViewBuilder func drawOnEffect(isActive: Bool) -> some View {
+        if #available(macOS 26.0, *) { symbolEffect(.drawOn, isActive: !isActive) } else { self }
+    }
+}
+
+// MARK: - Personality
+
 /// Ouch's bit of personality, taken from the icon: things land with a small squish and a burst of the
 /// icon's yellow impact lines. Reserved for state changes (a layout joins the cycle, a permission is
 /// granted, a preview window lands), never for navigation, and dropped under Reduce Motion.
-enum Motion {
-    /// Springy settle for things snapping into place.
-    static let snap = Animation.spring(response: 0.34, dampingFraction: 0.7)
-    /// `snap`, or a plain short fade-friendly ease under Reduce Motion.
-    static func snap(_ reduce: Bool) -> Animation { reduce ? .easeOut(duration: 0.15) : snap }
-}
 
 /// Three short strokes bursting from a point, like the ones on the app icon.
 struct SparkLines: Shape {
@@ -336,7 +454,7 @@ struct SparkLines: Shape {
     }
 }
 
-/// The icon's impact lines, flashing once each time `trigger` changes.
+/// The icon's impact lines in `accent2`, flashing once each time `trigger` changes.
 struct ImpactBurst<Trigger: Equatable>: View {
     let trigger: Trigger
     var angle: Double = -135
@@ -350,7 +468,7 @@ struct ImpactBurst<Trigger: Equatable>: View {
     var body: some View {
         let reduceMotion = reduceMotion, delay = delay
         return SparkLines(angle: angle)
-            .stroke(Color.yellow, style: StrokeStyle(lineWidth: max(1.5, size / 10), lineCap: .round))
+            .stroke(Theme.accent2, style: StrokeStyle(lineWidth: max(1.5, size / 10), lineCap: .round))
             .frame(width: size, height: size)
             .phaseAnimator(Phase.allCases, trigger: trigger) { view, phase in
                 view.scaleEffect(phase == .rest ? 0.3 : phase == .burst ? 1 : 1.2)
@@ -404,36 +522,6 @@ extension View {
 
 // MARK: - Miniatures
 
-/// A window in the miniatures, styled like the icon: the main window in the accent colour, the rest
-/// plain. `chrome` adds the title-bar dots on larger ones.
-struct MiniWindow: View {
-    var main: Bool
-    var muted = false
-    var corner: CGFloat = 2.5
-    var chrome = false
-
-    var body: some View {
-        let shape = RoundedRectangle(cornerRadius: corner, style: .continuous)
-        shape.fill(fill)
-            .overlay(shape.strokeBorder(main && !muted ? Color.white.opacity(0.3) : Theme.hairline, lineWidth: 0.75))
-            .overlay(alignment: .topLeading) {
-                if chrome {
-                    HStack(spacing: 3) {
-                        ForEach(0..<3, id: \.self) { _ in
-                            Circle().fill(main ? Color.white.opacity(0.5) : Color.primary.opacity(0.18)).frame(width: 4, height: 4)
-                        }
-                    }
-                    .padding(5)
-                }
-            }
-    }
-
-    private var fill: AnyShapeStyle {
-        if main { return AnyShapeStyle((muted ? Color.gray : Color.accentColor).gradient) }
-        return muted ? AnyShapeStyle(Color.gray.opacity(0.4)) : AnyShapeStyle(Theme.miniWindow.gradient)
-    }
-}
-
 /// A made-up app for the demo windows. The tones are all low-saturation and alternate light and
 /// dark, so any two side by side read as different apps without clashing.
 struct DemoApp: Equatable {
@@ -483,7 +571,7 @@ struct DemoWindow: View {
                 }
                 if g.size.width > 56 {
                     Text(app.title)
-                        .font(Theme.body(6.5, .semibold))
+                        .font(Theme.body(6.5, .medium))
                         .foregroundStyle(app.dark ? Color.white.opacity(0.6) : Color.black.opacity(0.55))
                         .lineLimit(1)
                         .padding(.leading, 3)
@@ -494,13 +582,13 @@ struct DemoWindow: View {
         }
         .background(app.color)
         .clipShape(shape)
-        .overlay(shape.strokeBorder(main ? Color.accentColor : (app.dark ? Color.white : Color.black).opacity(0.1),
+        .overlay(shape.strokeBorder(main ? Theme.accent : (app.dark ? Color.white : Color.black).opacity(0.1),
                                     lineWidth: main ? 1.25 : 0.5))
     }
 }
 
-/// Miniature of a layout, drawn with the real layout code. When the layout changes, the windows
-/// spring to their new places.
+/// Miniature of a layout, drawn with the real layout code: the main pane in accent mixed into tint (full
+/// accent when selected), the rest in tint. When the layout changes, the panes spring to their places.
 struct LayoutThumbnail: View {
     let layout: Layout
     var count = 4
@@ -510,27 +598,29 @@ struct LayoutThumbnail: View {
     var body: some View {
         GeometryReader { g in
             let frames = Self.frames(layout, count: count, size: g.size)
+            let r = max(1.5, min(g.size.width, g.size.height) * 0.05)
             ZStack(alignment: .topLeading) {
-                RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Color.primary.opacity(selected ? 0.1 : 0.07))
                 ForEach(Array(frames.enumerated()).reversed(), id: \.offset) { i, f in
-                    MiniWindow(main: i == 0, muted: !selected)
+                    RoundedRectangle(cornerRadius: r, style: .continuous)
+                        .fill(i == 0 ? (selected ? Theme.accent : Theme.thumbMain) : Theme.tint)
                         .frame(width: f.width, height: f.height)
                         .offset(x: f.minX, y: f.minY)
                 }
             }
         }
+        .aspectRatio(16 / 10, contentMode: .fit)
         .animation(Motion.snap(reduceMotion), value: layout)
-        .animation(.easeOut(duration: 0.2), value: selected)
+        .animation(.easeOut(duration: Theme.medium), value: selected)
         .accessibilityHidden(true)
     }
 
     private static func frames(_ layout: Layout, count: Int, size: CGSize) -> [CGRect] {
-        let px = size.width * 0.04, py = size.height * 0.06
-        let r = CGRect(origin: .zero, size: size).insetBy(dx: px, dy: py)
-        return layout.frames(count: count, in: r.insetBy(dx: -px / 2, dy: -py / 2), ratio: 0.5, mainCount: 1)?
-            .map { $0.insetBy(dx: px / 2, dy: py / 2) }
-            ?? [CGRect(x: size.width * 0.09, y: size.height * 0.15, width: size.width * 0.52, height: size.height * 0.5),
-                CGRect(x: size.width * 0.39, y: size.height * 0.37, width: size.width * 0.52, height: size.height * 0.5)]
+        let gap = max(1.5, size.width * 0.035)
+        let r = CGRect(origin: .zero, size: size)
+        return layout.frames(count: count, in: r.insetBy(dx: -gap / 2, dy: -gap / 2), ratio: 0.5, mainCount: 1)?
+            .map { $0.insetBy(dx: gap / 2, dy: gap / 2) }
+            ?? [CGRect(x: size.width * 0.06, y: size.height * 0.1, width: size.width * 0.56, height: size.height * 0.56),
+                CGRect(x: size.width * 0.38, y: size.height * 0.34, width: size.width * 0.56, height: size.height * 0.56)]
     }
 }
 
@@ -548,8 +638,8 @@ struct BadgedAppIcon: View {
                 Image(systemName: badge)
                     .font(.system(size: size * 0.36, weight: .semibold))
                     .symbolRenderingMode(.palette)
-                    .foregroundStyle(.white, color)
-                    .background(Circle().fill(Theme.window).padding(-1.5))
+                    .foregroundStyle(Theme.surface, color)
+                    .background(Circle().fill(Theme.surface).padding(-1.5))
                     .contentTransition(.symbolEffect(.replace))
                     .offset(x: size * 0.06, y: size * 0.04)
             }

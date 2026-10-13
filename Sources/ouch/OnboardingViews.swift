@@ -2,42 +2,8 @@ import AppKit
 import SwiftUI
 
 // SwiftUI content for the onboarding overlays. Each one is hosted in its own borderless panel
-// (see Onboarding.swift); none of them is a regular window.
-
-private let blue = Color(red: 0, green: 122 / 255, blue: 1)
-private let blueDown = Color(red: 0, green: 98 / 255, blue: 204 / 255)
-private let okGreen = Color(red: 36 / 255, green: 138 / 255, blue: 61 / 255)
-private let ink = Color(red: 29 / 255, green: 29 / 255, blue: 31 / 255)
-
-/// Hover state; @State can't be used here (its macro plugin isn't available to SwiftPM builds).
-private final class Hover: ObservableObject { @Published var on = false }
-
-/// Rounded pill button from the design: filled blue, or white with a hairline.
-private struct Pill: View {
-    let title: String
-    var primary = false
-    var enabled = true
-    var height: CGFloat = 24
-    var weight: Font.Weight = .regular
-    let action: () -> Void
-    @StateObject private var hover = Hover()
-
-    var body: some View {
-        Button(action: action) {
-            Text(title).font(Theme.body(13, weight))
-                .foregroundStyle(primary ? Color.white : ink)
-                .padding(.horizontal, height > 26 ? 18 : 13)
-                .frame(height: height)
-                .background(Capsule().fill(primary ? (hover.on && enabled ? blueDown : blue).opacity(enabled ? 1 : 0.45)
-                                                   : Color(white: hover.on ? 0.96 : 1)))
-                .overlay(Capsule().strokeBorder(Color.black.opacity(primary ? 0 : 0.18), lineWidth: 0.5))
-                .shadow(color: .black.opacity(primary ? 0.1 : 0.12), radius: 0.75, y: 0.5)
-                .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .onHover { hover.on = $0 }
-    }
-}
+// (see Onboarding.swift); none of them is a regular window. All of them are Surfaces: the welcome
+// card at `xl`, tour steps at `lg` in the accent tone, the menu bar tip at `md`.
 
 // MARK: - Welcome card
 
@@ -57,91 +23,77 @@ final class WelcomeModel: ObservableObject {
 struct WelcomeView: View {
     @ObservedObject var model: WelcomeModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Transparent room around the card for its shadow.
+    static let margin: CGFloat = 44
 
     var body: some View {
-        VStack(spacing: 18) {
-            VStack(spacing: 8) {
-                Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 84, height: 84)
-                    .offset(y: model.landed || reduceMotion ? 0 : -28)
-                    .opacity(model.landed ? 1 : 0)
-                    .animation(.easeIn(duration: 0.22), value: model.landed)
-                    .squish(on: model.landed, delay: 0.22)
-                    .overlay(alignment: .topLeading) {
-                        ImpactBurst(trigger: model.landed, size: 26, delay: 0.22).offset(x: -6, y: 0)
-                    }
-                    .padding(.vertical, -10) // the icon artwork has its own transparent margin
-                Text("Welcome to Ouch").font(Theme.display(30)).foregroundStyle(ink).padding(.top, 6)
-                Text("Ouch needs a few permissions to tile. Each button opens System Settings with a guide beside it.")
-                    .font(Theme.body(13)).foregroundStyle(Color.black.opacity(0.5))
-                    .multilineTextAlignment(.center).frame(maxWidth: 380)
-                    .fixedSize(horizontal: false, vertical: true)
+        VStack(alignment: .leading, spacing: 0) {
+            Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 72, height: 72)
+                .offset(y: model.landed || reduceMotion ? 0 : -28)
+                .opacity(model.landed ? 1 : 0)
+                .animation(.easeIn(duration: 0.22), value: model.landed)
+                .squish(on: model.landed, delay: 0.22)
+                .overlay(alignment: .topLeading) {
+                    ImpactBurst(trigger: model.landed, size: 24, delay: 0.22).offset(x: -8, y: -4)
+                }
+                .padding(.leading, -6).padding(.vertical, -6) // the icon artwork has its own transparent margin
+            Text("Welcome to Ouch").font(Theme.display(40)).tracking(-1).oneLine()
+                .padding(.top, 16).padding(.bottom, 8)
+            Text("Ouch needs a few permissions to tile. Each button opens System Settings with a guide beside it.")
+                .font(Theme.body(13.5)).lineSpacing(2).foregroundStyle(Theme.inkMuted)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.bottom, 16)
+            OGroup {
+                permission(granted: model.accessibility, symbol: "lock", title: "Accessibility", required: true,
+                           detail: "Moves windows and hears your shortcuts", primary: true, action: model.allowAccessibility)
+                permission(granted: model.inputMonitoring, symbol: "keyboard", title: "Input Monitoring", required: false,
+                           detail: "Makes Caps Lock shortcuts instant", primary: false, action: model.allowInputMonitoring)
+                permission(granted: model.login, symbol: "power", title: "Open at login", required: false,
+                           detail: "Starts Ouch when you log in", primary: false, action: model.allowLogin)
             }
-            VStack(spacing: 0) {
-                permission(granted: model.accessibility, symbol: "lock.fill",
-                           tint: [Color(red: 1, green: 0.667, blue: 0.2), Color(red: 1, green: 0.55, blue: 0)],
-                           title: "Accessibility", required: true,
-                           detail: "Lets Ouch move other apps' windows and respond to your shortcuts.",
-                           primary: true, action: model.allowAccessibility)
-                Rectangle().fill(Color.black.opacity(0.06)).frame(height: 1).padding(.leading, 58).padding(.trailing, 14)
-                permission(granted: model.inputMonitoring, symbol: "keyboard",
-                           tint: [Color(red: 0.2, green: 0.78, blue: 0.9), Color(red: 0.1, green: 0.55, blue: 0.85)],
-                           title: "Input Monitoring", required: false,
-                           detail: "Makes shortcuts that use Caps Lock instant instead of needing a hold.",
-                           primary: false, action: model.allowInputMonitoring)
-                Rectangle().fill(Color.black.opacity(0.06)).frame(height: 1).padding(.leading, 58).padding(.trailing, 14)
-                permission(granted: model.login, symbol: "power",
-                           tint: [Color(red: 0.486, green: 0.478, blue: 0.918), Color(red: 0.345, green: 0.337, blue: 0.839)],
-                           title: "Open at login", required: false,
-                           detail: "Starts Ouch when you log in. macOS may ask you to allow it in Login Items.",
-                           primary: false, action: model.allowLogin)
-            }
-            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.black.opacity(0.035)))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.black.opacity(0.06)))
             HStack(spacing: 8) {
                 Spacer(minLength: 0)
-                Pill(title: "Skip tutorial", action: model.skip)
-                Pill(title: "Learn the shortcuts", primary: true, enabled: model.accessibility, action: model.learn)
+                OButton("Skip tutorial", variant: .ghost, action: model.skip)
+                OButton("Take the tour", variant: .primary, size: .lg, shortcut: ["↩"], action: model.learn)
+                    .disabled(!model.accessibility)
                     .help(model.accessibility ? "" : "Allow Accessibility first")
+                    .keyboardShortcut(.defaultAction)
             }
+            .padding(.top, 24)
         }
-        .padding(.horizontal, 28).padding(.top, 30).padding(.bottom, 22)
-        .frame(width: 560)
-        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color(white: 0.984)))
-        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(Color.black.opacity(0.2), lineWidth: 0.5))
-        .environment(\.colorScheme, .light)
+        .frame(width: 480 - 64)
+        .surface(.xl)
+        .padding(Self.margin)
     }
 
-    private func permission(granted: Bool, symbol: String, tint: [Color], title: String, required: Bool,
+    private func permission(granted: Bool, symbol: String, title: String, required: Bool,
                             detail: String, primary: Bool, action: @escaping () -> Void) -> some View {
         HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(LinearGradient(colors: granted ? [Color(red: 0.3, green: 0.85, blue: 0.39), Color(red: 0.18, green: 0.7, blue: 0.31)] : tint,
-                                     startPoint: .top, endPoint: .bottom))
-                .frame(width: 32, height: 32)
-                .overlay(Image(systemName: granted ? "checkmark" : symbol).font(.system(size: 14, weight: .semibold)).foregroundStyle(.white)
-                    .contentTransition(.symbolEffect(.replace)).symbolEffect(.bounce, value: granted))
+            Image(systemName: granted ? "checkmark.circle.fill" : symbol)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(granted ? Theme.success : Theme.accentInk)
+                .contentTransition(.symbolEffect(.replace))
+                .frame(width: 22)
                 .overlay(alignment: .topLeading) {
                     ImpactBurst(trigger: granted, size: 18).offset(x: -9, y: -9).opacity(granted ? 1 : 0)
                 }
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 6) {
-                    Text(title).font(Theme.body(13, .medium)).foregroundStyle(ink)
-                    Text(required ? "Required" : "Optional").font(Theme.body(10, .semibold))
-                        .foregroundStyle(required ? Color(red: 0.79, green: 0.2, blue: 0) : Color.black.opacity(0.55))
-                        .padding(.horizontal, 6).padding(.vertical, 1)
-                        .background(RoundedRectangle(cornerRadius: 4).fill(required ? Color.orange.opacity(0.16) : Color.black.opacity(0.06)))
+                    Text(title).font(Theme.body(14)).oneLine()
+                    Text(required ? "Required" : "Optional").font(Theme.body(11.5, .medium))
+                        .foregroundStyle(required ? Theme.accentInk : Theme.inkMuted).oneLine()
                 }
-                Text(detail).font(Theme.body(11)).foregroundStyle(Color.black.opacity(0.55)).fixedSize(horizontal: false, vertical: true)
+                Text(detail).font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine()
             }
             Spacer(minLength: 0)
             if granted {
-                Text("Allowed").font(Theme.body(12, .medium)).foregroundStyle(okGreen)
+                OStatus(kind: .success, text: "Granted").transition(.opacity.combined(with: .scale(scale: 0.9)))
             } else {
-                Pill(title: "Allow…", primary: primary, action: action)
+                OButton("Allow…", variant: primary ? .primary : .secondary, size: .sm, action: action)
             }
         }
-        .padding(.horizontal, 14).padding(.vertical, 12)
-        .animation(.easeOut(duration: 0.3), value: granted)
+        .frame(minHeight: 52)
+        .animation(Motion.easeOut, value: granted)
     }
 }
 
@@ -159,13 +111,13 @@ struct WordmarkView: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            Text("Ouch").font(Theme.display(size)).foregroundStyle(.white)
+            Text("Ouch").font(Theme.wordmark(size)).foregroundStyle(.white)
                 .shadow(color: .black.opacity(0.3), radius: 12, y: 4)
                 .squish(on: model.landed, delay: 0.75)
                 .overlay(alignment: .topLeading) {
                     ImpactBurst(trigger: model.landed, size: size * 0.45, delay: 0.75).offset(x: -size * 0.3, y: -size * 0.15)
                 }
-            tagline(max(16, min(20, size / 7)))
+            tagline(max(16, min(22, size / 6)))
                 .foregroundStyle(Color.white.opacity(0.88))
                 .opacity(model.subtitle ? 1 : 0)
                 .animation(.easeOut(duration: 0.9), value: model.subtitle)
@@ -173,13 +125,11 @@ struct WordmarkView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    /// "*Wonderful* hyprland inspired tile manager for macOS." "Wonderful" is set in the system italic;
-    /// "hyprland" is in Hyprland's blue.
+    /// "Wonderful *hyprland* inspired tile manager for macOS.", light, with "hyprland" at 500 in Hyprland's blue.
     private func tagline(_ pt: CGFloat) -> Text {
-        Text("Wonderful").font(.system(size: pt).italic())
-            + Text(" ").font(Theme.body(pt))
+        Text("Wonderful ").font(Theme.body(pt, .light))
             + Text("hyprland").font(Theme.body(pt, .medium)).foregroundColor(hyprlandBlue)
-            + Text(" inspired tile manager for macOS.").font(Theme.body(pt))
+            + Text(" inspired tile manager for macOS.").font(Theme.body(pt, .light))
     }
 }
 
@@ -209,191 +159,167 @@ final class CoachModel: ObservableObject {
     var skip: () -> Void = {}
 }
 
+/// One step of the keyboard tour: Surface `lg` filled with `accent`, pointing at the real target.
 struct CoachCardView: View {
     @ObservedObject var model: CoachModel
-    static let width: CGFloat = 360
-    private let surface = Color(white: 1, opacity: 0.96)
+    static let width: CGFloat = 344
+    /// Transparent room around the card for its caret and shadow; the panel lets clicks through there.
+    static let inset = EdgeInsets(top: 12, leading: 28, bottom: 36, trailing: 28)
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(model.kicker.uppercased()).font(Theme.mono(11, .bold)).tracking(0.66)
-                    .foregroundStyle(model.final ? okGreen : blue)
-                Spacer()
+        VStack(alignment: .leading, spacing: 0) {
+            // head: lead symbol, kicker, close
+            HStack(spacing: 8) {
+                Image(systemName: model.final ? "checkmark.circle.fill" : "keyboard")
+                    .font(.system(size: 13, weight: .medium))
+                    .contentTransition(.symbolEffect(.replace))
+                Text(model.kicker).kicker(Theme.onAccent).oneLine()
+                Spacer(minLength: 8)
                 if model.canSkip {
-                    SkipLink(action: model.skip)
+                    OButton("Skip tour", variant: .ghost, size: .sm, onAccent: true, action: model.skip)
+                        .padding(.trailing, -8)
                 }
             }
-            Text(model.title).font(Theme.heading(27)).foregroundStyle(ink).fixedSize(horizontal: false, vertical: true)
-            Text(model.text).font(Theme.body(13.5)).lineSpacing(3).foregroundStyle(Color.black.opacity(0.6))
+            .frame(minHeight: 22)
+            Text(model.title).font(Theme.body(22)).tracking(-0.2).fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 12).padding(.bottom, 4)
+            Text(model.text).font(Theme.body(13.5)).lineSpacing(2).opacity(0.86)
                 .fixedSize(horizontal: false, vertical: true)
             if !model.caps.isEmpty {
-                HStack(spacing: 10) {
+                HStack(spacing: 12) {
                     Button(action: model.tryKeys) {
-                        HStack(spacing: 6) { ForEach(Array(model.caps.enumerated()), id: \.offset) { _, c in keycap(c) } }
-                            .contentShape(Rectangle())
+                        Kbd(keys: model.caps, large: true, pressed: model.pressed, onAccent: true).contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .help(model.hint)
                     if model.done {
-                        HStack(spacing: 5) {
-                            Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.green)
+                        HStack(spacing: 6) {
+                            Image(systemName: "checkmark.circle.fill")
                                 .transition(.symbolEffect(.appear))
                                 .overlay(alignment: .topLeading) {
                                     ImpactBurst(trigger: model.done, size: 14, delay: 0.05).offset(x: -8, y: -8)
                                 }
-                            Text("Nice").font(Theme.body(13, .semibold)).foregroundStyle(okGreen)
+                            Text("Nice").font(Theme.body(13.5, .medium))
                         }
                         .transition(.opacity.combined(with: .scale(scale: 0.8)))
+                    } else {
+                        HStack(spacing: 6) {
+                            Image(systemName: "cursorarrow.rays")
+                            Text("Press it now").font(Theme.body(13))
+                        }
+                        .opacity(0.8)
                     }
                 }
-                .padding(.top, 2)
+                .padding(.top, 16)
             }
             if let warning = model.warning {
-                Text(warning).font(Theme.body(12)).foregroundStyle(Color(red: 0.79, green: 0.2, blue: 0))
-                    .padding(.horizontal, 10).padding(.vertical, 7)
-                    .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.orange.opacity(0.12)))
-                    .fixedSize(horizontal: false, vertical: true)
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                    Text(warning).font(Theme.body(12.5)).fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.horizontal, 12).padding(.vertical, 8)
+                .background(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(Theme.onAccent.opacity(0.16)))
+                .padding(.top, 14)
             }
             if model.final {
-                Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 8) {
+                Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 7) {
                     ForEach(Array(model.rows.enumerated()), id: \.offset) { _, row in
                         if row.caps.isEmpty { // a section heading
-                            Text(row.label.uppercased()).font(Theme.mono(10, .bold)).tracking(0.6)
-                                .foregroundStyle(Color.black.opacity(0.45))
+                            Text(row.label).kicker(Theme.onAccent).opacity(0.75)
                                 .padding(.top, 6)
                                 .gridCellColumns(2)
                         } else {
                             GridRow {
-                                Keycaps(caps: row.caps)
-                                Text(row.label).font(Theme.body(12)).foregroundStyle(Color.black.opacity(0.7))
+                                HStack(spacing: 2) {
+                                    ForEach(Array(row.caps.enumerated()), id: \.offset) { _, c in
+                                        Text(c).font(Theme.keys(11.5, .medium)).oneLine()
+                                            .padding(.horizontal, 5).frame(minWidth: 20, minHeight: 20)
+                                            .background(RoundedRectangle(cornerRadius: Theme.Radius.xs).fill(Theme.onAccent.opacity(0.18)))
+                                    }
+                                }
+                                Text(row.label).font(Theme.body(12.5)).oneLine()
                             }
                         }
                     }
                 }
-                .padding(.vertical, 4)
+                .padding(.top, 14)
             }
             if let button = model.button {
                 HStack {
                     Spacer()
-                    Pill(title: button, primary: true, height: 32, weight: .semibold, action: model.next)
+                    OButton(button, variant: .primary, shortcut: ["↩"], onAccent: true, action: model.next)
+                        .keyboardShortcut(.defaultAction)
                 }
+                .padding(.top, 20)
             }
             GeometryReader { g in
                 ZStack(alignment: .leading) {
-                    Capsule().fill(Color.black.opacity(0.07))
-                    Capsule().fill(blue).frame(width: g.size.width * model.progress)
+                    Capsule().fill(Theme.onAccent.opacity(0.25))
+                    Capsule().fill(Theme.onAccent).frame(width: g.size.width * model.progress)
                 }
             }
             .frame(height: 3)
-            .animation(.spring(response: 0.5, dampingFraction: 0.9), value: model.progress)
+            .padding(.top, 14)
+            .animation(Motion.spring, value: model.progress)
         }
-        .padding(.horizontal, 22).padding(.top, 20).padding(.bottom, 18)
-        .frame(width: Self.width)
-        .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(surface))
-        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(Color.black.opacity(0.15), lineWidth: 0.5))
-        .background(alignment: caretAlignment) { caret }
-        .shadow(color: .black.opacity(0.3), radius: 22, y: 14)
-        // Room for the caret and the shadow; the panel is transparent there, so clicks pass through.
-        .padding(.vertical, 10).padding(.horizontal, 24).padding(.bottom, 20)
-        .environment(\.colorScheme, .light)
+        .frame(width: Self.width - 40)
+        .surface(.lg, tone: .accent, caret: caret)
+        .padding(Self.inset)
         .animation(.easeOut(duration: 0.2), value: model.done)
     }
 
-    private var caretAlignment: Alignment {
-        if case .down = model.caret { return .bottom }
-        return .topLeading
-    }
-
-    @ViewBuilder private var caret: some View {
-        let diamond = RoundedRectangle(cornerRadius: 3).fill(surface).frame(width: 14, height: 14).rotationEffect(.degrees(45))
+    private var caret: Caret {
         switch model.caret {
-        case .none: EmptyView()
-        case .up(let x): diamond.offset(x: x - 7, y: -6)
-        case .down: diamond.offset(y: 6)
+        case .none: .none
+        case .up(let x): .top(x)
+        case .down: .bottom
         }
-    }
-
-    private func keycap(_ label: String) -> some View {
-        let on = model.pressed
-        return Text(label)
-            .font(Theme.body(label.count > 2 ? 13 : 15, .medium))
-            .foregroundStyle(on ? Color.white : ink)
-            .padding(.horizontal, label.count > 2 ? 12 : 10)
-            .frame(minWidth: 34, minHeight: 34)
-            .background(RoundedRectangle(cornerRadius: 8).fill(on ? blue : Color.white))
-            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(on ? blueDown : Color(red: 60 / 255, green: 60 / 255, blue: 67 / 255).opacity(0.3)))
-            .shadow(color: on ? blue.opacity(0.35) : .black.opacity(0.12), radius: on ? 4 : 0, y: on ? 0 : 2)
-            .offset(y: on ? 1 : 0)
-            .animation(.easeOut(duration: 0.12), value: on)
-    }
-}
-
-private struct SkipLink: View {
-    let action: () -> Void
-    @StateObject private var hover = Hover()
-    var body: some View {
-        Button(action: action) {
-            Text("Skip tutorial").font(Theme.body(12))
-                .foregroundStyle(hover.on ? ink : Color.black.opacity(0.5))
-                .padding(.horizontal, 6).padding(.vertical, 2)
-                .background(Capsule().fill(Color.black.opacity(hover.on ? 0.06 : 0)))
-        }
-        .buttonStyle(.plain)
-        .onHover { hover.on = $0 }
     }
 }
 
 // MARK: - Menu bar tip
 
+/// Hangs under the menu bar item during onboarding: a Surface `md` with a caret pointing at the item.
 struct MenuBarTipView: View {
     @ObservedObject var model: MenuBarTipModel
-    private let surface = Color(white: 1, opacity: 0.96)
+    /// Transparent room for the caret and shadow; the panel ignores the mouse anyway.
+    static let inset = EdgeInsets(top: 10, leading: 20, bottom: 28, trailing: 20)
 
     var body: some View {
-        HStack(alignment: .top, spacing: 9) {
-            Image(systemName: model.state == .good ? "checkmark.circle.fill" : "menubar.arrow.up.rectangle")
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Image(systemName: model.state == .good ? "checkmark.circle.fill" : "lightbulb")
                 .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(model.state == .good ? okGreen : blue)
+                .foregroundStyle(model.state == .good ? Theme.success : Theme.accentInk)
                 .contentTransition(.symbolEffect(.replace))
                 .frame(width: 16)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title).font(Theme.body(12, .semibold)).foregroundStyle(ink)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(Theme.heading()).oneLine()
                 if let detail {
-                    Text(detail).font(Theme.body(11.5)).lineSpacing(1.5).foregroundStyle(Color.black.opacity(0.58))
-                        .fixedSize(horizontal: false, vertical: true)
+                    Text(detail).font(Theme.body(12.5)).lineSpacing(1.5).foregroundStyle(Theme.inkMuted)
+                        .lineLimit(2).fixedSize(horizontal: false, vertical: true)
                 }
             }
         }
-        .padding(.horizontal, 12).padding(.vertical, 9)
-        .frame(width: model.state == .good ? nil : 252, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(surface))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.black.opacity(0.13), lineWidth: 0.5))
-        .background(alignment: .topLeading) {
-            if let x = model.caret {
-                RoundedRectangle(cornerRadius: 2).fill(surface).frame(width: 10, height: 10)
-                    .rotationEffect(.degrees(45)).offset(x: x - 14 - 5, y: -4)
-            }
-        }
-        .shadow(color: .black.opacity(0.18), radius: 10, y: 5)
-        // Room for the caret and the shadow; the panel ignores the mouse anyway.
-        .padding(.top, 8).padding(.horizontal, 14).padding(.bottom, 16)
+        .padding(.horizontal, 10).padding(.vertical, 8)
+        .frame(width: model.state == .good ? nil : 288, alignment: .leading)
+        .surface(.md, caret: model.caret.map { .top($0 - Self.inset.leading) } ?? .none)
+        .padding(Self.inset)
         .fixedSize()
-        .environment(\.colorScheme, .light)
     }
 
     private var title: String {
         switch model.state {
         case .move: "Keep Ouch in reach"
         case .good: "Good spot for Ouch"
-        case .hidden: "Ouch is hidden by the notch"
+        case .hidden: "Ouch is behind the notch"
         }
     }
 
     private var detail: String? {
         switch model.state {
         case .good: nil
-        case .move: "Icons further left are hidden first when the menu bar fills up. Open Control Center, click Edit Controls and drag this one to the right."
-        case .hidden: "Open Control Center, click Edit Controls and drag Ouch to the right, near the clock."
+        case .move: "Items further left hide first. Drag Ouch right in Control Center › Edit Controls."
+        case .hidden: "Drag Ouch right, near the clock, in Control Center › Edit Controls."
         }
     }
 }

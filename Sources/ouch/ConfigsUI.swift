@@ -3,18 +3,11 @@ import SwiftUI
 
 // MARK: - Glyphs
 
-extension View {
-    /// Interactive glass in a rounded rectangle (see `glassSurface`). `tint` colors the glass.
-    func configGlass(cornerRadius: CGFloat = 10, tint: Color? = nil) -> some View {
-        glassSurface(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous), tint: tint, interactive: true)
-    }
-}
-
 /// A config's icon: the Ouch logo for built-ins, otherwise its symbol (or a generic one).
 struct ConfigGlyph: View {
     let config: SavedConfig
     var size: CGFloat = 16
-    var tint: Color = .primary
+    var tint: Color = Theme.ink
 
     var body: some View {
         if config.isBuiltIn {
@@ -32,7 +25,7 @@ struct ConfigGlyph: View {
 
 /// Text and icon colors that stay readable on a config's background.
 private func configInk(for config: SavedConfig) -> Color {
-    guard let hex = config.colorHex else { return .primary }
+    guard let hex = config.colorHex else { return Theme.ink }
     return ConfigLibrary.prefersDarkText(hex: hex) ? Color.black.opacity(0.85) : .white
 }
 
@@ -45,29 +38,31 @@ private func configFill(for config: SavedConfig) -> Color? {
 /// Popover state lives in an object instead of @State (the Command Line Tools ship without SwiftUI's macro plugin).
 final class PopoverFlag: ObservableObject { @Published var open = false }
 
-/// The button that names the active config and opens the list of configs. Only this button and the rows
-/// in its list take the configs' colors.
+/// The pill that names the active config and opens the list of configs. Only this pill and the rows
+/// in its list take the configs' own colours.
 struct ConfigSelector: View {
     let kind: ConfigKind
     @ObservedObject var library: ConfigLibrary
     var width: CGFloat? = nil
     @StateObject private var pop = PopoverFlag()
+    @StateObject private var hover = Flag()
 
     var body: some View {
         let c = library.current(kind)
         let fg = configInk(for: c)
         Button { pop.open.toggle() } label: {
-            HStack(spacing: 7) {
-                ConfigGlyph(config: c, size: 15, tint: fg)
-                Text(c.name).font(Theme.body(13, .medium)).lineLimit(1).foregroundStyle(fg)
+            HStack(spacing: 6) {
+                ConfigGlyph(config: c, size: 13, tint: fg)
+                Text(c.name).font(Theme.body(13, .medium)).oneLine().foregroundStyle(fg)
                 Spacer(minLength: 0)
-                Image(systemName: "chevron.up.chevron.down").font(.system(size: 9, weight: .bold)).foregroundStyle(fg.opacity(0.7))
+                Image(systemName: "chevron.up.chevron.down").font(.system(size: 9, weight: .semibold)).foregroundStyle(fg.opacity(0.7))
             }
-            .padding(.horizontal, 10).frame(width: width, height: 34)
-            .configGlass(cornerRadius: 10, tint: configFill(for: c))
-            .contentShape(Rectangle())
+            .padding(.leading, 6).padding(.trailing, 12).frame(width: width, height: 30)
+            .background(Capsule().fill(configFill(for: c) ?? (hover.on ? Theme.hover : Theme.surfaceSunken)))
+            .contentShape(Capsule())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScale(scale: 0.96))
+        .onHover { hover.on = $0 }
         .help("\(kind.title) config")
         .accessibilityLabel("\(kind.title) config: \(c.name)")
         .popover(isPresented: $pop.open, arrowEdge: .bottom) { ConfigList(kind: kind, library: library, dismiss: { pop.open = false }) }
@@ -82,17 +77,22 @@ private struct ConfigList: View {
     var body: some View {
         VStack(spacing: 4) {
             ForEach(library.configs(kind)) { c in row(c) }
-            Divider().padding(.vertical, 2)
+            Rectangle().fill(Theme.hairline).frame(height: 1).padding(.horizontal, 6).padding(.vertical, 2)
             Button {
                 dismiss()
                 library.sheet = .create(kind: kind, baseID: library.current(kind).id)
             } label: {
-                Label("New config from “\(library.current(kind).name)”", systemImage: "plus").font(Theme.body(13)).frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 8).frame(height: 28).contentShape(Rectangle())
+                HStack(spacing: 10) {
+                    Image(systemName: "plus").font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.inkMuted).frame(width: 16)
+                    Text("New config from “\(library.current(kind).name)”").font(Theme.body(13.5)).oneLine()
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 10).frame(height: Theme.rowHeight).contentShape(Rectangle())
             }
             .buttonStyle(.plain)
         }
-        .padding(8).frame(width: 260)
+        .padding(4).frame(width: 272)
+        .foregroundStyle(Theme.ink)
     }
 
     private func row(_ c: SavedConfig) -> some View {
@@ -101,12 +101,16 @@ private struct ConfigList: View {
             Button { library.select(c); dismiss() } label: {
                 HStack(spacing: 8) {
                     ConfigGlyph(config: c, size: 14, tint: fg)
-                    Text(c.name).font(Theme.body(13, library.isActive(c) ? .semibold : .regular)).lineLimit(1).foregroundStyle(fg)
+                    Text(c.name).font(Theme.body(13.5, library.isActive(c) ? .medium : .regular)).oneLine().foregroundStyle(fg)
                     Spacer(minLength: 0)
-                    if library.isActive(c) { Image(systemName: "checkmark").font(.system(size: 11, weight: .bold)).foregroundStyle(fg) }
+                    if library.isActive(c) {
+                        Image(systemName: "checkmark").font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(configFill(for: c) == nil ? Theme.accentInk : fg)
+                    }
                 }
-                .padding(.horizontal, 8).frame(height: 36).contentShape(Rectangle())
-                .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(configFill(for: c) ?? Color.primary.opacity(library.isActive(c) ? 0.08 : 0)))
+                .padding(.horizontal, 8).frame(height: 34).contentShape(Rectangle())
+                .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
+                    .fill(configFill(for: c) ?? (library.isActive(c) ? Theme.accentSoft : .clear)))
             }
             .buttonStyle(.plain)
             if c.isBuiltIn {
@@ -148,10 +152,11 @@ struct ConfigTransferMenu: View {
             Button("Import config…") { library.runImportPanel(only: kind == .full ? nil : kind) }
             Button("Export \(kind == .full ? "full" : kind.title.lowercased()) config…") { library.sheet = .export(kind: kind) }
         } label: {
-            Image(systemName: "square.and.arrow.up.on.square").font(.system(size: 14, weight: .medium))
-                .frame(width: 34, height: 34).configGlass(cornerRadius: 10).contentShape(Rectangle())
+            Image(systemName: "square.and.arrow.up.on.square").font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Theme.inkMuted)
+                .frame(width: 30, height: 30).background(Circle().fill(Theme.surfaceSunken)).contentShape(Circle())
         }
-        .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+        .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
         .help("Import / Export").accessibilityLabel("Import or export \(kind.title.lowercased()) config")
     }
 }
@@ -206,10 +211,12 @@ struct ConfigSheetView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(title).font(Theme.heading(17)).fixedSize(horizontal: false, vertical: true)
+            Text(title).font(Theme.body(22)).tracking(-0.2).oneLine()
             if case .export(let kind) = sheet { exportBody(kind) } else { editorBody }
         }
-        .padding(20).frame(width: 380)
+        .padding(24).frame(width: 400)
+        .foregroundStyle(Theme.ink)
+        .background(Theme.surfaceRaised)
         .onAppear(perform: setUp)
     }
 
@@ -218,30 +225,31 @@ struct ConfigSheetView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 Button { model.pickingSymbol.toggle() } label: {
-                    Image(systemName: model.symbol ?? kinds[0].genericSymbol).font(.system(size: 16, weight: .medium))
-                        .frame(width: 36, height: 32)
-                        .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.control))
-                        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Color.primary.opacity(0.1)))
+                    Image(systemName: model.symbol ?? kinds[0].genericSymbol).font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Theme.accentInk)
+                        .frame(width: 34, height: Theme.controlHeight)
+                        .background(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(Theme.surfaceSunken))
                 }
                 .buttonStyle(.plain).help("Icon").accessibilityLabel("Choose icon")
                 .popover(isPresented: $model.pickingSymbol, arrowEdge: .bottom) { SymbolGrid(selection: $model.symbol, close: { model.pickingSymbol = false }) }
 
-                TextField("Name", text: $model.name).textFieldStyle(.roundedBorder).onSubmit { if canConfirm { confirm() } }
+                OTextField(placeholder: "Name", text: $model.name) { if canConfirm { confirm() } }
 
                 Button { model.pickingColor.toggle() } label: {
                     Circle().fill(model.hasColor ? model.color.color : Color.clear).frame(width: 22, height: 22)
-                        .overlay(Circle().strokeBorder(Color.primary.opacity(model.hasColor ? 0.15 : 0.35), style: StrokeStyle(lineWidth: 1, dash: model.hasColor ? [] : [3, 2])))
+                        .overlay(Circle().strokeBorder(model.hasColor ? Theme.hairline : Theme.borderControl, style: StrokeStyle(lineWidth: 1, dash: model.hasColor ? [] : [3, 2])))
                         .frame(width: 32, height: 32).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain).help("Color").accessibilityLabel("Choose color")
                 .popover(isPresented: $model.pickingColor, arrowEdge: .bottom) { ColorPopover(model: model) }
             }
-            if let p = nameProblem { Text(p).font(Theme.body(11)).foregroundStyle(.red) }
-            HStack {
+            if let p = nameProblem { OStatus(kind: .danger, text: p) }
+            HStack(spacing: 8) {
                 Spacer()
-                Button("Cancel") { cancel() }.keyboardShortcut(.cancelAction)
-                Button(confirmTitle) { confirm() }.keyboardShortcut(.defaultAction).disabled(!canConfirm)
+                OButton("Cancel", variant: .ghost) { cancel() }.keyboardShortcut(.cancelAction)
+                OButton(confirmTitle, variant: .primary, shortcut: ["↩"]) { confirm() }.keyboardShortcut(.defaultAction).disabled(!canConfirm)
             }
+            .padding(.top, 8)
         }
     }
 
@@ -251,16 +259,14 @@ struct ConfigSheetView: View {
 
     private func exportBody(_ kind: ConfigKind) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Picker("Config", selection: $model.exportID) {
-                ForEach(library.configs(kind)) { c in Text(c.name + (library.isActive(c) ? " (active)" : "")).tag(c.id) }
+            ORow("Config", description: kind == .full ? "Includes the keyboard and animation configs it uses" : nil) {
+                OMenuPicker(title: "Config", options: library.configs(kind).map { ($0.id, $0.name + (library.isActive($0) ? " (active)" : "")) },
+                            selection: $model.exportID)
             }
-            if kind == .full {
-                Text("Includes the keyboard and animation configs it uses.").font(Theme.body(11)).foregroundStyle(Theme.secondary)
-            }
-            HStack {
+            HStack(spacing: 8) {
                 Spacer()
-                Button("Cancel") { library.sheet = nil }.keyboardShortcut(.cancelAction)
-                Button("Export…") {
+                OButton("Cancel", variant: .ghost) { library.sheet = nil }.keyboardShortcut(.cancelAction)
+                OButton("Export…", variant: .primary, shortcut: ["↩"]) {
                     library.sheet = nil
                     if let c = library.config(id: model.exportID) { DispatchQueue.main.async { library.runExportPanel(for: c) } }
                 }.keyboardShortcut(.defaultAction)
@@ -326,13 +332,14 @@ private struct SymbolGrid: View {
 
     var body: some View {
         VStack(spacing: 8) {
-            TextField("Search", text: $query.text).textFieldStyle(.roundedBorder)
+            OTextField(placeholder: "Search icons", text: $query.text)
             ScrollView {
                 LazyVGrid(columns: Array(repeating: GridItem(.fixed(34), spacing: 4), count: 7), spacing: 4) {
                     ForEach(shown, id: \.self) { s in
                         Button { selection = s; close() } label: {
                             Image(systemName: s).font(.system(size: 15, weight: .medium)).frame(width: 34, height: 34)
-                                .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Color.primary.opacity(selection == s ? 0.14 : 0)))
+                                .foregroundStyle(selection == s ? Theme.onAccent : Theme.ink)
+                                .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous).fill(selection == s ? Theme.accent : .clear))
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain).help(s).accessibilityLabel(s)
@@ -340,8 +347,8 @@ private struct SymbolGrid: View {
                 }
             }
             .frame(height: 190)
-            if shown.isEmpty { Text("No icons match").font(Theme.body(12)).foregroundStyle(Theme.secondary) }
-            Button("Use the default icon") { selection = nil; close() }.buttonStyle(.link).font(Theme.body(12))
+            if shown.isEmpty { Text("No icons match").font(Theme.body(12.5)).foregroundStyle(Theme.inkMuted) }
+            OButton("Use the default icon", variant: .ghost, size: .sm) { selection = nil; close() }
         }
         .padding(12).frame(width: 300)
     }
@@ -414,9 +421,8 @@ private struct ColorPopover: View {
                            colors: [model.color.color.opacity(0), Color(hue: model.color.h, saturation: model.color.s, brightness: model.color.b)],
                            knob: model.color.color, checker: true)
             HStack(spacing: 8) {
-                TextField("#RRGGBB, rgb() or hsl()", text: $model.colorText).textFieldStyle(.roundedBorder).font(.system(size: 12, design: .monospaced))
-                    .onSubmit(applyText)
-                Button("None") { model.set(color: nil); model.colorText = "" }.help("No background color")
+                OTextField(placeholder: "#RRGGBB, rgb() or hsl()", text: $model.colorText, mono: true, onSubmit: applyText)
+                OButton("None", variant: .ghost, size: .sm) { model.set(color: nil); model.colorText = "" }.help("No background color")
             }
         }
         .padding(14).frame(width: 260)
@@ -450,7 +456,7 @@ private struct ShadeSquare: View {
                     .frame(width: 18, height: 18).shadow(color: .black.opacity(0.35), radius: 2)
                     .position(x: color.s * geo.size.width, y: (1 - color.b) * geo.size.height)
             }
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous))
             .gesture(DragGesture(minimumDistance: 0).onChanged { v in
                 var c = color
                 c.s = min(max(v.location.x / geo.size.width, 0), 1)

@@ -131,7 +131,7 @@ final class ModeFXModel: ObservableObject {
     @Published var active = false
     @Published var enters = 0
     @Published var style: ModeFX.Style = .draw
-    @Published var color = Color(red: 10 / 255, green: 116 / 255, blue: 1) // logo blue #0a74ff
+    @Published var color = Theme.accent
     /// Where the pointer was on entering, in global (bottom-left) coordinates, for the ripple.
     var cursor: CGPoint = .zero
 }

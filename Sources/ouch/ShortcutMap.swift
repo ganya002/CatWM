@@ -12,21 +12,17 @@ struct ShortcutMap: View {
         let all = doc.keyActions(in: model.mode)
         let flags = model.flags
         let layer = all.filter { $0.flags == flags }
-        VStack(spacing: 0) {
-            header(all)
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    MacKeyboard(doc: doc, model: model, layer: layer, all: all, reveal: reveal)
-                        .frame(maxWidth: 940)
-                        .frame(maxWidth: .infinity)
-                    hint(layer)
-                    list(layer)
-                }
-                .padding(.horizontal, 24).padding(.top, 20).padding(.bottom, 28)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                header(all)
+                MacKeyboard(doc: doc, model: model, layer: layer, all: all, reveal: reveal)
+                    .frame(maxWidth: 940)
+                    .frame(maxWidth: .infinity)
+                hint(layer)
+                list(layer)
             }
+            .padding(.horizontal, 36).padding(.top, 22).padding(.bottom, 40)
         }
-        .ignoresSafeArea(edges: .top) // the header's first row is the title bar
-        .background(Theme.window.ignoresSafeArea())
         .onAppear {
             model.mode = doc.submaps.contains(ui.bindMode) ? ui.bindMode : ""
             model.picked = model.busiest(all: doc.keyActions(in: model.mode))
@@ -39,87 +35,71 @@ struct ShortcutMap: View {
         }
     }
 
-    /// The title bar row, level with the traffic lights: the set switch centred on the window, Done on
-    /// the right. Below it the heading sits where every pane's does, over the modifier picker.
+    /// Breadcrumb and title like every pane, Done on the right; below, the modifier picker, the set and the busiest combos.
     private func header(_ all: [ConfigDocument.KeyAction]) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ZStack {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Text("Settings")
+                Image(systemName: "chevron.right").font(.system(size: 9, weight: .semibold))
+                Text("Shortcuts")
+                Image(systemName: "chevron.right").font(.system(size: 9, weight: .semibold))
+                Text("Map")
+            }
+            .font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine()
+            HStack(alignment: .center, spacing: 8) {
+                Text("Shortcut Map").font(Theme.display(40)).tracking(-1).oneLine()
+                Spacer(minLength: 12)
                 if doc.submaps.count > 1 {
-                    Segmented(title: "Shortcut set", options: doc.submaps.map { ($0, $0.isEmpty ? "Global" : "\($0.capitalized) mode") },
-                              selection: $model.mode)
+                    OSegmented(title: "Shortcut set", options: doc.submaps.map { ($0, $0.isEmpty ? "Global" : "\($0.capitalized) mode") },
+                               selection: $model.mode)
                 }
-                HStack {
-                    Spacer()
-                    Button("Done") { close() }
-                        .keyboardShortcut(.cancelAction)
-                }
-                .padding(.trailing, 14)
+                OButton("Done", variant: .primary, shortcut: ["⎋"]) { close() }
+                    .keyboardShortcut(.cancelAction)
             }
-            // Regular-size controls, centred on the traffic lights (the title bar is 28pt).
-            .frame(height: 28)
-            .padding(.top, 1)
-            VStack(alignment: .leading, spacing: 0) {
-                Text("Shortcut Map").font(Theme.heading(22))
-                    .padding(.top, 4).padding(.bottom, 12)
-                HStack(spacing: 14) {
-                    modifierToggles
-                    Spacer(minLength: 8)
-                    combos(all)
-                }
-                .padding(.bottom, 12)
+            HStack(spacing: 14) {
+                modifierToggles
+                Spacer(minLength: 8)
+                combos(all)
             }
-            .padding(.horizontal, 24)
+            .padding(.top, 14)
         }
-        .overlay(alignment: .bottom) { Divider() }
     }
 
-    /// ⌃ ⌥ ⇧ ⌘ as one strip of toggles, lit like the keys they stand for. On macOS 26 each toggle is
-    /// its own glass, accent-tinted when on, and the four blend as one group.
-    @ViewBuilder
+    /// ⌃ ⌥ ⇧ ⌘ as one track of toggles, lit in `accent` like the keys they stand for.
     private var modifierToggles: some View {
-        if #available(macOS 26.0, *) {
-            GlassGroup(spacing: 4) { toggleStrip(spacing: 4) }
-                .animation(.easeOut(duration: 0.12), value: model.flags.rawValue)
-        } else {
-            toggleStrip(spacing: 2)
-                .padding(2)
-                .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.card))
-                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Theme.hairline))
-                .animation(.easeOut(duration: 0.12), value: model.flags.rawValue)
-        }
-    }
-
-    private func toggleStrip(spacing: CGFloat) -> some View {
         let mods: [(NSEvent.ModifierFlags, String, String)] = [(.control, "⌃", "Control"), (.option, "⌥", "Option"),
                                                                (.shift, "⇧", "Shift"), (.command, "⌘", "Command")]
-        return HStack(spacing: spacing) {
+        return HStack(spacing: 2) {
             ForEach(mods, id: \.1) { flag, symbol, name in
                 let on = model.flags.contains(flag)
                 Button { model.toggle(flag) } label: {
                     HStack(spacing: 5) {
-                        Text(symbol).font(Theme.body(13, .semibold))
-                        Text(name).font(Theme.body(12.5, .medium))
+                        Text(symbol).font(Theme.keys(12.5, .medium))
+                        Text(name).font(Theme.body(12.5, on ? .medium : .regular))
                     }
-                    .foregroundStyle(on ? Color.white : Color.primary.opacity(0.85))
-                    .padding(.horizontal, 10).frame(height: 24)
-                    .modifier(GlassToggle(on: on, shape: RoundedRectangle(cornerRadius: 6, style: .continuous), offFill: .clear))
-                    .contentShape(Rectangle())
+                    .foregroundStyle(on ? Theme.onAccent : Theme.inkMuted)
+                    .padding(.horizontal, 11).frame(height: 24)
+                    .background(Capsule().fill(on ? Theme.accent : .clear))
+                    .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(name)
                 .accessibilityAddTraits(on ? [.isSelected, .isToggle] : .isToggle)
             }
         }
+        .padding(3)
+        .background(Capsule().fill(Theme.surfaceSunken))
+        .animation(Motion.spring, value: model.flags.rawValue)
     }
 
-    /// Jumps to a row in the Keyboard Shortcuts pane and flashes it.
+    /// Jumps to a row in the Shortcuts pane and lights it up.
     private func reveal(_ row: BindRow) {
         model.selected = nil
         ui.bindMode = row.submap
-        ui.search = ""
+        ui.shortcutFilter = ""
         ui.expanded.insert(row.id)
         ui.reveal = row.id
-        ui.pane = .keybinds
+        ui.pane = .shortcuts
         withAnimation(Motion.snap) { ui.showMap = false }
     }
 
@@ -133,11 +113,11 @@ struct ShortcutMap: View {
         let counts = Dictionary(grouping: all, by: { $0.flags.rawValue }).mapValues(\.count)
         let list = counts.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
             .map { (flags: NSEvent.ModifierFlags(rawValue: $0.key), count: $0.value) }
-        return GlassGroup(spacing: 6) { HStack(spacing: 6) {
+        return HStack(spacing: 4) {
             if !list.isEmpty {
-                Text("In use").font(Theme.body(11.5)).foregroundStyle(Theme.secondary)
+                Text("In use").font(Theme.body(12)).foregroundStyle(Theme.inkMuted).padding(.trailing, 4)
             }
-            ForEach(list, id: \.flags.rawValue) { item in
+            ForEach(list.prefix(5), id: \.flags.rawValue) { item in
                 let on = item.flags == model.flags
                 let name = item.flags.isEmpty ? "None" : ConfigDocument.modifierCaps(item.flags).joined()
                 Button {
@@ -146,21 +126,21 @@ struct ShortcutMap: View {
                     withAnimation(.easeOut(duration: 0.15)) { model.picked = item.flags }
                 } label: {
                     HStack(spacing: 5) {
-                        Text(name).font(Theme.body(12, .semibold))
-                        Text("\(item.count)").font(Theme.body(11)).monospacedDigit()
-                            .foregroundStyle(on ? Color.white.opacity(0.8) : Theme.secondary)
+                        Text(name).font(Theme.keys(12, .medium))
+                        Text("\(item.count)").font(Theme.body(11.5)).monospacedDigit()
+                            .foregroundStyle(on ? Theme.onAccent.opacity(0.8) : Theme.inkMuted)
                     }
-                    .foregroundStyle(on ? Color.white : Color.primary)
-                    .padding(.horizontal, 9).frame(height: 24)
-                    .modifier(GlassToggle(on: on, shape: Capsule(), offFill: Theme.card, offBorder: Theme.hairline))
+                    .foregroundStyle(on ? Theme.onAccent : Theme.ink)
+                    .padding(.horizontal, 10).frame(height: 26)
+                    .background(Capsule().fill(on ? Theme.accent : Theme.surfaceSunken))
                     .contentShape(Capsule())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressScale())
                 .help("Show \(name == "None" ? "shortcuts without modifiers" : name + " shortcuts")")
                 .accessibilityLabel("\(name), \(item.count) shortcuts")
                 .accessibilityAddTraits(on ? .isSelected : [])
             }
-        } }
+        }
         .animation(.easeOut(duration: 0.12), value: model.flags.rawValue)
     }
 
@@ -169,20 +149,20 @@ struct ShortcutMap: View {
         let caps = ConfigDocument.modifierCaps(model.flags)
         return HStack(spacing: 8) {
             if let code = model.hovered, let key = MacKeyboard.spec(code) {
-                Keycaps(caps: caps + [model.legend(key)])
+                Kbd(keys: caps + [model.legend(key)])
                 if let a = layer.first(where: { $0.code == code }) {
                     Circle().fill(a.category.color).frame(width: 7, height: 7)
-                    Text(a.title)
+                    Text(a.title).oneLine()
                 } else {
-                    Text("Nothing yet. Click to add a shortcut.").foregroundStyle(Theme.secondary)
+                    Text("Nothing yet. Click to add a shortcut.").foregroundStyle(Theme.inkMuted).oneLine()
                 }
             } else {
                 Text("Hold ⌃ ⌥ ⇧ ⌘ or pick them above to see their shortcuts. Click any key to change it.")
-                    .foregroundStyle(Theme.secondary)
+                    .foregroundStyle(Theme.inkMuted).oneLine()
             }
             Spacer(minLength: 0)
         }
-        .font(Theme.body(12.5))
+        .font(Theme.body(13))
         .frame(height: 22)
         .frame(maxWidth: 940).frame(maxWidth: .infinity)
     }
@@ -195,22 +175,22 @@ struct ShortcutMap: View {
             if sorted.isEmpty {
                 Text(model.flags.isEmpty && model.mode.isEmpty ? "Global shortcuts need ⌥, ⌃ or ⌘ so they don't block typing."
                      : "No shortcuts use \(ConfigDocument.modifierCaps(model.flags).joined()) here yet.")
-                    .foregroundStyle(Theme.secondary)
+                    .font(Theme.body(13)).foregroundStyle(Theme.inkMuted).oneLine()
                     .frame(maxWidth: .infinity).padding(.vertical, 12)
             } else {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 240), spacing: 16, alignment: .leading)], alignment: .leading, spacing: 6) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 240), spacing: 16, alignment: .leading)], alignment: .leading, spacing: 4) {
                     ForEach(sorted) { a in
                         Button {
                             if MacKeyboard.spec(a.code) != nil { model.selected = a.code }
                         } label: {
                             HStack(spacing: 8) {
-                                Keycaps(caps: ConfigDocument.modifierCaps(a.flags) + [ConfigDocument.capLabel(a.key)])
-                                    .frame(minWidth: 60, alignment: .leading)
+                                Kbd(keys: ConfigDocument.modifierCaps(a.flags) + [ConfigDocument.capLabel(a.key)])
+                                    .frame(minWidth: 64, alignment: .leading)
                                 Circle().fill(a.category.color).frame(width: 7, height: 7)
-                                Text(a.title).lineLimit(1).truncationMode(.tail)
+                                Text(a.title).font(Theme.body(13)).oneLine()
                                 Spacer(minLength: 0)
                             }
-                            .padding(.vertical, 3)
+                            .padding(.vertical, 4)
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
@@ -392,16 +372,10 @@ struct MacKeyboard: View {
             let pad: CGFloat = 0.32
             let unit = g.size.width / (Self.width + pad * 2)
             ZStack(alignment: .topLeading) {
-                // The midnight aluminium around the keys, with its recessed well.
+                // The keyboard deck: a sunken well holding the keys.
                 RoundedRectangle(cornerRadius: unit * 0.42, style: .continuous)
-                    .fill(LinearGradient(colors: [Color(red: 0.25, green: 0.28, blue: 0.34), Color(red: 0.19, green: 0.22, blue: 0.27)],
-                                         startPoint: .top, endPoint: .bottom))
-                    .overlay(RoundedRectangle(cornerRadius: unit * 0.42, style: .continuous)
-                        .strokeBorder(LinearGradient(colors: [.white.opacity(0.14), .black.opacity(0.25)], startPoint: .top, endPoint: .bottom)))
-                RoundedRectangle(cornerRadius: unit * 0.22, style: .continuous)
-                    .fill(Color(red: 0.13, green: 0.15, blue: 0.19))
-                    .frame(width: (Self.width + 0.12) * unit, height: (Self.height + 0.12) * unit)
-                    .offset(x: (pad - 0.06) * unit, y: (pad - 0.06) * unit)
+                    .fill(Theme.surfaceSunken)
+                    .overlay(RoundedRectangle(cornerRadius: unit * 0.42, style: .continuous).strokeBorder(Theme.hairline))
                 ForEach(Self.keys) { k in
                     let action = k.code.flatMap { bound[$0] }
                     let gap = unit * 0.1
@@ -418,7 +392,6 @@ struct MacKeyboard: View {
             }
         }
         .aspectRatio((Self.width + 0.64) / (Self.height + 0.64), contentMode: .fit)
-        .environment(\.colorScheme, .dark)
     }
 }
 
@@ -431,7 +404,6 @@ private struct KeyCap: View {
     /// Unbound with these modifiers, but bound with others: a small dot says there's more to find.
     let hasOthers: Bool
 
-    private static let ink = Color(white: 0.86)
 
     var body: some View {
         let pressed = !key.modifier.isEmpty && model.flags.contains(key.modifier)
@@ -445,19 +417,18 @@ private struct KeyCap: View {
         } label: {
             ZStack {
                 shape.fill(fill(pressed: pressed))
-                shape.fill(LinearGradient(colors: [.white.opacity(0.07), .clear], startPoint: .top, endPoint: .center))
-                shape.strokeBorder(Color.white.opacity(action != nil ? 0.28 : 0.06), lineWidth: 0.75)
-                if hovered && interactive { shape.fill(Color.white.opacity(0.08)) }
+                shape.strokeBorder(action != nil || pressed ? Color.white.opacity(0.22) : Theme.hairline, lineWidth: 0.75)
+                if hovered && interactive { shape.fill(Theme.ink.opacity(0.06)) }
                 legend(pressed: pressed)
                 if hasOthers {
-                    Circle().fill(Self.ink.opacity(0.45)).frame(width: unit * 0.06, height: unit * 0.06)
+                    Circle().fill(Theme.accent2).frame(width: unit * 0.07, height: unit * 0.07)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                         .padding(unit * 0.08)
                 }
             }
             .compositingGroup()
-            .shadow(color: .black.opacity(0.5), radius: 0, y: unit * 0.025)
-            .overlay(shape.strokeBorder(Color.white, lineWidth: selected ? 2 : 0).padding(-1.5))
+            .shadow(color: .black.opacity(0.12), radius: 0, y: unit * 0.025)
+            .overlay(shape.strokeBorder(Theme.focus, lineWidth: selected ? 2 : 0).padding(-2))
             .scaleEffect(pressed ? 0.96 : 1)
             .contentShape(shape)
         }
@@ -481,17 +452,14 @@ private struct KeyCap: View {
     }
 
     private func fill(pressed: Bool) -> AnyShapeStyle {
-        if pressed { return AnyShapeStyle(Color.accentColor.gradient) }
-        if let action {
-            return AnyShapeStyle(LinearGradient(colors: [action.category.color.opacity(0.95), action.category.color.opacity(0.7)],
-                                                startPoint: .top, endPoint: .bottom))
-        }
-        return AnyShapeStyle(Color(red: 0.055, green: 0.06, blue: 0.075))
+        if pressed { return AnyShapeStyle(Theme.accent) }
+        if let action { return AnyShapeStyle(action.category.color.gradient) }
+        return AnyShapeStyle(Theme.surface)
     }
 
     @ViewBuilder private func legend(pressed: Bool) -> some View {
         let small = Font.system(size: unit * 0.17, weight: .regular)
-        let ink = action != nil || pressed ? Color.white : Self.ink
+        let ink = pressed ? Theme.onAccent : action != nil ? Color.white : Theme.inkMuted
         switch key.label {
         case .char:
             let l = model.legends(key)
@@ -555,7 +523,7 @@ private struct KeyCap: View {
                 Label(action.title, systemImage: action.symbol).font(.system(size: unit * 0.2, weight: .semibold)).foregroundStyle(ink)
             }
         case .touchID:
-            Circle().strokeBorder(Color.white.opacity(0.12), lineWidth: 1).padding(unit * 0.08)
+            Circle().strokeBorder(Theme.hairline, lineWidth: 1).padding(unit * 0.08)
         }
     }
 
@@ -592,10 +560,9 @@ private struct KeyPopover: View {
             .sorted { $0.flags.rawValue < $1.flags.rawValue }
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
-                Keycaps(caps: ConfigDocument.modifierCaps(flags) + [model.legend(key)])
+                Kbd(keys: ConfigDocument.modifierCaps(flags) + [model.legend(key)])
                 Spacer(minLength: 0)
-                Text(model.mode.isEmpty ? "Global" : "\(model.mode.capitalized) mode")
-                    .font(Theme.body(11)).foregroundStyle(Theme.secondary)
+                Text(model.mode.isEmpty ? "Global" : "\(model.mode.capitalized) mode").kicker(Theme.inkMuted)
             }
             if here.isEmpty {
                 addSection(flags)
@@ -603,20 +570,22 @@ private struct KeyPopover: View {
                 ForEach(here) { a in current(a) }
             }
             if !others.isEmpty {
-                Divider()
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("With other modifiers").font(Theme.body(11, .semibold)).foregroundStyle(Theme.secondary)
+                Rectangle().fill(Theme.hairline).frame(height: 1)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("With other modifiers").font(Theme.body(12, .medium)).foregroundStyle(Theme.inkMuted)
+                        .padding(.bottom, 4)
                     ForEach(others) { a in
                         Button {
                             model.held = []
                             withAnimation(.easeOut(duration: 0.15)) { model.picked = a.flags }
                         } label: {
                             HStack(spacing: 8) {
-                                Keycaps(caps: ConfigDocument.modifierCaps(a.flags) + [model.legend(key)])
+                                Kbd(keys: ConfigDocument.modifierCaps(a.flags) + [model.legend(key)])
                                 Circle().fill(a.category.color).frame(width: 7, height: 7)
-                                Text(a.title).lineLimit(1)
+                                Text(a.title).font(Theme.body(13)).oneLine()
                                 Spacer(minLength: 0)
                             }
+                            .padding(.vertical, 3)
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
@@ -625,29 +594,32 @@ private struct KeyPopover: View {
                 }
             }
         }
-        .padding(14)
-        .frame(width: 300)
+        .padding(16)
+        .frame(width: 320)
+        .font(Theme.body())
+        .foregroundStyle(Theme.ink)
     }
 
     @ViewBuilder private func current(_ a: ConfigDocument.KeyAction) -> some View {
         let i = doc.binds.firstIndex { $0.id == a.row.id }
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                IconTile(symbol: a.category.symbol, color: a.category.color, size: 22)
-                Text(a.title).font(Theme.body(13, .semibold)).lineLimit(2)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                Image(systemName: a.symbol).font(.system(size: 12, weight: .semibold)).foregroundStyle(.white)
+                    .frame(width: 26, height: 26).background(Circle().fill(a.category.color.gradient))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(a.title).font(Theme.heading()).oneLine()
+                    Text(a.category.rawValue).font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine()
+                }
                 Spacer(minLength: 0)
             }
             if a.isRange {
-                Text("Part of “\(doc.title(a.row))”. Edit its keys in Keyboard Shortcuts.")
-                    .font(Theme.body(11)).foregroundStyle(Theme.secondary).fixedSize(horizontal: false, vertical: true)
+                Text("Part of “\(doc.title(a.row))”. Edit its keys in Shortcuts.")
+                    .font(Theme.body(12)).foregroundStyle(Theme.inkMuted).fixedSize(horizontal: false, vertical: true)
             } else if let i, doc.binds[i].dispatcher == "exec" {
-                TextField("Command", text: $doc.binds[i].args, prompt: Text("open -na Terminal"))
-                    .labelsHidden().textFieldStyle(.roundedBorder).font(Theme.mono(12, .regular))
+                OTextField(placeholder: "open -na Terminal", text: $doc.binds[i].args, mono: true)
             }
             if let issue = doc.issue(a.row) {
-                Label(issue.message, systemImage: issue.severity == .error ? "exclamationmark.triangle.fill" : "exclamationmark.circle")
-                    .font(Theme.body(11)).foregroundStyle(issue.severity == .error ? .red : .orange)
-                    .fixedSize(horizontal: false, vertical: true)
+                OStatus(kind: issue.severity == .error ? .danger : .warning, text: issue.message)
             }
             HStack(spacing: 8) {
                 if let i, !a.isRange {
@@ -656,11 +628,17 @@ private struct KeyPopover: View {
                             doc.binds[i].dispatcher = pick.dispatcher
                             doc.binds[i].args = pick.args
                         }
-                    } label: { Text("Change Action") }
-                    .fixedSize()
-                    Button("Remove") { withAnimation(.snappy) { doc.binds.removeAll { $0.id == a.row.id } } }
+                    } label: {
+                        Text("Change Action").font(Theme.body(12.5, .medium)).foregroundStyle(Theme.ink)
+                            .padding(.horizontal, 11).frame(height: 26)
+                            .background(Capsule().fill(Theme.surfaceSunken))
+                    }
+                    .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
+                    OButton("Remove", variant: .danger, size: .sm) {
+                        withAnimation(Motion.easeOut) { doc.binds.removeAll { $0.id == a.row.id } }
+                    }
                 } else {
-                    Button("Edit in Keyboard Shortcuts") { reveal(a.row) }
+                    OButton("Edit in Shortcuts", icon: "arrow.right", size: .sm) { reveal(a.row) }
                 }
             }
         }
@@ -669,35 +647,24 @@ private struct KeyPopover: View {
     @ViewBuilder private func addSection(_ flags: NSEvent.ModifierFlags) -> some View {
         if model.mode.isEmpty && flags.subtracting(.shift).isEmpty {
             Text("Global shortcuts need ⌥, ⌃ or ⌘ so they don't block typing. Pick a modifier first, or use window mode for single keys.")
-                .font(Theme.body(12)).foregroundStyle(Theme.secondary).fixedSize(horizontal: false, vertical: true)
+                .font(Theme.body(12.5)).foregroundStyle(Theme.inkMuted).fixedSize(horizontal: false, vertical: true)
         } else if let name = ConfigDocument.keyName(for: code) {
-            Text("No shortcut yet.").foregroundStyle(Theme.secondary)
+            Text("No shortcut yet").font(Theme.body(13.5)).foregroundStyle(Theme.inkMuted)
             Menu {
                 ActionMenuItems { a in
                     doc.binds.append(BindRow(mods: doc.modsString(for: flags), key: name, dispatcher: a.dispatcher, args: a.args,
                                              submap: model.mode))
                 }
-            } label: { Label("Add Shortcut", systemImage: "plus") }
-            .fixedSize()
-        }
-    }
-}
-
-/// A toggle's chrome: interactive glass on macOS 26 and later, tinted with the accent colour when on.
-/// Before that, a solid accent fill when on and `offFill` (with an optional border) when off.
-private struct GlassToggle<S: InsettableShape>: ViewModifier {
-    let on: Bool
-    let shape: S
-    var offFill: Color
-    var offBorder: Color = .clear
-
-    func body(content: Content) -> some View {
-        if #available(macOS 26.0, *) {
-            content.glassEffect(on ? Glass.regular.tint(.accentColor).interactive() : Glass.regular.interactive(), in: shape)
-        } else {
-            content
-                .background(shape.fill(on ? Color.accentColor : offFill))
-                .overlay(shape.strokeBorder(on ? Color.clear : offBorder))
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "plus").font(.system(size: 11.5, weight: .semibold))
+                    Text("Add Shortcut")
+                }
+                .font(Theme.body(12.5, .medium)).foregroundStyle(Theme.onAccent)
+                .padding(.horizontal, 11).frame(height: 26)
+                .background(Capsule().fill(Theme.accent))
+            }
+            .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
         }
     }
 }

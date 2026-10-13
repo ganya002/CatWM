@@ -90,7 +90,7 @@ final class WindowManager {
         guard !isStarted else { return }
         isStarted = true
         loadWorkspaces()
-        Log.verbose = config.debugLogging
+        Log.verbose = config.debugLogging || Log.verboseLaunch
         Log.info("start: trusted=\(AXIsProcessTrusted()) windowServerFocus=\(WindowServerFocus.isAvailable) screens=\(Screen.all().count)")
         config.errors.forEach { Log.info("config: \($0)") }
         AXUIElementSetMessagingTimeout(AXUIElementCreateSystemWide(), 1.0) // a hung app can't freeze us
@@ -170,7 +170,7 @@ final class WindowManager {
             workspaceOf = [:]; monitorOf = [:]; shown = [:]; virtualShown = [:]; states = [:]; lastFocused = [:]
             Log.info("workspaces: \(config.virtualWorkspaces ? "Ouch workspaces" : "macOS Spaces")")
         }
-        Log.verbose = config.debugLogging
+        Log.verbose = config.debugLogging || Log.verboseLaunch
         ModeFX.shared.style = config.modeEffect
         config.errors.forEach { Log.info("config: \($0)") }
         Hotkeys.shared.setBindings(config.bindings)
@@ -477,6 +477,13 @@ final class WindowManager {
         if let w = focusedWindow(), let s = screen(of: w, in: screens) { return s }
         let p = mouseLocation()
         return screens.first { $0.frame.contains(p) } ?? screens.first
+    }
+
+    /// The focused window's floating and fullscreen state, for the menu's toggles.
+    func focusedWindowState() -> (floating: Bool, fullscreen: Bool)? {
+        guard let w = focusedWindow() else { return nil }
+        let zoomed = screen(of: w).map { state(for: $0).zoomed == w.id } ?? false
+        return (w.isFloating, zoomed)
     }
 
     private func focusedWindow() -> Window? {
