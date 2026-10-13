@@ -1051,6 +1051,12 @@ private struct GapsPreview: View {
     final class Play: ObservableObject {
         @Published var ids = [0, 1, 2]
         @Published var nextID = 3
+        /// Which app each window plays, picked at random so the desk looks different every time.
+        @Published var apps: [Int: DemoApp] = {
+            var picked: [DemoApp] = []
+            for _ in 0..<3 { picked.append(DemoApp.pick(avoiding: picked)) }
+            return Dictionary(uniqueKeysWithValues: picked.enumerated().map { ($0, $1) })
+        }()
         @Published var hovered: Int?
         /// Drawn above the others, so a window flying to the main slot passes over its neighbours.
         @Published var lifted: Int?
@@ -1110,7 +1116,7 @@ private struct GapsPreview: View {
         let hovered = play.hovered == id
         return ZStack(alignment: .topTrailing) {
             Button { focus(id) } label: {
-                MiniWindow(main: id == play.ids.first, corner: 4, chrome: f.width > 30)
+                DemoWindow(app: play.apps[id] ?? DemoApp.all[0], main: id == play.ids.first, corner: 4)
                     .brightness(hovered ? 0.06 : 0)
             }
             .buttonStyle(PressablePane())
@@ -1165,6 +1171,7 @@ private struct GapsPreview: View {
         guard play.ids.count < 6 else { return }
         play.spawn = point
         play.lifted = play.nextID
+        play.apps[play.nextID] = DemoApp.pick(avoiding: play.ids.compactMap { play.apps[$0] })
         withAnimation(motion) {
             play.ids.append(play.nextID)
             play.nextID += 1
@@ -1411,6 +1418,8 @@ private struct FloatingPane: View {
 private struct AnimationPane: View {
     @ObservedObject var doc: ConfigDocument
     @ObservedObject var ui: SettingsUI
+    /// The preview's two windows: a random pair, one light and one dark so they never blend.
+    static let previewApps = [DemoApp.all.filter(\.dark).randomElement()!, DemoApp.all.filter { !$0.dark }.randomElement()!].shuffled()
 
     struct Preset {
         let name: String
@@ -1526,10 +1535,10 @@ private struct AnimationPane: View {
                                 let seam = flipped ? w * 0.65 - 2 : w * 0.6 - 2
                                 ZStack(alignment: .topLeading) {
                                     RoundedRectangle(cornerRadius: 8, style: .continuous).fill(GapsPreview.wallpaper)
-                                    MiniWindow(main: true, corner: 5, chrome: true)
+                                    DemoWindow(app: Self.previewApps[0], main: true, corner: 5)
                                         .frame(width: max(1, (flipped ? w * 0.35 : w * 0.6) - 12), height: h - 16)
                                         .offset(x: flipped ? w * 0.65 + 4 : 8, y: 8)
-                                    MiniWindow(main: false, corner: 5, chrome: true)
+                                    DemoWindow(app: Self.previewApps[1], corner: 5)
                                         .frame(width: max(1, (flipped ? w * 0.65 : w * 0.4) - 12), height: h - 16)
                                         .offset(x: flipped ? 8 : w * 0.6 + 4, y: 8)
                                     // The windows meet at the seam when they land.
