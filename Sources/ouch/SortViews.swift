@@ -51,6 +51,7 @@ struct SortView: View {
         .frame(width: width - 40)
         .surface(.lg, glass: true)
         .background(GeometryReader { g in Color.clear.preference(key: SortSizeKey.self, value: g.size) })
+        .panelEntrance(model.shown, style: model.motion)
         .padding(Self.inset)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .overlay(alignment: .topLeading) { ghost }
@@ -90,8 +91,12 @@ struct SortView: View {
                 HStack(alignment: .top, spacing: 4) {
                     ForEach(Array(plan.lanes.enumerated()), id: \.element.id) { i, lane in
                         SortLaneView(model: model, index: i, lane: lane, rows: rows).id(lane.id)
+                            .tileItem(model.shown, style: model.motion,
+                                      spread: CGSize(width: -CGFloat(i) * (SortMetrics.lane + 4), height: 0))
                     }
                     SortAddLane(model: model, plan: plan)
+                        .tileItem(model.shown, style: model.motion,
+                                  spread: CGSize(width: -CGFloat(plan.lanes.count) * (SortMetrics.lane + 4), height: 0))
                 }
                 .padding(.horizontal, 8).padding(.bottom, 6)
                 .background(SortScrollAccessor(model: model))

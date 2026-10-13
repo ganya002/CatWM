@@ -19,6 +19,7 @@ Like `hyprctl`. The command is sent to the running instance through a distribute
 | `reload` | re-read `ouch.conf` and rebind keys. Errors go to the log; a HUD shows "Config reloaded" or the error count. |
 | `dump` | write tiling state to `~/Library/Logs/ouch.log` (prints only the log path) |
 | `modefx draw\|ripple\|corners\|none\|all` | preview a window-mode effect |
+| `panelfx rise\|pop\|focus\|tile\|draw\|all` | preview a panel animation: opens and closes Sort Windows, then keyboard help |
 | `poststyle 0\|1\|2` | diagnostics: how synthetic shortcuts are posted |
 | `grabtest` | diagnostics |
 

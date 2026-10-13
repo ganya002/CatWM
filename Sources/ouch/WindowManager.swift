@@ -839,6 +839,7 @@ final class WindowManager {
             Log.info("ipc: post style is now \(Hotkeys.postStyle)")
         case "reload": reload()
         case "modefx": ModeFX.shared.command(Array(parts.dropFirst()).flatMap { $0.split(separator: " ").map(String.init) })
+        case "panelfx": PanelMotionDemo.command(Array(parts.dropFirst()))
         default: Log.info("ipc: unknown command")
         }
     }

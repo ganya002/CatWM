@@ -292,6 +292,10 @@ enum SettingsIndex {
         SettingEntry(id: "motion.curve", title: "Curve", pane: .motion, advanced: true, keywords: "easing ease spring bounce overshoot linear"),
         SettingEntry(id: "motion.bounce", title: "Bounciness", pane: .motion, advanced: true, keywords: "spring overshoot"),
         SettingEntry(id: "motion.bezier", title: "Bezier control points", pane: .motion, advanced: true, keywords: "cubic custom curve"),
+        SettingEntry(id: "motion.panels", title: "Panel animation", pane: .motion, advanced: true,
+                     keywords: "sort windows keyboard help rise pop focus tile draw open appear"),
+        SettingEntry(id: "motion.modeEffect", title: "Window mode effect", pane: .motion, advanced: true,
+                     keywords: "border edge draw ripple corners submap indicator"),
 
         SettingEntry(id: "shortcuts.list", title: "Keyboard shortcuts", pane: .shortcuts, keywords: "keybinds hotkeys bind"),
         SettingEntry(id: "shortcuts.map", title: "Shortcut map", pane: .shortcuts, keywords: "keyboard overview"),

@@ -819,6 +819,33 @@ struct MotionPane: View {
                         .tooltip("How far springs swing, balls bounce and overshoot goes")
                         .setting("motion.bounce", ui)
                 }
+                OGroup("Panels and window mode") {
+                    ORow("Panel animation", description: "How Sort Windows and keyboard help come and go") {
+                        HStack(spacing: 8) {
+                            OMenuPicker(title: "Panel animation", options: PanelMotion.allCases.map { ($0.rawValue, $0.title) },
+                                        selection: Binding(get: { c.panelAnimation.rawValue }, set: { raw in
+                                            guard let m = PanelMotion(rawValue: raw) else { return }
+                                            doc.config.panelAnimation = m
+                                            PanelMotionDemo.play([m], keyboardOnly: true)
+                                        }))
+                            OButton("Play", icon: "play.fill", size: .sm) { PanelMotionDemo.play([c.panelAnimation], keyboardOnly: true) }
+                        }
+                    }
+                    .setting("motion.panels", ui)
+                    ORow("Window mode effect", description: "Shown at the screen edges while window mode is on") {
+                        HStack(spacing: 8) {
+                            OMenuPicker(title: "Window mode effect", options: ModeFX.Style.allCases.map { ($0.rawValue, $0.title) },
+                                        selection: Binding(get: { c.modeEffect.rawValue }, set: { raw in
+                                            guard let s = ModeFX.Style(rawValue: raw) else { return }
+                                            doc.config.modeEffect = s
+                                            ModeFX.shared.command([s.rawValue])
+                                        }))
+                            OButton("Play", icon: "play.fill", size: .sm) { ModeFX.shared.command([c.modeEffect.rawValue]) }
+                                .disabled(c.modeEffect == .none)
+                        }
+                    }
+                    .setting("motion.modeEffect", ui)
+                }
             }
         }
     }
