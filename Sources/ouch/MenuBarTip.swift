@@ -77,18 +77,27 @@ final class MenuBarTip {
     /// Where the item is and whether that's a good spot. A hidden item has no anchor; the tip then
     /// sits at the right end of the menu bar of the screen with the pointer.
     private func locate() -> (MenuBarTipModel.State, NSRect?, NSScreen?) {
-        let fallback = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main
+        let focused = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main
         guard let w = statusButton?.window, w.occlusionState.contains(.visible),
-              let screen = NSScreen.screens.first(where: { $0.frame.contains(NSPoint(x: w.frame.midX, y: w.frame.midY)) })
-        else { return (.hidden, nil, fallback) }
+              let itemScreen = NSScreen.screens.first(where: { $0.frame.contains(NSPoint(x: w.frame.midX, y: w.frame.midY)) })
+        else { return (.hidden, nil, focused) }
         let f = w.frame
-        if let left = screen.auxiliaryTopLeftArea, let right = screen.auxiliaryTopRightArea {
-            if f.maxX > left.maxX && f.minX < right.minX { return (.hidden, nil, screen) } // under the notch
-            // Left of the notch, or the first in line to be pushed under it when more items appear.
-            let good = f.minX >= right.minX + right.width * 0.25
-            return (good ? .good : .move, f, screen)
+        let state = state(for: f, on: itemScreen)
+        // On multi-display setups, keep the tip on the focused display even while the status item
+        // reports geometry from another display's menu bar.
+        if let focused, focused != itemScreen {
+            return (state, nil, focused)
         }
-        return (f.midX > screen.frame.midX ? .good : .move, f, screen)
+        return (state, f, itemScreen)
+    }
+
+    private func state(for frame: NSRect, on screen: NSScreen) -> MenuBarTipModel.State {
+        if let left = screen.auxiliaryTopLeftArea, let right = screen.auxiliaryTopRightArea {
+            if frame.maxX > left.maxX && frame.minX < right.minX { return .hidden } // under the notch
+            // Left of the notch, or the first in line to be pushed under it when more items appear.
+            return frame.minX >= right.minX + right.width * 0.25 ? .good : .move
+        }
+        return frame.midX > screen.frame.midX ? .good : .move
     }
 }
 
