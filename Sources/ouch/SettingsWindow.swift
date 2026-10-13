@@ -288,6 +288,10 @@ enum SettingsIndex {
 
         SettingEntry(id: "shortcuts.list", title: "Keyboard shortcuts", pane: .shortcuts, keywords: "keybinds hotkeys bind"),
         SettingEntry(id: "shortcuts.map", title: "Shortcut map", pane: .shortcuts, keywords: "keyboard overview"),
+        SettingEntry(id: "shortcuts.keyboardHelp", title: "Show keyboard help", pane: .shortcuts,
+                     keywords: "on-screen hold command cmd caps lock question mark"),
+        SettingEntry(id: "shortcuts.keyboardFinish", title: "Keyboard finish", pane: .shortcuts,
+                     keywords: "keyboard model colour color auto macbook air pro neo magic"),
         SettingEntry(id: "shortcuts.wasd", title: "Gaming shortcuts (WASD)", pane: .shortcuts, keywords: "reset preset games"),
         SettingEntry(id: "shortcuts.defaults", title: "Restore default shortcuts", pane: .shortcuts, keywords: "reset vim"),
     ]
