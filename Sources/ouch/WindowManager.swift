@@ -134,7 +134,6 @@ final class WindowManager {
             if !Hotkeys.shared.submap.isEmpty { Hotkeys.shared.setSubmap("") }
         }
         Hotkeys.shared.onSubmapChange = { [weak self] name in
-            ModeIndicator.shared.show(name.isEmpty ? nil : name)
             Log.debug("mode: \(name.isEmpty ? "reset" : name)")
             self?.onChange?()
             self?.onModeChange?(name)
@@ -946,6 +945,25 @@ final class WindowManager {
         let showing = Set(virtualShown.values)
         let current = currentScreen().flatMap { virtualShown[$0.uuid] }
         return (current, names.map { ($0, counts[$0] ?? 0, showing.contains($0)) })
+    }
+
+    /// What the menu bar shows for the focused display: its workspace (or macOS desktop number),
+    /// layout, and the apps on it in tiling order (floating ones last).
+    func menuBarState() -> (workspace: String?, layout: Layout, pids: [pid_t])? {
+        guard isStarted, let s = currentScreen() else { return nil }
+        let ws = shown[s.uuid]
+        let workspace: String?
+        if config.virtualWorkspaces {
+            workspace = virtualShown[s.uuid]
+        } else if let list = Spaces.list(display: s.uuid), let cur = list.current, let n = list.desktops.firstIndex(of: cur) {
+            workspace = String(n + 1)
+        } else {
+            workspace = nil
+        }
+        let here = order.filter { workspaceOf[$0] == ws && present.contains($0) }.compactMap { windows[$0] }
+        var seen = Set<pid_t>()
+        let pids = (here.filter { !$0.isFloating } + here.filter(\.isFloating)).map(\.pid).filter { seen.insert($0).inserted }
+        return (workspace, state(for: s).layout, pids)
     }
 
     private func firstFreeWorkspace() -> String {

@@ -105,44 +105,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         Hotkeys.shared.restoreCapsLockDelay()
     }
 
-    /// Menu bar indicator, like a Waybar workspaces module: workspaces with windows, the
-    /// focused display's one filled in.
+    /// Menu bar indicator: the focused display's workspace, a drawing of its layout, and the
+    /// apps on it.
     private func updateIcon() {
         // Only checkPermission() updates wasTrusted; doing it here too (window events call this)
         // could swallow a revocation before the watchdog sees it.
         let trusted = AXIsProcessTrusted()
         guard let button = statusItem.button else { return }
-        let summary = WindowManager.shared.workspaceSummary()
-        guard trusted, !summary.all.isEmpty || !Hotkeys.shared.submap.isEmpty else {
+        button.attributedTitle = NSAttributedString(string: "")
+        guard trusted, let state = WindowManager.shared.menuBarState() else {
             button.image = NSImage(systemSymbolName: trusted ? "rectangle.split.3x1" : "exclamationmark.triangle",
                                    accessibilityDescription: "Ouch")
-            button.attributedTitle = NSAttributedString(string: "")
             return
         }
-        button.image = nil
-        let title = NSMutableAttributedString()
-        if !Hotkeys.shared.submap.isEmpty {
-            title.append(NSAttributedString(string: Hotkeys.shared.submap.uppercased() + "  ", attributes: [
-                .font: Theme.nsMono(11), .foregroundColor: NSColor.controlAccentColor,
-            ]))
-        }
-        for (i, ws) in summary.all.enumerated() where ws.windows > 0 || ws.shown {
-            if title.length > 0 { title.append(NSAttributedString(string: " ")) }
-            let current = ws.name == summary.current
-            let glyph: String
-            if let n = Int(ws.name), (1...10).contains(n) {
-                glyph = String(UnicodeScalar((current ? 0x2775 : 0x245F) + UInt32(n))!) // ❶… / ①…
-            } else {
-                glyph = current ? "[\(ws.name)]" : ws.name
-            }
-            let color: NSColor = current ? .labelColor : (ws.windows > 0 ? .secondaryLabelColor : .tertiaryLabelColor)
-            title.append(NSAttributedString(string: glyph, attributes: [
-                .font: NSFont.systemFont(ofSize: 14, weight: current ? .bold : .regular), .foregroundColor: color,
-                .baselineOffset: 0.5,
-            ]))
-            _ = i
-        }
-        button.attributedTitle = title
+        MenuBarIcon.pruneIcons(keeping: Set(state.pids))
+        button.image = MenuBarIcon.image(mode: Hotkeys.shared.submap, workspace: state.workspace, layout: state.layout,
+                                         pids: state.pids)
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
