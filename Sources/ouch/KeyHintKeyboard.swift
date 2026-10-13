@@ -242,7 +242,7 @@ struct KeyHintKeyboard: View {
     /// Legends of a typing key: a letter (`t`), a shifted symbol over its base (`t` over `b`), or four
     /// corners (`t` `d` over `b` `c`) where two scripts share the key.
     struct Legend: Equatable {
-        enum Kind { case char, dual, quad, quadLarge }
+        enum Kind { case char, charOption, dual, quad, quadLarge }
         var t = "", b = "", c = "", d = ""
         var kind: Kind = .char
     }
@@ -632,6 +632,9 @@ private struct HintKeyCap: View {
             switch l.kind {
             case .char:
                 text(l.t, 16.5, .center, .middle(-8))
+            case .charOption:
+                text(l.t, 16.5, .center, .middle(-8))
+                text(l.c, 10.5, .right(9), .bottom(8))
             case .dual:
                 text(l.t, 10.5, .center, .top(10))
                 text(l.b, 16.5, .center, .bottom(10))
@@ -643,7 +646,7 @@ private struct HintKeyCap: View {
                 text(l.c, big ? 15 : 13.5, .right(9), .bottom(8))
             }
             if key.home {
-                if l.kind == .char || l.kind == .dual {
+                if l.kind == .char || l.kind == .charOption || l.kind == .dual {
                     mark(9, 1.5, color: homeColor, x: nil, y: nil, bottom: 9)
                 } else {
                     mark(9, 1.5, color: homeColor, x: nil, y: key.frame.height / 2 - 1)
@@ -720,15 +723,12 @@ private struct HintKeyCap: View {
         let full = key.frame.height >= 50
         let glyph = label.count <= 2
         let numeric = Int(label) != nil
-        let corner = cornerLegend
         let ink = filled ? pressedInk : groupColor
         // On the ISO return key, the label sits in the wide top part.
         let box = key.lShape.map { CGSize(width: $0.top * k, height: $0.joint * k) } ?? CGSize(width: w, height: h)
         return ZStack(alignment: .topLeading) {
-            if full && !corner.isEmpty {
-                Text(corner).font(.system(size: 10.5 * k)).oneLine().fixedSize()
-                    .foregroundStyle(filled ? pressedInk : legendColor.opacity(0.55))
-                    .padding(.leading, 7 * k).padding(.top, (7 - 1) * k)
+            if full {
+                cornerLegend
             }
             Group {
                 if glyph {
@@ -753,7 +753,28 @@ private struct HintKeyCap: View {
     }
 
     /// The legend that moves to the corner when a label takes the middle.
-    private var cornerLegend: String {
+    @ViewBuilder private var cornerLegend: some View {
+        let color = filled ? pressedInk : legendColor.opacity(0.55)
+        switch key.kind {
+        case .typing(let l) where l.kind == .charOption:
+            Text(l.t).font(.system(size: 10.5 * scale)).oneLine().fixedSize()
+                .foregroundStyle(color)
+                .padding(.leading, 7 * scale).padding(.top, (7 - 1) * scale)
+            Text(l.c).font(.system(size: 9.5 * scale)).oneLine().fixedSize()
+                .foregroundStyle(color)
+                .padding(.trailing, 7 * scale).padding(.bottom, 6 * scale)
+                .frame(width: w, height: h, alignment: .bottomTrailing)
+        default:
+            let text = cornerText
+            if !text.isEmpty {
+                Text(text).font(.system(size: 10.5 * scale)).oneLine().fixedSize()
+                    .foregroundStyle(color)
+                    .padding(.leading, 7 * scale).padding(.top, (7 - 1) * scale)
+            }
+        }
+    }
+
+    private var cornerText: String {
         switch key.kind {
         case .typing(let l): l.kind == .dual ? l.b : l.t
         case .word(let w, _, _, _): w

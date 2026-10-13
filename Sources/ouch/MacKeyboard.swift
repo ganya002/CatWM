@@ -68,7 +68,8 @@ final class MacKeyboard: ObservableObject {
         guard signature != sourceSignature || keys.isEmpty else { return }
         sourceSignature = signature
         let english = s == .ansi && Self.englishSources.contains(source)
-        keys = Self.build(shape: s, light: f.lightKeys, english: english, legends: Self.typingLegends())
+        let typed = Self.typingLegends()
+        keys = Self.build(shape: s, light: f.lightKeys, english: english, legends: typed.legends, koreanCaps: typed.koreanCaps)
     }
 
     // MARK: Model and finish
@@ -229,36 +230,51 @@ final class MacKeyboard: ObservableObject {
     }
 
     /// What the typing keys say on the current input source: a letter, or the shifted symbol over the
-    /// base one. A non-Latin layout (Russian, Greek) keeps the Latin legends on the left and adds its
-    /// own on the right, as those keyboards are printed.
-    static func typingLegends() -> [UInt16: KeyHintKeyboard.Legend] {
+    /// base one. Some Latin layouts also print an Option symbol on letter keys. A non-Latin layout
+    /// (Russian, Greek) keeps the Latin legends on the left and adds its own on the right, as those
+    /// keyboards are printed.
+    static func typingLegends() -> (legends: [UInt16: KeyHintKeyboard.Legend], koreanCaps: Bool) {
         let codes = Array(letters.keys) + Array(usSymbols.keys)
-        var native: [UInt16: (base: String, shifted: String?)] = [:]
+        var native: [UInt16: (base: String, shifted: String?, option: String?)] = [:]
         for c in codes {
             guard let base = ConfigDocument.typedCharacter(keyCode: c, flags: []) else { continue }
-            native[c] = (base, ConfigDocument.typedCharacter(keyCode: c, flags: .shift))
+            native[c] = (base, ConfigDocument.typedCharacter(keyCode: c, flags: .shift), ConfigDocument.typedCharacter(keyCode: c, flags: .option))
         }
         let nonLatin = letters.keys.contains { native[$0].map { isLetter($0.base) && !isLatin($0.base) } ?? false }
+        let koreanCaps = letters.keys.contains {
+            native[$0].map {
+                $0.base.unicodeScalars.contains { (0x1100...0x11FF).contains($0.value) || (0x3130...0x318F).contains($0.value) || (0xAC00...0xD7AF).contains($0.value) }
+            } ?? false
+        }
         var out: [UInt16: KeyHintKeyboard.Legend] = [:]
         for c in codes {
             let us: (base: String, shifted: String?) = letters[c].map { ($0.lowercased(), $0) } ?? usSymbols[c].map { ($0.0, $0.1) } ?? ("", nil)
-            guard let n = native[c] else { out[c] = plain(us.base, us.shifted); continue }
+            guard let n = native[c] else { out[c] = plain(us.base, us.shifted, nil); continue }
             if nonLatin, n.base.lowercased() != us.base.lowercased() || n.shifted != us.shifted {
                 out[c] = quad(code: c, us: us, native: n)
             } else {
-                out[c] = plain(n.base, n.shifted)
+                out[c] = plain(n.base, n.shifted, n.option)
             }
         }
-        return out
+        return (out, koreanCaps)
     }
 
-    private static func plain(_ base: String, _ shifted: String?) -> KeyHintKeyboard.Legend {
-        if isLetter(base), shifted == nil || shifted == base.uppercased() { return .init(t: base.uppercased()) }
+    private static func plain(_ base: String, _ shifted: String?, _ option: String?) -> KeyHintKeyboard.Legend {
+        if isLetter(base), shifted == nil || shifted == base.uppercased() {
+            if let option, printedOption.contains(option) {
+                return .init(t: base.uppercased(), c: option, kind: .charOption)
+            }
+            return .init(t: base.uppercased())
+        }
         if let shifted, shifted != base { return .init(t: shifted, b: base, kind: .dual) }
         return .init(t: base.uppercased())
     }
 
-    private static func quad(code: UInt16, us: (base: String, shifted: String?), native n: (base: String, shifted: String?)) -> KeyHintKeyboard.Legend {
+    /// Option characters Apple prints on letter keys (€ on E, @ on L for German, Spanish, Italian…).
+    /// Others, like US ∂ or ƒ, are typeable but not printed.
+    private static let printedOption: Set<String> = ["€", "@"]
+
+    private static func quad(code: UInt16, us: (base: String, shifted: String?), native n: (base: String, shifted: String?, option: String?)) -> KeyHintKeyboard.Legend {
         var l = KeyHintKeyboard.Legend(kind: .quad)
         if let letter = letters[code] { l.t = letter } else { l.t = us.shifted ?? ""; l.b = us.base }
         if isLetter(n.base) {
@@ -281,7 +297,7 @@ final class MacKeyboard: ObservableObject {
     private typealias Item = (code: UInt16?, u: CGFloat, kind: Key.Kind)
 
     /// Every key, left to right and top to bottom, so a left modifier comes before its right twin.
-    static func build(shape: Shape, light: Bool, english: Bool, legends: [UInt16: KeyHintKeyboard.Legend]) -> [KeyHintKeyboard.Key] {
+    static func build(shape: Shape, light: Bool, english: Bool, legends: [UInt16: KeyHintKeyboard.Legend], koreanCaps: Bool = false) -> [KeyHintKeyboard.Key] {
         let U = pitch, V = rowPitch, KH = keyHeight
         func kw(_ u: CGFloat) -> CGFloat { u * U - gap }
         var out: [Key] = []
@@ -298,6 +314,9 @@ final class MacKeyboard: ObservableObject {
         func word(_ code: UInt16, _ u: CGFloat, _ trailing: Bool, _ w: String, _ symbol: String, caps: Bool = false) -> Item {
             (code, u, .word(words ? w : symbol, symbol: !words, trailing: trailing, caps: caps))
         }
+        func caps(_ u: CGFloat) -> Item {
+            koreanCaps ? (57, u, .word("한/A", symbol: false, trailing: false, caps: true)) : word(57, u, false, "caps lock", "⇪", caps: true)
+        }
         func mod(_ code: UInt16, _ u: CGFloat, _ symbol: String, _ w: String, left: Bool) -> Item {
             // Dark keyboards print the symbol in the outer top corner, light ones in the inner one.
             (code, u, .modifier(symbol, word: english ? w : nil, symbolTrailing: left != light))
@@ -312,7 +331,7 @@ final class MacKeyboard: ObservableObject {
         case .ansi:
             row(1, chars([50, 18, 19, 20, 21, 23, 22, 26, 28, 25, 29, 27, 24]) + [word(51, 1.5, true, "delete", "⌫")])
             row(2, [word(48, 1.5, false, "tab", "⇥")] + chars([12, 13, 14, 15, 17, 16, 32, 34, 31, 35, 33, 30, 42]))
-            row(3, [word(57, 1.75, false, "caps lock", "⇪", caps: true)] + chars([0, 1, 2, 3, 5, 4, 38, 40, 37, 41, 39])
+            row(3, [caps(1.75)] + chars([0, 1, 2, 3, 5, 4, 38, 40, 37, 41, 39])
                 + [word(36, 1.75, true, "return", "↵")])
             row(4, [word(56, 2.25, false, "shift", "⇧")] + chars([6, 7, 8, 9, 11, 45, 46, 43, 47, 44]) + [word(60, 2.25, true, "shift", "⇧")])
         case .iso:
@@ -321,7 +340,7 @@ final class MacKeyboard: ObservableObject {
             var ret = Key(code: 36, frame: CGRect(x: x, y: 2 * V, width: kw(1.25), height: KH + V), kind: word(36, 1.25, true, "return", "↵").kind)
             ret.lShape = Key.LShape(top: kw(1.25), bottom: kw(1), joint: KH)
             out.append(ret)
-            row(3, [word(57, 1.5, false, "caps lock", "⇪", caps: true)] + chars([0, 1, 2, 3, 5, 4, 38, 40, 37, 41, 39, 42]))
+            row(3, [caps(1.5)] + chars([0, 1, 2, 3, 5, 4, 38, 40, 37, 41, 39, 42]))
             row(4, [word(56, 1.25, false, "shift", "⇧")] + chars([50, 6, 7, 8, 9, 11, 45, 46, 43, 47, 44]) + [word(60, 2.25, true, "shift", "⇧")])
         case .jis:
             // JIS keyboards print the same Latin and kana legends whatever the input source.
