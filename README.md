@@ -20,6 +20,22 @@ After onboarding, small tips turn up once each where they help: beside a Setting
 
 The app is ad-hoc signed, so after each rebuild you may need to remove and re-add it in Accessibility.
 
+## Bug reports
+
+**Help › Report a Bug…** collects a report folder in `~/Library/Application Support/Ouch/Reports/<time>/`: setup, recent log, config and (after a crash) the macOS crash report, plus `prompt.md` with instructions for an agent. Agents get only the path to `prompt.md` and read the rest themselves. The card shows the AI apps and coding agents installed on the Mac, as their icons. Clicking one opens it with the prompt filled in: Claude, Codex and Cursor through their deep links, editors with the folder opened, chat apps with the prompt on the clipboard, and command-line agents in Terminal. When the report is done, the agent runs `open "ouch://report?id=<folder>"` and Ouch shows it, ready to send. Users can also write it themselves.
+
+**Send** files the report as a Linear issue through the relay in `report-relay/`, a Cloudflare Worker that holds the Linear API key, since a key shipped inside the app could be pulled out. Deploy it once:
+
+```sh
+cd report-relay
+npx wrangler deploy
+npx wrangler secret put LINEAR_API_KEY   # Linear → Settings → Security & access → Personal API keys
+```
+
+Set `LINEAR_TEAM_KEY` in `wrangler.toml` to the team's issue prefix, and put the worker's URL plus `/report` into `OuchReportURL` in `Info.plist`. Until then, Send opens a Mail draft to `OuchReportEmail` (Linear's intake address), and with neither set it copies the report.
+
+If Ouch crashes, a small watchdog reopens it once macOS has written the crash report. Nothing pops up: the menu bar icon, Help and Report a Bug… get a yellow dot, and Report a Bug… then opens with the crash attached. `open build/ouch.app --args --crash-report` marks the newest crash report as waiting.
+
 ## Releasing with Amore
 
 Updates ship through [Amore](https://amore.computer) and Sparkle. Amore signs, notarizes, builds the DMG, writes the appcast and hosts it.
@@ -44,7 +60,7 @@ Each release (the build number is stamped from the commit count, so only `CFBund
 ./release.sh "WIP" --draft                       # upload without publishing
 ```
 
-For early-access betas, `./beta.sh "What changed"` publishes to the beta channel with no version bump: the build number is the commit count and the version reads `0.1-beta.<build>`. Beta builds start opted in to beta updates. Without a Developer ID certificate it ships an unsigned ZIP, so testers allow it once in System Settings → Privacy & Security → **Open Anyway**.
+For early-access betas, `./beta.sh "What changed"` publishes to the beta channel with no version bump: the build number is the commit count and the version reads `0.2-beta.<build>`. Beta builds start opted in to beta updates. Without a Developer ID certificate it ships an unsigned ZIP, so testers allow it once in System Settings → Privacy & Security → **Open Anyway**.
 
 Settings → General has the update toggles, and the menu bar menu has **Help › Check for Updates…**.
 

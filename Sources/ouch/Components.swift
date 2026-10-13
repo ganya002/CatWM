@@ -698,11 +698,14 @@ struct OTextField: View {
     @Binding var text: String
     var mono = false
     var onSubmit: () -> Void = {}
+    /// Takes focus when it appears, so typing doesn't fall through to another field in the window.
+    var autofocus = false
     @FocusState private var focused: Bool
 
     var body: some View {
         TextField("", text: $text, prompt: Text(placeholder).foregroundStyle(Theme.inkFaint))
             .textFieldStyle(.plain)
+            .onAppear { if autofocus { DispatchQueue.main.async { focused = true } } }
             .font(mono ? Theme.mono(12, .regular) : Theme.body(13))
             .foregroundStyle(Theme.ink)
             .focused($focused)

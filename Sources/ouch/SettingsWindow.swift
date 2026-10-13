@@ -414,12 +414,7 @@ private struct Sidebar: View {
                     Wordmark()
                     Text(version).font(Theme.body(11.5)).foregroundStyle(Theme.inkMuted).oneLine()
                     Spacer(minLength: 0)
-                    OIconButton(symbol: "keyboard", label: "Shortcut map") {
-                        ui.search = ""
-                        ui.pane = .shortcuts
-                        withAnimation(Motion.snap) { ui.showMap = true }
-                    }
-                    .tipAnchor("map")
+                    BugReportButton()
                 }
                 .padding(.leading, 10).padding(.top, 6)
             }
@@ -903,4 +898,21 @@ func confirm(_ title: String, _ detail: String, button: String = "Reset") -> Boo
     a.addButton(withTitle: "Cancel")
     a.buttons.first?.hasDestructiveAction = true
     return a.runModal() == .alertFirstButtonReturn
+}
+
+/// Report a Bug… at the foot of the sidebar, with the crash dot while a crash report is waiting.
+private struct BugReportButton: View {
+    @StateObject private var crashed = Flag()
+
+    var body: some View {
+        OIconButton(symbol: "ladybug", label: crashed.on ? "Report a bug: Ouch crashed" : "Report a bug") { CrashWatch.openReport() }
+            .overlay(alignment: .topTrailing) {
+                if crashed.on { NotificationDot().offset(x: -6, y: 6).allowsHitTesting(false) }
+            }
+            .frame(width: 30) // the share button above is 30 wide: centred under it
+            .onAppear { crashed.on = CrashWatch.pending != nil }
+            .onReceive(NotificationCenter.default.publisher(for: .crashPendingChanged)) { _ in
+                crashed.on = CrashWatch.pending != nil
+            }
+    }
 }

@@ -20,6 +20,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         NSApp.mainMenu = makeMainMenu()
         Updater.shared.start()
+        NotificationCenter.default.addObserver(forName: .crashPendingChanged, object: nil, queue: .main) { [weak self] _ in
+            self?.updateIcon()
+            StatusMenu.shared.refreshIfOpen()
+        }
+        CrashWatch.start()
         WindowManager.shared.onChange = { [weak self] in
             self?.updateIcon()
             StatusMenu.shared.refreshIfOpen()
@@ -91,6 +96,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         WindowManager.shared.restoreHiddenWindows()
         Hotkeys.shared.restoreCapsLockDelay()
+        CrashWatch.cleanExit()
+    }
+
+    /// `ouch://report?id=…`: an agent hands back a finished bug report.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls where url.scheme == "ouch" { BugReportPanel.shared.handle(url) }
     }
 
     /// Menu bar indicator: the focused display's workspace, a drawing of its layout, and the
@@ -108,7 +119,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         MenuBarIcon.pruneIcons(keeping: Set(state.pids))
         button.image = MenuBarIcon.image(mode: Hotkeys.shared.submap, workspace: state.workspace, layout: state.layout,
-                                         pids: state.pids)
+                                         pids: state.pids, dot: CrashWatch.pending != nil)
     }
 
     /// Only shown while the settings window is active; without an Edit menu, ⌘C/⌘V/⌘Z don't work in text fields.
@@ -184,6 +195,7 @@ for sig in [SIGTERM, SIGINT, SIGHUP] {
     let source = DispatchSource.makeSignalSource(signal: sig, queue: .main)
     source.setEventHandler {
         WindowManager.shared.restoreHiddenWindows()
+        CrashWatch.cleanExit()
         exit(0)
     }
     source.resume()

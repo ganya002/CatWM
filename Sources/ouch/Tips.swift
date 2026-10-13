@@ -111,15 +111,11 @@ final class Tips: ObservableObject {
 
     /// A Settings pane came into view.
     func paneShown(_ pane: Pane) {
-        if let s = settings, s.place != .settings("pane.\(pane.rawValue)") && s.place != .settings("map") { dismissSettings() }
+        if let s = settings, s.place != .settings("pane.\(pane.rawValue)") { dismissSettings() }
         let keys = ShortcutIndex()
         let chord = keys.modeChord
         let tip: Tip?
         switch pane {
-        case .general:
-            tip = Tip(id: "settings.map", title: "Every shortcut at a glance",
-                      body: "The keyboard button opens the shortcut map: each key, labelled with what it does.",
-                      place: .settings("map"))
         case .shortcuts:
             tip = Tip(id: "settings.shortcuts", title: "Two sets of keys",
                       body: "Global keys work anywhere. Window-mode keys work after the mode chord, so they never clash with typing.",
@@ -134,7 +130,7 @@ final class Tips: ObservableObject {
             tip = float.isEmpty ? nil : Tip(id: "settings.windows", title: "Float a single window",
                                             body: "The list here floats whole apps. \(float.joined()) in window mode floats just the focused window.",
                                             chords: chord.isEmpty ? [float] : [chord, float], place: .settings("pane.\(pane.rawValue)"))
-        case .motion:
+        default:
             tip = nil
         }
         guard let tip, canShow(tip.id) else { return }
