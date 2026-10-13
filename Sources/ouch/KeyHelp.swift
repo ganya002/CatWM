@@ -70,11 +70,13 @@ final class KeyHelp {
         show(mode: mode, reason: .toggle)
     }
 
-    /// The menu bar's Keyboard Help: the current mode's keys (global ones outside a mode).
-    func showFromMenu() {
+    /// The menu bar's Keyboard Help.
+    /// If it momentarily exits a mode while opening, fall back to the configured window mode.
+    func showFromMenu(preferredMode: String? = nil) {
         holdWork?.cancel()
-        let mode = Hotkeys.shared.submap
-        show(mode: mode, reason: mode.isEmpty ? .menu : .toggle)
+        let active = Hotkeys.shared.submap
+        let mode = active.isEmpty ? (preferredMode ?? "") : active
+        show(mode: mode, reason: .menu)
     }
 
     private func flagsChanged(_ f: NSEvent.ModifierFlags) {
