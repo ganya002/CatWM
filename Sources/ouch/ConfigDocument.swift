@@ -96,6 +96,8 @@ enum Actions {
         add("Toggle Floating", .window, "togglefloating", "", "macwindow.on.rectangle")
         add("Toggle Fullscreen", .window, "fullscreen", "", "arrow.up.left.and.arrow.down.right")
         add("Close Window", .window, "killactive", "", "xmark.square")
+        add("Sort Windows", .window, "sort", "", "square.grid.3x1.below.line.grid.1x2")
+        add("Undo Last Sort", .window, "sort-undo", "", "arrow.uturn.backward")
         add("Focus Next Display", .displays, "focusmonitor", "+1", "display")
         add("Focus Previous Display", .displays, "focusmonitor", "-1", "display")
         add("Move Window to Next Display", .displays, "movewindow", "mon:+1", "rectangle.portrait.and.arrow.right")
@@ -205,7 +207,7 @@ enum Actions {
     static let dispatchers = ["movefocus", "movewindow", "swapwindow", "cyclenext", "swapnext", "layoutmsg", "splitratio",
                               "togglefloating", "fullscreen", "killactive", "exec", "focusmonitor", "movewindowtomonitor",
                               "workspace", "movetoworkspace", "movetoworkspacesilent", "cyclelayout", "layout", "setlayout",
-                              "toggletiling", "retile", "reevaluate", "reload", "exit", "submap", "sethomespace"]
+                              "toggletiling", "retile", "reevaluate", "reload", "exit", "submap", "sethomespace", "sort", "sort-undo"]
 }
 
 // MARK: - Document
@@ -458,6 +460,8 @@ final class ConfigDocument: ObservableObject {
             "window-resize-step = \(n((c.windowResizeStep * 100).rounded()))",
             "enables-layout-hud = \(b(c.enablesLayoutHUD))",
             "enables-layout-hud-on-space-change = \(b(c.enablesLayoutHUDOnSpaceChange))",
+            "sort-strategy = \(c.sortStrategy.rawValue)",
+            "sort-nudge = \(c.sortNudge)",
             "",
             "floating = " + c.floating.joined(separator: ", "),
             "floating-is-blacklist = \(b(c.floatingIsBlacklist))",

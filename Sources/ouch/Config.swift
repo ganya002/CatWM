@@ -54,6 +54,10 @@ struct Config {
     var virtualWorkspaces = true
     /// Closing a window keeps you on the current workspace instead of jumping to wherever macOS refocuses.
     var stayOnWorkspaceAfterClose = true
+    /// Windows on one workspace before Ouch offers to sort them; 0 turns the offer off.
+    var sortNudge = 8
+    /// The grouping the Sort panel opens with.
+    var sortStrategy: SortStrategy = .task
     /// Screen-edge effect while a mode is on: draw, ripple, corners or none. Config file only for now.
     var modeEffect: ModeFX.Style = .draw
     var bindings: [KeyBinding] = []
@@ -79,6 +83,25 @@ struct Config {
         let c = parse((try? String(contentsOf: url, encoding: .utf8)) ?? defaultText)
         c.errors.forEach { NSLog("Ouch config: %@", $0) }
         return c
+    }
+
+    /// Sets one option in the config file where it stands (or adds it above the binds), leaving the
+    /// rest of the file, comments included, as written.
+    static func write(option key: String, _ value: String) {
+        let text = (try? String(contentsOf: url, encoding: .utf8)) ?? defaultText
+        var lines = text.components(separatedBy: "\n")
+        func norm(_ s: String) -> String { s.lowercased().replacingOccurrences(of: "-", with: "_") }
+        let existing = lines.firstIndex { l in
+            let t = l.trimmingCharacters(in: .whitespaces)
+            guard !t.hasPrefix("#"), let eq = t.firstIndex(of: "=") else { return false }
+            return norm(t[..<eq].trimmingCharacters(in: .whitespaces)) == norm(key)
+        }
+        if let existing {
+            lines[existing] = "\(key) = \(value)"
+        } else {
+            lines.insert("\(key) = \(value)", at: lines.firstIndex { $0.trimmingCharacters(in: .whitespaces).lowercased().hasPrefix("bind") } ?? lines.count)
+        }
+        try? lines.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
     }
 
     static func parse(_ text: String) -> Config {
@@ -175,6 +198,12 @@ struct Config {
         case "debug_logging": debugLogging = bool
         case "virtual_workspaces": virtualWorkspaces = bool
         case "stay_on_workspace_after_close": stayOnWorkspaceAfterClose = bool
+        case "sort_nudge": return needNum { sortNudge = $0.isFinite ? Int(min(max($0, 0), 100)) : 8 }
+        case "sort_strategy":
+            guard let s = SortStrategy(rawValue: v.lowercased()) else {
+                return "unknown sort strategy `\(v)` (\(SortStrategy.allCases.map(\.rawValue).joined(separator: ", ")))"
+            }
+            sortStrategy = s
         case "mode_effect":
             guard let s = ModeFX.Style(rawValue: v.lowercased()) else {
                 return "unknown mode effect `\(v)` (\(ModeFX.Style.allCases.map(\.rawValue).joined(separator: ", ")))"
@@ -340,6 +369,11 @@ window-resize-step = 5
 enables-layout-hud = true
 enables-layout-hud-on-space-change = true
 
+# Sort Windows (the bind below): the grouping it opens with (task, app, focus or none), and how many
+# windows one workspace holds before Ouch offers to sort them (0 turns the offer off).
+sort-strategy = task
+sort-nudge = 8
+
 # Bundle IDs to float (wildcards like com.adobe.* work). Set floating-is-blacklist = false
 # to make this a list of the ONLY apps that get tiled.
 floating = com.apple.systempreferences, com.apple.SystemSettings, com.apple.calculator
@@ -358,6 +392,7 @@ animation-bounce = 0.5
 # Global binds work everywhere. Everything else lives in "window mode" (a Hyprland submap):
 # press Cmd+Caps Lock, then single keys, vim style. Esc / i / Return or a mouse click leaves it.
 bind = $mod, 1..0, workspace, 1..10
+bind = $mod, o, sort
 bind = SUPER, capslock, submap, window
 # Scroll wheel / trackpad scroll while holding the modifier, and trackpad swipes:
 # bind = $mod, mouse_down, workspace, e+1

@@ -23,7 +23,7 @@ final class Tour {
 
     private let wm = WindowManager.shared
     private weak var statusButton: NSStatusBarButton?
-    private let onEnd: () -> Void
+    private let onEnd: (_ steps: Int) -> Void
     private let screen: NSScreen
 
     private var steps: [Step] = []
@@ -51,7 +51,7 @@ final class Tour {
     private var follow: Timer?
     private var target = NSRect.zero
 
-    init(statusButton: NSStatusBarButton?, onEnd: @escaping () -> Void) {
+    init(statusButton: NSStatusBarButton?, onEnd: @escaping (_ steps: Int) -> Void) {
         self.statusButton = statusButton
         self.onEnd = onEnd
         screen = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main ?? NSScreen.screens[0]
@@ -375,7 +375,7 @@ final class Tour {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [self] in
             wm.practice = nil
             if let original, wm.config.virtualWorkspaces { wm.showWorkspace(original) }
-            onEnd()
+            onEnd(steps.count)
         }
     }
 
