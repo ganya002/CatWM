@@ -369,16 +369,24 @@ final class Tooltip {
         let measure = NSHostingView(rootView: OTooltip(text: text, chords: chords, caret: .none))
         let tip = measure.fittingSize
         let x = min(max(r.midX - tip.width / 2, v.minX + 6), v.maxX - tip.width - 6)
-        let above = r.maxY + 8 + tip.height < v.maxY - 4
-        let y = above ? r.maxY + 8 : r.minY - 8 - tip.height
+        // The caret reaches about 11pt past the pill, so leave room for it before the view.
+        let gap: CGFloat = 14
+        let above = r.maxY + gap + tip.height < v.maxY - 4
+        let y = above ? r.maxY + gap : r.minY - gap - tip.height
         // The caret points at the middle of the view, wherever the tip had to shift to stay on screen.
         let caretX = min(max(r.midX - x, 14), tip.width - 14)
         let caret: Caret = above ? .bottomAt(caretX - tip.width / 2) : .top(caretX)
 
         let p = panel ?? makePanel()
         panel = p
-        p.contentView = NSHostingView(rootView: OTooltip(text: text, chords: chords, caret: caret).padding(m))
-        p.setFrame(NSRect(x: x - m, y: y - m, width: tip.width + 2 * m, height: tip.height + 2 * m), display: true)
+        // The frame is set here alone: a hosting view left to size its window would resize it on layout
+        // and slide the pill down over the view.
+        let frame = NSRect(x: x - m, y: y - m, width: tip.width + 2 * m, height: tip.height + 2 * m)
+        let host = NSHostingView(rootView: OTooltip(text: text, chords: chords, caret: caret).padding(m))
+        host.sizingOptions = []
+        host.frame = NSRect(origin: .zero, size: frame.size)
+        p.contentView = host
+        p.setFrame(frame, display: true)
         p.orderFrontRegardless()
         watch?.invalidate()
         watch = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self, weak view] _ in
