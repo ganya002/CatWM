@@ -51,7 +51,7 @@ Each release (the build number is stamped from the commit count, so only `CFBund
 ./release.sh "WIP" --draft                       # upload without publishing
 ```
 
-For early-access betas, `./beta.sh "What changed"` publishes to the beta channel with no version bump: the build number is the commit count and the version reads `0.1-beta.<build>`. Beta builds start opted in to beta updates. Without a Developer ID certificate it ships an unsigned ZIP, so testers allow it once in System Settings → Privacy & Security → **Open Anyway**.
+For early-access betas, `./beta.sh "What changed"` publishes to the beta channel with no version bump: the build number is the commit count and the version reads `0.2-beta.<build>`. Beta builds start opted in to beta updates. Without a Developer ID certificate it ships an unsigned ZIP, so testers allow it once in System Settings → Privacy & Security → **Open Anyway**.
 
 Settings → General has the update toggles, and the menu bar menu has **Help › Check for Updates…**.
 

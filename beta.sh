@@ -1,6 +1,6 @@
 #!/bin/sh
 # Publishes a beta to Amore's "beta" channel for early-access users. Version and build number are
-# stamped automatically (0.1-beta.<commit count>), so there's nothing to bump.
+# stamped automatically (0.2-beta.<commit count>), so there's nothing to bump.
 # Without a Developer ID certificate it ships an unsigned ZIP; testers then need to allow it once in
 # System Settings → Privacy & Security → Open Anyway.
 # Usage: ./beta.sh "release notes" [extra amore flags, e.g. --draft]
