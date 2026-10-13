@@ -261,7 +261,7 @@ final class MacKeyboard: ObservableObject {
 
     private static func plain(_ base: String, _ shifted: String?, _ option: String?) -> KeyHintKeyboard.Legend {
         if isLetter(base), shifted == nil || shifted == base.uppercased() {
-            if let option, option.count == 1, !isLetter(option), option != base.uppercased() {
+            if let option, printedOption.contains(option) {
                 return .init(t: base.uppercased(), c: option, kind: .charOption)
             }
             return .init(t: base.uppercased())
@@ -269,6 +269,10 @@ final class MacKeyboard: ObservableObject {
         if let shifted, shifted != base { return .init(t: shifted, b: base, kind: .dual) }
         return .init(t: base.uppercased())
     }
+
+    /// Option characters Apple prints on letter keys (€ on E, @ on L for German, Spanish, Italian…).
+    /// Others, like US ∂ or ƒ, are typeable but not printed.
+    private static let printedOption: Set<String> = ["€", "@"]
 
     private static func quad(code: UInt16, us: (base: String, shifted: String?), native n: (base: String, shifted: String?, option: String?)) -> KeyHintKeyboard.Legend {
         var l = KeyHintKeyboard.Legend(kind: .quad)
