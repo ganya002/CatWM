@@ -11,6 +11,22 @@ open build/ouch.app
 
 On first launch, a welcome card asks for **Accessibility** (System Settings → Privacy & Security) and offers a keyboard tour. The tour opens practice windows on a free workspace and tiles them for real; your own windows wait on their workspace until it ends. Run it again from the menu bar with **Keyboard Tour…**. The app is ad-hoc signed, so after each rebuild you may need to remove and re-add it there.
 
+## Bug reports
+
+**Help › Report a Bug…** collects a report folder in `~/Library/Application Support/Ouch/Reports/<time>/`: setup, recent log, config and (after a crash) the macOS crash report, plus `prompt.md` with instructions for an agent. Agents get only the path to `prompt.md` and read the rest themselves. The card shows the AI apps and coding agents installed on the Mac, as their icons. Clicking one opens it with the prompt filled in: Claude, Codex and Cursor through their deep links, editors with the folder opened, chat apps with the prompt on the clipboard, and command-line agents in Terminal. When the report is done, the agent runs `open "ouch://report?id=<folder>"` and Ouch shows it, ready to send. Users can also write it themselves.
+
+**Send** files the report as a Linear issue through the relay in `report-relay/`, a Cloudflare Worker that holds the Linear API key, since a key shipped inside the app could be pulled out. Deploy it once:
+
+```sh
+cd report-relay
+npx wrangler deploy
+npx wrangler secret put LINEAR_API_KEY   # Linear → Settings → Security & access → Personal API keys
+```
+
+Set `LINEAR_TEAM_KEY` in `wrangler.toml` to the team's issue prefix, and put the worker's URL plus `/report` into `OuchReportURL` in `Info.plist`. Until then, Send opens a Mail draft to `OuchReportEmail` (Linear's intake address), and with neither set it copies the report.
+
+If Ouch crashes, a small watchdog reopens it once macOS has written the crash report. Nothing pops up: the menu bar icon, Help and Report a Bug… get a yellow dot, and Report a Bug… then opens with the crash attached. `open build/ouch.app --args --crash-report` marks the newest crash report as waiting.
+
 ## Releasing with Amore
 
 Updates ship through [Amore](https://amore.computer) and Sparkle. Amore signs, notarizes, builds the DMG, writes the appcast and hosts it.

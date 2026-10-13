@@ -31,6 +31,8 @@ struct MenuItem: Identifiable {
     var rotates = false
     /// A count shown in a pill before the shortcut.
     var badge: Int? = nil
+    /// A notification dot on the symbol: something here is waiting (a crash report).
+    var dot = false
     var action: (() -> Void)? = nil
 
     var selectable: Bool {
@@ -224,6 +226,7 @@ final class MenuModel: ObservableObject {
                             rotates: true, action: { SettingsWindow.shared.show(pane: nil) }))
         out.append(MenuItem(id: "tour", label: "Keyboard Tour…", symbol: "graduationcap", enabled: trusted,
                             keywords: "learn tutorial onboarding help", action: { Onboarding.shared.startTour() }))
+        let crashed = CrashWatch.pending != nil
         out.append(MenuItem(id: "help", kind: .sub, label: "Help", symbol: "questionmark.circle", children: [
             MenuItem(id: "map", label: "Shortcut Map", symbol: "keyboard", shortcut: ["⌘", "/"], keywords: "keys overview cheat sheet",
                      action: { SettingsWindow.shared.show(pane: .shortcuts, map: true) }),
@@ -233,7 +236,9 @@ final class MenuModel: ObservableObject {
                      keywords: "refresh file", keepOpen: true, rotates: true, action: { wm.reload() }),
             MenuItem(id: "updates", label: "Check for Updates…", symbol: "arrow.down.circle", keywords: "version upgrade",
                      action: { AppDelegate.checkForUpdates() }),
-        ]))
+            MenuItem(id: "bug", label: "Report a Bug…", symbol: "ladybug", value: crashed ? "Crashed" : nil,
+                     keywords: "problem issue crash feedback agent", dot: crashed, action: { CrashWatch.openReport() }),
+        ], dot: crashed))
         out.append(.sep("s3"))
         out.append(MenuItem(id: "quit", kind: .footer, label: "Quit Ouch", shortcut: ["⌘", "Q"], keywords: "exit",
                             action: { NSApp.terminate(nil) }))
@@ -648,6 +653,15 @@ private struct MenuColumn: View {
     }
 }
 
+/// `accent-2`, the logo's spark yellow: a shape only, always beside a word that says what's waiting.
+struct NotificationDot: View {
+    var body: some View {
+        Circle().fill(Theme.accent2).frame(width: 6, height: 6)
+            .overlay(Circle().strokeBorder(Theme.surfaceRaised, lineWidth: 1).padding(-1))
+            .accessibilityHidden(true)
+    }
+}
+
 /// The four square toggles at the top: Tiling, Float, Fullscreen, Retile.
 private struct EssentialsRow: View {
     @ObservedObject var model: MenuModel
@@ -769,7 +783,8 @@ private struct MenuRowView: View {
         default:
             if let symbol = item.symbol {
                 let image = Image(systemName: symbol).font(.system(size: 13, weight: .medium)).foregroundStyle(muted)
-                if item.rotates { image.rotateEffect(value: spins.on) } else { image }
+                Group { if item.rotates { image.rotateEffect(value: spins.on) } else { image } }
+                    .overlay(alignment: .topTrailing) { if item.dot { NotificationDot().offset(x: 3, y: -2) } }
             }
         }
     }
