@@ -100,7 +100,7 @@ struct WelcomeView: View {
                 OButton("Skip setup", variant: .ghost, action: model.skip)
                 OButton("Continue", variant: .primary, size: .lg, shortcut: ["↩"], action: model.next)
                     .disabled(!model.accessibility)
-                    .help(model.accessibility ? "" : "Allow Accessibility first")
+                    .tooltip(model.accessibility ? "" : "Allow Accessibility first")
                     .keyboardShortcut(model.page == .permissions ? .defaultAction : nil) // both pages stay laid out
             }
         }
@@ -210,9 +210,9 @@ private struct KeyStyleTile: View {
             }
             .foregroundStyle(selected ? Theme.onAccent : Theme.ink)
             .padding(14)
-            .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
+            .background(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
                 .fill(selected ? Theme.accent : model.hover ? Theme.wellHover : Theme.well))
-            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous))
         }
         .buttonStyle(PressScale(scale: 0.97))
         .onHover { model.hover = $0 }
@@ -401,11 +401,11 @@ struct CoachCardView: View {
                     }
                 }
                 .buttonStyle(OButtonStyle(variant: .ghost, size: .sm, onAccent: true))
-                .help("Show the keys")
+                .tooltip("Show the keys")
             } else {
                 Button(action: model.tryKeys) { caps.fixedSize().contentShape(Rectangle()) }
                     .buttonStyle(.plain)
-                    .help("Press the keys, or click them.")
+                    .tooltip("Press the keys, or click them.")
                 status
             }
         }
@@ -451,7 +451,7 @@ struct CoachCardView: View {
                 }
                 icon
             }
-            .help(model.doneText)
+            .tooltip(model.doneText)
             .transition(.opacity.combined(with: .scale(scale: 0.8)))
         } else {
             let icon = Image(systemName: "cursorarrow.rays").symbolEffect(.pulse)
@@ -462,7 +462,7 @@ struct CoachCardView: View {
                 }
                 icon
             }
-            .help("Press it now")
+            .tooltip("Press it now")
             .opacity(0.8)
         }
     }

@@ -188,7 +188,7 @@ struct BugReportView: View {
                     Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 30, height: 30).accessibilityHidden(true)
                 }
                 Text(title).font(Theme.body(22)).oneLine()
-                    .help(model.crash?.headline ?? "")
+                    .tooltip(model.crash?.headline ?? "")
             }
             .frame(height: Self.titleBar)
             .padding(.leading, 44 - 32) // clear of the close button
@@ -274,17 +274,16 @@ private struct AgentTile: View {
                 Button { ask(group.agents[0]) } label: { icon }
                     .buttonStyle(PressScale())
             } else {
-                Menu {
-                    ForEach(group.agents) { agent in
-                        Button { ask(agent) } label: {
-                            Label { Text(agent.isCLI ? "Terminal" : agent.name) } icon: { Image(nsImage: menuIcon(agent)) }
-                        }
+                let agents = group.agents, ask = ask
+                OMenuButton(items: {
+                    agents.map { agent in
+                        MenuItem(id: agent.id, label: agent.isCLI ? "Terminal" : agent.name, image: menuIcon(agent), action: { ask(agent) })
                     }
-                } label: { icon }
-                    .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
+                }) { icon }
+                    .fixedSize()
             }
         }
-        .help(group.name)
+        .tooltip(group.name)
         .accessibilityLabel("Ask \(group.name)")
     }
 
@@ -316,21 +315,20 @@ private struct MoreAgents: View {
     let ask: (Agent) -> Void
 
     var body: some View {
-        Menu {
-            ForEach(groups) { group in
-                ForEach(group.agents) { agent in
-                    Button { ask(agent) } label: { Label { Text(agent.name) } icon: { Image(nsImage: menuIcon(agent)) } }
-                }
+        let groups = groups, ask = ask
+        OMenuButton(items: {
+            groups.flatMap(\.agents).map { agent in
+                MenuItem(id: agent.id, label: agent.name, image: menuIcon(agent), action: { ask(agent) })
             }
-        } label: {
+        }) {
             Image(systemName: "ellipsis")
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(Theme.inkMuted)
                 .frame(width: 48, height: 48)
-                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.well))
+                .background(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous).fill(Theme.well))
         }
-        .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
-        .help("More agents")
+        .fixedSize()
+        .tooltip("More agents")
         .accessibilityLabel("More agents")
     }
 }

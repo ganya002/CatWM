@@ -169,7 +169,7 @@ Click the menu bar item for Ouch's menu. Type to search every command (↩ runs 
 
 ## Settings window
 
-Open it from the menu bar menu with **Settings…** (⌘,). Changes save and apply automatically, and **Undo All Changes** goes back to how things were when you opened the window. The search field (⌘F) finds every setting, including ones tucked under a pane's **Advanced** section, and takes you to it.
+Open it from the menu bar menu with **Settings…** (⌘,). Changes save and apply automatically, and **Undo All Changes** goes back to how things were when you opened the window. The search field (⌘K) finds every setting, including ones tucked under a pane's **Advanced** section, and takes you to it.
 
 - **General:** permission and keybind status, open at login, tiling, the main modifier, updates. Advanced: beta releases. Reset everything is at the bottom.
 - **Layout:** the layout of each display, the layouts in the cycle, gaps and padding with a live preview, the layout HUD. Advanced: smart gaps, per-side padding, the built-in display, the menu bar, the main pane resize step.
