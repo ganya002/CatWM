@@ -300,8 +300,8 @@ struct TipView: View {
                 .padding(.top, 10)
             }
             HStack(spacing: 4) {
-                Button("No more tips") { Tips.shared.noMore() }.buttonStyle(.plain)
-                    .font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine()
+                OButton("No more tips", variant: .ghost, size: .sm) { Tips.shared.noMore() }
+                    .padding(.leading, -11) // the label lines up with the text above
                 Spacer(minLength: 8)
                 if let action = tip.action {
                     OButton(action.label, variant: .primary) {

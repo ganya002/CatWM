@@ -479,9 +479,11 @@ final class ConfigDocument: ObservableObject {
             "# The keyboard drawn there and in Settings: auto (this Mac), a model (macbook-pro, macbook-air,",
             "# macbook-neo, magic-keyboard) or a finish such as macbook-air-midnight or imac-blue",
             "keyboard-finish = \(c.keyboardFinish)",
+            "# The screen-edge effect while window mode is on: draw, ripple, corners or none",
+            "mode-effect = \(c.modeEffect.rawValue)",
+            "# How Sort Windows and keyboard help come and go: rise, pop, focus, tile or draw",
+            "panel-animation = \(c.panelAnimation.rawValue)",
         ]
-        // Experimental and not in Settings, so only written once someone has picked a different one.
-        if c.modeEffect != Config().modeEffect { out.append("mode-effect = \(c.modeEffect.rawValue)") }
         out += [
             "",
             "# bind = MODS, key, dispatcher, args. Binds inside `submap = name` … `submap = reset` only work in",

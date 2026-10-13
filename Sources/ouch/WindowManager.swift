@@ -66,6 +66,7 @@ final class WindowManager {
     private var floatFrames: [CGWindowID: CGRect] = [:]  // floating windows' frames while parked
     private var savedWorkspaceOf: [CGWindowID: String] = [:]
     private var savedOwnerOf: [CGWindowID: String] = [:]  // "pid bundleID" when saved; window IDs are reused after a logout
+    private var savedFloating: [CGWindowID: Bool] = [:]  // windows floated or tiled by hand, from the last run
     private var previousWorkspace: [String: String] = [:] // display UUID → workspace it showed before
     private var labels: [String: String] = [:]           // workspace → the name the Sort panel gave it
     private var focusOrder: [CGWindowID] = []            // most recently focused first
@@ -406,6 +407,13 @@ final class WindowManager {
         let onScreenIDs = Set(onScreen.map(\.id))
         let pidsOnScreen = Set(onScreen.map(\.pid))
         let firstRun = windows.isEmpty
+        // While macOS slides between Spaces, windows of the Space being left are still listed on screen.
+        // Counting them would file them under the Space arriving and tile them there.
+        let currentSpaces = Set(screens.map { Spaces.current(display: $0.uuid) })
+        func onOtherSpace(_ id: CGWindowID) -> Bool {
+            let spaces = Spaces.of(window: id)
+            return !spaces.isEmpty && currentSpaces.isDisjoint(with: spaces)
+        }
         var present = Set<CGWindowID>()
         var fresh: [Window] = []
 
@@ -415,7 +423,7 @@ final class WindowManager {
             let pid = app.processIdentifier
             guard pidsOnScreen.contains(pid) else { continue }
             for el in AXUIElementCreateApplication(pid).elements(kAXWindowsAttribute) {
-                guard let id = el.windowID, onScreenIDs.contains(id) else { continue }
+                guard let id = el.windowID, onScreenIDs.contains(id), !onOtherSpace(id) else { continue }
                 if let w = windows[id] {
                     if !w.isNativeFullscreen { present.insert(id) }
                     continue
@@ -436,7 +444,10 @@ final class WindowManager {
         let z = Dictionary(onScreen.enumerated().map { ($1.id, $0) }, uniquingKeysWith: { a, _ in a })
         let arrivals = fresh.sorted(by: { (z[$0.id] ?? 0) < (z[$1.id] ?? 0) })
         for w in arrivals where config.virtualWorkspaces {
-            if let saved = savedWorkspaceOf[w.id], savedOwnerOf[w.id] == owner(w) { workspaceOf[w.id] = saved }
+            if savedOwnerOf[w.id] == owner(w) {
+                if let saved = savedWorkspaceOf[w.id] { workspaceOf[w.id] = saved }
+                if let float = savedFloating[w.id] { w.userFloating = float }
+            }
             if let p = practice, w.pid == p.pid, let ws = w.element.string(kAXTitleAttribute).flatMap({ p.workspaces[$0] }) {
                 workspaceOf[w.id] = ws
                 if monitorOf[ws] == nil, let here = currentScreen() { monitorOf[ws] = here.uuid }
@@ -457,7 +468,7 @@ final class WindowManager {
         visible = present.filter { isShown(workspaceOf[$0]) }
         if config.virtualWorkspaces {
             for id in present where !visible.contains(id) { park(id, screens: screens) }
-            for id in visible where windows[id]?.isFloating == true { unpark(floating: id, screens: screens) }
+            for id in visible where floatsFreely(id) { unpark(floating: id, screens: screens) }
             saveWorkspaces()
         }
 
@@ -474,7 +485,8 @@ final class WindowManager {
         for s in screens {
             let st = state(for: s)
             let ids = tiled(on: s)
-            if let z = st.zoomed, !ids.contains(z) { st.zoomed = nil }
+            // Not while it's only out of sight for a moment (app hidden, minimised, mid Space switch).
+            if let z = st.zoomed, windows[z]?.isFloating != false || workspaceOf[z] != shown[s.uuid] { st.zoomed = nil }
             let rect = usableRect(s)
             guard let (raw, gap) = rawSlots(ids, on: s, st, ratio: st.ratio) else {
                 ids.forEach { targets[$0] = nil } // floating layout: navigate by where windows really are
@@ -727,7 +739,12 @@ final class WindowManager {
         let screens = Screen.all()
         let p = mouseLocation()
         for (id, resized) in finished {
-            guard let w = windows[id], !w.isFloating, let src = screen(of: w, in: screens) else { continue }
+            guard let w = windows[id], let src = screen(of: w, in: screens) else { continue }
+            if floatsFreely(id) {
+                // Otherwise the next workspace switch parks it back on the display it came from.
+                if let dst = screen(containing: w.frame, in: screens), dst.uuid != src.uuid, let ws = shown[dst.uuid] { workspaceOf[id] = ws }
+                continue
+            }
             if resized {
                 if config.mouseResizesWindows { applyMouseResize(w, on: src) }
                 continue
@@ -828,6 +845,7 @@ final class WindowManager {
             Log.info("ipc: post style is now \(Hotkeys.postStyle)")
         case "reload": reload()
         case "modefx": ModeFX.shared.command(Array(parts.dropFirst()).flatMap { $0.split(separator: " ").map(String.init) })
+        case "panelfx": PanelMotionDemo.command(Array(parts.dropFirst()))
         default: Log.info("ipc: unknown command")
         }
     }
@@ -1308,7 +1326,7 @@ final class WindowManager {
         let f = w.frame
         guard !f.isNull, !isParked(f, screens) else { return }
         let s = workspaceOf[id].flatMap { monitorOf[$0] }.flatMap { u in screens.first { $0.uuid == u } } ?? screens[0]
-        if w.isFloating { floatFrames[id] = f }
+        floatFrames[id] = floatsFreely(id) ? f : nil
         animator.cancel(id)
         animator.quiet(id)
         EnhancedUI.suspend(w.pid)
@@ -1316,12 +1334,21 @@ final class WindowManager {
         EnhancedUI.resume(w.pid)
     }
 
+    /// Windows nothing lays out: floating ones, everything on a Floating-layout workspace, and all
+    /// windows while tiling is off. Parking keeps their frame and showing their workspace puts it back.
+    private func floatsFreely(_ id: CGWindowID) -> Bool {
+        guard let w = windows[id] else { return false }
+        if w.isFloating || !tilingEnabled { return true }
+        guard let ws = workspaceOf[id] else { return false }
+        return (states[ws]?.layout ?? config.layouts.first) == .floating
+    }
+
     private func unpark(floating id: CGWindowID, screens: [Screen]) {
         guard let w = windows[id] else { return }
         let f = w.frame
         guard isParked(f, screens) else { floatFrames[id] = nil; return }
         let s = screen(of: w, in: screens) ?? screens[0]
-        var r = floatFrames.removeValue(forKey: id)
+        var r = floatFrames.removeValue(forKey: id) ?? targets[id]
             ?? CGRect(x: s.visible.midX - f.width / 2, y: s.visible.midY - f.height / 2, width: f.width, height: f.height)
         r.origin.x = max(s.visible.minX, min(r.origin.x, s.visible.maxX - r.width))
         r.origin.y = max(s.visible.minY, min(r.origin.y, s.visible.maxY - r.height))
@@ -1368,6 +1395,18 @@ final class WindowManager {
         labels = d.dictionary(forKey: "ws.labels") as? [String: String] ?? [:]
         virtualShown = d.dictionary(forKey: "ws.shown") as? [String: String] ?? [:]
         for (k, v) in d.dictionary(forKey: "ws.home") as? [String: NSNumber] ?? [:] { homeSpace[k] = v.uint64Value }
+        for (k, v) in d.dictionary(forKey: "ws.floating") as? [String: Bool] ?? [:] {
+            if let id = CGWindowID(k) { savedFloating[id] = v }
+        }
+        // "layout ratio mainCount" per workspace, so a restart (or an update) keeps each one's arrangement.
+        for (ws, v) in d.dictionary(forKey: "ws.layouts") as? [String: String] ?? [:] where isVirtual(ws) {
+            let parts = v.split(separator: " ").map(String.init)
+            guard let layout = parts.first.flatMap(Layout.init(rawValue:)) else { continue }
+            let st = state(workspace: ws)
+            st.layout = layout
+            if parts.count > 1, let r = Double(parts[1]) { st.ratio = min(0.9, max(0.1, CGFloat(r))) }
+            if parts.count > 2, let m = Int(parts[2]) { st.mainCount = max(1, min(10, m)) }
+        }
         monitorOf = monitorOf.filter { isVirtual($0.key) }
     }
 
@@ -1378,7 +1417,12 @@ final class WindowManager {
         let windowsMap = Dictionary(workspaceOf.filter { windows[$0.key] != nil && isVirtual($0.value) && !isPending($0.value) }.map { (String($0.key), $0.value) },
                                     uniquingKeysWith: { a, _ in a })
         let monitors = monitorOf.filter { isVirtual($0.key) && !isPending($0.key) }
-        let key = "\(windowsMap.sorted { $0.key < $1.key })|\(monitors.sorted { $0.key < $1.key })|\(virtualShown.sorted { $0.key < $1.key })|\(homeSpace.sorted { $0.key < $1.key })|\(labels.sorted { $0.key < $1.key })"
+        let floating = Dictionary(windowsMap.keys.compactMap { k in CGWindowID(k).flatMap { windows[$0]?.userFloating }.map { (k, $0) } },
+                                  uniquingKeysWith: { a, _ in a })
+        let layouts = Dictionary(states.filter { isVirtual($0.key) && !isPending($0.key) }
+                                    .map { ($0.key, "\($0.value.layout.rawValue) \($0.value.ratio) \($0.value.mainCount)") },
+                                 uniquingKeysWith: { a, _ in a })
+        let key = "\(windowsMap.sorted { $0.key < $1.key })|\(monitors.sorted { $0.key < $1.key })|\(virtualShown.sorted { $0.key < $1.key })|\(homeSpace.sorted { $0.key < $1.key })|\(labels.sorted { $0.key < $1.key })|\(floating.sorted { $0.key < $1.key })|\(layouts.sorted { $0.key < $1.key })"
         guard key != lastSavedWorkspaces else { return }
         lastSavedWorkspaces = key
         let d = UserDefaults.standard
@@ -1389,6 +1433,8 @@ final class WindowManager {
         d.set(virtualShown, forKey: "ws.shown")
         d.set(homeSpace.mapValues { NSNumber(value: $0) }, forKey: "ws.home")
         d.set(labels, forKey: "ws.labels")
+        d.set(floating, forKey: "ws.floating")
+        d.set(layouts, forKey: "ws.layouts")
     }
 
     /// Hyprland's `workspace`: shows it on its display (a new one opens on the focused display)

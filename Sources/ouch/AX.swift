@@ -40,6 +40,17 @@ enum Spaces {
         return DisplaySpaces(ids: ids, desktops: desktops, current: cur.flatMap { ids.firstIndex(of: $0) })
     }
 
+    private typealias WindowSpacesFn = @convention(c) (Int32, Int32, CFArray) -> Unmanaged<CFArray>?
+    private static let windowSpaces: WindowSpacesFn? = symbol("SLSCopySpacesForWindows", in: skylight)
+
+    /// The spaces a window is on; empty when unknown.
+    static func of(window id: CGWindowID) -> [UInt64] {
+        guard let conn, let windowSpaces,
+              let arr = windowSpaces(conn(), 0x7, [NSNumber(value: id)] as CFArray)?.takeRetainedValue() as? [NSNumber]
+        else { return [] }
+        return arr.map(\.uint64Value)
+    }
+
     /// Current space on a display, so layouts are remembered per space like Amethyst.
     static func current(display uuid: String) -> UInt64 {
         guard let conn, let space else { return 0 }

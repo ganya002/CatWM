@@ -182,7 +182,7 @@ private struct AmoreCredit: View {
         }
         .buttonStyle(.plain)
         .onHover { hover.on = $0 }
-        .help("Updates delivered by Amore")
+        .tooltip("Updates delivered by Amore")
     }
 }
 
@@ -316,7 +316,7 @@ struct LayoutPane: View {
                 if let index { if !locked { doc.config.layouts.remove(at: index) } } else { doc.config.layouts.append(l) }
             }
         }
-        .help(locked ? "At least one layout has to stay in the cycle" : "\(l.title): \(l.blurb)")
+        .tooltip(locked ? "At least one layout has to stay in the cycle" : "\(l.title): \(l.blurb)")
     }
 }
 
@@ -347,7 +347,7 @@ private struct CycleChip: View {
             }
             .frame(width: 96, height: 18)
         }
-        .help(layout.title)
+        .tooltip(layout.title)
         .onHover { hover.on = $0 }
         .animation(.easeOut(duration: Theme.fast), value: hover.on)
     }
@@ -362,7 +362,7 @@ private struct CycleChip: View {
         }
         .buttonStyle(PressScale(scale: 0.88))
         .disabled(!enabled)
-        .help(help)
+        .tooltip(help)
         .accessibilityLabel("\(help): \(layout.title)")
     }
 }
@@ -462,7 +462,7 @@ struct GapsPreview: View {
             .animation(Motion.snap(reduceMotion), value: geometry)
             .animation(.easeOut(duration: 0.12), value: play.hovered)
         }
-        .help("Click a window to make it main, × to close it, click the desktop to open one")
+        .tooltip("Click a window to make it main, × to close it, click the desktop to open one")
         .accessibilityHidden(true)
     }
 
@@ -674,28 +674,19 @@ struct WindowsPane: View {
     }
 
     private var addMenu: some View {
-        Menu {
-            ForEach(runningApps, id: \.id) { app in
-                Button {
+        let doc = doc, apps = runningApps
+        return OMenuButton(style: OButtonStyle(variant: .secondary, size: .sm), items: {
+            apps.map { app in
+                MenuItem(id: app.id, label: app.name, image: app.icon.map(resized), enabled: !doc.config.floating.contains(app.id), action: {
                     if !doc.config.floating.contains(app.id) { withAnimation(Motion.easeOut) { doc.config.floating.append(app.id) } }
-                } label: {
-                    if let icon = app.icon { Image(nsImage: resized(icon)) }
-                    Text(app.name)
-                }
+                })
             }
-        } label: {
+        }) {
             HStack(spacing: 6) {
-                Image(systemName: "plus").font(.system(size: 11.5, weight: .semibold))
+                Image(systemName: "plus").font(.system(size: 11.5, weight: .medium))
                 Text("Add Running App")
             }
-            .font(Theme.body(12.5, .medium)).foregroundStyle(Theme.ink)
-            .padding(.horizontal, 11).frame(height: 26)
-            .background(Capsule().fill(Theme.well))
-            .contentShape(Capsule())
         }
-        .menuStyle(.button)
-        .buttonStyle(.plain)
-        .menuIndicator(.hidden)
         .fixedSize()
     }
 
@@ -845,8 +836,35 @@ struct MotionPane: View {
                                format: { "\(Int(($0 * 100).rounded()))%" }, onCommit: play)
                         .padding(.vertical, 12)
                         .disabled(!c.animate || !c.animationCurve.usesBounce)
-                        .help("How far springs swing, balls bounce and overshoot goes")
+                        .tooltip("How far springs swing, balls bounce and overshoot goes")
                         .setting("motion.bounce", ui)
+                }
+                OGroup("Panels and window mode") {
+                    ORow("Panel animation", description: "How Sort Windows and keyboard help come and go") {
+                        HStack(spacing: 8) {
+                            OMenuPicker(title: "Panel animation", options: PanelMotion.allCases.map { ($0.rawValue, $0.title) },
+                                        selection: Binding(get: { c.panelAnimation.rawValue }, set: { raw in
+                                            guard let m = PanelMotion(rawValue: raw) else { return }
+                                            doc.config.panelAnimation = m
+                                            PanelMotionDemo.play([m], keyboardOnly: true)
+                                        }))
+                            OButton("Play", icon: "play.fill", size: .sm) { PanelMotionDemo.play([c.panelAnimation], keyboardOnly: true) }
+                        }
+                    }
+                    .setting("motion.panels", ui)
+                    ORow("Window mode effect", description: "Shown at the screen edges while window mode is on") {
+                        HStack(spacing: 8) {
+                            OMenuPicker(title: "Window mode effect", options: ModeFX.Style.allCases.map { ($0.rawValue, $0.title) },
+                                        selection: Binding(get: { c.modeEffect.rawValue }, set: { raw in
+                                            guard let s = ModeFX.Style(rawValue: raw) else { return }
+                                            doc.config.modeEffect = s
+                                            ModeFX.shared.command([s.rawValue])
+                                        }))
+                            OButton("Play", icon: "play.fill", size: .sm) { ModeFX.shared.command([c.modeEffect.rawValue]) }
+                                .disabled(c.modeEffect == .none)
+                        }
+                    }
+                    .setting("motion.modeEffect", ui)
                 }
             }
         }
@@ -948,9 +966,9 @@ private struct PresetTile: View {
             .foregroundStyle(selected ? Theme.onAccent : Theme.ink)
             .padding(.vertical, 12).padding(.horizontal, 8)
             .frame(maxWidth: .infinity)
-            .background(RoundedRectangle(cornerRadius: 12, style: .continuous)
+            .background(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
                 .fill(selected ? Theme.accent : hover.on ? Theme.wellHover : Theme.well))
-            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous))
         }
         .buttonStyle(PressScale())
         .onHover { hover.on = $0 }
@@ -963,21 +981,22 @@ private struct PresetTile: View {
 // MARK: - Shortcuts
 
 /// The action catalog as menu items: a submenu per category, numbered families folded into their own submenu.
-struct ActionMenuItems: View {
-    let pick: (Action) -> Void
-
-    var body: some View {
-        ForEach(Actions.byCategory, id: \.0) { cat, actions in
-            Menu {
-                ForEach(Actions.menuEntries(actions)) { entry in
-                    switch entry {
-                    case .action(let a):
-                        Button(a.title) { pick(a) }
-                    case .group(let name, let list):
-                        Menu(name) { ForEach(list) { a in Button(a.short ?? a.title) { pick(a) } } }
-                    }
+enum ActionMenuItems {
+    static func items(current: Action? = nil, pick: @escaping (Action) -> Void) -> [MenuItem] {
+        func row(_ a: Action, _ title: String) -> MenuItem {
+            MenuItem(id: "a.\(a.id)", kind: current == nil ? .action : .radio, label: title, checked: a.id == current?.id,
+                     action: { pick(a) })
+        }
+        func sub(_ id: String, _ label: String, symbol: String?, _ children: [MenuItem]) -> MenuItem {
+            MenuItem(id: id, kind: .sub, label: label, symbol: symbol, width: MenuItem.fitWidth(children), children: children)
+        }
+        return Actions.byCategory.map { cat, actions in
+            sub("c.\(cat.rawValue)", cat.rawValue, symbol: cat.symbol, Actions.menuEntries(actions).map { entry in
+                switch entry {
+                case .action(let a): row(a, a.title)
+                case .group(let name, let list): sub("g.\(name)", name, symbol: nil, list.map { row($0, $0.short ?? $0.title) })
                 }
-            } label: { Label(cat.rawValue, systemImage: cat.symbol) }
+            })
         }
     }
 }
@@ -1019,7 +1038,7 @@ struct ShortcutsPane: View {
                 if doc.submaps.count > 1 {
                     OSegmented(title: "Shortcut set", options: doc.submaps.map { ($0, $0.isEmpty ? "Global" : "\($0.capitalized) mode") },
                                selection: $ui.bindMode)
-                        .help("Global shortcuts work everywhere. Mode shortcuts only work in the mode, so single keys are fine.")
+                        .tooltip("Global shortcuts work everywhere. Mode shortcuts only work in the mode, so single keys are fine.")
                 }
                 OTextField(placeholder: "Filter shortcuts", text: $ui.shortcutFilter).frame(maxWidth: 200)
                 Spacer(minLength: 0)
@@ -1078,34 +1097,30 @@ struct ShortcutsPane: View {
     }
 
     private var addMenu: some View {
-        Menu {
-            ActionMenuItems { a in add(a.dispatcher, a.args) }
-            Menu {
-                Button("Go to Workspaces 1–10 with 1…0") { add("workspace", "1..10", key: "1..0") }
-                Button("Move Window to Workspaces 1–10 with 1…0") { add("movetoworkspace", "1..10", key: "1..0") }
-                Divider()
-                Button("Focus with H J K L") { add("movefocus", "l|d|u|r", key: "h|j|k|l") }
-                Button("Focus with Arrow Keys") { add("movefocus", "l|d|u|r", key: "left|down|up|right") }
-                Button("Move Window with H J K L") { add("movewindow", "l|d|u|r", key: "h|j|k|l") }
-                Button("Move Window with Arrow Keys") { add("movewindow", "l|d|u|r", key: "left|down|up|right") }
-                Divider()
-                Button("Custom Range…") { add("workspace", "1..5", key: "1..5", expand: true) }
-            } label: { Label("Ranges", systemImage: "ellipsis.rectangle") }
-            Divider()
-            Button("Custom Dispatcher…") { add("layoutmsg", "") } // matches no preset, so the raw editor shows
-        } label: {
+        OMenuButton(style: OButtonStyle(variant: .primary), items: {
+            let ranges: [MenuItem] = [
+                MenuItem(id: "r.ws", label: "Go to Workspaces 1–10 with 1…0", action: { add("workspace", "1..10", key: "1..0") }),
+                MenuItem(id: "r.mv", label: "Move Window to Workspaces 1–10 with 1…0", action: { add("movetoworkspace", "1..10", key: "1..0") }),
+                .sep("r.s1"),
+                MenuItem(id: "r.fh", label: "Focus with H J K L", action: { add("movefocus", "l|d|u|r", key: "h|j|k|l") }),
+                MenuItem(id: "r.fa", label: "Focus with Arrow Keys", action: { add("movefocus", "l|d|u|r", key: "left|down|up|right") }),
+                MenuItem(id: "r.mh", label: "Move Window with H J K L", action: { add("movewindow", "l|d|u|r", key: "h|j|k|l") }),
+                MenuItem(id: "r.ma", label: "Move Window with Arrow Keys", action: { add("movewindow", "l|d|u|r", key: "left|down|up|right") }),
+                .sep("r.s2"),
+                MenuItem(id: "r.custom", label: "Custom Range…", action: { add("workspace", "1..5", key: "1..5", expand: true) }),
+            ]
+            return ActionMenuItems.items { a in add(a.dispatcher, a.args) } + [
+                MenuItem(id: "ranges", kind: .sub, label: "Ranges", symbol: "ellipsis.rectangle", width: MenuItem.fitWidth(ranges), children: ranges),
+                .sep("s"),
+                // Matches no preset, so the raw editor shows.
+                MenuItem(id: "custom", label: "Custom Dispatcher…", symbol: "terminal", action: { add("layoutmsg", "") }),
+            ]
+        }) {
             HStack(spacing: 6) {
-                Image(systemName: "plus").font(.system(size: 12, weight: .semibold))
+                Image(systemName: "plus").font(.system(size: 12, weight: .medium))
                 Text("Add Shortcut")
             }
-            .font(Theme.body(13, .medium)).foregroundStyle(Theme.onAccent)
-            .padding(.horizontal, 14).frame(height: Theme.controlHeight)
-            .background(Capsule().fill(Theme.accent))
-            .contentShape(Capsule())
         }
-        .menuStyle(.button)
-        .buttonStyle(.plain)
-        .menuIndicator(.hidden)
         .fixedSize()
     }
 
@@ -1160,7 +1175,7 @@ private struct BindRowView: View {
                     if let issue {
                         Image(systemName: issue.severity == .error ? "exclamationmark.triangle.fill" : "exclamationmark.circle")
                             .foregroundStyle(issue.severity == .error ? Theme.danger : Theme.warning)
-                            .help(issue.message)
+                            .tooltip(issue.message)
                             .accessibilityLabel(issue.message)
                     }
                     if isRange { editToggle(open: editorOpen, locked: summary == nil || issue?.severity == .error) }
@@ -1221,7 +1236,7 @@ private struct BindRowView: View {
         }
         .buttonStyle(.plain)
         .disabled(locked)
-        .help(open ? "Hide keys and values" : "Edit keys and values")
+        .tooltip(open ? "Hide keys and values" : "Edit keys and values")
         .accessibilityLabel(open ? "Hide keys and values" : "Edit keys and values")
     }
 
@@ -1239,14 +1254,16 @@ private struct BindRowView: View {
     }
 
     private func actionMenu(_ i: Int, _ action: Action?) -> some View {
-        Menu {
-            ActionMenuItems { a in
+        let doc = doc
+        return OMenuButton(items: {
+            ActionMenuItems.items(current: action) { a in
+                guard doc.binds.indices.contains(i) else { return }
                 doc.binds[i].dispatcher = a.dispatcher
                 if a.dispatcher != "exec" || doc.binds[i].args.isEmpty || action?.dispatcher != "exec" {
                     doc.binds[i].args = a.args
                 }
             }
-        } label: {
+        }) {
             HStack(spacing: 5) {
                 Text(action?.title ?? "Custom").font(Theme.body(14)).oneLine()
                 Image(systemName: "chevron.up.chevron.down").font(.system(size: 8, weight: .semibold)).foregroundStyle(Theme.inkMuted)
@@ -1254,9 +1271,6 @@ private struct BindRowView: View {
             .foregroundStyle(Theme.ink)
             .contentShape(Rectangle())
         }
-        .menuStyle(.button)
-        .buttonStyle(.plain)
-        .menuIndicator(.hidden)
         .fixedSize()
     }
 }
@@ -1297,7 +1311,7 @@ private struct Recorder: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(recording ? (row.submap.isEmpty || BindRange.isRange(row.key) ? "Esc cancels" : "Click to cancel")
+        .tooltip(recording ? (row.submap.isEmpty || BindRange.isRange(row.key) ? "Esc cancels" : "Click to cancel")
               : "Click to record a new shortcut")
         .accessibilityLabel(recording ? "Recording shortcut" : "Shortcut \(doc.prettyShortcut(row).joined()). Click to record")
     }

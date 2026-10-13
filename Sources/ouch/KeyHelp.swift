@@ -110,8 +110,14 @@ final class KeyHelp {
 
         let p = panel ?? makePanel()
         panel = p
-        let host = host ?? NSHostingView(rootView: KeyHelpView(model: model, margin: Self.margin))
-        if self.host == nil { self.host = host; p.contentView = host }
+        if !wasShown {
+            // A fresh view each time it comes up, built hidden. A reused one would be ordered front showing
+            // whatever it drew last (a frame from partway through the way out), then jump before animating.
+            model.motion = PanelMotion.current
+            host = NSHostingView(rootView: KeyHelpView(model: model, margin: Self.margin))
+            p.contentView = host
+        }
+        guard let host else { return }
         host.layoutSubtreeIfNeeded()
         let size = host.fittingSize
         let area = screen.visibleFrame
@@ -132,9 +138,13 @@ final class KeyHelp {
         Hotkeys.shared.heldChord = []
         guard model.shown else { return }
         model.shown = false
-        let work = DispatchWorkItem { [weak self] in self?.panel?.orderOut(nil) }
+        let work = DispatchWorkItem { [weak self] in
+            self?.panel?.orderOut(nil)
+            self?.panel?.contentView = nil
+            self?.host = nil
+        }
         orderOutWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + Theme.medium + 0.05, execute: work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + max(Theme.medium, model.motion.outDuration) + 0.05, execute: work)
     }
 
     /// Shown from the menu, the help stays until the next click or key press anywhere.
@@ -172,6 +182,8 @@ final class KeyHelpModel: ObservableObject {
     enum Reason { case hold, toggle, menu }
 
     @Published var shown = false
+    /// How it comes and goes, fixed while it's up.
+    var motion = PanelMotion.current
     @Published var mode = ""
     @Published var reason: Reason = .hold
     /// Modifiers held right now; ⇧ picks the layer and held keys get a ring.
@@ -227,7 +239,6 @@ final class KeyHelpModel: ObservableObject {
 struct KeyHelpView: View {
     @ObservedObject var model: KeyHelpModel
     let margin: CGFloat
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: 20, style: .continuous)
@@ -242,9 +253,7 @@ struct KeyHelpView: View {
         .padding(.vertical, 10).padding(.horizontal, 12)
         .foregroundStyle(Theme.ink)
         .floatingGlass(shape)
-        .opacity(model.shown ? 1 : 0)
-        .scaleEffect(model.shown || reduceMotion ? 1 : 0.97)
-        .animation(.timingCurve(0.2, 0.8, 0.2, 1, duration: Theme.medium), value: model.shown)
+        .panelEntrance(model.shown, style: model.motion, radius: 20)
         .padding(margin)
         .allowsHitTesting(false)
         .accessibilityElement(children: .contain)
@@ -254,6 +263,7 @@ struct KeyHelpView: View {
     private var keyboard: some View {
         let scale = model.keyboardWidth / KeyHintKeyboard.size(scale: 1).width
         return KeyHintKeyboard(binds: model.hints, style: .labels, pressed: model.pressed, hot: model.hot, scale: scale)
+            .environment(\.keyTile, model.motion == .tile ? model.shown : nil)
     }
 
     @ViewBuilder private var pad: some View {

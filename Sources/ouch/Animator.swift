@@ -177,9 +177,10 @@ enum AnimationCurve: Hashable {
         case "bounce", "bouncy": self = .bounce
         case "overshoot", "back", "easeoutback": self = .overshoot
         default:
-            var body = s
+            // Numbers keep their minus signs (a y below 0 is how a curve anticipates), so don't use `s`.
+            var body = text.lowercased().filter { !$0.isWhitespace }
             if let open = body.firstIndex(of: "("), body.hasSuffix(")") {
-                guard ["cubicbezier", "bezier"].contains(body[..<open]) else { return nil }
+                guard ["cubicbezier", "bezier"].contains(body[..<open].filter { !"-_".contains($0) }) else { return nil }
                 body = String(body[body.index(after: open)..<body.index(before: body.endIndex)])
             }
             let n = body.split(separator: ",").compactMap { Double($0) }

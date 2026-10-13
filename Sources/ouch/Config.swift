@@ -66,6 +66,7 @@ struct Config {
     /// Blur every window but the focused one, `blurRadius` points.
     var blurOtherWindows = false
     var blurRadius: CGFloat = 20
+    var panelAnimation: PanelMotion = .rise
     /// The on-screen keyboard help: hold the mode chord, or press ? in a mode.
     var keyboardHelp = true
     /// The keyboard drawn in the Shortcut Map and the keyboard help: `auto` (this Mac), a finish such as
@@ -230,6 +231,11 @@ struct Config {
                 return "unknown mode effect `\(v)` (\(ModeFX.Style.allCases.map(\.rawValue).joined(separator: ", ")))"
             }
             modeEffect = s
+        case "panel_animation":
+            guard let s = PanelMotion(rawValue: v.lowercased()) else {
+                return "unknown panel animation `\(v)` (\(PanelMotion.allCases.map(\.rawValue).joined(separator: ", ")))"
+            }
+            panelAnimation = s
         default: return "unknown option `\(rawKey)`"
         }
         return nil

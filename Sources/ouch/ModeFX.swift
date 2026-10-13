@@ -2,13 +2,22 @@ import AppKit
 import SwiftUI
 
 /// Screen-edge effect while a mode (submap) is on, so you can tell keys are going to ouch and not the
-/// app. A click-through panel on every screen. The style is `mode-effect` in the config (not shown in
-/// Settings); `ouch modefx <style>` previews one and `ouch modefx all` plays them one after another.
+/// app. A click-through panel on every screen. The style is `mode-effect` in the config (Settings: Motion ›
+/// Advanced); `ouch modefx <style>` previews one and `ouch modefx all` plays them one after another.
 final class ModeFX {
     static let shared = ModeFX()
 
     enum Style: String, CaseIterable {
         case draw, ripple, corners, none
+
+        var title: String {
+            switch self {
+            case .draw: "Draw"
+            case .ripple: "Ripple"
+            case .corners: "Corners"
+            case .none: "None"
+            }
+        }
     }
 
     /// The configured style; previews show others without changing it.
