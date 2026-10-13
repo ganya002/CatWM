@@ -140,7 +140,7 @@ struct ShortcutMap: View {
                     .contentShape(Capsule())
                 }
                 .buttonStyle(PressScale())
-                .help("Show \(name == "None" ? "shortcuts without modifiers" : name + " shortcuts")")
+                .tooltip("Show \(name == "None" ? "shortcuts without modifiers" : name + " shortcuts")")
                 .accessibilityLabel("\(name), \(item.count) shortcuts")
                 .accessibilityAddTraits(on ? .isSelected : [])
             }
@@ -579,7 +579,7 @@ private struct KeyEditor: View {
             if let issue {
                 hairline
                 OStatus(kind: issue.severity == .error ? .danger : .warning, text: issue.message)
-                    .help(issue.message)
+                    .tooltip(issue.message)
                     .padding(.horizontal, 8).frame(height: 34)
             }
             others
@@ -877,7 +877,7 @@ private struct KeyEditor: View {
                         .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
-                .help(name)
+                .tooltip(name)
                 .accessibilityLabel(name)
                 .accessibilityAddTraits(on ? [.isSelected, .isToggle] : .isToggle)
             }
@@ -906,7 +906,7 @@ private struct KeyEditor: View {
                         Text(a.title).oneLine()
                         Spacer(minLength: 0)
                     }
-                    .help("Show \(ConfigDocument.modifierCaps(a.flags).joined()) shortcuts")
+                    .tooltip("Show \(ConfigDocument.modifierCaps(a.flags).joined()) shortcuts")
                 }
             }
             .padding(.bottom, 4)

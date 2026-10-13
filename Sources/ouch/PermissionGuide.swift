@@ -326,7 +326,7 @@ private struct GuideView: View {
                     OButton("Reset", variant: .ghost, size: .sm) {
                         model.kind == .accessibility ? Permissions.reset() : Permissions.resetInputMonitoring()
                     }
-                    .help("Clears a stale entry left by a rebuilt or moved copy of the app")
+                    .tooltip("Clears a stale entry left by a rebuilt or moved copy of the app")
                     OButton("Hide", size: .sm, action: dismiss)
                 }
             }
@@ -351,6 +351,6 @@ private struct GuideView: View {
         // Only the app's location. Offering its contents (NSItemProvider(contentsOf:)) let Settings take
         // a copy of the bundle, so the switch turned on a copy and this app never became trusted.
         .onDrag { NSItemProvider(object: Bundle.main.bundleURL as NSURL) }
-        .help("Drag into the \(model.kind.title) list")
+        .tooltip("Drag into the \(model.kind.title) list")
     }
 }

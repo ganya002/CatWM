@@ -157,8 +157,7 @@ struct SortView: View {
                 HStack(spacing: 8) {
                     Text(notice.text).oneLine()
                     if notice.undo != nil {
-                        Button("Undo") { model.undoRemove() }.buttonStyle(.plain)
-                            .font(Theme.body(13.5, .medium)).foregroundStyle(Theme.accentInk)
+                        OButton("Undo", icon: "arrow.uturn.backward", size: .sm) { model.undoRemove() }
                     }
                 }
             }
@@ -265,7 +264,7 @@ private struct SortDisplays: View {
                 }
                 .buttonStyle(.plain)
                 .zone(.display(d.id))
-                .help(d.name)
+                .tooltip(d.name)
                 .accessibilityLabel(d.name)
                 .accessibilityAddTraits(on ? .isSelected : [])
             }
@@ -340,7 +339,7 @@ private struct SortLaneView: View {
                 .contentShape(Rectangle())
                 .onTapGesture(count: 2) { model.finish(lane.ws) }
                 .gesture(carry)
-                .help("Double-click to go to workspace \(lane.ws)")
+                .tooltip("Double-click to go to workspace \(lane.ws)")
             SortLayoutPill(layout: lane.layout, next: { model.cycleLayout(of: index) }, previous: { model.cycleLayout(of: index, by: -1) })
                 .padding(.leading, 4)
             SortList(model: model, ids: lane.ids, closing: false, rows: rows)
@@ -377,7 +376,7 @@ private struct SortRemoveButton: View {
         .buttonStyle(.plain)
         .onHover { hover.on = $0 }
         .animation(.easeOut(duration: Theme.fast), value: hover.on)
-        .help(label)
+        .tooltip(label)
         .accessibilityLabel(label)
     }
 }
@@ -449,7 +448,7 @@ private struct SortLayoutPill: View {
         .overlay(SortRightClick(action: previous))
         .onHover { hover.on = $0 }
         .animation(.easeOut(duration: Theme.fast), value: hover.on)
-        .help(help)
+        .tooltip(help)
         .accessibilityLabel("Layout: \(layout.title)")
         .accessibilityAction(named: "Previous layout", previous)
     }
@@ -619,7 +618,7 @@ private struct SortRow: View {
             .gesture(DragGesture(minimumDistance: 4, coordinateSpace: .named("sort"))
                 .onChanged { model.dragChanged(item, $0) }
                 .onEnded { _ in model.dragEnded() })
-            .help(closing ? "Click to bring back" : "")
+            .tooltip(closing ? "Click to bring back" : "")
             .accessibilityLabel("\(item.title), \(item.app)")
     }
 }
@@ -674,7 +673,7 @@ private struct SortClosedHeader: View {
         .contentShape(Rectangle())
         .onHover { hover.on = $0 }
         .onTapGesture { model.reopen(group.id) }
-        .help("Click to bring back")
+        .tooltip("Click to bring back")
         .accessibilityLabel("Closed workspace \(group.ws), \(group.ids.count) windows")
         .accessibilityAddTraits(.isButton)
     }

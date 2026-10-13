@@ -116,7 +116,7 @@ struct OIconButton: View {
             Image(systemName: symbol).font(.system(size: size == .sm ? 13 : 15, weight: .medium))
         }
         .buttonStyle(OButtonStyle(variant: variant, size: size, iconOnly: true, onAccent: onAccent))
-        .help(label)
+        .tooltip(label)
         .accessibilityLabel(label)
     }
 }
@@ -535,7 +535,9 @@ struct OTooltip: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Text(text).font(Theme.body(12.5)).oneLine()
+            // One line; a long message (a config problem) wraps rather than running across the screen.
+            Text(text).font(Theme.body(12.5)).lineLimit(4).fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: 320, alignment: .leading)
             if !chords.isEmpty {
                 HStack(spacing: 5) {
                     ForEach(Array(chords.enumerated()), id: \.offset) { i, keys in
@@ -660,40 +662,6 @@ struct OSwitchRow: View {
 
 // MARK: - Inputs
 
-/// A pop-up menu showing its current value and ⇕, on a sunken pill.
-struct OMenuPicker<T: Hashable>: View {
-    /// Spoken by VoiceOver; not shown.
-    let title: String
-    let options: [(value: T, label: String)]
-    @Binding var selection: T
-    @StateObject private var hover = Flag()
-
-    var body: some View {
-        Menu {
-            Picker(title, selection: $selection) {
-                ForEach(options, id: \.value) { Text($0.label).tag($0.value) }
-            }
-            .pickerStyle(.inline)
-            .labelsHidden()
-        } label: {
-            HStack(spacing: 6) {
-                Text(options.first { $0.value == selection }?.label ?? "").font(Theme.body(13)).oneLine()
-                Image(systemName: "chevron.up.chevron.down").font(.system(size: 9, weight: .semibold)).foregroundStyle(Theme.inkMuted)
-            }
-            .foregroundStyle(Theme.ink)
-            .padding(.horizontal, 12).frame(height: Theme.controlHeight)
-            .background(Capsule().fill(hover.on ? Theme.wellHover : Theme.well))
-            .contentShape(Capsule())
-        }
-        .menuStyle(.button)
-        .buttonStyle(.plain)
-        .menuIndicator(.hidden)
-        .fixedSize()
-        .onHover { hover.on = $0 }
-        .accessibilityLabel(title)
-    }
-}
-
 /// A text field on a sunken well, with a focus ring in `focus`.
 struct OTextField: View {
     let placeholder: String
@@ -791,7 +759,7 @@ private struct WorkspacePill: View {
         .buttonStyle(PressScale(scale: 0.88))
         .onHover { hover.on = $0 }
         .animation(Motion.spring, value: current)
-        .help("Workspace \(name)")
+        .tooltip("Workspace \(name)")
         .accessibilityLabel("Workspace \(name)\(occupied ? ", has windows" : "")")
         .accessibilityAddTraits(current ? .isSelected : [])
     }
@@ -918,14 +886,14 @@ struct EssentialTile: View {
             .foregroundStyle(on ? Theme.onAccent : model.hover ? Theme.ink : Theme.inkMuted)
             .padding(.horizontal, 4)
             .frame(maxWidth: .infinity).frame(height: 54)
-            .background(RoundedRectangle(cornerRadius: 12, style: .continuous)
+            .background(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
                 .fill(on ? Theme.accent : model.hover ? Theme.wellHover : Theme.well))
-            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous))
         }
         .buttonStyle(PressScale())
         .onHover { model.hover = $0 }
         .animation(.easeOut(duration: Theme.medium), value: on)
-        .help(shortcut.isEmpty ? label : "\(label)  \(shortcut.joined())")
+        .tooltip(label, keys: shortcut)
         .accessibilityLabel(label)
         .accessibilityAddTraits(isOn == nil ? [] : on ? [.isToggle, .isSelected] : .isToggle)
     }
@@ -948,7 +916,7 @@ struct RemoveButton: View {
         .buttonStyle(PressScale(scale: 0.88))
         .onHover { hover.on = $0 }
         .animation(.easeOut(duration: Theme.fast), value: hover.on)
-        .help(help)
+        .tooltip(help)
         .accessibilityLabel(help)
     }
 }

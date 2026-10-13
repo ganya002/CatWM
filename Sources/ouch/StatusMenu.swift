@@ -14,6 +14,8 @@ struct MenuItem: Identifiable {
     var kind: Kind = .action
     var label = ""
     var symbol: String? = nil
+    /// An app icon in place of a symbol.
+    var image: NSImage? = nil
     var shortcut: [String] = []
     /// The current choice, shown muted after a submenu's label.
     var value: String? = nil
@@ -97,6 +99,10 @@ final class MenuModel: ObservableObject {
     /// Submenus open to the left when the item sits near the right edge of the screen.
     var opensLeft = true
     var close: () -> Void = {}
+    /// The status menu has a search field; pop-up menus elsewhere don't.
+    var searchable = true
+    /// Where the items come from: live state for the status menu, a fixed list for a pop-up.
+    var source: () -> [MenuItem] = MenuModel.build
 
     private var openWork: DispatchWorkItem?
     private var trimWork: DispatchWorkItem?
@@ -104,7 +110,7 @@ final class MenuModel: ObservableObject {
     // MARK: Building
 
     func rebuild() {
-        items = Self.build()
+        items = source()
     }
 
     func reset() {
@@ -385,7 +391,7 @@ final class MenuModel: ObservableObject {
 
     /// Re-reads live state while open, keeping what's highlighted and open.
     func refresh() {
-        items = Self.build()
+        items = source()
     }
 }
 
@@ -531,19 +537,24 @@ private struct ColumnHeightKey: PreferenceKey {
     static func reduce(value: inout [Int: CGFloat], nextValue: () -> [Int: CGFloat]) { value.merge(nextValue()) { $1 } }
 }
 
-private struct MenuRoot: View {
+struct MenuRoot: View {
     @ObservedObject var model: MenuModel
     let rootX: CGFloat
     let top: CGFloat
     let size: CGSize
+    var rootWidth: CGFloat = Theme.menuWidth
+    /// Hangs the root column up from the bottom of the panel: a pop-up near the bottom of the screen.
+    var fromBottom = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            Color.clear
-            column(0, width: Theme.menuWidth)
-                .padding(.leading, rootX).padding(.top, top)
-                .scaleEffect(model.appeared || reduceMotion ? 1 : 0.97, anchor: .top)
+            // A click beside the columns closes the menu, like a click anywhere else.
+            Color.clear.contentShape(Rectangle()).onTapGesture { model.close() }
+            column(0, width: rootWidth)
+                .padding(.leading, rootX).padding(.top, fromBottom ? 0 : top).padding(.bottom, fromBottom ? top : 0)
+                .frame(height: fromBottom ? size.height : nil, alignment: .bottom)
+                .scaleEffect(model.appeared || reduceMotion ? 1 : 0.97, anchor: fromBottom ? .bottom : .top)
                 .opacity(model.appeared ? 1 : 0)
             ForEach(Array(model.path.enumerated()), id: \.element) { i, id in
                 if let parent = model.item(id), let row = model.rowFrames[id] {
@@ -584,7 +595,7 @@ private struct MenuColumn: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if level == 0 {
+            if level == 0 && model.searchable {
                 OSearchField(placeholder: "Search commands…", text: $model.query, focus: $searchFocused) {
                     model.runHighlighted()
                 }
@@ -613,7 +624,13 @@ private struct MenuColumn: View {
                     .fixedSize(horizontal: false, vertical: true)
                 }
             } else {
-                ForEach(model.column(level).filter { !$0.hidden }) { i in row(i) }
+                let rows = model.column(level).filter { !$0.hidden }
+                if rows.count > 16 { // a long list, such as running apps, scrolls
+                    ScrollView { VStack(spacing: 0) { ForEach(rows) { i in row(i) } } }
+                        .frame(maxHeight: 480).fixedSize(horizontal: false, vertical: true)
+                } else {
+                    ForEach(rows) { i in row(i) }
+                }
             }
         }
     }
@@ -793,7 +810,9 @@ private struct MenuRowView: View {
         case .footer:
             Color.clear // keeps the version in line with the labels above
         default:
-            if let symbol = item.symbol {
+            if let image = item.image {
+                Image(nsImage: image).resizable().interpolation(.high).frame(width: 16, height: 16)
+            } else if let symbol = item.symbol {
                 let image = Image(systemName: symbol).font(.system(size: 13, weight: .medium)).foregroundStyle(muted)
                 Group { if item.rotates { image.rotateEffect(value: spins.on) } else { image } }
                     .overlay(alignment: .topTrailing) { if item.dot { NotificationDot().offset(x: 3, y: -2) } }

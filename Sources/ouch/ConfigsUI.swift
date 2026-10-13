@@ -57,15 +57,15 @@ struct ConfigSelector: View {
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.up.chevron.down").font(.system(size: 9, weight: .semibold)).foregroundStyle(fg.opacity(0.7))
             }
-            .padding(.leading, 6).padding(.trailing, 12).frame(width: width, height: 30)
+            .padding(.leading, 6).padding(.trailing, 12).frame(width: width, height: Theme.controlHeight)
             .background(Capsule().fill(configFill(for: c) ?? (hover.on ? Theme.wellHover : Theme.well)))
             .contentShape(Capsule())
         }
         .buttonStyle(PressScale(scale: 0.96))
         .onHover { hover.on = $0 }
-        .help("\(kind.title) config")
+        .tooltip("\(kind.title) config")
         .accessibilityLabel("\(kind.title) config: \(c.name)")
-        .popover(isPresented: $pop.open, arrowEdge: .bottom) { ConfigList(kind: kind, library: library, dismiss: { pop.open = false }) }
+        .oPopover(isPresented: $pop.open) { ConfigList(kind: kind, library: library, dismiss: { pop.open = false }) }
     }
 }
 
@@ -87,11 +87,11 @@ private struct ConfigList: View {
                     Text("New config from “\(library.current(kind).name)”").font(Theme.body(13.5)).oneLine()
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 10).frame(height: Theme.rowHeight).contentShape(Rectangle())
+                .padding(.horizontal, 10).frame(height: Theme.rowHeight)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(MenuRowStyle())
         }
-        .padding(4).frame(width: 272)
+        .frame(width: Theme.menuWidth - 8) // the Surface adds 4 each side
         .foregroundStyle(Theme.ink)
     }
 
@@ -108,30 +108,28 @@ private struct ConfigList: View {
                             .foregroundStyle(configFill(for: c) == nil ? Theme.accentInk : fg)
                     }
                 }
-                .padding(.horizontal, 8).frame(height: 34).contentShape(Rectangle())
+                .padding(.horizontal, 8).frame(height: 34)
                 .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
                     .fill(configFill(for: c) ?? (library.isActive(c) ? Theme.accentSoft : .clear)))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(MenuRowStyle())
             if c.isBuiltIn {
-                Button { dismiss(); library.sheet = .create(kind: kind, baseID: c.id) } label: {
-                    Image(systemName: "plus").font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.inkMuted)
-                        .frame(width: 24, height: 24).contentShape(Rectangle())
+                OIconButton(symbol: "plus", label: "New config based on “\(c.name)”") {
+                    dismiss(); library.sheet = .create(kind: kind, baseID: c.id)
                 }
-                .buttonStyle(.plain).help("New config based on “\(c.name)”").accessibilityLabel("New config based on \(c.name)")
             } else {
-                Menu {
-                    Button("Edit name, icon and color…") { dismiss(); library.sheet = .edit(id: c.id) }
-                    Button("Duplicate") { library.duplicate(c) }
-                    Divider()
-                    Button("Delete…", role: .destructive) { confirmDelete(c) }
-                } label: {
-                    // Muted like the + beside built-in configs; the borderless style tinted it accent.
-                    Image(systemName: "ellipsis").font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.inkMuted)
-                        .frame(width: 24, height: 24).contentShape(Rectangle())
+                OMenuButton(style: OButtonStyle(variant: .ghost, size: .sm, iconOnly: true), items: {
+                    [
+                        MenuItem(id: "edit", label: "Edit Name, Icon and Color…", symbol: "pencil", action: { dismiss(); library.sheet = .edit(id: c.id) }),
+                        MenuItem(id: "duplicate", label: "Duplicate", symbol: "plus.square.on.square", action: { library.duplicate(c) }),
+                        .sep("s"),
+                        MenuItem(id: "delete", label: "Delete…", symbol: "trash", danger: true, action: { confirmDelete(c) }),
+                    ]
+                }) {
+                    Image(systemName: "ellipsis").font(.system(size: 13, weight: .medium))
                 }
-                .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).frame(width: 24)
-                .help("Edit, duplicate or delete “\(c.name)”")
+                .tooltip("Edit, duplicate or delete “\(c.name)”")
+                .accessibilityLabel("Edit, duplicate or delete \(c.name)")
             }
         }
     }
@@ -152,16 +150,18 @@ struct ConfigTransferMenu: View {
     @ObservedObject var library: ConfigLibrary
 
     var body: some View {
-        Menu {
-            Button("Import config…") { library.runImportPanel(only: kind == .full ? nil : kind) }
-            Button("Export \(kind == .full ? "full" : kind.title.lowercased()) config…") { library.sheet = .export(kind: kind) }
-        } label: {
+        OMenuButton(style: OButtonStyle(variant: .secondary, iconOnly: true), items: {
+            [
+                MenuItem(id: "import", label: "Import Config…", symbol: "square.and.arrow.down",
+                         action: { library.runImportPanel(only: kind == .full ? nil : kind) }),
+                MenuItem(id: "export", label: "Export \(kind == .full ? "Full" : kind.title) Config…", symbol: "square.and.arrow.up",
+                         action: { library.sheet = .export(kind: kind) }),
+            ]
+        }) {
             Image(systemName: "square.and.arrow.up.on.square").font(.system(size: 13, weight: .medium))
-                .foregroundStyle(Theme.inkMuted)
-                .frame(width: 30, height: 30).background(Circle().fill(Theme.well)).contentShape(Circle())
         }
-        .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
-        .help("Import / Export").accessibilityLabel("Import or export \(kind.title.lowercased()) config")
+        .fixedSize()
+        .tooltip("Import or export").accessibilityLabel("Import or export \(kind.title.lowercased()) config")
     }
 }
 
@@ -234,8 +234,8 @@ struct ConfigSheetView: View {
                         .frame(width: 34, height: Theme.controlHeight)
                         .background(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(Theme.well))
                 }
-                .buttonStyle(.plain).help("Icon").accessibilityLabel("Choose icon")
-                .popover(isPresented: $model.pickingSymbol, arrowEdge: .bottom) { SymbolGrid(selection: $model.symbol, close: { model.pickingSymbol = false }) }
+                .buttonStyle(.plain).tooltip("Icon").accessibilityLabel("Choose icon")
+                .oPopover(isPresented: $model.pickingSymbol) { SymbolGrid(selection: $model.symbol, close: { model.pickingSymbol = false }) }
 
                 OTextField(placeholder: "Name", text: $model.name) { if canConfirm { confirm() } }
 
@@ -244,8 +244,8 @@ struct ConfigSheetView: View {
                         .overlay(Circle().strokeBorder(model.hasColor ? Theme.hairline : Theme.borderControl, style: StrokeStyle(lineWidth: 1, dash: model.hasColor ? [] : [3, 2])))
                         .frame(width: 32, height: 32).contentShape(Rectangle())
                 }
-                .buttonStyle(.plain).help("Color").accessibilityLabel("Choose color")
-                .popover(isPresented: $model.pickingColor, arrowEdge: .bottom) { ColorPopover(model: model) }
+                .buttonStyle(.plain).tooltip("Color").accessibilityLabel("Choose color")
+                .oPopover(isPresented: $model.pickingColor) { ColorPopover(model: model) }
             }
             if let p = nameProblem { OStatus(kind: .danger, text: p) }
             HStack(spacing: 8) {
@@ -346,7 +346,7 @@ private struct SymbolGrid: View {
                                 .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous).fill(selection == s ? Theme.accent : .clear))
                                 .contentShape(Rectangle())
                         }
-                        .buttonStyle(.plain).help(s).accessibilityLabel(s)
+                        .buttonStyle(.plain).tooltip(s).accessibilityLabel(s)
                     }
                 }
             }
@@ -426,7 +426,7 @@ private struct ColorPopover: View {
                            knob: model.color.color, checker: true)
             HStack(spacing: 8) {
                 OTextField(placeholder: "#RRGGBB, rgb() or hsl()", text: $model.colorText, mono: true, onSubmit: applyText)
-                OButton("None", variant: .ghost, size: .sm) { model.set(color: nil); model.colorText = "" }.help("No background color")
+                OButton("None", variant: .ghost, size: .sm) { model.set(color: nil); model.colorText = "" }.tooltip("No background color")
             }
         }
         .padding(14).frame(width: 260)

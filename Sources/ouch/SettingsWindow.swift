@@ -47,6 +47,8 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
+        // AppKit hands the keyboard to the first text field, the search; it waits for ⌘K or a click instead.
+        if !wasVisible { DispatchQueue.main.async { self.window?.makeFirstResponder(nil) } }
         Tips.shared.paneShown(ui.pane)
     }
 
@@ -360,8 +362,8 @@ struct SettingsView: View {
         .foregroundStyle(Theme.ink)
         .tint(Theme.accent)
         .background {
-            // ⌘F focuses the settings search.
-            Button("") { searchFocused = true }.keyboardShortcut("f").hidden()
+            // ⌘K focuses the settings search.
+            Button("") { searchFocused = true }.keyboardShortcut("k").hidden()
         }
         .sheet(item: $library.sheet) { ConfigSheetView(sheet: $0, library: library) }
         .onDrop(of: [.fileURL], isTargeted: nil) { providers in
@@ -387,7 +389,7 @@ private struct Sidebar: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Color.clear.frame(height: SettingsWindow.titlebarHeight)
-            OSearchField(placeholder: "Search settings", text: $ui.search, shortcut: ["⌘", "F"], focus: searchFocused) {
+            OSearchField(placeholder: "Search settings", text: $ui.search, shortcut: ["⌘", "K"], focus: searchFocused) {
                 if let first = SettingsIndex.search(ui.search, doc: doc).first { ui.open(first) }
             }
             .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.surface.opacity(0.6)))
@@ -655,7 +657,7 @@ private struct ResultRow: View {
                     .opacity(hover.on ? 1 : 0)
             }
             .padding(.horizontal, 10).frame(height: 40)
-            .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(hover.on ? Theme.hover : .clear))
+            .background(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(hover.on ? Theme.well : .clear))
             .padding(.horizontal, -10)
             .contentShape(Rectangle())
         }
@@ -704,18 +706,8 @@ private struct StatusPill: View {
                     if let message { label(message).transition(.opacity) }
                     if message != nil && undo { Rectangle().fill(Theme.hairline).frame(width: 1, height: 16) }
                     if undo {
-                        Button { doc.undoAllChanges() } label: {
-                            HStack(spacing: 6) {
-                                Image(systemName: "arrow.uturn.backward").font(.system(size: 11, weight: .semibold))
-                                Text("Undo All Changes").font(Theme.body(12.5, .medium)).oneLine()
-                            }
-                            .foregroundStyle(Theme.ink)
-                            .padding(.horizontal, 10).frame(height: 26)
-                            .background(Capsule().fill(Theme.well))
-                            .contentShape(Capsule())
-                        }
-                        .buttonStyle(PressScale())
-                        .help("Go back to how things were when you opened Settings")
+                        OButton("Undo All Changes", icon: "arrow.uturn.backward", size: .sm) { doc.undoAllChanges() }
+                        .tooltip("Go back to how things were when you opened Settings")
                     }
                 }
                 .padding(.leading, message == nil ? 5 : 14).padding(.trailing, undo ? 5 : 14)
@@ -735,12 +727,12 @@ private struct StatusPill: View {
     @ViewBuilder private func label(_ m: Message) -> some View {
         switch m {
         case .error(let err):
-            OStatus(kind: .danger, text: "Couldn't save: \(err)").help(err)
+            OStatus(kind: .danger, text: "Couldn't save: \(err)").tooltip(err)
         case .problems(let n):
             OStatus(kind: .warning, text: "Fix \(n) shortcut\(n == 1 ? "" : "s") to save")
         case .skipped(let n):
             OStatus(kind: .warning, text: "\(n) line\(n == 1 ? "" : "s") in the config file skipped")
-                .help(doc.fileErrors.joined(separator: "\n"))
+                .tooltip(doc.fileErrors.joined(separator: "\n"))
         case .saved:
             HStack(spacing: 6) {
                 Image(systemName: "checkmark.circle.fill").font(.system(size: 12, weight: .semibold))
