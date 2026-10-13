@@ -965,6 +965,20 @@ struct ShortcutsPane: View {
     @ObservedObject var doc: ConfigDocument
     @ObservedObject var ui: SettingsUI
 
+    private var keyboardFinishOptions: [(value: String, label: String)] {
+        var options = [
+            (value: "auto", label: "Auto (this Mac)"),
+            (value: "macbook-pro", label: "MacBook Pro (family)"),
+            (value: "macbook-air", label: "MacBook Air (family)"),
+            (value: "macbook-neo", label: "MacBook Neo (family)"),
+            (value: "magic-keyboard", label: "Magic Keyboard (family)"),
+        ] + MacKeyboard.Finish.all.map { (value: $0.slug, label: $0.name) }
+        if !options.contains(where: { $0.value == doc.config.keyboardFinish }) {
+            options.append((value: doc.config.keyboardFinish, label: doc.config.keyboardFinish))
+        }
+        return options
+    }
+
     private func category(_ r: BindRow) -> ActionCategory {
         Actions.match(r)?.category ?? Actions.rangeSummary(r)?.category ?? .custom
     }
@@ -995,6 +1009,17 @@ struct ShortcutsPane: View {
                 .setting("shortcuts.map", ui)
             }
             .setting("shortcuts.list", ui)
+
+            OGroup("Keyboard") {
+                OSwitchRow("Show keyboard help",
+                           description: "Hold ⌘ after ⌘⇪, or press ? in window mode",
+                           isOn: $doc.config.keyboardHelp)
+                    .setting("shortcuts.keyboardHelp", ui)
+                ORow("Keyboard finish", description: "Used by keyboard help and Shortcut Map") {
+                    OMenuPicker(title: "Keyboard finish", options: keyboardFinishOptions, selection: $doc.config.keyboardFinish)
+                }
+                .setting("shortcuts.keyboardFinish", ui)
+            }
 
             ForEach(sections, id: \.0) { cat, rows in
                 OGroup(cat.rawValue) {

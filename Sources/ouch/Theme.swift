@@ -21,7 +21,7 @@ struct Palette {
 
     var bg, surface, surfaceRaised, surfaceSunken, hover, hairline, borderControl: Pair
     var ink, inkMuted, inkFaint: Pair
-    var accent, accentHover, onAccent, accentInk, accentSoft, accent2, tint, focus: Pair
+    var accent, accentHover, onAccent, accentInk, accentSoft, accent2, accent2Ink, sky, tint, focus: Pair
     var success, warning, danger, dangerSoft: Pair
     var glass, wash1, wash2: Pair
 
@@ -34,6 +34,7 @@ struct Palette {
         ink: Pair(0x18181B, 0xF5F5F7), inkMuted: Pair(0x55555C, 0xB4B4BB), inkFaint: Pair(0x6B6B73, 0x97979F),
         accent: Pair(0x0A68E6, 0x3F95FF), accentHover: Pair(0x0A58C4, 0x5AA8FF), onAccent: Pair(0xFFFFFF, 0x0B0B0D),
         accentInk: Pair(0x0A5FD1, 0x8DC3FF), accentSoft: Pair(0xE3EEFF, 0x1B2C47), accent2: Pair(0xFFCC00, 0xFFCC00),
+        accent2Ink: Pair(0x8F6A00, 0xFFCC00), sky: Pair(0x3D8BE0, 0x8DC3FF),
         tint: Pair(0xC7C7CC, 0x4A4A50), focus: Pair(0x0A68E6, 0x8DC3FF),
         success: Pair(0x1F7A3D, 0x5FD38A), warning: Pair(0x8A5A00, 0xFFCC00), danger: Pair(0xC42B1C, 0xFF7B6B),
         dangerSoft: Pair(0xFDE8E6, 0x3D2220),
@@ -59,6 +60,15 @@ enum Theme {
         }
     }
     private static func token(_ kp: KeyPath<Palette, Palette.Pair>) -> Color { Color(nsColor: ns(kp)) }
+
+    /// A token's light or dark value whatever the appearance: for things with their own ground, like
+    /// the dark keycaps of a MacBook Pro drawn in Light Mode.
+    static func fixed(_ token: KeyPath<Palette, Palette.Pair>, dark: Bool) -> Color {
+        let p = palette[keyPath: token]
+        return Color(nsColor: dark ? hex(p.dark, p.darkAlpha) : hex(p.light, p.lightAlpha))
+    }
+    /// A raw sRGB colour, for drawings of real hardware. Interface colours always come from tokens.
+    static func rgb(_ v: UInt32, _ alpha: CGFloat = 1) -> Color { Color(nsColor: hex(v, alpha)) }
 
     // MARK: Colour tokens
 
@@ -87,6 +97,10 @@ enum Theme {
     static let accentSoft = token(\.accentSoft)
     /// The logo's spark yellow. Shapes only: occupied-workspace dots, impact marks. Never text.
     static let accent2 = token(\.accent2)
+    /// The yellow where it has to be read: the workspace group's key labels. Deepened in light mode.
+    static let accent2Ink = token(\.accent2Ink)
+    /// A lighter blue beside `accent`: the layout group's key labels.
+    static let sky = token(\.sky)
     /// Quiet fill for illustrations and layout thumbnails.
     static let tint = token(\.tint)
     static let focus = token(\.focus)
@@ -283,6 +297,8 @@ enum Caret: Equatable {
     case top(CGFloat)
     /// Centred on the bottom edge.
     case bottom
+    /// On the bottom edge, `x` from its centre: for a surface nudged in from a window edge.
+    case bottomAt(CGFloat)
 }
 
 enum SurfaceTone { case plain, accent, inverted }
@@ -324,8 +340,10 @@ private struct SurfaceModifier: ViewModifier {
     }
 
     private var caretAlignment: Alignment {
-        if case .bottom = caret { return .bottom }
-        return .topLeading
+        switch caret {
+        case .bottom, .bottomAt: return .bottom
+        default: return .topLeading
+        }
     }
 
     @ViewBuilder private var caretView: some View {
@@ -336,6 +354,7 @@ private struct SurfaceModifier: ViewModifier {
         case .none: EmptyView()
         case .top(let x): diamond.offset(x: x - 7, y: -6)
         case .bottom: diamond.offset(y: 6)
+        case .bottomAt(let x): diamond.offset(x: x, y: 6)
         }
     }
 }

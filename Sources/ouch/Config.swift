@@ -60,6 +60,11 @@ struct Config {
     var sortStrategy: SortStrategy = .task
     /// Screen-edge effect while a mode is on: draw, ripple, corners or none. Config file only for now.
     var modeEffect: ModeFX.Style = .draw
+    /// The on-screen keyboard help: hold the mode chord, or press ? in a mode.
+    var keyboardHelp = true
+    /// The keyboard drawn in the Shortcut Map and the keyboard help: `auto` (this Mac), a finish such as
+    /// `macbook-air-midnight`, or a family (`macbook-pro`, `macbook-air`, `macbook-neo`, `magic-keyboard`).
+    var keyboardFinish = "auto"
     var bindings: [KeyBinding] = []
     var currentSubmap = "" // parser state while reading submap blocks
     var errors: [String] = []
@@ -204,6 +209,12 @@ struct Config {
                 return "unknown sort strategy `\(v)` (\(SortStrategy.allCases.map(\.rawValue).joined(separator: ", ")))"
             }
             sortStrategy = s
+        case "keyboard_help": keyboardHelp = bool
+        case "keyboard_finish":
+            guard MacKeyboard.isValid(v) else {
+                return "unknown keyboard finish `\(v)` (auto, macbook-pro, macbook-air, macbook-neo, magic-keyboard, or a finish like macbook-pro-space-black)"
+            }
+            keyboardFinish = MacKeyboard.slug(v)
         case "mode_effect":
             guard let s = ModeFX.Style(rawValue: v.lowercased()) else {
                 return "unknown mode effect `\(v)` (\(ModeFX.Style.allCases.map(\.rawValue).joined(separator: ", ")))"
@@ -323,6 +334,8 @@ let keyCodes: [String: UInt16] = [
     "semicolon": 41, ";": 41, "backslash": 42, "\\": 42, "comma": 43, "n": 45, "m": 46,
     "slash": 44, "/": 44, "period": 47, ".": 47, "tab": 48, "space": 49, "grave": 50, "`": 50,
     "backspace": 51, "escape": 53, "esc": 53, "capslock": 57, "caps": 57, "caps_lock": 57,
+    // ISO and JIS extras.
+    "section": 10, "yen": 93, "underscore_jis": 94, "eisu": 102, "kana": 104,
     "f1": 122, "f2": 120, "f3": 99, "f4": 118, "f5": 96, "f6": 97, "f7": 98, "f8": 100,
     "f9": 101, "f10": 109, "f11": 103, "f12": 111,
     "home": 115, "pageup": 116, "prior": 116, "delete": 117, "end": 119, "pagedown": 121, "next": 121,
@@ -368,6 +381,14 @@ float-small-windows = true
 window-resize-step = 5
 enables-layout-hud = true
 enables-layout-hud-on-space-change = true
+# Keyboard help: keep holding Cmd after Cmd+Caps Lock (or press ? in window mode) to see
+# every window-mode key on an on-screen keyboard.
+keyboard-help = true
+# The keyboard drawn there and in Settings: auto follows this Mac (model, colour, layout). Or pick one,
+# e.g. macbook-pro-space-black, macbook-pro-silver, macbook-air-midnight, macbook-air-starlight,
+# macbook-air-sky-blue, macbook-air-silver, macbook-neo-silver, macbook-neo-blush, macbook-neo-citrus,
+# macbook-neo-indigo, imac-silver, imac-blue, imac-purple, imac-pink, imac-orange, imac-yellow, imac-green.
+keyboard-finish = auto
 
 # Sort Windows (the bind below): the grouping it opens with (task, app, focus or none), and how many
 # windows one workspace holds before Ouch offers to sort them (0 turns the offer off).

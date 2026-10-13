@@ -37,20 +37,6 @@ enum ActionCategory: String, CaseIterable, Identifiable {
         case .custom: "curlybraces"
         }
     }
-    /// Tint for this kind of action on the shortcut map.
-    var color: Color {
-        switch self {
-        case .focus: .blue
-        case .move: .purple
-        case .layout: .teal
-        case .window: .orange
-        case .displays: .indigo
-        case .spaces: .green
-        case .commands: .gray
-        case .app: .pink
-        case .custom: .brown
-        }
-    }
 }
 
 struct Action: Identifiable {
@@ -481,6 +467,11 @@ final class ConfigDocument: ObservableObject {
             "debug-logging = \(b(c.debugLogging))",
             "virtual-workspaces = \(b(c.virtualWorkspaces))",
             "stay-on-workspace-after-close = \(b(c.stayOnWorkspaceAfterClose))",
+            "# On-screen keyboard help: keep holding the window-mode chord's modifier, or press ? in the mode",
+            "keyboard-help = \(b(c.keyboardHelp))",
+            "# The keyboard drawn there and in Settings: auto (this Mac), a model (macbook-pro, macbook-air,",
+            "# macbook-neo, magic-keyboard) or a finish such as macbook-air-midnight or imac-blue",
+            "keyboard-finish = \(c.keyboardFinish)",
         ]
         // Experimental and not in Settings, so only written once someone has picked a different one.
         if c.modeEffect != Config().modeEffect { out.append("mode-effect = \(c.modeEffect.rawValue)") }
@@ -631,10 +622,15 @@ final class ConfigDocument: ObservableObject {
     var problemCount: Int { binds.filter { issue($0)?.severity == .error }.count }
 
     static func keyName(for code: UInt16) -> String? {
+        if let name = canonicalKeyNames[code] { return name }
         let names = keyCodes.filter { $0.value == code }.map(\.key).filter { $0.allSatisfy { $0.isLetter || $0.isNumber } }
         guard let best = names.max(by: { $0.count < $1.count }) else { return nil }
         return best.count == 1 ? best.uppercased() : best
     }
+
+    private static let canonicalKeyNames: [UInt16: String] = [
+        10: "section", 93: "yen", 94: "underscore_jis", 102: "eisu", 104: "kana",
+    ]
 
     /// Keycaps for display, e.g. ["⌥", "⇧", "H"]. A short `h|j|k|l` list gets a cap per key.
     func prettyShortcut(_ row: BindRow) -> [String] {
@@ -670,6 +666,7 @@ final class ConfigDocument: ObservableObject {
         "semicolon": ";", "apostrophe": "'", "quote": "'", "slash": "/", "backslash": "\\", "grave": "`",
         "pageup": "⇞", "pagedown": "⇟", "home": "↖", "end": "↘",
         "mouse_up": "Scroll ↑", "mouse_down": "Scroll ↓", "mouse_left": "Scroll ←", "mouse_right": "Scroll →",
+        "section": "§", "yen": "¥", "underscore_jis": "_", "eisu": "英数", "kana": "かな",
         "swipe_left": "Swipe ←", "swipe_right": "Swipe →", "swipe_up": "Swipe ↑", "swipe_down": "Swipe ↓",
     ]
 
@@ -683,6 +680,8 @@ final class ConfigDocument: ObservableObject {
         let code: UInt16
         let key: String
         let flags: NSEvent.ModifierFlags
+        /// This key's own argument (one of a range row's).
+        let arg: String
         let title: String
         let symbol: String
         let category: ActionCategory
@@ -703,7 +702,7 @@ final class ConfigDocument: ObservableObject {
                 let action = Actions.match(single)
                 let title = row.dispatcher == "exec" ? (p.arg.isEmpty ? "Run Command" : "Run “\(p.arg)”")
                     : action?.title ?? "\(row.dispatcher) \(p.arg)".trimmingCharacters(in: .whitespaces)
-                out.append(KeyAction(code: code, key: p.key, flags: f, title: title, symbol: action?.symbol ?? "curlybraces",
+                out.append(KeyAction(code: code, key: p.key, flags: f, arg: p.arg, title: title, symbol: action?.symbol ?? "curlybraces",
                                      category: action?.category ?? .custom, row: row))
             }
         }
