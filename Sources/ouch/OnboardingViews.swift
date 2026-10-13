@@ -163,8 +163,9 @@ final class CoachModel: ObservableObject {
 struct CoachCardView: View {
     @ObservedObject var model: CoachModel
     static let width: CGFloat = 344
-    /// Transparent room around the card for its caret and shadow; the panel lets clicks through there.
-    static let inset = EdgeInsets(top: 12, leading: 28, bottom: 36, trailing: 28)
+    /// Transparent room around the card for its caret and the float shadow, which reaches about twice its
+    /// radius; with less, the panel edge clips it into a visible tinted rectangle. Clicks pass through.
+    static let inset = EdgeInsets(top: 32, leading: 52, bottom: 68, trailing: 52)
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -282,8 +283,9 @@ struct CoachCardView: View {
 /// Hangs under the menu bar item during onboarding: a Surface `md` with a caret pointing at the item.
 struct MenuBarTipView: View {
     @ObservedObject var model: MenuBarTipModel
-    /// Transparent room for the caret and shadow; the panel ignores the mouse anyway.
-    static let inset = EdgeInsets(top: 10, leading: 20, bottom: 28, trailing: 20)
+    /// Transparent room for the caret and the popover shadow, enough that the panel edge doesn't clip it;
+    /// the panel ignores the mouse anyway.
+    static let inset = EdgeInsets(top: 18, leading: 32, bottom: 44, trailing: 32)
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {

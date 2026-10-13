@@ -135,8 +135,8 @@ enum Theme {
 
     // MARK: Type
 
-    /// Chillax (ITF, Fontshare) at 300, 400 and 500 ships in Contents/Resources/Fonts with Dela Gothic One,
-    /// the wordmark's face. Keys use SF Mono.
+    /// Chillax (ITF, Fontshare) at 300, 400 and 500 ships in Contents/Resources/Fonts, plus 700 for the
+    /// wordmark. Keys use SF Mono.
     static func registerFonts() {
         guard let dir = Bundle.main.resourceURL?.appendingPathComponent("Fonts"),
               let urls = try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)
@@ -145,7 +145,7 @@ enum Theme {
         CTFontManagerRegisterFontURLs(fonts as CFArray, .process, true, nil)
     }
 
-    private static let hasDela = NSFont(name: "DelaGothicOne-Regular", size: 12) != nil
+    private static let hasChillaxBold = NSFont(name: "Chillax-Bold", size: 12) != nil
     private static let hasChillax = NSFont(name: "Chillax-Regular", size: 12) != nil
 
     /// Chillax at the nearest of its three weights; nothing heavier than 500.
@@ -174,9 +174,9 @@ enum Theme {
     static func heading(_ size: CGFloat = 15) -> Font { body(size, .medium) }
     /// Light display type: the welcome title, pane titles, showcase headlines.
     static func display(_ size: CGFloat) -> Font { body(size, .light) }
-    /// Dela Gothic One, kept for the "Ouch" wordmark only: it is the logo.
+    /// Chillax Bold, for the "Ouch" wordmark only: it is the logo, the one place above 500.
     static func wordmark(_ size: CGFloat) -> Font {
-        hasDela ? .custom("DelaGothicOne-Regular", size: size) : .system(size: size, weight: .heavy)
+        hasChillaxBold ? .custom("Chillax-Bold", size: size) : .system(size: size, weight: .bold)
     }
 
     static func nsBody(_ size: CGFloat, weight: NSFont.Weight = .regular) -> NSFont {
