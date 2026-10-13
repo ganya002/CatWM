@@ -47,6 +47,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
+        Tips.shared.paneShown(ui.pane)
     }
 
     /// Each time the window opens it starts centred on the display under the pointer; while it's
@@ -93,6 +94,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
 
     func windowWillClose(_ notification: Notification) {
         ui.endSession()
+        Tips.shared.settingsClosed()
         NSApp.setActivationPolicy(.accessory)
     }
 }
@@ -351,6 +353,8 @@ struct SettingsView: View {
                 .padding(.vertical, 8).padding(.trailing, 8)
         }
         .background(Theme.wash.ignoresSafeArea())
+        .overlayPreferenceValue(TipAnchorKey.self) { SettingsTipLayer(anchors: $0) }
+        .onChange(of: ui.pane) { _, p in Tips.shared.paneShown(p) }
         .ignoresSafeArea()
         .font(Theme.body())
         .foregroundStyle(Theme.ink)
@@ -480,6 +484,7 @@ private struct SideItem: View {
         .onHover { model.hover = $0 }
         .animation(.easeOut(duration: Theme.fast), value: model.hover)
         .accessibilityAddTraits(on ? .isSelected : [])
+        .tipAnchor("pane.\(pane.rawValue)")
     }
 }
 

@@ -3,21 +3,40 @@ import SwiftUI
 
 // SwiftUI content for the onboarding overlays. Each one is hosted in its own borderless panel
 // (see Onboarding.swift); none of them is a regular window. All of them are Surfaces: the welcome
-// card at `xl`, tour steps at `lg` in the accent tone, the menu bar tip at `md`.
+// card at `xl`, coach steps at `lg` in the accent tone, the menu bar tip at `md`.
 
 // MARK: - Welcome card
 
+/// The two built-in key sets the welcome card offers.
+enum KeyStyle: String, CaseIterable {
+    case vim, wasd
+
+    var configID: String { ConfigLibrary.builtInPrefix + (self == .vim ? "keyboard.default" : "keyboard.wasd") }
+    var title: String { self == .vim ? "Vim" : "WASD" }
+    var caption: String { self == .vim ? "Right hand on the home row" : "Left hand, like a game" }
+
+    /// The built-in set that's active now, if one is.
+    static var current: KeyStyle? {
+        let id = SettingsWindow.shared.library.current(.keyboard).id
+        return allCases.first { $0.configID == id }
+    }
+}
+
 final class WelcomeModel: ObservableObject {
+    enum Page { case permissions, keys }
+    @Published var page = Page.permissions
     @Published var accessibility = false
     @Published var inputMonitoring = false
     @Published var login = false
+    @Published var style: KeyStyle?
     /// Set once the card is on screen; the icon drops in and lands.
     @Published var landed = false
     var allowAccessibility: () -> Void = {}
     var allowInputMonitoring: () -> Void = {}
     var allowLogin: () -> Void = {}
     var skip: () -> Void = {}
-    var learn: () -> Void = {}
+    var next: () -> Void = {}
+    var start: () -> Void = {}
 }
 
 struct WelcomeView: View {
@@ -25,8 +44,31 @@ struct WelcomeView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Transparent room around the card for its shadow.
     static let margin: CGFloat = 44
+    static let width: CGFloat = 480 - 64
 
     var body: some View {
+        // Both pages are always laid out so the card keeps one size; the hidden one steps aside.
+        ZStack(alignment: .topLeading) {
+            permissions
+                .opacity(model.page == .permissions ? 1 : 0)
+                .offset(x: model.page == .permissions || reduceMotion ? 0 : -24)
+                .allowsHitTesting(model.page == .permissions)
+                .accessibilityHidden(model.page != .permissions)
+            keys
+                .opacity(model.page == .keys ? 1 : 0)
+                .offset(x: model.page == .keys || reduceMotion ? 0 : 24)
+                .allowsHitTesting(model.page == .keys)
+                .accessibilityHidden(model.page != .keys)
+        }
+        .animation(Motion.snap(reduceMotion), value: model.page)
+        .frame(width: Self.width)
+        .surface(.xl)
+        .padding(Self.margin)
+    }
+
+    // MARK: Permissions
+
+    private var permissions: some View {
         VStack(alignment: .leading, spacing: 0) {
             Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 72, height: 72)
                 .offset(y: model.landed || reduceMotion ? 0 : -28)
@@ -51,19 +93,17 @@ struct WelcomeView: View {
                 permission(granted: model.login, symbol: "power", title: "Open at login", required: false,
                            detail: "Starts Ouch when you log in", primary: false, action: model.allowLogin)
             }
+            Spacer(minLength: 24)
             HStack(spacing: 8) {
+                dots(0)
                 Spacer(minLength: 0)
-                OButton("Skip tutorial", variant: .ghost, action: model.skip)
-                OButton("Take the tour", variant: .primary, size: .lg, shortcut: ["↩"], action: model.learn)
+                OButton("Skip setup", variant: .ghost, action: model.skip)
+                OButton("Continue", variant: .primary, size: .lg, shortcut: ["↩"], action: model.next)
                     .disabled(!model.accessibility)
                     .help(model.accessibility ? "" : "Allow Accessibility first")
                     .keyboardShortcut(.defaultAction)
             }
-            .padding(.top, 24)
         }
-        .frame(width: 480 - 64)
-        .surface(.xl)
-        .padding(Self.margin)
     }
 
     private func permission(granted: Bool, symbol: String, title: String, required: Bool,
@@ -94,6 +134,107 @@ struct WelcomeView: View {
         }
         .frame(minHeight: 52)
         .animation(Motion.easeOut, value: granted)
+    }
+
+    // MARK: Keys
+
+    private var keys: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Pick your keys").font(Theme.display(40)).tracking(-1).oneLine()
+                .padding(.top, 2).padding(.bottom, 8)
+            Text("They move windows only in window mode, so typing is never in the way. Switch any time under Configs.")
+                .font(Theme.body(13.5)).lineSpacing(2).foregroundStyle(Theme.inkMuted)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.bottom, 22)
+            HStack(spacing: 12) {
+                ForEach(KeyStyle.allCases, id: \.self) { s in
+                    KeyStyleTile(style: s, selected: model.style == s) {
+                        withAnimation(Motion.snap(reduceMotion)) { model.style = s }
+                    }
+                }
+            }
+            Spacer(minLength: 24)
+            HStack(spacing: 8) {
+                dots(1)
+                Spacer(minLength: 0)
+                OButton("Skip tour", variant: .ghost, action: model.skip)
+                OButton("Start the tour", variant: .primary, size: .lg, shortcut: ["↩"], action: model.start)
+                    .keyboardShortcut(.defaultAction)
+            }
+        }
+    }
+
+    /// Where you are in the card: two small dots, the current one in accent.
+    private func dots(_ current: Int) -> some View {
+        HStack(spacing: 6) {
+            ForEach(0..<2, id: \.self) { i in
+                Capsule().fill(i == current ? Theme.accent : Theme.hairline)
+                    .frame(width: i == current ? 16 : 6, height: 6)
+            }
+        }
+        .accessibilityElement()
+        .accessibilityLabel("Page \(current + 1) of 2")
+    }
+}
+
+/// One of the two key sets: its four direction keys drawn where they sit, the name, and a caption.
+/// A control, so it gets a fill; the chosen one is `accent`.
+private struct KeyStyleTile: View {
+    let style: KeyStyle
+    let selected: Bool
+    let action: () -> Void
+    @StateObject private var model = Model()
+
+    final class Model: ObservableObject { @Published var hover = false }
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 0) {
+                cluster.frame(maxWidth: .infinity).frame(height: 132)
+                HStack(spacing: 6) {
+                    Text(style.title).font(Theme.heading()).oneLine()
+                    Spacer(minLength: 0)
+                    Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 14, weight: .medium))
+                        .contentTransition(.symbolEffect(.replace))
+                }
+                .padding(.top, 12)
+                Text(style.caption).font(Theme.body(12)).oneLine()
+                    .foregroundStyle(selected ? Theme.onAccent.opacity(0.85) : Theme.inkMuted)
+                    .padding(.top, 1)
+            }
+            .foregroundStyle(selected ? Theme.onAccent : Theme.ink)
+            .padding(14)
+            .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(selected ? Theme.accent : model.hover ? Theme.wellHover : Theme.well))
+            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+        .buttonStyle(PressScale(scale: 0.97))
+        .onHover { model.hover = $0 }
+        .animation(.easeOut(duration: Theme.medium), value: selected)
+        .accessibilityLabel("\(style.title): \(style.caption)")
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    /// H J K L in a row, or W over A S D.
+    @ViewBuilder private var cluster: some View {
+        switch style {
+        case .vim:
+            HStack(spacing: 5) { ForEach(["H", "J", "K", "L"], id: \.self) { cap($0) } }
+        case .wasd:
+            VStack(spacing: 5) {
+                cap("W")
+                HStack(spacing: 5) { ForEach(["A", "S", "D"], id: \.self) { cap($0) } }
+            }
+        }
+    }
+
+    private func cap(_ k: String) -> some View {
+        let shape = RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
+        return Text(k).font(Theme.keys(13, .medium))
+            .foregroundStyle(selected ? Theme.accent : Theme.ink)
+            .frame(width: 32, height: 32)
+            .background(shape.fill(selected ? Theme.onAccent : Theme.surface).elevation(.sm, in: shape))
     }
 }
 
@@ -136,6 +277,7 @@ struct WordmarkView: View {
 /// Hyprland's accent (its default active border, #33CCFF).
 private let hyprlandBlue = Color(red: 0x33 / 255, green: 0xCC / 255, blue: 1)
 
+
 // MARK: - Coach card
 
 final class CoachModel: ObservableObject {
@@ -144,22 +286,30 @@ final class CoachModel: ObservableObject {
     @Published var title = ""
     @Published var text = ""
     @Published var caps: [String] = []
-    @Published var hint = ""
+    /// One flag per cap once it has been pressed, for steps that want every key.
+    @Published var capsDone: [Bool] = []
     @Published var pressed = false
     @Published var done = false
+    @Published var doneText = "Nice"
+    /// A recall drill: the keys hide behind a hint until asked for.
+    @Published var recall = false
+    @Published var hidden = false
     @Published var warning: String?
     @Published var button: String?
     @Published var final = false
-    @Published var canSkip = true
+    @Published var canHead = true
+    @Published var headLabel = "Skip tour"
+    @Published var headSymbol: String?
     @Published var rows: [(caps: [String], label: String)] = []
     @Published var progress: Double = 0
     @Published var caret: Caret = .none
     var tryKeys: () -> Void = {}
     var next: () -> Void = {}
-    var skip: () -> Void = {}
+    var headAction: () -> Void = {}
+    var reveal: () -> Void = {}
 }
 
-/// One step of the keyboard tour: Surface `lg` filled with `accent`, pointing at the real target.
+/// One step of a lesson: Surface `lg` filled with `accent`, pointing at the real target.
 struct CoachCardView: View {
     @ObservedObject var model: CoachModel
     static let width: CGFloat = 344
@@ -169,50 +319,26 @@ struct CoachCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // head: lead symbol, kicker, close
+            // head: lead symbol, kicker, Skip or Pause
             HStack(spacing: 8) {
-                Image(systemName: model.final ? "checkmark.circle.fill" : "keyboard")
+                Image(systemName: model.final ? "checkmark.circle.fill" : model.recall ? "brain" : "keyboard")
                     .font(.system(size: 13, weight: .medium))
                     .contentTransition(.symbolEffect(.replace))
                 Text(model.kicker).kicker(Theme.onAccent).oneLine()
                 Spacer(minLength: 8)
-                if model.canSkip {
-                    OButton("Skip tour", variant: .ghost, size: .sm, onAccent: true, action: model.skip)
+                if model.canHead {
+                    OButton(model.headLabel, icon: model.headSymbol, variant: .ghost, size: .sm, onAccent: true, action: model.headAction)
                         .padding(.trailing, -8)
                 }
             }
             .frame(minHeight: 22)
             Text(model.title).font(Theme.body(22)).tracking(-0.2).fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 12).padding(.bottom, 4)
-            Text(model.text).font(Theme.body(13.5)).lineSpacing(2).opacity(0.86)
-                .fixedSize(horizontal: false, vertical: true)
-            if !model.caps.isEmpty {
-                HStack(spacing: 12) {
-                    Button(action: model.tryKeys) {
-                        Kbd(keys: model.caps, large: true, pressed: model.pressed, onAccent: true).contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .help(model.hint)
-                    if model.done {
-                        HStack(spacing: 6) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .transition(.symbolEffect(.appear))
-                                .overlay(alignment: .topLeading) {
-                                    ImpactBurst(trigger: model.done, size: 14, delay: 0.05).offset(x: -8, y: -8)
-                                }
-                            Text("Nice").font(Theme.body(13.5, .medium))
-                        }
-                        .transition(.opacity.combined(with: .scale(scale: 0.8)))
-                    } else {
-                        HStack(spacing: 6) {
-                            Image(systemName: "cursorarrow.rays")
-                            Text("Press it now").font(Theme.body(13))
-                        }
-                        .opacity(0.8)
-                    }
-                }
-                .padding(.top, 16)
+            if !model.text.isEmpty {
+                Text(model.text).font(Theme.body(13.5)).lineSpacing(2).opacity(0.86)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            if !model.caps.isEmpty { keys.padding(.top, 16) }
             if let warning = model.warning {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Image(systemName: "exclamationmark.triangle.fill")
@@ -222,29 +348,7 @@ struct CoachCardView: View {
                 .background(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(Theme.onAccent.opacity(0.16)))
                 .padding(.top, 14)
             }
-            if model.final {
-                Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 7) {
-                    ForEach(Array(model.rows.enumerated()), id: \.offset) { _, row in
-                        if row.caps.isEmpty { // a section heading
-                            Text(row.label).kicker(Theme.onAccent).opacity(0.75)
-                                .padding(.top, 6)
-                                .gridCellColumns(2)
-                        } else {
-                            GridRow {
-                                HStack(spacing: 2) {
-                                    ForEach(Array(row.caps.enumerated()), id: \.offset) { _, c in
-                                        Text(c).font(Theme.keys(11.5, .medium)).oneLine()
-                                            .padding(.horizontal, 5).frame(minWidth: 20, minHeight: 20)
-                                            .background(RoundedRectangle(cornerRadius: Theme.Radius.xs).fill(Theme.onAccent.opacity(0.18)))
-                                    }
-                                }
-                                Text(row.label).font(Theme.body(12.5)).oneLine()
-                            }
-                        }
-                    }
-                }
-                .padding(.top, 14)
-            }
+            if model.final { summary.padding(.top, 14) }
             if let button = model.button {
                 HStack {
                     Spacer()
@@ -267,6 +371,95 @@ struct CoachCardView: View {
         .surface(.lg, tone: .accent, caret: caret)
         .padding(Self.inset)
         .animation(.easeOut(duration: 0.2), value: model.done)
+        .animation(.easeOut(duration: 0.2), value: model.hidden)
+    }
+
+    /// Large keycaps and the live state beside them. Hidden in a recall drill until the hint.
+    private var keys: some View {
+        HStack(spacing: 12) {
+            if model.hidden {
+                // Blank caps, one per key, so you know how many to remember.
+                Kbd(keys: model.caps.map { _ in " " }, large: true, onAccent: true).opacity(0.5)
+                    .accessibilityHidden(true)
+                Button(action: model.reveal) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "lightbulb").breatheEffect()
+                        Text("Hint").font(Theme.body(13, .medium))
+                    }
+                }
+                .buttonStyle(.plain)
+                .help("Show the keys")
+            } else {
+                Button(action: model.tryKeys) { caps.contentShape(Rectangle()) }
+                    .buttonStyle(.plain)
+                    .help("Press the keys, or click them.")
+                status
+            }
+        }
+    }
+
+    @ViewBuilder private var caps: some View {
+        if model.capsDone.count == model.caps.count, !model.capsDone.isEmpty {
+            HStack(spacing: 6) {
+                ForEach(Array(model.caps.enumerated()), id: \.offset) { i, k in
+                    Kbd(keys: [k], large: true, pressed: model.capsDone[i], onAccent: true)
+                        .overlay(alignment: .topTrailing) {
+                            if model.capsDone[i] {
+                                Image(systemName: "checkmark.circle.fill").font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(Theme.onAccent, Theme.accent)
+                                    .offset(x: 5, y: -5)
+                                    .transition(.symbolEffect(.appear))
+                            }
+                        }
+                        .animation(Motion.spring, value: model.capsDone[i])
+                }
+            }
+        } else {
+            Kbd(keys: model.caps, large: true, pressed: model.pressed, onAccent: true)
+        }
+    }
+
+    @ViewBuilder private var status: some View {
+        if model.done {
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.circle.fill")
+                    .transition(.symbolEffect(.appear))
+                    .overlay(alignment: .topLeading) {
+                        ImpactBurst(trigger: model.done, size: 14, delay: 0.05).offset(x: -8, y: -8)
+                    }
+                Text(model.doneText).font(Theme.body(13.5, .medium)).oneLine()
+            }
+            .transition(.opacity.combined(with: .scale(scale: 0.8)))
+        } else {
+            HStack(spacing: 6) {
+                Image(systemName: "cursorarrow.rays").symbolEffect(.pulse)
+                Text("Press it now").font(Theme.body(13)).oneLine()
+            }
+            .opacity(0.8)
+        }
+    }
+
+    private var summary: some View {
+        Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 7) {
+            ForEach(Array(model.rows.enumerated()), id: \.offset) { _, row in
+                if row.caps.isEmpty { // a section heading
+                    Text(row.label).kicker(Theme.onAccent).opacity(0.75)
+                        .padding(.top, 6)
+                        .gridCellColumns(2)
+                } else {
+                    GridRow {
+                        HStack(spacing: 2) {
+                            ForEach(Array(row.caps.enumerated()), id: \.offset) { _, c in
+                                Text(c).font(Theme.keys(11.5, .medium)).oneLine()
+                                    .padding(.horizontal, 5).frame(minWidth: 20, minHeight: 20)
+                                    .background(RoundedRectangle(cornerRadius: Theme.Radius.xs).fill(Theme.onAccent.opacity(0.18)))
+                            }
+                        }
+                        Text(row.label).font(Theme.body(12.5)).oneLine()
+                    }
+                }
+            }
+        }
     }
 
     private var caret: Caret {

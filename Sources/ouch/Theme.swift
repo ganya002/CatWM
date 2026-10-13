@@ -299,6 +299,10 @@ enum Caret: Equatable {
     case bottom
     /// On the bottom edge, `x` from its centre: for a surface nudged in from a window edge.
     case bottomAt(CGFloat)
+    /// On the leading edge, `y` from the top: for a tip beside what it's about.
+    case leading(CGFloat)
+    /// On the leading edge, `y` from the bottom.
+    case leadingBottom(CGFloat)
 }
 
 enum SurfaceTone { case plain, accent, inverted }
@@ -342,6 +346,7 @@ private struct SurfaceModifier: ViewModifier {
     private var caretAlignment: Alignment {
         switch caret {
         case .bottom, .bottomAt: return .bottom
+        case .leadingBottom: return .bottomLeading
         default: return .topLeading
         }
     }
@@ -355,6 +360,8 @@ private struct SurfaceModifier: ViewModifier {
         case .top(let x): diamond.offset(x: x - 7, y: -6)
         case .bottom: diamond.offset(y: 6)
         case .bottomAt(let x): diamond.offset(x: x, y: 6)
+        case .leading(let y): diamond.offset(x: -6, y: y - 7)
+        case .leadingBottom(let y): diamond.offset(x: -6, y: 7 - y)
         }
     }
 }

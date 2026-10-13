@@ -224,14 +224,22 @@ final class MenuModel: ObservableObject {
 
         out.append(MenuItem(id: "settings", label: "Settings…", symbol: "gearshape", shortcut: ["⌘", ","], keywords: "preferences options",
                             rotates: true, action: { SettingsWindow.shared.show(pane: nil) }))
-        out.append(MenuItem(id: "tour", label: "Keyboard Tour…", symbol: "graduationcap", enabled: trusted,
-                            keywords: "learn tutorial onboarding help", action: { Onboarding.shared.startTour() }))
+        let paused = TutorialLesson.paused
+        out.append(MenuItem(id: "tutorial", label: paused == nil ? "Keyboard Tutorial…" : "Resume Tutorial…", symbol: "graduationcap",
+                            value: paused?.name, enabled: trusted, keywords: "learn practice drill keys lessons onboarding help",
+                            action: { Onboarding.shared.startTutorial() }))
         let crashed = CrashWatch.pending != nil
         out.append(MenuItem(id: "help", kind: .sub, label: "Help", symbol: "questionmark.circle", children: [
             MenuItem(id: "map", label: "Shortcut Map", symbol: "keyboard", shortcut: ["⌘", "/"], keywords: "keys overview cheat sheet",
                      action: { SettingsWindow.shared.show(pane: .shortcuts, map: true) }),
             MenuItem(id: "keyhelp", label: "Keyboard Help", symbol: "keyboard.badge.ellipsis", shortcut: keys.modeChord,
                      enabled: trusted, keywords: "keys overlay cheat sheet window mode", action: { KeyHelp.shared.showFromMenu(preferredMode: keys.modeName) }),
+            MenuItem(id: "tour", label: "Quick Tour", symbol: "play.circle", enabled: trusted,
+                     keywords: "learn tutorial onboarding keyboard tour", action: { Onboarding.shared.startTour() }),
+            MenuItem(id: "tutorial-restart", label: "Restart Tutorial", symbol: "arrow.counterclockwise", enabled: trusted,
+                     hidden: paused == nil, keywords: "learn tutorial start over", action: { Onboarding.shared.startTutorial(fromStart: true) }),
+            MenuItem(id: "tips", kind: .check, label: "Show Tips", checked: Tips.shared.enabled, keywords: "hints help tooltips",
+                     keepOpen: true, action: { Tips.shared.enabled.toggle() }),
             MenuItem(id: "reload", label: "Reload Config", symbol: "arrow.triangle.2.circlepath", shortcut: keys.keys("reload"),
                      keywords: "refresh file", keepOpen: true, rotates: true, action: { wm.reload() }),
             MenuItem(id: "updates", label: "Check for Updates…", symbol: "arrow.down.circle", keywords: "version upgrade",
@@ -365,6 +373,7 @@ final class MenuModel: ObservableObject {
 
     func run(_ item: MenuItem) {
         guard item.enabled, let action = item.action else { return }
+        if item.kind == .action || item.kind == .check { Tips.shared.clicked(id: item.id, label: item.label, shortcut: item.shortcut) }
         if item.keepOpen {
             action()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in self?.refresh() }

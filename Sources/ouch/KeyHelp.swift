@@ -103,6 +103,7 @@ final class KeyHelp {
             ?? NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main
         guard let screen else { return }
         let wasShown = model.shown
+        Tips.shared.markSeen(.keyHelp)
         model.load(mode: mode, binds: WindowManager.shared.config.bindings, chord: chordMods, reason: reason,
                    room: screen.visibleFrame.width - Self.margin * 2 - 48)
         model.held = Self.mods(CGEventSource.flagsState(.combinedSessionState))
