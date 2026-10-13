@@ -504,23 +504,33 @@ final class WindowManager {
         (!w.isFloating && tilingEnabled ? targets[w.id] : nil) ?? w.frame
     }
 
-    /// The window to go to from `w` in direction `dir`. Like Hyprland, when several windows share
-    /// the nearest edge that way (the stack beside a main window, a two-pane stack), the one you
-    /// used last wins, so going left and back right returns to the window you started from.
+    /// How `o` lies from `f` going `dir`: distance between centres along the way (negative when
+    /// behind), offset across it, whether the two share a row/column, and the gap between near edges.
+    private func relation(_ f: CGRect, _ of: CGRect, _ dir: Direction) -> (along: CGFloat, across: CGFloat, overlaps: Bool, edge: CGFloat) {
+        let dx = of.midX - f.midX, dy = of.midY - f.midY
+        let rows = of.minY < f.maxY && of.maxY > f.minY, cols = of.minX < f.maxX && of.maxX > f.minX
+        switch dir {
+        case .left: return (-dx, dy, rows, f.minX - of.maxX)
+        case .right: return (dx, dy, rows, of.minX - f.maxX)
+        case .up: return (-dy, dx, cols, f.minY - of.maxY)
+        case .down: return (dy, dx, cols, of.minY - f.maxY)
+        }
+    }
+
+    /// The window to go to from `w` in direction `dir`. On its own screen only windows sharing its
+    /// row (left/right) or column (up/down) count, so up/down never drifts sideways. Like Hyprland,
+    /// when several windows share the nearest edge that way (the stack beside a main window), the
+    /// one you used last wins, so going left and back right returns to the window you started from.
     private func neighbor(of w: Window, _ dir: Direction, among candidates: [Window]) -> Window? {
         let f = navFrame(w)
+        let screens = Screen.all()
+        let home = screen(of: w, in: screens)?.uuid
         var scored: [(w: Window, score: CGFloat, edge: CGFloat)] = []
         for o in candidates where o.id != w.id {
-            let of = navFrame(o)
-            let dx = of.midX - f.midX, dy = of.midY - f.midY
-            let (along, across, overlaps, edge): (CGFloat, CGFloat, Bool, CGFloat)
-            switch dir {
-            case .left: (along, across, overlaps, edge) = (-dx, dy, of.minY < f.maxY && of.maxY > f.minY, f.minX - of.maxX)
-            case .right: (along, across, overlaps, edge) = (dx, dy, of.minY < f.maxY && of.maxY > f.minY, of.minX - f.maxX)
-            case .up: (along, across, overlaps, edge) = (-dy, dx, of.minX < f.maxX && of.maxX > f.minX, f.minY - of.maxY)
-            case .down: (along, across, overlaps, edge) = (dy, dx, of.minX < f.maxX && of.maxX > f.minX, of.minY - f.maxY)
-            }
+            let (along, across, overlaps, edge) = relation(f, navFrame(o), dir)
             guard along > 1 else { continue }
+            // Off the row/column is only allowed when crossing to another display.
+            guard overlaps || screen(of: o, in: screens)?.uuid != home else { continue }
             scored.append((o, along + abs(across) * 2 + (overlaps ? 0 : 100_000), overlaps ? max(0, edge) : .infinity))
         }
         guard let best = scored.min(by: { $0.score < $1.score }) else { return nil }
@@ -797,9 +807,29 @@ final class WindowManager {
             return
         }
         let candidates = order.filter(visible.contains).compactMap { windows[$0] } // tiling order breaks ties
+        let screens = Screen.all()
+        let home = screen(of: w, in: screens)
+        // A zoomed window covers everything else: there's no geometry to navigate, so cycle.
+        if let home, state(for: home).zoomed == w.id { cycleFocus(d == .left || d == .up ? -1 : 1); return }
         if let n = neighbor(of: w, d, among: candidates) { focus(n); return }
-        // Stacked layouts (fullscreen / zoom / two-pane) have no geometry to navigate: cycle instead.
-        cycleFocus(d == .left || d == .up ? -1 : 1)
+        let f = navFrame(w)
+        let here = candidates.filter { $0.id != w.id && screen(of: $0, in: screens)?.uuid == home?.uuid }
+        // At the end of a row or column: wrap round to the far end of it.
+        let behind = here.compactMap { o -> (Window, CGFloat)? in
+            let r = relation(f, navFrame(o), d)
+            return r.overlaps && r.along < -1 ? (o, -r.along) : nil
+        }
+        if let far = behind.map(\.1).max() {
+            let ends = behind.filter { $0.1 >= far - 2 }.map(\.0)
+            if let pick = ends.max(by: { (focusStamps[$0.id] ?? 0) < (focusStamps[$1.id] ?? 0) }) { focus(pick) }
+            return
+        }
+        // Windows stacked in the same slot (fullscreen layout, a two-pane stack): cycle through them.
+        let hereIDs = Set(here.map(\.id))
+        let stack = candidates.filter { $0.id == w.id || (hereIDs.contains($0.id) && navFrame($0).approxEqual(f, tolerance: 2)) }
+        guard stack.count > 1, let i = stack.firstIndex(where: { $0.id == w.id }) else { return }
+        let delta = d == .left || d == .up ? -1 : 1
+        focus(stack[((i + delta) % stack.count + stack.count) % stack.count])
     }
 
     private func moveWindow(_ d: Direction) {
