@@ -214,6 +214,8 @@ final class MenuModel: ObservableObject {
         out.append(MenuItem(id: "help", kind: .sub, label: "Help", symbol: "questionmark.circle", children: [
             MenuItem(id: "map", label: "Shortcut Map", symbol: "keyboard", shortcut: ["⌘", "/"], keywords: "keys overview cheat sheet",
                      action: { SettingsWindow.shared.show(pane: .shortcuts, map: true) }),
+            MenuItem(id: "keyhelp", label: "Keyboard Help", symbol: "keyboard.badge.ellipsis", shortcut: keys.modeChord,
+                     enabled: trusted, keywords: "keys overlay cheat sheet window mode", action: { KeyHelp.shared.showFromMenu() }),
             MenuItem(id: "reload", label: "Reload Config", symbol: "arrow.triangle.2.circlepath", shortcut: keys.keys("reload"),
                      keywords: "refresh file", keepOpen: true, rotates: true, action: { wm.reload() }),
             MenuItem(id: "updates", label: "Check for Updates…", symbol: "arrow.down.circle", keywords: "version upgrade",

@@ -136,6 +136,7 @@ final class WindowManager {
         Hotkeys.shared.onSubmapChange = { [weak self] name in
             Log.debug("mode: \(name.isEmpty ? "reset" : name)")
             ModeFX.shared.setActive(!name.isEmpty)
+            KeyHelp.shared.modeChanged(name)
             self?.onChange?()
             self?.onModeChange?(name)
         }
@@ -144,6 +145,7 @@ final class WindowManager {
         Hotkeys.shared.setBindings(config.bindings)
         ModeFX.shared.style = config.modeEffect
         Hotkeys.shared.handler = { [weak self] b in self?.dispatch(b.dispatcher, b.arg) }
+        KeyHelp.shared.install()
         if !Hotkeys.shared.start() {
             Log.info("start: could not create the keyboard event tap")
             HUD.shared.show("Keybinds unavailable: grant Accessibility", on: nil)
@@ -471,6 +473,9 @@ final class WindowManager {
            let s = screens.first(where: { $0.uuid == u }) { return s }
         return screen(containing: w.frame, in: screens)
     }
+
+    /// The screen with the focused window, else the one under the pointer.
+    var focusedScreen: NSScreen? { currentScreen()?.ns }
 
     private func currentScreen() -> Screen? {
         let screens = Screen.all()
