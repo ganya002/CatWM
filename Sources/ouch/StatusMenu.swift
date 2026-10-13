@@ -46,14 +46,19 @@ struct MenuItem: Identifiable {
 struct ShortcutIndex {
     private var mode: [String: [String]] = [:]
     private var global: [String: [String]] = [:]
+    /// The configured window mode name, if there is one.
+    var modeName: String? = nil
     /// The chord that enters window mode, e.g. ⌘⇪.
     var modeChord: [String] = []
 
     init() {
         let text = (try? String(contentsOf: Config.url, encoding: .utf8)) ?? defaultText
         let doc = ConfigDocument(text: text)
-        let modeName = doc.binds.first { $0.submap.isEmpty && $0.dispatcher == "submap" && $0.args.lowercased() != "reset" }
-        if let modeName { modeChord = doc.prettyShortcut(modeName) }
+        let modeBind = doc.binds.first { $0.submap.isEmpty && $0.dispatcher == "submap" && $0.args.lowercased() != "reset" }
+        if let modeBind {
+            modeName = modeBind.args
+            modeChord = doc.prettyShortcut(modeBind)
+        }
         func table(_ submap: String) -> [String: [String]] {
             var out: [String: [String]] = [:]
             for a in doc.keyActions(in: submap) where out[a.title] == nil {
@@ -61,7 +66,7 @@ struct ShortcutIndex {
             }
             return out
         }
-        if let m = modeName?.args { mode = table(m) }
+        if let m = modeName { mode = table(m) }
         global = table("")
     }
 
@@ -215,7 +220,7 @@ final class MenuModel: ObservableObject {
             MenuItem(id: "map", label: "Shortcut Map", symbol: "keyboard", shortcut: ["⌘", "/"], keywords: "keys overview cheat sheet",
                      action: { SettingsWindow.shared.show(pane: .shortcuts, map: true) }),
             MenuItem(id: "keyhelp", label: "Keyboard Help", symbol: "keyboard.badge.ellipsis", shortcut: keys.modeChord,
-                     enabled: trusted, keywords: "keys overlay cheat sheet window mode", action: { KeyHelp.shared.showFromMenu() }),
+                     enabled: trusted, keywords: "keys overlay cheat sheet window mode", action: { KeyHelp.shared.showFromMenu(preferredMode: keys.modeName) }),
             MenuItem(id: "reload", label: "Reload Config", symbol: "arrow.triangle.2.circlepath", shortcut: keys.keys("reload"),
                      keywords: "refresh file", keepOpen: true, rotates: true, action: { wm.reload() }),
             MenuItem(id: "updates", label: "Check for Updates…", symbol: "arrow.down.circle", keywords: "version upgrade",
