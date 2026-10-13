@@ -58,6 +58,10 @@ final class WindowManager {
     private var lastFocused: [String: CGWindowID] = [:]
     private var focusStamps: [CGWindowID: Int] = [:] // focus history: higher was focused more recently
     private var focusClock = 0
+    /// A window we just focused. macOS takes a moment to report it, and a key press in between
+    /// must navigate from it, not from the window before (or spamming a key goes nowhere).
+    private var pendingFocus: (id: CGWindowID, until: Date)?
+    private var refocusAfterClose: String? // workspace whose focused window just closed
     private var lastClose = Date.distantPast // when a window last closed (macOS then refocuses the previous app's window)
     private var floatFrames: [CGWindowID: CGRect] = [:]  // floating windows' frames while parked
     private var savedWorkspaceOf: [CGWindowID: String] = [:]
@@ -132,7 +136,8 @@ final class WindowManager {
 
         NSEvent.addGlobalMonitorForEvents(matching: .leftMouseUp) { [weak self] _ in self?.mouseUp() }
         // Clicking somewhere means you've moved on: leave any mode, like vim leaving normal mode.
-        NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { _ in
+        NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
+            self?.pendingFocus = nil // a click decides focus itself
             if !Hotkeys.shared.submap.isEmpty { Hotkeys.shared.setSubmap("") }
         }
         Hotkeys.shared.onSubmapChange = { [weak self] name in
@@ -266,6 +271,8 @@ final class WindowManager {
     }
 
     private func forget(_ id: CGWindowID) {
+        if focusClock > 0, focusStamps[id] == focusClock { refocusAfterClose = workspaceOf[id] }
+        if pendingFocus?.id == id { pendingFocus = nil }
         windows[id] = nil
         order.removeAll { $0 == id }
         workspaceOf[id] = nil; floatFrames[id] = nil; targets[id] = nil; minSizes[id] = nil; corrections[id] = nil; drags[id] = nil
@@ -374,6 +381,12 @@ final class WindowManager {
             saveWorkspaces()
         }
 
+        // A new window may be why the old one closed (a dialog, a replacement): let it keep focus.
+        if let ws = refocusAfterClose {
+            refocusAfterClose = nil
+            if fresh.isEmpty { DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in self?.refocusRecent(on: ws) } }
+        }
+
         // 3. Lay out each screen.
         guard tilingEnabled else { onChange?(); return }
         var moves: [Animator.Move] = [], instant: [Animator.Move] = []
@@ -409,6 +422,21 @@ final class WindowManager {
         animator.animate(moves, duration: config.animate ? config.animationDuration : 0,
                          curve: config.animationCurve, bounce: config.animationBounce)
         onChange?()
+    }
+
+    /// After the focused window closes, macOS hands focus to whatever it likes (often another
+    /// column, or the app's other window). Like Hyprland, go back to the window used before it.
+    private func refocusRecent(on ws: String) {
+        guard isShown(ws), pendingFocus == nil else { return }
+        // A dialog or other window we don't manage took focus: leave it be.
+        if let app = NSWorkspace.shared.frontmostApplication,
+           let id = AXUIElementCreateApplication(app.processIdentifier).element(kAXFocusedWindowAttribute)?.windowID,
+           windows[id] == nil { return }
+        let here = visible.filter { workspaceOf[$0] == ws }
+        guard let id = here.max(by: { (focusStamps[$0] ?? 0) < (focusStamps[$1] ?? 0) }), focusStamps[id] != nil,
+              reportedFocusedWindow()?.id != id, let w = windows[id] else { return }
+        Log.debug("focus: window closed; back to \(id)")
+        focus(w)
     }
 
     /// Each window's slot before fitting around minimum sizes, and the gap between windows.
@@ -493,6 +521,15 @@ final class WindowManager {
     }
 
     private func focusedWindow() -> Window? {
+        if let p = pendingFocus {
+            if Date() < p.until, let w = windows[p.id], visible.contains(p.id) { return w }
+            pendingFocus = nil
+        }
+        return reportedFocusedWindow()
+    }
+
+    /// The focused window as macOS reports it, which lags behind `focus(_:)`.
+    private func reportedFocusedWindow() -> Window? {
         guard let app = NSWorkspace.shared.frontmostApplication,
               let el = AXUIElementCreateApplication(app.processIdentifier).element(kAXFocusedWindowAttribute),
               let id = el.windowID else { return nil }
@@ -567,6 +604,7 @@ final class WindowManager {
     private func focus(_ w: Window) {
         w.focus()
         noteFocus(w.id) // now, not when macOS gets round to telling us: quick key presses read it next
+        pendingFocus = (w.id, Date().addingTimeInterval(0.5))
         if config.mouseFollowsFocus {
             ignoreMouseUntil = Date().addingTimeInterval(0.3)
             CGWarpMouseCursorPosition(navFrame(w).center)
@@ -1316,7 +1354,12 @@ final class WindowManager {
     /// If the focused window lives on a hidden workspace (⌘-Tab, Dock, a link opening a window),
     /// switch to it. Also remembers each workspace's last focused window.
     private func followFocus() {
-        guard isStarted, let w = focusedWindow() else { return }
+        guard isStarted, let w = reportedFocusedWindow() else { return }
+        if let p = pendingFocus {
+            // Until macOS catches up with a focus we asked for, its reports are stale.
+            guard p.id == w.id else { return }
+            pendingFocus = nil
+        }
         if focusStamps[w.id] != focusClock { noteFocus(w.id) }
         guard config.virtualWorkspaces, let ws = workspaceOf[w.id], isVirtual(ws) else { return }
         if isShown(ws) { lastFocused[ws] = w.id; return }
