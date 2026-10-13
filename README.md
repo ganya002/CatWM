@@ -9,7 +9,16 @@ An Amethyst-style tiling window manager for macOS with Hyprland-style keybinds a
 open build/ouch.app
 ```
 
-On first launch, a welcome card asks for **Accessibility** (System Settings → Privacy & Security) and offers a keyboard tour. The tour opens practice windows on a free workspace and tiles them for real; your own windows wait on their workspace until it ends. Run it again from the menu bar with **Keyboard Tour…**. The app is ad-hoc signed, so after each rebuild you may need to remove and re-add it there.
+On first launch, a short intro plays, then a welcome card asks for **Accessibility** (System Settings → Privacy & Security), lets you pick **Vim** (H J K L) or **WASD** keys, and starts a keyboard tour. The tour opens practice windows on a free workspace and tiles them for real; your own windows wait on their workspace until it ends. `open build/ouch.app --args --onboarding` plays it again.
+
+The menu bar has two lessons on the same practice windows:
+
+- **Keyboard Tutorial…** is the long one: chapters (window mode, focus, moving, the main pane, layouts, zoom and float, workspaces, global keys, displays, sorting), each followed by drills you answer from memory. **Pause** remembers the chapter; the menu then reads **Resume Tutorial…**.
+- **Help › Quick Tour** replays the onboarding tour.
+
+After onboarding, small tips turn up once each where they help: beside a Settings pane, above the mode bar, or under the menu bar item after you click a command that has a key. **Help › Show Tips** turns them off and on (turning them on shows them again).
+
+The app is ad-hoc signed, so after each rebuild you may need to remove and re-add it in Accessibility.
 
 ## Releasing with Amore
 

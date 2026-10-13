@@ -152,6 +152,7 @@ final class WindowManager {
             Log.debug("mode: \(name.isEmpty ? "reset" : name)")
             ModeFX.shared.setActive(!name.isEmpty)
             KeyHelp.shared.modeChanged(name)
+            Tips.shared.modeChanged(name)
             self?.onChange?()
             self?.onModeChange?(name)
         }

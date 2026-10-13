@@ -1,12 +1,15 @@
 import AppKit
 import SwiftUI
 
-/// First-run onboarding: an intro played across the screen, a welcome card for permissions, then a
-/// keyboard tour on practice windows. Everything is separate borderless panels over the desktop
-/// and real windows tiled by the real window manager; there is no onboarding window.
+/// First-run onboarding: an intro played across the screen, a welcome card for permissions and the
+/// choice between Vim and WASD keys, then a keyboard tour on practice windows. Everything is
+/// separate borderless panels over the desktop and real windows tiled by the real window manager;
+/// there is no onboarding window. The longer keyboard tutorial runs on the same coach.
 final class Onboarding {
     static let shared = Onboarding()
     private static let doneKey = "didOnboard"
+
+    static var isDone: Bool { UserDefaults.standard.bool(forKey: doneKey) }
 
     /// The menu bar item, so the tour can point at it.
     weak var statusButton: NSStatusBarButton? {
@@ -16,21 +19,26 @@ final class Onboarding {
     private var welcome: OverlayPanel?
     private let welcomeModel = WelcomeModel()
     private var poll: Timer?
-    private var tour: Tour?
+    private var coach: Coach?
     private var openedLoginItems = false
     private var offering = false
+    /// Set while the first-run flow runs (rather than a tour or tutorial from the menu).
+    private var firstRun = false
 
-    var isRunning: Bool { intro != nil || welcome != nil || tour != nil || offering }
+    var isRunning: Bool { intro != nil || welcome != nil || coach != nil || offering }
 
     /// Fresh installs see it, and so does anyone who hasn't granted Accessibility yet. Once per Mac.
     static func shouldShow(firstRun: Bool, trusted: Bool) -> Bool {
-        !UserDefaults.standard.bool(forKey: doneKey) && (firstRun || !trusted)
+        !isDone && (firstRun || !trusted)
     }
 
     func start() {
         guard !isRunning else { return }
+        firstRun = true
         let screen = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main ?? NSScreen.screens[0]
         let card = makeWelcome(on: screen)
+        // Reduce Motion: no light show, just the card.
+        guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return showWelcome() }
         let m = WelcomeView.margin
         let intro = Intro(screen: screen, landing: card.frame.insetBy(dx: m, dy: m)) { [weak self] in
             self?.intro = nil
@@ -43,6 +51,8 @@ final class Onboarding {
     // MARK: Welcome card
 
     private func makeWelcome(on screen: NSScreen) -> OverlayPanel {
+        welcomeModel.page = .permissions
+        welcomeModel.style = KeyStyle.current
         welcomeModel.allowAccessibility = { Permissions.request() }
         welcomeModel.allowInputMonitoring = { Permissions.requestInputMonitoring() }
         welcomeModel.allowLogin = { [weak self] in
@@ -55,9 +65,19 @@ final class Onboarding {
         // Settings and macOS's alert close after a grant; then the card should be in front again.
         PermissionGuide.shared.onGranted = { [weak self] in self?.welcome?.orderFrontRegardless() }
         welcomeModel.skip = { [weak self] in self?.hideWelcome { self?.finish() } }
-        welcomeModel.learn = { [weak self] in
+        welcomeModel.next = { [weak self] in
             guard AXIsProcessTrusted() else { Permissions.request(); return }
-            self?.hideWelcome { self?.startTour() }
+            self?.welcomeModel.page = .keys
+        }
+        welcomeModel.start = { [weak self] in
+            guard let self else { return }
+            guard AXIsProcessTrusted() else { welcomeModel.page = .permissions; return }
+            // The tour reads the keys from the config, so they're switched before it starts.
+            if let style = welcomeModel.style, style != KeyStyle.current,
+               let config = SettingsWindow.shared.library.config(id: style.configID) {
+                SettingsWindow.shared.library.select(config)
+            }
+            hideWelcome { self.startTour() }
         }
         refreshWelcome()
         let host = FirstClickHostingView(rootView: WelcomeView(model: welcomeModel))
@@ -118,32 +138,58 @@ final class Onboarding {
         }
     }
 
-    // MARK: Tour
+    // MARK: Lessons
 
-    /// The keyboard tour on its own (also from the menu bar). Waits for the window manager, which
-    /// starts a moment after Accessibility is granted.
-    func startTour(attempts: Int = 20) {
-        guard tour == nil, intro == nil, welcome == nil else { return }
+    /// The keyboard tour on its own (also from the menu bar).
+    func startTour() {
+        let lesson = TourLesson()
+        run(lesson) { [weak self] _ in
+            self?.offerSort(steps: lesson.count) { self?.finish() }
+        }
+    }
+
+    /// The long, pausable tutorial from the menu bar. Picks up at the chapter it was paused in.
+    func startTutorial(fromStart: Bool = false) {
+        if fromStart { TutorialLesson.forget() }
+        run(TutorialLesson()) { how in
+            switch how {
+            case .paused:
+                let at = TutorialLesson.paused?.name
+                HUD.shared.show(at.map { "Paused at \($0)" } ?? "Tutorial paused", on: nil)
+            case .finished:
+                HUD.shared.show("Tutorial complete", on: nil)
+            case .skipped:
+                break
+            }
+        }
+    }
+
+    /// Waits for the window manager, which starts a moment after Accessibility is granted.
+    private func run(_ lesson: Lesson, attempts: Int = 20, then: @escaping (Coach.Ending) -> Void) {
+        guard coach == nil, intro == nil, welcome == nil else { return }
         guard WindowManager.shared.isStarted, Hotkeys.shared.isActive else {
             if attempts > 0 {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in self?.startTour(attempts: attempts - 1) }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in self?.run(lesson, attempts: attempts - 1, then: then) }
             } else {
                 HUD.shared.show("Ouch needs Accessibility first", on: nil)
                 MenuBarTip.shared.hide()
+                firstRun = false
             }
             return
         }
-        let t = Tour(statusButton: statusButton) { [weak self] steps in
-            self?.tour = nil
-            self?.offerSort(afterSteps: steps) { self?.finish() }
+        Tips.shared.dismissAll()
+        if SortPanel.shared.isOpen { SortPanel.shared.revert() }
+        let c = Coach(lesson: lesson, statusButton: statusButton) { [weak self] how in
+            self?.coach = nil
+            then(how)
         }
-        tour = t
-        t.start()
-        MenuBarTip.shared.show()
+        coach = c
+        c.start()
+        if firstRun { MenuBarTip.shared.show() }
     }
 
     /// When the tour hands the user's windows back crowded onto one workspace, offers to sort them.
-    private func offerSort(afterSteps steps: Int, then: @escaping () -> Void) {
+    private func offerSort(steps: Int, then: @escaping () -> Void) {
         let wm = WindowManager.shared
         guard wm.config.sortNudge > 0, let hit = wm.shownWorkspaces().first, hit.count > wm.config.sortNudge else { return then() }
         offering = true
@@ -159,8 +205,13 @@ final class Onboarding {
 
     private func finish() {
         MenuBarTip.shared.hide()
+        let wasFirst = firstRun || !Self.isDone
+        firstRun = false
         UserDefaults.standard.set(true, forKey: Self.doneKey)
-        if AXIsProcessTrusted() { HUD.shared.show("Tiling On", on: nil) }
+        guard AXIsProcessTrusted() else { return }
+        HUD.shared.show("Tiling On", on: nil)
+        // Once, after the first run: where the longer tutorial lives.
+        if wasFirst { DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { Tips.shared.show(.tutorial) } }
     }
 }
 
@@ -205,10 +256,13 @@ private extension NSWindow.Level {
     static func above(_ l: NSWindow.Level, _ n: Int) -> NSWindow.Level { NSWindow.Level(rawValue: l.rawValue + n) }
 }
 
+
 // MARK: - Intro
 
-/// The opening, played over the whole screen: it dims, four glass windows drift in, snap into a
-/// tiling layout, re-tile, then fly into the welcome card. Each tile is its own window.
+/// The opening, played over the whole screen and drawn from the app icon: it dims to graphite, four
+/// windows drift in (the main one in the icon's electric blue), snap into a tiling layout with a squish
+/// and the icon's yellow impact lines, the wordmark lands, they re-tile, then fly into the welcome
+/// card. Each tile is its own window. Click anywhere to skip.
 private final class Intro {
     static let margin: CGFloat = 60 // room around each tile for its rotation and shadow
 
@@ -216,7 +270,6 @@ private final class Intro {
     private let landing: NSRect
     private let onDone: () -> Void
     private var dim: OverlayPanel!
-    private var dimContent: NSView!
     private var skipLabel: NSTextField!
     private var tiles: [OverlayPanel] = []
     private var word: OverlayPanel!
@@ -237,10 +290,10 @@ private final class Intro {
         dim.orderFrontRegardless()
         tiles.forEach { $0.orderFrontRegardless() }
         word.orderFrontRegardless()
-        for (i, at) in [0.12, 1.3, 2.3, 3.5, 4.9].enumerated() {
+        for (i, at) in [0.12, 1.25, 2.3, 3.55, 4.85].enumerated() {
             later(at) { [weak self] in self?.go(to: i + 1) }
         }
-        later(5.7) { [weak self] in self?.finish() }
+        later(5.6) { [weak self] in self?.finish() }
     }
 
     private func later(_ seconds: Double, _ f: @escaping () -> Void) {
@@ -282,11 +335,19 @@ private final class Intro {
         blur.state = .active
         blur.appearance = NSAppearance(named: .darkAqua)
         root.addSubview(blur)
-        let shade = NSView(frame: root.bounds)
-        shade.autoresizingMask = [.width, .height]
-        shade.wantsLayer = true
-        shade.layer?.backgroundColor = NSColor(srgbRed: 0x1B / 255, green: 0x1B / 255, blue: 0x1E / 255, alpha: 0.4).cgColor // graphite, from the icon
-        root.addSubview(shade)
+        // Graphite from the icon, a little lighter in the middle so the tiles read as lit from the front.
+        let shade = CAGradientLayer()
+        shade.type = .radial
+        shade.colors = [Intro.graphite.withAlphaComponent(0.3).cgColor, Intro.graphite.withAlphaComponent(0.62).cgColor]
+        shade.startPoint = CGPoint(x: 0.5, y: 0.5)
+        shade.endPoint = CGPoint(x: 1.1, y: 1.1)
+        let shadeView = NSView(frame: root.bounds)
+        shadeView.autoresizingMask = [.width, .height]
+        shadeView.wantsLayer = true
+        shade.frame = shadeView.bounds
+        shade.autoresizingMask = [.layerWidthSizable, .layerHeightSizable]
+        shadeView.layer?.addSublayer(shade)
+        root.addSubview(shadeView)
         skipLabel = NSTextField(labelWithString: "Click anywhere to skip")
         skipLabel.font = Theme.nsBody(12)
         skipLabel.textColor = NSColor.white.withAlphaComponent(0.6)
@@ -296,11 +357,10 @@ private final class Intro {
         root.addSubview(skipLabel)
         dim.contentView = root
         dim.alphaValue = 0
-        dimContent = root
 
-        for _ in 0..<4 {
+        for i in 0..<4 {
             let p = OverlayPanel(frame: padded(start), level: .above(.statusBar, 2), clickThrough: true)
-            p.contentView = TileView(frame: NSRect(origin: .zero, size: p.frame.size))
+            p.contentView = TileView(frame: NSRect(origin: .zero, size: p.frame.size), main: i == 0)
             p.alphaValue = 0
             tiles.append(p)
         }
@@ -311,6 +371,8 @@ private final class Intro {
         word.contentView = NSHostingView(rootView: WordmarkView(model: wordModel, size: size))
         word.alphaValue = 0
     }
+
+    static let graphite = NSColor(srgbRed: 0x1B / 255, green: 0x1B / 255, blue: 0x1E / 255, alpha: 1)
 
     // MARK: Stages
 
@@ -359,14 +421,22 @@ private final class Intro {
         let scatter: [(NSRect, CGFloat)] = [(fraction(0.1, 0.16, 0.26, 0.3), -9), (fraction(0.62, 0.1, 0.25, 0.28), 7),
                                             (fraction(0.16, 0.58, 0.22, 0.27), 6), (fraction(0.6, 0.56, 0.28, 0.31), -6)]
         let curve = CAMediaTimingFunction(controlPoints: 0.2, 0.9, 0.15, 1)
+        func tile(_ i: Int) -> TileView? { tiles[i].contentView as? TileView }
         func move(_ i: Int, to r: NSRect, alpha: CGFloat, rotation: CGFloat, duration: Double, delay: Double) {
             let p = tiles[i]
             let run = {
-                (p.contentView as? TileView)?.rotate(to: rotation, duration: duration, curve: curve)
+                tile(i)?.rotate(to: rotation, duration: duration, curve: curve)
                 animate(duration, curve: curve) { p.animator().setFrame(self.padded(r), display: true) }
                 animate(0.6, curve: CAMediaTimingFunction(name: .easeOut)) { p.animator().alphaValue = alpha }
             }
             if delay > 0 { DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: run) } else { run() }
+        }
+        /// When a tile lands: it squishes, and the main one takes the icon's impact lines.
+        func land(_ i: Int, after delay: Double, spark: Bool) {
+            later(delay) {
+                tile(i)?.squish()
+                if spark { tile(i)?.spark() }
+            }
         }
         switch s {
         case 1:
@@ -375,23 +445,31 @@ private final class Intro {
                 skipLabel.animator().alphaValue = 1
             }
             for (i, t) in scatter.enumerated() {
-                (tiles[i].contentView as? TileView)?.rotate(to: t.1 * 2, duration: 0, curve: curve)
+                tile(i)?.rotate(to: t.1 * 2, duration: 0, curve: curve)
                 move(i, to: t.0, alpha: 1, rotation: t.1, duration: 1.1, delay: Double(i) * 0.07)
             }
         case 2:
-            for (i, r) in layout(bsp: false).enumerated() { move(i, to: r, alpha: 1, rotation: 0, duration: 0.8, delay: Double(i) * 0.07) }
+            for (i, r) in layout(bsp: false).enumerated() {
+                let delay = Double(i) * 0.07
+                move(i, to: r, alpha: 1, rotation: 0, duration: 0.8, delay: delay)
+                land(i, after: delay + 0.36, spark: i == 0)
+            }
         case 3:
-            for i in tiles.indices { animate(0.6) { tiles[i].animator().alphaValue = 0.45 } }
+            for i in tiles.indices { animate(0.6) { tiles[i].animator().alphaValue = i == 0 ? 0.6 : 0.4 } }
             wordModel.landed = true
             animate(1.1) {
                 word.animator().alphaValue = 1
                 word.animator().setFrame(wordFrame, display: true)
             }
         case 4:
-            for (i, r) in layout(bsp: true).enumerated() { move(i, to: r, alpha: 0.45, rotation: 0, duration: 0.9, delay: 0) }
+            for (i, r) in layout(bsp: true).enumerated() {
+                let delay = Double(i) * 0.05
+                move(i, to: r, alpha: i == 0 ? 0.6 : 0.4, rotation: 0, duration: 0.9, delay: delay)
+                land(i, after: delay + 0.4, spark: false)
+            }
             wordModel.subtitle = true
         default:
-            for i in tiles.indices { move(i, to: landing, alpha: 0, rotation: 0, duration: 0.7, delay: 0) }
+            for i in tiles.indices { move(i, to: landing, alpha: 0, rotation: 0, duration: 0.7, delay: Double(i) * 0.03) }
             animate(0.9, curve: CAMediaTimingFunction(name: .easeOut)) {
                 word.animator().alphaValue = 0
                 skipLabel.animator().alphaValue = 0
@@ -408,32 +486,51 @@ private final class ClickView: NSView {
     override func hitTest(_ point: NSPoint) -> NSView? { frame.contains(point) ? self : nil }
 }
 
-/// One glass tile of the intro: a translucent card with three dots, drawn inside its window with
-/// some margin so it can be rotated.
+/// One tile of the intro: a translucent window with three dots, drawn inside its panel with some
+/// margin so it can be rotated. The main tile is filled with the icon's electric blue.
 private final class TileView: NSView {
     private let card = CALayer()
+    private let sheen = CAGradientLayer()
     private var dots: [CALayer] = []
+    private let lines = CAShapeLayer()
+    private let main: Bool
 
-    override init(frame: NSRect) {
+    init(frame: NSRect, main: Bool) {
+        self.main = main
         super.init(frame: frame)
         wantsLayer = true
-        card.backgroundColor = NSColor(white: 1, alpha: 0.13).cgColor
-        card.borderColor = NSColor(white: 1, alpha: 0.38).cgColor
+        card.backgroundColor = main ? NSColor(srgbRed: 0x0A / 255, green: 0x74 / 255, blue: 1, alpha: 0.92).cgColor
+                                    : NSColor(white: 1, alpha: 0.13).cgColor
+        card.borderColor = NSColor(white: 1, alpha: main ? 0.5 : 0.38).cgColor
         card.borderWidth = 1
         card.cornerRadius = 14
         card.cornerCurve = .continuous
-        card.shadowColor = NSColor.black.cgColor
-        card.shadowOpacity = 0.25
+        card.shadowColor = (main ? NSColor(srgbRed: 0x0A / 255, green: 0x74 / 255, blue: 1, alpha: 1) : .black).cgColor
+        card.shadowOpacity = main ? 0.35 : 0.25
         card.shadowRadius = 24
         card.shadowOffset = CGSize(width: 0, height: -16)
+        // A soft light across the top, like glass catching it.
+        sheen.colors = [NSColor(white: 1, alpha: main ? 0.22 : 0.12).cgColor, NSColor(white: 1, alpha: 0).cgColor]
+        sheen.startPoint = CGPoint(x: 0.5, y: 1)
+        sheen.endPoint = CGPoint(x: 0.5, y: 0.55)
+        sheen.cornerRadius = 14
+        sheen.cornerCurve = .continuous
+        sheen.masksToBounds = true
+        card.addSublayer(sheen)
         for a in [0.55, 0.35, 0.25] {
             let d = CALayer()
-            d.backgroundColor = NSColor(white: 1, alpha: a).cgColor
+            d.backgroundColor = NSColor(white: 1, alpha: main ? a + 0.25 : a).cgColor
             d.cornerRadius = 4.5
             card.addSublayer(d)
             dots.append(d)
         }
         layer?.addSublayer(card)
+        lines.strokeColor = NSColor(srgbRed: 1, green: 0xCC / 255, blue: 0, alpha: 1).cgColor // the icon's spark yellow
+        lines.fillColor = nil
+        lines.lineWidth = 4
+        lines.lineCap = .round
+        lines.opacity = 0
+        layer?.addSublayer(lines)
     }
 
     required init?(coder: NSCoder) { fatalError() }
@@ -445,9 +542,20 @@ private final class TileView: NSView {
         let r = bounds.insetBy(dx: Intro.margin, dy: Intro.margin)
         card.bounds = CGRect(origin: .zero, size: CGSize(width: max(0, r.width), height: max(0, r.height)))
         card.position = CGPoint(x: r.midX, y: r.midY)
+        sheen.frame = card.bounds
         for (i, d) in dots.enumerated() {
             d.frame = CGRect(x: 12 + CGFloat(i) * 15, y: card.bounds.height - 11 - 9, width: 9, height: 9)
         }
+        // The impact lines sit off the top-left corner, pointing away from it.
+        let c = CGPoint(x: r.minX - 4, y: r.maxY + 4), radius: CGFloat = 30
+        let path = CGMutablePath()
+        for (spread, reach) in [(-40.0, 0.78), (0, 1), (40, 0.78)] {
+            let a = (135 + spread) * .pi / 180
+            path.move(to: CGPoint(x: c.x + cos(a) * radius * 0.4, y: c.y + sin(a) * radius * 0.4))
+            path.addLine(to: CGPoint(x: c.x + cos(a) * radius * reach, y: c.y + sin(a) * radius * reach))
+        }
+        lines.frame = bounds
+        lines.path = path
         CATransaction.commit()
     }
 
@@ -459,5 +567,33 @@ private final class TileView: NSView {
         CATransaction.setAnimationTimingFunction(curve)
         card.setAffineTransform(CGAffineTransform(rotationAngle: -degrees * .pi / 180))
         CATransaction.commit()
+    }
+
+    /// A quick squash and stretch, like a window hitting the edge of its slot.
+    func squish() {
+        for (key, values) in [("transform.scale.x", [1, 1.035, 0.99, 1]), ("transform.scale.y", [1, 0.955, 1.01, 1])] {
+            let a = CAKeyframeAnimation(keyPath: key)
+            a.values = values
+            a.keyTimes = [0, 0.3, 0.7, 1]
+            a.duration = 0.42
+            a.timingFunctions = [CAMediaTimingFunction(name: .easeOut), CAMediaTimingFunction(name: .easeInEaseOut),
+                                 CAMediaTimingFunction(name: .easeOut)]
+            card.add(a, forKey: key)
+        }
+    }
+
+    /// The icon's three yellow lines flash out from the corner.
+    func spark() {
+        let draw = CABasicAnimation(keyPath: "strokeEnd")
+        draw.fromValue = 0
+        draw.toValue = 1
+        draw.duration = 0.18
+        draw.timingFunction = CAMediaTimingFunction(name: .easeOut)
+        let fade = CAKeyframeAnimation(keyPath: "opacity")
+        fade.values = [0, 1, 1, 0]
+        fade.keyTimes = [0, 0.1, 0.6, 1]
+        fade.duration = 0.7
+        lines.add(draw, forKey: "draw")
+        lines.add(fade, forKey: "fade")
     }
 }
