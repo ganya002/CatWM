@@ -18,8 +18,9 @@ final class Onboarding {
     private var poll: Timer?
     private var tour: Tour?
     private var openedLoginItems = false
+    private var offering = false
 
-    var isRunning: Bool { intro != nil || welcome != nil || tour != nil }
+    var isRunning: Bool { intro != nil || welcome != nil || tour != nil || offering }
 
     /// Fresh installs see it, and so does anyone who hasn't granted Accessibility yet. Once per Mac.
     static func shouldShow(firstRun: Bool, trusted: Bool) -> Bool {
@@ -132,13 +133,28 @@ final class Onboarding {
             }
             return
         }
-        let t = Tour(statusButton: statusButton) { [weak self] in
+        let t = Tour(statusButton: statusButton) { [weak self] steps in
             self?.tour = nil
-            self?.finish()
+            self?.offerSort(afterSteps: steps) { self?.finish() }
         }
         tour = t
         t.start()
         MenuBarTip.shared.show()
+    }
+
+    /// When the tour hands the user's windows back crowded onto one workspace, offers to sort them.
+    private func offerSort(afterSteps steps: Int, then: @escaping () -> Void) {
+        let wm = WindowManager.shared
+        guard wm.config.sortNudge > 0, let hit = wm.shownWorkspaces().first, hit.count > wm.config.sortNudge else { return then() }
+        offering = true
+        MenuBarTip.shared.suppressed = true
+        SortNudge.shared.markOffered(hit.workspace)
+        SortOffer.shared.show(steps: steps, workspace: hit.workspace, count: hit.count, button: statusButton, on: hit.screen) { [weak self] sort in
+            self?.offering = false
+            MenuBarTip.shared.suppressed = false
+            then()
+            if sort { SortPanel.shared.open() }
+        }
     }
 
     private func finish() {

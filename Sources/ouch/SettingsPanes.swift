@@ -605,6 +605,24 @@ struct WindowsPane: View {
                 OSwitchRow("Use Ouch workspaces", description: "Instant, per-display workspaces instead of macOS Spaces",
                            isOn: $doc.config.virtualWorkspaces)
                     .setting("windows.workspaces", ui)
+                ORow("Sort windows by", description: "How the Sort Windows panel groups them when it opens") {
+                    OMenuPicker(title: "Sort windows by", options: SortStrategy.allCases.map { ($0, $0.title) },
+                                selection: $doc.config.sortStrategy)
+                }
+                .disabled(!doc.config.virtualWorkspaces)
+                .setting("windows.sortStrategy", ui)
+                OSwitchRow("Suggest sorting a crowded workspace", description: "A tip under the menu bar icon, at most once a day",
+                           isOn: Binding(get: { doc.config.sortNudge > 0 }, set: { doc.config.sortNudge = $0 ? 8 : 0 }))
+                    .disabled(!doc.config.virtualWorkspaces)
+                    .setting("windows.sortNudge", ui)
+                ORow("Crowded from", description: "Windows on one workspace") {
+                    OSlider(value: Binding(get: { Double(doc.config.sortNudge) },
+                                           set: { doc.config.sortNudge = Int($0.rounded()) }),
+                            range: Double(min(3, doc.config.sortNudge))...Double(max(20, doc.config.sortNudge)), step: 1, ticks: [8], resetValue: 8, width: 160, label: "Crowded from",
+                            format: { "\(Int($0)) windows" })
+                }
+                .disabled(!doc.config.virtualWorkspaces || doc.config.sortNudge == 0)
+                .setting("windows.sortCrowded", ui)
             }
 
             AdvancedSection(pane: .windows, ui: ui) {

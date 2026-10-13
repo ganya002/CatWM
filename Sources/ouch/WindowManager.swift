@@ -67,6 +67,14 @@ final class WindowManager {
     private var savedWorkspaceOf: [CGWindowID: String] = [:]
     private var savedOwnerOf: [CGWindowID: String] = [:]  // "pid bundleID" when saved; window IDs are reused after a logout
     private var previousWorkspace: [String: String] = [:] // display UUID → workspace it showed before
+    private var labels: [String: String] = [:]           // workspace → the name the Sort panel gave it
+    private var focusOrder: [CGWindowID] = []            // most recently focused first
+    private var sortSnapshot: SortSnapshot?
+    private var closingNow: Set<CGWindowID> = []          // closed by a finished sort, kept hidden until checked
+    /// The Sort panel is open: workspaces change under it, but nothing may take the keyboard or switch workspace.
+    private var sortSession = false
+    private var quietWorkspaceHUD = false
+    private var crowdWork: DispatchWorkItem?
     private var autoSwitchAfter = Date.distantPast
     private var lastSavedWorkspaces = ""
     private var focusSink: NSWindow?
@@ -178,6 +186,8 @@ final class WindowManager {
         if wasVirtual != config.virtualWorkspaces {
             if wasVirtual { restoreHiddenWindows() }
             workspaceOf = [:]; monitorOf = [:]; shown = [:]; virtualShown = [:]; states = [:]; lastFocused = [:]
+            labels = [:]; sortSnapshot = nil; closingNow = []
+            SortPanel.shared.abandon()
             Log.info("workspaces: \(config.virtualWorkspaces ? "Ouch workspaces" : "macOS Spaces")")
         }
         Log.verbose = config.debugLogging || Log.verboseLaunch
@@ -385,6 +395,7 @@ final class WindowManager {
             saveWorkspaces()
         }
 
+        watchCrowding(screens)
         // A new window may be why the old one closed (a dialog, a replacement): let it keep focus.
         if let ws = refocusAfterClose {
             refocusAfterClose = nil
@@ -634,7 +645,7 @@ final class WindowManager {
     }
 
     private func focusUnderMouse() {
-        guard config.focusFollowsMouse, Date() > ignoreMouseUntil, NSEvent.pressedMouseButtons == 0, !movingToSpace else { return }
+        guard config.focusFollowsMouse, !sortSession, Date() > ignoreMouseUntil, NSEvent.pressedMouseButtons == 0, !movingToSpace else { return }
         let p = mouseLocation()
         guard let hit = CGWindowInfo.normalWindow(at: p), let w = windows[hit.id], visible.contains(w.id),
               focusedWindow()?.id != w.id else { return }
@@ -814,6 +825,10 @@ final class WindowManager {
         case "toggletiling": toggleTiling()
         case "submap": Hotkeys.shared.setSubmap(arg)
         case "sethomespace": makeCurrentSpaceHome()
+        case "sort":
+            if config.virtualWorkspaces { SortPanel.shared.toggle() }
+            else { HUD.shared.show("Sorting needs Ouch workspaces", on: currentScreen()?.ns) }
+        case "sort-undo": SortPanel.shared.undoApplied()
         case "retile", "reevaluate": corrections = [:]; refresh()
         case "reload": reload()
         case "exit": NSApp.terminate(nil)
@@ -1051,7 +1066,7 @@ final class WindowManager {
     func workspaceSummary() -> (current: String?, all: [(name: String, windows: Int, shown: Bool)]) {
         guard config.virtualWorkspaces, isStarted else { return (nil, []) }
         var counts: [String: Int] = [:]
-        for (id, ws) in workspaceOf where windows[id] != nil && isVirtual(ws) { counts[ws, default: 0] += 1 }
+        for (id, ws) in workspaceOf where windows[id] != nil && isVirtual(ws) && !isPending(ws) { counts[ws, default: 0] += 1 }
         let names = Set(counts.keys).union(virtualShown.values).sorted(by: workspaceSort)
         let showing = Set(virtualShown.values)
         let current = currentScreen().flatMap { virtualShown[$0.uuid] }
@@ -1097,7 +1112,7 @@ final class WindowManager {
             return String(max(1, (Int(cur) ?? 1) + d))
         }
         if lower.hasPrefix("e+") || lower.hasPrefix("e-"), let d = Int(lower.dropFirst(1).replacingOccurrences(of: "+", with: "")) {
-            let occupied = Set(workspaceOf.values).union(virtualShown.values).filter(isVirtual).sorted(by: workspaceSort)
+            let occupied = Set(workspaceOf.values).union(virtualShown.values).filter { isVirtual($0) && !isPending($0) }.sorted(by: workspaceSort)
             guard !occupied.isEmpty else { return nil }
             let i = occupied.firstIndex(of: cur) ?? 0
             return occupied[((i + d) % occupied.count + occupied.count) % occupied.count]
@@ -1108,6 +1123,11 @@ final class WindowManager {
     /// Keeps workspace bookkeeping consistent with the displays that exist. In macOS-Spaces mode,
     /// mirrors whatever Space each display is showing.
     private func isVirtual(_ ws: String?) -> Bool { ws.map { !$0.hasPrefix("space:") } ?? false }
+
+    /// While the Sort panel is open, windows put in Close wait on a workspace of their own per display, which
+    /// is never shown (so the usual parking hides them), never listed and never saved.
+    private static let pendingPrefix = "sort-close:"
+    private func isPending(_ ws: String?) -> Bool { ws?.hasPrefix(Self.pendingPrefix) == true }
 
     /// Keeps workspace bookkeeping consistent with the displays that exist.
     ///
@@ -1133,7 +1153,7 @@ final class WindowManager {
             }
             if config.virtualWorkspaces && space == homeSpace[s.uuid] {
                 if virtualShown[s.uuid] == nil {
-                    let own = monitorOf.filter { $0.value == s.uuid && isVirtual($0.key) && !virtualShown.values.contains($0.key) }
+                    let own = monitorOf.filter { $0.value == s.uuid && isVirtual($0.key) && !isPending($0.key) && !virtualShown.values.contains($0.key) }
                         .map(\.key).sorted(by: workspaceSort).first
                     virtualShown[s.uuid] = own ?? firstFreeWorkspace()
                 }
@@ -1275,6 +1295,7 @@ final class WindowManager {
             if let id = CGWindowID(k) { savedOwnerOf[id] = v }
         }
         monitorOf = d.dictionary(forKey: "ws.monitors") as? [String: String] ?? [:]
+        labels = d.dictionary(forKey: "ws.labels") as? [String: String] ?? [:]
         virtualShown = d.dictionary(forKey: "ws.shown") as? [String: String] ?? [:]
         for (k, v) in d.dictionary(forKey: "ws.home") as? [String: NSNumber] ?? [:] { homeSpace[k] = v.uint64Value }
         monitorOf = monitorOf.filter { isVirtual($0.key) }
@@ -1284,10 +1305,10 @@ final class WindowManager {
 
     private func saveWorkspaces() {
         guard config.virtualWorkspaces else { return }
-        let windowsMap = Dictionary(workspaceOf.filter { windows[$0.key] != nil && isVirtual($0.value) }.map { (String($0.key), $0.value) },
+        let windowsMap = Dictionary(workspaceOf.filter { windows[$0.key] != nil && isVirtual($0.value) && !isPending($0.value) }.map { (String($0.key), $0.value) },
                                     uniquingKeysWith: { a, _ in a })
-        let monitors = monitorOf.filter { isVirtual($0.key) }
-        let key = "\(windowsMap.sorted { $0.key < $1.key })|\(monitors.sorted { $0.key < $1.key })|\(virtualShown.sorted { $0.key < $1.key })|\(homeSpace.sorted { $0.key < $1.key })"
+        let monitors = monitorOf.filter { isVirtual($0.key) && !isPending($0.key) }
+        let key = "\(windowsMap.sorted { $0.key < $1.key })|\(monitors.sorted { $0.key < $1.key })|\(virtualShown.sorted { $0.key < $1.key })|\(homeSpace.sorted { $0.key < $1.key })|\(labels.sorted { $0.key < $1.key })"
         guard key != lastSavedWorkspaces else { return }
         lastSavedWorkspaces = key
         let d = UserDefaults.standard
@@ -1297,11 +1318,12 @@ final class WindowManager {
         d.set(monitors, forKey: "ws.monitors")
         d.set(virtualShown, forKey: "ws.shown")
         d.set(homeSpace.mapValues { NSNumber(value: $0) }, forKey: "ws.home")
+        d.set(labels, forKey: "ws.labels")
     }
 
     /// Hyprland's `workspace`: shows it on its display (a new one opens on the focused display)
     /// and focuses the window you last used there.
-    func showWorkspace(_ ws: String, focusing preferred: Window? = nil, attempts: Int = 3) {
+    func showWorkspace(_ ws: String, focusing preferred: Window? = nil, focus takesFocus: Bool = true, attempts: Int = 3) {
         let screens = Screen.all()
         guard let here = currentScreen() ?? screens.first else { return }
         let monitor = monitorOf[ws].flatMap { u in screens.first { $0.uuid == u } } ?? here
@@ -1309,6 +1331,8 @@ final class WindowManager {
         monitorOf[ws] = monitor.uuid
         virtualShown[monitor.uuid] = ws
         autoSwitchAfter = Date().addingTimeInterval(0.6)
+        // Away from the home Space, a workspace can't be shown without going there; a quiet show just records it.
+        if !takesFocus, !isOnHomeSpace(monitor) { return }
         // On another macOS Space? Go to the home Space first, then show the workspace there.
         if !isOnHomeSpace(monitor), let home = homeSpace[monitor.uuid], let info = Spaces.list(display: monitor.uuid),
            let index = info.ids.firstIndex(of: home), let desktop = info.desktops.firstIndex(of: index) {
@@ -1320,9 +1344,17 @@ final class WindowManager {
             }
             return
         }
+        let changed = shown[monitor.uuid] != ws
         shown[monitor.uuid] = ws
         Log.debug("workspaces: showing \(ws) on \(monitor.ns.localizedName)")
         refresh()
+        if changed, !quietWorkspaceHUD, config.enablesLayoutHUD, config.enablesLayoutHUDOnSpaceChange, let label = labels[ws] {
+            HUD.shared.show("\(ws) · \(label)", layout: state(workspace: ws).layout, on: monitor.ns)
+        }
+        guard takesFocus else {
+            onChange?()
+            return
+        }
         let candidates = [preferred?.id, lastFocused[ws]].compactMap { $0 } + order + Array(visible)
         if let id = candidates.first(where: { visible.contains($0) && workspaceOf[$0] == ws }), let w = windows[id] {
             focus(w)
@@ -1368,6 +1400,10 @@ final class WindowManager {
             pendingFocus = nil
         }
         if focusStamps[w.id] != focusClock { noteFocus(w.id) }
+        focusOrder.removeAll { $0 == w.id }
+        focusOrder.insert(w.id, at: 0)
+        if focusOrder.count > 80 { focusOrder.removeLast(focusOrder.count - 80) }
+        guard !sortSession else { return }
         guard config.virtualWorkspaces, let ws = workspaceOf[w.id], isVirtual(ws) else { return }
         if isShown(ws) { lastFocused[ws] = w.id; return }
         guard Date() > autoSwitchAfter else { return }
@@ -1415,6 +1451,277 @@ final class WindowManager {
         if !WindowServerFocus.focus(pid: getpid(), window: CGWindowID(sink.windowNumber)) {
             NSApp.activate(ignoringOtherApps: true)
         }
+    }
+
+    // MARK: - Sort
+
+    /// Everything a sort can change, as it was when the panel opened, for Revert and the toast's Undo.
+    private struct SortSnapshot {
+        var workspaceOf: [CGWindowID: String]
+        var order: [CGWindowID]
+        var monitorOf: [String: String]
+        var labels: [String: String]
+        var layouts: [String: (layout: Layout, ratio: CGFloat, mainCount: Int)]
+        var shown: [String: String]
+        var focused: CGWindowID?
+    }
+
+    /// The toast went away: the last sort can no longer be undone.
+    func dropSortSnapshot() { sortSnapshot = nil }
+
+    /// Every display with its tiled windows and workspaces, left to right, for the Sort panel.
+    func sortDisplays() -> [SortDisplay] {
+        guard config.virtualWorkspaces, isStarted else { return [] }
+        let screens = Screen.all()
+        guard let first = screens.first else { return [] }
+        var rank: [CGWindowID: Int] = [:]
+        for (i, id) in ([focusedWindow()?.id].compactMap { $0 } + focusOrder).enumerated() where rank[id] == nil { rank[id] = i }
+        for (i, info) in CGWindowInfo.onScreen().enumerated() where rank[info.id] == nil { rank[info.id] = 1000 + i }
+        func home(_ id: CGWindowID) -> String { workspaceOf[id].flatMap { monitorOf[$0] } ?? first.uuid }
+        let tiledIDs = order.filter { present.contains($0) && windows[$0]?.isFloating == false && isVirtual(workspaceOf[$0]) && !isPending(workspaceOf[$0]) }
+        var shorts = screens.map(Self.shortName)
+        for (i, name) in shorts.enumerated() where shorts.filter({ $0 == name }).count > 1 {
+            shorts[i] = "\(name) \(shorts[..<i].filter { $0.hasPrefix(name) }.count + 1)"
+        }
+        return screens.enumerated().map { n, s in
+            let mine = tiledIDs.filter { home($0) == s.uuid }
+            let items = mine.compactMap { id -> SortItem? in
+                guard let w = windows[id] else { return nil }
+                let app = NSRunningApplication(processIdentifier: w.pid)
+                let title = w.element.string(kAXTitleAttribute) ?? ""
+                return SortItem(id: id, title: title.isEmpty ? "Untitled" : title, app: app?.localizedName ?? w.bundleID ?? "App",
+                                bundleID: w.bundleID, icon: app?.icon, recency: rank[id] ?? 2000)
+            }
+            let active = virtualShown[s.uuid]
+            var names = Set(mine.compactMap { workspaceOf[$0] })
+            if let active { names.insert(active) }
+            let spaces = names.sorted(by: workspaceSort).map { name in
+                SortWorkspace(name: name, label: labels[name] ?? "", layout: states[name]?.layout ?? config.layouts.first ?? .tall,
+                              ratio: states[name]?.ratio ?? 0.5, mainCount: states[name]?.mainCount ?? 1,
+                              ids: mine.filter { workspaceOf[$0] == name })
+            }
+            let taken = Set(monitorOf.filter { $0.value != s.uuid && isVirtual($0.key) && !isPending($0.key) }.keys)
+                .union(virtualShown.filter { $0.key != s.uuid }.values)
+                .union(tiledIDs.filter { home($0) != s.uuid }.compactMap { workspaceOf[$0] })
+            return SortDisplay(id: s.uuid, name: s.ns.localizedName, short: shorts[n], isLaptop: s.isBuiltin,
+                               aspect: s.frame.width / max(s.frame.height, 1), screen: s.ns, items: items, workspaces: spaces,
+                               active: active, taken: taken)
+        }
+    }
+
+    private static func shortName(_ s: Screen) -> String {
+        if s.isBuiltin { return "Built-in" }
+        let words = s.ns.localizedName.split(separator: " ").filter { $0.lowercased() != "display" }
+        return words.isEmpty ? s.ns.localizedName : words.joined(separator: " ")
+    }
+
+    /// The panel opened: remember how everything is now (for Revert and Undo), and from here on keep
+    /// focus and workspace switching out of the way until `finishSort`, `revertSort` or `endSort`.
+    func beginSort() {
+        var layouts: [String: (layout: Layout, ratio: CGFloat, mainCount: Int)] = [:]
+        for (name, st) in states { layouts[name] = (st.layout, st.ratio, st.mainCount) }
+        sortSnapshot = SortSnapshot(workspaceOf: workspaceOf, order: order, monitorOf: monitorOf, labels: labels, layouts: layouts,
+                                    shown: virtualShown, focused: focusedWindow()?.id)
+        sortSession = true
+    }
+
+    /// Windows that still exist, so the panel can drop rows for ones that closed.
+    func liveWindowIDs() -> Set<CGWindowID> { Set(windows.keys) }
+
+    /// Applies edited plans to the real windows right away: workspaces, order, layouts and names. Nothing
+    /// takes focus, no workspace is switched (unless the one a display shows went away, then its first
+    /// one with windows is shown) and windows in Close are hidden.
+    func liveSort(_ plans: [SortApply]) {
+        guard config.virtualWorkspaces, isStarted, sortSession else { return }
+        let planned = plans.flatMap { $0.lanes.flatMap(\.ids) }.filter { windows[$0] != nil }
+        let moving = Set(planned)
+        let kept = Set(plans.flatMap { $0.lanes.map(\.name) })
+        // Workspaces a plan let go of. One another display has taken over since is not ours to clear.
+        var gone: [String: Set<String>] = [:]
+        for p in plans {
+            gone[p.display] = Set(p.dropped.filter { !kept.contains($0) && (monitorOf[$0] == nil || monitorOf[$0] == p.display) })
+        }
+        // The workspace each display shows afterwards, and what to do with windows outside the plan (floating,
+        // hidden apps, opened while the panel was up) that sat on a workspace that goes away.
+        var landing: [String: String] = [:]
+        for p in plans {
+            let names = Set(p.lanes.map(\.name))
+            let land = virtualShown[p.display].flatMap { names.contains($0) ? $0 : nil }
+                ?? (p.lanes.first { lane in lane.ids.contains { windows[$0] != nil } } ?? p.lanes.first)?.name
+            guard let land else { continue }
+            landing[p.display] = land
+            let dropped = gone[p.display] ?? []
+            for (id, ws) in workspaceOf where dropped.contains(ws) && !moving.contains(id) { workspaceOf[id] = land }
+        }
+        for p in plans {
+            for lane in p.lanes {
+                monitorOf[lane.name] = p.display
+                labels[lane.name] = lane.label.isEmpty ? nil : lane.label
+                let st = state(workspace: lane.name)
+                st.layout = lane.layout
+                st.zoomed = nil
+                for id in lane.ids where windows[id] != nil { workspaceOf[id] = lane.name }
+            }
+            for name in gone[p.display] ?? [] { labels[name] = nil }
+            // Windows in Close disappear from the screen right away; the usual parking hides them.
+            let hidden = Self.pendingPrefix + p.display
+            monitorOf[hidden] = p.display
+            for id in p.close where windows[id] != nil { workspaceOf[id] = hidden }
+        }
+        order = order.filter { !moving.contains($0) } + planned
+        lastFocused = lastFocused.filter { !moving.contains($0.value) }
+        corrections = [:]
+        quietWorkspaceHUD = true
+        defer { quietWorkspaceHUD = false }
+        for (display, ws) in landing where virtualShown[display] != ws { showWorkspace(ws, focus: false) }
+        refresh()
+    }
+
+    /// The panel is done and the changes stay. Windows in `ids` are closed while still hidden; one that
+    /// stays open (a save sheet) is then brought onto its display's shown workspace and tried again. `goTo`
+    /// shows that workspace and focuses its main window; `focus` goes back to the window that had focus
+    /// when the panel opened.
+    func finishSort(closing ids: [CGWindowID], goTo: String?, focus: Bool) {
+        sortSession = false
+        guard config.virtualWorkspaces, isStarted else { return releasePending() }
+        let closing = ids.filter { windows[$0] != nil }
+        Log.info("sort: finishing, \(ids.count) window(s) marked to close (\(closing.count) still known), goTo=\(goTo ?? "-") focus=\(focus)")
+        corrections = [:]
+        quietWorkspaceHUD = true
+        defer { quietWorkspaceHUD = false }
+        if let ws = goTo {
+            let main = order.first { workspaceOf[$0] == ws && present.contains($0) && !closing.contains($0) && windows[$0]?.isFloating == false }
+            showWorkspace(ws, focusing: main.flatMap { windows[$0] })
+        } else if focus {
+            let candidates = [sortSnapshot?.focused].compactMap { $0 } + order
+            if let id = candidates.first(where: { visible.contains($0) && !closing.contains($0) }), let w = windows[id] { self.focus(w) }
+        }
+        // Marked windows stay hidden and are closed there. Only one that is still open afterwards (an app
+        // asking to save) is brought onto the shown workspace, so its sheet can be answered.
+        closingNow.formUnion(closing)
+        releasePending()
+        if !closing.isEmpty { closeMarked(closing, attempt: 0) }
+    }
+
+    /// Presses the close buttons of windows marked in the Sort panel, then checks they went and tries
+    /// again (with the app's Close Window menu item for a window that has focus) if some did not.
+    private func closeMarked(_ ids: [CGWindowID], attempt: Int) {
+        var pressed: [CGWindowID] = []
+        for id in ids {
+            guard let w = windows[id], w.isValid else { continue }
+            let name = NSRunningApplication(processIdentifier: w.pid)?.bundleIdentifier ?? "pid \(w.pid)"
+            lastClose = Date()
+            var outcome = w.close()
+            if outcome != "pressed", attempt > 0, focusedWindow()?.id == id { outcome += w.closeFromMenu() ? ", menu Close Window chosen" : ", no menu item" }
+            Log.info("sort: close \(id) \(name) frame=\(w.frame) try \(attempt + 1): \(outcome)")
+            pressed.append(id)
+        }
+        guard !pressed.isEmpty, attempt < 2 else { return stopClosing(ids) }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
+            guard let self else { return }
+            let left = pressed.filter { self.windows[$0]?.isValid == true }
+            Log.info("sort: \(pressed.count - left.count) of \(pressed.count) closed after try \(attempt + 1)")
+            // Still open: most likely waiting on a save sheet. Show it, then try again once it has settled.
+            stopClosing(ids)
+            guard !left.isEmpty else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in self?.closeMarked(left, attempt: attempt + 1) }
+        }
+    }
+
+    /// Windows `closeMarked` no longer keeps hidden: whichever are still open come back on screen.
+    private func stopClosing(_ ids: [CGWindowID]) {
+        closingNow.subtract(ids)
+        releasePending(Set(ids))
+    }
+
+    /// The panel was dismissed without keeping anything: put everything back, focus and shown workspaces untouched.
+    func revertSort() {
+        sortSession = false
+        if let u = sortSnapshot { restoreSort(u) }
+        sortSnapshot = nil
+        releasePending()
+    }
+
+    /// Nothing may stay hidden on a workspace that is never shown: windows waiting there (only `ids`, else
+    /// all but those being closed right now) go to the workspace their display shows.
+    private func releasePending(_ ids: Set<CGWindowID>? = nil) {
+        let waiting = workspaceOf.filter { isPending($0.value) && (ids?.contains($0.key) ?? !closingNow.contains($0.key)) }
+        let screens = Screen.all()
+        for (id, key) in waiting {
+            let display = String(key.dropFirst(Self.pendingPrefix.count))
+            workspaceOf[id] = virtualShown[display] ?? screens.first.flatMap { virtualShown[$0.uuid] } ?? screens.first.flatMap { shown[$0.uuid] }
+        }
+        let used = Set(workspaceOf.values.filter(isPending))
+        for key in monitorOf.keys where isPending(key) && !used.contains(key) { monitorOf[key] = nil }
+        guard !waiting.isEmpty else { return }
+        corrections = [:]
+        refresh()
+    }
+
+    /// The panel went away without a say in the matter (the workspace mode changed under it).
+    func endSort() {
+        sortSession = false
+        releasePending()
+    }
+
+    /// Puts everything back as it was when the panel opened (the toast's Undo). Closed windows stay closed.
+    @discardableResult
+    func undoSort() -> Bool {
+        guard config.virtualWorkspaces, !sortSession, let u = sortSnapshot else { return false }
+        sortSnapshot = nil
+        restoreSort(u)
+        return true
+    }
+
+    /// Windows being closed keep their place (hidden) so they never flash back on screen.
+    private func restoreSort(_ u: SortSnapshot) {
+        for (id, ws) in u.workspaceOf where windows[id] != nil && !closingNow.contains(id) { workspaceOf[id] = ws }
+        let known = Set(u.order)
+        order = u.order.filter { windows[$0] != nil } + order.filter { !known.contains($0) }
+        monitorOf = u.monitorOf
+        labels = u.labels
+        for name in Array(states.keys) where u.layouts[name] == nil { states[name] = nil }
+        for (name, l) in u.layouts {
+            let st = state(workspace: name)
+            st.layout = l.layout; st.ratio = l.ratio; st.mainCount = l.mainCount; st.zoomed = nil
+        }
+        corrections = [:]
+        quietWorkspaceHUD = true
+        defer { quietWorkspaceHUD = false }
+        for (display, ws) in u.shown where virtualShown[display] != ws { showWorkspace(ws, focus: false) }
+        refresh()
+    }
+
+    private func tiledCount(in ws: String) -> Int {
+        order.reduce(0) { n, id in n + (present.contains(id) && workspaceOf[id] == ws && windows[id]?.isFloating == false ? 1 : 0) }
+    }
+
+    /// The workspace a display shows and how many tiled windows it holds; the focused display first.
+    func shownWorkspaces() -> [(workspace: String, count: Int, screen: NSScreen)] {
+        guard config.virtualWorkspaces, isStarted else { return [] }
+        let screens = Screen.all()
+        let focus = currentScreen()?.uuid
+        return (screens.filter { $0.uuid == focus } + screens.filter { $0.uuid != focus }).compactMap { s in
+            guard let ws = shown[s.uuid], isVirtual(ws) else { return nil }
+            return (ws, tiledCount(in: ws), s.ns)
+        }
+    }
+
+    /// Watches for a shown workspace growing past `sort-nudge`, and offers to sort once it has stayed that way.
+    private func watchCrowding(_ screens: [Screen]) {
+        guard config.virtualWorkspaces, tilingEnabled, config.sortNudge > 0,
+              screens.contains(where: { s in shown[s.uuid].map { isVirtual($0) && tiledCount(in: $0) > config.sortNudge } ?? false })
+        else { crowdWork?.cancel(); crowdWork = nil; return }
+        guard crowdWork == nil else { return }
+        let work = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            crowdWork = nil
+            if let hit = shownWorkspaces().first(where: { $0.count > self.config.sortNudge }) {
+                SortNudge.shared.offer(workspace: hit.workspace, count: hit.count, on: hit.screen)
+            }
+        }
+        crowdWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5, execute: work)
     }
 
     // MARK: - Spaces

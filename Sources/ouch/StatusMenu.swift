@@ -29,6 +29,8 @@ struct MenuItem: Identifiable {
     var keepOpen = false
     /// Turns its symbol on use: Retile, Reload, Settings.
     var rotates = false
+    /// A count shown in a pill before the shortcut.
+    var badge: Int? = nil
     var action: (() -> Void)? = nil
 
     var selectable: Bool {
@@ -190,6 +192,12 @@ final class MenuModel: ObservableObject {
             MenuItem(id: "close-window", label: "Close Window", symbol: "xmark.square", shortcut: keys.keys("killactive"),
                      enabled: focused != nil, action: { wm.dispatch("killactive", "") }),
         ]))
+
+        // Sort.
+        let crowd = wm.config.sortNudge > 0 ? wm.shownWorkspaces().first.map(\.count) : nil
+        out.append(MenuItem(id: "sort", label: "Sort Windows…", symbol: "square.grid.3x1.below.line.grid.1x2", shortcut: keys.keys("sort"),
+                            enabled: trusted && wm.config.virtualWorkspaces, keywords: "organize group arrange tidy workspaces crowded",
+                            badge: crowd.flatMap { $0 > wm.config.sortNudge ? $0 : nil }, action: { wm.dispatch("sort", "") }))
 
         // Configs.
         func radios(_ kind: ConfigKind) -> [MenuItem] {
@@ -716,6 +724,12 @@ private struct MenuRowView: View {
                     }
                     .layoutPriority(1)
                     Spacer(minLength: 6)
+                }
+                if let n = item.badge {
+                    Text("\(n)").font(Theme.body(12, .medium)).monospacedDigit()
+                        .foregroundStyle(hi ? Theme.onAccent : Theme.accentInk)
+                        .padding(.horizontal, 7).frame(height: 18)
+                        .background(Capsule().fill(hi ? .clear : Theme.accentSoft))
                 }
                 if item.kind == .sub && crumb == nil {
                     Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold)).foregroundStyle(muted)

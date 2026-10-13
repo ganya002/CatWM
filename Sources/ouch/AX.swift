@@ -172,7 +172,31 @@ final class Window {
         element.perform(kAXRaiseAction)
     }
 
-    func close() { element.element(kAXCloseButtonAttribute)?.perform(kAXPressAction) }
+    /// Presses the window's close button (looked for among its children when the app doesn't publish it as
+    /// an attribute). Says what happened, for the log.
+    @discardableResult
+    func close() -> String {
+        let button = element.element(kAXCloseButtonAttribute)
+            ?? element.elements(kAXChildrenAttribute).first { $0.string(kAXSubroleAttribute) == kAXCloseButtonSubrole }
+        guard let button else { return "no close button" }
+        let result = AXUIElementPerformAction(button, kAXPressAction as CFString)
+        return result == .success ? "pressed" : "press failed (AX error \(result.rawValue))"
+    }
+
+    /// Chooses Close Window from the app's menu bar. Only for the app's focused window: the menu acts on that one.
+    func closeFromMenu() -> Bool {
+        let bar = AXUIElementCreateApplication(pid).element(kAXMenuBarAttribute)
+        for top in bar?.elements(kAXChildrenAttribute) ?? [] {
+            for menu in top.elements(kAXChildrenAttribute) {
+                for item in menu.elements(kAXChildrenAttribute) where ["Close Window", "Close"].contains(item.string(kAXTitleAttribute) ?? "") {
+                    guard item.bool(kAXEnabledAttribute) != false else { continue }
+                    item.perform(kAXPressAction)
+                    return true
+                }
+            }
+        }
+        return false
+    }
 }
 
 /// Apps with AXEnhancedUserInterface on (set by VoiceOver, Magnet, Grammarly, ...) animate or
