@@ -102,6 +102,8 @@ struct KeyHint: Identifiable, Equatable {
         case "togglefloating": return "Float"
         case "retile", "reevaluate": return "Retile"
         case "toggletiling": return "Tiling"
+        case "toggledim": return "Dim"
+        case "toggleblur": return "Blur"
         case "reload": return "Reload"
         case "killactive": return "Close"
         case "exec": return "Run"

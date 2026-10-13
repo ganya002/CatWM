@@ -39,6 +39,10 @@ Booleans accept `true yes on 1`; anything else is false.
 | `keyboard-help` | bool | |
 | `keyboard-finish` | `auto`, `macbook-pro`, `macbook-air`, `macbook-neo`, `magic-keyboard`, or a finish such as `macbook-pro-space-black` | look of the Shortcut Map keyboard |
 | `mode-effect` | `draw` `ripple` `corners` `none` | visual while window mode is on |
+| `dim-other-windows` | bool | darken every window but the focused one (`dim_inactive` works too) |
+| `dim-strength` | 0–1 | how dark; default 0.3 |
+| `blur-other-windows` | bool | blur every window but the focused one; combines with dimming |
+| `blur-radius` | points | default 20 |
 | `bind` (also `binde`, `bindr`, `bindl`, `bindel`, `bindle`) | see [keybinds.md](keybinds.md) | the `binde`/`bindel`/`bindle` forms repeat while held |
 | `submap = name` / `submap = reset` | | groups binds into a mode |
 

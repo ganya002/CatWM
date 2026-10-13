@@ -111,6 +111,8 @@ enum Actions {
         add("Leave Mode", .app, "submap", "reset", "escape")
         add("Toggle Tiling", .app, "toggletiling", "", "power")
         add("Retile Windows", .app, "retile", "", "arrow.clockwise")
+        add("Toggle Dim Other Windows", .app, "toggledim", "", "circle.lefthalf.filled")
+        add("Toggle Blur Other Windows", .app, "toggleblur", "", "drop.halffull")
         add("Reload Config", .app, "reload", "", "arrow.triangle.2.circlepath")
         add("Quit Ouch", .app, "exit", "", "xmark.circle")
         return a
@@ -193,7 +195,7 @@ enum Actions {
     static let dispatchers = ["movefocus", "movewindow", "swapwindow", "cyclenext", "swapnext", "layoutmsg", "splitratio",
                               "togglefloating", "fullscreen", "killactive", "exec", "focusmonitor", "movewindowtomonitor",
                               "workspace", "movetoworkspace", "movetoworkspacesilent", "cyclelayout", "layout", "setlayout",
-                              "toggletiling", "retile", "reevaluate", "reload", "exit", "submap", "sethomespace", "sort", "sort-undo"]
+                              "toggletiling", "toggledim", "toggleblur", "retile", "reevaluate", "reload", "exit", "submap", "sethomespace", "sort", "sort-undo"]
 }
 
 // MARK: - Document
@@ -446,6 +448,11 @@ final class ConfigDocument: ObservableObject {
             "window-resize-step = \(n((c.windowResizeStep * 100).rounded()))",
             "enables-layout-hud = \(b(c.enablesLayoutHUD))",
             "enables-layout-hud-on-space-change = \(b(c.enablesLayoutHUDOnSpaceChange))",
+            "# Make the focused window stand out: darken the others (strength 0-1) and/or blur them (points)",
+            "dim-other-windows = \(b(c.dimOtherWindows))",
+            "dim-strength = \(String(format: "%g", (c.dimStrength * 100).rounded() / 100))",
+            "blur-other-windows = \(b(c.blurOtherWindows))",
+            "blur-radius = \(n(c.blurRadius))",
             "sort-strategy = \(c.sortStrategy.rawValue)",
             "sort-nudge = \(c.sortNudge)",
             "",

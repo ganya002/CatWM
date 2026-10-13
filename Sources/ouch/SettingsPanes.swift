@@ -566,6 +566,26 @@ struct WindowsPane: View {
                     .setting("windows.ffm", ui)
                 OSwitchRow("Mouse follows focus", description: "The pointer jumps to the window you focus", isOn: $doc.config.mouseFollowsFocus)
                     .setting("windows.mff", ui)
+                OSwitchRow("Dim other windows", description: "Darkens everything but the focused window", isOn: $doc.config.dimOtherWindows)
+                    .setting("windows.dimOthers", ui)
+                ORow("Dim strength", description: "How dark the other windows get") {
+                    OSlider(value: Binding(get: { Double(doc.config.dimStrength * 100) },
+                                           set: { doc.config.dimStrength = CGFloat($0.rounded()) / 100 }),
+                            range: 0...100, step: 1, ticks: [30], resetValue: 30, width: 160, label: "Dim strength",
+                            format: { "\(Int($0))%" })
+                }
+                .disabled(!doc.config.dimOtherWindows)
+                .setting("windows.dimStrength", ui)
+                OSwitchRow("Blur other windows", description: "Softens everything but the focused window", isOn: $doc.config.blurOtherWindows)
+                    .setting("windows.blurOthers", ui)
+                ORow("Blur radius", description: "How soft the other windows look") {
+                    OSlider(value: Binding(get: { Double(doc.config.blurRadius) },
+                                           set: { doc.config.blurRadius = CGFloat($0.rounded()) }),
+                            range: 2...60, step: 1, ticks: [20], resetValue: 20, width: 160, label: "Blur radius",
+                            format: { "\(Int($0)) pt" })
+                }
+                .disabled(!doc.config.blurOtherWindows)
+                .setting("windows.blurRadius", ui)
             }
 
             OGroup("Mouse") {

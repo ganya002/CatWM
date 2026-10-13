@@ -162,6 +162,8 @@ final class WindowManager {
 
         Hotkeys.shared.setBindings(config.bindings)
         ModeFX.shared.style = config.modeEffect
+        FocusDim.shared.configure(dim: config.dimOtherWindows, strength: config.dimStrength,
+                                  blur: config.blurOtherWindows, radius: Int(config.blurRadius))
         MacKeyboard.shared.setting = config.keyboardFinish
         Hotkeys.shared.handler = { [weak self] b in self?.dispatch(b.dispatcher, b.arg) }
         KeyHelp.shared.install()
@@ -195,6 +197,8 @@ final class WindowManager {
         }
         Log.verbose = config.debugLogging || Log.verboseLaunch
         ModeFX.shared.style = config.modeEffect
+        FocusDim.shared.configure(dim: config.dimOtherWindows, strength: config.dimStrength,
+                                  blur: config.blurOtherWindows, radius: Int(config.blurRadius))
         MacKeyboard.shared.setting = config.keyboardFinish
         config.errors.forEach { Log.info("config: \($0)") }
         Hotkeys.shared.setBindings(config.bindings)
@@ -250,6 +254,7 @@ final class WindowManager {
         case kAXUIElementDestroyedNotification:
             lastClose = Date()
             scheduleRefresh()
+            FocusDim.shared.update()
         case kAXWindowMovedNotification, kAXWindowResizedNotification:
             guard let id = element.windowID, let w = windows[id], !animator.isBusy(id), !movingToSpace else { return }
             if NSEvent.pressedMouseButtons & 1 != 0 {
@@ -262,6 +267,7 @@ final class WindowManager {
             // now restored): pick it up instead of waiting for some other event.
             if let id = element.windowID, windows[id] == nil { scheduleRefresh(after: 0.1) }
             followFocus()
+            FocusDim.shared.update()
             onChange?()
         case kAXWindowCreatedNotification:
             // The window often isn't in the on-screen list yet when this fires, so look again shortly.
@@ -884,6 +890,8 @@ final class WindowManager {
         case "cyclelayout": cycleLayout(arg.lowercased().hasPrefix("prev") ? -1 : 1)
         case "layout", "setlayout": if let l = Layout(rawValue: arg.lowercased()) { setLayout(l) }
         case "toggletiling": toggleTiling()
+        case "toggledim": FocusDim.shared.toggleDim()
+        case "toggleblur": FocusDim.shared.toggleBlur()
         case "submap": Hotkeys.shared.setSubmap(arg)
         case "sethomespace": makeCurrentSpaceHome()
         case "sort":

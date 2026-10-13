@@ -270,6 +270,10 @@ enum SettingsIndex {
 
         SettingEntry(id: "windows.ffm", title: "Focus follows mouse", pane: .windows, keywords: "hover pointer"),
         SettingEntry(id: "windows.mff", title: "Mouse follows focus", pane: .windows, keywords: "pointer cursor warp"),
+        SettingEntry(id: "windows.dimOthers", title: "Dim other windows", pane: .windows, keywords: "focus darken inactive spotlight hazeover"),
+        SettingEntry(id: "windows.dimStrength", title: "Dim strength", pane: .windows, keywords: "darken amount opacity"),
+        SettingEntry(id: "windows.blurOthers", title: "Blur other windows", pane: .windows, keywords: "focus soft inactive spotlight"),
+        SettingEntry(id: "windows.blurRadius", title: "Blur radius", pane: .windows, keywords: "soft amount points"),
         SettingEntry(id: "windows.dragSwap", title: "Drag to swap", pane: .windows, keywords: "mouse move"),
         SettingEntry(id: "windows.resizeMain", title: "Resize to adjust the main pane", pane: .windows, keywords: "mouse ratio"),
         SettingEntry(id: "windows.floatingMode", title: "Floating apps", pane: .windows, keywords: "float exclude blacklist whitelist tile only"),

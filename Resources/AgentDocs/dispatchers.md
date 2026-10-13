@@ -21,6 +21,8 @@ Used as `bind = MODS, key, <dispatcher>, <args>` or `ouch dispatch <dispatcher> 
 | `cyclelayout` | `next` / `prev` | step through the `layouts` list |
 | `layout` / `setlayout` | a layout name, e.g. `bsp` | set the layout of the focused display |
 | `toggletiling` | | pause/resume tiling |
+| `toggledim` | | dim other windows on/off until the setting changes |
+| `toggleblur` | | blur other windows on/off until the setting changes |
 | `retile` / `reevaluate` | | recompute and reapply frames |
 | `reload` | | re-read the config |
 | `submap` | mode name, or `reset` | enter or leave a keybind mode |
