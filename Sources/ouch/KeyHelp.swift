@@ -3,7 +3,8 @@ import SwiftUI
 
 /// On-screen keyboard help: the whole keyboard with every action written on its key, shown only on
 /// request. In a mode it appears when you keep holding the chord's modifier (⌘ for ⌘⇪) for half a
-/// second after entering, and goes when you let go; `?` in the mode toggles it; the menu bar's
+/// second after entering, and goes when you let go (the mode's keys work under it as if the modifier
+/// were up); `?` in the mode toggles it; the menu bar's
 /// Keyboard Help shows it until the next click or key. A click-through, non-activating panel centred
 /// on the screen with the focused window. `keyboard-help = false` in the config turns it off.
 final class KeyHelp {
@@ -119,11 +120,13 @@ final class KeyHelp {
         if !wasShown { DispatchQueue.main.async { [weak self] in self?.model.shown = true } }
 
         setDismissMonitor(reason == .menu)
+        Hotkeys.shared.heldChord = reason == .hold ? CGEventFlags(rawValue: UInt64(chordMods.rawValue)) : []
     }
 
     func hide() {
         holdWork?.cancel()
         setDismissMonitor(false)
+        Hotkeys.shared.heldChord = []
         guard model.shown else { return }
         model.shown = false
         let work = DispatchWorkItem { [weak self] in self?.panel?.orderOut(nil) }

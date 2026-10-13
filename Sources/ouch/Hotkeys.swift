@@ -23,6 +23,10 @@ final class Hotkeys {
     /// For the keyboard help: every modifier change and `?` pressed in a mode. Fired binds post `didFire`.
     var onFlagsChanged: ((CGEventFlags) -> Void)?
     var onHelpKey: (() -> Void)?
+    /// The mode chord's modifiers (⌘ for ⌘⇪) while the keyboard help is up because they're held. Keys
+    /// pressed then are matched as if those modifiers were up, so the mode's keys work under the help
+    /// instead of reaching the app as ⌘ shortcuts.
+    var heldChord: CGEventFlags = []
     private var tap: CFMachPort?
     private var swipeMonitor: Any?
     private var scrollAccum: [Int: Double] = [:] // axis → distance since the last fire
@@ -270,14 +274,16 @@ final class Hotkeys {
         let k = Self.key(code, event.flags)
         if !submap.isEmpty {
             if let b = lookup(code, event.flags) { return repeatOK(b, event) ? .bind(b) : .swallow }
-            if let help = onHelpKey, event.flags.isDisjoint(with: [.maskCommand, .maskControl]),
+            let flags = !heldChord.isEmpty && event.flags.contains(heldChord) ? event.flags.subtracting(heldChord) : event.flags
+            if flags != event.flags, let b = lookup(code, flags) { return repeatOK(b, event) ? .bind(b) : .swallow }
+            if let help = onHelpKey, flags.isDisjoint(with: [.maskCommand, .maskControl]),
                event.getIntegerValueField(.keyboardEventAutorepeat) == 0, Self.typed(event) == "?" {
                 DispatchQueue.main.async(execute: help)
                 return .swallow
             }
             // Like vim's normal mode: stray keys do nothing instead of typing into the app,
             // but ⌘/⌃ shortcuts (copy, paste…) still reach it.
-            return event.flags.isDisjoint(with: [.maskCommand, .maskControl]) ? .swallow : .pass
+            return flags.isDisjoint(with: [.maskCommand, .maskControl]) ? .swallow : .pass
         }
         return tables[""]?[k].map { repeatOK($0, event) ? .bind($0) : .swallow } ?? .pass
     }
