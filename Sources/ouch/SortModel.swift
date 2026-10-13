@@ -58,6 +58,10 @@ final class SortModel: ObservableObject {
     @Published var moreToRight = false
     /// Size of the panel's content, for the controller.
     @Published var contentSize = CGSize.zero
+    /// The panel is up; flips a turn after it orders front so the entrance plays.
+    @Published var shown = false
+    /// How the panel comes and goes, fixed while it's up.
+    var motion = PanelMotion.current
 
     var layouts: [Layout] = [.tall]
     var strategy: SortStrategy = .task

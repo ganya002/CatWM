@@ -182,6 +182,7 @@ struct KeyHintKeyboard: View {
     private var tap: ((Key) -> Void)?
     private var hover: ((Key, Bool) -> Void)?
     @ObservedObject private var mac = MacKeyboard.shared
+    @Environment(\.keyTile) private var tile
 
     init(binds: [KeyHint], style: Style = .labels, pressed: UInt16? = nil, hot: Set<UInt16> = [], scale: CGFloat = 1) {
         self.binds = binds
@@ -207,6 +208,8 @@ struct KeyHintKeyboard: View {
                            hint: k.code.flatMap { bound[$0] }, pressed: k.code != nil && k.code == pressed,
                            hot: k.code.map(hot.contains) ?? false, tap: tap, hover: hover)
                     .frame(width: r.width, height: r.height)
+                    .tileItem(tile ?? true, style: tile == nil ? .rise : .tile,
+                              spread: CGSize(width: (size.width / 2 - r.midX) * 0.35, height: (size.height / 2 - r.midY) * 0.35))
                     .offset(x: r.minX, y: r.minY)
             }
         }

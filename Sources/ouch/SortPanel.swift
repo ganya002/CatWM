@@ -57,12 +57,15 @@ final class SortPanel: NSObject, NSWindowDelegate {
         model.revert = { [weak self] in self?.revert() }
         model.changed = { [weak self] in self?.scheduleLive() }
         active = true
+        model.motion = PanelMotion.current
+        model.shown = false
         model.begin(displays: displays, start: start.id, config: wm.config)
 
         let v = screen.visibleFrame
         width = min(1100, v.width - 32)
         let host = FirstClickHostingView(rootView: SortView(model: model, width: width))
         let p = panel ?? makePanel()
+        p.ignoresMouseEvents = false
         p.delegate = self
         panel = p
         self.host = host
@@ -83,10 +86,11 @@ final class SortPanel: NSObject, NSWindowDelegate {
             model.prune(alive: wm.liveWindowIDs())
         }
 
-        p.alphaValue = 0
+        p.alphaValue = 1
         p.makeKeyAndOrderFront(nil)
         p.makeFirstResponder(nil)
-        animate(0.28) { p.animator().alphaValue = 1 }
+        // A turn later, so the view sees `shown` change and plays its entrance.
+        DispatchQueue.main.async { [weak self] in self?.model.shown = true }
     }
 
     private func makePanel() -> SortWindow {
@@ -206,13 +210,16 @@ final class SortPanel: NSObject, NSWindowDelegate {
         panel.delegate = nil
         generation += 1
         let gen = generation
-        animate(0.12, changes: { panel.animator().alphaValue = 0 }) { [weak self] in
+        let done = { [weak self] in
             guard let self, gen == generation else { return }
             panel.orderOut(nil)
             panel.contentView = nil
             panel.alphaValue = 1
             host = nil
         }
+        model.shown = false
+        panel.ignoresMouseEvents = true // it's on its way out
+        DispatchQueue.main.asyncAfter(deadline: .now() + model.motion.outDuration + 0.02, execute: done)
     }
 
     func windowDidResignKey(_ notification: Notification) {

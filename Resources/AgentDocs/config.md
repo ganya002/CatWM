@@ -38,7 +38,8 @@ Booleans accept `true yes on 1`; anything else is false.
 | `debug-logging` | bool | verbose log; prefer `--verbose` |
 | `keyboard-help` | bool | |
 | `keyboard-finish` | `auto`, `macbook-pro`, `macbook-air`, `macbook-neo`, `magic-keyboard`, or a finish such as `macbook-pro-space-black` | look of the Shortcut Map keyboard |
-| `mode-effect` | `draw` `ripple` `corners` `none` | visual while window mode is on |
+| `mode-effect` | `draw` `ripple` `corners` `none` | visual while window mode is on; `ouch modefx <style>` previews |
+| `panel-animation` | `rise` `pop` `focus` `tile` `draw` | how Sort Windows and keyboard help come and go; `tile` follows the animation curve; `ouch panelfx <style>` previews |
 | `bind` (also `binde`, `bindr`, `bindl`, `bindel`, `bindle`) | see [keybinds.md](keybinds.md) | the `binde`/`bindel`/`bindle` forms repeat while held |
 | `submap = name` / `submap = reset` | | groups binds into a mode |
 
