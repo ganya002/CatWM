@@ -291,7 +291,7 @@ struct KeyHelpView: View {
         case .toggle:
             HStack(spacing: 5) {
                 Text("press").oneLine()
-                Kbd(keys: ["?"])
+                Kbd(keys: [WindowManager.shared.config.keyboardHelpKey])
                 Text("to hide").oneLine()
             }
         case .menu:

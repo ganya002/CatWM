@@ -95,11 +95,12 @@ enum Steps {
     static func help(_ c: Coach) -> PlannedStep? {
         guard c.wm.config.keyboardHelp, !c.book.mode.isEmpty else { return nil }
         let chord = c.book.enterCaps(long: false).first ?? "⌘"
+        let key = c.wm.config.keyboardHelpKey
         return PlannedStep(chapter: "Keyboard help") { _ in
             var opened = false
             return Step(kicker: "", title: "See every key",
-                        text: "? opens a map of every key in the mode; ? again closes it. Holding \(chord) after you enter works too.",
-                        caps: ["?", "?"], tokens: ["open", "close"], needsMode: true, accept: { e in
+                        text: "\(key) opens a map of every key in the mode; \(key) again closes it. Holding \(chord) after you enter works too.",
+                        caps: [key, key], tokens: ["open", "close"], needsMode: true, accept: { e in
                             guard case .tick = e else { return nil }
                             if KeyHelp.shared.isVisible { opened = true; return "open" }
                             return opened ? "close" : nil
@@ -507,7 +508,7 @@ enum Steps {
         if let (g, s) = b.resize { rows.append((cap(s) + cap(g), "Shrink / grow")) }
         if let n = b.find(["cyclelayout"], "next") { rows.append((cap(n), "Next layout")) }
         if let w = b.find(["workspace"], "1") { rows.append((KeyWords.modLabels(w.mods, long: false) + ["1–0"], "Switch workspace")) }
-        if b.enter != nil, c.wm.config.keyboardHelp { rows.append((["?"], "Keyboard help")) }
+        if b.enter != nil, c.wm.config.keyboardHelp { rows.append(([c.wm.config.keyboardHelpKey], "Keyboard help")) }
         if let f = b.find(["fullscreen"]) { more.append((cap(f), "Zoom")) }
         if let f = b.find(["togglefloating"]) { more.append((cap(f), "Float or tile")) }
         if let s = b.find(["sort"], global: true) { more.append((cap(s), "Sort windows")) }

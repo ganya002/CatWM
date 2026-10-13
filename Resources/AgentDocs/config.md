@@ -37,6 +37,7 @@ Booleans accept `true yes on 1`; anything else is false.
 | `stay-on-workspace-after-close` | bool | default true |
 | `debug-logging` | bool | verbose log; prefer `--verbose` |
 | `keyboard-help` | bool | |
+| `keyboard-help-key` | one character | `?`; toggles the keyboard help in window mode |
 | `keyboard-finish` | `auto`, `macbook-pro`, `macbook-air`, `macbook-neo`, `magic-keyboard`, or a finish such as `macbook-pro-space-black` | look of the Shortcut Map keyboard |
 | `mode-effect` | `draw` `ripple` `corners` `none` | visual while window mode is on; `ouch modefx <style>` previews |
 | `panel-animation` | `rise` `pop` `focus` `tile` `draw` | how Sort Windows and keyboard help come and go; `tile` follows the animation curve; `ouch panelfx <style>` previews |
