@@ -54,6 +54,8 @@ struct Config {
     var virtualWorkspaces = true
     /// Closing a window keeps you on the current workspace instead of jumping to wherever macOS refocuses.
     var stayOnWorkspaceAfterClose = true
+    /// Screen-edge effect while a mode is on: draw, ripple, corners or none. Config file only for now.
+    var modeEffect: ModeFX.Style = .draw
     var bindings: [KeyBinding] = []
     var currentSubmap = "" // parser state while reading submap blocks
     var errors: [String] = []
@@ -173,6 +175,11 @@ struct Config {
         case "debug_logging": debugLogging = bool
         case "virtual_workspaces": virtualWorkspaces = bool
         case "stay_on_workspace_after_close": stayOnWorkspaceAfterClose = bool
+        case "mode_effect":
+            guard let s = ModeFX.Style(rawValue: v.lowercased()) else {
+                return "unknown mode effect `\(v)` (\(ModeFX.Style.allCases.map(\.rawValue).joined(separator: ", ")))"
+            }
+            modeEffect = s
         default: return "unknown option `\(rawKey)`"
         }
         return nil

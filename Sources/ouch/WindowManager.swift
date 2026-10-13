@@ -135,12 +135,14 @@ final class WindowManager {
         }
         Hotkeys.shared.onSubmapChange = { [weak self] name in
             Log.debug("mode: \(name.isEmpty ? "reset" : name)")
+            ModeFX.shared.setActive(!name.isEmpty)
             self?.onChange?()
             self?.onModeChange?(name)
         }
         NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved) { [weak self] _ in self?.mouseMoved() }
 
         Hotkeys.shared.setBindings(config.bindings)
+        ModeFX.shared.style = config.modeEffect
         Hotkeys.shared.handler = { [weak self] b in self?.dispatch(b.dispatcher, b.arg) }
         if !Hotkeys.shared.start() {
             Log.info("start: could not create the keyboard event tap")
@@ -169,6 +171,7 @@ final class WindowManager {
             Log.info("workspaces: \(config.virtualWorkspaces ? "Ouch workspaces" : "macOS Spaces")")
         }
         Log.verbose = config.debugLogging
+        ModeFX.shared.style = config.modeEffect
         config.errors.forEach { Log.info("config: \($0)") }
         Hotkeys.shared.setBindings(config.bindings)
         for w in windows.values { w.autoFloating = shouldFloat(w) }
@@ -659,6 +662,7 @@ final class WindowManager {
             if let n = Int(parts[1]), let style = Hotkeys.PostStyle(rawValue: n) { Hotkeys.postStyle = style }
             Log.info("ipc: post style is now \(Hotkeys.postStyle)")
         case "reload": reload()
+        case "modefx": ModeFX.shared.command(Array(parts.dropFirst()).flatMap { $0.split(separator: " ").map(String.init) })
         default: Log.info("ipc: unknown command")
         }
     }
