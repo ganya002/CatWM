@@ -99,6 +99,14 @@ enum Theme {
     static let wash1 = token(\.wash1)
     static let wash2 = token(\.wash2)
 
+    /// Action groups on the keyboard help. Workspaces use `warning`: the logo's yellow in dark mode, a
+    /// deep amber in light mode where yellow text can't be read.
+    static let groupNavigation = accent
+    static let groupWorkspaces = warning
+    static let groupLayout = accentInk
+    static let groupWindow = ink
+    static let groupExit = inkFaint
+
     /// A translucent well: keycaps, tiles and hovered rows on glass, where an opaque `surface-sunken`
     /// would read as a hole. Works on solid surfaces too.
     static let well = Color(nsColor: NSColor(name: nil) { a in

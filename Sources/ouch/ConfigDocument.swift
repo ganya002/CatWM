@@ -477,6 +477,8 @@ final class ConfigDocument: ObservableObject {
             "debug-logging = \(b(c.debugLogging))",
             "virtual-workspaces = \(b(c.virtualWorkspaces))",
             "stay-on-workspace-after-close = \(b(c.stayOnWorkspaceAfterClose))",
+            "# On-screen keyboard help: keep holding the window-mode chord's modifier, or press ? in the mode",
+            "keyboard-help = \(b(c.keyboardHelp))",
         ]
         // Experimental and not in Settings, so only written once someone has picked a different one.
         if c.modeEffect != Config().modeEffect { out.append("mode-effect = \(c.modeEffect.rawValue)") }

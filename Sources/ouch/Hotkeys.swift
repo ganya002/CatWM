@@ -17,6 +17,10 @@ final class Hotkeys {
     /// is already matched against the new mode.
     private(set) var submap = ""
     var onSubmapChange: ((String) -> Void)?
+    /// For the keyboard help: every modifier change, every bind that fires, and `?` pressed in a mode.
+    var onFlagsChanged: ((CGEventFlags) -> Void)?
+    var onFire: ((KeyBinding) -> Void)?
+    var onHelpKey: (() -> Void)?
     private var tap: CFMachPort?
     private var swipeMonitor: Any?
     private var scrollAccum: [Int: Double] = [:] // axis → distance since the last fire
@@ -192,6 +196,7 @@ final class Hotkeys {
     }
 
     fileprivate func fire(_ b: KeyBinding) {
+        if let f = onFire { DispatchQueue.main.async { f(b) } }
         if b.dispatcher == "submap" {
             setSubmap(b.arg)
         } else {
@@ -263,11 +268,24 @@ final class Hotkeys {
         let k = Self.key(code, event.flags)
         if !submap.isEmpty {
             if let b = lookup(code, event.flags) { return repeatOK(b, event) ? .bind(b) : .swallow }
+            if let help = onHelpKey, event.flags.isDisjoint(with: [.maskCommand, .maskControl]),
+               event.getIntegerValueField(.keyboardEventAutorepeat) == 0, Self.typed(event) == "?" {
+                DispatchQueue.main.async(execute: help)
+                return .swallow
+            }
             // Like vim's normal mode: stray keys do nothing instead of typing into the app,
             // but ⌘/⌃ shortcuts (copy, paste…) still reach it.
             return event.flags.isDisjoint(with: [.maskCommand, .maskControl]) ? .swallow : .pass
         }
         return tables[""]?[k].map { repeatOK($0, event) ? .bind($0) : .swallow } ?? .pass
+    }
+
+    /// What a key event types on the current layout, so `?` is found wherever the layout puts it.
+    private static func typed(_ event: CGEvent) -> String {
+        var length = 0
+        var chars = [UniChar](repeating: 0, count: 4)
+        event.keyboardGetUnicodeString(maxStringLength: 4, actualStringLength: &length, unicodeString: &chars)
+        return String(utf16CodeUnits: chars, count: length)
     }
 
     /// Only binde-style binds fire on key autorepeat.
@@ -322,6 +340,10 @@ private func tapCallback(proxy: CGEventTapProxy, type: CGEventType, event: CGEve
         return Hotkeys.shared.handleScroll(event) ? nil : Unmanaged.passUnretained(event)
     }
     guard type == .keyDown || type == .flagsChanged else { return Unmanaged.passUnretained(event) }
+    if type == .flagsChanged, let f = Hotkeys.shared.onFlagsChanged {
+        let flags = event.flags
+        DispatchQueue.main.async { f(flags) }
+    }
     if type == .flagsChanged {
         // Only Caps Lock can be bound as a key; every other modifier change passes untouched.
         guard event.getIntegerValueField(.keyboardEventKeycode) == 57 else { return Unmanaged.passUnretained(event) }

@@ -56,6 +56,8 @@ struct Config {
     var stayOnWorkspaceAfterClose = true
     /// Screen-edge effect while a mode is on: draw, ripple, corners or none. Config file only for now.
     var modeEffect: ModeFX.Style = .draw
+    /// The on-screen keyboard help: hold the mode chord, or press ? in a mode.
+    var keyboardHelp = true
     var bindings: [KeyBinding] = []
     var currentSubmap = "" // parser state while reading submap blocks
     var errors: [String] = []
@@ -175,6 +177,7 @@ struct Config {
         case "debug_logging": debugLogging = bool
         case "virtual_workspaces": virtualWorkspaces = bool
         case "stay_on_workspace_after_close": stayOnWorkspaceAfterClose = bool
+        case "keyboard_help": keyboardHelp = bool
         case "mode_effect":
             guard let s = ModeFX.Style(rawValue: v.lowercased()) else {
                 return "unknown mode effect `\(v)` (\(ModeFX.Style.allCases.map(\.rawValue).joined(separator: ", ")))"
@@ -339,6 +342,9 @@ float-small-windows = true
 window-resize-step = 5
 enables-layout-hud = true
 enables-layout-hud-on-space-change = true
+# Keyboard help: keep holding Cmd after Cmd+Caps Lock (or press ? in window mode) to see
+# every window-mode key on an on-screen keyboard.
+keyboard-help = true
 
 # Bundle IDs to float (wildcards like com.adobe.* work). Set floating-is-blacklist = false
 # to make this a list of the ONLY apps that get tiled.
