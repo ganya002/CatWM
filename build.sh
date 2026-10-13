@@ -24,7 +24,7 @@ if [ -n "$OUCH_CHANNEL" ]; then
   /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $SHORT-$OUCH_CHANNEL.$BUILD" "$PLIST"
   /usr/libexec/PlistBuddy -c "Add :OuchUpdateChannel string $OUCH_CHANNEL" "$PLIST"
 fi
-cp -R Resources/Fonts "$APP/Contents/Resources/"  # Chillax (ITF) and Dela Gothic One (OFL), registered at launch
+cp -R Resources/Fonts "$APP/Contents/Resources/"  # Chillax (ITF), registered at launch
 cp Resources/Icon/AppIcon.icns "$APP/Contents/Resources/"
 # Sparkle ships as a prebuilt framework inside the SwiftPM artifact bundle.
 SPARKLE=$(find .build/artifacts -type d -name Sparkle.framework -path '*macos-arm64_x86_64*' | head -1)
