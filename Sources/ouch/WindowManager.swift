@@ -56,6 +56,8 @@ final class WindowManager {
     private var homeSpace: [String: UInt64] = [:]        // display UUID → the macOS Space workspaces live on
     private var present: Set<CGWindowID> = []
     private var lastFocused: [String: CGWindowID] = [:]
+    private var focusStamps: [CGWindowID: Int] = [:] // focus history: higher was focused more recently
+    private var focusClock = 0
     private var lastClose = Date.distantPast // when a window last closed (macOS then refocuses the previous app's window)
     private var floatFrames: [CGWindowID: CGRect] = [:]  // floating windows' frames while parked
     private var savedWorkspaceOf: [CGWindowID: String] = [:]
@@ -267,6 +269,7 @@ final class WindowManager {
         windows[id] = nil
         order.removeAll { $0 == id }
         workspaceOf[id] = nil; floatFrames[id] = nil; targets[id] = nil; minSizes[id] = nil; corrections[id] = nil; drags[id] = nil
+        focusStamps[id] = nil
         visible.remove(id)
     }
 
@@ -379,7 +382,10 @@ final class WindowManager {
             let ids = tiled(on: s)
             if let z = st.zoomed, !ids.contains(z) { st.zoomed = nil }
             let rect = usableRect(s)
-            guard let (raw, gap) = rawSlots(ids, on: s, st, ratio: st.ratio) else { continue }
+            guard let (raw, gap) = rawSlots(ids, on: s, st, ratio: st.ratio) else {
+                ids.forEach { targets[$0] = nil } // floating layout: navigate by where windows really are
+                continue
+            }
             let slots = fitMinimums(raw, mins: ids.map { minSizes[$0] }, gap: gap)
             for (id, slot) in zip(ids, slots) {
                 let target = id == st.zoomed ? rect.pixelAligned : slot
@@ -498,24 +504,32 @@ final class WindowManager {
         (!w.isFloating && tilingEnabled ? targets[w.id] : nil) ?? w.frame
     }
 
+    /// The window to go to from `w` in direction `dir`. Like Hyprland, when several windows share
+    /// the nearest edge that way (the stack beside a main window, a two-pane stack), the one you
+    /// used last wins, so going left and back right returns to the window you started from.
     private func neighbor(of w: Window, _ dir: Direction, among candidates: [Window]) -> Window? {
         let f = navFrame(w)
-        var best: (Window, CGFloat)?
+        var scored: [(w: Window, score: CGFloat, edge: CGFloat)] = []
         for o in candidates where o.id != w.id {
             let of = navFrame(o)
             let dx = of.midX - f.midX, dy = of.midY - f.midY
-            let (along, across, overlaps): (CGFloat, CGFloat, Bool)
+            let (along, across, overlaps, edge): (CGFloat, CGFloat, Bool, CGFloat)
             switch dir {
-            case .left: (along, across, overlaps) = (-dx, dy, of.minY < f.maxY && of.maxY > f.minY)
-            case .right: (along, across, overlaps) = (dx, dy, of.minY < f.maxY && of.maxY > f.minY)
-            case .up: (along, across, overlaps) = (-dy, dx, of.minX < f.maxX && of.maxX > f.minX)
-            case .down: (along, across, overlaps) = (dy, dx, of.minX < f.maxX && of.maxX > f.minX)
+            case .left: (along, across, overlaps, edge) = (-dx, dy, of.minY < f.maxY && of.maxY > f.minY, f.minX - of.maxX)
+            case .right: (along, across, overlaps, edge) = (dx, dy, of.minY < f.maxY && of.maxY > f.minY, of.minX - f.maxX)
+            case .up: (along, across, overlaps, edge) = (-dy, dx, of.minX < f.maxX && of.maxX > f.minX, f.minY - of.maxY)
+            case .down: (along, across, overlaps, edge) = (dy, dx, of.minX < f.maxX && of.maxX > f.minX, of.minY - f.maxY)
             }
             guard along > 1 else { continue }
-            let score = along + abs(across) * 2 + (overlaps ? 0 : 100_000)
-            if best == nil || score < best!.1 { best = (o, score) }
+            scored.append((o, along + abs(across) * 2 + (overlaps ? 0 : 100_000), overlaps ? max(0, edge) : .infinity))
         }
-        return best?.0
+        guard let best = scored.min(by: { $0.score < $1.score }) else { return nil }
+        // Overlapping windows whose near edge is as close as the nearest one's are all adjacent.
+        guard let nearest = scored.map(\.edge).min(), nearest.isFinite else { return best.w }
+        let adjacent = scored.filter { $0.edge <= nearest + 2 }
+        let recent = adjacent.max { (focusStamps[$0.w.id] ?? 0) < (focusStamps[$1.w.id] ?? 0) }
+        if let recent, focusStamps[recent.w.id] != nil { return recent.w }
+        return adjacent.min(by: { $0.score < $1.score })?.w ?? best.w
     }
 
     private func screen(from s: Screen, spec: String, in screens: [Screen]) -> Screen? {
@@ -542,6 +556,7 @@ final class WindowManager {
 
     private func focus(_ w: Window) {
         w.focus()
+        noteFocus(w.id) // now, not when macOS gets round to telling us: quick key presses read it next
         if config.mouseFollowsFocus {
             ignoreMouseUntil = Date().addingTimeInterval(0.3)
             CGWarpMouseCursorPosition(navFrame(w).center)
@@ -556,6 +571,11 @@ final class WindowManager {
         let work = DispatchWorkItem { [weak self] in self?.focusUnderMouse() }
         ffmWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.06, execute: work)
+    }
+
+    private func noteFocus(_ id: CGWindowID) {
+        focusClock += 1
+        focusStamps[id] = focusClock
     }
 
     private func focusUnderMouse() {
@@ -605,16 +625,21 @@ final class WindowManager {
         if !isMain, [.threeColumnLeft, .threeColumnRight].contains(st.layout) { return }
         let gap = config.windowMargins ? config.windowMarginSize : 0
         let total = axis.horizontal ? r.width : r.height
-        let boundary: CGFloat // distance of the main/secondary edge from the main pane's outer side
-        switch (axis.horizontal, axis.fromStart, isMain) {
-        case (true, true, true): boundary = f.maxX - r.minX + gap
-        case (true, true, false): boundary = f.minX - r.minX
-        case (true, false, true): boundary = r.maxX - f.minX + gap
-        case (true, false, false): boundary = r.maxX - f.maxX
-        case (false, _, true): boundary = f.maxY - r.minY + gap
-        case (false, _, false): boundary = f.minY - r.minY
+        // Distance of the main/secondary edge from the main pane's outer side, as `f` puts it.
+        func boundary(_ f: CGRect) -> CGFloat {
+            switch (axis.horizontal, axis.fromStart, isMain) {
+            case (true, true, true): f.maxX - r.minX + gap
+            case (true, true, false): f.minX - r.minX
+            case (true, false, true): r.maxX - f.minX + gap
+            case (true, false, false): r.maxX - f.maxX
+            case (false, _, true): f.maxY - r.minY + gap
+            case (false, _, false): f.minY - r.minY
+            }
         }
-        st.ratio = min(0.9, max(0.1, boundary / (total + gap)))
+        // Only a window whose slot sits on the split can move it (not e.g. a deeper BSP tile).
+        if let (slots, _) = rawSlots(ids, on: s, st, ratio: st.ratio), slots.indices.contains(idx),
+           abs(boundary(slots[idx]) - st.ratio * (total + gap)) > 3 { return }
+        st.ratio = min(0.9, max(0.1, boundary(f) / (total + gap)))
     }
 
     // MARK: - Status & IPC
@@ -771,7 +796,7 @@ final class WindowManager {
             if let c = context(), let first = c.ids.first.flatMap({ windows[$0] }) { focus(first) }
             return
         }
-        let candidates = visible.compactMap { windows[$0] }
+        let candidates = order.filter(visible.contains).compactMap { windows[$0] } // tiling order breaks ties
         if let n = neighbor(of: w, d, among: candidates) { focus(n); return }
         // Stacked layouts (fullscreen / zoom / two-pane) have no geometry to navigate: cycle instead.
         cycleFocus(d == .left || d == .up ? -1 : 1)
@@ -779,7 +804,7 @@ final class WindowManager {
 
     private func moveWindow(_ d: Direction) {
         guard let w = focusedWindow(), !w.isFloating else { return }
-        let candidates = visible.compactMap { windows[$0] }.filter { !$0.isFloating }
+        let candidates = order.filter(visible.contains).compactMap { windows[$0] }.filter { !$0.isFloating }
         if let n = neighbor(of: w, d, among: candidates) {
             if let a = screen(of: w), let b = screen(of: n), a.uuid != b.uuid {
                 workspaceOf[w.id] = shown[b.uuid] // across monitors Hyprland moves without swapping
@@ -874,7 +899,7 @@ final class WindowManager {
 
     private func cycleLayout(_ delta: Int) {
         guard let c = context(), !config.layouts.isEmpty else { return }
-        let i = config.layouts.firstIndex(of: c.st.layout) ?? -1
+        let i = config.layouts.firstIndex(of: c.st.layout) ?? (delta > 0 ? -1 : 0)
         setLayout(config.layouts[((i + delta) % config.layouts.count + config.layouts.count) % config.layouts.count])
     }
 
@@ -1261,7 +1286,9 @@ final class WindowManager {
     /// If the focused window lives on a hidden workspace (⌘-Tab, Dock, a link opening a window),
     /// switch to it. Also remembers each workspace's last focused window.
     private func followFocus() {
-        guard config.virtualWorkspaces, isStarted, let w = focusedWindow(), let ws = workspaceOf[w.id], isVirtual(ws) else { return }
+        guard isStarted, let w = focusedWindow() else { return }
+        if focusStamps[w.id] != focusClock { noteFocus(w.id) }
+        guard config.virtualWorkspaces, let ws = workspaceOf[w.id], isVirtual(ws) else { return }
         if isShown(ws) { lastFocused[ws] = w.id; return }
         guard Date() > autoSwitchAfter else { return }
         // Only a window we actually parked means "go to its workspace". One you can already see
