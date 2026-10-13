@@ -60,6 +60,12 @@ struct Config {
     var sortStrategy: SortStrategy = .task
     /// Screen-edge effect while a mode is on: draw, ripple, corners or none. Config file only for now.
     var modeEffect: ModeFX.Style = .draw
+    /// Darken every window but the focused one, by `dimStrength` (0...1).
+    var dimOtherWindows = false
+    var dimStrength: CGFloat = 0.3
+    /// Blur every window but the focused one, `blurRadius` points.
+    var blurOtherWindows = false
+    var blurRadius: CGFloat = 20
     var panelAnimation: PanelMotion = .rise
     /// The on-screen keyboard help: hold the mode chord, or press ? in a mode.
     var keyboardHelp = true
@@ -216,6 +222,10 @@ struct Config {
                 return "unknown keyboard finish `\(v)` (auto, macbook-pro, macbook-air, macbook-neo, magic-keyboard, or a finish like macbook-pro-space-black)"
             }
             keyboardFinish = MacKeyboard.slug(v)
+        case "dim_other_windows", "dim_inactive": dimOtherWindows = bool
+        case "dim_strength": return needNum { dimStrength = min(1, max(0, $0 > 1 ? $0 / 100 : $0)) }
+        case "blur_other_windows": blurOtherWindows = bool
+        case "blur_radius": return needNum { blurRadius = min(100, max(1, $0.rounded())) }
         case "mode_effect":
             guard let s = ModeFX.Style(rawValue: v.lowercased()) else {
                 return "unknown mode effect `\(v)` (\(ModeFX.Style.allCases.map(\.rawValue).joined(separator: ", ")))"
@@ -390,6 +400,11 @@ enables-layout-hud-on-space-change = true
 # Keyboard help: keep holding Cmd after Cmd+Caps Lock (or press ? in window mode) to see
 # every window-mode key on an on-screen keyboard.
 keyboard-help = true
+# Make the focused window stand out: darken the others (strength 0-1) and/or blur them (radius in points).
+dim-other-windows = false
+dim-strength = 0.3
+blur-other-windows = false
+blur-radius = 20
 # The keyboard drawn there and in Settings: auto follows this Mac (model, colour, layout). Or pick one,
 # e.g. macbook-pro-space-black, macbook-pro-silver, macbook-air-midnight, macbook-air-starlight,
 # macbook-air-sky-blue, macbook-air-silver, macbook-neo-silver, macbook-neo-blush, macbook-neo-citrus,

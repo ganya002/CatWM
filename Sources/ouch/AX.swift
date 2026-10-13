@@ -290,7 +290,7 @@ extension CGWindowInfo {
             else { continue }
             let layer = d[kCGWindowLayer as String] as? Int ?? 0
             let alpha = d[kCGWindowAlpha as String] as? Double ?? 1
-            if alpha < 0.01 { continue } // invisible overlays
+            if alpha < 0.01 || FocusDim.shared.owns(n) { continue } // invisible overlays, the focus dim
             if pid == Int(getpid()) {
                 if layer == 0 { return nil } // over the Settings window: leave focus alone
                 continue // the layout HUD
