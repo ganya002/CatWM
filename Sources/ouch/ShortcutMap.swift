@@ -785,6 +785,8 @@ private struct KeyEditor: View {
         if a.dispatcher != "exec" { draft.args = a.args } else if !wasExec { draft.args = "" }
         draft.open = nil
         draft.search = ""
+        // The click on a menu row drops focus; without this typing lands in the sidebar's search.
+        if a.dispatcher != "exec" { searching = true }
     }
 
     // MARK: Argument and options
@@ -798,7 +800,7 @@ private struct KeyEditor: View {
         HStack(spacing: 10) {
             if draft.dispatcher == "exec" {
                 Text("Command").foregroundStyle(Theme.inkMuted).oneLine().fixedSize()
-                OTextField(placeholder: "open -na Terminal", text: $draft.args, mono: true)
+                OTextField(placeholder: "open -na Terminal", text: $draft.args, mono: true, autofocus: true)
             } else if let a = action, let group = a.group {
                 let family = catalog.filter { $0.group == group }
                 Text(group).oneLine()
