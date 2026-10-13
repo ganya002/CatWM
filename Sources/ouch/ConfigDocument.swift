@@ -662,6 +662,7 @@ final class ConfigDocument: ObservableObject {
         "semicolon": ";", "apostrophe": "'", "quote": "'", "slash": "/", "backslash": "\\", "grave": "`",
         "pageup": "⇞", "pagedown": "⇟", "home": "↖", "end": "↘",
         "mouse_up": "Scroll ↑", "mouse_down": "Scroll ↓", "mouse_left": "Scroll ←", "mouse_right": "Scroll →",
+        "section": "§", "yen": "¥", "underscore_jis": "_", "eisu": "英数", "kana": "かな",
         "swipe_left": "Swipe ←", "swipe_right": "Swipe →", "swipe_up": "Swipe ↑", "swipe_down": "Swipe ↓",
     ]
 
