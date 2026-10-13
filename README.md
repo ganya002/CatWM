@@ -29,7 +29,7 @@ Each release (the build number is stamped from the commit count, so only `CFBund
 
 ```sh
 ./release.sh "What changed"                      # build, sign, notarize, publish
-./release.sh "Try this first" --channel beta     # beta channel (Settings → Include beta releases)
+./release.sh "Try this first" --channel beta     # beta channel (Settings → General → Advanced → Include beta releases)
 ./release.sh "Security fix" --critical           # prompts users to update right away
 ./release.sh "Big change" --phased-rollout       # gradual rollout
 ./release.sh "WIP" --draft                       # upload without publishing
@@ -37,7 +37,7 @@ Each release (the build number is stamped from the commit count, so only `CFBund
 
 For early-access betas, `./beta.sh "What changed"` publishes to the beta channel with no version bump: the build number is the commit count and the version reads `0.1-beta.<build>`. Beta builds start opted in to beta updates. Without a Developer ID certificate it ships an unsigned ZIP, so testers allow it once in System Settings → Privacy & Security → **Open Anyway**.
 
-Settings → Overview has the update toggles, and the menu bar has **Check for Updates…**.
+Settings → General has the update toggles, and the menu bar menu has **Help › Check for Updates…**.
 
 ## Config
 
@@ -64,7 +64,7 @@ submap = reset
 - While a mode is on, "-- WINDOW --" shows at the bottom of the screen and the menu bar shows WINDOW.
 - Keys with no bind in the mode are ignored instead of typed. ⌘ and ⌃ shortcuts still reach the app.
 - Clicking anywhere leaves the mode.
-- In Settings → Keyboard Shortcuts, switch between **Global** and **Window mode** to edit each set.
+- In Settings → Shortcuts, switch between **Global** and **Window mode** to edit each set.
 
 ### Range binds
 
@@ -105,10 +105,10 @@ Ouch has its own workspaces, like Hyprland and AeroSpace:
 - If you ⌘-Tab or click the Dock to a window on a hidden workspace, Ouch switches to that workspace.
 - The menu bar shows ① ② ❸; the filled number is the workspace you're on. Click it to pick a workspace.
 - `workspace` accepts `N`, `name:foo`, `previous`, `+1` / `-1` and `e+1` / `e-1` (the next workspace that has windows). `movetoworkspace` follows the window; `movetoworkspacesilent` doesn't.
-- Workspaces live on one **home Desktop** per display: the macOS Desktop you were on at first launch, or the one chosen in Settings → Behavior. Other Desktops tile normally, and ⌘1–0 from one of them goes home first. This setup works best with a single macOS Desktop.
+- Workspaces live on one **home Desktop** per display: the macOS Desktop you were on at first launch, or the one chosen in Settings → Windows → Advanced. Other Desktops tile normally, and ⌘1–0 from one of them goes home first. This setup works best with a single macOS Desktop.
 - When Ouch quits, crashes or is killed, every parked window is put back on screen, and assignments are saved for the next launch.
 - To use macOS Spaces instead, set `virtual-workspaces = false`. Space switching then uses "Switch to Desktop N" when it's on, and otherwise steps with Ctrl-←/→.
-- `stay-on-workspace-after-close = true` (default) keeps you on your current workspace when you close a window, instead of jumping to the workspace of whichever window macOS refocuses. Also under Settings → Workspaces.
+- `stay-on-workspace-after-close = true` (default) keeps you on your current workspace when you close a window, instead of jumping to the workspace of whichever window macOS refocuses. Also under Settings → Windows → Advanced.
 
 ### Dispatchers
 
@@ -138,18 +138,21 @@ Ouch has its own workspaces, like Hyprland and AeroSpace:
 - Windows on the current space come from the CoreGraphics window list instead of AX alone. Windows on other spaces and minimized windows no longer leave holes in the layout.
 - Windows that can't be resized float automatically instead of breaking the layout.
 
+## Menu bar menu
+
+Click the menu bar item for Ouch's menu. Type to search every command (↩ runs the first match), or use the four toggles at the top: Tiling, Float Window, Fullscreen and Retile. Below them are your workspaces, then **Layout**, **Window** and **Configs** submenus. ↑↓ move, → opens a submenu, ← and Esc go back. Rows show the window-mode key for each command.
+
 ## Settings window
 
-Open it from the menu bar icon with **Settings…**. Changes save and apply automatically, and **Undo All Changes** goes back to how things were when you opened the window.
+Open it from the menu bar menu with **Settings…** (⌘,). Changes save and apply automatically, and **Undo All Changes** goes back to how things were when you opened the window. The search field (⌘F) finds every setting, including ones tucked under a pane's **Advanced** section, and takes you to it.
 
-- **Overview:** permission and keybind status, a layout picker for each display, and quick toggles
-- **Layouts:** clickable layout cards and the cycle order
-- **Gaps & Padding:** a preview drawn at your real screen's proportions
-- **Behavior:** focus follows mouse, mouse follows focus, drag to swap or resize, new windows, layout HUD
-- **Floating Windows:** apps that float or are the only ones tiled, with a picker for running apps
-- **Animation:** style presets (None, Snappy, Smooth, Relaxed, Springy, Wobbly, Bouncy, Playful), curve, duration and bounciness, plus a preview and a graph of the curve
-- **Keyboard Shortcuts:** grouped by category. Click a shortcut, then press the new keys to record it. Invalid shortcuts are flagged in red; ones that replace a standard app shortcut like ⌘Q are flagged in orange.
-- **Advanced:** config and log files, detailed logging, command-line usage, and resets
+- **General:** permission and keybind status, open at login, tiling, the main modifier, updates. Advanced: beta releases. Reset everything is at the bottom.
+- **Layout:** the layout of each display, the layouts in the cycle, gaps and padding with a live preview, the layout HUD. Advanced: smart gaps, per-side padding, the built-in display, the menu bar, the main pane resize step.
+- **Windows:** focus follows mouse, mouse follows focus, drag to swap or resize, floating apps, Ouch workspaces. Advanced: new windows, small windows, bundle IDs, the home Desktop.
+- **Motion:** style presets (None, Snappy, Smooth, Relaxed, Springy, Wobbly, Bouncy, Playful), a preview and duration. Advanced: curve and bounciness.
+- **Shortcuts:** grouped by category. Click a shortcut, then press the new keys to record it. Invalid shortcuts are flagged in red; ones that replace a standard app shortcut like ⌘Q are flagged in orange. The keyboard button opens the Shortcut Map. Gaming (WASD) and Restore Defaults are at the bottom.
+
+Detailed logging is a launch argument now: `open build/ouch.app --args --verbose`. The old `debug-logging` key still works.
 
 ## Command line
 

@@ -70,6 +70,8 @@ final class HUDModel: ObservableObject {
     @Published var pops = 0
 }
 
+/// Confirms a keyboard action in the middle of the screen: a glass Surface with the layout and its
+/// name, or a pill with a wiggling warning when something refused. Never interactive.
 struct HUDView: View {
     @ObservedObject var model: HUDModel
     let margin: CGFloat
@@ -77,21 +79,28 @@ struct HUDView: View {
 
     var body: some View {
         let reduceMotion = reduceMotion // read here; the animator closure can't touch the environment
-        VStack(spacing: 12) {
-            if let layout = model.layout {
-                LayoutThumbnail(layout: layout, selected: true).frame(width: 120, height: 75)
-            }
+        Group {
             if model.warning {
                 HStack(spacing: 8) {
-                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.yellow)
-                    Text(model.text).font(Theme.heading(15)).fixedSize()
+                    Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Theme.warning)
+                        .wiggleEffect(value: model.pops)
+                    Text(model.text).font(Theme.body(14, .medium)).oneLine().fixedSize()
                 }
+                .padding(.horizontal, 18).padding(.vertical, 12)
+                .floatingGlass(Capsule())
             } else {
-                Text(model.text).font(Theme.heading(28)).fixedSize()
+                VStack(spacing: 12) {
+                    if let layout = model.layout {
+                        LayoutThumbnail(layout: layout, selected: true).frame(width: 120)
+                    }
+                    Text(model.text).font(Theme.body(22)).tracking(-0.2).oneLine().fixedSize()
+                }
+                .padding(.horizontal, 24).padding(.top, model.layout == nil ? 16 : 20).padding(.bottom, 16)
+                .floatingGlass(RoundedRectangle(cornerRadius: 22, style: .continuous))
             }
         }
-        .padding(.horizontal, model.warning ? 18 : 28).padding(.vertical, model.warning ? 11 : model.layout == nil ? 16 : 20)
-        .modifier(Surface())
+        .foregroundStyle(Theme.ink)
         .keyframeAnimator(initialValue: 1.0, trigger: model.pops) { view, scale in
             view.scaleEffect(reduceMotion ? 1 : scale)
         } keyframes: { _ in
@@ -101,44 +110,5 @@ struct HUDView: View {
             }
         }
         .padding(margin)
-    }
-
-    /// Glass on macOS 26 and later (it draws its own edge, so no extra shadow); a blur with a shadow before that.
-    private struct Surface: ViewModifier {
-        func body(content: Content) -> some View {
-            if #available(macOS 26.0, *) {
-                content.glassEffect(.regular, in: .rect(cornerRadius: 16))
-            } else {
-                content
-                    .background(Blur())
-                    .shadow(color: .black.opacity(0.25), radius: 18, y: 8)
-            }
-        }
-    }
-
-    /// Behind-window blur with rounded corners. A mask image, because a layer corner radius leaves
-    /// the blur's edges square.
-    private struct Blur: NSViewRepresentable {
-        func makeNSView(context: Context) -> NSVisualEffectView {
-            let v = NSVisualEffectView()
-            v.material = .popover
-            v.state = .active
-            v.blendingMode = .behindWindow
-            v.maskImage = roundedMask(radius: 16)
-            return v
-        }
-        func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
-
-        private func roundedMask(radius: CGFloat) -> NSImage {
-            let edge = radius * 2 + 1
-            let image = NSImage(size: NSSize(width: edge, height: edge), flipped: false) { rect in
-                NSColor.black.setFill()
-                NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius).fill()
-                return true
-            }
-            image.capInsets = NSEdgeInsets(top: radius, left: radius, bottom: radius, right: radius)
-            image.resizingMode = .stretch
-            return image
-        }
     }
 }

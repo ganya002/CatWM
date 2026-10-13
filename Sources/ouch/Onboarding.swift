@@ -30,7 +30,8 @@ final class Onboarding {
         guard !isRunning else { return }
         let screen = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main ?? NSScreen.screens[0]
         let card = makeWelcome(on: screen)
-        let intro = Intro(screen: screen, landing: card.frame) { [weak self] in
+        let m = WelcomeView.margin
+        let intro = Intro(screen: screen, landing: card.frame.insetBy(dx: m, dy: m)) { [weak self] in
             self?.intro = nil
             self?.showWelcome()
         }
@@ -66,7 +67,6 @@ final class Onboarding {
                                            width: size.width, height: size.height),
                              level: .normal, clickThrough: false)
         p.contentView = host
-        p.hasShadow = true
         p.isMovableByWindowBackground = true
         welcome = p
         return p
@@ -269,10 +269,10 @@ private final class Intro {
         let shade = NSView(frame: root.bounds)
         shade.autoresizingMask = [.width, .height]
         shade.wantsLayer = true
-        shade.layer?.backgroundColor = NSColor(srgbRed: 10 / 255, green: 14 / 255, blue: 22 / 255, alpha: 0.4).cgColor
+        shade.layer?.backgroundColor = NSColor(srgbRed: 0x1B / 255, green: 0x1B / 255, blue: 0x1E / 255, alpha: 0.4).cgColor // graphite, from the icon
         root.addSubview(shade)
         skipLabel = NSTextField(labelWithString: "Click anywhere to skip")
-        skipLabel.font = Theme.nsMono(11, weight: .medium)
+        skipLabel.font = Theme.nsBody(12)
         skipLabel.textColor = NSColor.white.withAlphaComponent(0.6)
         skipLabel.sizeToFit()
         skipLabel.setFrameOrigin(NSPoint(x: f.width - skipLabel.frame.width - 20, y: 18))

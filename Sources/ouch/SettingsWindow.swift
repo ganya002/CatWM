@@ -1,6 +1,8 @@
 import AppKit
 import SwiftUI
 
+/// Settings, shaped like Zen Browser: traffic lights, a search pill and the panes sit straight on the
+/// chrome wash, and the content is one floating pane.
 final class SettingsWindow: NSObject, NSWindowDelegate {
     static let shared = SettingsWindow()
     private(set) var window: NSWindow?
@@ -8,35 +10,34 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
     private(set) lazy var library = ConfigLibrary(doc: doc)
     private(set) lazy var ui = SettingsUI(doc: doc)
 
-    func show(pane: Pane?) {
+    func show(pane: Pane?, map: Bool = false) {
         let wasVisible = window?.isVisible ?? false
         if window == nil {
-            let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 920, height: 660),
+            let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 940, height: 680),
                              styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
                              backing: .buffered, defer: false)
             w.title = "Ouch Settings"
             w.isReleasedWhenClosed = false
-            // Unified toolbar over a native sidebar, like Notes. The title stays hidden because each
-            // pane draws its own heading; SwiftUI fills the toolbar (search field on Keyboard Shortcuts).
             let host = NSHostingController(rootView: SettingsView(doc: doc, ui: ui))
-            host.sceneBridgingOptions = [.toolbars]
             host.sizingOptions = []
             w.contentViewController = host
-            w.setContentSize(NSSize(width: 920, height: 660))
-            w.contentMinSize = NSSize(width: 820, height: 520)
+            w.setContentSize(NSSize(width: 940, height: 680))
+            w.contentMinSize = NSSize(width: 840, height: 540)
             // Pinned: stays above every ordinary window while open, even when another app is active.
             w.level = .floating
             w.titleVisibility = .hidden
             w.titlebarAppearsTransparent = true
-            w.toolbarStyle = .unified
             // Settings has no use for full screen: drop the green button and the full-screen behaviour.
             w.collectionBehavior.insert(.fullScreenNone)
             w.standardWindowButton(.zoomButton)?.isHidden = true
             w.delegate = self
             window = w
-            Self.hideSplitDivider
         }
-        if let pane { ui.pane = pane }
+        if let pane {
+            ui.pane = pane
+            ui.search = ""
+        }
+        if map { ui.showMap = true }
         if !wasVisible {
             doc.beginSession()
             ui.beginSession()
@@ -47,19 +48,6 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
     }
-
-    /// The split view between sidebar and detail draws a dark 1pt divider; the panes already differ in
-    /// background, so Settings' own split view gets a clear divider (other split views are untouched).
-    private static let hideSplitDivider: Void = {
-        let sel = #selector(getter: NSSplitView.dividerColor)
-        guard let m = class_getInstanceMethod(NSSplitView.self, sel) else { return }
-        typealias Getter = @convention(c) (AnyObject, Selector) -> NSColor
-        let original = unsafeBitCast(method_getImplementation(m), to: Getter.self)
-        let block: @convention(block) (NSSplitView) -> NSColor = { view in
-            view.window === SettingsWindow.shared.window ? .clear : original(view, sel)
-        }
-        method_setImplementation(m, imp_implementationWithBlock(block))
-    }()
 
     /// Each time the window opens it starts centred on the display under the pointer; while it's
     /// open it can be moved freely. (The tiler always floats our windows, so nothing moves it back.)
@@ -73,8 +61,6 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
                    display: false)
     }
 
-    /// AppKit brings the zoom button back whenever SwiftUI rebuilds the toolbar (e.g. the search
-    /// field on Keyboard Shortcuts), so hide it again on every update.
     func windowDidUpdate(_ notification: Notification) {
         if window?.standardWindowButton(.zoomButton)?.isHidden == false { window?.standardWindowButton(.zoomButton)?.isHidden = true }
         placeTrafficLights()
@@ -82,9 +68,8 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
 
     func windowDidResize(_ notification: Notification) { placeTrafficLights() }
 
-    /// Height of the band the traffic lights sit in. Taller than the stock title bar so they have room,
-    /// like in other modern Mac apps.
-    static let titlebarHeight: CGFloat = 52
+    /// Height of the band the traffic lights sit in, above the sidebar's search pill.
+    static let titlebarHeight: CGFloat = 48
 
     /// Insets the close and minimise buttons from the corner and centres them in the taller band.
     private func placeTrafficLights() {
@@ -98,7 +83,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
         }
         let y = (h - close.frame.height) / 2
         for (i, b) in [close, mini].enumerated() {
-            let x = 20 + CGFloat(i) * 20
+            let x = 22 + CGFloat(i) * 20
             if b.frame.origin != NSPoint(x: x, y: y) { b.setFrameOrigin(NSPoint(x: x, y: y)) }
         }
     }
@@ -115,56 +100,46 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
 // MARK: - View state
 
 enum Pane: String, CaseIterable, Identifiable {
-    case overview = "Overview", layouts = "Layouts", gaps = "Gaps & Padding", behavior = "Behavior"
-    case floating = "Floating Windows", animation = "Animation", keybinds = "Keyboard Shortcuts", advanced = "Advanced"
+    case general = "General", layout = "Layout", windows = "Windows", motion = "Motion", shortcuts = "Shortcuts"
     var id: Self { self }
 
     var icon: String {
         switch self {
-        case .overview: "rectangle.split.3x1.fill"
-        case .layouts: "square.grid.2x2.fill"
-        case .gaps: "square.dashed"
-        case .behavior: "cursorarrow"
-        case .floating: "macwindow.on.rectangle"
-        case .animation: "wand.and.stars"
-        case .keybinds: "command"
-        case .advanced: "wrench.fill"
+        case .general: "gearshape"
+        case .layout: "square.grid.2x2"
+        case .windows: "macwindow.on.rectangle"
+        case .motion: "wand.and.stars"
+        case .shortcuts: "keyboard"
         }
     }
     /// The library of saved configs a pane has a selector for.
     var configKind: ConfigKind? {
-        switch self { case .animation: .animation; case .keybinds: .keyboard; default: nil }
-    }
-    var color: Color {
-        switch self {
-        case .overview: .blue
-        case .layouts: .indigo
-        case .gaps: .teal
-        case .behavior: .orange
-        case .floating: .purple
-        case .animation: .pink
-        case .keybinds: .gray
-        case .advanced: .brown
-        }
+        switch self { case .motion: .animation; case .shortcuts: .keyboard; default: nil }
     }
 }
 
 /// View state lives here instead of in @State (the Command Line Tools ship without SwiftUI's macro plugin).
 final class SettingsUI: ObservableObject {
-    @Published var pane: Pane? = .overview
+    @Published var pane: Pane = .general
+    /// The settings search in the sidebar.
     @Published var search = ""
+    /// Filters the shortcut list.
+    @Published var shortcutFilter = ""
     @Published var bindMode = "" // which mode the shortcuts pane shows; "" = global
+    /// Panes whose Advanced section is open.
+    @Published var advancedOpen: Set<Pane> = []
+    /// The setting a search result just opened: scrolled to and lit for a moment.
+    @Published var highlight: String?
     /// Range and custom rows whose raw editor is open.
     @Published var expanded: Set<UUID> = []
-    /// Row to scroll to and flash when the shortcuts pane appears (from the shortcut map).
+    /// Row to scroll to and flash when the shortcuts pane appears (from the shortcut map or search).
     @Published var reveal: UUID?
-    /// The full-window keyboard map is showing instead of the panes.
+    /// The keyboard map is showing in the pane.
     @Published var showMap = false
     @Published var newID = ""
     @Published var previewFlipped = false
     @Published var bezierText = ""
     @Published var linkedPadding = true
-    @Published var dragAnywhere = DragAnywhere.isEnabled
     @Published var status = WindowManager.shared.status()
     /// Row whose shortcut is being recorded. Global keybinds are paused meanwhile so the combo
     /// arrives here instead of moving windows.
@@ -179,7 +154,6 @@ final class SettingsUI: ObservableObject {
     func beginSession() {
         let c = doc.config
         linkedPadding = Set([c.paddingTop, c.paddingBottom, c.paddingLeft, c.paddingRight]).count == 1
-        dragAnywhere = DragAnywhere.isEnabled
         refreshStatus()
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in self?.refreshStatus() }
@@ -188,11 +162,31 @@ final class SettingsUI: ObservableObject {
     func endSession() {
         recording = nil
         showMap = false
+        search = ""
         timer?.invalidate()
         timer = nil
     }
 
     func refreshStatus() { status = WindowManager.shared.status() }
+
+    /// Opens a search result: its pane, its Advanced section if it's hidden there, then lights it up.
+    func open(_ entry: SettingEntry) {
+        search = ""
+        showMap = false
+        if let row = entry.bind {
+            bindMode = row.submap
+            shortcutFilter = ""
+            expanded.insert(row.id)
+            reveal = row.id
+        }
+        if entry.advanced { advancedOpen.insert(entry.pane) }
+        pane = entry.pane
+        highlight = nil
+        DispatchQueue.main.async { self.highlight = entry.id }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { [weak self] in
+            if self?.highlight == entry.id { withAnimation(.easeOut(duration: 0.5)) { self?.highlight = nil } }
+        }
+    }
 
     private func updateMonitor() {
         guard recording != nil else {
@@ -233,28 +227,131 @@ final class SettingsUI: ObservableObject {
     }
 }
 
+// MARK: - Search index
+
+/// One setting the search can find, hidden ones included.
+struct SettingEntry: Identifiable {
+    let id: String
+    let title: String
+    let pane: Pane
+    var advanced = false
+    var keywords = ""
+    /// For shortcut results: the row to reveal.
+    var bind: BindRow? = nil
+}
+
+enum SettingsIndex {
+    static let all: [SettingEntry] = [
+        SettingEntry(id: "general.status", title: "Accessibility access", pane: .general, keywords: "permission status running grant"),
+        SettingEntry(id: "general.login", title: "Open at login", pane: .general, keywords: "startup launch login items"),
+        SettingEntry(id: "general.inputMonitoring", title: "Instant Caps Lock shortcuts", pane: .general, keywords: "input monitoring permission"),
+        SettingEntry(id: "general.tiling", title: "Tiling", pane: .general, keywords: "enable disable pause on off"),
+        SettingEntry(id: "general.modifier", title: "Main modifier", pane: .general, keywords: "mod key option command control super"),
+        SettingEntry(id: "general.autoCheck", title: "Check for updates automatically", pane: .general, keywords: "update sparkle"),
+        SettingEntry(id: "general.autoDownload", title: "Download updates automatically", pane: .general, keywords: "update sparkle"),
+        SettingEntry(id: "general.checkNow", title: "Check for updates", pane: .general, keywords: "update version"),
+        SettingEntry(id: "general.beta", title: "Include beta releases", pane: .general, advanced: true, keywords: "update channel early"),
+        SettingEntry(id: "general.reset", title: "Reset all settings", pane: .general, keywords: "defaults restore factory"),
+
+        SettingEntry(id: "layout.displays", title: "Layout per display", pane: .layout, keywords: "screen monitor current"),
+        SettingEntry(id: "layout.cycle", title: "Layouts in the cycle", pane: .layout, keywords: "order next previous tall wide bsp column"),
+        SettingEntry(id: "layout.gaps", title: "Gaps between windows", pane: .layout, keywords: "margin spacing"),
+        SettingEntry(id: "layout.gapSize", title: "Gap size", pane: .layout, keywords: "margin spacing points"),
+        SettingEntry(id: "layout.padding", title: "Screen padding", pane: .layout, keywords: "edges margin inset"),
+        SettingEntry(id: "layout.hud", title: "Show layout name on change", pane: .layout, keywords: "hud overlay"),
+        SettingEntry(id: "layout.smartGaps", title: "Smart gaps", pane: .layout, advanced: true, keywords: "single window no gaps"),
+        SettingEntry(id: "layout.linked", title: "Same padding on every side", pane: .layout, advanced: true, keywords: "top bottom left right"),
+        SettingEntry(id: "layout.builtin", title: "No padding on the built-in display", pane: .layout, advanced: true, keywords: "laptop macbook"),
+        SettingEntry(id: "layout.menuBar", title: "Tile over the menu bar", pane: .layout, advanced: true, keywords: "hidden menubar"),
+        SettingEntry(id: "layout.resizeStep", title: "Main pane resize step", pane: .layout, advanced: true, keywords: "ratio grow shrink percent"),
+        SettingEntry(id: "layout.hudSpaces", title: "Show layout name when switching spaces", pane: .layout, advanced: true, keywords: "hud desktop"),
+
+        SettingEntry(id: "windows.ffm", title: "Focus follows mouse", pane: .windows, keywords: "hover pointer"),
+        SettingEntry(id: "windows.mff", title: "Mouse follows focus", pane: .windows, keywords: "pointer cursor warp"),
+        SettingEntry(id: "windows.dragSwap", title: "Drag to swap", pane: .windows, keywords: "mouse move"),
+        SettingEntry(id: "windows.resizeMain", title: "Resize to adjust the main pane", pane: .windows, keywords: "mouse ratio"),
+        SettingEntry(id: "windows.floatingMode", title: "Floating apps", pane: .windows, keywords: "float exclude blacklist whitelist tile only"),
+        SettingEntry(id: "windows.workspaces", title: "Use Ouch workspaces", pane: .windows, keywords: "spaces desktops virtual"),
+        SettingEntry(id: "windows.newMain", title: "New windows become main", pane: .windows, advanced: true, keywords: "open"),
+        SettingEntry(id: "windows.floatSmall", title: "Float small windows", pane: .windows, advanced: true, keywords: "dialogs panels"),
+        SettingEntry(id: "windows.bundleID", title: "Add app by bundle ID", pane: .windows, advanced: true, keywords: "floating wildcard identifier"),
+        SettingEntry(id: "windows.stay", title: "Stay on this workspace when closing a window", pane: .windows, advanced: true, keywords: "close jump"),
+        SettingEntry(id: "windows.home", title: "Home Desktop", pane: .windows, advanced: true, keywords: "spaces desktop workspaces live"),
+
+        SettingEntry(id: "motion.style", title: "Animation style", pane: .motion, keywords: "preset snappy smooth springy bouncy"),
+        SettingEntry(id: "motion.animate", title: "Animate windows", pane: .motion, keywords: "animation off motion"),
+        SettingEntry(id: "motion.duration", title: "Duration", pane: .motion, keywords: "speed time milliseconds animation"),
+        SettingEntry(id: "motion.preview", title: "Animation preview", pane: .motion, keywords: "play"),
+        SettingEntry(id: "motion.curve", title: "Curve", pane: .motion, advanced: true, keywords: "easing ease spring bounce overshoot linear"),
+        SettingEntry(id: "motion.bounce", title: "Bounciness", pane: .motion, advanced: true, keywords: "spring overshoot"),
+        SettingEntry(id: "motion.bezier", title: "Bezier control points", pane: .motion, advanced: true, keywords: "cubic custom curve"),
+
+        SettingEntry(id: "shortcuts.list", title: "Keyboard shortcuts", pane: .shortcuts, keywords: "keybinds hotkeys bind"),
+        SettingEntry(id: "shortcuts.map", title: "Shortcut map", pane: .shortcuts, keywords: "keyboard overview"),
+        SettingEntry(id: "shortcuts.wasd", title: "Gaming shortcuts (WASD)", pane: .shortcuts, keywords: "reset preset games"),
+        SettingEntry(id: "shortcuts.defaults", title: "Restore default shortcuts", pane: .shortcuts, keywords: "reset vim"),
+    ]
+
+    /// Settings, then shortcuts, whose words all appear in the query's order-free word list.
+    static func search(_ query: String, doc: ConfigDocument) -> [SettingEntry] {
+        let words = query.lowercased().split(separator: " ").map(String.init)
+        guard !words.isEmpty else { return [] }
+        func hit(_ text: String) -> Bool { let t = text.lowercased(); return words.allSatisfy { t.contains($0) } }
+        let settings = all.filter { hit("\($0.title) \($0.keywords) \($0.pane.rawValue)") }
+        let binds = doc.binds.filter { hit("\(doc.title($0)) \(doc.prettyShortcut($0).joined()) \($0.submap)") }
+            .prefix(12)
+            .map { SettingEntry(id: "bind.\($0.id)", title: doc.title($0), pane: .shortcuts, bind: $0) }
+        return settings + binds
+    }
+}
+
+extension View {
+    /// Marks a setting the search can open: the scroll target, lit up when it was just opened.
+    func setting(_ id: String, _ ui: SettingsUI) -> some View {
+        modifier(SettingAnchor(id: id, ui: ui))
+    }
+}
+
+private struct SettingAnchor: ViewModifier {
+    let id: String
+    @ObservedObject var ui: SettingsUI
+
+    func body(content: Content) -> some View {
+        content
+            .background {
+                RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.accentSoft)
+                    .padding(.horizontal, -12)
+                    .opacity(ui.highlight == id ? 1 : 0)
+            }
+            .id(id)
+    }
+}
+
 // MARK: - Root
 
 struct SettingsView: View {
     @ObservedObject var doc: ConfigDocument
     @ObservedObject var ui: SettingsUI
     @ObservedObject private var library = SettingsWindow.shared.library
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @FocusState private var searchFocused: Bool
 
     var body: some View {
-        // The map covers the panes rather than replacing them, so the window keeps its toolbar and the
-        // traffic lights stay put.
-        ZStack {
-            panes
-                .allowsHitTesting(!ui.showMap)
-                .accessibilityHidden(ui.showMap)
-            if ui.showMap {
-                ShortcutMap(doc: doc, ui: ui)
-                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.98)))
-            }
+        HStack(spacing: 0) {
+            Sidebar(doc: doc, ui: ui, searchFocused: $searchFocused)
+                .frame(width: 228)
+            PaneHost(doc: doc, ui: ui)
+                .pane()
+                .padding(.vertical, 8).padding(.trailing, 8)
         }
+        .background(Theme.wash.ignoresSafeArea())
+        .ignoresSafeArea()
         .font(Theme.body())
+        .foregroundStyle(Theme.ink)
+        .tint(Theme.accent)
+        .background {
+            // ⌘F focuses the settings search.
+            Button("") { searchFocused = true }.keyboardShortcut("f").hidden()
+        }
         .sheet(item: $library.sheet) { ConfigSheetView(sheet: $0, library: library) }
         .onDrop(of: [.fileURL], isTargeted: nil) { providers in
             guard let p = providers.first else { return false }
@@ -264,136 +361,122 @@ struct SettingsView: View {
             return true
         }
     }
-
-    private var panes: some View {
-        let pane = ui.pane ?? .overview
-        return NavigationSplitView {
-            Sidebar(doc: doc, ui: ui)
-                .toolbar(removing: .sidebarToggle)
-                .navigationSplitViewColumnWidth(220)
-        } detail: {
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 8) {
-                    Text(pane.rawValue).font(Theme.heading(22))
-                    Spacer(minLength: 12)
-                    if let kind = pane.configKind {
-                        ConfigSelector(kind: kind, library: library, width: 190)
-                        ConfigTransferMenu(kind: kind, library: library)
-                    }
-                }
-                .padding(.horizontal, 24).padding(.top, 4).padding(.bottom, 12)
-                Group {
-                    switch pane {
-                    case .overview: OverviewPane(doc: doc, ui: ui)
-                    case .layouts: LayoutsPane(doc: doc)
-                    case .gaps: GapsPane(doc: doc, ui: ui)
-                    case .behavior: BehaviorPane(doc: doc, ui: ui)
-                    case .floating: FloatingPane(doc: doc, ui: ui)
-                    case .animation: AnimationPane(doc: doc, ui: ui)
-                    case .keybinds: KeybindsPane(doc: doc, ui: ui)
-                    case .advanced: AdvancedPane(doc: doc)
-                    }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                // An inset rather than a stacked row, so panes scroll on under the glass bar on macOS 26.
-                .safeAreaInset(edge: .bottom, spacing: 0) { StatusBar(doc: doc) }
-            }
-            .background(Theme.window)
-            .modifier(SeamlessToolbar())
-        }
-    }
 }
 
-/// Lets the detail background run up under the (empty) toolbar instead of a separate strip.
-private struct SeamlessToolbar: ViewModifier {
-    func body(content: Content) -> some View {
-        if #available(macOS 15.0, *) {
-            content.toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
-        } else {
-            content
-        }
-    }
-}
+// MARK: - Sidebar
 
-/// Standard source-list sidebar, like Notes and System Settings.
 private struct Sidebar: View {
     @ObservedObject var doc: ConfigDocument
     @ObservedObject var ui: SettingsUI
+    var searchFocused: FocusState<Bool>.Binding
     @ObservedObject private var library = SettingsWindow.shared.library
-    /// How far the import/export row is nudged up to sit level with the traffic lights. The title
-    /// bar strip the list reserves is taller on macOS 26, which would otherwise leave the row low.
-    private final class Lift: ObservableObject { @Published var y: CGFloat = 0 }
-    @StateObject private var lift = Lift()
 
     private var version: String { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "" }
 
     var body: some View {
-        List(Pane.allCases, selection: $ui.pane) { p in
-            HStack(spacing: 8) {
-                IconTile(symbol: p.icon, color: p.color, size: 22)
-                Text(p.rawValue)
-                Spacer(minLength: 0)
-                if p == .overview && !(ui.status.trusted && ui.status.keybindsActive) {
-                    Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.white, .orange)
-                        .accessibilityLabel("Needs attention")
-                } else if p == .keybinds && doc.problemCount > 0 {
-                    Text("\(doc.problemCount)").font(Theme.body(11, .bold)).foregroundStyle(.white)
-                        .padding(.horizontal, 5).frame(minWidth: 16, minHeight: 16)
-                        .background(Capsule().fill(.red))
+        VStack(alignment: .leading, spacing: 0) {
+            Color.clear.frame(height: SettingsWindow.titlebarHeight)
+            OSearchField(placeholder: "Search settings", text: $ui.search, shortcut: ["⌘", "F"], focus: searchFocused) {
+                if let first = SettingsIndex.search(ui.search, doc: doc).first { ui.open(first) }
+            }
+            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.surface.opacity(0.6)))
+            .padding(.bottom, 14)
+            VStack(spacing: 2) {
+                ForEach(Pane.allCases) { p in
+                    SideItem(pane: p, on: p == ui.pane && ui.search.isEmpty, badge: badge(p)) {
+                        withAnimation(.easeOut(duration: Theme.fast)) {
+                            ui.search = ""
+                            ui.showMap = false
+                            ui.pane = p
+                        }
+                    }
                 }
             }
-            .tag(p)
-        }
-        .listStyle(.sidebar)
-        .safeAreaInset(edge: .top, spacing: 0) {
-            // Full configs. Import/export shares a row with the traffic lights and the selector sits right under.
-            VStack(spacing: 0) {
-                HStack { Spacer(); ConfigTransferMenu(kind: .full, library: library) }
-                    .padding(.trailing, 12).frame(height: 44)
-                    .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).midY } action: { mid in
-                        // The traffic lights are centred in the title band; close the remaining gap.
-                        let y = lift.y + mid - SettingsWindow.titlebarHeight / 2
-                        if abs(y - lift.y) > 0.5 { lift.y = max(0, y) }
-                    }
-                ConfigSelector(kind: .full, library: library).padding(.horizontal, 12).padding(.bottom, 8)
-            }
-            .padding(.top, -24) // the list reserves a title bar strip; this starts the row at the window edge
-            .offset(y: -lift.y) // moves only these two rows; the list below keeps its place
-        }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            HStack {
+            Spacer(minLength: 12)
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Config").font(Theme.body(12, .medium)).foregroundStyle(Theme.inkMuted).padding(.leading, 10)
+                HStack(spacing: 4) {
+                    ConfigSelector(kind: .full, library: library)
+                    ConfigTransferMenu(kind: .full, library: library)
+                }
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Wordmark()
-                    Text(version).font(Theme.body(11)).foregroundStyle(.secondary)
+                    Text(version).font(Theme.body(11.5)).foregroundStyle(Theme.inkMuted).oneLine()
+                    Spacer(minLength: 0)
+                    OIconButton(symbol: "keyboard", label: "Shortcut map") {
+                        ui.search = ""
+                        ui.pane = .shortcuts
+                        withAnimation(Motion.snap) { ui.showMap = true }
+                    }
                 }
-                Spacer()
-                MapButton { withAnimation(Motion.snap) { ui.showMap = true } }
+                .padding(.leading, 10).padding(.top, 6)
             }
-            .padding(.leading, 18).padding(.trailing, 12).padding(.vertical, 12)
+        }
+        .padding(.leading, 10).padding(.trailing, 6).padding(.bottom, 12)
+    }
+
+    private func badge(_ p: Pane) -> SideItem.Badge? {
+        switch p {
+        case .general where !(ui.status.trusted && ui.status.keybindsActive): .attention
+        case .shortcuts where doc.problemCount > 0: .count(doc.problemCount)
+        default: nil
         }
     }
 }
 
-/// Opens the shortcut map. The keyboard hops a little on hover.
-private struct MapButton: View {
+/// A sidebar item straight on the wash; the selected one is a `surface` pill.
+private struct SideItem: View {
+    enum Badge { case attention, count(Int) }
+    let pane: Pane
+    let on: Bool
+    let badge: Badge?
     let action: () -> Void
-    private final class Hover: ObservableObject { @Published var on = false }
-    @StateObject private var hover = Hover()
+    @StateObject private var model = Model()
+
+    final class Model: ObservableObject {
+        @Published var hover = false
+    }
 
     var body: some View {
-        Button(action: action) {
-            Image(systemName: "keyboard")
-                .font(.system(size: 15, weight: .medium))
-                .symbolEffect(.bounce, value: hover.on)
-                .foregroundStyle(hover.on ? .primary : .secondary)
-                .frame(width: 30, height: 26)
-                .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Color.primary.opacity(hover.on ? 0.1 : 0)))
-                .contentShape(Rectangle())
+        Button {
+            action()
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: pane.icon)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(on ? Theme.accentInk : Theme.inkMuted)
+                    .frame(width: 18)
+                Text(pane.rawValue).font(Theme.body(13.5, on ? .medium : .regular)).oneLine()
+                Spacer(minLength: 0)
+                switch badge {
+                case .attention:
+                    Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 11)).foregroundStyle(Theme.warning)
+                        .accessibilityLabel("Needs attention")
+                case .count(let n):
+                    Text("\(n)").font(Theme.body(11, .medium)).foregroundStyle(Theme.danger)
+                        .padding(.horizontal, 6).frame(minWidth: 18, minHeight: 18)
+                        .background(Capsule().fill(Theme.dangerSoft))
+                        .accessibilityLabel("\(n) problems")
+                case nil:
+                    EmptyView()
+                }
+            }
+            .foregroundStyle(Theme.ink)
+            .padding(.horizontal, 10).frame(height: 34)
+            .background {
+                let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
+                if on {
+                    shape.fill(Theme.surface).elevation(.sm, in: shape)
+                } else {
+                    shape.fill(Theme.surface.opacity(model.hover ? 0.55 : 0))
+                }
+            }
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .onHover { hover.on = $0 }
-        .help("Shortcut Map")
-        .accessibilityLabel("Shortcut Map")
+        .onHover { model.hover = $0 }
+        .animation(.easeOut(duration: Theme.fast), value: model.hover)
+        .accessibilityAddTraits(on ? .isSelected : [])
     }
 }
 
@@ -407,11 +490,11 @@ private struct Wordmark: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        Text("Ouch").font(Theme.display(22))
+        Text("Ouch").font(Theme.wordmark(19))
             .rotationEffect(.degrees(model.hover && !reduceMotion ? -6 : 0), anchor: .bottomLeading)
             .squish(on: model.bumps)
             .overlay(alignment: .topLeading) {
-                ImpactBurst(trigger: model.bumps, size: 16).offset(x: -10, y: -8)
+                ImpactBurst(trigger: model.bumps, size: 15).offset(x: -10, y: -8)
             }
             .animation(Motion.snap, value: model.hover)
             .onHover { model.hover = $0 }
@@ -420,363 +503,278 @@ private struct Wordmark: View {
     }
 }
 
-private struct StatusBar: View {
-    @ObservedObject var doc: ConfigDocument
+// MARK: - Pane host
 
-    var body: some View {
-        HStack(spacing: 10) {
-            if let err = doc.saveError {
-                dot(.red)
-                Text("Couldn't save: \(err)").foregroundStyle(.red)
-            } else if doc.problemCount > 0 {
-                dot(.orange)
-                Text("Fix \(doc.problemCount) shortcut\(doc.problemCount == 1 ? "" : "s") to save your changes").foregroundStyle(.orange)
-            } else if doc.isDirty {
-                ProgressView().controlSize(.small).scaleEffect(0.8).frame(width: 14, height: 14)
-                Text("Saving…").foregroundStyle(Theme.secondary)
-            } else if !doc.fileErrors.isEmpty {
-                dot(.orange)
-                Text("\(doc.fileErrors.count) line\(doc.fileErrors.count == 1 ? "" : "s") in the config file were skipped")
-                    .foregroundStyle(.orange)
-                    .help(doc.fileErrors.joined(separator: "\n"))
-            } else {
-                EmptyView()
-            }
-            Spacer()
-            if doc.hasChangesSinceOpen {
-                Button("Undo All Changes") { doc.undoAllChanges() }
-            }
-        }
-        .font(Theme.body(12.5))
-        .modifier(Chrome(isEmpty: isEmpty))
-        .animation(.easeOut(duration: 0.2), value: isEmpty)
-    }
-
-    private var isEmpty: Bool {
-        doc.saveError == nil && doc.problemCount == 0 && !doc.isDirty && doc.fileErrors.isEmpty && !doc.hasChangesSinceOpen
-    }
-
-    /// A glass bar floating over the bottom edge on macOS 26, a solid strip with a divider before that.
-    private struct Chrome: ViewModifier {
-        let isEmpty: Bool
-
-        func body(content: Content) -> some View {
-            if #available(macOS 26.0, *) {
-                // Floating glass has no reason to show while there is nothing to report.
-                if !isEmpty {
-                    content
-                        .padding(.leading, 16).padding(.trailing, 8)
-                        .frame(height: 38)
-                        .glassEffect(.regular, in: .capsule)
-                        .padding(.horizontal, 16).padding(.bottom, 12).padding(.top, 4)
-                        .transition(.opacity.combined(with: .move(edge: .bottom)))
-                }
-            } else {
-                content
-                    .padding(.leading, 24).padding(.trailing, 16)
-                    .frame(height: 38)
-                    .background(Theme.statusBar)
-                    .overlay(alignment: .top) { Divider() }
-            }
-        }
-    }
-
-    private func dot(_ c: Color) -> some View { Circle().fill(c).frame(width: 8, height: 8) }
-}
-
-// MARK: - Shared components
-
-/// Scrolling pane body with the design's insets.
-private struct PaneScroll<Content: View>: View {
-    var spacing: CGFloat = 20
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: spacing) { content }
-                .padding(.horizontal, 24).padding(.top, 8).padding(.bottom, 24)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-}
-
-private extension View {
-    /// Disabled and faded, like the design's inactive rows.
-    func dimmed(_ off: Bool) -> some View { disabled(off).opacity(off ? 0.4 : 1) }
-}
-
-private struct NumberRow: View {
-    let title: String
-    @Binding var value: CGFloat
-    var range: ClosedRange<CGFloat> = 0...60
-    @Environment(\.isEnabled) private var enabled
-
-    /// Whole points, clamped to the range, so the slider, field and stepper never disagree.
-    private var points: Binding<Double> {
-        Binding(get: { Double(value) }, set: { v in
-            let r = CGFloat(v.rounded())
-            let clamped = min(range.upperBound, max(range.lowerBound, r))
-            if clamped != value { value = clamped }
-        })
-    }
-
-    var body: some View {
-        Row(title, vertical: 7) {
-            HStack(spacing: 8) {
-                // No `step:`: on macOS it draws a tick mark per step and makes the knob jump. The binding rounds instead.
-                Slider(value: points, in: Double(range.lowerBound)...Double(range.upperBound))
-                    .controlSize(.small)
-                    .frame(width: 180)
-                    .accessibilityLabel(title)
-                    .accessibilityValue("\(Int(value)) points")
-                HStack(spacing: 2) {
-                    TextField(title, value: points, format: .number)
-                        .labelsHidden()
-                        .textFieldStyle(.roundedBorder)
-                        .multilineTextAlignment(.trailing)
-                        .monospacedDigit()
-                        .frame(width: 44)
-                    Stepper(title, value: points, in: Double(range.lowerBound)...Double(range.upperBound), step: 1)
-                        .labelsHidden()
-                }
-                Text("pt").foregroundStyle(.secondary)
-            }
-        }
-        .opacity(enabled ? 1 : 0.4)
-    }
-}
-
-private extension Layout {
-    var blurb: String {
-        switch self {
-        case .tall: "Main on the left, the rest stacked on the right"
-        case .tallRight: "Main on the right, the rest stacked on the left"
-        case .wide: "Main on top, the rest side by side below"
-        case .middleWide: "Main in the middle, the rest split left and right"
-        case .fullscreen: "Every window fills the screen"
-        case .column: "Equal-width columns"
-        case .row: "Equal-height rows"
-        case .floating: "Leave windows where you put them"
-        case .bsp: "Each window splits the space of the previous one"
-        case .threeColumnLeft: "Main on the left, two columns to its right"
-        case .threeColumnMiddle: "Main in the middle column"
-        case .threeColumnRight: "Main on the right, two columns to its left"
-        case .twoPane: "Main on the left, one other window on the right"
-        case .twoPaneRight: "Main on the right, one other window on the left"
-        case .widescreenTall: "Main windows side by side, the rest stacked right"
-        case .widescreenTallRight: "Main windows side by side, the rest stacked left"
-        }
-    }
-}
-
-// MARK: - Overview
-
-private struct OverviewPane: View {
+private struct PaneHost: View {
     @ObservedObject var doc: ConfigDocument
     @ObservedObject var ui: SettingsUI
-    @ObservedObject private var updater = Updater.shared
+    @ObservedObject private var library = SettingsWindow.shared.library
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        let s = ui.status
-        PaneScroll {
-            Card(padding: 14) { hero(s) }
+        ZStack(alignment: .bottom) {
+            if !ui.search.isEmpty {
+                SearchResults(doc: doc, ui: ui)
+            } else if ui.showMap {
+                ShortcutMap(doc: doc, ui: ui)
+                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.98)))
+            } else {
+                content.id(ui.pane)
+            }
+            StatusPill(doc: doc)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
 
-            if s.trusted && !s.screens.isEmpty {
-                Block("Displays") {
-                    Card {
-                        ForEach(s.screens, id: \.uuid) { screen in
-                            HStack(spacing: 12) {
-                                LayoutThumbnail(layout: screen.layout, selected: true).frame(width: 64, height: 40)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(screen.workspace.isEmpty ? screen.name : "\(screen.name) · Workspace \(screen.workspace)")
-                                }
-                                Spacer(minLength: 0)
-                                PopUp(title: "Layout for \(screen.name)", options: Layout.allCases.map { ($0, $0.title) }, selection: Binding(get: { screen.layout }, set: { l in
-                                    WindowManager.shared.setLayout(l, screen: screen.uuid)
-                                    ui.refreshStatus()
-                                }))
-                            }
-                            .padding(.vertical, 9)
-                        }
+    private var content: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 30) {
+                    header
+                    switch ui.pane {
+                    case .general: GeneralPane(doc: doc, ui: ui)
+                    case .layout: LayoutPane(doc: doc, ui: ui)
+                    case .windows: WindowsPane(doc: doc, ui: ui)
+                    case .motion: MotionPane(doc: doc, ui: ui)
+                    case .shortcuts: ShortcutsPane(doc: doc, ui: ui)
                     }
                 }
+                .padding(.horizontal, 36).padding(.top, 22).padding(.bottom, 64)
+                .frame(maxWidth: 660, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-
-            Block("Quick settings") {
-                Card {
-                    SwitchRow(title: "Open at login", isOn: loginBinding)
-                    if ui.status.loginNeedsApproval { LoginApprovalRow() }
-                    if !s.inputMonitoring { InputMonitoringRow() }
-                    SwitchRow(title: "Tiling", isOn: Binding(get: { ui.status.tilingEnabled }, set: { _ in
-                        WindowManager.shared.toggleTiling()
-                        ui.refreshStatus()
-                    }))
-                    .disabled(!s.running)
-                    SwitchRow(title: "Focus follows mouse", isOn: $doc.config.focusFollowsMouse)
-                    SwitchRow(title: "Mouse follows focus", isOn: $doc.config.mouseFollowsFocus)
-                    SwitchRow(title: "Animate windows", isOn: $doc.config.animate)
-                    Row("Main modifier") {
-                        PopUp(title: "Main modifier", options: modifierOptions, selection: Binding(get: { doc.modValue }, set: { doc.modValue = $0 }))
-                    }
+            .scrollIndicators(.automatic)
+            .onChange(of: ui.highlight) { _, id in
+                guard let id else { return }
+                // After the Advanced section has had a moment to open.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+                    withAnimation(Motion.easeOut) { proxy.scrollTo(id, anchor: .center) }
                 }
             }
-
-            Block("Updates") {
-                Card {
-                    if updater.isConfigured {
-                        SwitchRow(title: "Check for updates automatically",
-                                  isOn: Binding(get: { updater.automaticallyChecks }, set: { updater.automaticallyChecks = $0 }))
-                        SwitchRow(title: "Download updates automatically",
-                                  isOn: Binding(get: { updater.automaticallyDownloads }, set: { updater.automaticallyDownloads = $0 }))
-                            .disabled(!updater.automaticallyChecks)
-                        SwitchRow(title: "Include beta releases", isOn: Binding(get: { updater.receivesBeta }, set: { updater.receivesBeta = $0 }))
-                        Row(updater.lastChecked.map { "Last checked \($0.formatted(.relative(presentation: .named)))" } ?? "Not checked yet",
-                            vertical: 8) {
-                            Button("Check Now") { updater.checkForUpdates() }
-                        }
-                    } else {
-                        Text("This build has no update feed. Release builds published with Amore update themselves.")
-                            .foregroundStyle(Theme.secondary)
-                            .padding(.vertical, 9)
-                    }
+            .onChange(of: ui.recording) { _, id in
+                if let id { withAnimation { proxy.scrollTo("bind.\(id)", anchor: .center) } }
+            }
+            .onAppear {
+                if let id = ui.highlight { DispatchQueue.main.async { proxy.scrollTo(id, anchor: .center) } }
+                guard let id = ui.reveal else { return }
+                DispatchQueue.main.async { proxy.scrollTo("bind.\(id)", anchor: .center) }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
+                    if ui.reveal == id { withAnimation(.easeOut(duration: 0.4)) { ui.reveal = nil } }
                 }
             }
-
-            AmoreCredit().frame(maxWidth: .infinity)
         }
     }
 
-    private var loginBinding: Binding<Bool> {
-        Binding(get: { ui.status.launchAtLogin || ui.status.loginNeedsApproval }, set: { on in
-            LoginItem.set(on)
-            ui.refreshStatus()
-        })
-    }
-
-    private var modifierOptions: [(value: String, label: String)] {
-        var o = ConfigDocument.modifierChoices.map { (value: $0.value, label: $0.label) }
-        if !o.contains(where: { $0.value == doc.modValue }) { o.append((doc.modValue, doc.modValue)) }
-        return o
-    }
-
-    /// One layout for every state, so the icon stays put (and can bump) when access is granted.
-    private func hero(_ s: WindowManager.Status) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 14) {
-                statusIcon(s)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(!s.trusted ? "Ouch needs Accessibility access" : !s.tilingEnabled ? "Tiling is paused"
-                         : s.keybindsActive ? "Ouch is running" : "Keyboard shortcuts aren't active")
-                        .font(Theme.heading(21))
-                        .contentTransition(.opacity)
-                    Text(s.trusted ? summary(s) : "macOS only lets apps move other apps' windows with this permission.")
-                        .foregroundStyle(Theme.secondary)
-                        .contentTransition(.numericText())
-                }
-                Spacer()
-                if s.trusted && !s.keybindsActive {
-                    Button("Retry") { Hotkeys.shared.restart(); ui.refreshStatus() }
+    /// Breadcrumb, the 40pt light title, and the pane's config selector.
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Text("Settings")
+                Image(systemName: "chevron.right").font(.system(size: 9, weight: .semibold))
+                Text(ui.pane.rawValue)
+            }
+            .font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine()
+            HStack(alignment: .center, spacing: 8) {
+                Text(ui.pane.rawValue).font(Theme.display(40)).tracking(-1).oneLine()
+                Spacer(minLength: 12)
+                if let kind = ui.pane.configKind {
+                    ConfigSelector(kind: kind, library: library, width: 180)
+                    ConfigTransferMenu(kind: kind, library: library)
                 }
             }
-            if !s.trusted {
+        }
+    }
+}
+
+// MARK: - Search results
+
+private struct SearchResults: View {
+    @ObservedObject var doc: ConfigDocument
+    @ObservedObject var ui: SettingsUI
+
+    var body: some View {
+        let results = SettingsIndex.search(ui.search, doc: doc)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
                 VStack(alignment: .leading, spacing: 6) {
-                    step(1, "Click Open Accessibility Settings. A guide appears next to System Settings.")
-                    step(2, "Turn on Ouch in the list.")
-                    step(3, "Still not working after a rebuild? Click Reset Permission, then turn it on again.")
+                    Text("Search").font(Theme.body(12)).foregroundStyle(Theme.inkMuted)
+                    Text("“\(ui.search)”").font(Theme.display(40)).tracking(-1).oneLine()
                 }
-                .font(Theme.body(12.5))
-                HStack(spacing: 8) {
-                    Button("Open Accessibility Settings") { Permissions.request() }.glassButtonStyle(prominent: true)
-                    Button("Reset Permission") { Permissions.reset() }
-                    Spacer()
-                    ProgressView().controlSize(.small).scaleEffect(0.7).frame(width: 12, height: 12)
-                    Text("Waiting…").font(Theme.body(11)).foregroundStyle(Theme.secondary)
+                if results.isEmpty {
+                    Text("Nothing matches. Try another word, like “gaps” or “focus”.")
+                        .font(Theme.body(13.5)).foregroundStyle(Theme.inkMuted).oneLine()
                 }
-                .transition(.opacity)
+                ForEach(Pane.allCases) { p in
+                    let here = results.filter { $0.pane == p }
+                    if !here.isEmpty {
+                        OGroup(p.rawValue) {
+                            ForEach(here) { r in ResultRow(entry: r, first: r.id == results.first?.id) { ui.open(r) } }
+                        }
+                    }
+                }
             }
-        }
-        .animation(.easeOut(duration: 0.25), value: s.trusted)
-        .animation(.easeOut(duration: 0.2), value: summary(s))
-    }
-
-    /// The app icon with a status badge. Going live (access granted, tiling back on) gives it a bump.
-    private func statusIcon(_ s: WindowManager.Status) -> some View {
-        let live = s.trusted && s.keybindsActive && s.tilingEnabled
-        let badge = !s.trusted ? "lock.circle.fill" : live ? "checkmark.circle.fill"
-            : s.keybindsActive ? "pause.circle.fill" : "exclamationmark.circle.fill"
-        return BadgedAppIcon(badge: badge, color: live ? .green : .orange, size: 48)
-            .squish(on: live, when: live)
-            .overlay(alignment: .topLeading) {
-                ImpactBurst(trigger: live, size: 22).offset(x: -12, y: -12).opacity(live ? 1 : 0)
-            }
-    }
-
-    private func summary(_ s: WindowManager.Status) -> String {
-        let w = "\(s.tiled) tiled window\(s.tiled == 1 ? "" : "s")"
-        let f = s.floating > 0 ? " · \(s.floating) floating" : ""
-        let d = " · \(s.screens.count) display\(s.screens.count == 1 ? "" : "s")"
-        return w + f + d
-    }
-
-    private func step(_ n: Int, _ text: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text("\(n)").font(Theme.body(11, .bold)).foregroundStyle(.white)
-                .frame(width: 18, height: 18).background(Circle().fill(Color.accentColor))
-            Text(text).fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 36).padding(.top, 22).padding(.bottom, 40)
+            .frame(maxWidth: 660, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }
 
-private struct InputMonitoringRow: View {
+private struct ResultRow: View {
+    let entry: SettingEntry
+    let first: Bool
+    let action: () -> Void
+    @StateObject private var hover = Flag()
+
     var body: some View {
-        Row {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Instant Caps Lock shortcuts")
-                Text("Allow Input Monitoring so Super + Caps Lock fires right away instead of after a hold.")
-                    .font(Theme.body(11)).foregroundStyle(Theme.secondary)
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: entry.bind != nil ? "command" : entry.pane.icon)
+                    .font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.accentInk).frame(width: 18)
+                Text(entry.title).font(Theme.body(14)).oneLine()
+                if entry.advanced {
+                    Text("Advanced").font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine()
+                }
+                Spacer(minLength: 8)
+                if first { Text("↩").font(Theme.keys(12)).foregroundStyle(Theme.inkMuted) }
+                Image(systemName: "arrow.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.inkMuted)
+                    .opacity(hover.on ? 1 : 0)
             }
-        } control: {
-            Button("Allow…") { Permissions.requestInputMonitoring() }
-        }
-    }
-}
-
-private struct LoginApprovalRow: View {
-    var body: some View {
-        Row {
-            Label("macOS is waiting for you to allow Ouch in Login Items", systemImage: "exclamationmark.circle")
-                .foregroundStyle(.orange).font(Theme.body(12.5))
-        } control: {
-            Button("Open Login Items") { LoginItem.openSettings() }
-        }
-    }
-}
-
-/// Tiny "shipped with" credit; the heart gives a little hop on hover.
-private struct AmoreCredit: View {
-    private final class Hover: ObservableObject { @Published var on = false }
-    @StateObject private var hover = Hover()
-
-    var body: some View {
-        let hovering = hover.on
-        return Link(destination: URL(string: "https://amore.computer")!) {
-            HStack(spacing: 4) {
-                Text("shipped with")
-                Image(systemName: "heart.fill")
-                    .foregroundStyle(.pink)
-                    .symbolEffect(.bounce, value: hovering)
-                    .shadow(color: .pink.opacity(hovering ? 0.7 : 0), radius: 4)
-                Text("Amore").fontWeight(.bold)
-            }
-            .font(Theme.body(10))
-            .foregroundStyle(.primary.opacity(hovering ? 0.85 : 0.3))
-            .animation(.spring(response: 0.3, dampingFraction: 0.45), value: hovering)
+            .padding(.horizontal, 10).frame(height: 40)
+            .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(hover.on ? Theme.hover : .clear))
+            .padding(.horizontal, -10)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onHover { hover.on = $0 }
-        .help("Updates delivered by Amore")
     }
 }
+
+// MARK: - Status
+
+/// A small glass capsule over the bottom of the pane: a brief "Saved" when a change lands, problems
+/// while there are any, and "Undo All Changes" once something changed since the window opened.
+private struct StatusPill: View {
+    @ObservedObject var doc: ConfigDocument
+    @StateObject private var model = Model()
+
+    final class Model: ObservableObject {
+        @Published var saved = false
+        private var hide: DispatchWorkItem?
+
+        func flash() {
+            withAnimation(Motion.easeOut) { saved = true }
+            hide?.cancel()
+            let work = DispatchWorkItem { [weak self] in withAnimation(.easeOut(duration: 0.3)) { self?.saved = false } }
+            hide = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.4, execute: work)
+        }
+    }
+
+    private enum Message: Equatable { case error(String), problems(Int), skipped(Int), saved }
+
+    /// What to say, most urgent first. Saving itself takes a few milliseconds, so it isn't announced.
+    private var message: Message? {
+        if let err = doc.saveError { return .error(err) }
+        if doc.problemCount > 0 { return .problems(doc.problemCount) }
+        if model.saved { return .saved }
+        if !doc.fileErrors.isEmpty { return .skipped(doc.fileErrors.count) }
+        return nil
+    }
+
+    var body: some View {
+        let message = message, undo = doc.hasChangesSinceOpen
+        Group {
+            if message != nil || undo {
+                HStack(spacing: 10) {
+                    if let message { label(message).transition(.opacity) }
+                    if message != nil && undo { Rectangle().fill(Theme.hairline).frame(width: 1, height: 16) }
+                    if undo {
+                        Button { doc.undoAllChanges() } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "arrow.uturn.backward").font(.system(size: 11, weight: .semibold))
+                                Text("Undo All Changes").font(Theme.body(12.5, .medium)).oneLine()
+                            }
+                            .foregroundStyle(Theme.ink)
+                            .padding(.horizontal, 10).frame(height: 26)
+                            .background(Capsule().fill(Theme.well))
+                            .contentShape(Capsule())
+                        }
+                        .buttonStyle(PressScale())
+                        .help("Go back to how things were when you opened Settings")
+                    }
+                }
+                .padding(.leading, message == nil ? 5 : 14).padding(.trailing, undo ? 5 : 14)
+                .frame(height: 36)
+                .floatingGlass(Capsule())
+                .padding(.bottom, 14)
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
+        }
+        .animation(Motion.easeOut, value: message)
+        .animation(Motion.easeOut, value: undo)
+        .onChange(of: doc.isDirty) { was, now in
+            if was && !now && doc.saveError == nil { model.flash() }
+        }
+    }
+
+    @ViewBuilder private func label(_ m: Message) -> some View {
+        switch m {
+        case .error(let err):
+            OStatus(kind: .danger, text: "Couldn't save: \(err)").help(err)
+        case .problems(let n):
+            OStatus(kind: .warning, text: "Fix \(n) shortcut\(n == 1 ? "" : "s") to save")
+        case .skipped(let n):
+            OStatus(kind: .warning, text: "\(n) line\(n == 1 ? "" : "s") in the config file skipped")
+                .help(doc.fileErrors.joined(separator: "\n"))
+        case .saved:
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.circle.fill").font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Theme.success)
+                Text("Saved").font(Theme.body(12.5, .medium)).foregroundStyle(Theme.inkMuted)
+            }
+        }
+    }
+}
+
+// MARK: - Advanced
+
+/// The collapsed section at the bottom of a pane, holding what it doesn't need to show up front.
+struct AdvancedSection<Content: View>: View {
+    let pane: Pane
+    @ObservedObject var ui: SettingsUI
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        let open = ui.advancedOpen.contains(pane)
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                withAnimation(Motion.easeOut) {
+                    if open { ui.advancedOpen.remove(pane) } else { ui.advancedOpen.insert(pane) }
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Text("Advanced").font(Theme.body(12, .medium)).tracking(0.24)
+                    Image(systemName: "chevron.right").font(.system(size: 9, weight: .bold))
+                        .rotationEffect(.degrees(open ? 90 : 0))
+                    Rectangle().fill(Theme.hairline).frame(height: 1).padding(.leading, 6)
+                }
+                .foregroundStyle(open ? Theme.accentInk : Theme.inkMuted)
+                .frame(height: 24)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(open ? "Hide advanced settings" : "Show advanced settings")
+            if open {
+                VStack(alignment: .leading, spacing: 30) { content }
+                    .padding(.top, 10)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+    }
+}
+
+// MARK: - Permissions
 
 enum Permissions {
     /// Input Monitoring lets Caps Lock shortcuts fire at the real key press (see Hotkeys.startRawCaps).
@@ -883,1168 +881,13 @@ enum Permissions {
     }
 }
 
-// MARK: - Layouts
-
-private struct LayoutsPane: View {
-    @ObservedObject var doc: ConfigDocument
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        PaneScroll(spacing: 22) {
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Cycle order").font(Theme.heading(16))
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
-                        ForEach(Array(doc.config.layouts.enumerated()), id: \.element) { i, l in
-                            orderChip(i, l)
-                        }
-                    }
-                    .padding(2)
-                }
-            }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.card))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Theme.hairline))
-
-            VStack(alignment: .leading, spacing: 10) {
-                Text("All layouts").font(Theme.heading(16))
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 14)], spacing: 14) {
-                    ForEach(Layout.allCases, id: \.self) { card($0) }
-                }
-            }
-        }
-    }
-
-    private func orderChip(_ i: Int, _ l: Layout) -> some View {
-        VStack(spacing: 6) {
-            LayoutThumbnail(layout: l, selected: true).frame(width: 84, height: 52)
-            Text("\(i + 1). \(l.title)").font(Theme.body(11, .medium)).lineLimit(1).frame(maxWidth: 96)
-            HStack(spacing: 2) {
-                arrow("chevron.left", enabled: i > 0, help: "Move earlier") { move(i, by: -1) }
-                arrow("chevron.right", enabled: i < doc.config.layouts.count - 1, help: "Move later") { move(i, by: 1) }
-            }
-        }
-        .frame(width: 104)
-        .padding(.vertical, 8)
-        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.control))
-        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Theme.hairline))
-    }
-
-    private func move(_ i: Int, by d: Int) {
-        withAnimation(Motion.snap(reduceMotion)) { doc.config.layouts.swapAt(i, i + d) }
-    }
-
-    private func arrow(_ symbol: String, enabled: Bool, help: String, _ action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol).font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(.primary.opacity(enabled ? 0.7 : 0.2))
-                .frame(width: 22, height: 16)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .disabled(!enabled)
-        .help(help)
-    }
-
-    private func card(_ l: Layout) -> some View {
-        let index = doc.config.layouts.firstIndex(of: l)
-        let on = index != nil
-        let locked = on && doc.config.layouts.count == 1
-        return Button {
-            withAnimation(Motion.snap(reduceMotion)) {
-                if let index { if !locked { doc.config.layouts.remove(at: index) } } else { doc.config.layouts.append(l) }
-            }
-        } label: {
-            VStack(alignment: .leading, spacing: 0) {
-                LayoutThumbnail(layout: l, selected: on)
-                    .frame(height: 86)
-                    .squish(on: on, when: on)
-                    .overlay(alignment: .topTrailing) {
-                        if let index {
-                            Text("\(index + 1)").font(Theme.body(11, .bold)).foregroundStyle(.white)
-                                .contentTransition(.numericText())
-                                .frame(width: 20, height: 20).background(Circle().fill(Color.accentColor))
-                                .padding(5)
-                                .transition(.scale(scale: 0.4).combined(with: .opacity))
-                        }
-                    }
-                    .overlay(alignment: .topLeading) {
-                        ImpactBurst(trigger: on, size: 22).offset(x: -9, y: -9).opacity(on ? 1 : 0)
-                    }
-                Text(l.title).font(Theme.body(12.5, .semibold)).foregroundStyle(.primary).padding(.top, 8)
-            }
-            .padding(10)
-            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(on ? Color.accentColor.opacity(0.1) : Theme.card))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(on ? Color.accentColor : Theme.hairline, lineWidth: on ? 1.5 : 1))
-            .contentShape(RoundedRectangle(cornerRadius: 12))
-        }
-        .buttonStyle(.plain)
-        .help(locked ? "At least one layout has to stay in the cycle" : "\(l.blurb). \(on ? "Click to remove from the cycle" : "Click to add to the cycle")")
-    }
-}
-
-// MARK: - Gaps
-
-private struct GapsPane: View {
-    @ObservedObject var doc: ConfigDocument
-    @ObservedObject var ui: SettingsUI
-
-    private var allPadding: Binding<CGFloat> {
-        Binding(get: { doc.config.paddingTop }, set: { v in
-            doc.config.paddingTop = v; doc.config.paddingBottom = v; doc.config.paddingLeft = v; doc.config.paddingRight = v
-        })
-    }
-
-    var body: some View {
-        let c = doc.config
-        PaneScroll {
-            Card(padding: 14) {
-                GapsPreview(config: c, layout: c.layouts.first { ![.floating, .fullscreen].contains($0) } ?? .tall)
-                    .frame(width: 368, height: 230)
-                    .frame(maxWidth: .infinity)
-            }
-            Block("Between windows") {
-                Card {
-                    SwitchRow(title: "Gaps between windows", isOn: $doc.config.windowMargins)
-                    NumberRow(title: "Gap", value: $doc.config.windowMarginSize).disabled(!c.windowMargins)
-                    SwitchRow(title: "Smart gaps", isOn: $doc.config.smartWindowMargins)
-                        .disabled(!c.windowMargins)
-                }
-            }
-            Block("Screen edges") {
-                Card {
-                    SwitchRow(title: "Same padding on every side", isOn: Binding(get: { ui.linkedPadding }, set: { on in
-                        ui.linkedPadding = on
-                        if on { allPadding.wrappedValue = c.paddingTop }
-                    }))
-                    if ui.linkedPadding {
-                        NumberRow(title: "Padding", value: allPadding)
-                    } else {
-                        NumberRow(title: "Top", value: $doc.config.paddingTop)
-                        NumberRow(title: "Bottom", value: $doc.config.paddingBottom)
-                        NumberRow(title: "Left", value: $doc.config.paddingLeft)
-                        NumberRow(title: "Right", value: $doc.config.paddingRight)
-                    }
-                    SwitchRow(title: "No padding on the built-in display",
-                              isOn: $doc.config.disablePaddingOnBuiltinDisplay)
-                    SwitchRow(title: "Tile over the menu bar",
-                              isOn: $doc.config.ignoreMenuBar)
-                }
-            }
-        }
-    }
-}
-
-/// The main display, scaled down, with windows placed exactly as the tiler would place them. They
-/// spring to their new places as gaps and padding change.
-private struct GapsPreview: View {
-    let config: Config
-    let layout: Layout
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    /// Easter egg: the little windows are playable. Ids keep each window's identity while the order
-    /// (first is main) changes.
-    @StateObject private var play = Play()
-
-    /// Play state lives in an object: @State's macro plugin isn't available to SwiftPM builds.
-    final class Play: ObservableObject {
-        @Published var ids = [0, 1, 2]
-        @Published var nextID = 3
-        /// Which app each window plays, picked at random so the desk looks different every time.
-        @Published var apps: [Int: DemoApp] = {
-            var picked: [DemoApp] = []
-            for _ in 0..<3 { picked.append(DemoApp.pick(avoiding: picked)) }
-            return Dictionary(uniqueKeysWithValues: picked.enumerated().map { ($0, $1) })
-        }()
-        @Published var hovered: Int?
-        /// Drawn above the others, so a window flying to the main slot passes over its neighbours.
-        @Published var lifted: Int?
-        /// Where the desktop was clicked, as a fraction of the screen: the new window grows out of it.
-        @Published var spawn = UnitPoint.center
-    }
-
-    /// Desktop backdrop shared with the animation preview.
-    static let wallpaper = LinearGradient(colors: [Color(red: 88 / 255, green: 86 / 255, blue: 214 / 255).opacity(0.55),
-                                                   Color(red: 48 / 255, green: 176 / 255, blue: 199 / 255).opacity(0.45)],
-                                          startPoint: .topLeading, endPoint: .bottomTrailing)
-
-    var body: some View {
-        let screen = NSScreen.main ?? NSScreen.screens.first
-        let full = screen?.frame.size ?? CGSize(width: 1440, height: 900)
-        let menuBar = (screen.map { $0.frame.maxY - $0.visibleFrame.maxY }) ?? 24
-        let dock = (screen.map { $0.visibleFrame.minY - $0.frame.minY }) ?? 0
-        GeometryReader { g in
-            let scale = min(g.size.width / full.width, g.size.height / full.height)
-            let w = full.width * scale, h = full.height * scale
-            let bar = config.ignoreMenuBar ? 0 : menuBar * scale
-            let frames = windows(in: CGRect(x: 0, y: bar, width: w, height: h - bar - dock * scale), scale: scale, count: play.ids.count)
-            ZStack(alignment: .topLeading) {
-                RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Self.wallpaper)
-                Rectangle().fill(.black.opacity(0.25)).frame(width: w, height: menuBar * scale)
-                    .opacity(config.ignoreMenuBar ? 0 : 1)
-                Color.clear.contentShape(Rectangle())
-                    .onTapGesture(coordinateSpace: .local) { p in open(at: UnitPoint(x: p.x / w, y: p.y / h)) }
-                ForEach(Array(zip(play.ids, frames)), id: \.0) { i, f in
-                    window(i, frame: f)
-                        .position(x: f.midX, y: f.midY)
-                        .zIndex(play.lifted == i ? 1 : 0)
-                        // Grows out of the click, and on close sinks into its own spot while the rest fill in.
-                        .transition(.asymmetric(
-                            insertion: .scale(scale: 0.15, anchor: play.spawn).combined(with: .opacity),
-                            removal: .scale(scale: 0.85, anchor: UnitPoint(x: f.midX / w, y: f.midY / h)).combined(with: .opacity)))
-                }
-                if play.ids.isEmpty {
-                    Text("Click the desktop for a window")
-                        .font(Theme.body(11)).foregroundStyle(.white.opacity(0.7))
-                        .frame(width: w, height: h).allowsHitTesting(false)
-                        .transition(.opacity)
-                }
-            }
-            .frame(width: w, height: h)
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .frame(width: g.size.width, height: g.size.height)
-            // Dragging a slider retargets constantly, which a spring takes in stride.
-            .animation(Motion.snap(reduceMotion), value: geometry)
-            .animation(.easeOut(duration: 0.12), value: play.hovered)
-        }
-        .help("Click a window to make it main, × to close it, click the desktop to open one")
-        .accessibilityHidden(true)
-    }
-
-    private func window(_ id: Int, frame f: CGRect) -> some View {
-        let hovered = play.hovered == id
-        return ZStack(alignment: .topTrailing) {
-            Button { focus(id) } label: {
-                DemoWindow(app: play.apps[id] ?? DemoApp.all[0], main: id == play.ids.first, corner: 4)
-                    .brightness(hovered ? 0.06 : 0)
-            }
-            .buttonStyle(PressablePane())
-            if f.width > 30, f.height > 24 {
-                Button { close(id) } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 6.5, weight: .heavy))
-                        .foregroundStyle(.white)
-                        .frame(width: 13, height: 13)
-                        .background(Circle().fill(Color(red: 1, green: 0.37, blue: 0.34)))
-                        .contentShape(Circle())
-                }
-                .buttonStyle(PressablePane())
-                .padding(4)
-                .opacity(hovered ? 1 : 0)
-                .scaleEffect(hovered ? 1 : 0.5)
-                .allowsHitTesting(hovered)
-            }
-        }
-        .focusEffectDisabled()
-        .frame(width: max(f.width, 0), height: max(f.height, 0))
-        .shadow(color: .black.opacity(hovered ? 0.25 : 0.15), radius: hovered ? 4 : 2, y: hovered ? 2 : 1)
-        .onHover { play.hovered = $0 ? id : (play.hovered == id ? nil : play.hovered) }
-    }
-
-    /// Plays with the curve set under Animation, so the toy moves like real windows do.
-    private var motion: Animation {
-        if reduceMotion || !config.animate { return Motion.snap(reduceMotion) }
-        // Springs and bounces need a little longer to read at this size.
-        return Animation(CurveAnimation(curve: config.animationCurve, bounce: config.animationBounce,
-                                        duration: max(config.animationDuration, 0.22)))
-    }
-
-    /// Everything from the settings that moves the windows.
-    private var geometry: [CGFloat] {
-        [config.paddingTop, config.paddingBottom, config.paddingLeft, config.paddingRight, config.windowMarginSize,
-         config.windowMargins ? 1 : 0, config.smartWindowMargins ? 1 : 0, config.ignoreMenuBar ? 1 : 0]
-    }
-
-    private func focus(_ id: Int) {
-        guard let at = play.ids.firstIndex(of: id), at != 0 else { return }
-        play.lifted = id
-        withAnimation(motion) { play.ids.swapAt(0, at) }
-    }
-
-    private func close(_ id: Int) {
-        if play.hovered == id { play.hovered = nil }
-        withAnimation(motion) { play.ids.removeAll { $0 == id } }
-    }
-
-    private func open(at point: UnitPoint) {
-        guard play.ids.count < 6 else { return }
-        play.spawn = point
-        play.lifted = play.nextID
-        play.apps[play.nextID] = DemoApp.pick(avoiding: play.ids.compactMap { play.apps[$0] })
-        withAnimation(motion) {
-            play.ids.append(play.nextID)
-            play.nextID += 1
-        }
-    }
-
-    private func windows(in area: CGRect, scale: CGFloat, count: Int) -> [CGRect] {
-        guard count > 0 else { return [] }
-        let usable = CGRect(x: area.minX + config.paddingLeft * scale, y: area.minY + config.paddingTop * scale,
-                            width: area.width - (config.paddingLeft + config.paddingRight) * scale,
-                            height: area.height - (config.paddingTop + config.paddingBottom) * scale)
-        let gap = (config.windowMargins && !(config.smartWindowMargins && count == 1) ? config.windowMarginSize : 0) * scale
-        guard usable.width > 4, usable.height > 4,
-              let frames = layout.frames(count: count, in: usable.insetBy(dx: -gap / 2, dy: -gap / 2), ratio: 0.5, mainCount: 1)
-        else { return [] }
-        return frames.map { $0.insetBy(dx: gap / 2, dy: gap / 2) }
-    }
-}
-
-/// Dips a little while held, like pressing on glass.
-private struct PressablePane: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.96 : 1)
-            .animation(.spring(response: 0.2, dampingFraction: 0.6), value: configuration.isPressed)
-    }
-}
-
-// MARK: - Behavior
-
-private struct BehaviorPane: View {
-    @ObservedObject var doc: ConfigDocument
-    @ObservedObject var ui: SettingsUI
-
-    var body: some View {
-        PaneScroll {
-            Block("Startup") {
-                Card {
-                    SwitchRow(title: "Open Ouch at login",
-                              isOn: Binding(get: { ui.status.launchAtLogin || ui.status.loginNeedsApproval }, set: { on in
-                                  LoginItem.set(on)
-                                  ui.refreshStatus()
-                              }))
-                    if ui.status.loginNeedsApproval { LoginApprovalRow() }
-                }
-            }
-            Block("Workspaces") {
-                Card {
-                    SwitchRow(title: "Use Ouch workspaces",
-                              detail: "Per-display workspaces instead of macOS Spaces",
-                              isOn: $doc.config.virtualWorkspaces)
-                    if doc.config.virtualWorkspaces {
-                        SwitchRow(title: "Stay on this workspace when closing a window",
-                                  isOn: $doc.config.stayOnWorkspaceAfterClose)
-                        Row {
-                            TitleDetail(title: "Home Desktop",
-                                        detail: WindowManager.shared.homeSpaceSummary.isEmpty ? "The Desktop you're on when Ouch starts"
-                                            : "Workspaces live on \(WindowManager.shared.homeSpaceSummary). Other Desktops tile normally.")
-                        } control: {
-                            Button("Use This Desktop") { WindowManager.shared.makeCurrentSpaceHome() }
-                        }
-                    }
-                }
-            }
-            Block("Focus") {
-                Card {
-                    SwitchRow(title: "Focus follows mouse",
-                              isOn: $doc.config.focusFollowsMouse)
-                    SwitchRow(title: "Mouse follows focus",
-                              isOn: $doc.config.mouseFollowsFocus)
-                }
-            }
-            Block("Mouse") {
-                Card {
-                    SwitchRow(title: "Drag to swap",
-                              isOn: $doc.config.mouseSwapsWindows)
-                    SwitchRow(title: "Resize to adjust the main pane",
-                              isOn: $doc.config.mouseResizesWindows)
-                    SwitchRow(title: "Drag windows from anywhere",
-                              detail: "Hold ⌃⌘ and drag. Restart open apps to apply.",
-                              isOn: Binding(get: { ui.dragAnywhere }, set: { on in
-                                  DragAnywhere.set(on)
-                                  ui.dragAnywhere = DragAnywhere.isEnabled
-                              }))
-                }
-            }
-            Block("Windows") {
-                Card {
-                    SwitchRow(title: "New windows become main",
-                              isOn: $doc.config.newWindowsToMain)
-                    Row("Main pane resize step", vertical: 8) {
-                        let step = Binding(get: { Int((doc.config.windowResizeStep * 100).rounded()) },
-                                           set: { doc.config.windowResizeStep = CGFloat($0) / 100 })
-                        HStack(spacing: 8) {
-                            Text("\(step.wrappedValue)%").monospacedDigit()
-                            Stepper("Main pane resize step", value: step, in: 1...25).labelsHidden().controlSize(.small)
-                        }
-                    }
-                }
-            }
-            Block("Layout HUD") {
-                Card {
-                    SwitchRow(title: "Show layout name on change",
-                              isOn: $doc.config.enablesLayoutHUD)
-                    SwitchRow(title: "Also when switching spaces", isOn: $doc.config.enablesLayoutHUDOnSpaceChange)
-                        .disabled(!doc.config.enablesLayoutHUD)
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Floating
-
-private struct FloatingPane: View {
-    @ObservedObject var doc: ConfigDocument
-    @ObservedObject var ui: SettingsUI
-
-    private var runningApps: [(name: String, id: String, icon: NSImage?)] {
-        NSWorkspace.shared.runningApplications
-            .filter { $0.activationPolicy == .regular && $0.bundleIdentifier != nil && $0.processIdentifier != getpid() }
-            .map { ($0.localizedName ?? $0.bundleIdentifier!, $0.bundleIdentifier!, $0.icon) }
-            .filter { app in !doc.config.floating.contains(app.id) }
-            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-    }
-
-    var body: some View {
-        PaneScroll {
-            Block() {
-                Card {
-                    HStack(alignment: .top, spacing: 12) {
-                        Text("Apps in the list below")
-                        Spacer(minLength: 0)
-                        VStack(alignment: .leading, spacing: 6) {
-                            radio("Always float", true)
-                            radio("Are the only ones tiled", false)
-                        }
-                    }
-                    .padding(.vertical, 10)
-                    SwitchRow(title: "Float small windows",
-                              isOn: $doc.config.floatSmallWindows)
-                }
-            }
-            VStack(alignment: .leading, spacing: 0) {
-                HStack {
-                    Text("Apps").font(Theme.body(13, .semibold)).foregroundStyle(.primary.opacity(0.85))
-                    Spacer()
-                    Menu {
-                        ForEach(runningApps, id: \.id) { app in
-                            Button { if !doc.config.floating.contains(app.id) { withAnimation(.snappy) { doc.config.floating.append(app.id) } } } label: {
-                                if let icon = app.icon { Image(nsImage: resized(icon)) }
-                                Text(app.name)
-                            }
-                        }
-                    } label: {
-                        Label("Add Running App", systemImage: "plus")
-                    }
-                    .menuStyle(.borderlessButton)
-                    .menuIndicator(.hidden)
-                    .foregroundStyle(Color.accentColor)
-                    .fixedSize()
-                }
-                .padding(.horizontal, 2).padding(.bottom, 6)
-                Card {
-                    if doc.config.floating.isEmpty {
-                        Text("No apps yet. Add one from the menu above.").foregroundStyle(Theme.secondary)
-                            .frame(maxWidth: .infinity).padding(.vertical, 16)
-                    }
-                    ForEach(doc.config.floating, id: \.self) { id in
-                        HStack(spacing: 10) {
-                            appIcon(id)
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(appName(id) ?? id)
-                                if appName(id) != nil { Text(id).font(Theme.body(11)).foregroundStyle(Theme.secondary) }
-                            }
-                            Spacer(minLength: 0)
-                            RemoveButton(help: "Remove") { withAnimation(.snappy) { doc.config.floating.removeAll { $0 == id } } }
-                        }
-                        .padding(.vertical, 8)
-                    }
-                }
-            }
-            Block("Add by bundle ID") {
-                Card(padding: 9) {
-                    HStack(spacing: 8) {
-                        TextField("", text: $ui.newID, prompt: Text("com.example.app or com.adobe.*"))
-                            .textFieldStyle(.roundedBorder)
-                            .onSubmit(add)
-                        Button("Add", action: add)
-                            .disabled(ui.newID.trimmingCharacters(in: .whitespaces).isEmpty)
-                    }
-                }
-            }
-        }
-    }
-
-    private func radio(_ label: String, _ value: Bool) -> some View {
-        let on = doc.config.floatingIsBlacklist == value
-        return Button { doc.config.floatingIsBlacklist = value } label: {
-            HStack(spacing: 7) {
-                Circle().fill(on ? Color.accentColor : Theme.control)
-                    .overlay(Circle().strokeBorder(Color.black.opacity(on ? 0 : 0.3), lineWidth: 0.5))
-                    .overlay(Circle().fill(on ? Color.white : .clear).frame(width: 6, height: 6))
-                    .shadow(color: .black.opacity(on ? 0 : 0.12), radius: 0.5, y: 0.5)
-                    .frame(width: 14, height: 14)
-                Text(label)
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(on ? .isSelected : [])
-    }
-
-    private func add() {
-        let id = ui.newID.trimmingCharacters(in: .whitespaces)
-        guard !id.isEmpty, !doc.config.floating.contains(id) else { return }
-        withAnimation(.snappy) { doc.config.floating.append(id) }
-        ui.newID = ""
-    }
-
-    private func resized(_ image: NSImage) -> NSImage {
-        let copy = image.copy() as! NSImage
-        copy.size = NSSize(width: 16, height: 16)
-        return copy
-    }
-    private func appURL(_ id: String) -> URL? {
-        id.hasSuffix("*") ? nil : NSWorkspace.shared.urlForApplication(withBundleIdentifier: id)
-    }
-    private func appName(_ id: String) -> String? {
-        appURL(id).map { FileManager.default.displayName(atPath: $0.path).replacingOccurrences(of: ".app", with: "") }
-    }
-    @ViewBuilder private func appIcon(_ id: String) -> some View {
-        if let url = appURL(id) {
-            Image(nsImage: NSWorkspace.shared.icon(forFile: url.path)).resizable().frame(width: 26, height: 26)
-        } else {
-            RoundedRectangle(cornerRadius: 7).strokeBorder(Color.primary.opacity(0.3), style: StrokeStyle(lineWidth: 1.5, dash: [3, 2]))
-                .frame(width: 26, height: 26)
-        }
-    }
-}
-
-// MARK: - Animation
-
-private struct AnimationPane: View {
-    @ObservedObject var doc: ConfigDocument
-    @ObservedObject var ui: SettingsUI
-    /// The preview's two windows: a random pair, one light and one dark so they never blend.
-    static let previewApps = [DemoApp.all.filter(\.dark).randomElement()!, DemoApp.all.filter { !$0.dark }.randomElement()!].shuffled()
-
-    struct Preset {
-        let name: String
-        var animate = true
-        var curve: AnimationCurve = .easeOut
-        var duration = 0.2
-        var bounce = 0.5
-    }
-
-    static let presets: [Preset] = [
-        Preset(name: "None", animate: false),
-        Preset(name: "Snappy", duration: 0.12),
-        Preset(name: "Smooth", duration: 0.2),
-        Preset(name: "Relaxed", curve: .easeInOut, duration: 0.35),
-        Preset(name: "Springy", curve: .spring, duration: 0.5, bounce: 0.55),
-        Preset(name: "Wobbly", curve: .spring, duration: 0.8, bounce: 0.85),
-        Preset(name: "Bouncy", curve: .bounce, duration: 0.6, bounce: 0.5),
-        Preset(name: "Playful", curve: .overshoot, duration: 0.35, bounce: 0.6),
-    ]
-
-    private func matches(_ p: Preset, _ c: Config) -> Bool {
-        guard p.animate else { return !c.animate }
-        return c.animate && c.animationCurve == p.curve && abs(c.animationDuration - p.duration) < 0.005
-            && (!p.curve.usesBounce || abs(c.animationBounce - p.bounce) < 0.005)
-    }
-
-    var body: some View {
-        let c = doc.config
-        PaneScroll {
-            Block("Style", footer: Self.presets.contains { matches($0, c) } ? nil : "Custom: your own mix of the settings below.") {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 4), spacing: 10) {
-                    ForEach(Self.presets, id: \.name) { p in
-                        PresetTile(preset: p, selected: matches(p, c)) {
-                            doc.config.animate = p.animate
-                            if p.animate {
-                                doc.config.animationCurve = p.curve
-                                doc.config.animationDuration = p.duration
-                                if p.curve.usesBounce { doc.config.animationBounce = p.bounce }
-                            }
-                            play() // feel it right away
-                        }
-                    }
-                }
-            }
-            Block("Customize") {
-                Card {
-                    SwitchRow(title: "Animate windows", isOn: $doc.config.animate)
-                    Row("Curve", vertical: 8) {
-                        PopUp(title: "Curve",
-                              options: AnimationCurve.named.map { ($0.name, $0.title) } + [("bezier", AnimationCurve.bezier(0, 0, 0, 0).title)],
-                              selection: Binding(get: { c.animationCurve.isBezier ? "bezier" : c.animationCurve.name }, set: { name in
-                                  if name == "bezier" {
-                                      if !c.animationCurve.isBezier { doc.config.animationCurve = .bezier(0.34, 1.56, 0.64, 1) }
-                                  } else if let curve = AnimationCurve(name) {
-                                      doc.config.animationCurve = curve
-                                  }
-                                  play()
-                              }))
-                    }
-                    .dimmed(!c.animate)
-                    if case let .bezier(x1, y1, x2, y2) = c.animationCurve {
-                        Row(vertical: 8) {
-                            TitleDetail(title: "Control points", detail: "x1, y1, x2, y2 as in CSS. x stays within 0–1; y past 1 overshoots.")
-                        } control: {
-                            TextField("Control points", text: $ui.bezierText, prompt: Text("0.34, 1.56, 0.64, 1"))
-                                .labelsHidden()
-                                .textFieldStyle(.roundedBorder)
-                                .monospacedDigit()
-                                .frame(width: 170)
-                                .onAppear { ui.bezierText = Self.points(x1, y1, x2, y2) }
-                                .onChange(of: c.animationCurve) { _, new in
-                                    if case let .bezier(a, b, c, d) = new, AnimationCurve(ui.bezierText) != new { ui.bezierText = Self.points(a, b, c, d) }
-                                }
-                                .onSubmit(play)
-                                .onChange(of: ui.bezierText) { _, text in
-                                    if let curve = AnimationCurve(text), curve.isBezier { doc.config.animationCurve = curve }
-                                }
-                        }
-                        .dimmed(!c.animate)
-                    }
-                    Row("Duration", vertical: 8) {
-                        HStack(spacing: 10) {
-                            Slider(value: Binding(get: { c.animationDuration }, set: { doc.config.animationDuration = ($0 * 100).rounded() / 100 }),
-                                   in: 0.05...1, onEditingChanged: { if !$0 { play() } })
-                                .controlSize(.small)
-                                .frame(width: 200)
-                                .accessibilityLabel("Duration")
-                            Text("\(Int((c.animationDuration * 1000).rounded())) ms").monospacedDigit().frame(width: 56, alignment: .trailing)
-                        }
-                    }
-                    .dimmed(!c.animate)
-                    Row(vertical: 8) {
-                        TitleDetail(title: "Bounciness", detail: "How far springs swing, balls bounce and overshoot goes")
-                    } control: {
-                        HStack(spacing: 10) {
-                            Slider(value: Binding(get: { c.animationBounce }, set: { doc.config.animationBounce = ($0 * 100).rounded() / 100 }),
-                                   in: 0...1, onEditingChanged: { if !$0 { play() } })
-                                .controlSize(.small)
-                                .frame(width: 200)
-                                .accessibilityLabel("Bounciness")
-                            Text("\(Int((c.animationBounce * 100).rounded()))%").monospacedDigit().frame(width: 56, alignment: .trailing)
-                        }
-                    }
-                    .dimmed(!c.animate || !c.animationCurve.usesBounce)
-                }
-            }
-            Block("Preview") {
-                Card(padding: 14) {
-                    VStack(spacing: 12) {
-                        HStack(spacing: 14) {
-                            GeometryReader { geo in
-                                let w = geo.size.width, h = geo.size.height, flipped = ui.previewFlipped
-                                let seam = flipped ? w * 0.65 - 2 : w * 0.6 - 2
-                                ZStack(alignment: .topLeading) {
-                                    RoundedRectangle(cornerRadius: 8, style: .continuous).fill(GapsPreview.wallpaper)
-                                    DemoWindow(app: Self.previewApps[0], main: true, corner: 5)
-                                        .frame(width: max(1, (flipped ? w * 0.35 : w * 0.6) - 12), height: h - 16)
-                                        .offset(x: flipped ? w * 0.65 + 4 : 8, y: 8)
-                                    DemoWindow(app: Self.previewApps[1], corner: 5)
-                                        .frame(width: max(1, (flipped ? w * 0.65 : w * 0.4) - 12), height: h - 16)
-                                        .offset(x: flipped ? 8 : w * 0.6 + 4, y: 8)
-                                    // The windows meet at the seam when they land.
-                                    ImpactBurst(trigger: flipped, angle: -90, size: 26,
-                                                delay: c.animate ? c.animationDuration * c.animationCurve.arrival(bounce: c.animationBounce) : 0)
-                                        .offset(x: seam - 13, y: -4)
-                                        .animation(nil, value: flipped)
-                                }
-                                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                                .shadow(color: .black.opacity(0.1), radius: 2, y: 1)
-                            }
-                            CurveGraph(curve: c.animate ? c.animationCurve : .linear, bounce: c.animationBounce, instant: !c.animate)
-                                .frame(width: 140)
-                                .padding(10)
-                                .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.window.opacity(0.6)))
-                                .accessibilityHidden(true)
-                        }
-                        .frame(height: 140)
-                        .accessibilityHidden(true)
-                        Button(action: play) {
-                            Label("Play", systemImage: "play.fill")
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-            }
-        }
-    }
-
-    private static func points(_ v: Double...) -> String { v.map { String(format: "%g", $0) }.joined(separator: ", ") }
-
-    private func play() {
-        let c = doc.config
-        // Exactly the curve the real animator uses.
-        withAnimation(c.animate ? Animation(CurveAnimation(curve: c.animationCurve, bounce: c.animationBounce, duration: c.animationDuration)) : nil) {
-            ui.previewFlipped.toggle()
-        }
-    }
-}
-
-/// SwiftUI animation that follows an `AnimationCurve`, so the preview moves like real windows do.
-private struct CurveAnimation: CustomAnimation {
-    let curve: AnimationCurve
-    let bounce: Double
-    let duration: Double
-
-    func animate<V: VectorArithmetic>(value: V, time: TimeInterval, context: inout AnimationContext<V>) -> V? {
-        guard time < duration else { return nil }
-        return value.scaled(by: curve.progress(time / duration, bounce: bounce))
-    }
-}
-
-/// Plot of a curve's progress over time, with dashed lines at the start and target.
-private struct CurveGraph: View {
-    let curve: AnimationCurve
-    let bounce: Double
-    var instant = false
-    var lineWidth: CGFloat = 2
-
-    var body: some View {
-        Canvas { ctx, size in
-            // Leave headroom above and below for overshoot and anticipation.
-            let samples = (0...120).map { Double($0) / 120 }
-            let values = samples.map { instant ? ($0 > 0 ? 1 : 0) : curve.progress($0, bounce: bounce) }
-            let lo = min(0, values.min() ?? 0), hi = max(1, values.max() ?? 1)
-            func y(_ v: Double) -> CGFloat { size.height - CGFloat((v - lo) / (hi - lo)) * size.height }
-            var guides = Path()
-            for v in [0.0, 1.0] { guides.move(to: CGPoint(x: 0, y: y(v))); guides.addLine(to: CGPoint(x: size.width, y: y(v))) }
-            ctx.stroke(guides, with: .color(.secondary.opacity(0.35)), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
-            var line = Path()
-            for (t, v) in zip(samples, values) {
-                let p = CGPoint(x: CGFloat(t) * size.width, y: y(v))
-                if t == 0 { line.move(to: p) } else { line.addLine(to: p) }
-            }
-            ctx.stroke(line, with: .color(.accentColor), style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
-        }
-    }
-}
-
-private struct PresetTile: View {
-    let preset: AnimationPane.Preset
-    let selected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 6) {
-                CurveGraph(curve: preset.animate ? preset.curve : .linear, bounce: preset.bounce, instant: !preset.animate, lineWidth: 1.75)
-                    .frame(height: 34)
-                    .padding(.horizontal, 4)
-                Text(preset.name).font(Theme.body(12, selected ? .semibold : .regular))
-            }
-            .padding(.vertical, 10)
-            .padding(.horizontal, 8)
-            .frame(maxWidth: .infinity)
-            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.card))
-            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .strokeBorder(selected ? Color.accentColor : Theme.hairline, lineWidth: selected ? 2 : 1))
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(preset.name)
-        .accessibilityAddTraits(selected ? .isSelected : [])
-    }
-}
-
-// MARK: - Keyboard shortcuts
-
-/// The action catalog as menu items: a submenu per category, numbered families folded into their own submenu.
-struct ActionMenuItems: View {
-    let pick: (Action) -> Void
-
-    var body: some View {
-        ForEach(Actions.byCategory, id: \.0) { cat, actions in
-            Menu {
-                ForEach(Actions.menuEntries(actions)) { entry in
-                    switch entry {
-                    case .action(let a):
-                        Button(a.title) { pick(a) }
-                    case .group(let name, let list):
-                        Menu(name) { ForEach(list) { a in Button(a.short ?? a.title) { pick(a) } } }
-                    }
-                }
-            } label: { Label(cat.rawValue, systemImage: cat.symbol) }
-        }
-    }
-}
-
-private struct KeybindsPane: View {
-    @ObservedObject var doc: ConfigDocument
-    @ObservedObject var ui: SettingsUI
-
-    private func category(_ r: BindRow) -> ActionCategory {
-        Actions.match(r)?.category ?? Actions.rangeSummary(r)?.category ?? .custom
-    }
-
-    private func matches(_ r: BindRow) -> Bool {
-        guard r.submap == ui.bindMode else { return false }
-        guard !ui.search.isEmpty else { return true }
-        let q = ui.search.lowercased()
-        let title = doc.title(r)
-        return [title, r.dispatcher, r.args, r.key, doc.prettyShortcut(r).joined()].contains { $0.lowercased().contains(q) }
-    }
-
-    var body: some View {
-        let sections = ActionCategory.allCases.map { cat in (cat, doc.binds.filter { category($0) == cat && matches($0) }) }
-            .filter { !$0.1.isEmpty }
-        VStack(spacing: 0) {
-            HStack(spacing: 10) {
-                Segmented(title: "Shortcut set", options: doc.submaps.map { ($0, $0.isEmpty ? "Global" : "\($0.capitalized) mode") }, selection: $ui.bindMode)
-                    .help("Global shortcuts work everywhere. Mode shortcuts need the mode on, so single keys are fine there.")
-                Spacer()
-                addMenu
-            }
-            .padding(.horizontal, 24).padding(.top, 6).padding(.bottom, 12)
-            Divider()
-            ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
-                        ForEach(sections, id: \.0) { cat, rows in
-                            Block(cat.rawValue) {
-                                Card {
-                                    ForEach(rows) { row in
-                                        BindRowView(doc: doc, ui: ui, rowID: row.id).id(row.id)
-                                    }
-                                }
-                            }
-                        }
-                        if sections.isEmpty {
-                            Text(ui.search.isEmpty ? "No shortcuts yet" : "No shortcuts match “\(ui.search)”")
-                                .foregroundStyle(Theme.secondary)
-                                .frame(maxWidth: .infinity).padding(.vertical, 40)
-                        }
-                    }
-                    .padding(.horizontal, 24).padding(.top, 16).padding(.bottom, 24)
-                }
-                .onChange(of: ui.recording) { _, id in
-                    if let id { withAnimation { proxy.scrollTo(id, anchor: .center) } }
-                }
-                .onAppear {
-                    guard let id = ui.reveal else { return }
-                    DispatchQueue.main.async { proxy.scrollTo(id, anchor: .center) }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
-                        if ui.reveal == id { withAnimation(.easeOut(duration: 0.4)) { ui.reveal = nil } }
-                    }
-                }
-            }
-        }
-        .modifier(ShortcutSearch(ui: ui))
-        .onDisappear { ui.recording = nil }
-    }
-
-    private var addMenu: some View {
-        Menu {
-            ActionMenuItems { a in add(a.dispatcher, a.args) }
-            Menu {
-                Button("Go to Workspaces 1–10 with 1…0") { add("workspace", "1..10", key: "1..0") }
-                Button("Move Window to Workspaces 1–10 with 1…0") { add("movetoworkspace", "1..10", key: "1..0") }
-                Divider()
-                Button("Focus with H J K L") { add("movefocus", "l|d|u|r", key: "h|j|k|l") }
-                Button("Focus with Arrow Keys") { add("movefocus", "l|d|u|r", key: "left|down|up|right") }
-                Button("Move Window with H J K L") { add("movewindow", "l|d|u|r", key: "h|j|k|l") }
-                Button("Move Window with Arrow Keys") { add("movewindow", "l|d|u|r", key: "left|down|up|right") }
-                Divider()
-                Button("Custom Range…") { add("workspace", "1..5", key: "1..5", expand: true) }
-            } label: { Label("Ranges", systemImage: "ellipsis.rectangle") }
-            Divider()
-            Button("Custom Dispatcher…") { add("layoutmsg", "") } // matches no preset, so the raw editor shows
-        } label: {
-            Label("Add Shortcut", systemImage: "plus")
-        }
-        .fixedSize()
-    }
-
-    private func add(_ dispatcher: String, _ args: String, key: String = "", expand: Bool = false) {
-        let row = BindRow(mods: ui.bindMode.isEmpty ? doc.modVarName : "", key: key, dispatcher: dispatcher, args: args,
-                          submap: ui.bindMode)
-        doc.binds.append(row)
-        if expand { ui.expanded.insert(row.id) }
-        ui.search = ""
-        DispatchQueue.main.async { ui.recording = row.id }
-    }
-}
-
-/// The toolbar search field, left out while the shortcut map covers the pane.
-private struct ShortcutSearch: ViewModifier {
-    @ObservedObject var ui: SettingsUI
-    func body(content: Content) -> some View {
-        if ui.showMap { content } else { content.searchable(text: $ui.search, placement: .toolbar, prompt: "Search shortcuts") }
-    }
-}
-
-private struct BindRowView: View {
-    @ObservedObject var doc: ConfigDocument
-    @ObservedObject var ui: SettingsUI
-    let rowID: UUID
-
-    private var index: Int? { doc.binds.firstIndex { $0.id == rowID } }
-
-    private func dispatcherOptions(_ current: String) -> [(value: String, label: String)] {
-        Actions.dispatchers.map { ($0, $0) } + (Actions.dispatchers.contains(current) ? [] : [(current, current)])
-    }
-
-    var body: some View {
-        if let i = index {
-            let row = doc.binds[i]
-            let action = Actions.match(row)
-            let issue = doc.issue(row)
-            let isRange = BindRange.isRange(row.key)
-            let summary = isRange ? Actions.rangeSummary(row) : nil
-            // Range rows read like any other row; their keys and values open on demand (or when they're broken).
-            let editorOpen = isRange && (ui.expanded.contains(rowID) || summary == nil || issue?.severity == .error)
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 12) {
-                    recorder(row)
-                    if isRange {
-                        Text(summary?.title ?? "Custom range").lineLimit(1).truncationMode(.middle)
-                            .padding(.leading, 2)
-                            .foregroundStyle(summary == nil ? Theme.secondary : .primary)
-                        Spacer(minLength: 0)
-                    } else {
-                        actionMenu(i, action)
-                        if row.dispatcher == "exec" {
-                            TextField("Command", text: $doc.binds[i].args, prompt: Text("open -na Terminal"))
-                                .labelsHidden()
-                                .textFieldStyle(.roundedBorder).font(Theme.mono(12, .regular))
-                        } else if action == nil {
-                            PopUp(title: "Dispatcher", options: dispatcherOptions(row.dispatcher), selection: $doc.binds[i].dispatcher, bordered: true)
-                            TextField("Arguments", text: $doc.binds[i].args, prompt: Text("arguments"))
-                                .labelsHidden()
-                                .textFieldStyle(.roundedBorder).font(Theme.mono(12, .regular))
-                        } else {
-                            Spacer(minLength: 0)
-                        }
-                    }
-                    if let issue {
-                        Image(systemName: issue.severity == .error ? "exclamationmark.triangle.fill" : "exclamationmark.circle")
-                            .foregroundStyle(issue.severity == .error ? .red : .orange)
-                            .help(issue.message)
-                    }
-                    if isRange { editToggle(open: editorOpen, locked: summary == nil || issue?.severity == .error) }
-                    RemoveButton(help: "Delete shortcut") {
-                        withAnimation(.snappy) { doc.binds.removeAll { $0.id == rowID } }
-                        ui.expanded.remove(rowID)
-                    }
-                }
-                if editorOpen {
-                    rangeEditor(i, row, valid: issue?.severity != .error)
-                        .transition(.opacity.combined(with: .move(edge: .top)))
-                }
-                if let issue, issue.severity == .error {
-                    Text(issue.message).font(Theme.body(11)).foregroundStyle(.red)
-                        .padding(.leading, Self.recorderWidth + 12)
-                }
-            }
-            .padding(.vertical, 8)
-            .background(alignment: .center) {
-                RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.accentColor.opacity(ui.reveal == rowID ? 0.16 : 0))
-                    .padding(.horizontal, -8).padding(.vertical, 2)
-            }
-        }
-    }
-
-    static let recorderWidth: CGFloat = 150
-
-    /// Dispatcher, keys and values of a range row, with what each key ends up doing.
-    private func rangeEditor(_ i: Int, _ row: BindRow, valid: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack(spacing: 8) {
-                PopUp(title: "Dispatcher", options: dispatcherOptions(row.dispatcher), selection: $doc.binds[i].dispatcher, bordered: true)
-                TextField("Keys", text: $doc.binds[i].key, prompt: Text("1..0"))
-                    .labelsHidden()
-                    .textFieldStyle(.roundedBorder).font(Theme.mono(12, .regular))
-                    .frame(minWidth: 90, maxWidth: 160)
-                Image(systemName: "arrow.right").foregroundStyle(Theme.secondary).accessibilityHidden(true)
-                TextField("Values", text: $doc.binds[i].args, prompt: Text("1..10"))
-                    .labelsHidden()
-                    .textFieldStyle(.roundedBorder).font(Theme.mono(12, .regular))
-                    .frame(minWidth: 90, maxWidth: 160)
-                Spacer(minLength: 0)
-            }
-            if valid {
-                Text(rangePreview(row)).font(Theme.body(11)).foregroundStyle(Theme.secondary).lineLimit(1).truncationMode(.tail)
-            }
-        }
-        .padding(.leading, Self.recorderWidth + 12)
-    }
-
-    private func editToggle(open: Bool, locked: Bool) -> some View {
-        Button {
-            withAnimation(.snappy(duration: 0.2)) {
-                if ui.expanded.contains(rowID) { ui.expanded.remove(rowID) } else { ui.expanded.insert(rowID) }
-            }
-        } label: {
-            Image(systemName: "slider.horizontal.3")
-                .foregroundStyle(open ? Color.accentColor : Theme.secondary)
-                .frame(width: 20, height: 20)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .disabled(locked)
-        .help(open ? "Hide keys and values" : "Edit keys and values")
-        .accessibilityLabel(open ? "Hide keys and values" : "Edit keys and values")
-    }
-
-    /// "H → Focus Left · J → Focus Down · …", or the raw values when they aren't catalog actions.
-    private func rangePreview(_ row: BindRow) -> String {
-        guard case .success(let pairs) = BindRange.pairs(key: row.key, dispatcher: row.dispatcher, arg: row.args) else { return "" }
-        let mods = ConfigDocument.flags(doc.resolvedMods(row.mods)).map { ConfigDocument.modifierCaps($0).joined() } ?? ""
-        func one(_ p: (key: String, arg: String)) -> String {
-            let target = Actions.match(BindRow(mods: "", key: "", dispatcher: row.dispatcher, args: p.arg))?.title
-                ?? (p.arg.isEmpty ? row.dispatcher : p.arg)
-            return "\(mods)\(ConfigDocument.capLabel(p.key)) → \(target)"
-        }
-        let shown = pairs.count > 5 ? pairs.prefix(3).map(one) + ["…", one(pairs.last!)] : pairs.map(one)
-        return shown.joined(separator: "  ·  ")
-    }
-
-    private func recorder(_ row: BindRow) -> some View {
-        let recording = ui.recording == rowID
-        return Button {
-            ui.recording = recording ? nil : rowID
-        } label: {
-            Group {
-                if recording {
-                    Text(BindRange.isRange(row.key) ? "Press modifiers…" : "Press keys…")
-                        .font(Theme.body(11.5, .medium)).foregroundStyle(Color.accentColor)
-                        .lineLimit(1)
-                } else if row.key.isEmpty {
-                    Text("Click to record").font(Theme.body(11.5)).foregroundStyle(Theme.secondary)
-                } else {
-                    // Freshly recorded keys drop in with a little bump.
-                    Keycaps(caps: doc.prettyShortcut(row))
-                        .squish(on: row.mods + row.key, anchor: .center)
-                }
-            }
-            .padding(.horizontal, 4)
-            .frame(width: Self.recorderWidth, alignment: .leading)
-            .frame(height: 28)
-            .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(recording ? Color.accentColor.opacity(0.14) : Color.primary.opacity(0.04)))
-            .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous)
-                .strokeBorder(recording ? Color.accentColor : Theme.hairline,
-                              style: StrokeStyle(lineWidth: recording ? 1.5 : 1, dash: row.key.isEmpty && !recording ? [3] : [])))
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .help(recording ? (row.submap.isEmpty || BindRange.isRange(row.key) ? "Esc cancels" : "Click to cancel")
-              : "Click to record a new shortcut")
-        .accessibilityLabel(recording ? "Recording shortcut" : "Shortcut \(doc.prettyShortcut(row).joined()). Click to record")
-    }
-
-    private func actionMenu(_ i: Int, _ action: Action?) -> some View {
-        Menu {
-            ActionMenuItems { a in
-                doc.binds[i].dispatcher = a.dispatcher
-                if a.dispatcher != "exec" || doc.binds[i].args.isEmpty || action?.dispatcher != "exec" {
-                    doc.binds[i].args = a.args
-                }
-            }
-        } label: {
-            Text(action?.title ?? "Custom")
-        }
-        .menuStyle(.borderlessButton)
-        .fixedSize()
-    }
-}
-
-// MARK: - Advanced
-
-private struct AdvancedPane: View {
-    @ObservedObject var doc: ConfigDocument
-
-    private var binaryPath: String { Bundle.main.executablePath ?? "ouch" }
-
-    var body: some View {
-        PaneScroll {
-            Block("Files") {
-                Card {
-                    Row {
-                        path("Config file", Config.url)
-                    } control: {
-                        HStack(spacing: 8) {
-                            Button("Edit in TextEdit") {
-                                NSWorkspace.shared.open([Config.url], withApplicationAt: URL(fileURLWithPath: "/System/Applications/TextEdit.app"),
-                                                        configuration: NSWorkspace.OpenConfiguration())
-                            }
-                            Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([Config.url]) }
-                        }
-                    }
-                    Row {
-                        path("Log file", Log.url)
-                    } control: {
-                        Button("Open Log") { NSWorkspace.shared.open(Log.url) }
-                    }
-                    SwitchRow(title: "Detailed logging",
-                              isOn: $doc.config.debugLogging)
-                }
-            }
-            Block("Command line") {
-                Card(padding: 12) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Control Ouch from a terminal, like hyprctl:")
-                        Text("\(binaryPath) dispatch movefocus l\n\(binaryPath) dump\n\(binaryPath) reload")
-                            .font(Theme.mono(11))
-                            .lineSpacing(5)
-                            .textSelection(.enabled)
-                            .padding(8)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.05)))
-                        Text("dump writes the current layout state to the log. exec is only allowed from keyboard shortcuts.")
-                            .font(Theme.body(11)).foregroundStyle(Theme.secondary)
-                    }
-                }
-            }
-            Block("Backups") {
-                Card {
-                    Row {
-                        TitleDetail(title: "Keyboard shortcuts", detail: "Saves a dated copy next to the config file")
-                    } control: {
-                        Button("Back Up Now") {
-                            if let url = doc.backUpShortcuts() { NSWorkspace.shared.activateFileViewerSelecting([url]) }
-                        }
-                    }
-                }
-            }
-            Block("Reset") {
-                Card {
-                    Row("Keyboard shortcuts", vertical: 8) {
-                        Button("Gaming (WASD)…") {
-                            if confirm("Switch to the gaming shortcuts?", "Window mode moves to W A S D, with Q and E for workspaces. Your own shortcuts will be replaced.", button: "Switch") {
-                                doc.useShortcutSet(wasdText)
-                            }
-                        }
-                        Button("Restore Defaults…") {
-                            if confirm("Restore the default keyboard shortcuts?", "Your own shortcuts will be replaced.") {
-                                doc.restoreDefaultShortcuts()
-                            }
-                        }
-                    }
-                    Row("Everything", vertical: 8) {
-                        Button("Reset All Settings…") {
-                            if confirm("Reset all settings to their defaults?", "Layouts, gaps, floating apps and shortcuts are all reset. Your main modifier is kept.") {
-                                doc.resetEverything()
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private func path(_ title: String, _ url: URL) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title)
-            Text(url.path.replacingOccurrences(of: NSHomeDirectory(), with: "~"))
-                .font(Theme.mono(11, .regular)).foregroundStyle(Theme.secondary).textSelection(.enabled)
-        }
-    }
-
-    private func confirm(_ title: String, _ detail: String, button: String = "Reset") -> Bool {
-        let a = NSAlert()
-        a.messageText = title
-        a.informativeText = detail
-        a.addButton(withTitle: button)
-        a.addButton(withTitle: "Cancel")
-        a.buttons.first?.hasDestructiveAction = true
-        return a.runModal() == .alertFirstButtonReturn
-    }
+/// Asks before a destructive change; the first button is the destructive one.
+func confirm(_ title: String, _ detail: String, button: String = "Reset") -> Bool {
+    let a = NSAlert()
+    a.messageText = title
+    a.informativeText = detail
+    a.addButton(withTitle: button)
+    a.addButton(withTitle: "Cancel")
+    a.buttons.first?.hasDestructiveAction = true
+    return a.runModal() == .alertFirstButtonReturn
 }

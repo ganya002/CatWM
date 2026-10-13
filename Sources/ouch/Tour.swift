@@ -384,7 +384,7 @@ final class Tour {
     private func render() {
         guard index < steps.count else { return }
         let s = step
-        model.kicker = s.kicker
+        model.kicker = s.id == .final ? "Done · \(steps.count) of \(steps.count)" : "Step \(index + 1) of \(steps.count) · \(s.kicker)"
         model.title = s.title
         model.text = s.text
         model.caps = s.caps
@@ -408,8 +408,9 @@ final class Tour {
         guard let panel, !ended else { return }
         let size = host.fittingSize
         // The card sits inside the panel with room for its caret and shadow (see CoachCardView).
-        let inset = (left: CGFloat(24), top: CGFloat(10))
-        let card = NSSize(width: CoachCardView.width, height: size.height - 40)
+        let pad = CoachCardView.inset
+        let inset = (left: pad.leading, top: pad.top)
+        let card = NSSize(width: CoachCardView.width, height: size.height - pad.top - pad.bottom)
         let v = screen.visibleFrame
         var o = NSPoint(x: v.midX - card.width / 2, y: v.midY - card.height / 2) // card's bottom-left
         var caret = CoachModel.Caret.none

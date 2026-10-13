@@ -1,9 +1,7 @@
 import AppKit
 
-final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
-    private let layoutItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
-    private let tilingItem = NSMenuItem(title: "Tiling Enabled", action: #selector(toggleTiling), keyEquivalent: "")
     private var watchdog: Timer?
     private var wasTrusted = true
     private var hadInputMonitoring = Permissions.inputMonitoringGranted
@@ -14,28 +12,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         Theme.registerFonts()
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.button?.image = NSImage(systemSymbolName: "rectangle.split.3x1", accessibilityDescription: "Ouch")
-
-        let menu = NSMenu()
-        menu.delegate = self
-        layoutItem.isEnabled = false
-        menu.addItem(layoutItem)
-        menu.addItem(.separator())
-        menu.addItem(withTitle: "Next Layout", action: #selector(nextLayout), keyEquivalent: "")
-        menu.addItem(withTitle: "Retile", action: #selector(retile), keyEquivalent: "")
-        menu.addItem(tilingItem)
-        menu.addItem(.separator())
-        menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
-        menu.addItem(withTitle: "Keyboard Tour…", action: #selector(startTour), keyEquivalent: "")
-        menu.addItem(withTitle: "Reload Config", action: #selector(reload), keyEquivalent: "")
-        menu.addItem(.separator())
-        menu.addItem(withTitle: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: "")
-        menu.addItem(withTitle: "Quit Ouch", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
-        menu.items.forEach { if $0.action != #selector(NSApplication.terminate(_:)) { $0.target = self } }
-        statusItem.menu = menu
+        // The menu is Ouch's own (see StatusMenu); it opens on mouse down like a native one.
+        statusItem.button?.target = self
+        statusItem.button?.action = #selector(toggleMenu)
+        statusItem.button?.sendAction(on: [.leftMouseDown, .rightMouseDown])
+        StatusMenu.shared.button = statusItem.button
 
         NSApp.mainMenu = makeMainMenu()
         Updater.shared.start()
-        WindowManager.shared.onChange = { [weak self] in self?.updateIcon() }
+        WindowManager.shared.onChange = { [weak self] in
+            self?.updateIcon()
+            StatusMenu.shared.refreshIfOpen()
+        }
         let firstRun = UserDefaults.standard.object(forKey: "didSetUpLaunchAtLogin") == nil
         LoginItem.enableOnFirstLaunch()
         Onboarding.shared.statusButton = statusItem.button
@@ -123,39 +111,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                                          pids: state.pids)
     }
 
-    func menuNeedsUpdate(_ menu: NSMenu) {
-        menu.items.filter { $0.tag == 42 }.forEach(menu.removeItem)
-        guard AXIsProcessTrusted() else {
-            layoutItem.title = "Needs Accessibility permission"
-            return
-        }
-        // Workspace list, so a workspace can also be picked with the mouse.
-        let summary = WindowManager.shared.workspaceSummary()
-        var at = 1
-        for ws in summary.all where ws.windows > 0 || ws.shown {
-            let item = NSMenuItem(title: "Workspace \(ws.name)" + (ws.windows > 0 ? "  (\(ws.windows) window\(ws.windows == 1 ? "" : "s"))" : ""),
-                                  action: #selector(pickWorkspace(_:)), keyEquivalent: "")
-            item.representedObject = ws.name
-            item.state = ws.name == summary.current ? .on : .off
-            item.target = self
-            item.tag = 42
-            menu.insertItem(item, at: at)
-            at += 1
-        }
-        if at > 1 {
-            let sep = NSMenuItem.separator()
-            sep.tag = 42
-            menu.insertItem(sep, at: at)
-        }
-        layoutItem.title = "Layout: \(WindowManager.shared.currentLayoutTitle)"
-        tilingItem.state = WindowManager.shared.tilingEnabled ? .on : .off
-    }
-
     /// Only shown while the settings window is active; without an Edit menu, ⌘C/⌘V/⌘Z don't work in text fields.
     private func makeMainMenu() -> NSMenu {
         let main = NSMenu()
         let appMenu = NSMenu()
-        let updates = appMenu.addItem(withTitle: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: "")
+        let updates = appMenu.addItem(withTitle: "Check for Updates…", action: #selector(checkForUpdatesItem), keyEquivalent: "")
         updates.target = self
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Close Window", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
@@ -173,7 +133,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         return main
     }
 
-    @objc private func checkForUpdates() {
+    /// Sparkle's check, or a note when this build has no update feed.
+    static func checkForUpdates() {
         guard Updater.shared.isConfigured else {
             let a = NSAlert()
             a.messageText = "Updates aren't set up in this build"
@@ -185,15 +146,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         NSApp.activate(ignoringOtherApps: true)
         Updater.shared.checkForUpdates()
     }
-    @objc private func openSettings() { SettingsWindow.shared.show(pane: nil) }
-    @objc private func startTour() { Onboarding.shared.startTour() }
-    @objc private func pickWorkspace(_ sender: NSMenuItem) {
-        if let ws = sender.representedObject as? String { WindowManager.shared.showWorkspace(ws) }
-    }
-    @objc private func nextLayout() { WindowManager.shared.dispatch("cyclelayout", "next") }
-    @objc private func retile() { WindowManager.shared.dispatch("retile", "") }
-    @objc private func toggleTiling() { WindowManager.shared.toggleTiling() }
-    @objc private func reload() { WindowManager.shared.reload() }
+    @objc private func checkForUpdatesItem() { Self.checkForUpdates() }
+    @objc private func toggleMenu() { StatusMenu.shared.toggle() }
 }
 
 // The onboarding tour's practice windows run as a second copy of this binary (see PracticeDesk).
