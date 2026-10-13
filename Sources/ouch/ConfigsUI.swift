@@ -63,7 +63,6 @@ struct ConfigSelector: View {
         }
         .buttonStyle(PressScale(scale: 0.96))
         .onHover { hover.on = $0 }
-        .tooltip("\(kind.title) config")
         .accessibilityLabel("\(kind.title) config: \(c.name)")
         .oPopover(isPresented: $pop.open) { ConfigList(kind: kind, library: library, dismiss: { pop.open = false }) }
     }

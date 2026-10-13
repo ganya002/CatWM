@@ -1464,8 +1464,8 @@ final class WindowManager {
         shown[monitor.uuid] = ws
         Log.debug("workspaces: showing \(ws) on \(monitor.ns.localizedName)")
         refresh()
-        if changed, !quietWorkspaceHUD, config.enablesLayoutHUD, config.enablesLayoutHUDOnSpaceChange, let label = labels[ws] {
-            HUD.shared.show("\(ws) · \(label)", layout: state(workspace: ws).layout, on: monitor.ns)
+        if changed, !quietWorkspaceHUD, config.enablesLayoutHUD, config.enablesLayoutHUDOnSpaceChange {
+            HUD.shared.show(labels[ws].map { "\(ws) · \($0)" } ?? ws, layout: state(workspace: ws).layout, on: monitor.ns)
         }
         guard takesFocus else {
             onChange?()

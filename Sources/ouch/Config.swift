@@ -420,7 +420,7 @@ keyboard-finish = auto
 # Sort Windows (the bind below): the grouping it opens with (task, app, focus or none), and how many
 # windows one workspace holds before Ouch offers to sort them (0 turns the offer off).
 sort-strategy = task
-sort-nudge = 8
+sort-nudge = 5
 
 # Bundle IDs to float (wildcards like com.adobe.* work). Set floating-is-blacklist = false
 # to make this a list of the ONLY apps that get tiled.
