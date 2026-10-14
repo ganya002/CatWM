@@ -186,7 +186,7 @@ struct ModeFXView: View {
     /// Borders are drawn this much thicker on the side facing the screen edge or the notch. The extra part is
     /// off screen or behind the notch, so what shows is the same, but the line meets the notch whatever its
     /// exact curve is and leaves no sliver of gap.
-    private var tuck: CGFloat { notchHalfWidth > 0 ? 3 : 0 }
+    private var tuck: CGFloat { notchHalfWidth > 0 ? 6 : 0 }
     private var notchCutout: some View {
         NotchCutout(halfWidth: notchHalfWidth, height: notchHeight).fill(style: FillStyle(eoFill: true))
     }
