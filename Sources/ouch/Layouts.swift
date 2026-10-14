@@ -125,6 +125,8 @@ private func rows(_ r: CGRect, _ n: Int) -> [CGRect] {
 /// of the stack evenly between the others. Stacks that can't fit everyone are left alone.
 func fitMinimums(_ frames: [CGRect], mins: [CGSize?], gap: CGFloat) -> [CGRect] {
     guard mins.contains(where: { $0 != nil }) else { return frames }
+    // Int(_:) below traps on NaN, infinity and out-of-range values; a bad frame is better left as is.
+    guard frames.allSatisfy({ [$0.minX, $0.minY, $0.width, $0.height].allSatisfy { $0.isFinite && abs($0) < 1e9 } }) else { return frames }
     var out = frames
     for vertical in [true, false] {
         let groups = Dictionary(grouping: out.indices) { i -> String in
