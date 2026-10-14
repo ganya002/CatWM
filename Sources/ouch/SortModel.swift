@@ -56,8 +56,6 @@ final class SortModel: ObservableObject {
     @Published var focusName: UUID?
     /// More lanes sit past the right edge of the row.
     @Published var moreToRight = false
-    /// Size of the panel's content, for the controller.
-    @Published var contentSize = CGSize.zero
     /// The panel is up; flips a turn after it orders front so the entrance plays.
     @Published var shown = false
     /// How the panel comes and goes, fixed while it's up.
@@ -88,7 +86,6 @@ final class SortModel: ObservableObject {
         strategy = config.sortStrategy
         nextLayout = layouts.contains(.tall) ? .tall : layouts[0]
         plans = [:]
-        contentSize = .zero
         hover = nil; selected = nil; notice = nil; drag = nil; columnDrag = nil; over = nil; focusName = nil
         running = true
         // The keys of the mode called "window" if there is one, else the first; with no modes, the global binds.

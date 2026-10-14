@@ -114,8 +114,10 @@ final class KeyHelp {
             // A fresh view each time it comes up, built hidden. A reused one would be ordered front showing
             // whatever it drew last (a frame from partway through the way out), then jump before animating.
             model.motion = PanelMotion.current
-            host = NSHostingView(rootView: KeyHelpView(model: model, margin: Self.margin))
-            p.contentView = host
+            let h = NSHostingView(rootView: KeyHelpView(model: model, margin: Self.margin))
+            h.sizingOptions = [.intrinsicContentSize] // measured by fittingSize; only setFrame below moves the panel
+            host = h
+            p.contentView = h
         }
         guard let host else { return }
         host.layoutSubtreeIfNeeded()
