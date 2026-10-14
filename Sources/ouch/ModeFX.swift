@@ -93,7 +93,7 @@ final class ModeFX {
             // A reused panel's view still has the origin and corners of where its screen used to be.
             if let host = p.contentView as? NSHostingView<ModeFXView> {
                 host.rootView = ModeFXView(model: model, radius: Self.topCornerRadius(screen), origin: screen.frame.origin,
-                                           notchHalfWidth: Self.notchHalfWidth(screen))
+                                           notchHalfWidth: Self.notchHalfWidth(screen), notchHeight: Self.notchHeight(screen))
             }
             p.setFrame(screen.frame, display: false)
             p.orderFrontRegardless()
@@ -113,7 +113,8 @@ final class ModeFX {
         p.ignoresMouseEvents = true
         p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
         p.contentView = NSHostingView(rootView: ModeFXView(model: model, radius: Self.topCornerRadius(screen),
-                                                           origin: screen.frame.origin, notchHalfWidth: Self.notchHalfWidth(screen)))
+                                                           origin: screen.frame.origin, notchHalfWidth: Self.notchHalfWidth(screen),
+                                                           notchHeight: Self.notchHeight(screen)))
         return p
     }
 
@@ -130,6 +131,11 @@ final class ModeFX {
     static func notchHalfWidth(_ screen: NSScreen) -> CGFloat {
         guard screen.safeAreaInsets.top > 0, let l = screen.auxiliaryTopLeftArea, let r = screen.auxiliaryTopRightArea else { return 0 }
         return max(0, (r.minX - l.maxX) / 2)
+    }
+
+    /// Height of the camera notch, or 0 on screens without one.
+    static func notchHeight(_ screen: NSScreen) -> CGFloat {
+        notchHalfWidth(screen) > 0 ? (screen.auxiliaryTopLeftArea?.height ?? screen.safeAreaInsets.top) : 0
     }
 
     static func topCornerRadius(_ screen: NSScreen) -> CGFloat {
@@ -161,6 +167,7 @@ struct ModeFXView: View {
     let radius: CGFloat
     let origin: CGPoint
     var notchHalfWidth: CGFloat = 0
+    var notchHeight: CGFloat = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -176,6 +183,13 @@ struct ModeFXView: View {
     private var shape: UnevenRoundedRectangle {
         UnevenRoundedRectangle(topLeadingRadius: radius, topTrailingRadius: radius, style: .circular)
     }
+    /// Borders are drawn this much thicker on the side facing the screen edge or the notch. The extra part is
+    /// off screen or behind the notch, so what shows is the same, but the line meets the notch whatever its
+    /// exact curve is and leaves no sliver of gap.
+    private var tuck: CGFloat { notchHalfWidth > 0 ? 6 : 0 }
+    private var notchCutout: some View {
+        NotchCutout(halfWidth: notchHalfWidth, height: notchHeight).fill(style: FillStyle(eoFill: true))
+    }
     private var c: Color { model.color }
     private var on: Bool { model.active }
 
@@ -183,8 +197,8 @@ struct ModeFXView: View {
     private func border(width: CGFloat) -> some View {
         ZStack {
             ForEach([false, true], id: \.self) { mirrored in
-                DrawnHalf(radius: radius, inset: width / 2, notchHalfWidth: notchHalfWidth)
-                    .stroke(c, style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .miter))
+                DrawnHalf(radius: radius, inset: (width - tuck) / 2, notchHalfWidth: notchHalfWidth, notchHeight: notchHeight)
+                    .stroke(c, style: StrokeStyle(lineWidth: width + tuck, lineCap: .butt, lineJoin: .miter))
                     .scaleEffect(x: mirrored ? -1 : 1, y: 1)
             }
         }
@@ -214,6 +228,7 @@ struct ModeFXView: View {
                         .frame(width: reach * 2 * v.t, height: reach * 2 * v.t)
                         .position(p)
                         .opacity(v.t >= 1 ? 0 : 1 - v.t * 0.6)
+                        .mask(notchCutout) // the ring stops at the notch; the border below tucks into it
                     border(width: 3.5).opacity(v.edge)
                 }
                 .clipShape(shape)
@@ -243,6 +258,7 @@ struct ModeFXView: View {
                     }
                 }
                 .opacity(min(1, k * 1.5))
+                .mask(notchCutout)
             } keyframes: { _ in
                 KeyframeTrack {
                     CubicKeyframe(0, duration: 0.001)
@@ -256,9 +272,9 @@ struct ModeFXView: View {
             Color.clear.keyframeAnimator(initialValue: 0.0, trigger: model.enters) { _, k in
                 ZStack {
                     ForEach([false, true], id: \.self) { mirrored in
-                        let half = DrawnHalf(radius: radius, inset: 2, notchHalfWidth: notchHalfWidth)
+                        let half = DrawnHalf(radius: radius, inset: (4 - tuck) / 2, notchHalfWidth: notchHalfWidth, notchHeight: notchHeight)
                         ZStack {
-                            half.trim(from: 0, to: k).stroke(c, style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .miter))
+                            half.trim(from: 0, to: k).stroke(c, style: StrokeStyle(lineWidth: 4 + tuck, lineCap: .round, lineJoin: .miter))
                             half.trim(from: max(0, k - 0.06), to: k)
                                 .stroke(c, style: StrokeStyle(lineWidth: 14, lineCap: .round)).blur(radius: 8)
                                 .opacity(k >= 1 ? 0 : 1)
@@ -288,6 +304,33 @@ struct ModeFXView: View {
     private struct Ripple { var t: CGFloat = 0; var edge: Double = 0 }
 }
 
+/// The notch's outline, in points: the side walls meet the screen top through a concave flare, and the
+/// bottom corners are rounded.
+private enum Notch {
+    static let bottomRadius: CGFloat = 8
+    static let flareRadius: CGFloat = 6
+}
+
+/// The whole rect with the notch cut out of the top centre (fill it even-odd as a mask).
+private struct NotchCutout: Shape {
+    let halfWidth: CGFloat
+    let height: CGFloat
+    func path(in rect: CGRect) -> Path {
+        var p = Path(rect)
+        guard halfWidth > 0 else { return p }
+        let l = rect.midX - halfWidth, r = rect.midX + halfWidth, top = rect.minY
+        let rb = Notch.bottomRadius, rf = Notch.flareRadius, k: CGFloat = 0.5523
+        p.move(to: CGPoint(x: l - rf, y: top))
+        p.addCurve(to: CGPoint(x: l, y: top + rf), control1: CGPoint(x: l - rf + k * rf, y: top), control2: CGPoint(x: l, y: top + rf - k * rf))
+        p.addArc(tangent1End: CGPoint(x: l, y: top + height), tangent2End: CGPoint(x: r, y: top + height), radius: rb)
+        p.addArc(tangent1End: CGPoint(x: r, y: top + height), tangent2End: CGPoint(x: r, y: top), radius: rb)
+        p.addLine(to: CGPoint(x: r, y: top + rf))
+        p.addCurve(to: CGPoint(x: r + rf, y: top), control1: CGPoint(x: r, y: top + rf - k * rf), control2: CGPoint(x: r + rf - k * rf, y: top))
+        p.closeSubpath()
+        return p
+    }
+}
+
 /// A top-left corner bracket; rotated for the other three.
 private struct Bracket: Shape {
     let radius: CGFloat
@@ -305,13 +348,23 @@ private struct Bracket: Shape {
 private struct DrawnHalf: Shape {
     let radius: CGFloat
     let inset: CGFloat
-    /// The path starts at the notch edge instead of the top centre, so none of it draws under the notch.
+    /// With a notch, the path starts under it and curves round it instead of running behind it.
     var notchHalfWidth: CGFloat = 0
+    var notchHeight: CGFloat = 0
     func path(in rect: CGRect) -> Path {
         let r = rect.insetBy(dx: inset, dy: inset)
         let rad = max(0, radius - inset)
         var p = Path()
-        p.move(to: CGPoint(x: r.midX + notchHalfWidth, y: r.minY))
+        if notchHalfWidth > 0 {
+            // Hug the notch, just outside its outline: out from under its middle, round the bottom corner,
+            // up the wall and out along the flare to the top edge.
+            let x = r.midX + notchHalfWidth + inset, y = rect.minY + notchHeight + inset
+            p.move(to: CGPoint(x: r.midX, y: y))
+            p.addArc(tangent1End: CGPoint(x: x, y: y), tangent2End: CGPoint(x: x, y: r.minY), radius: Notch.bottomRadius + inset)
+            p.addArc(tangent1End: CGPoint(x: x, y: r.minY), tangent2End: CGPoint(x: r.maxX, y: r.minY), radius: max(0.5, Notch.flareRadius - inset))
+        } else {
+            p.move(to: CGPoint(x: r.midX, y: r.minY))
+        }
         p.addArc(tangent1End: CGPoint(x: r.maxX, y: r.minY), tangent2End: CGPoint(x: r.maxX, y: r.maxY), radius: rad)
         p.addLine(to: CGPoint(x: r.maxX, y: r.maxY))
         p.addLine(to: CGPoint(x: r.midX, y: r.maxY))
