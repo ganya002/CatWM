@@ -215,22 +215,39 @@ final class Window {
 
 /// Apps with AXEnhancedUserInterface on (set by VoiceOver, Magnet, Grammarly, ...) animate or
 /// ignore frame changes. Turn it off while we move their windows, then restore it.
+/// Called from the main thread and from the animator's per-app queues, so each app has its own lock:
+/// a slow app's AX call only ever waits on that same app.
 enum EnhancedUI {
     private static var held: [pid_t: (count: Int, wasOn: Bool)] = [:]
+    private static var locks: [pid_t: NSLock] = [:]
+    private static let tableLock = NSLock() // guards `held` and `locks`
     private static let attr = "AXEnhancedUserInterface"
 
     static func suspend(_ pid: pid_t) {
-        if let h = held[pid] { held[pid] = (h.count + 1, h.wasOn); return }
+        let l = lock(pid)
+        l.lock(); defer { l.unlock() }
+        if let h = tableLock.withLock({ held[pid] }) { tableLock.withLock { held[pid] = (h.count + 1, h.wasOn) }; return }
         let app = AXUIElementCreateApplication(pid)
         let on = app.bool(attr) ?? false
         if on { app.set(attr, kCFBooleanFalse) }
-        held[pid] = (1, on)
+        tableLock.withLock { held[pid] = (1, on) }
     }
     static func resume(_ pid: pid_t) {
-        guard let h = held[pid] else { return }
-        if h.count > 1 { held[pid] = (h.count - 1, h.wasOn); return }
-        held[pid] = nil
+        let l = lock(pid)
+        l.lock(); defer { l.unlock() }
+        guard let h = tableLock.withLock({ held[pid] }) else { return }
+        if h.count > 1 { tableLock.withLock { held[pid] = (h.count - 1, h.wasOn) }; return }
+        tableLock.withLock { held[pid] = nil }
         if h.wasOn { AXUIElementCreateApplication(pid).set(attr, kCFBooleanTrue) }
+    }
+
+    private static func lock(_ pid: pid_t) -> NSLock {
+        tableLock.withLock {
+            if let l = locks[pid] { return l }
+            let l = NSLock()
+            locks[pid] = l
+            return l
+        }
     }
 }
 

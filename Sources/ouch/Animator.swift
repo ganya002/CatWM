@@ -2,6 +2,8 @@ import AppKit
 import QuartzCore
 
 /// Animates windows between frames by stepping their AX frame, then lands, verifies and corrects.
+/// The main thread only works out the frames. Each app's AX calls run on a queue of its own (`AXWriter`),
+/// so an app that answers slowly holds up only its own windows.
 final class Animator {
     struct Move {
         let window: Window
@@ -20,25 +22,31 @@ final class Animator {
     }
 
     private var items: [CGWindowID: Item] = [:]
+    /// Windows whose last frame is on its way to their app, with a number that tells this landing apart.
+    private var landing: [CGWindowID: (move: Move, number: Int)] = [:]
+    private var landings = 0
     private var quietUntil: [CGWindowID: CFTimeInterval] = [:]
+    private var writers: [pid_t: AXWriter] = [:]
     private var timer: Timer?
+    private var timing = Timing()
     /// Called when a window turns out to be bigger than its slot even after retrying.
     var onMinimumSize: ((CGWindowID, CGSize) -> Void)?
 
     /// True while we are moving the window ourselves, so its move/resize notifications are ours.
     func isBusy(_ id: CGWindowID) -> Bool {
-        items[id] != nil || (quietUntil[id] ?? 0) > CACurrentMediaTime()
+        items[id] != nil || landing[id] != nil || (quietUntil[id] ?? 0) > CACurrentMediaTime()
     }
 
     /// Whether a window is already animating to this frame, so asking for it again changes nothing.
     func isMoving(_ id: CGWindowID, to frame: CGRect) -> Bool {
-        items[id]?.move.to == frame
+        (items[id]?.move.to ?? landing[id]?.move.to) == frame
     }
 
     /// Stops animating a window (it's about to be parked somewhere else).
     func cancel(_ id: CGWindowID) {
-        guard let item = items.removeValue(forKey: id) else { return }
-        EnhancedUI.resume(item.move.window.pid)
+        let item = items.removeValue(forKey: id), landed = landing.removeValue(forKey: id)
+        guard let w = item?.move.window ?? landed?.move.window else { return }
+        writer(w.pid).cancel(id)
     }
 
     /// Treat the next move/resize notifications for this window as our own.
@@ -53,9 +61,10 @@ final class Animator {
             let from: CGRect
             if let running = items[id] {
                 from = running.frame(at: now) // retarget smoothly from where it is mid-flight
+            } else if let landed = landing.removeValue(forKey: id) {
+                from = m.from ?? landed.move.to // its last frame may not have reached the app yet
             } else {
                 from = m.from ?? m.window.frame
-                EnhancedUI.suspend(m.window.pid)
             }
             if duration < 0.01 || from.isNull || from.approxEqual(m.to, tolerance: 2) {
                 items[id] = nil
@@ -72,51 +81,198 @@ final class Animator {
         }
     }
 
+    private func writer(_ pid: pid_t) -> AXWriter {
+        if let w = writers[pid] { return w }
+        let w = AXWriter(pid: pid)
+        writers[pid] = w
+        return w
+    }
+
     private func tick() {
         let now = CACurrentMediaTime()
+        timing.tick(at: now)
         for (id, item) in items {
             if now - item.start >= item.duration {
                 items[id] = nil
                 land(item.move)
             } else {
-                let f = item.frame(at: now)
-                item.move.window.setSize(f.size)
-                item.move.window.setPosition(f.origin)
+                writer(item.move.window.pid).step(item.move.window, to: item.frame(at: now))
             }
         }
-        if items.isEmpty { timer?.invalidate(); timer = nil }
+        timing.ticks.add(CACurrentMediaTime() - now)
+        if items.isEmpty {
+            timer?.invalidate(); timer = nil
+            timing.log(Array(writers.values))
+            timing = Timing()
+        }
     }
 
     private func land(_ m: Move) {
-        m.window.setFrame(m.to)
-        CursorRefresh.soon()
-        quietUntil[m.window.id] = CACurrentMediaTime() + 0.4
-        EnhancedUI.resume(m.window.pid)
-        // Many apps apply frames asynchronously or snap to their own grid; check once it settles.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in self?.verify(m) }
+        let id = m.window.id
+        landings += 1
+        let number = landings
+        landing[id] = (m, number)
+        quietUntil[id] = CACurrentMediaTime() + 0.4
+        writer(m.window.pid).land(m.window, at: m.to) { [weak self] in
+            guard let self, self.landing[id]?.number == number else { return } // re-animated or parked since
+            self.landing[id] = nil
+            CursorRefresh.soon()
+            self.quietUntil[id] = CACurrentMediaTime() + 0.4
+            // Many apps apply frames asynchronously or snap to their own grid; check once it settles.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in self?.verify(m) }
+        }
     }
 
     private func verify(_ m: Move) {
         let w = m.window
-        guard items[w.id] == nil else { return } // re-animated since
-        var actual = w.frame
-        guard !actual.isNull, !actual.approxEqual(m.to, tolerance: 2) else { return }
-
+        guard items[w.id] == nil, landing[w.id] == nil else { return } // re-animated since
         quietUntil[w.id] = CACurrentMediaTime() + 0.4
-        EnhancedUI.suspend(w.pid)
-        w.setFrame(m.to)
-        actual = w.frame
-        // Still too big => the app has a minimum size. Keep it anchored to its slot but on screen,
-        // instead of hanging off the edge or covering the menu bar.
-        if !actual.isNull, actual.width > m.to.width + 1 || actual.height > m.to.height + 1 {
-            onMinimumSize?(w.id, CGSize(width: actual.width > m.to.width + 1 ? actual.width : 0,
-                                        height: actual.height > m.to.height + 1 ? actual.height : 0))
-            var o = m.to.origin
-            o.x = max(m.bounds.minX, min(o.x, m.bounds.maxX - actual.width))
-            o.y = max(m.bounds.minY, min(o.y, m.bounds.maxY - actual.height))
-            w.setPosition(o)
+        writer(w.pid).run { [weak self] in
+            var actual = w.frame
+            guard !actual.isNull, !actual.approxEqual(m.to, tolerance: 2) else { return }
+            EnhancedUI.suspend(w.pid)
+            w.setFrame(m.to)
+            actual = w.frame
+            // Still too big => the app has a minimum size. Keep it anchored to its slot but on screen,
+            // instead of hanging off the edge or covering the menu bar.
+            var minimum: CGSize?
+            if !actual.isNull, actual.width > m.to.width + 1 || actual.height > m.to.height + 1 {
+                minimum = CGSize(width: actual.width > m.to.width + 1 ? actual.width : 0,
+                                 height: actual.height > m.to.height + 1 ? actual.height : 0)
+                var o = m.to.origin
+                o.x = max(m.bounds.minX, min(o.x, m.bounds.maxX - actual.width))
+                o.y = max(m.bounds.minY, min(o.y, m.bounds.maxY - actual.height))
+                w.setPosition(o)
+            }
+            EnhancedUI.resume(w.pid)
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.quietUntil[w.id] = CACurrentMediaTime() + 0.4
+                if let minimum { self.onMinimumSize?(w.id, minimum) }
+            }
         }
-        EnhancedUI.resume(w.pid)
+    }
+}
+
+/// One app's AX writes, on a serial queue of its own. An app that answers slowly (Finder, Electron apps)
+/// then holds up only its own windows, never the main thread or other apps. Frames coalesce: while the
+/// app is still busy, a newer frame for a window replaces the one waiting, so a slow app skips frames
+/// instead of falling behind.
+private final class AXWriter {
+    private enum Op { case step(CGRect), land(CGRect, done: () -> Void) }
+    private struct Pending { let window: Window; let op: Op; let epoch: Int }
+    struct Stats { var size = Stat(), position = Stat(), land = Stat(), skipped = 0 }
+
+    let pid: pid_t
+    private let queue: DispatchQueue
+    private let lock = NSLock()
+    // Guarded by `lock`.
+    private var pending: [CGWindowID: Pending] = [:]
+    private var epochs: [CGWindowID: Int] = [:] // a cancel bumps it, so frames from before it are dropped
+    private var draining = false
+    private var stats = Stats()
+    // Only used on `queue`: windows we turned enhanced UI off for.
+    private var animating: Set<CGWindowID> = []
+
+    init(pid: pid_t) {
+        self.pid = pid
+        queue = DispatchQueue(label: "ouch.ax.\(pid)", qos: .userInteractive)
+    }
+
+    func step(_ w: Window, to frame: CGRect) { submit(w, .step(frame)) }
+    func land(_ w: Window, at frame: CGRect, done: @escaping () -> Void) { submit(w, .land(frame, done: done)) }
+
+    /// Drops the window's waiting frame. A frame the app is taking right now still lands.
+    func cancel(_ id: CGWindowID) {
+        lock.withLock { pending[id] = nil; epochs[id, default: 0] += 1 }
+        queue.async { [self] in if animating.remove(id) != nil { EnhancedUI.resume(pid) } }
+    }
+
+    /// Runs `f` on this app's queue, after the frames already waiting.
+    func run(_ f: @escaping () -> Void) { queue.async(execute: f) }
+
+    /// What the writes cost since the last call.
+    func takeStats() -> Stats {
+        lock.withLock { defer { stats = Stats() }; return stats }
+    }
+
+    private func submit(_ w: Window, _ op: Op) {
+        let start = lock.withLock { () -> Bool in
+            if case .step = pending[w.id]?.op { stats.skipped += 1 }
+            pending[w.id] = Pending(window: w, op: op, epoch: epochs[w.id] ?? 0)
+            defer { draining = true }
+            return !draining
+        }
+        if start { queue.async { [self] in drain() } }
+    }
+
+    private func drain() {
+        while true {
+            let batch = lock.withLock { () -> [Pending] in
+                let b = Array(pending.values)
+                pending = [:]
+                if b.isEmpty { draining = false }
+                return b
+            }
+            if batch.isEmpty { return }
+            for p in batch where lock.withLock({ epochs[p.window.id] ?? 0 }) == p.epoch { apply(p) }
+        }
+    }
+
+    private func apply(_ p: Pending) {
+        let w = p.window
+        if animating.insert(w.id).inserted { EnhancedUI.suspend(pid) }
+        switch p.op {
+        case let .step(f):
+            let s = measure { w.setSize(f.size) }, o = measure { w.setPosition(f.origin) }
+            lock.withLock { stats.size.add(s); stats.position.add(o) }
+        case let .land(f, done):
+            let t = measure { w.setFrame(f) }
+            animating.remove(w.id)
+            EnhancedUI.resume(pid)
+            lock.withLock { stats.land.add(t) }
+            DispatchQueue.main.async(execute: done)
+        }
+    }
+}
+
+private struct Stat {
+    var count = 0, total = 0.0, max = 0.0
+    mutating func add(_ seconds: Double) { count += 1; total += seconds; max = Swift.max(max, seconds) }
+    var text: String { count == 0 ? "-" : String(format: "avg %.2fms max %.2fms ×%d", total / Double(count) * 1000, max * 1000, count) }
+}
+
+private func measure(_ f: () -> Void) -> Double {
+    let t = CACurrentMediaTime()
+    f()
+    return CACurrentMediaTime() - t
+}
+
+private extension Animator {
+    /// What one run of the timer cost, from first tick to last: how long the main thread spent on each
+    /// tick, how late the ticks came, and how long each app took for its AX calls. Logged when the run
+    /// ends, with `debug-logging` or `--verbose`. A landing still on its way counts in the next run.
+    struct Timing {
+        var ticks = Stat(), gaps = Stat()
+        var firstTick: CFTimeInterval?, lastTick: CFTimeInterval?
+
+        mutating func tick(at now: CFTimeInterval) {
+            if let lastTick { gaps.add(now - lastTick) }
+            if firstTick == nil { firstTick = now }
+            lastTick = now
+        }
+
+        func log(_ writers: [AXWriter]) {
+            let apps = writers.map { ($0.pid, $0.takeStats()) }.filter { $0.1.size.count + $0.1.land.count > 0 }
+            guard Log.verbose, ticks.count > 0 else { return }
+            Log.debug(String(format: "animate: %d ticks in %.0fms (timer 8.33ms) | tick %@ | gap %@",
+                             ticks.count, (CACurrentMediaTime() - (firstTick ?? 0)) * 1000, ticks.text, gaps.text))
+            // Slowest app first.
+            for (pid, s) in apps.sorted(by: { $0.1.size.total + $0.1.position.total > $1.1.size.total + $1.1.position.total }) {
+                let name = NSRunningApplication(processIdentifier: pid)?.localizedName ?? "?"
+                Log.debug("animate:   \(name) (\(pid)) size \(s.size.text) | position \(s.position.text) | land \(s.land.text) | skipped \(s.skipped)")
+            }
+        }
     }
 }
 
