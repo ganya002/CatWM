@@ -335,12 +335,18 @@ final class WindowManager {
         "com.microsoft.autoupdate2",
     ]
 
+    /// "Sign in", "Sign-in", "Log in" or "Login" at the start of a title, then the end or a separator, so
+    /// "Sign in - Google Accounts" and "Login" match but "login.swift" doesn't.
+    private static let signInTitle = try? NSRegularExpression(
+        pattern: "^(sign[ -]?in|log[ -]?in)(?=$|[\\s\\-–—|:,])", options: .caseInsensitive)
+
     /// Utility windows that share an app with tiled ones, recognised by title: a browser's
-    /// Picture in Picture player, an app's own Settings window and Finder's Get Info panels.
+    /// Picture in Picture player, an app's own Settings window, Finder's Get Info panels and sign-in popups.
     private func isUtilityWindow(_ w: Window) -> Bool {
         guard let title = w.element.string(kAXTitleAttribute), !title.isEmpty else { return false }
         if title == "Picture in Picture" || title == "Picture-in-Picture" { return true }
         if w.bundleID == "com.apple.finder" { return title.hasSuffix(" Info") }
+        if let re = Self.signInTitle, re.firstMatch(in: title, range: NSRange(title.startIndex..., in: title)) != nil { return true }
         let name = NSRunningApplication(processIdentifier: w.pid)?.localizedName
         let settings = ["Settings", "Preferences", "Settings…", "Preferences…"]
         return settings.contains(title) || name.map { n in settings.contains { title == "\(n) \($0)" } } == true
