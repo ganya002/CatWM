@@ -25,6 +25,8 @@ final class SortPanel: NSObject, NSWindowDelegate {
     private var sizeSink: AnyCancellable?
     private var wasPaused = false
     private var width: CGFloat = 0
+    /// Where the panel's bottom edge sits and the display it must stay inside, set when it opens.
+    private var anchor = (minY: CGFloat(0), visible: NSRect.zero)
     private var generation = 0 // so a fade-out that finishes after a reopen leaves the new panel alone
     private var liveWork: DispatchWorkItem?
     private var pruneTimer: Timer?
@@ -71,9 +73,8 @@ final class SortPanel: NSObject, NSWindowDelegate {
         self.host = host
         p.contentView = host
         host.layoutSubtreeIfNeeded()
-        let size = host.fittingSize
-        let frame = NSRect(x: v.midX - size.width / 2, y: v.minY + 18 - SortView.inset.bottom, width: size.width, height: size.height)
-        p.setFrame(frame, display: true)
+        anchor = (v.minY + 18 - SortView.inset.bottom, v)
+        p.setFrame(placed(host.fittingSize), display: true)
         // The panel follows the content as lanes fill up and empty out, keeping its bottom edge.
         sizeSink = model.$contentSize.removeDuplicates().sink { [weak self] s in self?.fit(to: s) }
 
@@ -89,6 +90,7 @@ final class SortPanel: NSObject, NSWindowDelegate {
         p.alphaValue = 1
         p.makeKeyAndOrderFront(nil)
         p.makeFirstResponder(nil)
+        fit(to: model.contentSize) // the content may have reported its size before the panel could follow it
         // A turn later, so the view sees `shown` change and plays its entrance.
         DispatchQueue.main.async { [weak self] in self?.model.shown = true }
     }
@@ -105,10 +107,18 @@ final class SortPanel: NSObject, NSWindowDelegate {
         return p
     }
 
+    /// The panel's frame for a content size: centred on its display, bottom edge on the anchor, never taller
+    /// or wider than the display so the surface can't end up off screen.
+    private func placed(_ size: CGSize) -> NSRect {
+        let v = anchor.visible
+        let w = min(size.width, v.width), h = min(size.height, v.maxY - anchor.minY)
+        return NSRect(x: v.midX - w / 2, y: anchor.minY, width: w, height: h)
+    }
+
     private func fit(to size: CGSize) {
-        guard let panel, panel.isVisible, size.height > 0, abs(panel.frame.height - size.height) > 0.5 else { return }
-        var f = panel.frame
-        f.size.height = size.height
+        guard active, let panel, size.height > 0 else { return }
+        let f = placed(size)
+        guard f != panel.frame else { return }
         panel.setFrame(f, display: true)
     }
 
