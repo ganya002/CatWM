@@ -1,11 +1,20 @@
 import AppKit
-import Combine
 import SwiftUI
 
 /// A key-capable borderless panel that takes the keyboard without activating Ouch.
 private final class SortWindow: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
+}
+
+/// The Sort view's host: takes the first click, and says when the content's size changes so the panel can follow it.
+private final class SortHost: NSHostingView<SortView> {
+    var sizeChanged: (() -> Void)?
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override func invalidateIntrinsicContentSize() {
+        super.invalidateIntrinsicContentSize()
+        sizeChanged?()
+    }
 }
 
 /// Sort Windows: a panel on the display under the pointer that groups a crowded display into workspaces.
@@ -18,11 +27,11 @@ final class SortPanel: NSObject, NSWindowDelegate {
     private let wm = WindowManager.shared
     private let model = SortModel()
     private var panel: SortWindow?
-    private var host: NSHostingView<SortView>?
+    private var host: SortHost?
     private var monitors: [Any] = []
     private var screenObserver: Any?
     private var active = false
-    private var sizeSink: AnyCancellable?
+    private var fitQueued = false
     private var wasPaused = false
     private var width: CGFloat = 0
     /// Where the panel's bottom edge sits and the display it must stay inside, set when it opens.
@@ -65,7 +74,12 @@ final class SortPanel: NSObject, NSWindowDelegate {
 
         let v = screen.visibleFrame
         width = min(1100, v.width - 32)
-        let host = FirstClickHostingView(rootView: SortView(model: model, width: width))
+        let host = SortHost(rootView: SortView(model: model, width: width))
+        // Measured by fittingSize; placed() moves the panel. With the default options the host resizes the
+        // window itself, from its top-left corner, and pushes the panel off the right and bottom of the screen.
+        host.sizingOptions = [.intrinsicContentSize]
+        // The panel follows the content as lanes fill up and empty out, keeping its bottom edge.
+        host.sizeChanged = { [weak self] in self?.queueFit() }
         let p = panel ?? makePanel()
         p.ignoresMouseEvents = false
         p.delegate = self
@@ -75,8 +89,6 @@ final class SortPanel: NSObject, NSWindowDelegate {
         host.layoutSubtreeIfNeeded()
         anchor = (v.minY + 18 - SortView.inset.bottom, v)
         p.setFrame(placed(host.fittingSize), display: true)
-        // The panel follows the content as lanes fill up and empty out, keeping its bottom edge.
-        sizeSink = model.$contentSize.removeDuplicates().sink { [weak self] s in self?.fit(to: s) }
 
         wasPaused = Hotkeys.shared.paused
         Hotkeys.shared.paused = true // keys belong to the panel now
@@ -90,7 +102,7 @@ final class SortPanel: NSObject, NSWindowDelegate {
         p.alphaValue = 1
         p.makeKeyAndOrderFront(nil)
         p.makeFirstResponder(nil)
-        fit(to: model.contentSize) // the content may have reported its size before the panel could follow it
+        fit() // the content may have changed size before the panel could follow it
         // A turn later, so the view sees `shown` change and plays its entrance.
         DispatchQueue.main.async { [weak self] in self?.model.shown = true }
     }
@@ -115,8 +127,20 @@ final class SortPanel: NSObject, NSWindowDelegate {
         return NSRect(x: v.midX - w / 2, y: anchor.minY, width: w, height: h)
     }
 
-    private func fit(to size: CGSize) {
-        guard active, let panel, size.height > 0 else { return }
+    /// Once per turn, after SwiftUI has finished the update that changed the size.
+    private func queueFit() {
+        guard !fitQueued else { return }
+        fitQueued = true
+        DispatchQueue.main.async { [weak self] in
+            self?.fitQueued = false
+            self?.fit()
+        }
+    }
+
+    private func fit() {
+        guard active, let panel, let host else { return }
+        let size = host.fittingSize
+        guard size.height > 0 else { return }
         let f = placed(size)
         guard f != panel.frame else { return }
         panel.setFrame(f, display: true)
@@ -205,7 +229,6 @@ final class SortPanel: NSObject, NSWindowDelegate {
     /// Gives the keyboard back and drops the monitors. Safe to run on any close path, any number of times.
     private func teardown() {
         removeMonitors()
-        sizeSink = nil
         pruneTimer?.invalidate()
         pruneTimer = nil
         guard active else { return }

@@ -19,11 +19,6 @@ private struct SortZoneKey: PreferenceKey {
     static func reduce(value: inout [SortZone: CGRect], nextValue: () -> [SortZone: CGRect]) { value.merge(nextValue()) { $1 } }
 }
 
-private struct SortSizeKey: PreferenceKey {
-    static var defaultValue = CGSize.zero
-    static func reduce(value: inout CGSize, nextValue: () -> CGSize) { value = nextValue() }
-}
-
 private enum SortMetrics {
     static let lane: CGFloat = 176
     static let rowHeight = Theme.rowHeight
@@ -50,7 +45,6 @@ struct SortView: View {
         }
         .frame(width: width - 40)
         .surface(.lg, glass: true)
-        .background(GeometryReader { g in Color.clear.preference(key: SortSizeKey.self, value: g.size) })
         .panelEntrance(model.shown, style: model.motion)
         .padding(Self.inset)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -58,10 +52,6 @@ struct SortView: View {
         .overlay(alignment: .topLeading) { columnGhost }
         .coordinateSpace(name: "sort")
         .onPreferenceChange(SortZoneKey.self) { model.zones = $0 }
-        .onPreferenceChange(SortSizeKey.self) { s in
-            let size = CGSize(width: s.width + Self.inset.leading + Self.inset.trailing, height: s.height + Self.inset.top + Self.inset.bottom)
-            if size != model.contentSize { model.contentSize = size }
-        }
         .font(Theme.body())
         .foregroundStyle(Theme.ink)
         .tint(Theme.accent)
