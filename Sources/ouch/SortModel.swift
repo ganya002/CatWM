@@ -204,7 +204,7 @@ final class SortModel: ObservableObject {
     /// What the panel leaves behind: whether anything was edited, what is marked to close, and the counts for the toast.
     func result() -> (changed: Bool, closing: [CGWindowID], workspaces: Int) {
         let edited = plans.values.filter(\.touched)
-        return (!edited.isEmpty, edited.flatMap(\.close), plan.lanes.filter { !$0.ids.isEmpty }.count)
+        return (!edited.isEmpty, edited.flatMap(\.close), edited.reduce(0) { $0 + $1.lanes.filter { !$0.ids.isEmpty }.count })
     }
 
     /// Drops windows that have closed since the panel opened.
@@ -303,7 +303,12 @@ final class SortModel: ObservableObject {
 
     func undoRemove() {
         guard let u = notice?.undo else { return }
-        plans[u.display] = u.plan
+        var restored = u.plan
+        // Renames keep the notice, so carry any made since the removal over into the restored plan.
+        for (i, lane) in restored.lanes.enumerated() {
+            if let now = plans[u.display]?.lanes.first(where: { $0.id == lane.id }) { restored.lanes[i].name = now.name }
+        }
+        plans[u.display] = restored
         plans[u.display]?.touched = true
         plans[u.display]?.pending = true
         notice = nil

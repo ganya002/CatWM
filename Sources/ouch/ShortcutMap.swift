@@ -371,7 +371,10 @@ final class ShortcutMapModel: ObservableObject {
     @Published var tipWidth: CGFloat = 0
     /// The key editor's measured height, to place it where it fits in the window.
     @Published var editorHeight: CGFloat = 480
-    @Published var selected: UInt16?
+    @Published var selected: UInt16? {
+        // Modifier changes are ignored while the editor is open, so catch up with them when it closes.
+        didSet { if selected == nil, oldValue != nil { held = NSEvent.modifierFlags.intersection(Self.watched) } }
+    }
     /// The key flashing because its shortcut was just pressed.
     @Published var pressed: UInt16?
     /// The list row under the pointer; its keys light up on the keyboard.

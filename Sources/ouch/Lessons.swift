@@ -179,13 +179,15 @@ enum Steps {
         guard let add = c.book.find(["layoutmsg"], "addmaster"), let remove = c.book.find(["layoutmsg"], "removemaster") else { return nil }
         return PlannedStep(chapter: "Main pane") { c in
             var adding = true
+            var seen: Set<String> = [] // each action counts once, so the step needs both
             return Step(kicker: "", title: "More main windows",
                         text: "\(KeyWords.keyWord(add)) adds a window to the main pane, \(KeyWords.keyWord(remove)) takes one out. Try both.",
                         target: .window, caps: KeyWords.caps(add, long: false) + [KeyWords.keyLabel(remove.keyCode, long: false)],
                         tokens: [], needsMode: true, count: 2,
                         accept: { e in
                             guard case .command("layoutmsg", let a, _) = e else { return nil }
-                            return ["addmaster", "removemaster"].contains(a.lowercased()) ? "" : nil
+                            guard ["addmaster", "removemaster"].contains(a.lowercased()) else { return nil }
+                            return seen.insert(a.lowercased()).inserted ? "" : nil
                         }, simulate: {
                             c.wm.dispatch("layoutmsg", adding ? "addmaster" : "removemaster")
                             adding.toggle()

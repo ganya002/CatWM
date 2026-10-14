@@ -44,7 +44,9 @@ struct BugReport {
             if let conf = try? String(contentsOf: Config.url, encoding: .utf8) {
                 try redact(conf).write(to: dir.appendingPathComponent("ouch.conf"), atomically: true, encoding: .utf8)
             }
-            if let crash { try fm.copyItem(at: crash, to: dir.appendingPathComponent("crash.ips")) }
+            if let crash, let ips = try? String(contentsOf: crash, encoding: .utf8) {
+                try redact(ips).write(to: dir.appendingPathComponent("crash.ips"), atomically: true, encoding: .utf8)
+            }
             try AgentPrompt.full(for: r).write(to: r.prompt, atomically: true, encoding: .utf8)
             prune()
             return r
@@ -443,10 +445,16 @@ enum Agents {
         p.standardError = FileHandle.nullDevice
         p.standardInput = FileHandle.nullDevice
         if (try? p.run()) != nil {
-            DispatchQueue.global().asyncAfter(deadline: .now() + 4) { if p.isRunning { p.terminate() } }
-            let data = out.fileHandleForReading.readDataToEndOfFile()
-            p.waitUntilExit()
-            for line in String(decoding: data, as: UTF8.self).split(separator: "\n") {
+            // The read gets a deadline too: `-i` shells ignore SIGTERM, and their children can hold the pipe open.
+            var data = Data()
+            let read = DispatchSemaphore(value: 0)
+            DispatchQueue.global().async { data = out.fileHandleForReading.readDataToEndOfFile(); read.signal() }
+            var finished = read.wait(timeout: .now() + 4) == .success
+            if !finished {
+                kill(p.processIdentifier, SIGKILL)
+                finished = read.wait(timeout: .now() + 0.5) == .success
+            }
+            for line in finished ? String(decoding: data, as: UTF8.self).split(separator: "\n") : [] {
                 let path = line.trimmingCharacters(in: .whitespaces)
                 let name = (path as NSString).lastPathComponent
                 if path.hasPrefix("/"), names.contains(name), found[name] == nil { found[name] = path }
@@ -583,7 +591,10 @@ enum ReportSender {
         }
         for file in r.attachments where file != r.report {
             guard let content = try? Data(contentsOf: file) else { continue }
-            part("Content-Disposition: form-data; name=\"file\"; filename=\"\(file.lastPathComponent)\"\r\nContent-Type: text/plain", content)
+            // The relay keeps only the last 40k characters of a file; sending more can push the body past its 4 MB cap.
+            let text = String(decoding: content, as: UTF8.self)
+            part("Content-Disposition: form-data; name=\"file\"; filename=\"\(file.lastPathComponent)\"\r\nContent-Type: text/plain",
+                 Data((text.count > 40000 ? "…\n" + text.suffix(40000) : text).utf8))
         }
         data.append(Data("--\(boundary)--\r\n".utf8))
 

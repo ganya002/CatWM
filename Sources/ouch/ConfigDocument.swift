@@ -212,6 +212,7 @@ final class ConfigDocument: ObservableObject {
     private var savedText = ""
     private var openedText = "" // state when the window was opened, for "Undo All Changes"
     private var extraLines: [String] = [] // lines we don't understand, written back untouched
+    private var unreadable = false // the config file exists but can't be read: never overwrite it
     private var autosave: AnyCancellable?
 
     static let modifierChoices: [(value: String, label: String)] = [
@@ -319,9 +320,13 @@ final class ConfigDocument: ObservableObject {
     // MARK: Load / save
 
     func load() {
-        apply(text: (try? String(contentsOf: Config.url, encoding: .utf8)) ?? defaultText)
+        let text = try? String(contentsOf: Config.url, encoding: .utf8)
+        let wasUnreadable = unreadable
+        unreadable = text == nil && FileManager.default.fileExists(atPath: Config.url.path)
+        apply(text: text ?? defaultText)
         fileErrors = config.errors
         savedText = serialize()
+        if unreadable { saveError = "The config file can't be read, so it's left as it is" } else if wasUnreadable { saveError = nil }
     }
 
     private func apply(text: String) {
@@ -364,7 +369,7 @@ final class ConfigDocument: ObservableObject {
                 var probe = Config()
                 var v = value
                 for (k, val) in resolved.sorted(by: { $0.0.count > $1.0.count }) { v = v.replacingOccurrences(of: k, with: val) }
-                if probe.apply((blocks + [key]).joined(separator: ":"), v)?.hasPrefix("unknown option") == true { extra.append(raw) }
+                if probe.apply((blocks + [key]).joined(separator: ":"), v) != nil { extra.append(raw) } // unknown, or a bad value: keep the user's line
             }
         }
         if !newVars.contains(where: { $0.name.lowercased().contains("mod") }) {
@@ -382,6 +387,7 @@ final class ConfigDocument: ObservableObject {
 
     @discardableResult
     func save() -> Bool {
+        guard !unreadable else { return false }
         let text = serialize()
         do {
             try FileManager.default.createDirectory(at: Config.url.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -432,12 +438,13 @@ final class ConfigDocument: ObservableObject {
             "mouse-resizes-windows = \(b(c.mouseResizesWindows))",
             "new-windows-to-main = \(b(c.newWindowsToMain))",
             "float-small-windows = \(b(c.floatSmallWindows))",
-            "window-resize-step = \(n((c.windowResizeStep * 100).rounded()))",
+            // Below 1% the percent form would read back as a fraction, so write the fraction itself.
+            "window-resize-step = \(c.windowResizeStep >= 0.01 ? n(c.windowResizeStep * 100) : n(c.windowResizeStep))",
             "enables-layout-hud = \(b(c.enablesLayoutHUD))",
             "enables-layout-hud-on-space-change = \(b(c.enablesLayoutHUDOnSpaceChange))",
             "# Make the focused window stand out: darken the others (strength 0-1) and/or blur them (points)",
             "dim-other-windows = \(b(c.dimOtherWindows))",
-            "dim-strength = \(String(format: "%g", (c.dimStrength * 100).rounded() / 100))",
+            "dim-strength = \(n(c.dimStrength))",
             "blur-other-windows = \(b(c.blurOtherWindows))",
             "blur-radius = \(n(c.blurRadius))",
             "sort-strategy = \(c.sortStrategy.rawValue)",
@@ -463,7 +470,7 @@ final class ConfigDocument: ObservableObject {
             "stay-on-workspace-after-close = \(b(c.stayOnWorkspaceAfterClose))",
             "# On-screen keyboard help: keep holding the window-mode chord's modifier, or press ? in the mode",
             "keyboard-help = \(b(c.keyboardHelp))",
-            "keyboard-help-key = \(c.keyboardHelpKey)",
+            "keyboard-help-key = \(esc(c.keyboardHelpKey))",
             "# The keyboard drawn there and in Settings: auto (this Mac), a model (macbook-pro, macbook-air,",
             "# macbook-neo, magic-keyboard) or a finish such as macbook-air-midnight or imac-blue",
             "keyboard-finish = \(c.keyboardFinish)",

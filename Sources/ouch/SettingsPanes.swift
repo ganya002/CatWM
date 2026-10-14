@@ -34,8 +34,8 @@ struct GeneralPane: View {
 
             OGroup("Tiling") {
                 OSwitchRow("Tile windows",
-                           isOn: Binding(get: { ui.status.tilingEnabled }, set: { _ in
-                               WindowManager.shared.toggleTiling()
+                           isOn: Binding(get: { ui.status.tilingEnabled }, set: { on in
+                               if on != WindowManager.shared.tilingEnabled { WindowManager.shared.toggleTiling() }
                                ui.refreshStatus()
                            }))
                     .disabled(!s.running)

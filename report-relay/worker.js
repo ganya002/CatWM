@@ -20,7 +20,10 @@ export default {
       const { success } = await env.LIMITER.limit({ key: req.headers.get("cf-connecting-ip") ?? "unknown" })
       if (!success) return json({ error: "too many reports" }, 429)
     }
-    if (Number(req.headers.get("content-length") ?? 0) > MAX_BYTES) return json({ error: "too large" }, 413)
+    // Without a length (a chunked body) the size can't be checked before formData() buffers it all.
+    const length = req.headers.get("content-length")
+    if (length === null) return json({ error: "length required" }, 411)
+    if (Number(length) > MAX_BYTES) return json({ error: "too large" }, 413)
 
     let form
     try {

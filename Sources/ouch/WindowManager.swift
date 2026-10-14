@@ -1615,9 +1615,10 @@ final class WindowManager {
         for (i, info) in CGWindowInfo.onScreen().enumerated() where rank[info.id] == nil { rank[info.id] = 1000 + i }
         func home(_ id: CGWindowID) -> String { workspaceOf[id].flatMap { monitorOf[$0] } ?? first.uuid }
         let tiledIDs = order.filter { present.contains($0) && windows[$0]?.isFloating == false && isVirtual(workspaceOf[$0]) && !isPending(workspaceOf[$0]) }
-        var shorts = screens.map(Self.shortName)
-        for (i, name) in shorts.enumerated() where shorts.filter({ $0 == name }).count > 1 {
-            shorts[i] = "\(name) \(shorts[..<i].filter { $0.hasPrefix(name) }.count + 1)"
+        let names = screens.map(Self.shortName)
+        var shorts = names
+        for (i, name) in names.enumerated() where names.filter({ $0 == name }).count > 1 {
+            shorts[i] = "\(name) \(names[..<i].filter { $0 == name }.count + 1)"
         }
         return screens.enumerated().map { n, s in
             let mine = tiledIDs.filter { home($0) == s.uuid }
@@ -1735,7 +1736,7 @@ final class WindowManager {
         // Marked windows stay hidden and are closed there. Only one that is still open afterwards (an app
         // asking to save) is brought onto the shown workspace, so its sheet can be answered.
         closingNow.formUnion(closing)
-        closingApps = Set(closing.compactMap { windows[$0]?.pid })
+        closingApps.formUnion(closing.compactMap { windows[$0]?.pid })
         releasePending()
         if !closing.isEmpty { closeMarked(closing, attempt: 0) }
     }
@@ -2065,10 +2066,11 @@ final class WindowManager {
         let restore = mouseLocation()
         func next(_ rest: ArraySlice<CGPoint>) {
             guard let p = rest.first else { finishMove(restore: restore); return }
+            let original = serverFrame(w.id) ?? w.frame
             attemptGrab(w, at: p) { [weak self] grabbed, held in
                 self?.postMouse(.leftMouseUp, held)
                 Log.info("grabtest: \(p) \(grabbed ? "GRABS" : "no")")
-                if grabbed { self?.rememberGrab(w, p, frame: w.frame) }
+                if grabbed { self?.rememberGrab(w, p, frame: original) }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { next(rest.dropFirst()) }
             }
         }

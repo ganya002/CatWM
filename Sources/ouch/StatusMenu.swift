@@ -87,7 +87,10 @@ struct ShortcutIndex {
 
 final class MenuModel: ObservableObject {
     @Published var items: [MenuItem] = []
-    @Published var query = ""
+    @Published var query = "" {
+        // Leading spaces are dropped, so a query of only spaces is no query rather than one matching nothing.
+        didSet { if query.first?.isWhitespace == true { query = String(query.drop { $0.isWhitespace }) } }
+    }
     /// Ids of the open submenus, one per level below the root.
     @Published var path: [String] = []
     /// Highlighted item per level (0 is the root or the search results).

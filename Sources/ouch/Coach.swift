@@ -278,6 +278,7 @@ final class Coach {
         MenuBarTip.shared.suppressed = false
         Hotkeys.shared.setSubmap("")
         if KeyHelp.shared.isVisible { KeyHelp.shared.hide() }
+        if SortPanel.shared.isOpen { SortPanel.shared.revert() } // left open by the Sorting steps
         if let panel {
             animate(0.25, changes: { panel.animator().alphaValue = 0 }) { panel.orderOut(nil) }
         }
