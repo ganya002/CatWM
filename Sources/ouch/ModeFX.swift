@@ -93,7 +93,7 @@ final class ModeFX {
             // A reused panel's view still has the origin and corners of where its screen used to be.
             if let host = p.contentView as? NSHostingView<ModeFXView> {
                 host.rootView = ModeFXView(model: model, radius: Self.topCornerRadius(screen), origin: screen.frame.origin,
-                                           notchHalfWidth: Self.notchHalfWidth(screen))
+                                           notchHalfWidth: Self.notchHalfWidth(screen), notchHeight: Self.notchHeight(screen))
             }
             p.setFrame(screen.frame, display: false)
             p.orderFrontRegardless()
@@ -113,7 +113,8 @@ final class ModeFX {
         p.ignoresMouseEvents = true
         p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
         p.contentView = NSHostingView(rootView: ModeFXView(model: model, radius: Self.topCornerRadius(screen),
-                                                           origin: screen.frame.origin, notchHalfWidth: Self.notchHalfWidth(screen)))
+                                                           origin: screen.frame.origin, notchHalfWidth: Self.notchHalfWidth(screen),
+                                                           notchHeight: Self.notchHeight(screen)))
         return p
     }
 
@@ -130,6 +131,11 @@ final class ModeFX {
     static func notchHalfWidth(_ screen: NSScreen) -> CGFloat {
         guard screen.safeAreaInsets.top > 0, let l = screen.auxiliaryTopLeftArea, let r = screen.auxiliaryTopRightArea else { return 0 }
         return max(0, (r.minX - l.maxX) / 2)
+    }
+
+    /// Height of the camera notch, or 0 on screens without one.
+    static func notchHeight(_ screen: NSScreen) -> CGFloat {
+        notchHalfWidth(screen) > 0 ? screen.safeAreaInsets.top : 0
     }
 
     static func topCornerRadius(_ screen: NSScreen) -> CGFloat {
@@ -161,12 +167,15 @@ struct ModeFXView: View {
     let radius: CGFloat
     let origin: CGPoint
     var notchHalfWidth: CGFloat = 0
+    var notchHeight: CGFloat = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         GeometryReader { geo in
             effect(size: geo.size)
                 .frame(width: geo.size.width, height: geo.size.height)
+                // Whatever the effect draws (glow, ripple ring, corner brackets) stops at the notch.
+                .mask(NotchCutout(halfWidth: notchHalfWidth, height: notchHeight).fill(style: FillStyle(eoFill: true)))
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
@@ -286,6 +295,20 @@ struct ModeFXView: View {
     }
 
     private struct Ripple { var t: CGFloat = 0; var edge: Double = 0 }
+}
+
+/// The whole rect with the notch cut out of the top centre (fill it even-odd as a mask).
+private struct NotchCutout: Shape {
+    let halfWidth: CGFloat
+    let height: CGFloat
+    func path(in rect: CGRect) -> Path {
+        var p = Path(rect)
+        if halfWidth > 0 {
+            p.addPath(UnevenRoundedRectangle(bottomLeadingRadius: 10, bottomTrailingRadius: 10, style: .continuous)
+                .path(in: CGRect(x: rect.midX - halfWidth, y: rect.minY - 1, width: halfWidth * 2, height: height + 1)))
+        }
+        return p
+    }
 }
 
 /// A top-left corner bracket; rotated for the other three.
