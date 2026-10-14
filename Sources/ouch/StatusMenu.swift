@@ -160,13 +160,11 @@ final class MenuModel: ObservableObject {
 
         // Layout.
         var layoutItems: [MenuItem] = [
-            .label("layouts", "Layouts"), // Next Layout below shows the key
             MenuItem(id: "picker", kind: .layoutPicker),
-            .sep("ls"),
             MenuItem(id: "next-layout", label: "Next Layout", symbol: "chevron.right", shortcut: keys.keys("cyclelayout", "next"),
-                     enabled: trusted, keepOpen: true, action: { wm.dispatch("cyclelayout", "next") }),
+                     enabled: trusted, hidden: true, keepOpen: true, action: { wm.dispatch("cyclelayout", "next") }),
             MenuItem(id: "prev-layout", label: "Previous Layout", symbol: "chevron.left", shortcut: keys.keys("cyclelayout", "prev"),
-                     enabled: trusted, keepOpen: true, action: { wm.dispatch("cyclelayout", "prev") }),
+                     enabled: trusted, hidden: true, keepOpen: true, action: { wm.dispatch("cyclelayout", "prev") }),
         ]
         layoutItems += Layout.allCases.map { l in
             MenuItem(id: "layout-\(l.rawValue)", kind: .radio, label: l.title, shortcut: keys.keys("layout", l.rawValue), checked: l == layout,
@@ -183,16 +181,15 @@ final class MenuModel: ObservableObject {
         }
         out.append(MenuItem(id: "window", kind: .sub, label: "Window", symbol: "macwindow", enabled: trusted, children: [
             MenuItem(id: "retile", label: "Retile", symbol: "arrow.triangle.2.circlepath", shortcut: keys.keys("retile"),
-                     keywords: "refresh reflow", keepOpen: true, rotates: true, action: { wm.dispatch("retile", "") }),
+                     hidden: true, keywords: "refresh reflow", keepOpen: true, rotates: true, action: { wm.dispatch("retile", "") }),
             MenuItem(id: "swap", label: "Swap with Main", symbol: "arrow.left.arrow.right", shortcut: keys.keys("layoutmsg", "swapwithmaster"),
                      keywords: "master", action: { wm.dispatch("layoutmsg", "swapwithmaster") }),
             MenuItem(id: "float", kind: .check, label: "Float Window", shortcut: keys.keys("togglefloating"),
-                     checked: focused?.floating == true, enabled: focused != nil, keywords: "floating tile",
+                     checked: focused?.floating == true, enabled: focused != nil, hidden: true, keywords: "floating tile",
                      keepOpen: true, action: { wm.dispatch("togglefloating", "") }),
             MenuItem(id: "full", kind: .check, label: "Fullscreen", shortcut: keys.keys("fullscreen"),
-                     checked: focused?.fullscreen == true, enabled: focused != nil, keywords: "zoom maximize",
+                     checked: focused?.fullscreen == true, enabled: focused != nil, hidden: true, keywords: "zoom maximize",
                      keepOpen: true, action: { wm.dispatch("fullscreen", "") }),
-            .sep("ws"),
             MenuItem(id: "send", kind: .sub, label: "Send to Workspace", symbol: "rectangle.stack", enabled: wm.config.virtualWorkspaces,
                      width: 200, children: send),
             MenuItem(id: "monitor", label: "Next Display", symbol: "display", shortcut: keys.keys("movewindow", "mon:+1"),
@@ -218,10 +215,9 @@ final class MenuModel: ObservableObject {
                             value: library.current(.full).name, children:
             [.label("kb", "Keyboard")] + radios(.keyboard) + [.sep("c1"), .label("an", "Animation")] + radios(.animation)
                 + [.sep("c2"), .label("full", "Everything")] + radios(.full) + [
-                .sep("c3"),
-                MenuItem(id: "import", label: "Import…", symbol: "square.and.arrow.down", keywords: "config file",
+                MenuItem(id: "import", label: "Import…", symbol: "square.and.arrow.down", hidden: true, keywords: "config file",
                          action: { NSApp.activate(ignoringOtherApps: true); library.runImportPanel() }),
-                MenuItem(id: "export", label: "Export…", symbol: "square.and.arrow.up", keywords: "config file share", action: {
+                MenuItem(id: "export", label: "Export…", symbol: "square.and.arrow.up", hidden: true, keywords: "config file share", action: {
                     SettingsWindow.shared.show(pane: nil)
                     library.sheet = .export(kind: .full)
                 }),
@@ -239,15 +235,15 @@ final class MenuModel: ObservableObject {
             MenuItem(id: "map", label: "Shortcut Map", symbol: "keyboard", shortcut: ["⌘", "/"], keywords: "keys overview cheat sheet",
                      action: { SettingsWindow.shared.show(pane: .shortcuts, map: true) }),
             MenuItem(id: "keyhelp", label: "Keyboard Help", symbol: "keyboard.badge.ellipsis", shortcut: keys.modeChord,
-                     enabled: trusted, keywords: "keys overlay cheat sheet window mode", action: { KeyHelp.shared.showFromMenu(preferredMode: keys.modeName) }),
+                     enabled: trusted, hidden: true, keywords: "keys overlay cheat sheet window mode", action: { KeyHelp.shared.showFromMenu(preferredMode: keys.modeName) }),
             MenuItem(id: "tour", label: "Quick Tour", symbol: "play.circle", enabled: trusted,
                      keywords: "learn tutorial onboarding keyboard tour", action: { Onboarding.shared.startTour() }),
             MenuItem(id: "tutorial-restart", label: "Restart Tutorial", symbol: "arrow.counterclockwise", enabled: trusted,
-                     hidden: paused == nil, keywords: "learn tutorial start over", action: { Onboarding.shared.startTutorial(fromStart: true) }),
-            MenuItem(id: "tips", kind: .check, label: "Show Tips", checked: Tips.shared.enabled, keywords: "hints help tooltips",
+                     hidden: true, keywords: "learn tutorial start over", action: { Onboarding.shared.startTutorial(fromStart: true) }),
+            MenuItem(id: "tips", kind: .check, label: "Show Tips", checked: Tips.shared.enabled, hidden: true, keywords: "hints help tooltips",
                      keepOpen: true, action: { Tips.shared.enabled.toggle() }),
             MenuItem(id: "reload", label: "Reload Config", symbol: "arrow.triangle.2.circlepath", shortcut: keys.keys("reload"),
-                     keywords: "refresh file", keepOpen: true, rotates: true, action: { wm.reload() }),
+                     hidden: true, keywords: "refresh file", keepOpen: true, rotates: true, action: { wm.reload() }),
             MenuItem(id: "updates", label: "Check for Updates…", symbol: "arrow.down.circle", keywords: "version upgrade",
                      action: { AppDelegate.checkForUpdates() }),
             MenuItem(id: "bug", label: "Report a Bug…", symbol: "ladybug", value: crashed ? "Crashed" : nil,
