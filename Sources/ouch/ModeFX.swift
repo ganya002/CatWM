@@ -92,7 +92,8 @@ final class ModeFX {
             panels[id] = p
             // A reused panel's view still has the origin and corners of where its screen used to be.
             if let host = p.contentView as? NSHostingView<ModeFXView> {
-                host.rootView = ModeFXView(model: model, radius: Self.topCornerRadius(screen), origin: screen.frame.origin)
+                host.rootView = ModeFXView(model: model, radius: Self.topCornerRadius(screen), origin: screen.frame.origin,
+                                           notchHalfWidth: Self.notchHalfWidth(screen))
             }
             p.setFrame(screen.frame, display: false)
             p.orderFrontRegardless()
@@ -112,7 +113,7 @@ final class ModeFX {
         p.ignoresMouseEvents = true
         p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
         p.contentView = NSHostingView(rootView: ModeFXView(model: model, radius: Self.topCornerRadius(screen),
-                                                           origin: screen.frame.origin))
+                                                           origin: screen.frame.origin, notchHalfWidth: Self.notchHalfWidth(screen)))
         return p
     }
 
@@ -125,6 +126,12 @@ final class ModeFX {
     /// cut off. Built-in MacBook displays round only the top (about 20pt on notched ones); the bottom and
     /// external displays are square. WindowServer knows the exact value per display; the notch is the
     /// fallback guess.
+    /// Half the width of the camera notch, or 0 on screens without one. Drawn borders start at its edges.
+    static func notchHalfWidth(_ screen: NSScreen) -> CGFloat {
+        guard screen.safeAreaInsets.top > 0, let l = screen.auxiliaryTopLeftArea, let r = screen.auxiliaryTopRightArea else { return 0 }
+        return max(0, (r.minX - l.maxX) / 2)
+    }
+
     static func topCornerRadius(_ screen: NSScreen) -> CGFloat {
         var radii = [Double](repeating: 0, count: 4) // the bottom two, then the top two
         if let f = cornerRadii, let id = screen.displayID,
@@ -153,6 +160,7 @@ struct ModeFXView: View {
     @ObservedObject var model: ModeFXModel
     let radius: CGFloat
     let origin: CGPoint
+    var notchHalfWidth: CGFloat = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -171,10 +179,21 @@ struct ModeFXView: View {
     private var c: Color { model.color }
     private var on: Bool { model.active }
 
+    /// The finished screen border: two mirrored halves that begin at the notch edges, so nothing runs under it.
+    private func border(width: CGFloat) -> some View {
+        ZStack {
+            ForEach([false, true], id: \.self) { mirrored in
+                DrawnHalf(radius: radius, inset: width / 2, notchHalfWidth: notchHalfWidth)
+                    .stroke(c, style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .miter))
+                    .scaleEffect(x: mirrored ? -1 : 1, y: 1)
+            }
+        }
+    }
+
     @ViewBuilder private func effect(size: CGSize) -> some View {
         if reduceMotion && model.style != .none {
             // No motion: just the finished border, faded in.
-            shape.strokeBorder(c, lineWidth: 4)
+            border(width: 4)
                 .opacity(on ? 1 : 0).animation(.easeOut(duration: 0.15), value: on)
         } else {
             animated(size: size)
@@ -195,7 +214,7 @@ struct ModeFXView: View {
                         .frame(width: reach * 2 * v.t, height: reach * 2 * v.t)
                         .position(p)
                         .opacity(v.t >= 1 ? 0 : 1 - v.t * 0.6)
-                    shape.strokeBorder(c, lineWidth: 3.5).opacity(v.edge)
+                    border(width: 3.5).opacity(v.edge)
                 }
                 .clipShape(shape)
             } keyframes: { _ in
@@ -237,7 +256,7 @@ struct ModeFXView: View {
             Color.clear.keyframeAnimator(initialValue: 0.0, trigger: model.enters) { _, k in
                 ZStack {
                     ForEach([false, true], id: \.self) { mirrored in
-                        let half = DrawnHalf(radius: radius, inset: 2)
+                        let half = DrawnHalf(radius: radius, inset: 2, notchHalfWidth: notchHalfWidth)
                         ZStack {
                             half.trim(from: 0, to: k).stroke(c, style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .miter))
                             half.trim(from: max(0, k - 0.06), to: k)
@@ -286,11 +305,13 @@ private struct Bracket: Shape {
 private struct DrawnHalf: Shape {
     let radius: CGFloat
     let inset: CGFloat
+    /// The path starts at the notch edge instead of the top centre, so none of it draws under the notch.
+    var notchHalfWidth: CGFloat = 0
     func path(in rect: CGRect) -> Path {
         let r = rect.insetBy(dx: inset, dy: inset)
         let rad = max(0, radius - inset)
         var p = Path()
-        p.move(to: CGPoint(x: r.midX, y: r.minY))
+        p.move(to: CGPoint(x: r.midX + notchHalfWidth, y: r.minY))
         p.addArc(tangent1End: CGPoint(x: r.maxX, y: r.minY), tangent2End: CGPoint(x: r.maxX, y: r.maxY), radius: rad)
         p.addLine(to: CGPoint(x: r.maxX, y: r.maxY))
         p.addLine(to: CGPoint(x: r.midX, y: r.maxY))
