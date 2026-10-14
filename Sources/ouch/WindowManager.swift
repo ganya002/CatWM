@@ -281,12 +281,14 @@ final class WindowManager {
     }
 
     private func learnMinimum(_ id: CGWindowID, _ size: CGSize) {
+        // A size from a window that's going away can be garbage; a minimum must be a real, screen-sized number.
+        guard size.width.isFinite, size.height.isFinite, abs(size.width) < 1e5, abs(size.height) < 1e5 else { return }
         let old = minSizes[id] ?? .zero
         let new = CGSize(width: max(old.width, size.width.rounded()), height: max(old.height, size.height.rounded()))
         guard new != old else { return }
         minSizes[id] = new
         corrections[id] = nil
-        Log.info("window \(id) has a minimum size of \(Int(new.width))×\(Int(new.height)); re-tiling around it")
+        Log.info("window \(id) has a minimum size of \(Int(new.width))×\(Int(new.height)); re-tiling around it") // finite and small, per the guard above
         if let r = ratioChange, Date() < r.until {
             ratioChange = nil
             warnTooSmall(id, on: Screen.all().first { $0.uuid == r.screen })
@@ -389,6 +391,9 @@ final class WindowManager {
     }
 
     // MARK: - Refresh & tiling
+
+    /// Relayouts moving more windows than this land at once instead of animating (see `refresh`).
+    private static let maxAnimatedMoves = 6
 
     /// Coalesces refresh requests. A pending earlier refresh is kept rather than pushed back, so a
     /// steady stream of events can't postpone tiling indefinitely.
@@ -518,7 +523,10 @@ final class WindowManager {
         }
         if !moves.isEmpty { Log.debug("tile: moving \(moves.map { "\($0.window.id)→\($0.to)" }.joined(separator: ", "))") }
         animator.animate(instant, duration: 0) // workspace switches are instant, like Hyprland
-        animator.animate(moves, duration: config.animate ? config.animationDuration : 0,
+        // An animated move costs AX calls on every frame for every window in it. With a crowd of
+        // windows that keeps the main thread busy enough to stall events, so a big relayout lands at once.
+        let animated = config.animate && moves.count <= Self.maxAnimatedMoves
+        animator.animate(moves, duration: animated ? config.animationDuration : 0,
                          curve: config.animationCurve, bounce: config.animationBounce)
         onChange?()
     }
@@ -775,6 +783,7 @@ final class WindowManager {
         let st = state(for: s)
         let ids = tiled(on: s)
         let r = usableRect(s), f = w.frame
+        guard !f.isNull else { return } // unknown geometry: a null rect's infinite origin would set the ratio to an extreme
         let mains = [.bsp, .twoPane, .twoPaneRight].contains(st.layout) ? 1 : st.mainCount
         guard let idx = ids.firstIndex(of: w.id), ids.count > mains, var axis = st.layout.ratioAxis else { return }
         if st.layout == .bsp { axis = (r.width >= r.height, true) }

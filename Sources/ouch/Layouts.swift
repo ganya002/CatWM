@@ -125,18 +125,20 @@ private func rows(_ r: CGRect, _ n: Int) -> [CGRect] {
 /// of the stack evenly between the others. Stacks that can't fit everyone are left alone.
 func fitMinimums(_ frames: [CGRect], mins: [CGSize?], gap: CGFloat) -> [CGRect] {
     guard mins.contains(where: { $0 != nil }) else { return frames }
-    // Int(_:) below traps on NaN, infinity and out-of-range values; a bad frame is better left as is.
+    // A bad frame is better left as is. Keys stay Doubles: Int(_:) traps on NaN and infinity.
     guard frames.allSatisfy({ [$0.minX, $0.minY, $0.width, $0.height].allSatisfy { $0.isFinite && abs($0) < 1e9 } }) else { return frames }
+    // `+ 0` turns -0.0 into 0.0, so the keys match as the Int keys they replace did.
+    func key(_ v: CGFloat) -> String { "\(v.rounded() + 0)" }
     var out = frames
     for vertical in [true, false] {
         let groups = Dictionary(grouping: out.indices) { i -> String in
             let f = out[i]
-            return vertical ? "\(Int(f.minX.rounded())):\(Int(f.width.rounded()))" : "\(Int(f.minY.rounded())):\(Int(f.height.rounded()))"
+            return vertical ? "\(key(f.minX)):\(key(f.width))" : "\(key(f.minY)):\(key(f.height))"
         }
         for idx in groups.values where idx.count > 1 {
             let sorted = idx.sorted { vertical ? out[$0].minY < out[$1].minY : out[$0].minX < out[$1].minX }
             let starts = sorted.map { vertical ? out[$0].minY : out[$0].minX }
-            guard Set(starts.map { Int($0.rounded()) }).count == starts.count else { continue } // stacked on top of each other
+            guard Set(starts.map { $0.rounded() }).count == starts.count else { continue } // stacked on top of each other
             let sizes = sorted.map { vertical ? out[$0].height : out[$0].width }
             let need = sorted.map { i -> CGFloat in vertical ? (mins[i]?.height ?? 0) : (mins[i]?.width ?? 0) }
             guard zip(need, sizes).contains(where: { $0 > $1 + 1 }) else { continue }

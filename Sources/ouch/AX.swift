@@ -116,8 +116,12 @@ extension AXUIElement {
         var s = CGSize.zero
         return AXValueGetValue(v as! AXValue, .cgSize, &s) ? s : nil
     }
+    /// `.null` when the app doesn't answer or reports something that isn't a real rect. Apps that
+    /// are closing (kitty does this under load) can report infinite or NaN geometry, and every
+    /// caller that treats `isNull` as "unknown" then ignores the window instead of tiling with it.
     var frame: CGRect {
-        guard let p = point(kAXPositionAttribute), let s = size(kAXSizeAttribute) else { return .null }
+        guard let p = point(kAXPositionAttribute), let s = size(kAXSizeAttribute),
+              [p.x, p.y, s.width, s.height].allSatisfy(\.isFinite) else { return .null }
         return CGRect(origin: p, size: s)
     }
 
