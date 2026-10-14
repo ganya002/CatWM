@@ -90,6 +90,10 @@ final class ModeFX {
             seen.insert(id)
             let p = panels[id] ?? makePanel(screen)
             panels[id] = p
+            // A reused panel's view still has the origin and corners of where its screen used to be.
+            if let host = p.contentView as? NSHostingView<ModeFXView> {
+                host.rootView = ModeFXView(model: model, radius: Self.topCornerRadius(screen), origin: screen.frame.origin)
+            }
             p.setFrame(screen.frame, display: false)
             p.orderFrontRegardless()
         }

@@ -102,7 +102,9 @@ struct Config {
     /// Sets one option in the config file where it stands (or adds it above the binds), leaving the
     /// rest of the file, comments included, as written.
     static func write(option key: String, _ value: String) {
-        let text = (try? String(contentsOf: url, encoding: .utf8)) ?? defaultText
+        let read = try? String(contentsOf: url, encoding: .utf8)
+        guard read != nil || !FileManager.default.fileExists(atPath: url.path) else { return } // never replace a file we can't read
+        let text = read ?? defaultText
         var lines = text.components(separatedBy: "\n")
         func norm(_ s: String) -> String { s.lowercased().replacingOccurrences(of: "-", with: "_") }
         let existing = lines.firstIndex { l in
@@ -154,7 +156,8 @@ struct Config {
         let fullKey = key
         if let colon = key.lastIndex(of: ":") { key = String(key[key.index(after: colon)...]) } // general:gaps_in
         let num = Double(v).flatMap { $0.isFinite ? CGFloat($0) : nil } // "nan" and "inf" parse as Doubles but poison every frame computed from them
-        let bool = ["true", "yes", "on", "1"].contains(v.lowercased())
+        var readBool = false // a typo such as `ture` is an error, not a silent false
+        var bool: Bool { readBool = true; return ["true", "yes", "on", "1"].contains(v.lowercased()) }
         func needNum(_ set: (CGFloat) -> Void) -> String? {
             guard let num else { return "`\(rawKey)` needs a number" }
             set(num); return nil
@@ -243,6 +246,9 @@ struct Config {
             panelAnimation = s
         default: return "unknown option `\(rawKey)`"
         }
+        if readBool, !["true", "yes", "on", "1", "false", "no", "off", "0"].contains(v.lowercased()) {
+            return "`\(rawKey)` needs true or false"
+        }
         return nil
     }
 
@@ -317,8 +323,9 @@ enum BindRange {
             return (prefix, n)
         }
         guard let (pa, na) = split(a), let (pb, nb) = split(b), pb.isEmpty || pa.lowercased() == pb.lowercased() else { return nil }
+        let (span, overflow) = nb.subtractingReportingOverflow(na)
+        guard !overflow, span.magnitude < 100 else { return nil } // before building the array: 1..99999999999 would not fit
         let seq = na <= nb ? Array(na...nb) : Array((nb...na).reversed())
-        guard seq.count <= 100 else { return nil }
         return seq.map { pa + String($0) }
     }
 

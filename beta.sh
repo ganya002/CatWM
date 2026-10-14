@@ -7,8 +7,8 @@
 set -e
 cd "$(dirname "$0")"
 export OUCH_CHANNEL=beta
-NOTES=${1:-}
-[ $# -gt 0 ] && shift
+NOTES=
+case "${1:-}" in -*) ;; *) NOTES=${1:-}; [ $# -gt 0 ] && shift ;; esac
 if security find-identity -v -p codesigning | grep -q "Developer ID Application"; then
   exec ./release.sh "$NOTES" "$@" --channel beta
 fi

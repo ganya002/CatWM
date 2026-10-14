@@ -363,6 +363,10 @@ struct SettingsView: View {
         .background(Theme.wash.ignoresSafeArea())
         .overlayPreferenceValue(TipAnchorKey.self) { SettingsTipLayer(anchors: $0) }
         .onChange(of: ui.pane) { _, p in Tips.shared.paneShown(p) }
+        // Applying a config, undo or reset can leave unequal paddings; the single slider would flatten them.
+        .onChange(of: [doc.config.paddingTop, doc.config.paddingBottom, doc.config.paddingLeft, doc.config.paddingRight]) { _, p in
+            if Set(p).count > 1 { ui.linkedPadding = false }
+        }
         .ignoresSafeArea()
         .font(Theme.body())
         .foregroundStyle(Theme.ink)

@@ -193,14 +193,14 @@ final class Tips: ObservableObject {
     // MARK: Showing
 
     private func present(_ tip: Tip) {
-        markSeen(tip.id)
-        defaults.set(Date().timeIntervalSince1970, forKey: Self.lastKey)
         switch tip.place {
         case .settings:
             withAnimation(Motion.easeOut) { settings = tip }
         case .menuBar, .modeBar:
-            showPanel(tip)
+            guard showPanel(tip) else { return } // nowhere to show it: keep the tip and today's slot
         }
+        markSeen(tip.id)
+        defaults.set(Date().timeIntervalSince1970, forKey: Self.lastKey)
     }
 
     func dismiss(_ tip: Tip) {
@@ -222,18 +222,18 @@ final class Tips: ObservableObject {
         withAnimation(Motion.easeOut) { settings = nil }
     }
 
-    private func showPanel(_ tip: Tip) {
+    private func showPanel(_ tip: Tip) -> Bool {
         let host = FirstClickHostingView(rootView: TipView(tip: tip, inset: TipView.panelInset))
         let size = host.fittingSize
         let screen = WindowManager.shared.focusedScreen ?? NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main
-        guard let screen else { return }
+        guard let screen else { return false }
         let v = screen.visibleFrame
         var frame: NSRect
         var caret: Caret
         switch tip.place {
         case .menuBar:
             guard let b = Onboarding.shared.statusButton?.window?.frame,
-                  let target = NSScreen.screens.first(where: { $0.frame.contains(NSPoint(x: b.midX, y: b.midY)) }) else { return }
+                  let target = NSScreen.screens.first(where: { $0.frame.contains(NSPoint(x: b.midX, y: b.midY)) }) else { return false }
             let tv = target.visibleFrame
             var x = b.midX - size.width / 2
             x = min(max(x, target.frame.minX + 8), target.frame.maxX - size.width - 8)
@@ -257,6 +257,7 @@ final class Tips: ObservableObject {
         let work = DispatchWorkItem { [weak self] in self?.dismissGlobal() }
         hideWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 25, execute: work)
+        return true
     }
 
     private func dismissGlobal() {

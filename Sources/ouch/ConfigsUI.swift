@@ -394,11 +394,13 @@ struct HSBA: Equatable {
     /// What people type: "#E8460C", "E8460C", "rgb(232, 70, 12)" or "hsl(16, 90%, 48%)".
     init?(text: String) {
         let t = text.trimmingCharacters(in: .whitespaces).lowercased()
-        let nums = t.split(whereSeparator: { !"0123456789.".contains($0) }).compactMap { Double($0) }
+        // "-" is kept so hsl(-30, …) is hue 330; other negative numbers clamp to 0.
+        let signed = t.split(whereSeparator: { !"0123456789.-".contains($0) }).compactMap { Double($0) }
+        let nums = signed.map { max($0, 0) }
         if t.hasPrefix("rgb"), nums.count >= 3 {
             self.init(r: min(nums[0], 255) / 255, g: min(nums[1], 255) / 255, b: min(nums[2], 255) / 255, a: nums.count > 3 ? min(nums[3], 1) : 1)
         } else if t.hasPrefix("hsl"), nums.count >= 3 {
-            let h = nums[0].truncatingRemainder(dividingBy: 360) / 360, s = min(nums[1], 100) / 100, l = min(nums[2], 100) / 100
+            let h = (signed[0].truncatingRemainder(dividingBy: 360) + 360).truncatingRemainder(dividingBy: 360) / 360, s = min(nums[1], 100) / 100, l = min(nums[2], 100) / 100
             let v = l + s * min(l, 1 - l)
             self.init()
             self.h = h; self.s = v == 0 ? 0 : 2 * (1 - l / v); self.b = v; self.a = nums.count > 3 ? min(nums[3], 1) : 1

@@ -85,7 +85,12 @@ final class PermissionGuide {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) { [weak self] in
             guard let self else { return }
             finishing = false
-            guard kind.isGranted else { return }
+            guard kind.isGranted else { // turned off again meanwhile: back to guiding
+                model.granted = false
+                layout(animated: true)
+                follow = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [weak self] _ in self?.tick() }
+                return
+            }
             stop()
             Permissions.dismissSystemAlert()
             // The alert's button brings Settings forward; close it after that lands.

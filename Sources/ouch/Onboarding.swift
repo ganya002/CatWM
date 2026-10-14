@@ -174,6 +174,8 @@ final class Onboarding {
             } else {
                 HUD.shared.show("Ouch needs Accessibility first", on: nil)
                 MenuBarTip.shared.hide()
+                // Trusted, so the next launch won't offer the tour again: count it as done, or Tips never show.
+                if firstRun, AXIsProcessTrusted() { UserDefaults.standard.set(true, forKey: Self.doneKey) }
                 firstRun = false
             }
             return

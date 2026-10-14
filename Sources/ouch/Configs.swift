@@ -130,6 +130,11 @@ final class ConfigLibrary: ObservableObject {
             custom = stored.custom
             for (k, v) in stored.active { if let kind = ConfigKind(rawValue: k) { active[kind] = v } }
         } else {
+            if FileManager.default.fileExists(atPath: Self.url.path) { // can't decode it: keep a copy before it's replaced
+                let bak = Self.url.appendingPathExtension("bak")
+                try? FileManager.default.removeItem(at: bak)
+                try? FileManager.default.moveItem(at: Self.url, to: bak)
+            }
             adoptCurrentSettings()
         }
         for kind in ConfigKind.allCases where config(id: active[kind]) == nil { active[kind] = configs(kind)[0].id }
@@ -225,6 +230,10 @@ final class ConfigLibrary: ObservableObject {
             // A full config brings its keyboard and animation selection along.
             active[.keyboard] = config(id: c.keyboardID)?.id ?? builtIns[0].id
             active[.animation] = config(id: c.animationID)?.id ?? Self.builtInPrefix + "animation.default"
+            // Its embedded binds and animation may be older than those configs: put the configs' current text in.
+            doc.applyKeyboard(current(.keyboard).text)
+            doc.applyAnimation(current(.animation).text)
+            doc.save()
         }
         refreshLinks()
         save()

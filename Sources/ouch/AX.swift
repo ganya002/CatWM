@@ -205,8 +205,7 @@ final class Window {
             for menu in top.elements(kAXChildrenAttribute) {
                 for item in menu.elements(kAXChildrenAttribute) where ["Close Window", "Close"].contains(item.string(kAXTitleAttribute) ?? "") {
                     guard item.bool(kAXEnabledAttribute) != false else { continue }
-                    item.perform(kAXPressAction)
-                    return true
+                    return AXUIElementPerformAction(item, kAXPressAction as CFString) == .success
                 }
             }
         }

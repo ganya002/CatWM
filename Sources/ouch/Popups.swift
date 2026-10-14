@@ -181,7 +181,7 @@ final class Popup: NSObject, NSWindowDelegate {
         }) { monitors.append(m) }
         if let m = NSEvent.addLocalMonitorForEvents(matching: .keyDown, handler: { [weak self] e in
             guard let self, let top = self.stack.last, top.panel.isKeyWindow else { return e }
-            if e.keyCode == 53 && !top.keys(e) { self.close(); return nil }
+            if e.keyCode == 53 { if !top.keys(e) { self.close() }; return nil } // keys(e) once: Esc steps back a level
             return top.keys(e) ? nil : e
         }) { monitors.append(m) }
     }

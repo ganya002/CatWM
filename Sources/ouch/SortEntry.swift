@@ -147,7 +147,7 @@ final class SortOffer {
         let v = screen.visibleFrame
         // Hangs under the menu bar icon like the tour's own cards do.
         var x = v.midX - size.width / 2, y = v.maxY - size.height - 16
-        var caret: CGFloat = size.width - 60
+        var caret: CGFloat = SortOfferView.width / 2 // the card is centred when there's no icon to hang under
         if let b = button?.window?.frame {
             let card = SortOfferView.width
             let left = min(max(b.midX - card + 60, v.minX + 16), v.maxX - card - 16)
