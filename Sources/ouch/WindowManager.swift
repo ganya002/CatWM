@@ -267,7 +267,10 @@ final class WindowManager {
             scheduleRefresh()
             FocusDim.shared.update()
         case kAXWindowMovedNotification, kAXWindowResizedNotification:
-            guard let id = element.windowID, let w = windows[id], !animator.isBusy(id), !movingToSpace else { return }
+            // Look the window up here first: `windowID` asks the app, which may still be busy with our own frames.
+            guard let w = windows.values.first(where: { CFEqual($0.element, element) }) ?? element.windowID.flatMap({ windows[$0] }),
+                  !animator.isBusy(w.id), !movingToSpace else { return }
+            let id = w.id
             if NSEvent.pressedMouseButtons & 1 != 0 {
                 drags[id] = (drags[id] ?? false) || notification == kAXWindowResizedNotification
             } else if !w.isFloating {
