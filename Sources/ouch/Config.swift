@@ -428,6 +428,7 @@ floating = com.apple.systempreferences, com.apple.SystemSettings, com.apple.calc
 floating-is-blacklist = true
 
 # ---- animation -------------------------------------------------------------
+# These also set how windows slide when you switch workspaces.
 # animation-curve: ease-out, ease-in-out, linear, spring, bounce, overshoot,
 # or cubic-bezier(x1, y1, x2, y2) like CSS (y past 0...1 overshoots).
 # animation-bounce (0-1) sets how lively spring, bounce and overshoot are.

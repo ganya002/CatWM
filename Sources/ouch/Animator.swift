@@ -7,6 +7,7 @@ final class Animator {
         let window: Window
         let to: CGRect
         let bounds: CGRect // visible area of the target screen, used to keep oversized windows on it
+        var from: CGRect? = nil // where to start when that is not where the window is now (a workspace swap)
     }
 
     fileprivate struct Item {
@@ -29,6 +30,11 @@ final class Animator {
         items[id] != nil || (quietUntil[id] ?? 0) > CACurrentMediaTime()
     }
 
+    /// Whether a window is already animating to this frame, so asking for it again changes nothing.
+    func isMoving(_ id: CGWindowID, to frame: CGRect) -> Bool {
+        items[id]?.move.to == frame
+    }
+
     /// Stops animating a window (it's about to be parked somewhere else).
     func cancel(_ id: CGWindowID) {
         guard let item = items.removeValue(forKey: id) else { return }
@@ -48,7 +54,7 @@ final class Animator {
             if let running = items[id] {
                 from = running.frame(at: now) // retarget smoothly from where it is mid-flight
             } else {
-                from = m.window.frame
+                from = m.from ?? m.window.frame
                 EnhancedUI.suspend(m.window.pid)
             }
             if duration < 0.01 || from.isNull || from.approxEqual(m.to, tolerance: 2) {

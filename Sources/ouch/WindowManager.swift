@@ -76,6 +76,15 @@ final class WindowManager {
     /// The Sort panel is open: workspaces change under it, but nothing may take the keyboard or switch workspace.
     private var sortSession = false
     private var quietWorkspaceHUD = false
+    /// A workspace swap in progress: leaving windows slide out, arriving ones slide in (see `beginSlide`).
+    private struct Slide {
+        let monitor: String           // display UUID the swap happens on
+        let to: String                // workspace arriving
+        let outgoing: Set<CGWindowID> // windows leaving
+        let forward: Bool             // the new workspace sorts later: leaving windows go left, arriving ones come from the right
+        let until: CFTimeInterval     // when the slide is done
+    }
+    private var slide: Slide?
     private var crowdWork: DispatchWorkItem?
     private var autoSwitchAfter = Date.distantPast
     private var lastSavedWorkspaces = ""
@@ -511,7 +520,14 @@ final class WindowManager {
                 guard let w = windows[id] else { continue }
                 let current = w.frame
                 if current.isNull || current.approxEqual(target) { corrections[id] = nil; continue }
-                if isParked(current, screens) { instant.append(.init(window: w, to: target, bounds: s.visible)); continue }
+                if isParked(current, screens) {
+                    if let from = slideStart(id, to: target, on: s) {
+                        moves.append(.init(window: w, to: target, bounds: s.visible, from: from))
+                    } else {
+                        instant.append(.init(window: w, to: target, bounds: s.visible))
+                    }
+                    continue
+                }
                 if animator.isBusy(id) { moves.append(.init(window: w, to: target, bounds: s.visible)); continue }
                 // Don't fight an app that keeps refusing the same frame (minimum size etc.).
                 var c = corrections[id] ?? (target, 0)
@@ -523,7 +539,7 @@ final class WindowManager {
             }
         }
         if !moves.isEmpty { Log.debug("tile: moving \(moves.map { "\($0.window.id)→\($0.to)" }.joined(separator: ", "))") }
-        animator.animate(instant, duration: 0) // workspace switches are instant, like Hyprland
+        animator.animate(instant, duration: 0) // windows that don't slide in with a workspace swap snap into place
         // An animated move costs AX calls on every frame for every window in it. With a crowd of
         // windows that keeps the main thread busy enough to stall events, so a big relayout lands at once.
         let animated = config.animate && moves.count <= Self.maxAnimatedMoves
@@ -1344,12 +1360,30 @@ final class WindowManager {
         guard let w = windows[id], isVirtual(workspaceOf[id]) else { return }
         let f = w.frame
         guard !f.isNull, !isParked(f, screens) else { return }
-        let s = workspaceOf[id].flatMap { monitorOf[$0] }.flatMap { u in screens.first { $0.uuid == u } } ?? screens[0]
+        if let slide, slide.outgoing.contains(id) {
+            // Slides off the edge. `beginSlide` moves it into the corner once the slide is done.
+            let s = workspaceOf[id].flatMap { monitorOf[$0] }.flatMap { u in screens.first { $0.uuid == u } } ?? screens[0]
+            let x = slide.forward ? s.frame.minX - f.width + 1 : s.frame.maxX - 1
+            let edge = CGRect(x: x, y: f.minY, width: f.width, height: f.height)
+            // Already at the edge, or already sliding there: nothing to do, and its floating frame is still right.
+            guard !f.approxEqual(edge, tolerance: 2), !animator.isMoving(id, to: edge) else { return }
+            floatFrames[id] = floatsFreely(id) ? f : nil
+            animator.animate([.init(window: w, to: edge, bounds: s.visible)],
+                             duration: config.animationDuration, curve: config.animationCurve, bounce: config.animationBounce)
+            return
+        }
         floatFrames[id] = floatsFreely(id) ? f : nil
+        cornerPark(id, screens: screens)
+    }
+
+    /// Moves a window into the parking corner of its display. Keeps `floatFrames` as it is.
+    private func cornerPark(_ id: CGWindowID, screens: [Screen]) {
+        guard let w = windows[id] else { return }
+        let s = workspaceOf[id].flatMap { monitorOf[$0] }.flatMap { u in screens.first { $0.uuid == u } } ?? screens[0]
         animator.cancel(id)
         animator.quiet(id)
         EnhancedUI.suspend(w.pid)
-        w.setPosition(parkingSpot(size: f.size, on: s, screens))
+        w.setPosition(parkingSpot(size: w.frame.size, on: s, screens))
         EnhancedUI.resume(w.pid)
     }
 
@@ -1372,9 +1406,43 @@ final class WindowManager {
         r.origin.x = max(s.visible.minX, min(r.origin.x, s.visible.maxX - r.width))
         r.origin.y = max(s.visible.minY, min(r.origin.y, s.visible.maxY - r.height))
         animator.quiet(id)
+        if let from = slideStart(id, to: r, on: s) {
+            animator.animate([.init(window: w, to: r, bounds: s.visible, from: from)],
+                             duration: config.animationDuration, curve: config.animationCurve, bounce: config.animationBounce)
+            return
+        }
         EnhancedUI.suspend(w.pid)
         w.setFrame(r)
         EnhancedUI.resume(w.pid)
+    }
+
+    /// A workspace swap on this display. The windows leaving slide off the edge, then park in a corner.
+    /// The windows arriving slide in from the other edge. Both use the window animation settings.
+    /// Skipped when animations are off, or when too many windows would move (like a big relayout).
+    private func beginSlide(from previous: String, to ws: String, on s: Screen) {
+        // A swap still running: its leaving windows go to their corner now, so this swap starts from there.
+        if let old = slide { for id in old.outgoing where !visible.contains(id) { cornerPark(id, screens: Screen.all()) } }
+        slide = nil
+        guard config.animate, config.animationDuration >= 0.01 else { return }
+        let outgoing = visible.filter { workspaceOf[$0] == previous }
+        let arriving = present.filter { workspaceOf[$0] == ws }
+        guard outgoing.count + arriving.count <= Self.maxAnimatedMoves else { return }
+        let until = CACurrentMediaTime() + config.animationDuration
+        slide = Slide(monitor: s.uuid, to: ws, outgoing: outgoing, forward: workspaceSort(previous, ws), until: until)
+        // Wait past the animator's landing check (`verify`) before the corner park, or it would move the window back.
+        DispatchQueue.main.asyncAfter(deadline: .now() + config.animationDuration + 0.2) { [weak self] in
+            guard let self, self.slide?.until == until else { return }
+            let screens = Screen.all()
+            for id in outgoing where !self.visible.contains(id) { self.cornerPark(id, screens: screens) }
+            self.slide = nil
+        }
+    }
+
+    /// Where a window arriving in a workspace swap starts its slide, or nil when it does not slide.
+    private func slideStart(_ id: CGWindowID, to target: CGRect, on s: Screen) -> CGRect? {
+        guard let slide, slide.monitor == s.uuid, slide.to == workspaceOf[id], CACurrentMediaTime() < slide.until else { return nil }
+        let x = slide.forward ? s.frame.maxX - 1 : s.frame.minX - target.width + 1
+        return CGRect(x: x, y: target.minY, width: target.width, height: target.height)
     }
 
     /// Puts every parked window back on screen. Called when quitting, when killed, and when
@@ -1479,9 +1547,12 @@ final class WindowManager {
             }
             return
         }
-        let changed = shown[monitor.uuid] != ws
+        let previous = shown[monitor.uuid]
+        let changed = previous != ws
         shown[monitor.uuid] = ws
         Log.debug("workspaces: showing \(ws) on \(monitor.ns.localizedName)")
+        // Quiet shows (a sort, restoring a layout) snap; a switch the user asked for slides.
+        if changed, takesFocus, let previous { beginSlide(from: previous, to: ws, on: monitor) }
         refresh()
         if changed, !quietWorkspaceHUD, config.enablesLayoutHUD, config.enablesLayoutHUDOnSpaceChange {
             HUD.shared.show(labels[ws].map { "\(ws) · \($0)" } ?? ws, layout: state(workspace: ws).layout, on: monitor.ns)
