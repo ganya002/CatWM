@@ -72,6 +72,7 @@ final class WindowManager {
     private var focusOrder: [CGWindowID] = []            // most recently focused first
     private var sortSnapshot: SortSnapshot?
     private var closingNow: Set<CGWindowID> = []          // closed by a finished sort, kept hidden until checked
+    private var closingApps: Set<pid_t> = []              // apps of those windows, quit if the sort leaves them windowless
     /// The Sort panel is open: workspaces change under it, but nothing may take the keyboard or switch workspace.
     private var sortSession = false
     private var quietWorkspaceHUD = false
@@ -192,7 +193,7 @@ final class WindowManager {
         if wasVirtual != config.virtualWorkspaces {
             if wasVirtual { restoreHiddenWindows() }
             workspaceOf = [:]; monitorOf = [:]; shown = [:]; virtualShown = [:]; states = [:]; lastFocused = [:]
-            labels = [:]; sortSnapshot = nil; closingNow = []
+            labels = [:]; sortSnapshot = nil; closingNow = []; closingApps = []
             SortPanel.shared.abandon()
             Log.info("workspaces: \(config.virtualWorkspaces ? "Ouch workspaces" : "macOS Spaces")")
         }
@@ -1725,6 +1726,7 @@ final class WindowManager {
         // Marked windows stay hidden and are closed there. Only one that is still open afterwards (an app
         // asking to save) is brought onto the shown workspace, so its sheet can be answered.
         closingNow.formUnion(closing)
+        closingApps = Set(closing.compactMap { windows[$0]?.pid })
         releasePending()
         if !closing.isEmpty { closeMarked(closing, attempt: 0) }
     }
@@ -1783,6 +1785,28 @@ final class WindowManager {
     private func stopClosing(_ ids: [CGWindowID]) {
         closingNow.subtract(ids)
         releasePending(Set(ids))
+        quitWindowless()
+    }
+
+    /// Apps whose windows the sort closed and that kept running without any (kitty, by default, stays in the
+    /// Dock with no window): quit them, and force quit those that don't go. Finder and apps without a Dock
+    /// icon are left alone; an app with a window anywhere (another space, minimized, a sheet) too.
+    private func quitWindowless() {
+        for pid in closingApps {
+            guard let app = NSRunningApplication(processIdentifier: pid), !app.isTerminated else { closingApps.remove(pid); continue }
+            guard app.activationPolicy == .regular, app.bundleIdentifier != "com.apple.finder" else { closingApps.remove(pid); continue }
+            let known = windows.values.contains { $0.pid == pid && $0.isValid }
+            guard !known, AXUIElementCreateApplication(pid).elements(kAXWindowsAttribute).isEmpty else { continue }
+            closingApps.remove(pid)
+            let name = app.bundleIdentifier ?? "pid \(pid)"
+            Log.info("sort: \(name) has no windows left; quitting it")
+            app.terminate()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                guard !app.isTerminated, AXUIElementCreateApplication(pid).elements(kAXWindowsAttribute).isEmpty else { return }
+                Log.info("sort: \(name) didn't quit; force quitting it")
+                app.forceTerminate()
+            }
+        }
     }
 
     /// The panel was dismissed without keeping anything: put everything back, focus and shown workspaces untouched.
