@@ -539,7 +539,10 @@ final class WindowManager {
         // a full gap between them and sit exactly on the padding at the screen edges.
         guard let raw = st.layout.frames(count: ids.count, in: usableRect(s).insetBy(dx: -gap / 2, dy: -gap / 2),
                                          ratio: ratio, mainCount: st.mainCount) else { return nil }
-        return (raw.map { $0.insetBy(dx: gap / 2, dy: gap / 2).pixelAligned }, gap)
+        let slots = raw.map { $0.insetBy(dx: gap / 2, dy: gap / 2).pixelAligned }
+        // A non-finite slot (bad display geometry mid-reconfiguration) must never reach the AX calls.
+        guard slots.allSatisfy({ [$0.minX, $0.minY, $0.width, $0.height].allSatisfy(\.isFinite) }) else { return nil }
+        return (slots, gap)
     }
 
     /// The first window whose known minimum size the new ratio squeezes further than the old one did.
@@ -1825,7 +1828,7 @@ final class WindowManager {
         for name in Array(states.keys) where u.layouts[name] == nil { states[name] = nil }
         for (name, l) in u.layouts {
             let st = state(workspace: name)
-            st.layout = l.layout; st.ratio = l.ratio; st.mainCount = l.mainCount; st.zoomed = nil
+            st.layout = l.layout; st.ratio = l.ratio.isFinite ? min(0.9, max(0.1, l.ratio)) : 0.5; st.mainCount = l.mainCount; st.zoomed = nil
         }
         corrections = [:]
         quietWorkspaceHUD = true

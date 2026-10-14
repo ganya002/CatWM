@@ -153,7 +153,7 @@ struct Config {
         var key = rawKey.lowercased().replacingOccurrences(of: "-", with: "_")
         let fullKey = key
         if let colon = key.lastIndex(of: ":") { key = String(key[key.index(after: colon)...]) } // general:gaps_in
-        let num = Double(v).map { CGFloat($0) }
+        let num = Double(v).flatMap { $0.isFinite ? CGFloat($0) : nil } // "nan" and "inf" parse as Doubles but poison every frame computed from them
         let bool = ["true", "yes", "on", "1"].contains(v.lowercased())
         func needNum(_ set: (CGFloat) -> Void) -> String? {
             guard let num else { return "`\(rawKey)` needs a number" }
