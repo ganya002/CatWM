@@ -135,7 +135,7 @@ final class ModeFX {
 
     /// Height of the camera notch, or 0 on screens without one.
     static func notchHeight(_ screen: NSScreen) -> CGFloat {
-        notchHalfWidth(screen) > 0 ? screen.safeAreaInsets.top : 0
+        notchHalfWidth(screen) > 0 ? (screen.auxiliaryTopLeftArea?.height ?? screen.safeAreaInsets.top) : 0
     }
 
     static func topCornerRadius(_ screen: NSScreen) -> CGFloat {
@@ -297,16 +297,29 @@ struct ModeFXView: View {
     private struct Ripple { var t: CGFloat = 0; var edge: Double = 0 }
 }
 
+/// The notch's outline, in points: the side walls meet the screen top through a concave flare, and the
+/// bottom corners are rounded.
+private enum Notch {
+    static let bottomRadius: CGFloat = 8
+    static let flareRadius: CGFloat = 6
+}
+
 /// The whole rect with the notch cut out of the top centre (fill it even-odd as a mask).
 private struct NotchCutout: Shape {
     let halfWidth: CGFloat
     let height: CGFloat
     func path(in rect: CGRect) -> Path {
         var p = Path(rect)
-        if halfWidth > 0 {
-            p.addPath(UnevenRoundedRectangle(bottomLeadingRadius: 10, bottomTrailingRadius: 10, style: .continuous)
-                .path(in: CGRect(x: rect.midX - halfWidth, y: rect.minY - 1, width: halfWidth * 2, height: height + 1)))
-        }
+        guard halfWidth > 0 else { return p }
+        let l = rect.midX - halfWidth, r = rect.midX + halfWidth, top = rect.minY
+        let rb = Notch.bottomRadius, rf = Notch.flareRadius, k: CGFloat = 0.5523
+        p.move(to: CGPoint(x: l - rf, y: top))
+        p.addCurve(to: CGPoint(x: l, y: top + rf), control1: CGPoint(x: l - rf + k * rf, y: top), control2: CGPoint(x: l, y: top + rf - k * rf))
+        p.addArc(tangent1End: CGPoint(x: l, y: top + height), tangent2End: CGPoint(x: r, y: top + height), radius: rb)
+        p.addArc(tangent1End: CGPoint(x: r, y: top + height), tangent2End: CGPoint(x: r, y: top), radius: rb)
+        p.addLine(to: CGPoint(x: r, y: top + rf))
+        p.addCurve(to: CGPoint(x: r + rf, y: top), control1: CGPoint(x: r, y: top + rf - k * rf), control2: CGPoint(x: r + rf - k * rf, y: top))
+        p.closeSubpath()
         return p
     }
 }
@@ -336,11 +349,12 @@ private struct DrawnHalf: Shape {
         let rad = max(0, radius - inset)
         var p = Path()
         if notchHalfWidth > 0 {
-            // Hug the notch: out from under its middle, round its bottom corner, up its side to the top edge.
+            // Hug the notch, just outside its outline: out from under its middle, round the bottom corner,
+            // up the wall and out along the flare to the top edge.
             let x = r.midX + notchHalfWidth + inset, y = rect.minY + notchHeight + inset
             p.move(to: CGPoint(x: r.midX, y: y))
-            p.addArc(tangent1End: CGPoint(x: x, y: y), tangent2End: CGPoint(x: x, y: r.minY), radius: 10 + inset)
-            p.addArc(tangent1End: CGPoint(x: x, y: r.minY), tangent2End: CGPoint(x: r.maxX, y: r.minY), radius: 6)
+            p.addArc(tangent1End: CGPoint(x: x, y: y), tangent2End: CGPoint(x: x, y: r.minY), radius: Notch.bottomRadius + inset)
+            p.addArc(tangent1End: CGPoint(x: x, y: r.minY), tangent2End: CGPoint(x: r.maxX, y: r.minY), radius: max(0.5, Notch.flareRadius - inset))
         } else {
             p.move(to: CGPoint(x: r.midX, y: r.minY))
         }
