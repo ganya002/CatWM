@@ -750,15 +750,14 @@ private struct WorkspacePill: View {
                 .foregroundStyle(current ? Theme.onAccent : hover.on ? Theme.ink : Theme.inkMuted)
                 .frame(width: 24, height: 24)
                 .background(Circle().fill(current ? Theme.accent : hover.on ? Theme.wellHover : .clear))
-                .overlay(alignment: .bottom) {
-                    if occupied && !current { Circle().fill(Theme.accent2).frame(width: 4, height: 4).padding(.bottom, 1) }
-                }
+                .opacity(occupied || current || hover.on ? 1 : 0.35)
                 .scaleEffect(current ? 1.04 : 1)
                 .contentShape(Circle())
         }
         .buttonStyle(PressScale(scale: 0.88))
         .onHover { hover.on = $0 }
         .animation(Motion.spring, value: current)
+        .animation(Motion.spring, value: occupied)
         .tooltip("Workspace \(name)")
         .accessibilityLabel("Workspace \(name)\(occupied ? ", has windows" : "")")
         .accessibilityAddTraits(current ? .isSelected : [])

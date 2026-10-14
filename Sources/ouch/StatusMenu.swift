@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 // The menu under the menu bar item: a Surface `md` on glass with a search field, the essentials, where
-// you are, then Layout, Window and Configs submenus. The search reads the same items, so the two never
+// you are, then the Layout submenu. The search reads the same items, so the two never
 // disagree. Rows show window-mode keys; the label row states the chord that enters the mode once.
 
 // MARK: - Items
@@ -129,8 +129,6 @@ final class MenuModel: ObservableObject {
         let trusted = AXIsProcessTrusted() && wm.isStarted
         let state = wm.menuBarState()
         let layout = state?.layout
-        let library = SettingsWindow.shared.library
-        let focused = wm.focusedWindowState()
         var out: [MenuItem] = []
 
         if !AXIsProcessTrusted() {
@@ -138,15 +136,14 @@ final class MenuModel: ObservableObject {
                                 action: { Permissions.request() }))
         }
 
-        // Essentials, then hidden aliases so search finds them.
-        out.append(MenuItem(id: "essentials", kind: .essentials, enabled: trusted))
+        // Hidden alias so search finds it.
         out.append(MenuItem(id: "tiling", kind: .check, label: "Tiling", symbol: "rectangle.split.3x1", shortcut: keys.keys("toggletiling"),
                             checked: wm.tilingEnabled, enabled: trusted, hidden: true, keywords: "enable disable pause toggle",
                             keepOpen: true, action: { wm.toggleTiling() }))
 
         // Where you are.
         let wsName = state?.workspace.map { "Workspace \($0)" } ?? "Desktop"
-        out.append(.label("where", layout.map { "\(wsName) · \($0.title)" } ?? wsName, shortcut: keys.modeChord))
+        out.append(.label("where", layout.map { "\(wsName) · \($0.title)" } ?? wsName))
         let summary = wm.workspaceSummary()
         if wm.config.virtualWorkspaces && trusted {
             out.append(MenuItem(id: "workspaces", kind: .workspaces))
@@ -173,55 +170,6 @@ final class MenuModel: ObservableObject {
         out.append(MenuItem(id: "layout", kind: .sub, label: "Layout", symbol: "square.grid.2x2", value: layout?.title,
                             enabled: trusted, width: 276, children: layoutItems))
 
-        // Window.
-        let send = (1...9).map { n in
-            MenuItem(id: "send-\(n)", label: "Workspace \(n)", shortcut: keys.keys("movetoworkspacesilent", "\(n)").isEmpty
-                        ? keys.keys("movetoworkspace", "\(n)") : keys.keys("movetoworkspacesilent", "\(n)"),
-                     keywords: "move send window", action: { wm.dispatch("movetoworkspacesilent", "\(n)") })
-        }
-        out.append(MenuItem(id: "window", kind: .sub, label: "Window", symbol: "macwindow", enabled: trusted, children: [
-            MenuItem(id: "retile", label: "Retile", symbol: "arrow.triangle.2.circlepath", shortcut: keys.keys("retile"),
-                     hidden: true, keywords: "refresh reflow", keepOpen: true, rotates: true, action: { wm.dispatch("retile", "") }),
-            MenuItem(id: "swap", label: "Swap with Main", symbol: "arrow.left.arrow.right", shortcut: keys.keys("layoutmsg", "swapwithmaster"),
-                     keywords: "master", action: { wm.dispatch("layoutmsg", "swapwithmaster") }),
-            MenuItem(id: "float", kind: .check, label: "Float Window", shortcut: keys.keys("togglefloating"),
-                     checked: focused?.floating == true, enabled: focused != nil, hidden: true, keywords: "floating tile",
-                     keepOpen: true, action: { wm.dispatch("togglefloating", "") }),
-            MenuItem(id: "full", kind: .check, label: "Fullscreen", shortcut: keys.keys("fullscreen"),
-                     checked: focused?.fullscreen == true, enabled: focused != nil, hidden: true, keywords: "zoom maximize",
-                     keepOpen: true, action: { wm.dispatch("fullscreen", "") }),
-            MenuItem(id: "send", kind: .sub, label: "Send to Workspace", symbol: "rectangle.stack", enabled: wm.config.virtualWorkspaces,
-                     width: 200, children: send),
-            MenuItem(id: "monitor", label: "Next Display", symbol: "display", shortcut: keys.keys("movewindow", "mon:+1"),
-                     keywords: "monitor screen move", action: { wm.dispatch("movewindow", "mon:+1") }),
-            MenuItem(id: "close-window", label: "Close Window", symbol: "xmark.square", shortcut: keys.keys("killactive"),
-                     enabled: focused != nil, action: { wm.dispatch("killactive", "") }),
-        ]))
-
-        // Sort.
-        let crowd = wm.config.sortNudge > 0 ? wm.shownWorkspaces().first.map(\.count) : nil
-        out.append(MenuItem(id: "sort", label: "Sort Windows…", symbol: "square.grid.3x1.below.line.grid.1x2", shortcut: keys.keys("sort"),
-                            enabled: trusted && wm.config.virtualWorkspaces, keywords: "organize group arrange tidy workspaces crowded",
-                            badge: crowd.flatMap { $0 > wm.config.sortNudge ? $0 : nil }, action: { wm.dispatch("sort", "") }))
-
-        // Configs.
-        func radios(_ kind: ConfigKind) -> [MenuItem] {
-            library.configs(kind).map { c in
-                MenuItem(id: "cfg-\(c.id)", kind: .radio, label: c.name, checked: library.isActive(c), keywords: "\(kind.title) config",
-                         action: { library.select(c) })
-            }
-        }
-        out.append(MenuItem(id: "configs", kind: .sub, label: "Configs", symbol: "slider.horizontal.3",
-                            value: library.current(.full).name, children:
-            [.label("kb", "Keyboard")] + radios(.keyboard) + [.sep("c1"), .label("an", "Animation")] + radios(.animation)
-                + [.sep("c2"), .label("full", "Everything")] + radios(.full) + [
-                MenuItem(id: "import", label: "Import…", symbol: "square.and.arrow.down", hidden: true, keywords: "config file",
-                         action: { NSApp.activate(ignoringOtherApps: true); library.runImportPanel() }),
-                MenuItem(id: "export", label: "Export…", symbol: "square.and.arrow.up", hidden: true, keywords: "config file share", action: {
-                    SettingsWindow.shared.show(pane: nil)
-                    library.sheet = .export(kind: .full)
-                }),
-            ]))
         out.append(.sep("s2"))
 
         out.append(MenuItem(id: "settings", label: "Settings…", symbol: "gearshape", shortcut: ["⌘", ","], keywords: "preferences options",
@@ -601,7 +549,6 @@ private struct MenuColumn: View {
                     model.path = []
                     model.highlight = q.isEmpty ? [:] : [0: model.results.first?.item.id ?? ""]
                 }
-                Rectangle().fill(Theme.hairline).frame(height: 1).padding(.horizontal, 6).padding(.bottom, 4)
             }
             if level == 0 && !model.query.isEmpty {
                 let results = model.results
