@@ -1766,10 +1766,17 @@ final class WindowManager {
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
             guard let self else { return }
-            let left = pressed.filter { self.windows[$0]?.isValid == true }
+            var left = pressed.filter { self.windows[$0]?.isValid == true }
             Log.info("sort: \(pressed.count - left.count) of \(pressed.count) closed after try \(attempt + 1)")
+            // Still open without a sheet: the app asks inside the window (kitty's "really close?"), and nobody
+            // can answer that while it is hidden. Force it now, so it never comes back on screen.
+            let forced = self.forceClose(left.filter { self.windows[$0].map { !Self.hasSheet($0) } ?? false })
+            left.removeAll { forced.contains($0) }
+            if !forced.isEmpty {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in self?.stopClosing(Array(forced)) }
+            }
             // Still open: most likely waiting on a save sheet. Show it, then try again once it has settled.
-            stopClosing(ids)
+            stopClosing(ids.filter { !forced.contains($0) })
             guard !left.isEmpty else { return }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in self?.closeMarked(left, attempt: attempt + 1) }
         }
@@ -1777,17 +1784,27 @@ final class WindowManager {
 
     /// Force quits the app of each window that is still open, unless the app has other windows (they would be
     /// lost too) or the window has a sheet up (unsaved work).
-    private func forceClose(_ ids: [CGWindowID]) {
+    /// Says which windows it forced.
+    @discardableResult
+    private func forceClose(_ ids: [CGWindowID]) -> Set<CGWindowID> {
+        var forced: Set<CGWindowID> = []
         for id in ids {
             guard let w = windows[id], w.isValid else { continue }
-            let hasSheet = w.element.elements(kAXChildrenAttribute).contains { $0.string(kAXRoleAttribute) == kAXSheetRole }
+            let hasSheet = Self.hasSheet(w)
             let others = windows.values.contains { $0.pid == w.pid && $0.id != id && $0.isValid && !ids.contains($0.id) }
             let name = NSRunningApplication(processIdentifier: w.pid)?.bundleIdentifier ?? "pid \(w.pid)"
             if hasSheet || others { Log.info("sort: not forcing \(id) \(name): \(hasSheet ? "sheet up" : "app has other windows")"); continue }
             Log.info("sort: force quitting \(name) for window \(id)")
             lastClose = Date()
             NSRunningApplication(processIdentifier: w.pid)?.forceTerminate()
+            forced.insert(id)
         }
+        return forced
+    }
+
+    /// The window shows a sheet (a save dialog, most likely), which the user must answer.
+    private static func hasSheet(_ w: Window) -> Bool {
+        w.element.elements(kAXChildrenAttribute).contains { $0.string(kAXRoleAttribute) == kAXSheetRole }
     }
 
     /// Windows `closeMarked` no longer keeps hidden: whichever are still open come back on screen.
