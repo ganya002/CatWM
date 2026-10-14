@@ -174,8 +174,6 @@ struct ModeFXView: View {
         GeometryReader { geo in
             effect(size: geo.size)
                 .frame(width: geo.size.width, height: geo.size.height)
-                // Whatever the effect draws (glow, ripple ring, corner brackets) stops at the notch.
-                .mask(NotchCutout(halfWidth: notchHalfWidth, height: notchHeight).fill(style: FillStyle(eoFill: true)))
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
@@ -185,6 +183,13 @@ struct ModeFXView: View {
     private var shape: UnevenRoundedRectangle {
         UnevenRoundedRectangle(topLeadingRadius: radius, topTrailingRadius: radius, style: .circular)
     }
+    /// Borders are drawn this much thicker on the side facing the screen edge or the notch. The extra part is
+    /// off screen or behind the notch, so what shows is the same, but the line meets the notch whatever its
+    /// exact curve is and leaves no sliver of gap.
+    private var tuck: CGFloat { notchHalfWidth > 0 ? 3 : 0 }
+    private var notchCutout: some View {
+        NotchCutout(halfWidth: notchHalfWidth, height: notchHeight).fill(style: FillStyle(eoFill: true))
+    }
     private var c: Color { model.color }
     private var on: Bool { model.active }
 
@@ -192,8 +197,8 @@ struct ModeFXView: View {
     private func border(width: CGFloat) -> some View {
         ZStack {
             ForEach([false, true], id: \.self) { mirrored in
-                DrawnHalf(radius: radius, inset: width / 2, notchHalfWidth: notchHalfWidth, notchHeight: notchHeight)
-                    .stroke(c, style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .miter))
+                DrawnHalf(radius: radius, inset: (width - tuck) / 2, notchHalfWidth: notchHalfWidth, notchHeight: notchHeight)
+                    .stroke(c, style: StrokeStyle(lineWidth: width + tuck, lineCap: .butt, lineJoin: .miter))
                     .scaleEffect(x: mirrored ? -1 : 1, y: 1)
             }
         }
@@ -223,6 +228,7 @@ struct ModeFXView: View {
                         .frame(width: reach * 2 * v.t, height: reach * 2 * v.t)
                         .position(p)
                         .opacity(v.t >= 1 ? 0 : 1 - v.t * 0.6)
+                        .mask(notchCutout) // the ring stops at the notch; the border below tucks into it
                     border(width: 3.5).opacity(v.edge)
                 }
                 .clipShape(shape)
@@ -252,6 +258,7 @@ struct ModeFXView: View {
                     }
                 }
                 .opacity(min(1, k * 1.5))
+                .mask(notchCutout)
             } keyframes: { _ in
                 KeyframeTrack {
                     CubicKeyframe(0, duration: 0.001)
@@ -265,9 +272,9 @@ struct ModeFXView: View {
             Color.clear.keyframeAnimator(initialValue: 0.0, trigger: model.enters) { _, k in
                 ZStack {
                     ForEach([false, true], id: \.self) { mirrored in
-                        let half = DrawnHalf(radius: radius, inset: 2, notchHalfWidth: notchHalfWidth, notchHeight: notchHeight)
+                        let half = DrawnHalf(radius: radius, inset: (4 - tuck) / 2, notchHalfWidth: notchHalfWidth, notchHeight: notchHeight)
                         ZStack {
-                            half.trim(from: 0, to: k).stroke(c, style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .miter))
+                            half.trim(from: 0, to: k).stroke(c, style: StrokeStyle(lineWidth: 4 + tuck, lineCap: .round, lineJoin: .miter))
                             half.trim(from: max(0, k - 0.06), to: k)
                                 .stroke(c, style: StrokeStyle(lineWidth: 14, lineCap: .round)).blur(radius: 8)
                                 .opacity(k >= 1 ? 0 : 1)
