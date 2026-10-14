@@ -1733,7 +1733,17 @@ final class WindowManager {
             Log.info("sort: close \(id) \(name) frame=\(w.frame) try \(attempt + 1): \(outcome)")
             pressed.append(id)
         }
-        guard !pressed.isEmpty, attempt < 2 else { return stopClosing(ids) }
+        guard !pressed.isEmpty else { return stopClosing(ids) }
+        if attempt >= 2 {
+            // Last soft try done. Whatever is still open ignored the close (kitty asking "really close?"):
+            // force it, unless it shows a save sheet, which is left for the user to answer.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
+                guard let self else { return }
+                self.forceClose(pressed.filter { self.windows[$0]?.isValid == true })
+                self.stopClosing(ids)
+            }
+            return
+        }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
             guard let self else { return }
             let left = pressed.filter { self.windows[$0]?.isValid == true }
@@ -1742,6 +1752,21 @@ final class WindowManager {
             stopClosing(ids)
             guard !left.isEmpty else { return }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in self?.closeMarked(left, attempt: attempt + 1) }
+        }
+    }
+
+    /// Force quits the app of each window that is still open, unless the app has other windows (they would be
+    /// lost too) or the window has a sheet up (unsaved work).
+    private func forceClose(_ ids: [CGWindowID]) {
+        for id in ids {
+            guard let w = windows[id], w.isValid else { continue }
+            let hasSheet = w.element.elements(kAXChildrenAttribute).contains { $0.string(kAXRoleAttribute) == kAXSheetRole }
+            let others = windows.values.contains { $0.pid == w.pid && $0.id != id && $0.isValid && !ids.contains($0.id) }
+            let name = NSRunningApplication(processIdentifier: w.pid)?.bundleIdentifier ?? "pid \(w.pid)"
+            if hasSheet || others { Log.info("sort: not forcing \(id) \(name): \(hasSheet ? "sheet up" : "app has other windows")"); continue }
+            Log.info("sort: force quitting \(name) for window \(id)")
+            lastClose = Date()
+            NSRunningApplication(processIdentifier: w.pid)?.forceTerminate()
         }
     }
 
