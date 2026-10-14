@@ -192,7 +192,7 @@ struct ModeFXView: View {
     private func border(width: CGFloat) -> some View {
         ZStack {
             ForEach([false, true], id: \.self) { mirrored in
-                DrawnHalf(radius: radius, inset: width / 2, notchHalfWidth: notchHalfWidth)
+                DrawnHalf(radius: radius, inset: width / 2, notchHalfWidth: notchHalfWidth, notchHeight: notchHeight)
                     .stroke(c, style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .miter))
                     .scaleEffect(x: mirrored ? -1 : 1, y: 1)
             }
@@ -265,7 +265,7 @@ struct ModeFXView: View {
             Color.clear.keyframeAnimator(initialValue: 0.0, trigger: model.enters) { _, k in
                 ZStack {
                     ForEach([false, true], id: \.self) { mirrored in
-                        let half = DrawnHalf(radius: radius, inset: 2, notchHalfWidth: notchHalfWidth)
+                        let half = DrawnHalf(radius: radius, inset: 2, notchHalfWidth: notchHalfWidth, notchHeight: notchHeight)
                         ZStack {
                             half.trim(from: 0, to: k).stroke(c, style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .miter))
                             half.trim(from: max(0, k - 0.06), to: k)
@@ -328,13 +328,22 @@ private struct Bracket: Shape {
 private struct DrawnHalf: Shape {
     let radius: CGFloat
     let inset: CGFloat
-    /// The path starts at the notch edge instead of the top centre, so none of it draws under the notch.
+    /// With a notch, the path starts under it and curves round it instead of running behind it.
     var notchHalfWidth: CGFloat = 0
+    var notchHeight: CGFloat = 0
     func path(in rect: CGRect) -> Path {
         let r = rect.insetBy(dx: inset, dy: inset)
         let rad = max(0, radius - inset)
         var p = Path()
-        p.move(to: CGPoint(x: r.midX + notchHalfWidth, y: r.minY))
+        if notchHalfWidth > 0 {
+            // Hug the notch: out from under its middle, round its bottom corner, up its side to the top edge.
+            let x = r.midX + notchHalfWidth + inset, y = rect.minY + notchHeight + inset
+            p.move(to: CGPoint(x: r.midX, y: y))
+            p.addArc(tangent1End: CGPoint(x: x, y: y), tangent2End: CGPoint(x: x, y: r.minY), radius: 10 + inset)
+            p.addArc(tangent1End: CGPoint(x: x, y: r.minY), tangent2End: CGPoint(x: r.maxX, y: r.minY), radius: 6)
+        } else {
+            p.move(to: CGPoint(x: r.midX, y: r.minY))
+        }
         p.addArc(tangent1End: CGPoint(x: r.maxX, y: r.minY), tangent2End: CGPoint(x: r.maxX, y: r.maxY), radius: rad)
         p.addLine(to: CGPoint(x: r.maxX, y: r.maxY))
         p.addLine(to: CGPoint(x: r.midX, y: r.maxY))
