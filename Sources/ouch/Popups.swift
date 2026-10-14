@@ -29,20 +29,27 @@ private class PassThroughView: NSView {
 
 // MARK: - Pop-up panel
 
-/// Shows one pop-up at a time in a borderless panel hung off a control: a menu or a small popover.
-/// It closes on a click elsewhere, Esc, or a pick, and hands the keyboard back to the window it came from.
+/// Shows pop-ups in borderless panels hung off a control: a menu or a small popover. One opened from inside
+/// another stacks on it and leaves it open. Each closes on a click elsewhere, Esc, or a pick, and hands the
+/// keyboard back to the window it came from.
 final class Popup: NSObject, NSWindowDelegate {
     static let shared = Popup()
 
-    private var panel: MenuPanel?
+    private struct Entry {
+        let panel: MenuPanel
+        let generation: Int
+        weak var parent: NSWindow?
+        var onClose: (() -> Void)?
+        let keys: (NSEvent) -> Bool
+    }
+
+    /// Open pop-ups, the innermost last.
+    private var stack: [Entry] = []
     private var monitors: [Any] = []
-    private weak var parent: NSWindow?
-    private var onClose: (() -> Void)?
-    private var keys: ((NSEvent) -> Bool)?
     /// Room around the surface for its shadow.
     private static let margin: CGFloat = 26
 
-    var isOpen: Bool { panel?.isVisible == true }
+    var isOpen: Bool { !stack.isEmpty }
     /// Counts pop-ups shown, so a popover only closes the pop-up it opened.
     private(set) var generation = 0
 
@@ -68,7 +75,8 @@ final class Popup: NSObject, NSWindowDelegate {
             : NSRect(x: x, y: anchor.minY - 4 + m / 4 - height, width: width + subs + 2 * m, height: height)
         let view = MenuRoot(model: model, rootX: model.opensLeft ? subs + m : m, top: m / 4, size: frame.size,
                             rootWidth: width, fromBottom: fromBottom)
-        model.close = { [weak self] in self?.close() }
+        let g = generation + 1
+        model.close = { [weak self] in self?.close(generation: g) }
         show(AnyView(view), frame: frame, onClose: onClose) { e in Self.menuKey(e, model) }
         DispatchQueue.main.async { withAnimation(Motion.easeOut) { model.appeared = true } }
     }
@@ -87,38 +95,48 @@ final class Popup: NSObject, NSWindowDelegate {
     }
 
     private func show(_ view: AnyView, frame: NSRect, onClose: (() -> Void)?, keys: @escaping (NSEvent) -> Bool) {
-        if isOpen { close() }
-        parent = NSApp.keyWindow
-        self.onClose = onClose
-        self.keys = keys
+        // Opened from inside a pop-up, it stacks on it; from anywhere else it replaces what is open.
+        let key = NSApp.keyWindow
+        if !stack.contains(where: { $0.panel === key }) { closeAll() }
         generation += 1
         // A fresh panel each time: the last one may still be fading out.
         let p = makePanel()
-        panel = p
+        stack.append(Entry(panel: p, generation: generation, parent: key, onClose: onClose, keys: keys))
         p.contentView = NSHostingView(rootView: view)
         p.setFrame(frame, display: true)
         p.makeKeyAndOrderFront(nil)
         installMonitors()
     }
 
-    /// Closes the pop-up if it is still the one shown as `generation`.
-    func close(generation g: Int) { if g == generation { close() } }
+    /// Closes the pop-up shown as `generation`, and any opened from it, if it is still open.
+    func close(generation g: Int) {
+        if let i = stack.firstIndex(where: { $0.generation == g }) { close(from: i) }
+    }
 
-    func close() {
-        guard let panel, panel.isVisible else { return }
-        self.panel = nil
-        removeMonitors()
-        let done = onClose
-        onClose = nil
-        NSAnimationContext.runAnimationGroup({ ctx in
-            ctx.duration = 0.12
-            panel.animator().alphaValue = 0
-        }, completionHandler: {
-            panel.orderOut(nil)
-            panel.contentView = nil
-        })
-        parent?.makeKey()
-        done?()
+    /// Closes the innermost pop-up.
+    func close() { if !stack.isEmpty { close(from: stack.count - 1) } }
+
+    func closeAll() { close(from: 0) }
+
+    /// Closes the pop-up at `index` and everything above it, innermost first.
+    private func close(from index: Int) {
+        while stack.count > index {
+            var entry = stack.removeLast()
+            let panel = entry.panel
+            let done = entry.onClose
+            entry.onClose = nil
+            NSAnimationContext.runAnimationGroup({ ctx in
+                ctx.duration = 0.12
+                panel.animator().alphaValue = 0
+            }, completionHandler: {
+                panel.orderOut(nil)
+                panel.contentView = nil
+            })
+            // Hand the keyboard to what it came from; a pop-up still open keeps it for itself.
+            if let parent = entry.parent, parent.isVisible { parent.makeKey() }
+            done?()
+        }
+        if stack.isEmpty { removeMonitors() }
     }
 
     private func makePanel() -> MenuPanel {
@@ -135,27 +153,36 @@ final class Popup: NSObject, NSWindowDelegate {
     }
 
     func windowDidResignKey(_ notification: Notification) {
-        // A sheet or alert opened from the pop-up takes the keyboard; the pop-up has done its job.
-        if (notification.object as? NSWindow) === panel { close() }
+        guard let resigned = notification.object as? NSWindow,
+              stack.contains(where: { $0.panel === resigned }) else { return }
+        // The keyboard moving between pop-ups (into a child, or back to its parent) is no reason to close.
+        // A sheet or alert opened from the pop-up takes it for good; the pop-up has done its job.
+        DispatchQueue.main.async { [weak self] in
+            guard let self, let i = self.stack.firstIndex(where: { $0.panel === resigned }) else { return }
+            if self.stack.contains(where: { $0.panel.isKeyWindow }) { return }
+            self.close(from: i)
+        }
     }
 
     private func installMonitors() {
         removeMonitors()
         if let m = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown], handler: { [weak self] _ in
-            self?.close()
+            self?.closeAll()
         }) { monitors.append(m) }
         if let m = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown], handler: { [weak self] e in
             guard let self else { return e }
-            if e.window !== self.panel {
-                self.close()
-                return nil // the click only closes, like a native menu
+            if let i = self.stack.firstIndex(where: { $0.panel === e.window }) {
+                // A click in a pop-up closes only those opened from it.
+                if i < self.stack.count - 1 { self.close(from: i + 1) }
+                return e
             }
-            return e
+            self.closeAll()
+            return nil // the click only closes, like a native menu
         }) { monitors.append(m) }
         if let m = NSEvent.addLocalMonitorForEvents(matching: .keyDown, handler: { [weak self] e in
-            guard let self, self.panel?.isKeyWindow == true else { return e }
-            if e.keyCode == 53 && !(self.keys?(e) ?? false) { self.close(); return nil }
-            return self.keys?(e) == true ? nil : e
+            guard let self, let top = self.stack.last, top.panel.isKeyWindow else { return e }
+            if e.keyCode == 53 && !top.keys(e) { self.close(); return nil }
+            return top.keys(e) ? nil : e
         }) { monitors.append(m) }
     }
 
