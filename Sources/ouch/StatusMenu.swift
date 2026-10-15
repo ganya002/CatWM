@@ -173,6 +173,20 @@ final class MenuModel: ObservableObject {
         out.append(MenuItem(id: "layout", kind: .sub, label: "Layout", symbol: "square.grid.2x2", value: layout?.title,
                             enabled: trusted, width: 276, children: layoutItems))
 
+        if wm.config.virtualWorkspaces && trusted {
+            let incoming = wm.windowsOnOtherDesktops().map { w in
+                let app = NSRunningApplication(processIdentifier: w.pid)
+                let title = w.element.string(kAXTitleAttribute) ?? "Untitled"
+                return MenuItem(id: "bring-\(w.id)", label: title.isEmpty ? "Untitled" : title, image: app?.icon,
+                                value: app?.localizedName, keywords: "bring import window desktop space",
+                                action: { wm.bringWindowHere(w) })
+            }
+            if !incoming.isEmpty {
+                out.append(MenuItem(id: "bring-window", kind: .sub, label: "Bring Window Here", symbol: "rectangle.badge.arrow.down",
+                                    keywords: "import other desktops spaces", width: 340, children: incoming))
+            }
+        }
+
         out.append(.sep("s2"))
 
         out.append(MenuItem(id: "settings", label: "Settings…", symbol: "gearshape", shortcut: ["⌘", ","], keywords: "preferences options",

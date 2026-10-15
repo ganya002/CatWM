@@ -88,6 +88,17 @@ final class Animator {
         return w
     }
 
+    /// A native import's first tile must reach the apps before its display batch is released.
+    /// This waits for queued AX writes, without waiting for an animation's later timer ticks.
+    func afterPendingWrites(_ completion: @escaping () -> Void) {
+        let group = DispatchGroup()
+        for writer in writers.values {
+            group.enter()
+            writer.run { group.leave() }
+        }
+        group.notify(queue: .main, execute: completion)
+    }
+
     private func tick() {
         let now = CACurrentMediaTime()
         timing.tick(at: now)
