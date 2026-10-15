@@ -75,9 +75,6 @@ struct WelcomeView: View {
                 .opacity(model.landed ? 1 : 0)
                 .animation(.easeIn(duration: 0.22), value: model.landed)
                 .squish(on: model.landed, delay: 0.22)
-                .overlay(alignment: .topLeading) {
-                    ImpactBurst(trigger: model.landed, size: 24, delay: 0.22).offset(x: -8, y: -4)
-                }
                 .padding(.leading, -6).padding(.vertical, -6) // the icon artwork has its own transparent margin
             Text("Welcome to Ouch").font(Theme.display(40)).tracking(-1).oneLine()
                 .padding(.top, 16).padding(.bottom, 8)
@@ -259,10 +256,7 @@ struct WordmarkView: View {
         VStack(spacing: 14) {
             Text("Ouch").font(Theme.wordmark(size)).foregroundStyle(.white)
                 .shadow(color: .black.opacity(0.3), radius: 12, y: 4)
-                .squish(on: model.landed, delay: 0.75)
-                .overlay(alignment: .topLeading) {
-                    ImpactBurst(trigger: model.landed, size: size * 0.45, delay: 0.75).offset(x: -size * 0.3, y: -size * 0.15)
-                }
+                .squish(on: model.landed, delay: 0.3) // on the melody note
             tagline(max(16, min(22, size / 6)))
                 .foregroundStyle(Color.white.opacity(0.92))
                 .shadow(color: .black.opacity(0.45), radius: 8, y: 2) // reads over the tiles behind it
