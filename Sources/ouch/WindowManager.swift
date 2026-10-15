@@ -426,7 +426,7 @@ final class WindowManager {
         DispatchQueue.main.asyncAfter(deadline: deadline, execute: work)
     }
 
-    func refresh() {
+    func refresh(instant instantLayout: Bool = false) {
         refreshWork?.cancel(); refreshWork = nil
         guard isStarted else { return }
         let screens = Screen.all()
@@ -453,7 +453,10 @@ final class WindowManager {
             let pid = app.processIdentifier
             guard pidsOnScreen.contains(pid) else { continue }
             for el in AXUIElementCreateApplication(pid).elements(kAXWindowsAttribute) {
-                guard let id = el.windowID, onScreenIDs.contains(id), !onOtherSpace(id) else { continue }
+                // A bridged move can become discoverable before its completion commits the
+                // destination workspace. Do not tile that intermediate state as a new arrival.
+                guard let id = el.windowID, !workspaceMoves.contains(id),
+                      onScreenIDs.contains(id), !onOtherSpace(id) else { continue }
                 if let w = windows[id] {
                     if !w.isNativeFullscreen { present.insert(id) }
                     continue
@@ -556,7 +559,7 @@ final class WindowManager {
         animator.animate(instant, duration: 0) // windows that don't slide in with a workspace swap snap into place
         // An animated move costs AX calls on every frame for every window in it. With a crowd of
         // windows that keeps the main thread busy enough to stall events, so a big relayout lands at once.
-        let animated = config.animate && moves.count <= Self.maxAnimatedMoves
+        let animated = !instantLayout && config.animate && moves.count <= Self.maxAnimatedMoves
         animator.animate(moves, duration: animated ? config.animationDuration : 0,
                          curve: config.animationCurve, bounce: config.animationBounce)
         onChange?()
@@ -1542,7 +1545,8 @@ final class WindowManager {
 
     /// Hyprland's `workspace`: shows it on its display (a new one opens on the focused display)
     /// and focuses the window you last used there.
-    func showWorkspace(_ ws: String, focusing preferred: Window? = nil, focus takesFocus: Bool = true, attempts: Int = 3) {
+    func showWorkspace(_ ws: String, focusing preferred: Window? = nil, focus takesFocus: Bool = true, attempts: Int = 3,
+                       instant: Bool = false) {
         let screens = Screen.all()
         guard let here = currentScreen() ?? screens.first else { return }
         let monitor = monitorOf[ws].flatMap { u in screens.first { $0.uuid == u } } ?? here
@@ -1559,7 +1563,7 @@ final class WindowManager {
             CGWarpMouseCursorPosition(monitor.center) // space switching acts on the display under the pointer
             guard let steps = goToSpace(desktop + 1) else { Log.info("workspaces: can't switch Spaces for \(ws)"); return }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5 + 0.15 * Double(steps)) { [weak self] in
-                self?.showWorkspace(ws, focusing: preferred, attempts: attempts - 1)
+                self?.showWorkspace(ws, focusing: preferred, attempts: attempts - 1, instant: instant)
             }
             return
         }
@@ -1568,8 +1572,8 @@ final class WindowManager {
         shown[monitor.uuid] = ws
         Log.debug("workspaces: showing \(ws) on \(monitor.ns.localizedName)")
         // Quiet shows (a sort, restoring a layout) snap; a switch the user asked for slides.
-        if changed, takesFocus, let previous { beginSlide(from: previous, to: ws, on: monitor) }
-        refresh()
+        if changed, takesFocus, !instant, let previous { beginSlide(from: previous, to: ws, on: monitor) }
+        refresh(instant: instant)
         if changed, !quietWorkspaceHUD, config.enablesLayoutHUD, config.enablesLayoutHUDOnSpaceChange {
             HUD.shared.show(labels[ws].map { "\(ws) · \($0)" } ?? ws, layout: state(workspace: ws).layout, on: monitor.ns)
         }
@@ -1610,7 +1614,7 @@ final class WindowManager {
         autoSwitchAfter = Date().addingTimeInterval(0.7)
         let displayBatch = WindowServerUpdates.shared.begin()
         let started = Date()
-        Spaces.move(window: w.id, to: home) { [weak self] moved in
+        Spaces.move(window: w.id, to: home, waitUntilOnScreen: isOnHomeSpace(monitor)) { [weak self] moved in
             guard let self else { displayBatch?.finish(); return }
             workspaceMoves.remove(w.id)
             guard moved, w.isValid, config.virtualWorkspaces, homeSpace[monitor.uuid] == home else {
@@ -1621,12 +1625,12 @@ final class WindowManager {
             }
             Log.info("workspaces: moved \(w.id) to home Desktop in \(Int(Date().timeIntervalSince(started) * 1000)) ms")
             snapNextPlacement.insert(w.id)
-            assignWindow(w, toWorkspace: ws, display: monitor.uuid, follow: follow)
+            assignWindow(w, toWorkspace: ws, display: monitor.uuid, follow: follow, instant: true)
             animator.afterPendingWrites { displayBatch?.finish() }
         }
     }
 
-    private func assignWindow(_ w: Window, toWorkspace ws: String, display: String, follow: Bool) {
+    private func assignWindow(_ w: Window, toWorkspace ws: String, display: String, follow: Bool, instant: Bool = false) {
         let from = workspaceOf[w.id]
         if windows[w.id] == nil {
             windows[w.id] = w
@@ -1639,10 +1643,10 @@ final class WindowManager {
         if let from, lastFocused[from] == w.id { lastFocused[from] = nil }
         corrections[w.id] = nil
         if follow {
-            showWorkspace(ws, focusing: w)
+            showWorkspace(ws, focusing: w, instant: instant)
         } else {
             autoSwitchAfter = Date().addingTimeInterval(0.6)
-            refresh()
+            refresh(instant: instant)
             guard isShown(from) else { return } // importing a background window keeps the current focus
             if let next = order.first(where: { workspaceOf[$0] == from && visible.contains($0) }).flatMap({ windows[$0] }) {
                 focus(next)

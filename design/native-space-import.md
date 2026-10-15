@@ -26,7 +26,8 @@ Five fresh child windows were imported and silently sent back, checking actual S
 - Menu → **Bring Window Here** discovers other normal Desktop windows through AX plus Ouch's cached handles. It imports into the workspace currently showing on the home Desktop, without focus, cursor movement, or a Space switch.
 - A plain Dock click captures the home workspace on the Dock's display before app activation. `DockWindowPull.swift` consumes the click pair for a running app whose preferred standard window is on a native Desktop, then imports and focuses it. Dragging, holding for 350 ms, releasing outside the icon, or adding modifiers replays the original events to the Dock. Other clicks pass through. No system Dock preference is changed.
 - Existing `movetoworkspace` and `movetoworkspacesilent` also import focused native-Desktop windows. Following goes to the home Desktop once; silent movement does not activate it.
-- Space membership is checked immediately, then every 10 ms for at most 500 ms. There is no mandatory transition delay. The Ouch assignment is committed only after membership is exactly the destination home Desktop. The first tile placement snaps.
+- Ouch checks Space membership immediately, then every 10 ms for at most 500 ms. There is no mandatory transition delay. For a visible destination, Ouch also waits for the window to enter the on-screen list. Ouch commits the assignment after both checks pass.
+- Refresh excludes windows with an import in progress. The completed import places all affected tiles without animation. Ordinary Ouch moves retain their configured animation.
 - Native imports hold WindowServer display updates from just before the bridged request until the first queued AX tile writes finish. This is intended to suppress the reported flash of all windows during an import. It uses `SLSDisableUpdate` / `SLSReenableUpdate`, with overlapping leases and an independent 120 ms watchdog. Ordinary Ouch tiling is unchanged. No screen capture is started and no fixed delay is added; if the APIs are unavailable, the import proceeds normally.
 - Requests for the same window cannot overlap. Unsupported or refused operations report a HUD failure; there is no automatic visible-switch fallback.
 - Native fullscreen, minimized, hidden-app, sticky, and unknown-membership windows are excluded from the menu. An app that does not expose an inactive window through AX needs Ouch to have discovered its AX handle earlier.
@@ -51,6 +52,25 @@ The probe fails if an import or silent send does not change membership, or if th
 Run `/tmp/ouch-space-check/probe --batch-updates` to require display-update batching during imports. This passed five imports and five silent sends with no recording active, at a 6 ms median import. It verifies API availability, membership and Desktop stability; it cannot prove the physical panel does not flash. That needs a check in the running Ouch app without screen recording.
 
 `Tools/WindowServerUpdatesProbe.swift`, compiled as `main.swift` alongside `Sources/ouch/WindowServerUpdates.swift`, checks release after overlapping leases, duplicate finish calls, timeout with the main thread blocked, stale leases from an earlier batch, dropped leases, and API failure. Its injected operations do not modify the display.
+
+## Check screen visibility after import
+
+A user recording showed an intermediate layout change before Finder settled into its tile. Code inspection found two possible contributors. Refresh could discover the imported window before the import completed. Also, existing tiles still animated after the display batch ended.
+
+The revised import excludes the window during the move and places all affected tiles without animation. Completion also waits for screen visibility when the destination Desktop is active. Passing live runs measured medians of 23 ms and 53 ms to this completion point. The earlier 6 ms result measured membership alone. This difference does not prove the cause of the physical flash.
+
+Compile the probe with the actual `Spaces.move` wrapper to check visibility at completion:
+
+```sh
+cp Tools/SpaceMoveProbe.swift /tmp/ouch-space-check/main.swift
+swiftc -D OUCH_ARRIVAL_PROBE -module-cache-path /tmp/ouch-space-check/modules \
+  Sources/ouch/NativeSpaceMove.swift Sources/ouch/WindowServerUpdates.swift \
+  Sources/ouch/AX.swift /tmp/ouch-space-check/main.swift \
+  -o /tmp/ouch-space-check/arrival-probe
+/tmp/ouch-space-check/arrival-probe --batch-updates
+```
+
+This mode checks that completion occurs after screen visibility. It also checks that the active Desktop remains unchanged. The parent process does not initialize `NSApplication` during this check.
 
 ## Check Dock click handling
 

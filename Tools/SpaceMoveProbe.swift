@@ -2,6 +2,14 @@
 // Only disposable child-process windows are moved. No Desktop is activated.
 import AppKit
 
+#if OUCH_ARRIVAL_PROBE
+// AX.swift's unrelated pointer hit-testing references this overlay. The probe creates no overlay.
+final class FocusDim {
+    static let shared = FocusDim()
+    func owns(_ id: Int) -> Bool { false }
+}
+#endif
+
 func symbol<T>(_ name: String) -> T {
     let handle = dlopen("/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight", RTLD_LAZY)!
     guard let address = dlsym(handle, name) else { fatalError("Missing symbol: \(name)") }
@@ -31,6 +39,23 @@ func wait(until condition: () -> Bool) -> Bool {
         RunLoop.current.run(until: Date().addingTimeInterval(0.005))
     } while Date() < deadline
     return condition()
+}
+
+func move(window: CGWindowID, to destination: UInt64) -> Bool {
+#if OUCH_ARRIVAL_PROBE
+    let requireVisible = activeSpaces().contains(destination)
+    var result: Bool?
+    Spaces.move(window: window, to: destination, waitUntilOnScreen: requireVisible) { result = $0 }
+    guard wait(until: { result != nil }), result == true else { return false }
+    if requireVisible {
+        let info = CGWindowListCopyWindowInfo(.optionIncludingWindow, window) as? [[String: Any]]
+        precondition(info?.first?[kCGWindowIsOnscreen as String] as? Bool == true,
+                     "Completion preceded on-screen arrival")
+    }
+    return true
+#else
+    return NativeSpaceMove.move(window: window, to: destination)
+#endif
 }
 
 if CommandLine.arguments.dropFirst().first == "--child" {
@@ -72,7 +97,7 @@ for attempt in 1...5 {
     let displayBatch = batchUpdates ? WindowServerUpdates.shared.begin() : nil
     if batchUpdates { precondition(displayBatch != nil, "WindowServer update batching unavailable") }
     let start = Date()
-    guard NativeSpaceMove.move(window: id, to: current.uint64Value), wait(until: { membership(id) == [current.uint64Value] }) else {
+    guard move(window: id, to: current.uint64Value), wait(until: { membership(id) == [current.uint64Value] }) else {
         fatalError("Foreign-window import failed")
     }
     let elapsed = Date().timeIntervalSince(start) * 1000
@@ -80,7 +105,7 @@ for attempt in 1...5 {
     times.append(elapsed)
     guard activeSpaces() == initial else { fatalError("The active Desktop changed") }
     // Also verify a silent send to an inactive Desktop.
-    guard NativeSpaceMove.move(window: id, to: other.uint64Value), wait(until: { membership(id) == [other.uint64Value] }), activeSpaces() == initial else {
+    guard move(window: id, to: other.uint64Value), wait(until: { membership(id) == [other.uint64Value] }), activeSpaces() == initial else {
         fatalError("Silent send failed")
     }
     print("\(attempt): imported in \(Int(elapsed)) ms; silent send passed; active Desktops unchanged")

@@ -21,13 +21,22 @@ enum Spaces {
         return NativeSpaceMove.isAvailable
     }
 
-    static func move(window id: CGWindowID, to target: UInt64, completion: @escaping (Bool) -> Void) {
+    static func move(window id: CGWindowID, to target: UInt64, waitUntilOnScreen: Bool = false,
+                     completion: @escaping (Bool) -> Void) {
         guard target != 0, canMoveWindows else { completion(false); return }
         if of(window: id) == [target] { completion(true); return }
         guard NativeSpaceMove.move(window: id, to: target) else { completion(false); return }
         let deadline = Date().addingTimeInterval(0.5)
         func check() {
-            if of(window: id) == [target] { completion(true); return }
+            if of(window: id) == [target] {
+                // Membership can update before the imported window joins the visible window
+                // list. Committing then produces one layout without it and a second with it.
+                let info = CGWindowListCopyWindowInfo(.optionIncludingWindow, id) as? [[String: Any]]
+                if !waitUntilOnScreen || info?.first?[kCGWindowIsOnscreen as String] as? Bool == true {
+                    completion(true)
+                    return
+                }
+            }
             guard Date() < deadline else { completion(false); return }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.01, execute: check)
         }
