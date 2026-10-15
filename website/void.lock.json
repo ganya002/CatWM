@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "source": {
+    "account_id": "865dded96630ca6a533584a80efad356",
+    "compatibility_date": "2026-02-24",
+    "routes": [
+      {
+        "pattern": "ouch.perwko.com",
+        "custom_domain": true
+      }
+    ],
+    "workers_dev": false,
+    "preview_urls": true
+  },
+  "resolved": {
+    "account_id": "865dded96630ca6a533584a80efad356",
+    "compatibility_date": "2026-02-24",
+    "kv_namespaces": [
+      {
+        "binding": "KV",
+        "id": "2e57628adcf34aacbe7bc8b9bfe6a0e1"
+      }
+    ],
+    "name": "ouch-website",
+    "routes": [
+      {
+        "pattern": "ouch.perwko.com",
+        "custom_domain": true
+      }
+    ],
+    "workers_dev": false,
+    "preview_urls": true
+  },
+  "text": "// void:published-traffic:v1:eyJ3b3JrZXJzX2RldiI6ZmFsc2UsInByZXZpZXdfdXJscyI6dHJ1ZSwicm91dGVzIjpbeyJwYXR0ZXJuIjoib3VjaC5wZXJ3a28uY29tIiwiY3VzdG9tX2RvbWFpbiI6dHJ1ZX1dfQ\n{\n  \"account_id\": \"865dded96630ca6a533584a80efad356\",\n  \"compatibility_date\": \"2026-02-24\",\n  \"kv_namespaces\": [\n    {\n      \"binding\": \"KV\",\n      \"id\": \"2e57628adcf34aacbe7bc8b9bfe6a0e1\"\n    }\n  ],\n  \"name\": \"ouch-website\",\n  \"routes\": [\n    {\n      \"pattern\": \"ouch.perwko.com\",\n      \"custom_domain\": true\n    }\n  ],\n  \"workers_dev\": false,\n  \"preview_urls\": true\n}\n"
+}
