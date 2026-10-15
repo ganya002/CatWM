@@ -498,6 +498,7 @@ enum Steps {
         if let w = b.find(["workspace"], "1") { rows.append((KeyWords.modLabels(w.mods, long: false) + ["1–0"], "Switch workspace")) }
         if b.enter != nil, c.wm.config.keyboardHelp { rows.append(([c.wm.config.keyboardHelpKey], "Keyboard help")) }
         if let f = b.find(["fullscreen"]) { more.append((cap(f), "Zoom")) }
+        if let f = b.find(["nativefullscreen"]) { more.append((cap(f), "macOS full screen")) }
         if let f = b.find(["togglefloating"]) { more.append((cap(f), "Float or tile")) }
         if let s = b.find(["sort"], global: true) { more.append((cap(s), "Sort windows")) }
         if let g = b.find(["workspace"], "1", global: true) { more.append((KeyWords.modLabels(g.mods, long: false) + ["1–0"], "Switch from anywhere")) }
