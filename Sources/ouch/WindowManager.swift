@@ -884,6 +884,8 @@ final class WindowManager {
         case "reload": reload()
         case "modefx": ModeFX.shared.command(Array(parts.dropFirst()).flatMap { $0.split(separator: " ").map(String.init) })
         case "panelfx": PanelMotionDemo.command(Array(parts.dropFirst()))
+        case "introlab": IntroLab.shared.open()
+        case "intro": Onboarding.shared.playIntro(parts.dropFirst().first.flatMap { IntroScore.Arrangement.named($0) } ?? .standard)
         default: Log.info("ipc: unknown command")
         }
     }

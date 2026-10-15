@@ -459,57 +459,9 @@ extension View {
 
 // MARK: - Personality
 
-/// Ouch's bit of personality, taken from the icon: things land with a small squish and a burst of the
-/// icon's yellow impact lines. Reserved for state changes (a layout joins the cycle, a permission is
-/// granted, a preview window lands), never for navigation, and dropped under Reduce Motion.
-
-/// Three short strokes bursting from a point, like the ones on the app icon.
-struct SparkLines: Shape {
-    /// Direction of the middle stroke in degrees, y down: -90 points up, -135 up and to the left.
-    var angle: Double = -135
-
-    func path(in rect: CGRect) -> Path {
-        var p = Path()
-        let c = CGPoint(x: rect.midX, y: rect.midY), r = min(rect.width, rect.height) / 2
-        for (spread, reach) in [(-40.0, 0.78), (0, 1), (40, 0.78)] {
-            let a = (angle + spread) * .pi / 180
-            p.move(to: CGPoint(x: c.x + cos(a) * r * 0.4, y: c.y + sin(a) * r * 0.4))
-            p.addLine(to: CGPoint(x: c.x + cos(a) * r * reach, y: c.y + sin(a) * r * reach))
-        }
-        return p
-    }
-}
-
-/// The icon's impact lines in `accent2`, flashing once each time `trigger` changes.
-struct ImpactBurst<Trigger: Equatable>: View {
-    let trigger: Trigger
-    var angle: Double = -135
-    var size: CGFloat = 22
-    /// Seconds to wait first, e.g. until a moving window lands.
-    var delay: Double = 0
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    private enum Phase: CaseIterable { case rest, burst, fade }
-
-    var body: some View {
-        let reduceMotion = reduceMotion, delay = delay
-        return SparkLines(angle: angle)
-            .stroke(Theme.accent2, style: StrokeStyle(lineWidth: max(1.5, size / 10), lineCap: .round))
-            .frame(width: size, height: size)
-            .phaseAnimator(Phase.allCases, trigger: trigger) { view, phase in
-                view.scaleEffect(phase == .rest ? 0.3 : phase == .burst ? 1 : 1.2)
-                    .opacity(reduceMotion || phase != .burst ? 0 : 1)
-            } animation: { phase in
-                switch phase {
-                case .rest: nil
-                case .burst: .spring(response: 0.2, dampingFraction: 0.6).delay(delay)
-                case .fade: .easeOut(duration: 0.3).delay(0.08)
-                }
-            }
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
-    }
-}
+/// Ouch's bit of personality, taken from the icon: things land with a small squish. Reserved for
+/// state changes (a layout joins the cycle, a permission is granted, a preview window lands), never
+/// for navigation, and dropped under Reduce Motion.
 
 private struct Squish<Trigger: Equatable>: ViewModifier {
     let trigger: Trigger

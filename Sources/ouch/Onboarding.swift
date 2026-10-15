@@ -48,6 +48,17 @@ final class Onboarding {
         intro.run()
     }
 
+    /// `ouch intro [arrangement id]`: just the opening and its music, for working on them. Lands mid-screen.
+    func playIntro(_ arrangement: IntroScore.Arrangement = .standard) {
+        guard !isRunning else { return }
+        let screen = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main ?? NSScreen.screens[0]
+        let v = screen.visibleFrame
+        let landing = NSRect(x: v.midX - 230, y: v.midY - 200, width: 460, height: 400)
+        let intro = Intro(screen: screen, landing: landing, music: arrangement) { [weak self] in self?.intro = nil }
+        self.intro = intro
+        intro.run()
+    }
+
     // MARK: Welcome card
 
     private func makeWelcome(on screen: NSScreen) -> OverlayPanel {
@@ -264,30 +275,36 @@ private extension NSWindow.Level {
 
 // MARK: - Intro
 
-/// The opening, played over the whole screen and drawn from the app icon: it dims to graphite, four
-/// windows drift in (the main one in the icon's electric blue), snap into a tiling layout with a squish
-/// and the icon's yellow impact lines, the wordmark lands, they re-tile, then fly into the welcome
-/// card. Each tile is its own window. Click anywhere to skip.
+/// The opening, played over the whole screen to its own music (`IntroScore`). It dims to graphite,
+/// then five windows open one at a time and tile like the real layouts, each snap on a piano note
+/// (the main one in the icon's electric blue). The wordmark lands, the windows re-tile under a falling
+/// run, then pull into one stack, hold for a beat of silence, and burst into the welcome card on one
+/// full chord with a ring of light. Each tile is its own window. Click anywhere to skip.
 private final class Intro {
-    static let margin: CGFloat = 60 // room around each tile for its rotation and shadow
+    static let margin: CGFloat = 60 // room around each tile for its squish and shadow
+    static let count = 5
 
     private let screen: NSScreen
     private let landing: NSRect
     private let onDone: () -> Void
+    private let score: IntroScore
     private var dim: OverlayPanel!
     private var skipLabel: NSTextField!
     private var tiles: [OverlayPanel] = []
     private var word: OverlayPanel!
+    private var fx: OverlayPanel!
     private let wordModel = WordmarkModel()
     private var wordFrame = NSRect.zero
     private var pending: [DispatchWorkItem] = []
-    private var stage = 0
     private var done = false
 
-    init(screen: NSScreen, landing: NSRect, onDone: @escaping () -> Void) {
+    private let curve = CAMediaTimingFunction(controlPoints: 0.2, 0.9, 0.15, 1)
+
+    init(screen: NSScreen, landing: NSRect, music: IntroScore.Arrangement = .standard, onDone: @escaping () -> Void) {
         self.screen = screen
         self.landing = landing
         self.onDone = onDone
+        score = IntroScore(music)
         build()
     }
 
@@ -295,10 +312,16 @@ private final class Intro {
         dim.orderFrontRegardless()
         tiles.forEach { $0.orderFrontRegardless() }
         word.orderFrontRegardless()
-        for (i, at) in [0.12, 1.25, 2.3, 3.55, 4.85].enumerated() {
-            later(at) { [weak self] in self?.go(to: i + 1) }
-        }
-        later(5.6) { [weak self] in self?.finish() }
+        fx.orderFrontRegardless()
+        score.play()
+        typealias B = IntroScore.Beat
+        // The motion starts a little before each beat, so it lands on the note.
+        fadeIn()
+        for (i, t) in B.arrive.enumerated() { later(t - 0.12) { [weak self] in self?.arrive(i + 1) } }
+        later(B.word - 0.25) { [weak self] in self?.showWord() }
+        later(B.retile - 0.1) { [weak self] in self?.retile() }
+        later(B.gather) { [weak self] in self?.gather() }
+        later(B.impact - 0.06) { [weak self] in self?.impact() }
     }
 
     private func later(_ seconds: Double, _ f: @escaping () -> Void) {
@@ -307,23 +330,27 @@ private final class Intro {
         DispatchQueue.main.asyncAfter(deadline: .now() + seconds, execute: w)
     }
 
+    /// Straight to the welcome card, quietly: no hit.
     private func skip() {
-        guard !done, stage < 5 else { return }
+        guard !done else { return }
         pending.forEach { $0.cancel() }
         pending = []
-        if stage == 0 { go(to: 1) }
-        go(to: 5)
-        later(0.5) { [weak self] in self?.finish() }
+        score.fadeOut()
+        fadeIn()
+        for i in tiles.indices { move(i, to: landing, alpha: 0, duration: 0.7, delay: Double(i) * 0.03) }
+        hideWord()
+        later(0.5) { [weak self] in self?.finish(over: 0.7) }
     }
 
-    private func finish() {
+    private func finish(over seconds: Double) {
         guard !done else { return }
         done = true
         onDone()
         let panels = [dim!, word!] + tiles
-        animate(0.7, curve: CAMediaTimingFunction(name: .easeOut), changes: { panels.forEach { $0.animator().alphaValue = 0 } }) {
+        animate(seconds, curve: CAMediaTimingFunction(name: .easeOut), changes: { panels.forEach { $0.animator().alphaValue = 0 } }) {
             panels.forEach { $0.orderOut(nil) }
         }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) { [fx] in fx?.orderOut(nil) } // after the ring
     }
 
     // MARK: Building
@@ -363,8 +390,9 @@ private final class Intro {
         dim.contentView = root
         dim.alphaValue = 0
 
-        for i in 0..<4 {
-            let p = OverlayPanel(frame: padded(start), level: .above(.statusBar, 2), clickThrough: true)
+        let center = NSRect(x: f.midX, y: f.midY, width: 0, height: 0)
+        for i in 0..<Self.count {
+            let p = OverlayPanel(frame: padded(center), level: .above(.statusBar, 2), clickThrough: true)
             p.contentView = TileView(frame: NSRect(origin: .zero, size: p.frame.size), main: i == 0)
             p.alphaValue = 0
             tiles.append(p)
@@ -375,31 +403,39 @@ private final class Intro {
         word = OverlayPanel(frame: wordFrame.offsetBy(dx: 0, dy: -24), level: .above(.statusBar, 3), clickThrough: true)
         word.contentView = NSHostingView(rootView: WordmarkView(model: wordModel, size: size))
         word.alphaValue = 0
+
+        // The hit's ring and flash, on top of everything and outliving the backdrop's fade.
+        fx = OverlayPanel(frame: f, level: .above(.statusBar, 4), clickThrough: true)
+        fx.contentView = ImpactView(frame: NSRect(origin: .zero, size: f.size))
     }
 
     static let graphite = NSColor(srgbRed: 0x1B / 255, green: 0x1B / 255, blue: 0x1E / 255, alpha: 1)
 
-    // MARK: Stages
+    // MARK: Motion
 
-    private var start: NSRect { NSRect(x: screen.frame.midX - 60, y: screen.frame.midY - 40, width: 120, height: 80) }
+    private func tile(_ i: Int) -> TileView? { tiles.indices.contains(i) ? tiles[i].contentView as? TileView : nil }
 
     private func padded(_ r: NSRect) -> NSRect { r.insetBy(dx: -Self.margin, dy: -Self.margin) }
 
-    /// A rect given top-down as fractions of the screen, in AppKit coordinates.
-    private func fraction(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat) -> NSRect {
-        let f = screen.frame
-        return NSRect(x: f.minX + x * f.width, y: f.maxY - (y + h) * f.height, width: w * f.width, height: h * f.height)
+    private func move(_ i: Int, to r: NSRect, alpha: CGFloat, duration: Double, delay: Double = 0,
+                      curve: CAMediaTimingFunction? = nil) {
+        let p = tiles[i], c = curve ?? self.curve
+        let run = {
+            animate(duration, curve: c) { p.animator().setFrame(self.padded(r), display: true) }
+            animate(min(duration, 0.4), curve: CAMediaTimingFunction(name: .easeOut)) { p.animator().alphaValue = alpha }
+        }
+        if delay > 0 { later(delay, run) } else { run() }
     }
 
-    /// Tall or BSP frames for four tiles with gaps, like the real layouts.
-    private func layout(bsp: Bool) -> [NSRect] {
+    /// Tall or BSP (dwindle) frames for `n` tiles with gaps, like the real layouts.
+    private func layout(bsp: Bool, _ n: Int = Intro.count) -> [NSRect] {
         let f = screen.frame.insetBy(dx: 28, dy: 28)
         let gap: CGFloat = 18
         var out: [NSRect] = []
         // Work top-down, then flip into AppKit coordinates.
         var r = CGRect(x: 0, y: 0, width: f.width + gap, height: f.height + gap)
-        if bsp {
-            for i in 0..<3 {
+        if bsp || n == 1 {
+            for i in 0..<(n - 1) {
                 if i % 2 == 0 {
                     out.append(CGRect(x: r.minX, y: r.minY, width: r.width / 2, height: r.height))
                     r = CGRect(x: r.minX + r.width / 2, y: r.minY, width: r.width / 2, height: r.height)
@@ -410,9 +446,9 @@ private final class Intro {
             }
             out.append(r)
         } else {
-            let main = r.width / 2, h = r.height / 3
+            let main = r.width / 2, h = r.height / CGFloat(n - 1)
             out.append(CGRect(x: 0, y: 0, width: main, height: r.height))
-            for i in 0..<3 { out.append(CGRect(x: main, y: CGFloat(i) * h, width: r.width - main, height: h)) }
+            for i in 0..<(n - 1) { out.append(CGRect(x: main, y: CGFloat(i) * h, width: r.width - main, height: h)) }
         }
         return out.map { t in
             let g = t.insetBy(dx: gap / 2, dy: gap / 2)
@@ -420,67 +456,84 @@ private final class Intro {
         }
     }
 
-    private func go(to s: Int) {
-        guard s > stage else { return }
-        stage = s
-        let scatter: [(NSRect, CGFloat)] = [(fraction(0.1, 0.16, 0.26, 0.3), -9), (fraction(0.62, 0.1, 0.25, 0.28), 7),
-                                            (fraction(0.16, 0.58, 0.22, 0.27), 6), (fraction(0.6, 0.56, 0.28, 0.31), -6)]
-        let curve = CAMediaTimingFunction(controlPoints: 0.2, 0.9, 0.15, 1)
-        func tile(_ i: Int) -> TileView? { tiles[i].contentView as? TileView }
-        func move(_ i: Int, to r: NSRect, alpha: CGFloat, rotation: CGFloat, duration: Double, delay: Double) {
-            let p = tiles[i]
-            let run = {
-                tile(i)?.rotate(to: rotation, duration: duration, curve: curve)
-                animate(duration, curve: curve) { p.animator().setFrame(self.padded(r), display: true) }
-                animate(0.6, curve: CAMediaTimingFunction(name: .easeOut)) { p.animator().alphaValue = alpha }
-            }
-            if delay > 0 { DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: run) } else { run() }
+    private func fadeIn() {
+        animate(0.8, curve: CAMediaTimingFunction(name: .easeOut)) {
+            dim.animator().alphaValue = 1
+            skipLabel.animator().alphaValue = 1
         }
-        /// When a tile lands: it squishes, and the main one takes the icon's impact lines.
-        func land(_ i: Int, after delay: Double, spark: Bool) {
-            later(delay) {
-                tile(i)?.squish()
-                if spark { tile(i)?.spark() }
-            }
+    }
+
+    /// Window `n` opens in the middle of its slot, and the ones already there make room.
+    private func arrive(_ n: Int) {
+        let frames = layout(bsp: true, n)
+        for i in 0..<(n - 1) {
+            move(i, to: frames[i], alpha: 1, duration: 0.45)
+            later(0.12) { [weak self] in self?.tile(i)?.squish() }
         }
-        switch s {
-        case 1:
-            animate(1, curve: CAMediaTimingFunction(name: .easeOut)) {
-                dim.animator().alphaValue = 1
-                skipLabel.animator().alphaValue = 1
-            }
-            for (i, t) in scatter.enumerated() {
-                tile(i)?.rotate(to: t.1 * 2, duration: 0, curve: curve)
-                move(i, to: t.0, alpha: 1, rotation: t.1, duration: 1.1, delay: Double(i) * 0.07)
-            }
-        case 2:
-            for (i, r) in layout(bsp: false).enumerated() {
-                let delay = Double(i) * 0.07
-                move(i, to: r, alpha: 1, rotation: 0, duration: 0.8, delay: delay)
-                land(i, after: delay + 0.36, spark: i == 0)
-            }
-        case 3:
-            // Low enough that the tagline reads over the blue main tile.
-            for i in tiles.indices { animate(0.6) { tiles[i].animator().alphaValue = i == 0 ? 0.4 : 0.3 } }
-            wordModel.landed = true
-            animate(1.1) {
-                word.animator().alphaValue = 1
-                word.animator().setFrame(wordFrame, display: true)
-            }
-        case 4:
-            for (i, r) in layout(bsp: true).enumerated() {
-                let delay = Double(i) * 0.05
-                move(i, to: r, alpha: i == 0 ? 0.4 : 0.3, rotation: 0, duration: 0.9, delay: delay)
-                land(i, after: delay + 0.4, spark: false)
-            }
-            wordModel.subtitle = true
-        default:
-            for i in tiles.indices { move(i, to: landing, alpha: 0, rotation: 0, duration: 0.7, delay: Double(i) * 0.03) }
-            animate(0.9, curve: CAMediaTimingFunction(name: .easeOut)) {
-                word.animator().alphaValue = 0
-                skipLabel.animator().alphaValue = 0
-            }
+        let i = n - 1, slot = frames[i]
+        tiles[i].setFrame(padded(slot.insetBy(dx: slot.width * 0.3, dy: slot.height * 0.3)), display: false)
+        move(i, to: slot, alpha: 1, duration: 0.45)
+        later(0.12) { [weak self] in self?.tile(i)?.squish() }
+    }
+
+    private func showWord() {
+        // Low enough that the tagline reads over the blue main tile.
+        for i in tiles.indices { animate(0.5) { tiles[i].animator().alphaValue = i == 0 ? 0.4 : 0.3 } }
+        wordModel.landed = true
+        animate(1.1) {
+            word.animator().alphaValue = 1
+            word.animator().setFrame(wordFrame, display: true)
         }
+    }
+
+    private func hideWord() {
+        animate(0.5, curve: CAMediaTimingFunction(name: .easeOut)) {
+            word.animator().alphaValue = 0
+            skipLabel.animator().alphaValue = 0
+        }
+    }
+
+    /// One window per note of the falling run.
+    private func retile() {
+        wordModel.subtitle = true
+        let step = IntroScore.Beat.step
+        for (i, r) in layout(bsp: false).enumerated() {
+            move(i, to: r, alpha: i == 0 ? 0.4 : 0.3, duration: 0.6, delay: Double(i) * step)
+            later(Double(i) * step + 0.1) { [weak self] in self?.tile(i)?.squish() }
+        }
+    }
+
+    /// The windows pull into one small, bright stack in the middle of the card, the main one on
+    /// top, and hold still through the beat of silence.
+    private func gather() {
+        hideWord()
+        let span = IntroScore.Beat.impact - 0.25 - IntroScore.Beat.gather
+        let c = NSPoint(x: landing.midX, y: landing.midY)
+        let w = landing.width * 0.42, h = landing.height * 0.42
+        let pull = CAMediaTimingFunction(controlPoints: 0.6, 0, 0.2, 1)
+        for i in tiles.indices.reversed() {
+            let o = CGFloat(i) * 7
+            let r = NSRect(x: c.x - w / 2 + o, y: c.y - h / 2 - o, width: w, height: h)
+            move(i, to: r, alpha: i == 0 ? 1 : 0.85, duration: span, delay: Double(Self.count - 1 - i) * 0.04, curve: pull)
+            tiles[i].order(.above, relativeTo: i == Self.count - 1 ? 0 : tiles[i + 1].windowNumber)
+        }
+        // Wound up: everything leans in for the silence.
+        later(span) { [weak self] in self?.tiles.indices.forEach { self?.tile($0)?.brace() } }
+    }
+
+    /// The hit: the stack bursts out to the card's edges and fades as the card takes its place, with
+    /// a flash and a ring of light rolling out across the screen.
+    private func impact() {
+        guard !done else { return }
+        pending.forEach { $0.cancel() }
+        pending = []
+        (fx.contentView as? ImpactView)?.fire(at: NSPoint(x: landing.midX - screen.frame.minX, y: landing.midY - screen.frame.minY))
+        let burst = CAMediaTimingFunction(controlPoints: 0.1, 0.8, 0.2, 1)
+        for i in tiles.indices {
+            let spread = CGFloat(i) * 10
+            move(i, to: landing.insetBy(dx: -spread, dy: -spread), alpha: 0, duration: 0.6, curve: burst)
+        }
+        finish(over: 1.1)
     }
 }
 
@@ -492,26 +545,84 @@ private final class ClickView: NSView {
     override func hitTest(_ point: NSPoint) -> NSView? { frame.contains(point) ? self : nil }
 }
 
+/// The final hit's light: a quick flash over the screen and two rings in the icon's blue rolling out
+/// past its edges.
+private final class ImpactView: NSView {
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    func fire(at c: NSPoint) {
+        guard let root = layer else { return }
+        let flash = CALayer()
+        flash.frame = bounds
+        flash.backgroundColor = NSColor.white.cgColor
+        flash.opacity = 0
+        root.addSublayer(flash)
+        let blink = CAKeyframeAnimation(keyPath: "opacity")
+        blink.values = [0, 0.22, 0]
+        blink.keyTimes = [0, 0.08, 1]
+        blink.duration = 0.7
+        blink.timingFunctions = [CAMediaTimingFunction(name: .easeOut), CAMediaTimingFunction(name: .easeOut)]
+        flash.add(blink, forKey: "blink")
+
+        let reach = hypot(max(c.x, bounds.width - c.x), max(c.y, bounds.height - c.y)) * 1.1
+        for (i, (color, width)) in [(NSColor.white, 3.0), (NSColor(srgbRed: 0x0A / 255, green: 0x74 / 255, blue: 1, alpha: 1), 10.0)].enumerated() {
+            let ring = CAShapeLayer()
+            ring.path = CGPath(ellipseIn: CGRect(x: -reach, y: -reach, width: reach * 2, height: reach * 2), transform: nil)
+            ring.position = c
+            ring.fillColor = nil
+            ring.strokeColor = color.cgColor
+            ring.lineWidth = width
+            ring.opacity = 0
+            ring.shadowColor = color.cgColor
+            ring.shadowRadius = 18
+            ring.shadowOpacity = 0.9
+            root.addSublayer(ring)
+            let delay = Double(i) * 0.08
+            let grow = CABasicAnimation(keyPath: "transform.scale")
+            grow.fromValue = 0.04
+            grow.toValue = 1
+            grow.duration = 1.2
+            grow.beginTime = CACurrentMediaTime() + delay
+            grow.timingFunction = CAMediaTimingFunction(controlPoints: 0.1, 0.7, 0.3, 1)
+            grow.fillMode = .both
+            let fade = CAKeyframeAnimation(keyPath: "opacity")
+            fade.values = [0, 0.95, 0]
+            fade.keyTimes = [0, 0.05, 1]
+            fade.duration = 1.2
+            fade.beginTime = grow.beginTime
+            fade.fillMode = .both
+            ring.add(grow, forKey: "grow")
+            ring.add(fade, forKey: "fade")
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { root.sublayers?.forEach { $0.removeFromSuperlayer() } }
+    }
+}
+
 /// One tile of the intro: a translucent window with three dots, drawn inside its panel with some
-/// margin so it can be rotated. The main tile is filled with the icon's electric blue.
+/// margin for its squish and shadow. The main tile is filled with the icon's electric blue.
 private final class TileView: NSView {
     private let card = CALayer()
     private let sheen = CAGradientLayer()
     private var dots: [CALayer] = []
-    private let lines = CAShapeLayer()
     private let main: Bool
+
+    private static let blue = NSColor(srgbRed: 0x0A / 255, green: 0x74 / 255, blue: 1, alpha: 1)
 
     init(frame: NSRect, main: Bool) {
         self.main = main
         super.init(frame: frame)
         wantsLayer = true
-        card.backgroundColor = main ? NSColor(srgbRed: 0x0A / 255, green: 0x74 / 255, blue: 1, alpha: 0.92).cgColor
-                                    : NSColor(white: 1, alpha: 0.13).cgColor
+        card.backgroundColor = main ? Self.blue.withAlphaComponent(0.92).cgColor : NSColor(white: 1, alpha: 0.13).cgColor
         card.borderColor = NSColor(white: 1, alpha: main ? 0.5 : 0.38).cgColor
         card.borderWidth = 1
         card.cornerRadius = 14
         card.cornerCurve = .continuous
-        card.shadowColor = (main ? NSColor(srgbRed: 0x0A / 255, green: 0x74 / 255, blue: 1, alpha: 1) : .black).cgColor
+        card.shadowColor = (main ? Self.blue : .black).cgColor
         card.shadowOpacity = main ? 0.35 : 0.25
         card.shadowRadius = 24
         card.shadowOffset = CGSize(width: 0, height: -16)
@@ -531,12 +642,6 @@ private final class TileView: NSView {
             dots.append(d)
         }
         layer?.addSublayer(card)
-        lines.strokeColor = NSColor(srgbRed: 1, green: 0xCC / 255, blue: 0, alpha: 1).cgColor // the icon's spark yellow
-        lines.fillColor = nil
-        lines.lineWidth = 4
-        lines.lineCap = .round
-        lines.opacity = 0
-        layer?.addSublayer(lines)
     }
 
     required init?(coder: NSCoder) { fatalError() }
@@ -552,26 +657,6 @@ private final class TileView: NSView {
         for (i, d) in dots.enumerated() {
             d.frame = CGRect(x: 12 + CGFloat(i) * 15, y: card.bounds.height - 11 - 9, width: 9, height: 9)
         }
-        // The impact lines sit off the top-left corner, pointing away from it.
-        let c = CGPoint(x: r.minX - 4, y: r.maxY + 4), radius: CGFloat = 30
-        let path = CGMutablePath()
-        for (spread, reach) in [(-40.0, 0.78), (0, 1), (40, 0.78)] {
-            let a = (135 + spread) * .pi / 180
-            path.move(to: CGPoint(x: c.x + cos(a) * radius * 0.4, y: c.y + sin(a) * radius * 0.4))
-            path.addLine(to: CGPoint(x: c.x + cos(a) * radius * reach, y: c.y + sin(a) * radius * reach))
-        }
-        lines.frame = bounds
-        lines.path = path
-        CATransaction.commit()
-    }
-
-    /// Degrees clockwise, as in CSS.
-    func rotate(to degrees: CGFloat, duration: Double, curve: CAMediaTimingFunction) {
-        CATransaction.begin()
-        CATransaction.setDisableActions(duration == 0)
-        CATransaction.setAnimationDuration(duration)
-        CATransaction.setAnimationTimingFunction(curve)
-        card.setAffineTransform(CGAffineTransform(rotationAngle: -degrees * .pi / 180))
         CATransaction.commit()
     }
 
@@ -588,18 +673,20 @@ private final class TileView: NSView {
         }
     }
 
-    /// The icon's three yellow lines flash out from the corner.
-    func spark() {
-        let draw = CABasicAnimation(keyPath: "strokeEnd")
-        draw.fromValue = 0
-        draw.toValue = 1
-        draw.duration = 0.18
-        draw.timingFunction = CAMediaTimingFunction(name: .easeOut)
-        let fade = CAKeyframeAnimation(keyPath: "opacity")
-        fade.values = [0, 1, 1, 0]
-        fade.keyTimes = [0, 0.1, 0.6, 1]
-        fade.duration = 0.7
-        lines.add(draw, forKey: "draw")
-        lines.add(fade, forKey: "fade")
+    /// Compressed and glowing through the silence before the hit.
+    func brace() {
+        let shrink = CABasicAnimation(keyPath: "transform.scale")
+        shrink.toValue = 0.92
+        shrink.duration = 0.25
+        shrink.timingFunction = CAMediaTimingFunction(name: .easeIn)
+        shrink.fillMode = .forwards
+        shrink.isRemovedOnCompletion = false
+        card.add(shrink, forKey: "brace")
+        let glow = CABasicAnimation(keyPath: "shadowRadius")
+        glow.toValue = 48
+        glow.duration = 0.25
+        glow.fillMode = .forwards
+        glow.isRemovedOnCompletion = false
+        card.add(glow, forKey: "glow")
     }
 }
