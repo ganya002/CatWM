@@ -341,6 +341,29 @@ struct SortPlan {
         return (i > 0 ? i - 1 : 0, moved.count)
     }
 
+    /// Puts every window of lane `i` at the end of lane `j` and takes lane `i` away. `j` keeps its name and
+    /// layout. Returns where `j` is after the removal and how many windows moved.
+    mutating func mergeLane(_ i: Int, into j: Int) -> (target: Int, moved: Int)? {
+        guard i != j, lanes.indices.contains(i), lanes.indices.contains(j) else { return nil }
+        let moved = lanes[i].ids
+        lanes[j].ids += moved
+        lanes.remove(at: i)
+        return (j > i ? j - 1 : j, moved.count)
+    }
+
+    /// Moves lane `i` to sit before the lane now at `slot` (`lanes.count` is the end). Workspace numbers stay
+    /// in order left to right, so the lanes between swap numbers: the windows, name and layout move.
+    /// Returns the lane's new index.
+    mutating func moveLane(_ i: Int, toSlot slot: Int) -> Int? {
+        guard lanes.indices.contains(i), (0...lanes.count).contains(slot), slot != i, slot != i + 1 else { return nil }
+        let names = lanes.map(\.ws)
+        let lane = lanes.remove(at: i)
+        let at = slot > i ? slot - 1 : slot
+        lanes.insert(lane, at: at)
+        for k in lanes.indices { lanes[k].ws = names[k] }
+        return at
+    }
+
     mutating func cycleLayout(of lane: Int, by delta: Int, in layouts: [Layout]) {
         guard lanes.indices.contains(lane), !layouts.isEmpty else { return }
         let i = layouts.firstIndex(of: lanes[lane].layout) ?? -1

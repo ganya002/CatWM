@@ -296,7 +296,8 @@ private struct SortLaneView: View {
     @StateObject private var hover = Flag()
     @FocusState private var editing: Bool
 
-    /// Dragging the number, the count or the thumbnail carries the whole workspace, to Close.
+    /// Dragging the number, the count or the thumbnail carries the whole workspace: to Close, onto another
+    /// workspace to merge the two, or to the edge of one to move it there.
     private var carry: some Gesture {
         DragGesture(minimumDistance: 4, coordinateSpace: .named("sort"))
             .onChanged { model.columnDragChanged(lane, $0) }
@@ -343,13 +344,21 @@ private struct SortLaneView: View {
         .frame(width: SortMetrics.lane, alignment: .topLeading)
         .background(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous).fill(over ? Theme.accentSoft : .clear))
         .opacity(model.columnDrag?.lane.id == lane.id ? 0.3 : 1)
+        .overlay(alignment: .leading) { slotBar(model.columnSlot == index).offset(x: -3.5) }
+        .overlay(alignment: .trailing) { slotBar(model.columnSlot == index + 1 && index == model.plan.lanes.count - 1).offset(x: 3.5) }
         .animation(.easeOut(duration: Theme.medium), value: over)
+        .animation(.easeOut(duration: Theme.fast), value: model.columnSlot)
         .zone(.lane(lane.id))
         .onHover { hover.on = $0 }
         .onChange(of: model.focusName) { _, id in
             if id == lane.id { editing = true; model.focusName = nil }
         }
     }
+}
+
+/// Where a carried workspace would go: a bar in the gap before (or after) a column.
+private func slotBar(_ on: Bool) -> some View {
+    Capsule().fill(Theme.accent).frame(width: 3).padding(.vertical, 6).opacity(on ? 1 : 0).allowsHitTesting(false)
 }
 
 private struct SortRemoveButton: View {

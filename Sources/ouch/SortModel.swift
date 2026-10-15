@@ -29,7 +29,7 @@ struct SortDrag {
     var id: CGWindowID { item.id }
 }
 
-/// A workspace column being carried to Close.
+/// A workspace column being carried: to Close, onto another workspace to merge, or between two to reorder.
 struct SortColumnDrag {
     let lane: SortLane
     let ratio: CGFloat
@@ -51,6 +51,8 @@ final class SortModel: ObservableObject {
     @Published var drag: SortDrag?
     @Published var columnDrag: SortColumnDrag?
     @Published var over: SortZone?
+    /// Where a carried workspace would go: the index of the lane it would sit before, `lanes.count` for the end.
+    @Published var columnSlot: Int?
     @Published var reveal = SortReveal()
     /// Set to focus a lane's name field.
     @Published var focusName: UUID?
@@ -86,7 +88,7 @@ final class SortModel: ObservableObject {
         strategy = config.sortStrategy
         nextLayout = layouts.contains(.tall) ? .tall : layouts[0]
         plans = [:]
-        hover = nil; selected = nil; notice = nil; drag = nil; columnDrag = nil; over = nil; focusName = nil
+        hover = nil; selected = nil; notice = nil; drag = nil; columnDrag = nil; over = nil; columnSlot = nil; focusName = nil
         running = true
         // The keys of the mode called "window" if there is one, else the first; with no modes, the global binds.
         binds = [:]
@@ -108,7 +110,7 @@ final class SortModel: ObservableObject {
         if let o = scrollObserver { NotificationCenter.default.removeObserver(o) }
         scrollObserver = nil
         scroller = nil
-        drag = nil; columnDrag = nil; over = nil; hover = nil
+        drag = nil; columnDrag = nil; over = nil; columnSlot = nil; hover = nil
     }
 
     // MARK: Plans
@@ -299,6 +301,30 @@ final class SortModel: ObservableObject {
         changed()
         notice = SortNotice(text: r.moved > 0 ? "Removed \(title). Its \(r.moved) window\(r.moved == 1 ? "" : "s") moved to \(p.lanes[r.target].ws)."
                                               : "Removed \(title).", undo: (current, before))
+    }
+
+    /// Puts every window of one workspace into another and takes the first away.
+    func mergeLane(_ id: UUID, into target: UUID) {
+        guard var p = plans[current], let i = p.lanes.firstIndex(where: { $0.id == id }),
+              let j = p.lanes.firstIndex(where: { $0.id == target }) else { return }
+        let before = p, title = p.title(of: i)
+        guard let r = p.mergeLane(i, into: j) else { return }
+        p.touched = true
+        p.pending = true
+        plans[current] = p
+        changed()
+        reveal = SortReveal(id: 0, lane: target, token: reveal.token + 1)
+        notice = SortNotice(text: r.moved > 0 ? "Merged \(title) into \(p.title(of: r.target)). \(r.moved) window\(r.moved == 1 ? "" : "s") moved."
+                                              : "Removed \(title).", undo: (current, before))
+    }
+
+    /// Moves a workspace to another place in the row; the numbers stay in order, so the workspaces between swap numbers.
+    func moveLane(_ id: UUID, toSlot slot: Int) {
+        guard let i = plan.lanes.firstIndex(where: { $0.id == id }) else { return }
+        var at: Int?
+        edit { at = $0.moveLane(i, toSlot: slot) }
+        guard at != nil else { return }
+        reveal = SortReveal(id: 0, lane: id, token: reveal.token + 1)
     }
 
     func undoRemove() {
@@ -510,18 +536,49 @@ final class SortModel: ObservableObject {
             let g = plan.geometry[lane.ws]
             columnDrag = SortColumnDrag(lane: lane, ratio: g?.ratio ?? 0.5, mainCount: g?.mainCount ?? 1, location: v.location,
                                         grab: CGSize(width: v.startLocation.x - origin.x, height: v.startLocation.y - origin.y))
+            edgeTimer = Timer.scheduledTimer(withTimeInterval: 1 / 60, repeats: true) { [weak self] _ in self?.edgeScroll() }
         }
         columnDrag?.location = v.location
-        let next: SortZone? = zone(at: v.location) == .close ? .close : nil
-        if over != next { over = next }
+        let t = columnTarget(lane.id, at: v.location)
+        if over != t.over { over = t.over }
+        if columnSlot != t.slot { columnSlot = t.slot }
     }
 
     func columnDragEnded() {
+        edgeTimer?.invalidate()
+        edgeTimer = nil
         guard let d = columnDrag else { return }
-        let onClose = zone(at: d.location) == .close
+        let t = columnTarget(d.lane.id, at: d.location)
         columnDrag = nil
         over = nil
-        if onClose { closeLane(d.lane.id) }
+        columnSlot = nil
+        switch (t.over, t.slot) {
+        case (.close?, _): closeLane(d.lane.id)
+        case (.lane(let target)?, _): withAnimation(Motion.easeOut) { mergeLane(d.lane.id, into: target) }
+        case (nil, let slot?): withAnimation(Motion.spring) { moveLane(d.lane.id, toSlot: slot) }
+        default: break
+        }
+    }
+
+    /// Where a carried workspace lands. The middle of another workspace merges into it; the outer part of a
+    /// column, or the gap beside it, puts the workspace there; the new-workspace column is the end of the row.
+    private func columnTarget(_ id: UUID, at p: CGPoint) -> (over: SortZone?, slot: Int?) {
+        let z = zone(at: p)
+        if z == .close { return (.close, nil) }
+        let lanes = plan.lanes
+        guard let from = lanes.firstIndex(where: { $0.id == id }) else { return (nil, nil) }
+        func slot(_ s: Int) -> (SortZone?, Int?) { s == from || s == from + 1 ? (nil, nil) : (nil, s) }
+        if z == .add { return slot(lanes.count) }
+        guard let s = zones[.scroller], s.contains(p) else { return (nil, nil) }
+        let frames = lanes.enumerated().compactMap { i, l in zones[.lane(l.id)].map { (i, l.id, $0) } }
+        guard !frames.isEmpty else { return (nil, nil) }
+        let edge: CGFloat = 36
+        for (i, lid, f) in frames where f.minX - 2 <= p.x && p.x < f.maxX + 2 {
+            if p.x < f.minX + edge { return slot(i) }
+            if p.x >= f.maxX - edge { return slot(i + 1) }
+            return lid == id ? (nil, nil) : (.lane(lid), nil)
+        }
+        return (nil, nil)
     }
 
     /// What is under a point, display chips first, then Close, the new-workspace column and the lanes.
@@ -536,10 +593,10 @@ final class SortModel: ObservableObject {
 
     /// Dragging near either end of the row scrolls it.
     private func edgeScroll() {
-        guard let d = drag, let s = zones[.scroller], d.location.y > s.minY - 20, d.location.y < s.maxY + 20 else { return }
+        guard let d = drag?.location ?? columnDrag?.location, let s = zones[.scroller], d.y > s.minY - 20, d.y < s.maxY + 20 else { return }
         let edge: CGFloat = 40
-        if d.location.x > s.maxX - edge, d.location.x < s.maxX + edge { scrollRow(by: 9) }
-        else if d.location.x < s.minX + edge, d.location.x > s.minX - edge { scrollRow(by: -9) }
+        if d.x > s.maxX - edge, d.x < s.maxX + edge { scrollRow(by: 9) }
+        else if d.x < s.minX + edge, d.x > s.minX - edge { scrollRow(by: -9) }
     }
 
     // MARK: The row of lanes
