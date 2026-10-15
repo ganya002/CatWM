@@ -81,6 +81,7 @@ enum Actions {
         }
         add("Toggle Floating", .window, "togglefloating", "", "macwindow.on.rectangle")
         add("Toggle Fullscreen", .window, "fullscreen", "", "arrow.up.left.and.arrow.down.right")
+        add("Toggle macOS Full Screen", .window, "nativefullscreen", "", "arrow.up.left.and.down.right.and.arrow.up.right.and.down.left")
         add("Close Window", .window, "killactive", "", "xmark.square")
         add("Sort Windows", .window, "sort", "", "square.grid.3x1.below.line.grid.1x2")
         add("Undo Last Sort", .window, "sort-undo", "", "arrow.uturn.backward")
@@ -193,7 +194,7 @@ enum Actions {
 
     /// Dispatchers the window manager understands, for the custom editor.
     static let dispatchers = ["movefocus", "movewindow", "swapwindow", "cyclenext", "swapnext", "layoutmsg", "splitratio",
-                              "togglefloating", "fullscreen", "killactive", "exec", "focusmonitor", "movewindowtomonitor",
+                              "togglefloating", "fullscreen", "nativefullscreen", "killactive", "exec", "focusmonitor", "movewindowtomonitor",
                               "workspace", "movetoworkspace", "movetoworkspacesilent", "cyclelayout", "layout", "setlayout",
                               "toggletiling", "toggledim", "toggleblur", "retile", "reevaluate", "reload", "exit", "submap", "sethomespace", "sort", "sort-undo"]
 }

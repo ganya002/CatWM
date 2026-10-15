@@ -151,6 +151,7 @@ This uses an undocumented bridged WindowServer operation adapted from [WhichSpac
 | `layoutmsg` | `swapwithmaster`, `focusmaster`, `addmaster`, `removemaster`, `mfact ±0.05`, `orientationnext`/`prev` |
 | `splitratio` | `+0.05`, `-0.05`, `exact 0.6` |
 | `togglefloating`, `fullscreen`, `killactive`, `exit` | |
+| `nativefullscreen` | macOS Full Screen (the green button) on and off |
 | `exec` | shell command |
 | `focusmonitor` | `l r u d`, `+1`, `-1`, index |
 | `workspace` / `movetoworkspace` | `1`–`10` (requires macOS's "Switch to Desktop N" shortcuts on Ctrl+N) |

@@ -953,6 +953,7 @@ final class WindowManager {
         case "splitratio": adjustRatio(arg)
         case "togglefloating": toggleFloating()
         case "fullscreen": toggleZoom()
+        case "nativefullscreen": toggleNativeFullscreen()
         case "killactive": lastClose = Date(); focusedWindow()?.close()
         case "exec": exec(arg)
         case "focusmonitor": focusMonitor(arg)
@@ -1131,6 +1132,30 @@ final class WindowManager {
         c.st.zoomed = c.st.zoomed == w.id ? nil : w.id
         refresh()
         w.focus()
+    }
+
+    /// macOS's own Full Screen, as the green button does it: the window gets a Space of its own and leaves the
+    /// tiling until it comes back. A window already in Full Screen is not tiled, so ask macOS which one is
+    /// focused rather than relying on `windows`.
+    private func toggleNativeFullscreen() {
+        guard let app = NSWorkspace.shared.frontmostApplication,
+              let el = focusedWindow()?.element
+                ?? AXUIElementCreateApplication(app.processIdentifier).element(kAXFocusedWindowAttribute) else { return }
+        let on = el.bool("AXFullScreen") ?? false
+        let done: Bool
+        if el.isSettable("AXFullScreen") {
+            done = el.set("AXFullScreen", on ? kCFBooleanFalse : kCFBooleanTrue)
+        } else if let button = el.element("AXFullScreenButton") ?? el.element(kAXZoomButtonAttribute) {
+            // Apps that don't expose the attribute still have the button; pressing it enters or leaves Full Screen.
+            done = AXUIElementPerformAction(button, kAXPressAction as CFString) == .success
+        } else {
+            done = false
+        }
+        Log.info("native fullscreen \(on ? "off" : "on") for \(el.windowID.map(String.init) ?? "?") \(app.bundleIdentifier ?? ""): \(done ? "ok" : "refused")")
+        guard done else { return }
+        if let id = el.windowID, !on { for s in Screen.all() where state(for: s).zoomed == id { state(for: s).zoomed = nil } }
+        // The Full Screen transition takes a moment; the other tiles close the gap (or make room) once it's over.
+        scheduleRefresh(after: 0.8)
     }
 
     private func cycleLayout(_ delta: Int) {
