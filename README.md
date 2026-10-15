@@ -135,6 +135,12 @@ Ouch has its own workspaces, like Hyprland and AeroSpace:
 - To use macOS Spaces instead, set `virtual-workspaces = false`. Space switching then uses "Switch to Desktop N" when it's on, and otherwise steps with Ctrl-←/→.
 - `stay-on-workspace-after-close = true` (default) keeps you on your current workspace when you close a window, instead of jumping to the workspace of whichever window macOS refocuses. Also under Settings → Windows → Advanced.
 
+On the Ouch home Desktop, **Bring Window Here** in the menu bar lists standard, non-minimized windows from other macOS Desktops. Select one to import it into the current Ouch workspace without switching Desktops or moving the pointer. The imported window snaps into its tile. `movetoworkspace` and `movetoworkspacesilent` can also move a focused native-Desktop window directly to an Ouch workspace. Native fullscreen windows and hidden apps are excluded.
+
+A plain click on a running app in the **Dock** also brings its preferred window from a native Desktop into the Ouch workspace on the Dock's display and focuses it. Ouch handles that click before the Dock can switch Desktops. Apps already on an Ouch home Desktop, minimized/fullscreen windows, hidden apps, modified clicks, dragging and long presses keep the Dock's usual behavior.
+
+This uses an undocumented bridged WindowServer operation adapted from [WhichSpace](https://github.com/gechr/WhichSpace). Tested on macOS 27.0.1 with SIP enabled: five imports took 5–7 ms, with no active Desktop change. Older macOS builds may refuse it; Ouch verifies actual Space membership before committing an assignment and reports failure without switching Desktops. See [the investigation and standalone probe](design/native-space-import.md).
+
 ### Dispatchers
 
 | Dispatcher | Args |

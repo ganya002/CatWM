@@ -54,6 +54,8 @@ final class WindowManager {
     private var shown: [String: String] = [:]            // display UUID → workspace it shows right now
     private var virtualShown: [String: String] = [:]     // display UUID → Ouch workspace on its home Space
     private var homeSpace: [String: UInt64] = [:]        // display UUID → the macOS Space workspaces live on
+    private var workspaceMoves: Set<CGWindowID> = []
+    private var snapNextPlacement: Set<CGWindowID> = []
     private var present: Set<CGWindowID> = []
     private var lastFocused: [String: CGWindowID] = [:]
     private var focusStamps: [CGWindowID: Int] = [:] // focus history: higher was focused more recently
@@ -108,6 +110,7 @@ final class WindowManager {
     private var pendingSpace: (display: String, index: Int, until: Date)?
     private var spaceGeneration = 0
     private let animator = Animator()
+    private let dockWindowPull = DockWindowPull()
 
     // MARK: - Lifecycle
 
@@ -182,6 +185,8 @@ final class WindowManager {
             Log.info("start: could not create the keyboard event tap")
             HUD.shared.show("Keybinds unavailable: grant Accessibility", on: nil)
         }
+        dockWindowPull.prepare = { [weak self] point in self?.prepareDockPull(at: point) }
+        if !dockWindowPull.start() { Log.info("Dock window import: mouse event tap unavailable") }
 
         // `ouch dispatch movefocus l`, `ouch dump`, `ouch reload` from a terminal (like hyprctl).
         DistributedNotificationCenter.default().addObserver(forName: ipcNotification, object: nil, queue: .main) { [weak self] n in
@@ -313,6 +318,7 @@ final class WindowManager {
         if focusClock > 0, focusStamps[id] == focusClock { refocusAfterClose = workspaceOf[id] }
         if pendingFocus?.id == id { pendingFocus = nil }
         windows[id] = nil
+        snapNextPlacement.remove(id)
         order.removeAll { $0 == id }
         workspaceOf[id] = nil; floatFrames[id] = nil; targets[id] = nil; minSizes[id] = nil; corrections[id] = nil; drags[id] = nil
         focusStamps[id] = nil
@@ -521,8 +527,13 @@ final class WindowManager {
                 let target = id == st.zoomed ? rect.pixelAligned : slot
                 targets[id] = target
                 guard let w = windows[id] else { continue }
+                let snap = snapNextPlacement.remove(id) != nil
                 let current = w.frame
                 if current.isNull || current.approxEqual(target) { corrections[id] = nil; continue }
+                if snap {
+                    instant.append(.init(window: w, to: target, bounds: s.visible))
+                    continue
+                }
                 if isParked(current, screens) {
                     if let from = slideStart(id, to: target, on: s) {
                         moves.append(.init(window: w, to: target, bounds: s.visible, from: from))
@@ -1579,27 +1590,163 @@ final class WindowManager {
 
     /// Hyprland's `movetoworkspace` (follow) and `movetoworkspacesilent`.
     private func moveFocusedWindow(to ws: String, follow: Bool) {
-        guard let w = focusedWindow(), let from = workspaceOf[w.id], from != ws else { return }
-        guard isVirtual(from) else {
-            HUD.shared.show("Move this window to your Ouch Desktop first", on: screen(of: w)?.ns)
+        guard let w = focusedWindow(), workspaceOf[w.id] != ws else { return }
+        moveWindow(w, toWorkspace: ws, follow: follow)
+    }
+
+    /// Move the real window first; only commit Ouch's assignment after WindowServer confirms it.
+    private func moveWindow(_ w: Window, toWorkspace ws: String, follow: Bool) {
+        let screens = Screen.all()
+        guard config.virtualWorkspaces, isVirtual(ws), !workspaceMoves.contains(w.id),
+              let monitor = monitorOf[ws].flatMap({ uuid in screens.first { $0.uuid == uuid } })
+                ?? currentScreen() ?? screens.first,
+              let home = homeSpace[monitor.uuid], let info = Spaces.list(display: monitor.uuid),
+              info.desktops.contains(where: { info.ids[$0] == home }), !w.isNativeFullscreen else { return }
+        if Spaces.of(window: w.id) == [home] {
+            assignWindow(w, toWorkspace: ws, display: monitor.uuid, follow: follow)
             return
         }
-        if monitorOf[ws] == nil, let here = currentScreen() { monitorOf[ws] = here.uuid }
+        workspaceMoves.insert(w.id)
+        autoSwitchAfter = Date().addingTimeInterval(0.7)
+        let displayBatch = WindowServerUpdates.shared.begin()
+        let started = Date()
+        Spaces.move(window: w.id, to: home) { [weak self] moved in
+            guard let self else { displayBatch?.finish(); return }
+            workspaceMoves.remove(w.id)
+            guard moved, w.isValid, config.virtualWorkspaces, homeSpace[monitor.uuid] == home else {
+                Log.info("workspaces: direct move of \(w.id) to \(home) failed")
+                HUD.shared.show("macOS couldn't move this window", on: monitor.ns)
+                displayBatch?.finish()
+                return
+            }
+            Log.info("workspaces: moved \(w.id) to home Desktop in \(Int(Date().timeIntervalSince(started) * 1000)) ms")
+            snapNextPlacement.insert(w.id)
+            assignWindow(w, toWorkspace: ws, display: monitor.uuid, follow: follow)
+            animator.afterPendingWrites { displayBatch?.finish() }
+        }
+    }
+
+    private func assignWindow(_ w: Window, toWorkspace ws: String, display: String, follow: Bool) {
+        let from = workspaceOf[w.id]
+        if windows[w.id] == nil {
+            windows[w.id] = w
+            order.append(w.id)
+            watch(w)
+        }
+        monitorOf[ws] = display
         workspaceOf[w.id] = ws
         lastFocused[ws] = w.id
-        if lastFocused[from] == w.id { lastFocused[from] = nil }
+        if let from, lastFocused[from] == w.id { lastFocused[from] = nil }
         corrections[w.id] = nil
         if follow {
             showWorkspace(ws, focusing: w)
         } else {
             autoSwitchAfter = Date().addingTimeInterval(0.6)
             refresh()
+            guard isShown(from) else { return } // importing a background window keeps the current focus
             if let next = order.first(where: { workspaceOf[$0] == from && visible.contains($0) }).flatMap({ windows[$0] }) {
                 focus(next)
             } else {
                 parkFocus()
             }
         }
+    }
+
+    /// Menu candidates from every Desktop. Discovery never activates the app or raises its windows.
+    func windowsOnOtherDesktops() -> [Window] {
+        guard config.virtualWorkspaces, isStarted, Spaces.canMoveWindows,
+              let s = currentScreen(), isOnHomeSpace(s) else { return [] }
+        let screens = Screen.all()
+        let desktops = Set(screens.flatMap { screen -> [UInt64] in
+            guard let info = Spaces.list(display: screen.uuid) else { return [] }
+            return info.desktops.map { info.ids[$0] }
+        })
+        let homes = Set(homeSpace.values)
+        var result: [Window] = []
+        for app in NSWorkspace.shared.runningApplications
+        where app.activationPolicy == .regular && !app.isHidden && app.processIdentifier != getpid() {
+            let element = AXUIElementCreateApplication(app.processIdentifier)
+            AXUIElementSetMessagingTimeout(element, 0.15)
+            // Some apps omit inactive-Desktop windows from AXWindows. Keep using the AX
+            // handles Ouch discovered earlier while those Desktops were visible.
+            let candidates = element.elements(kAXWindowsAttribute)
+                + windows.values.filter { $0.pid == app.processIdentifier }.map(\.element)
+            var seen: Set<CGWindowID> = []
+            for el in candidates {
+                AXUIElementSetMessagingTimeout(el, 0.15)
+                guard let id = el.windowID, seen.insert(id).inserted, !workspaceMoves.contains(id) else { continue }
+                let membership = Spaces.of(window: id)
+                guard membership.count == 1, let space = membership.first,
+                      desktops.contains(space), !homes.contains(space),
+                      el.string(kAXSubroleAttribute) == kAXStandardWindowSubrole,
+                      el.bool(kAXMinimizedAttribute) != true, el.bool("AXFullScreen") != true else { continue }
+                let w = windows[id] ?? Window(id: id, element: el, pid: app.processIdentifier, bundleID: app.bundleIdentifier)
+                if w.naturalFrame.isNull { w.naturalFrame = w.frame; w.autoFloating = shouldFloat(w) }
+                result.append(w)
+            }
+        }
+        return result.sorted { ($0.bundleID ?? "", $0.id) < ($1.bundleID ?? "", $1.id) }
+    }
+
+    /// Pull an inactive Desktop's window into the workspace showing here, keeping this Desktop active.
+    func bringWindowHere(_ w: Window) {
+        guard let s = currentScreen(), isOnHomeSpace(s), let ws = virtualShown[s.uuid] else { return }
+        moveWindow(w, toWorkspace: ws, follow: false)
+    }
+
+    /// Capture the destination before the Dock gets a chance to activate another Desktop.
+    /// Only intercept an app's ordinary click when its preferred window is on a native Desktop.
+    private func prepareDockPull(at point: CGPoint) -> (() -> Void)? {
+        let deadline = Date().addingTimeInterval(0.15)
+        guard isStarted, config.virtualWorkspaces, !sortSession, Spaces.canMoveWindows,
+              let display = Screen.all().first(where: { $0.frame.contains(point) }),
+              isOnHomeSpace(display), let ws = virtualShown[display.uuid],
+              let dock = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.dock").first else { return nil }
+        let dockElement = AXUIElementCreateApplication(dock.processIdentifier)
+        AXUIElementSetMessagingTimeout(dockElement, 0.03)
+        var hit: AXUIElement?
+        guard AXUIElementCopyElementAtPosition(dockElement, Float(point.x), Float(point.y), &hit) == .success,
+              let hit else { return nil }
+        AXUIElementSetMessagingTimeout(hit, 0.03)
+        guard hit.string(kAXSubroleAttribute) == "AXApplicationDockItem",
+              let url = hit.value(kAXURLAttribute) as? URL,
+              let app = NSWorkspace.shared.runningApplications.first(where: {
+                  $0.bundleURL?.standardizedFileURL == url.standardizedFileURL
+              }), app.processIdentifier != getpid(), !app.isHidden else { return nil }
+        let appElement = AXUIElementCreateApplication(app.processIdentifier)
+        AXUIElementSetMessagingTimeout(appElement, 0.03)
+        // The focused/main window wins over other windows of the same app, just like the Dock.
+        let candidates = [appElement.element(kAXFocusedWindowAttribute), appElement.element(kAXMainWindowAttribute)].compactMap { $0 }
+            + focusOrder.compactMap { windows[$0] }.filter { $0.pid == app.processIdentifier }.map(\.element)
+            + appElement.elements(kAXWindowsAttribute)
+        let desktops = Set(Screen.all().flatMap { screen -> [UInt64] in
+            guard let info = Spaces.list(display: screen.uuid) else { return [] }
+            return info.desktops.map { info.ids[$0] }
+        })
+        var seen: Set<CGWindowID> = []
+        for el in candidates {
+            guard Date() < deadline else { return nil } // never stall the mouse tap on an unresponsive app
+            AXUIElementSetMessagingTimeout(el, 0.03)
+            guard let id = el.windowID, seen.insert(id).inserted else { continue }
+            guard el.string(kAXSubroleAttribute) == kAXStandardWindowSubrole else { continue }
+            // If the window the Dock would select is already on an Ouch home Desktop,
+            // minimized, sticky, or fullscreen, let the Dock handle it normally.
+            let membership = Spaces.of(window: id)
+            guard membership.count == 1, let source = membership.first,
+                  desktops.contains(source), !homeSpace.values.contains(source),
+                  !workspaceMoves.contains(id), el.bool(kAXMinimizedAttribute) != true,
+                  el.bool("AXFullScreen") != true else { return nil }
+            let w = windows[id] ?? Window(id: id, element: el, pid: app.processIdentifier, bundleID: app.bundleIdentifier)
+            return { [weak self] in
+                guard let self, config.virtualWorkspaces, virtualShown[display.uuid] == ws,
+                      isOnHomeSpace(display), w.isValid else { return }
+                if w.naturalFrame.isNull { w.naturalFrame = w.frame; w.autoFloating = shouldFloat(w) }
+                pendingFocus = nil
+                Hotkeys.shared.setSubmap("")
+                moveWindow(w, toWorkspace: ws, follow: true)
+            }
+        }
+        return nil
     }
 
     /// If the focused window lives on a hidden workspace (⌘-Tab, Dock, a link opening a window),
@@ -2065,8 +2212,7 @@ final class WindowManager {
 
     // MARK: Moving windows between spaces
 
-    /// macOS has no public (or, since 14.5, private) way to move another app's window to a space,
-    /// so do what a person would: hold the window by an empty part of its title bar and switch
+    /// Fallback for macOS Spaces mode: hold the window by an empty part of its title bar and switch
     /// spaces. The grab point is found by asking Accessibility what's under each candidate point,
     /// then confirmed by nudging the window and checking it followed.
     private func moveToSpace(_ n: Int) {
