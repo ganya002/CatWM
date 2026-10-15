@@ -156,7 +156,7 @@ final class Onboarding {
     func startTour() {
         let lesson = TourLesson()
         run(lesson) { [weak self] _ in
-            self?.offerSort(steps: lesson.count) { self?.finish() }
+            self?.offerSort { self?.finish() }
         }
     }
 
@@ -203,13 +203,13 @@ final class Onboarding {
     }
 
     /// When the tour hands the user's windows back crowded onto one workspace, offers to sort them.
-    private func offerSort(steps: Int, then: @escaping () -> Void) {
+    private func offerSort(then: @escaping () -> Void) {
         let wm = WindowManager.shared
         guard wm.config.sortNudge > 0, let hit = wm.shownWorkspaces().first, hit.count > wm.config.sortNudge else { return then() }
         offering = true
         MenuBarTip.shared.suppressed = true
         SortNudge.shared.markOffered(hit.workspace)
-        SortOffer.shared.show(steps: steps, workspace: hit.workspace, count: hit.count, button: statusButton, on: hit.screen) { [weak self] sort in
+        SortOffer.shared.show(button: statusButton, on: hit.screen) { [weak self] sort in
             self?.offering = false
             MenuBarTip.shared.suppressed = false
             then()

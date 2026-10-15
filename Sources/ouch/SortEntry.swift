@@ -131,17 +131,17 @@ private struct SortNudgeView: View {
 
 // MARK: - After the tour
 
-/// The tour's closing card: the user's windows came back onto one workspace, sort them?
+/// The tour's closing card: the user's windows came back crowded onto one workspace, sort them?
 final class SortOffer {
     static let shared = SortOffer()
     private var panel: OverlayPanel?
     private var finish: ((Bool) -> Void)?
     private var timeout: DispatchWorkItem?
 
-    func show(steps: Int, workspace: String, count: Int, button: NSStatusBarButton?, on screen: NSScreen,
+    func show(button: NSStatusBarButton?, on screen: NSScreen,
               done: @escaping (_ sort: Bool) -> Void) {
         finish = done
-        let view = SortOfferView(steps: steps, count: count, workspace: workspace, caret: 0) { [weak self] in self?.end($0) }
+        let view = SortOfferView(caret: 0) { [weak self] in self?.end($0) }
         var host = FirstClickHostingView(rootView: view)
         let size = host.fittingSize
         let v = screen.visibleFrame
@@ -155,7 +155,7 @@ final class SortOffer {
             y = b.minY - 10 - (size.height - SortOfferView.inset.top - SortOfferView.inset.bottom) - SortOfferView.inset.bottom
             caret = min(max(b.midX - left, 20), card - 20)
         }
-        host = FirstClickHostingView(rootView: SortOfferView(steps: steps, count: count, workspace: workspace, caret: caret) { [weak self] in
+        host = FirstClickHostingView(rootView: SortOfferView(caret: caret) { [weak self] in
             self?.end($0)
         })
         let p = OverlayPanel(frame: NSRect(x: x, y: y, width: size.width, height: size.height).integral, level: .floating, clickThrough: false)
@@ -183,9 +183,6 @@ final class SortOffer {
 }
 
 private struct SortOfferView: View {
-    let steps: Int
-    let count: Int
-    let workspace: String
     let caret: CGFloat
     let choose: (Bool) -> Void
     static let width: CGFloat = 344
@@ -195,14 +192,11 @@ private struct SortOfferView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
                 Image(systemName: "checkmark.circle.fill").font(.system(size: 13, weight: .medium))
-                Text("Step \(steps) of \(steps)").kicker(Theme.onAccent).oneLine()
                 Spacer(minLength: 8)
             }
             .frame(minHeight: 22)
-            Text("Your windows are back").font(Theme.body(22))
+            Text("Your workspace is crowded").font(Theme.body(22))
                 .tracking(-0.2).fixedSize(horizontal: false, vertical: true).padding(.top, 12).padding(.bottom, 4)
-            Text("All \(count) are on workspace \(workspace). Spread them out?")
-                .font(Theme.body(13.5)).lineSpacing(2).opacity(0.86).fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 4) {
                 OButton("Sort my windows", variant: .primary, shortcut: ["↩"], onAccent: true) { choose(true) }
                     .keyboardShortcut(.defaultAction)

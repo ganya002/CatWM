@@ -12,7 +12,6 @@ final class Coach {
     enum Ending { case finished, skipped, paused }
 
     struct Step {
-        var kicker: String
         var title: String
         var text: String
         var target = Target.center
@@ -29,7 +28,6 @@ final class Coach {
         var accept: (Event) -> String? = { _ in nil }
         /// What clicking the keycaps does: runs the step's command for you.
         var simulate: (() -> Void)?
-        var doneText = "Nice"
         var rows: [(caps: [String], label: String)] = []
         var final = false
     }
@@ -296,13 +294,11 @@ final class Coach {
 
     private func render() {
         guard let s = step else { return }
-        model.kicker = lesson.kicker(index)
         model.title = s.title
         model.text = s.text
         model.caps = s.caps
         model.capsDone = s.tokens.count == s.caps.count ? s.tokens.map { seen.contains($0) } : []
         model.recall = s.recall
-        model.doneText = s.doneText
         model.done = done
         model.button = s.button
         model.final = s.final
@@ -367,6 +363,5 @@ protocol Lesson: AnyObject {
     var pausable: Bool { get }
     /// Builds step `i` as it starts, so a drill can pick its target from the windows as they are now.
     func step(_ i: Int, in coach: Coach) -> Coach.Step
-    func kicker(_ i: Int) -> String
     func ended(_ how: Coach.Ending, at index: Int)
 }
