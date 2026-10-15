@@ -75,7 +75,7 @@ This mode checks that completion occurs after screen visibility. It also checks 
 
 ## Check Dock click handling
 
-`Tools/DockClickProbe.swift` checks click consumption, modifier passthrough, drag replay ordering, long presses, outside releases and unrelated clicks. It installs no event tap and captures replay events instead of posting them. Compile it as `main.swift` alongside `Sources/ouch/DockWindowPull.swift`:
+`Tools/DockClickProbe.swift` checks click consumption, modifier passthrough, drag replay ordering, long presses, outside releases, unrelated clicks and the Dock edge bands that gate the Accessibility hit test. It installs no event tap and captures replay events instead of posting them. Compile it as `main.swift` alongside `Sources/ouch/DockWindowPull.swift`:
 
 ```sh
 mkdir -p /tmp/ouch-dock-check

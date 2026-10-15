@@ -111,6 +111,7 @@ final class WindowManager {
     private var spaceGeneration = 0
     private let animator = Animator()
     private let dockWindowPull = DockWindowPull()
+    private let dockArea = DockArea()
 
     // MARK: - Lifecycle
 
@@ -186,7 +187,7 @@ final class WindowManager {
             HUD.shared.show("Keybinds unavailable: grant Accessibility", on: nil)
         }
         dockWindowPull.prepare = { [weak self] point in self?.prepareDockPull(at: point) }
-        if !dockWindowPull.start() { Log.info("Dock window import: mouse event tap unavailable") }
+        if dockWindowPull.start() { dockArea.refresh() } else { Log.info("Dock window import: mouse event tap unavailable") }
 
         // `ouch dispatch movefocus l`, `ouch dump`, `ouch reload` from a terminal (like hyprctl).
         DistributedNotificationCenter.default().addObserver(forName: ipcNotification, object: nil, queue: .main) { [weak self] n in
@@ -1680,31 +1681,44 @@ final class WindowManager {
     }
 
     /// Menu candidates from every Desktop. Discovery never activates the app or raises its windows.
+    /// The window server names the candidate windows first, so only their apps get AX queries.
+    /// An overall deadline keeps one slow app from stalling the menu.
     func windowsOnOtherDesktops() -> [Window] {
         guard config.virtualWorkspaces, isStarted, Spaces.canMoveWindows,
               let s = currentScreen(), isOnHomeSpace(s) else { return [] }
+        let deadline = Date().addingTimeInterval(0.3)
         let screens = Screen.all()
         let desktops = Set(screens.flatMap { screen -> [UInt64] in
             guard let info = Spaces.list(display: screen.uuid) else { return [] }
             return info.desktops.map { info.ids[$0] }
         })
         let homes = Set(homeSpace.values)
+        // Windows on another Desktop are off screen; the window list still has them with their pid.
+        var offDesktop: [pid_t: Set<CGWindowID>] = [:]
+        let list = CGWindowListCopyWindowInfo([.optionAll, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
+        for d in list where (d[kCGWindowLayer as String] as? Int) == 0 && (d[kCGWindowIsOnscreen as String] as? Bool) != true {
+            guard let n = d[kCGWindowNumber as String] as? Int, let pid = d[kCGWindowOwnerPID as String] as? Int,
+                  !workspaceMoves.contains(CGWindowID(n)) else { continue }
+            let membership = Spaces.of(window: CGWindowID(n))
+            guard membership.count == 1, let space = membership.first, desktops.contains(space), !homes.contains(space) else { continue }
+            offDesktop[pid_t(pid), default: []].insert(CGWindowID(n))
+        }
         var result: [Window] = []
         for app in NSWorkspace.shared.runningApplications
         where app.activationPolicy == .regular && !app.isHidden && app.processIdentifier != getpid() {
+            guard let ids = offDesktop[app.processIdentifier] else { continue }
+            guard Date() < deadline else { break }
             let element = AXUIElementCreateApplication(app.processIdentifier)
-            AXUIElementSetMessagingTimeout(element, 0.15)
+            AXUIElementSetMessagingTimeout(element, 0.1)
             // Some apps omit inactive-Desktop windows from AXWindows. Keep using the AX
             // handles Ouch discovered earlier while those Desktops were visible.
-            let candidates = element.elements(kAXWindowsAttribute)
-                + windows.values.filter { $0.pid == app.processIdentifier }.map(\.element)
+            let known = windows.values.filter { $0.pid == app.processIdentifier && ids.contains($0.id) }.map(\.element)
+            let candidates = (known.count < ids.count ? element.elements(kAXWindowsAttribute) : []) + known
             var seen: Set<CGWindowID> = []
             for el in candidates {
-                AXUIElementSetMessagingTimeout(el, 0.15)
-                guard let id = el.windowID, seen.insert(id).inserted, !workspaceMoves.contains(id) else { continue }
-                let membership = Spaces.of(window: id)
-                guard membership.count == 1, let space = membership.first,
-                      desktops.contains(space), !homes.contains(space),
+                guard Date() < deadline else { break }
+                AXUIElementSetMessagingTimeout(el, 0.1)
+                guard let id = el.windowID, ids.contains(id), seen.insert(id).inserted,
                       el.string(kAXSubroleAttribute) == kAXStandardWindowSubrole,
                       el.bool(kAXMinimizedAttribute) != true, el.bool("AXFullScreen") != true else { continue }
                 let w = windows[id] ?? Window(id: id, element: el, pid: app.processIdentifier, bundleID: app.bundleIdentifier)
@@ -1725,7 +1739,8 @@ final class WindowManager {
     /// Only intercept an app's ordinary click when its preferred window is on a native Desktop.
     private func prepareDockPull(at point: CGPoint) -> (() -> Void)? {
         let deadline = Date().addingTimeInterval(0.15)
-        guard isStarted, config.virtualWorkspaces, !sortSession, Spaces.canMoveWindows,
+        // Most clicks are nowhere near the Dock: let them through before any screen, Space or AX query.
+        guard isStarted, config.virtualWorkspaces, !sortSession, dockArea.contains(point), Spaces.canMoveWindows,
               let display = Screen.all().first(where: { $0.frame.contains(point) }),
               isOnHomeSpace(display), let ws = virtualShown[display.uuid],
               let dock = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.dock").first else { return nil }
