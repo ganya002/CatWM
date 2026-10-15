@@ -1,4 +1,4 @@
-// Compile alongside Sources/ouch/DockWindowPull.swift as main.swift.
+// Compile alongside Sources/ouch/Tiling/DockWindowPull.swift as main.swift.
 // No event tap is installed; replayed events are captured rather than posted to the desktop.
 import AppKit
 let clicks = DockWindowPull()
