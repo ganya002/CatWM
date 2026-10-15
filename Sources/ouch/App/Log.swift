@@ -1,3 +1,4 @@
+// App: plain-text log at ~/Library/Logs/ouch.log.
 import Foundation
 
 /// Plain-text log at ~/Library/Logs/ouch.log. `debug` lines only appear when launched with `--verbose`

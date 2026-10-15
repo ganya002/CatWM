@@ -1,3 +1,4 @@
+// Keys: global key binds through a CGEventTap, modes (submaps) and Caps Lock chords.
 import AppKit
 import IOKit
 import IOKit.hid
@@ -35,6 +36,8 @@ final class Hotkeys {
     private var scrollAccum: [Int: Double] = [:] // axis → distance since the last fire
     private var lastScrollFire: [Int: TimeInterval] = [:]
 
+    // MARK: - Bindings
+
     func setBindings(_ list: [KeyBinding]) {
         tables = [:]
         for b in list { tables[b.submap, default: [:]][Self.key(b.keyCode, b.mods)] = b }
@@ -54,6 +57,8 @@ final class Hotkeys {
     }
 
     enum Match { case bind(KeyBinding), swallow, pass }
+
+    // MARK: - Event tap and Caps Lock
 
     @discardableResult
     func start() -> Bool {
@@ -216,6 +221,8 @@ final class Hotkeys {
         DispatchQueue.main.async { Hotkeys.setCapsLock(want) }
     }
 
+    // MARK: - Swipes, lookup and firing
+
     /// Trackpad swipes (`swipe_left` … `swipe_down`). Swipe events can't come through the tap, and a global
     /// monitor can't swallow them, so macOS's own gesture for the same swipe still happens unless it's off.
     private func startSwipes() {
@@ -304,6 +311,8 @@ final class Hotkeys {
         IOHIDSetModifierLockState(conn, Int32(kIOHIDCapsLockState), on)
     }
 
+    // MARK: - Matching
+
     func match(_ event: CGEvent) -> Match {
         guard !paused, event.getIntegerValueField(.eventSourceUserData) != Self.syntheticMarker else { return .pass }
         let code = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
@@ -347,6 +356,8 @@ final class Hotkeys {
         return mods.rawValue | UInt64(code)
     }
 
+    // MARK: - Posting keys
+
     /// How synthetic shortcuts are posted. macOS only fires some system shortcuts (like switching
     /// spaces) when the event looks like a real key press, so the default wraps the key in real
     /// modifier key-downs and adds the Fn flag arrow keys carry. Selectable over IPC for diagnosis.
@@ -378,6 +389,8 @@ final class Hotkeys {
         }
     }
 }
+
+// MARK: - Tap callback
 
 private func tapCallback(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent,
                          refcon: UnsafeMutableRawPointer?) -> Unmanaged<CGEvent>? {

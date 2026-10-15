@@ -1,3 +1,4 @@
+// Onboarding: `ouch introlab`, a window to audition the intro music arrangements.
 import AppKit
 import SwiftUI
 

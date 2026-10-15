@@ -1,3 +1,4 @@
+// Keys: this Mac's keyboard model, finish, physical layout and input-source legends.
 import AppKit
 import Carbon
 import IOKit

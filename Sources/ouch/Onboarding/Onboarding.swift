@@ -1,3 +1,4 @@
+// Onboarding: first-run flow (intro, welcome card, keyboard tour) and its overlay panels.
 import AppKit
 import SwiftUI
 

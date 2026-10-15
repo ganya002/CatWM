@@ -1,3 +1,4 @@
+// App: launch at login through the system login item list.
 import Foundation
 import ServiceManagement
 

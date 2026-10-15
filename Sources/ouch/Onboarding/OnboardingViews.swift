@@ -1,3 +1,4 @@
+// Onboarding: SwiftUI views for the onboarding overlays (welcome card, coach steps).
 import AppKit
 import SwiftUI
 

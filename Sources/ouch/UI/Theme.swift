@@ -1,3 +1,4 @@
+// UI: design tokens (palette, type scale, radii, shadows, motion) and the Surface.
 import AppKit
 import CoreText
 import SwiftUI

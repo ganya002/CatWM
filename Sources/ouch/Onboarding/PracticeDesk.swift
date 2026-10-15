@@ -1,3 +1,4 @@
+// Onboarding: the tour's practice windows, run as a separate process.
 import AppKit
 import SwiftUI
 

@@ -1,3 +1,4 @@
+// MenuBar: draws the menu bar item's picture (workspace number and layout).
 import AppKit
 
 /// The menu bar item's picture: the focused display's workspace number, a small drawing of its

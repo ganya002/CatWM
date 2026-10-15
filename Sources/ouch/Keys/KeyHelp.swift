@@ -1,3 +1,4 @@
+// Keys: the on-screen keyboard help overlay.
 import AppKit
 import SwiftUI
 

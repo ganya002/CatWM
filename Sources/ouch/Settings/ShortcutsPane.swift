@@ -147,6 +147,8 @@ struct ShortcutsPane: View {
     }
 }
 
+// MARK: - Bind rows
+
 private struct BindRowView: View {
     @ObservedObject var doc: ConfigDocument
     @ObservedObject var ui: SettingsUI
@@ -287,6 +289,8 @@ private struct BindRowView: View {
         .fixedSize()
     }
 }
+
+// MARK: - Recorder
 
 /// Click to record a shortcut: keycaps on a sunken well, an `accent` outline while listening.
 private struct Recorder: View {

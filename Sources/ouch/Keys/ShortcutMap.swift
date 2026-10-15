@@ -1,3 +1,4 @@
+// Keys: the full-window Shortcut Map for viewing and editing binds per modifier combo.
 import AppKit
 import SwiftUI
 

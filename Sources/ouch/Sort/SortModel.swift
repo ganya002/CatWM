@@ -1,3 +1,4 @@
+// Sort: the Sort panel's state and every edit keys and mouse can make.
 import AppKit
 import SwiftUI
 

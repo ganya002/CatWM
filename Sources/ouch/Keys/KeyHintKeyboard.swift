@@ -1,3 +1,4 @@
+// Keys: the drawn Mac keyboard with binds written on its keys (used by Shortcut Map and Key Help).
 import AppKit
 import Carbon
 import SwiftUI

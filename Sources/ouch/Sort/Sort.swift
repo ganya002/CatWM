@@ -1,3 +1,4 @@
+// Sort: Sort Windows data types (displays, plans) handed between the window manager and the panel.
 import AppKit
 
 // Sort Windows, the data side: what the window manager hands the panel (`SortDisplay`), the plan the

@@ -15,6 +15,8 @@ extension WindowManager {
         var focused: CGWindowID?
     }
 
+    // MARK: - Sort session
+
     /// The toast went away: the last sort can no longer be undone.
     func dropSortSnapshot() { sortSnapshot = nil }
 
@@ -126,6 +128,8 @@ extension WindowManager {
         for (display, ws) in landing where virtualShown[display] != ws { showWorkspace(ws, focus: false) }
         refresh()
     }
+
+    // MARK: - Finishing and closing
 
     /// The panel is done and the changes stay. Windows in `ids` are closed while still hidden; one that
     /// stays open (a save sheet) is then brought onto its display's shown workspace and tried again. `goTo`
@@ -249,6 +253,8 @@ extension WindowManager {
         }
     }
 
+    // MARK: - Revert and undo
+
     /// The panel was dismissed without keeping anything: put everything back, focus and shown workspaces untouched.
     func revertSort() {
         sortSession = false
@@ -306,6 +312,8 @@ extension WindowManager {
         for (display, ws) in u.shown where virtualShown[display] != ws { showWorkspace(ws, focus: false) }
         refresh()
     }
+
+    // MARK: - Crowding
 
     private func tiledCount(in ws: String) -> Int {
         order.reduce(0) { n, id in n + (present.contains(id) && workspaceOf[id] == ws && windows[id]?.isFloating == false ? 1 : 0) }

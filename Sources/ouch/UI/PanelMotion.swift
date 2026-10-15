@@ -1,3 +1,4 @@
+// UI: entrance and exit animations for the Sort panel and Keyboard Help.
 import AppKit
 import SwiftUI
 

@@ -1,3 +1,4 @@
+// Config: named saved configs (model, store, import and export).
 import AppKit
 import Combine
 import SwiftUI

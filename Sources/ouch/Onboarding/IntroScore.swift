@@ -1,3 +1,4 @@
+// Onboarding: the intro's music, played on General MIDI instruments.
 import AVFoundation
 import AudioToolbox
 

@@ -1,5 +1,8 @@
+// Tiling: animates windows between frames through AX, one writer queue per app.
 import AppKit
 import QuartzCore
+
+// MARK: - Animator
 
 /// Animates windows between frames by stepping their AX frame, then lands, verifies and corrects.
 /// The main thread only works out the frames. Each app's AX calls run on a queue of its own (`AXWriter`),
@@ -165,6 +168,8 @@ final class Animator {
     }
 }
 
+// MARK: - AX writer
+
 /// One app's AX writes, on a serial queue of its own. An app that answers slowly (Finder, Electron apps)
 /// then holds up only its own windows, never the main thread or other apps. Frames coalesce: while the
 /// app is still busy, a newer frame for a window replaces the one waiting, so a slow app skips frames
@@ -259,6 +264,8 @@ private func measure(_ f: () -> Void) -> Double {
     return CACurrentMediaTime() - t
 }
 
+// MARK: - Timing
+
 private extension Animator {
     /// What one run of the timer cost, from first tick to last: how long the main thread spent on each
     /// tick, how late the ticks came, and how long each app took for its AX calls. Logged when the run
@@ -286,6 +293,8 @@ private extension Animator {
         }
     }
 }
+
+// MARK: - Cursor refresh
 
 /// macOS only picks the pointer's shape when the mouse moves. Windows we move, resize or park under a
 /// still pointer, focus we hand over, and `CGWarpMouseCursorPosition` (which sends no move) all leave
@@ -316,6 +325,8 @@ enum CursorRefresh {
         e.cgEvent?.getIntegerValueField(.eventSourceUserData) == Hotkeys.syntheticMarker
     }
 }
+
+// MARK: - Curves
 
 private extension Animator.Item {
     func frame(at now: CFTimeInterval) -> CGRect {

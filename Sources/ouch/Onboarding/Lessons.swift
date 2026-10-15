@@ -1,3 +1,4 @@
+// Onboarding: lesson scripts (the tour and the tutorial) and their step builders.
 import AppKit
 
 // The coach's scripts: the short tour that ends onboarding, and the longer tutorial that drills the

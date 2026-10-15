@@ -1,3 +1,4 @@
+// UI: the small "shipped with Amore" credit.
 import SwiftUI
 
 /// Tiny "shipped with" credit. Hover brightens it, swells the heart and draws an underline under

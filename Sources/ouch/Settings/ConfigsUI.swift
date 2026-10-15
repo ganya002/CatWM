@@ -1,3 +1,4 @@
+// Settings: the saved-config selector, editor sheets, icon picker and color picker.
 import AppKit
 import SwiftUI
 

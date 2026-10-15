@@ -1,5 +1,8 @@
+// Overlays: the screen-edge effect shown while a mode (submap) is on.
 import AppKit
 import SwiftUI
+
+// MARK: - Panels
 
 /// Screen-edge effect while a mode (submap) is on, so you can tell keys are going to ouch and not the
 /// app. A click-through panel on every screen. The style is `mode-effect` in the config (Settings: Motion ›
@@ -153,6 +156,8 @@ private extension NSScreen {
     var displayID: CGDirectDisplayID? { deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID }
 }
 
+// MARK: - Views
+
 final class ModeFXModel: ObservableObject {
     @Published var active = false
     @Published var enters = 0
@@ -303,6 +308,8 @@ struct ModeFXView: View {
 
     private struct Ripple { var t: CGFloat = 0; var edge: Double = 0 }
 }
+
+// MARK: - Shapes
 
 /// The notch's outline, in points: the side walls meet the screen top through a concave flare, and the
 /// bottom corners are rounded.

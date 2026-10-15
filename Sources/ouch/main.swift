@@ -1,3 +1,4 @@
+// App: entry point and AppDelegate (launch, migration from Hyprthyst, CLI subcommands, wiring).
 import AppKit
 
 final class AppDelegate: NSObject, NSApplicationDelegate {

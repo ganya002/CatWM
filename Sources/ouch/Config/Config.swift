@@ -1,4 +1,7 @@
+// Config: the config model (options, key binds) and the parser for the Hyprland-style config file.
 import AppKit
+
+// MARK: - Key binds
 
 struct KeyBinding {
     let keyCode: UInt16
@@ -23,6 +26,8 @@ func stripComment(_ line: String) -> String {
     }
     return out
 }
+
+// MARK: - Config
 
 /// Amethyst's options, written in a Hyprland-style config file.
 struct Config {
@@ -119,6 +124,8 @@ struct Config {
         }
         try? lines.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
     }
+
+    // MARK: - Parsing
 
     static func parse(_ text: String) -> Config {
         var c = Config()
@@ -279,6 +286,8 @@ struct Config {
         return nil
     }
 }
+
+// MARK: - Bind ranges and special keys
 
 /// Range binds, so one line can cover a run of keys:
 ///   bind = $mod, 1..0, workspace, 1..10      keys follow the number row, so 1..0 is ten keys

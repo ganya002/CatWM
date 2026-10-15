@@ -1,3 +1,4 @@
+// Tiling: moves windows to another macOS Space through SkyLight.
 import AppKit
 import MachO
 import ObjectiveC

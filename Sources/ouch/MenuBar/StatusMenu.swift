@@ -1,3 +1,4 @@
+// MenuBar: the menu under the menu bar item (items, search, Layout submenu).
 import AppKit
 import SwiftUI
 

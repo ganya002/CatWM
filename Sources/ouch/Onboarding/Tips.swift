@@ -1,3 +1,4 @@
+// Onboarding: one-time tips after onboarding (in Settings, under the menu bar item, above the mode bar).
 import AppKit
 import SwiftUI
 

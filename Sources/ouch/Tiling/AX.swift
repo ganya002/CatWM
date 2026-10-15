@@ -1,3 +1,4 @@
+// Tiling: Accessibility and private-API wrappers (Window, Screen, Spaces, CGWindowInfo).
 import AppKit
 import ApplicationServices
 

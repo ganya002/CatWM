@@ -1,3 +1,4 @@
+// Onboarding: the panel beside System Settings that guides the Accessibility grant.
 import AppKit
 import SwiftUI
 

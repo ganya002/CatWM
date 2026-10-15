@@ -1,3 +1,4 @@
+// BugReport: report folders, crash watch and agent hand-off for bug reports.
 import AppKit
 
 // Bug reports. Each one is a folder of plain files (environment, log, config, crash report and the

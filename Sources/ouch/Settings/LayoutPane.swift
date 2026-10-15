@@ -159,6 +159,8 @@ struct LayoutPane: View {
     }
 }
 
+// MARK: - Cycle chips and layout grid
+
 final class CycleDrag: ObservableObject {
     @Published var layout: Layout?
     @Published var x: CGFloat = 0
@@ -275,6 +277,8 @@ private struct LayoutCell: View {
         .accessibilityAddTraits(on ? .isSelected : [])
     }
 }
+
+// MARK: - Gaps preview
 
 /// The main display, scaled down, with three windows placed exactly as the tiler would place them. They
 /// spring to their new places as gaps and padding change.

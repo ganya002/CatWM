@@ -1,3 +1,4 @@
+// Tiling: the macOS hidden "drag windows from anywhere" (Ctrl+Cmd drag) setting.
 import Foundation
 
 /// macOS's hidden "drag windows from anywhere" setting: hold Ctrl+Cmd and drag any part of a window.

@@ -1,3 +1,4 @@
+// Tiling: dims or blurs everything except the focused window.
 import AppKit
 
 /// Dims and/or blurs everything but the focused window, so it's the one thing that stands out.

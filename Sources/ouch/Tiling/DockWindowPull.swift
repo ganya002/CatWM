@@ -1,3 +1,4 @@
+// Tiling: holds a Dock click to bring its window to the current workspace first.
 import AppKit
 
 /// Holds a plain Dock click long enough to bring its window here before macOS activates it.

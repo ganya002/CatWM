@@ -1,3 +1,4 @@
+// Keys: trackpad gesture binds as the keyboard help draws them.
 import AppKit
 import SwiftUI
 

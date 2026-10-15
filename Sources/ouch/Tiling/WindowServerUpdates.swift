@@ -1,3 +1,4 @@
+// Tiling: freezes WindowServer updates during a native-Space import.
 import AppKit
 
 /// Keeps the last composed frame visible during a native-Space import. WindowServer

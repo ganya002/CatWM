@@ -1,3 +1,4 @@
+// MenuBar: the onboarding hint that hangs under the menu bar item.
 import AppKit
 import SwiftUI
 

@@ -1,3 +1,4 @@
+// Sort: ways into Sort Windows (crowded-workspace tip, the offer at the end of the tour).
 import AppKit
 import SwiftUI
 

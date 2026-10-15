@@ -1,3 +1,4 @@
+// Sort: the Sort Windows panel window, its host and the undo toast.
 import AppKit
 import SwiftUI
 

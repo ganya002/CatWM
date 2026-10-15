@@ -1,3 +1,4 @@
+// Onboarding: runs keyboard lessons on practice windows with a floating coach card.
 import AppKit
 import SwiftUI
 

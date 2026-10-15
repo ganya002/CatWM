@@ -1,3 +1,4 @@
+// Tiling: the layout algorithms (Amethyst layouts) that compute window frames.
 import CoreGraphics
 
 /// Amethyst's layouts. Frames are computed in top-left-origin coordinates; `nil` means "don't touch".

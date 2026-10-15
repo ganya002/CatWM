@@ -1,5 +1,8 @@
+// BugReport: the bug report panel, its model and views.
 import AppKit
 import SwiftUI
+
+// MARK: - Panel
 
 /// The bug report card: hand it to one of the user's agents, or write it here and send it. After a
 /// crash it opens on its own with the crash report attached.
@@ -139,6 +142,8 @@ final class BugReportPanel: NSObject, NSWindowDelegate {
     }
 }
 
+// MARK: - Model
+
 final class BugReportModel: ObservableObject {
     @Published var report: BugReport?
     @Published var crash: CrashSummary?
@@ -171,6 +176,8 @@ final class BugReportModel: ObservableObject {
 
     var canSend: Bool { !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 }
+
+// MARK: - Views
 
 struct BugReportView: View {
     static let width: CGFloat = 440

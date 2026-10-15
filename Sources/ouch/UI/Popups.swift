@@ -1,3 +1,4 @@
+// UI: pop-up menus, popovers and tooltips drawn on the glass Surface.
 import AppKit
 import SwiftUI
 

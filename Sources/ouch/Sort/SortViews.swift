@@ -1,3 +1,4 @@
+// Sort: the Sort panel's SwiftUI views (columns, rows, drag, header, footer).
 import AppKit
 import SwiftUI
 

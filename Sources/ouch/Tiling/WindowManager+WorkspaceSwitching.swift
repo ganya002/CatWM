@@ -2,6 +2,9 @@
 import AppKit
 
 extension WindowManager {
+
+    // MARK: - Saving and loading workspaces
+
     func loadWorkspaces() {
         guard config.virtualWorkspaces else { return }
         let d = UserDefaults.standard
@@ -57,6 +60,8 @@ extension WindowManager {
         d.set(layouts, forKey: "ws.layouts")
     }
 
+    // MARK: - Showing a workspace
+
     /// Hyprland's `workspace`: shows it on its display (a new one opens on the focused display)
     /// and focuses the window you last used there.
     func showWorkspace(_ ws: String, focusing preferred: Window? = nil, focus takesFocus: Bool = true, attempts: Int = 3) {
@@ -104,6 +109,8 @@ extension WindowManager {
         }
         onChange?()
     }
+
+    // MARK: - Moving windows between workspaces
 
     /// Hyprland's `movetoworkspace` (follow) and `movetoworkspacesilent`.
     func moveFocusedWindow(to ws: String, follow: Bool) {
@@ -188,6 +195,8 @@ extension WindowManager {
             }
         }
     }
+
+    // MARK: - Windows on other desktops and Dock pulls
 
     /// Menu candidates from every Desktop. Discovery never activates the app or raises its windows.
     /// The window server names the candidate windows first, so only their apps get AX queries.
@@ -299,6 +308,8 @@ extension WindowManager {
         }
         return nil
     }
+
+    // MARK: - Following focus
 
     /// If the focused window lives on a hidden workspace (⌘-Tab, Dock, a link opening a window),
     /// switch to it. Also remembers each workspace's last focused window.

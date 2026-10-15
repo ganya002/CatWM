@@ -1,3 +1,4 @@
+// UI: design-system controls (buttons, switches, sliders, segmented, rows, groups).
 import AppKit
 import SwiftUI
 

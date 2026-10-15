@@ -1,3 +1,4 @@
+// Config: the editable config document behind Settings (bind/var rows, action catalog, save).
 import AppKit
 import Carbon
 import Combine

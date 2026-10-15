@@ -1,3 +1,4 @@
+// Overlays: the layout-name HUD shown on layout changes.
 import AppKit
 import SwiftUI
 

@@ -1,3 +1,4 @@
+// App: in-app updates through Sparkle.
 import Foundation
 import Sparkle
 
