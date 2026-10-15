@@ -70,6 +70,12 @@ enum Spaces {
         return DisplaySpaces(ids: ids, desktops: desktops, current: cur.flatMap { ids.firstIndex(of: $0) })
     }
 
+    /// Whether the display shows a fullscreen app's space instead of a desktop.
+    static func isFullscreen(display uuid: String) -> Bool {
+        guard let s = list(display: uuid), let cur = s.current else { return false }
+        return !s.desktops.contains(cur)
+    }
+
     private typealias WindowSpacesFn = @convention(c) (Int32, Int32, CFArray) -> Unmanaged<CFArray>?
     private static let windowSpaces: WindowSpacesFn? = symbol("SLSCopySpacesForWindows", in: skylight)
 

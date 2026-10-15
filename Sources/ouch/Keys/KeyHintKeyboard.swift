@@ -100,6 +100,7 @@ struct KeyHint: Identifiable, Equatable {
             default: return "Layout"
             }
         case "fullscreen": return "Full"
+        case "nativefullscreen": return "Max"
         case "togglefloating": return "Float"
         case "retile", "reevaluate": return "Retile"
         case "toggletiling": return "Tiling"

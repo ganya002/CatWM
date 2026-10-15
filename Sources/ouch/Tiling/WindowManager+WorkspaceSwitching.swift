@@ -68,7 +68,8 @@ extension WindowManager {
         let screens = Screen.all()
         guard let here = currentScreen() ?? screens.first else { return }
         let monitor = monitorOf[ws].flatMap { u in screens.first { $0.uuid == u } } ?? here
-        if let cur = virtualShown[monitor.uuid], cur != ws { previousWorkspace[monitor.uuid] = cur }
+        let leaving = virtualShown[monitor.uuid]
+        if let cur = leaving, cur != ws { previousWorkspace[monitor.uuid] = cur }
         monitorOf[ws] = monitor.uuid
         virtualShown[monitor.uuid] = ws
         autoSwitchAfter = Date().addingTimeInterval(0.6)
@@ -78,6 +79,7 @@ extension WindowManager {
         if !isOnHomeSpace(monitor), let home = homeSpace[monitor.uuid], let info = Spaces.list(display: monitor.uuid),
            let index = info.ids.firstIndex(of: home), let desktop = info.desktops.firstIndex(of: index) {
             guard attempts > 0 else { Log.info("workspaces: couldn't reach the home Space for \(ws)"); return }
+            stageHomeSpace(ws, replacing: leaving, on: monitor, home: home)
             CGWarpMouseCursorPosition(monitor.center) // space switching acts on the display under the pointer
             guard let steps = goToSpace(desktop + 1) else { Log.info("workspaces: can't switch Spaces for \(ws)"); return }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5 + 0.15 * Double(steps)) { [weak self] in
@@ -108,6 +110,39 @@ extension WindowManager {
             CursorRefresh.soon()
         }
         onChange?()
+    }
+
+    /// Before going back to the home Space from another macOS Space, sets the home Space up to show `ws`
+    /// while it is still out of sight: the workspace that was showing there parks, and `ws` takes its tiles.
+    /// Otherwise the Space slide shows the old workspace first, and only then swaps to `ws`.
+    private func stageHomeSpace(_ ws: String, replacing old: String?, on s: Screen, home: UInt64) {
+        guard config.virtualWorkspaces, isVirtual(ws) else { return }
+        let screens = Screen.all()
+        func onHome(_ id: CGWindowID) -> Bool { Spaces.of(window: id).contains(home) }
+        if let old, old != ws, isVirtual(old) {
+            for id in order where workspaceOf[id] == old && onHome(id) { park(id, screens: screens) }
+        }
+        // The windows a refresh would find there: not minimized, and their app not hidden.
+        let arriving = order.filter { id in
+            guard workspaceOf[id] == ws, let w = windows[id], !w.isNativeFullscreen, onHome(id),
+                  w.element.bool(kAXMinimizedAttribute) != true,
+                  NSRunningApplication(processIdentifier: w.pid)?.isHidden != true else { return false }
+            return true
+        }
+        for id in arriving where floatsFreely(id) { unpark(floating: id, screens: screens) }
+        let ids = arriving.filter { windows[$0]?.isFloating == false }
+        let st = state(workspace: ws)
+        guard tilingEnabled, !ids.isEmpty, let (raw, gap) = rawSlots(ids, on: s, st, ratio: st.ratio) else { return }
+        let slots = fitMinimums(raw, mins: ids.map { minSizes[$0] }, gap: gap)
+        var moves: [Animator.Move] = []
+        for (id, slot) in zip(ids, slots) {
+            guard let w = windows[id] else { continue }
+            let target = id == st.zoomed ? usableRect(s).pixelAligned : slot
+            targets[id] = target
+            if !w.frame.approxEqual(target) { moves.append(.init(window: w, to: target, bounds: s.visible)) }
+        }
+        animator.animate(moves, duration: 0)
+        Log.debug("workspaces: staged \(ws) on the home Space (\(arriving.count) windows, parked \(old ?? "none"))")
     }
 
     // MARK: - Moving windows between workspaces

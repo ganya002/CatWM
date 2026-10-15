@@ -94,10 +94,7 @@ final class ModeFX {
             let p = panels[id] ?? makePanel(screen)
             panels[id] = p
             // A reused panel's view still has the origin and corners of where its screen used to be.
-            if let host = p.contentView as? NSHostingView<ModeFXView> {
-                host.rootView = ModeFXView(model: model, radius: Self.topCornerRadius(screen), origin: screen.frame.origin,
-                                           notchHalfWidth: Self.notchHalfWidth(screen), notchHeight: Self.notchHeight(screen))
-            }
+            if let host = p.contentView as? NSHostingView<ModeFXView> { host.rootView = view(for: screen) }
             p.setFrame(screen.frame, display: false)
             p.orderFrontRegardless()
         }
@@ -115,10 +112,20 @@ final class ModeFX {
         p.hasShadow = false
         p.ignoresMouseEvents = true
         p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
-        p.contentView = NSHostingView(rootView: ModeFXView(model: model, radius: Self.topCornerRadius(screen),
-                                                           origin: screen.frame.origin, notchHalfWidth: Self.notchHalfWidth(screen),
-                                                           notchHeight: Self.notchHeight(screen)))
+        p.contentView = NSHostingView(rootView: view(for: screen))
         return p
+    }
+
+    /// A fullscreen app's window is square and, on a notched screen, sits below a black menu bar band.
+    /// There the border goes round the window instead of the screen and the notch.
+    private func view(for screen: NSScreen) -> ModeFXView {
+        let uuid = screen.displayID.flatMap { CGDisplayCreateUUIDFromDisplayID($0) }
+            .map { CFUUIDCreateString(nil, $0.takeRetainedValue()) as String }
+        if let uuid, Spaces.isFullscreen(display: uuid) {
+            return ModeFXView(model: model, radius: 0, origin: screen.frame.origin, topInset: screen.safeAreaInsets.top)
+        }
+        return ModeFXView(model: model, radius: Self.topCornerRadius(screen), origin: screen.frame.origin,
+                          notchHalfWidth: Self.notchHalfWidth(screen), notchHeight: Self.notchHeight(screen))
     }
 
     private typealias CornerRadiiFn = @convention(c) (CGDirectDisplayID, UnsafeMutablePointer<Double>?, UnsafeMutablePointer<Double>?,
@@ -173,12 +180,16 @@ struct ModeFXView: View {
     let origin: CGPoint
     var notchHalfWidth: CGFloat = 0
     var notchHeight: CGFloat = 0
+    /// Space at the top of the screen the effect leaves out: the black menu bar band over a fullscreen app.
+    var topInset: CGFloat = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         GeometryReader { geo in
-            effect(size: geo.size)
-                .frame(width: geo.size.width, height: geo.size.height)
+            let size = CGSize(width: geo.size.width, height: max(0, geo.size.height - topInset))
+            effect(size: size)
+                .frame(width: size.width, height: size.height)
+                .offset(y: topInset)
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)

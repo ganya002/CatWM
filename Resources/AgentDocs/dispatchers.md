@@ -12,6 +12,7 @@ Used as `bind = MODS, key, <dispatcher>, <args>` or `ouch dispatch <dispatcher> 
 | `splitratio` | `+0.05`, `-0.05`, `exact 0.6` | resize the main split |
 | `togglefloating` | | float/tile the focused window |
 | `fullscreen` | | zoom the focused window |
+| `nativefullscreen` | | macOS Full Screen (the green button) for the focused window: it gets a Space of its own and leaves the tiling until it comes back |
 | `killactive` | | close the focused window |
 | `exec` | shell command | run via `sh -c`. Keybinds only; refused from the CLI |
 | `focusmonitor` | `l r u d`, `+1`, `-1`, index | focus another display |
