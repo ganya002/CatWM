@@ -22,7 +22,6 @@ struct AmoreCredit: View {
                     .foregroundStyle(Theme.danger)
                     .scaleEffect(hovering && !reduce ? 1.25 : 1)
                     .squish(on: beats, anchor: .center)
-                    .overlay { ImpactBurst(trigger: beats, angle: -90, size: 20) }
                 Text("Amore").fontWeight(.medium)
                     .offset(y: hovering && !reduce ? -0.5 : 0)
                     .overlay(alignment: .bottom) {

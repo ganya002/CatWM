@@ -130,9 +130,6 @@ struct WelcomeView: View {
                     OButton("Allow…", variant: primary ? .primary : .secondary, size: .sm, action: action)
                 }
             }
-            .overlay(alignment: .leading) { // outlives the swap, so it sees `granted` change
-                ImpactBurst(trigger: granted, size: 16).offset(x: -10, y: -10).opacity(granted ? 1 : 0)
-            }
         }
         .frame(minHeight: 52)
         .animation(Motion.easeOut, value: granted)
@@ -435,9 +432,6 @@ struct CoachCardView: View {
         if model.done {
             let icon = Image(systemName: "checkmark.circle.fill")
                 .transition(.symbolEffect(.appear))
-                .overlay(alignment: .topLeading) {
-                    ImpactBurst(trigger: model.done, size: 14, delay: 0.05).offset(x: -8, y: -8)
-                }
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 6) {
                     icon

@@ -513,9 +513,6 @@ private struct Wordmark: View {
         Text("Ouch").font(Theme.wordmark(19))
             .rotationEffect(.degrees(model.hover && !reduceMotion ? -6 : 0), anchor: .bottomLeading)
             .squish(on: model.bumps)
-            .overlay(alignment: .topLeading) {
-                ImpactBurst(trigger: model.bumps, size: 15).offset(x: -10, y: -8)
-            }
             .animation(Motion.snap, value: model.hover)
             .onHover { model.hover = $0 }
             .onTapGesture { model.bumps += 1 }

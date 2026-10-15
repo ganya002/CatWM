@@ -116,9 +116,6 @@ private struct StatusHero: View {
                                   : s.keybindsActive ? "pause.circle.fill" : "exclamationmark.circle.fill",
                               color: live ? Theme.success : Theme.warning, size: 52)
                     .squish(on: live, when: live)
-                    .overlay(alignment: .topLeading) {
-                        ImpactBurst(trigger: live, size: 22).offset(x: -12, y: -12).opacity(live ? 1 : 0)
-                    }
                 VStack(alignment: .leading, spacing: 3) {
                     Text(!s.trusted ? "Ouch needs Accessibility access" : !s.tilingEnabled ? "Tiling is paused"
                          : s.keybindsActive ? "Ouch is running" : "Keyboard shortcuts aren't active")
@@ -424,9 +421,6 @@ private struct LayoutCell: View {
                 .padding(6)
                 .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
                     .fill(on ? Theme.accentSoft : hover.on ? Theme.wellHover : .clear))
-                .overlay(alignment: .topLeading) {
-                    ImpactBurst(trigger: on, size: 18).offset(x: -6, y: -6).opacity(on ? 1 : 0)
-                }
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -816,10 +810,8 @@ struct MotionPane: View {
     }
 
     private var preview: some View {
-        let c = doc.config
-        return GeometryReader { geo in
+        GeometryReader { geo in
             let w = geo.size.width, h = geo.size.height, flipped = ui.previewFlipped
-            let seam = flipped ? w * 0.65 - 2 : w * 0.6 - 2
             ZStack(alignment: .topLeading) {
                 RoundedRectangle(cornerRadius: 10, style: .continuous).fill(GapsPreview.wallpaper)
                 DemoWindow(app: Self.previewApps[0], main: true, corner: 5)
@@ -828,11 +820,6 @@ struct MotionPane: View {
                 DemoWindow(app: Self.previewApps[1], corner: 5)
                     .frame(width: max(1, (flipped ? w * 0.65 : w * 0.4) - 12), height: h - 16)
                     .offset(x: flipped ? 8 : w * 0.6 + 4, y: 8)
-                // The windows meet at the seam when they land.
-                ImpactBurst(trigger: flipped, angle: -90, size: 26,
-                            delay: c.animate ? c.animationDuration * c.animationCurve.arrival(bounce: c.animationBounce) : 0)
-                    .offset(x: seam - 13, y: -4)
-                    .animation(nil, value: flipped)
             }
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             .contentShape(Rectangle())
