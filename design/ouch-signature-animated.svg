@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
 <title>Ouch — signature ImpactBurst + logo</title>
-<desc>Logo from Resources/Icon/AppIcon.svg with the three yellow impact lines animated as in Sources/ouch/Theme.swift ImpactBurst (SparkLines angle -135, spread +/-40, scale 0.3-&gt;1-&gt;1.2, opacity 0-&gt;1-&gt;0). Loops every 2.4s for demo; in onboarding it fires once when WelcomeView lands.</desc>
+<desc>Logo from Resources/Icon/AppIcon.svg with the three yellow impact lines animated as in Sources/ouch/UI/Theme.swift ImpactBurst (SparkLines angle -135, spread +/-40, scale 0.3-&gt;1-&gt;1.2, opacity 0-&gt;1-&gt;0). Loops every 2.4s for demo; in onboarding it fires once when WelcomeView lands.</desc>
 <defs>
 <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a4a4f"/><stop offset="1" stop-color="#1b1b1e"/></linearGradient>
 <linearGradient id="blue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8dc3ff"/><stop offset=".45" stop-color="#3f95ff"/><stop offset="1" stop-color="#0a74ff"/></linearGradient>
