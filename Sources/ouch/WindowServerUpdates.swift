@@ -41,8 +41,7 @@ final class WindowServerUpdates {
     private var leases = 0
 
     // Injectable operations let the lifecycle probe run without touching WindowServer.
-    // An import measured 45–60 ms for the Space move alone, before any AX write. The hold must
-    // cover the move and the relayout around it, or the screen shows the import half done.
+    // An import measured 44–61 ms for the Space move alone. The watchdog leaves room for a slow move.
     init(maximumHold: Double = 0.3, disable: @escaping () -> Bool, enable: @escaping () -> Void) {
         self.maximumHold = maximumHold; self.disable = disable; self.enable = enable
     }

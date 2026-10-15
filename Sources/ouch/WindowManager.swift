@@ -426,7 +426,8 @@ final class WindowManager {
         DispatchQueue.main.asyncAfter(deadline: deadline, execute: work)
     }
 
-    func refresh(instant instantLayout: Bool = false) {
+    /// `placing` limits the frame writes to those windows; the rest keep their frames until the next refresh.
+    func refresh(instant instantLayout: Bool = false, placing only: Set<CGWindowID>? = nil) {
         refreshWork?.cancel(); refreshWork = nil
         guard isStarted else { return }
         let screens = Screen.all()
@@ -531,6 +532,7 @@ final class WindowManager {
             for (id, slot) in zip(ids, slots) {
                 let target = id == st.zoomed ? rect.pixelAligned : slot
                 targets[id] = target
+                if let only, !only.contains(id) { continue }
                 guard let w = windows[id] else { continue }
                 let snap = snapNextPlacement.remove(id) != nil
                 let current = w.frame
@@ -1547,8 +1549,7 @@ final class WindowManager {
 
     /// Hyprland's `workspace`: shows it on its display (a new one opens on the focused display)
     /// and focuses the window you last used there.
-    func showWorkspace(_ ws: String, focusing preferred: Window? = nil, focus takesFocus: Bool = true, attempts: Int = 3,
-                       instant: Bool = false) {
+    func showWorkspace(_ ws: String, focusing preferred: Window? = nil, focus takesFocus: Bool = true, attempts: Int = 3) {
         let screens = Screen.all()
         guard let here = currentScreen() ?? screens.first else { return }
         let monitor = monitorOf[ws].flatMap { u in screens.first { $0.uuid == u } } ?? here
@@ -1565,7 +1566,7 @@ final class WindowManager {
             CGWarpMouseCursorPosition(monitor.center) // space switching acts on the display under the pointer
             guard let steps = goToSpace(desktop + 1) else { Log.info("workspaces: can't switch Spaces for \(ws)"); return }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5 + 0.15 * Double(steps)) { [weak self] in
-                self?.showWorkspace(ws, focusing: preferred, attempts: attempts - 1, instant: instant)
+                self?.showWorkspace(ws, focusing: preferred, attempts: attempts - 1)
             }
             return
         }
@@ -1574,8 +1575,8 @@ final class WindowManager {
         shown[monitor.uuid] = ws
         Log.debug("workspaces: showing \(ws) on \(monitor.ns.localizedName)")
         // Quiet shows (a sort, restoring a layout) snap; a switch the user asked for slides.
-        if changed, takesFocus, !instant, let previous { beginSlide(from: previous, to: ws, on: monitor) }
-        refresh(instant: instant)
+        if changed, takesFocus, let previous { beginSlide(from: previous, to: ws, on: monitor) }
+        refresh()
         if changed, !quietWorkspaceHUD, config.enablesLayoutHUD, config.enablesLayoutHUDOnSpaceChange {
             HUD.shared.show(labels[ws].map { "\(ws) · \($0)" } ?? ws, layout: state(workspace: ws).layout, on: monitor.ns)
         }
@@ -1615,23 +1616,24 @@ final class WindowManager {
         let known = windows[w.id] != nil, from = workspaceOf[w.id], frame = w.frame
         workspaceMoves.insert(w.id)
         autoSwitchAfter = Date().addingTimeInterval(0.7)
-        let displayBatch = WindowServerUpdates.shared.begin()
-        let started = Date()
-        func release() {
-            let held = Int(Date().timeIntervalSince(started) * 1000)
-            let watchdog = Int(WindowServerUpdates.shared.maximumHold * 1000)
-            Log.info("workspaces: import of \(w.id) held the display \(held) ms\(held > watchdog ? " (watchdog let go at \(watchdog) ms)" : "")")
-            displayBatch?.finish()
-        }
-        // Lay the window out in its destination while it is still on its old Desktop, out of sight.
-        // It then arrives in its tile, instead of at its old frame on top of the other tiles.
+        // Put the window in its tile while it is still on its old Desktop, out of sight. It then
+        // arrives in its tile, instead of at its old frame on top of the other tiles. The other
+        // tiles keep their frames for now, and make room with the usual animation once it is here.
         if !known { windows[w.id] = w; order.append(w.id) }
         workspaceOf[w.id] = ws
         monitorOf[ws] = monitor.uuid
         snapNextPlacement.insert(w.id)
-        refresh(instant: true)
+        refresh(instant: true, placing: [w.id])
         animator.afterPendingWrites { [weak self] in
+            // Hold the display through the Space move only, so the animation after it is not frozen.
+            let displayBatch = WindowServerUpdates.shared.begin()
             let moveStarted = Date()
+            func release() {
+                let held = Int(Date().timeIntervalSince(moveStarted) * 1000)
+                let watchdog = Int(WindowServerUpdates.shared.maximumHold * 1000)
+                Log.info("workspaces: import of \(w.id) held the display \(held) ms\(held > watchdog ? " (watchdog let go at \(watchdog) ms)" : "")")
+                displayBatch?.finish()
+            }
             Spaces.move(window: w.id, to: home, waitUntilOnScreen: self?.isOnHomeSpace(monitor) ?? false) { [weak self] moved in
                 guard let self else { release(); return }
                 workspaceMoves.remove(w.id)
@@ -1646,14 +1648,13 @@ final class WindowManager {
                 }
                 Log.info("workspaces: moved \(w.id) to home Desktop in \(Int(Date().timeIntervalSince(moveStarted) * 1000)) ms")
                 if !known { watch(w) }
-                assignWindow(w, toWorkspace: ws, from: from, display: monitor.uuid, follow: follow, instant: true)
-                animator.afterPendingWrites { release() }
+                release()
+                assignWindow(w, toWorkspace: ws, from: from, display: monitor.uuid, follow: follow)
             }
         }
     }
 
-    private func assignWindow(_ w: Window, toWorkspace ws: String, from: String?, display: String, follow: Bool,
-                              instant: Bool = false) {
+    private func assignWindow(_ w: Window, toWorkspace ws: String, from: String?, display: String, follow: Bool) {
         if windows[w.id] == nil {
             windows[w.id] = w
             order.append(w.id)
@@ -1665,10 +1666,10 @@ final class WindowManager {
         if let from, lastFocused[from] == w.id { lastFocused[from] = nil }
         corrections[w.id] = nil
         if follow {
-            showWorkspace(ws, focusing: w, instant: instant)
+            showWorkspace(ws, focusing: w)
         } else {
             autoSwitchAfter = Date().addingTimeInterval(0.6)
-            refresh(instant: instant)
+            refresh()
             guard isShown(from) else { return } // importing a background window keeps the current focus
             if let next = order.first(where: { workspaceOf[$0] == from && visible.contains($0) }).flatMap({ windows[$0] }) {
                 focus(next)
