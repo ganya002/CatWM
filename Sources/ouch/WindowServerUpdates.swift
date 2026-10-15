@@ -36,12 +36,14 @@ final class WindowServerUpdates {
     private let lock = NSLock()
     private let disable: () -> Bool
     private let enable: () -> Void
-    private let maximumHold: Double
+    let maximumHold: Double
     private var generation = 0
     private var leases = 0
 
     // Injectable operations let the lifecycle probe run without touching WindowServer.
-    init(maximumHold: Double = 0.12, disable: @escaping () -> Bool, enable: @escaping () -> Void) {
+    // An import measured 45–60 ms for the Space move alone, before any AX write. The hold must
+    // cover the move and the relayout around it, or the screen shows the import half done.
+    init(maximumHold: Double = 0.3, disable: @escaping () -> Bool, enable: @escaping () -> Void) {
         self.maximumHold = maximumHold; self.disable = disable; self.enable = enable
     }
 

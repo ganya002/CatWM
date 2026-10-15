@@ -472,6 +472,8 @@ final class WindowManager {
                 present.insert(id)
             }
         }
+        // An import in progress already belongs to its destination workspace (see `moveWindow`).
+        present.formUnion(workspaceMoves.filter { windows[$0] != nil })
 
         // Front-most first, so on launch the window you were using becomes main.
         let z = Dictionary(onScreen.enumerated().map { ($1.id, $0) }, uniquingKeysWith: { a, _ in a })
@@ -1607,31 +1609,51 @@ final class WindowManager {
               let home = homeSpace[monitor.uuid], let info = Spaces.list(display: monitor.uuid),
               info.desktops.contains(where: { info.ids[$0] == home }), !w.isNativeFullscreen else { return }
         if Spaces.of(window: w.id) == [home] {
-            assignWindow(w, toWorkspace: ws, display: monitor.uuid, follow: follow)
+            assignWindow(w, toWorkspace: ws, from: workspaceOf[w.id], display: monitor.uuid, follow: follow)
             return
         }
+        let known = windows[w.id] != nil, from = workspaceOf[w.id], frame = w.frame
         workspaceMoves.insert(w.id)
         autoSwitchAfter = Date().addingTimeInterval(0.7)
         let displayBatch = WindowServerUpdates.shared.begin()
         let started = Date()
-        Spaces.move(window: w.id, to: home, waitUntilOnScreen: isOnHomeSpace(monitor)) { [weak self] moved in
-            guard let self else { displayBatch?.finish(); return }
-            workspaceMoves.remove(w.id)
-            guard moved, w.isValid, config.virtualWorkspaces, homeSpace[monitor.uuid] == home else {
-                Log.info("workspaces: direct move of \(w.id) to \(home) failed")
-                HUD.shared.show("macOS couldn't move this window", on: monitor.ns)
-                displayBatch?.finish()
-                return
+        func release() {
+            let held = Int(Date().timeIntervalSince(started) * 1000)
+            let watchdog = Int(WindowServerUpdates.shared.maximumHold * 1000)
+            Log.info("workspaces: import of \(w.id) held the display \(held) ms\(held > watchdog ? " (watchdog let go at \(watchdog) ms)" : "")")
+            displayBatch?.finish()
+        }
+        // Lay the window out in its destination while it is still on its old Desktop, out of sight.
+        // It then arrives in its tile, instead of at its old frame on top of the other tiles.
+        if !known { windows[w.id] = w; order.append(w.id) }
+        workspaceOf[w.id] = ws
+        monitorOf[ws] = monitor.uuid
+        snapNextPlacement.insert(w.id)
+        refresh(instant: true)
+        animator.afterPendingWrites { [weak self] in
+            let moveStarted = Date()
+            Spaces.move(window: w.id, to: home, waitUntilOnScreen: self?.isOnHomeSpace(monitor) ?? false) { [weak self] moved in
+                guard let self else { release(); return }
+                workspaceMoves.remove(w.id)
+                guard moved, w.isValid, config.virtualWorkspaces, homeSpace[monitor.uuid] == home else {
+                    Log.info("workspaces: direct move of \(w.id) to \(home) failed")
+                    HUD.shared.show("macOS couldn't move this window", on: monitor.ns)
+                    if known { workspaceOf[w.id] = from } else { forget(w.id) }
+                    if w.isValid, !frame.isNull { w.setFrame(frame) }
+                    refresh()
+                    release()
+                    return
+                }
+                Log.info("workspaces: moved \(w.id) to home Desktop in \(Int(Date().timeIntervalSince(moveStarted) * 1000)) ms")
+                if !known { watch(w) }
+                assignWindow(w, toWorkspace: ws, from: from, display: monitor.uuid, follow: follow, instant: true)
+                animator.afterPendingWrites { release() }
             }
-            Log.info("workspaces: moved \(w.id) to home Desktop in \(Int(Date().timeIntervalSince(started) * 1000)) ms")
-            snapNextPlacement.insert(w.id)
-            assignWindow(w, toWorkspace: ws, display: monitor.uuid, follow: follow, instant: true)
-            animator.afterPendingWrites { displayBatch?.finish() }
         }
     }
 
-    private func assignWindow(_ w: Window, toWorkspace ws: String, display: String, follow: Bool, instant: Bool = false) {
-        let from = workspaceOf[w.id]
+    private func assignWindow(_ w: Window, toWorkspace ws: String, from: String?, display: String, follow: Bool,
+                              instant: Bool = false) {
         if windows[w.id] == nil {
             windows[w.id] = w
             order.append(w.id)
