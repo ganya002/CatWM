@@ -139,9 +139,9 @@ struct WelcomeView: View {
 
     private var keys: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Pick your keys").font(Theme.display(40)).tracking(-1).oneLine()
+            Text("Ouch shortcut guide").font(Theme.display(40)).tracking(-1).oneLine()
                 .padding(.top, 2).padding(.bottom, 8)
-            Text("They only work in window mode, so typing is never affected. Change them later in Configs.")
+            Text("Like Vim, Photoshop or Blender, it takes some time to learn. Then you work faster.")
                 .font(Theme.body(13.5)).lineSpacing(2).foregroundStyle(Theme.inkMuted)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.bottom, 22)
@@ -156,8 +156,8 @@ struct WelcomeView: View {
             HStack(spacing: 8) {
                 dots(1)
                 Spacer(minLength: 0)
-                OButton("Skip tour", variant: .ghost, action: model.skip)
-                OButton("Start the tour", variant: .primary, size: .lg, shortcut: ["↩"], action: model.start)
+                OButton("Skip", variant: .ghost, action: model.skip)
+                OButton("Learn", variant: .primary, size: .lg, shortcut: ["↩"], action: model.start)
                     .keyboardShortcut(model.page == .keys ? .defaultAction : nil)
             }
         }
@@ -278,7 +278,6 @@ private let hyprlandBlue = Color(red: 0x33 / 255, green: 0xCC / 255, blue: 1)
 
 final class CoachModel: ObservableObject {
     enum Caret: Equatable { case none, up(CGFloat), down }
-    @Published var kicker = ""
     @Published var title = ""
     @Published var text = ""
     @Published var caps: [String] = []
@@ -286,7 +285,6 @@ final class CoachModel: ObservableObject {
     @Published var capsDone: [Bool] = []
     @Published var pressed = false
     @Published var done = false
-    @Published var doneText = "Nice"
     /// A recall drill: the keys hide behind a hint until asked for.
     @Published var recall = false
     @Published var hidden = false
@@ -315,19 +313,11 @@ struct CoachCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // head: lead symbol, kicker, Skip or Pause
+            // head: lead symbol, Skip or Pause
             HStack(spacing: 8) {
                 Image(systemName: model.final ? "checkmark.circle.fill" : model.recall ? "brain" : "keyboard")
                     .font(.system(size: 13, weight: .medium))
                     .contentTransition(.symbolEffect(.replace))
-                // The count never truncates; a long chapter name gives way first.
-                let parts = model.kicker.components(separatedBy: " · ")
-                HStack(spacing: 0) {
-                    Text(parts[0]).kicker(Theme.onAccent).oneLine().fixedSize()
-                    if parts.count > 1 {
-                        Text(" · " + parts.dropFirst().joined(separator: " · ")).kicker(Theme.onAccent).opacity(0.75).oneLine()
-                    }
-                }
                 Spacer(minLength: 8)
                 if model.canHead {
                     // The Surface head's close slot: Skip (×) or Pause, named in the tooltip.
@@ -397,7 +387,8 @@ struct CoachCardView: View {
                 Button(action: model.tryKeys) { caps.fixedSize().contentShape(Rectangle()) }
                     .buttonStyle(.plain)
                     .tooltip("Press the keys, or click them.")
-                status
+                // A step with a button only shows its keys; the button moves on.
+                if model.button == nil { status }
             }
         }
     }
@@ -430,17 +421,10 @@ struct CoachCardView: View {
     /// shows (with the words as its tooltip) rather than a truncated "Pre…".
     @ViewBuilder private var status: some View {
         if model.done {
-            let icon = Image(systemName: "checkmark.circle.fill")
+            Image(systemName: "checkmark.circle.fill")
                 .transition(.symbolEffect(.appear))
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 6) {
-                    icon
-                    Text(model.doneText).font(Theme.body(13.5, .medium)).oneLine().fixedSize()
-                }
-                icon
-            }
-            .tooltip(model.doneText)
-            .transition(.opacity.combined(with: .scale(scale: 0.8)))
+                .accessibilityLabel("Done")
+                .transition(.opacity.combined(with: .scale(scale: 0.8)))
         } else {
             let icon = Image(systemName: "cursorarrow.rays").symbolEffect(.pulse)
             ViewThatFits(in: .horizontal) {
