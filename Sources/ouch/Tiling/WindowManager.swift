@@ -168,6 +168,7 @@ final class WindowManager {
         Hotkeys.shared.onSubmapChange = { [weak self] name in
             Log.debug("mode: \(name.isEmpty ? "reset" : name)")
             ModeFX.shared.setActive(!name.isEmpty)
+            ModeCursor.shared.setActive(!name.isEmpty)
             KeyHelp.shared.modeChanged(name)
             CursorActions.shared.modeChanged(name)
             Tips.shared.modeChanged(name)
