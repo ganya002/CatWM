@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var watchdogTicks = 0
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        closePreviousInstances()
         migrateLegacyDefaults()
         Theme.registerFonts()
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -46,6 +47,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         updateIcon()
         // Permission can be granted later, or silently revoked (a rebuild changes the signature).
         watchdog = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in self?.checkPermission() }
+    }
+
+    /// The newest Ouch wins: any other copy (same bundle ID, or same executable for unbundled dev
+    /// builds) is asked to quit, then force-quit after a short wait. Waiting matters because the old
+    /// copy puts parked windows back on exit, which must finish before this one reads window state.
+    private func closePreviousInstances() {
+        let me = ProcessInfo.processInfo.processIdentifier
+        let myExe = Bundle.main.executableURL?.resolvingSymlinksInPath()
+        let others = NSWorkspace.shared.runningApplications.filter { app in
+            guard app.processIdentifier != me, !app.isTerminated else { return false }
+            if let id = Bundle.main.bundleIdentifier, app.bundleIdentifier == id { return true }
+            return myExe != nil && app.executableURL?.resolvingSymlinksInPath() == myExe
+        }
+        guard !others.isEmpty else { return }
+        Log.info("launch: closing \(others.count) previous instance(s)")
+        others.forEach { $0.terminate() }
+        let deadline = Date().addingTimeInterval(3)
+        while others.contains(where: { !$0.isTerminated }) && Date() < deadline {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+        }
+        for app in others where !app.isTerminated {
+            Log.info("launch: force-quitting previous instance \(app.processIdentifier)")
+            app.forceTerminate()
+        }
     }
 
     /// The app used to be called Hyprthyst (bundle ID local.hyprthyst). Copies its saved workspace
