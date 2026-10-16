@@ -18,11 +18,16 @@ extension WindowManager {
     /// Focus follows mouse fires once the pointer rests for a moment, so sweeping across several
     /// windows doesn't raise each one, and the window under the final position always gets focus.
     func mouseMoved() {
-        guard config.focusFollowsMouse else { return }
+        guard focusFollowsMouseNow else { return }
         ffmWork?.cancel()
         let work = DispatchWorkItem { [weak self] in self?.focusUnderMouse() }
         ffmWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.06, execute: work)
+    }
+
+    /// Focus follows mouse is on, and, with the mode-only option, window mode is on too.
+    private var focusFollowsMouseNow: Bool {
+        config.focusFollowsMouse && (!config.focusFollowsMouseInModeOnly || !Hotkeys.shared.submap.isEmpty)
     }
 
     func noteFocus(_ id: CGWindowID) {
@@ -31,7 +36,7 @@ extension WindowManager {
     }
 
     private func focusUnderMouse() {
-        guard config.focusFollowsMouse, !sortSession, Date() > ignoreMouseUntil, NSEvent.pressedMouseButtons == 0, !movingToSpace else { return }
+        guard focusFollowsMouseNow, !sortSession, Date() > ignoreMouseUntil, NSEvent.pressedMouseButtons == 0, !movingToSpace else { return }
         let p = mouseLocation()
         guard let hit = CGWindowInfo.normalWindow(at: p), let w = windows[hit.id], visible.contains(w.id),
               focusedWindow()?.id != w.id else { return }
