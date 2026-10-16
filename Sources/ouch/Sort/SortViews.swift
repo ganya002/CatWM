@@ -85,7 +85,7 @@ struct SortView: View {
                             .tileItem(model.shown, style: model.motion,
                                       spread: CGSize(width: -CGFloat(i) * (SortMetrics.lane + 4), height: 0))
                     }
-                    SortAddLane(model: model, plan: plan)
+                    SortAddLane(model: model, plan: plan, rows: rows)
                         .tileItem(model.shown, style: model.motion,
                                   spread: CGSize(width: -CGFloat(plan.lanes.count) * (SortMetrics.lane + 4), height: 0))
                 }
@@ -387,15 +387,19 @@ private struct SortRemoveButton: View {
 }
 
 /// The column after the last workspace: same size, an empty preview, and the layout new ones start with.
+/// It is as tall as the workspace columns beside it, and all of it takes a dropped window or workspace.
 private struct SortAddLane: View {
     @ObservedObject var model: SortModel
     let plan: SortPlan
+    let rows: Int
     @StateObject private var hover = Flag()
 
     var body: some View {
         let next = model.nextName
         let full = next == nil
-        let over = model.over == .add || (hover.on && !full)
+        let drop = model.over == .add
+        let over = drop || (hover.on && !full)
+        let box = RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
         VStack(alignment: .leading, spacing: 8) {
             Button { withAnimation(Motion.easeOut) { _ = model.addLane(focus: true) } } label: {
                 VStack(alignment: .leading, spacing: 8) {
@@ -406,10 +410,15 @@ private struct SortAddLane: View {
                     }
                     .foregroundStyle(hover.on && !full ? Theme.ink : Theme.inkMuted)
                     .padding(.horizontal, 4)
-                    RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
-                        .strokeBorder(over ? Theme.accent : Theme.borderControl, style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
-                        .opacity(over ? 1 : 0.6)
-                        .aspectRatio(16 / 10, contentMode: .fit)
+                    ZStack {
+                        box.fill(drop ? Theme.accentSoft : .clear)
+                        box.strokeBorder(over ? Theme.accent : Theme.borderControl, style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                            .opacity(over ? 1 : 0.6)
+                        if drop {
+                            Image(systemName: "plus").font(.system(size: 20, weight: .regular)).foregroundStyle(Theme.accentInk)
+                        }
+                    }
+                    .aspectRatio(16 / 10, contentMode: .fit)
                         .padding(.horizontal, 4)
                 }
                 .contentShape(Rectangle())
@@ -420,10 +429,12 @@ private struct SortAddLane: View {
             .accessibilityLabel("Add workspace \(next ?? "")")
             SortLayoutPill(layout: model.nextLayout, next: { model.cycleNextLayout() }, previous: { model.cycleNextLayout(by: -1) })
                 .padding(.leading, 4)
+            Color.clear.frame(height: CGFloat(rows) * SortMetrics.rowHeight)
         }
         .padding(.vertical, 8).padding(.horizontal, 4)
         .frame(width: SortMetrics.lane, alignment: .topLeading)
         .background(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous).fill(over ? Theme.accentSoft : .clear))
+        .overlay { if drop { RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous).strokeBorder(Theme.accent, lineWidth: 1.5) } }
         .opacity(full ? 0.45 : 1)
         .animation(.easeOut(duration: Theme.medium), value: over)
         .zone(.add)
