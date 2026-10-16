@@ -98,13 +98,13 @@ Each entry gives the design intent. The Swift type is in brackets.
 
 **Kbd** [`Kbd`]. Keycaps for a shortcut, a chord or a sequence. Small keycaps (20 pt) go in tooltips, labels and buttons. Menu rows use plain `kbd` text. Large keycaps (40 pt) go only in coach marks, where the real key press sinks them 2 pt. Order modifiers the macOS way: control, option, shift, command, then the key.
 
-**Tooltip** [`OTooltip`, `Tooltip`]. The smallest surface (`xs`). One short phrase in sentence case, with no full stop. Never a button inside. Every icon-only button gets one. Height 28 pt. A shortcut is one chord at most. It points at its target with a small caret.
+**Tooltip** [`OTooltip`, `Tooltip`]. The smallest surface (`xs`). One short phrase in sentence case, with no full stop. Never a button inside. Every icon-only button gets one. A shortcut is one chord at most. It points at its target with a small caret.
 
 **Menu** [`Popup`, `OMenuRow`, `OMenuButton`, `OMenuPicker`]. A dropdown with groups, checks, radios, switches, inline controls and nested submenus, with type-to-search.
 - Nest one level, two at most. Put the current choice of a radio group in the parent row's value.
 - Every actionable row shows its shortcut.
 - Give hidden aliases to commands that live inside a custom control, so search still finds them.
-- Hover opens a submenu after 100 ms, with a 180 ms grace period. Arrow keys, return and escape work. Typing focuses search.
+- Arrow keys, return and escape work. Typing focuses search.
 
 **Command menu**. A menu that opens with the search field first, 360 pt wide. Results group under their top-level parent and show the rest of the path as a breadcrumb. It shares its data with the menu so the two never disagree.
 
@@ -141,7 +141,7 @@ Use SF Symbols only, at the weight of the text, in hierarchical rendering. Use t
 
 ## Motion
 
-Two curves: `Motion.easeOut` for things that appear, `Motion.spring` for things that move under the hand (switch and slider thumbs, segmented thumbs, the HUD, keycaps). Direct manipulation follows the pointer exactly, then springs. Durations: `Theme.fast` 120 ms, `Theme.medium` 180 ms, `Theme.slow` 280 ms. Menus fade and scale from 0.97. Submenus slide 4 pt from their parent.
+Two curves: `Motion.easeOut` for things that appear, `Motion.spring` for things that move under the hand (switch and slider thumbs, segmented thumbs, the HUD, keycaps). Direct manipulation follows the pointer exactly, then springs. Durations: `Theme.fast` 120 ms, `Theme.medium` 180 ms, `Theme.slow` 280 ms.
 
 ## Voice
 
