@@ -1,8 +1,6 @@
 import AppKit
 import SwiftUI
 
-
-
 struct MenuItem: Identifiable {
     enum Kind { case action, check, radio, sub, label, separator, essentials, workspaces, layoutPicker, attention, footer }
 
@@ -68,7 +66,6 @@ struct ShortcutIndex {
     }
 }
 
-
 final class MenuModel: ObservableObject {
     @Published var items: [MenuItem] = []
     @Published var query = "" {
@@ -89,7 +86,6 @@ final class MenuModel: ObservableObject {
     private var trimWork: DispatchWorkItem?
     private var trimLevel = 0
 
-
     func rebuild() {
         items = source()
     }
@@ -106,14 +102,15 @@ final class MenuModel: ObservableObject {
     static func build() -> [MenuItem] {
         let wm = WindowManager.shared
         let keys = ShortcutIndex()
-        let trusted = AXIsProcessTrusted() && wm.isStarted
+        let axGranted = Permission.accessibility.isGranted
+        let trusted = axGranted && wm.isStarted
         let state = wm.menuBarState()
         let layout = state?.layout
         var out: [MenuItem] = []
 
-        if !AXIsProcessTrusted() {
+        if !axGranted {
             out.append(MenuItem(id: "attention", kind: .attention, label: "Ouch needs Accessibility", keywords: "permission grant",
-                                action: { Permissions.request() }))
+                                action: { Permission.accessibility.request() }))
         }
 
         out.append(MenuItem(id: "tiling", kind: .check, label: "Tiling", symbol: "rectangle.split.3x1", shortcut: keys.keys("toggletiling"),
@@ -191,7 +188,6 @@ final class MenuModel: ObservableObject {
         return out
     }
 
-
     func item(_ id: String, in list: [MenuItem]? = nil) -> MenuItem? {
         for i in list ?? items {
             if i.id == id { return i }
@@ -228,7 +224,6 @@ final class MenuModel: ObservableObject {
         walk(items, [])
         return out
     }
-
 
     func hover(_ item: MenuItem, level: Int) {
         guard item.selectable else { return }
@@ -269,7 +264,6 @@ final class MenuModel: ObservableObject {
         withAnimation(Motion.easeOut) { path = Array(path.prefix(level)) }
         for l in highlight.keys where l > level { highlight[l] = nil }
     }
-
 
     var keyLevel: Int { query.isEmpty ? min(path.count, highlight.keys.filter { highlight[$0] != nil }.max() ?? 0) : 0 }
 
@@ -326,14 +320,13 @@ final class MenuModel: ObservableObject {
     }
 }
 
-
 final class StatusMenu: NSObject, NSWindowDelegate {
     static let shared = StatusMenu()
 
     weak var button: NSStatusBarButton?
     let model = MenuModel()
-    private var panel: MenuPanel?
-    private var monitors: [Any] = []
+    private var panel: OuchPanel?
+    private let dismiss = DismissMonitor()
     private static let margin: CGFloat = 26
 
     var isOpen: Bool { panel?.isVisible == true }
@@ -360,7 +353,7 @@ final class StatusMenu: NSObject, NSWindowDelegate {
 
         let p = panel ?? makePanel()
         panel = p
-        p.contentView = NSHostingView(rootView: MenuRoot(model: model, rootX: rootX, top: m / 4,
+        p.contentView = OuchHostingView(rootView: MenuRoot(model: model, rootX: rootX, top: m / 4,
                                                          size: frame.size))
         p.setFrame(frame, display: true)
         p.makeKeyAndOrderFront(nil)
@@ -371,7 +364,7 @@ final class StatusMenu: NSObject, NSWindowDelegate {
 
     func close() {
         guard let panel, panel.isVisible else { return }
-        removeMonitors()
+        dismiss.stop()
         button?.highlight(false)
         NSAnimationContext.runAnimationGroup({ ctx in
             ctx.duration = 0.12
@@ -386,15 +379,9 @@ final class StatusMenu: NSObject, NSWindowDelegate {
 
     func refreshIfOpen() { if isOpen { model.refresh() } }
 
-    private func makePanel() -> MenuPanel {
-        let p = MenuPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        p.level = .popUpMenu
-        p.isOpaque = false
-        p.backgroundColor = .clear
-        p.hasShadow = false
-        p.isReleasedWhenClosed = false
-        p.hidesOnDeactivate = false
-        p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle, .transient]
+    private func makePanel() -> OuchPanel {
+        let p = OuchPanel(role: .menu)
+        p.onClose = { [weak self] in self?.close() }
         p.delegate = self
         return p
     }
@@ -402,24 +389,12 @@ final class StatusMenu: NSObject, NSWindowDelegate {
     func windowDidResignKey(_ notification: Notification) { close() }
 
     private func installMonitors() {
-        removeMonitors()
-        if let m = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown], handler: { [weak self] _ in
-            self?.close()
-        }) { monitors.append(m) }
-        if let m = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown], handler: { [weak self] e in
-            guard let self else { return e }
-            if e.window !== self.panel && e.window !== self.button?.window { self.close() }
-            return e
-        }) { monitors.append(m) }
-        if let m = NSEvent.addLocalMonitorForEvents(matching: .keyDown, handler: { [weak self] e in
-            guard let self, self.panel?.isKeyWindow == true else { return e }
-            return self.key(e) ? nil : e
-        }) { monitors.append(m) }
-    }
-
-    private func removeMonitors() {
-        monitors.forEach(NSEvent.removeMonitor)
-        monitors = []
+        dismiss.start(keeps: { [weak self] w in w === self?.panel || w === self?.button?.window },
+                      key: { [weak self] e in
+                          guard let self, panel?.isKeyWindow == true else { return false }
+                          return key(e)
+                      },
+                      close: { [weak self] in self?.close() })
     }
 
     private func key(_ e: NSEvent) -> Bool {
@@ -440,12 +415,6 @@ final class StatusMenu: NSObject, NSWindowDelegate {
         return true
     }
 }
-
-final class MenuPanel: NSPanel {
-    override var canBecomeKey: Bool { true }
-    override var canBecomeMain: Bool { false }
-}
-
 
 private struct RowFrameKey: PreferenceKey {
     static var defaultValue: [String: CGRect] = [:]
@@ -648,57 +617,48 @@ private struct MenuRowView: View {
     var body: some View {
         let hi = model.highlight[level] == item.id
         let open = model.path.count > level && model.path[level] == item.id
-        let fg: Color = item.danger ? Theme.danger : Theme.ink
         let muted: Color = Theme.inkMuted
-        Button {
+        OMenuRow(highlighted: hi, open: open, danger: item.danger) {
             if item.kind == .sub {
                 withAnimation(Motion.easeOut) { model.path = Array(model.path.prefix(level)) + [item.id] }
             } else {
                 if item.rotates { spins.on.toggle() }
                 model.run(item)
             }
+        } lead: {
+            lead(hi: hi, muted: muted)
         } label: {
-            HStack(spacing: 10) {
-                lead(hi: hi, muted: muted)
-                    .frame(width: 16)
-                if item.kind == .footer {
-                    Text("Ouch \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "")")
-                        .font(Theme.body(12)).foregroundStyle(muted).oneLine()
-                    Spacer(minLength: 4)
-                    Image(systemName: "power").font(.system(size: 11, weight: .medium)).foregroundStyle(muted)
-                    Text(item.label).font(Theme.body(12.5)).foregroundStyle(fg).oneLine()
-                } else {
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(item.label).foregroundStyle(fg).oneLine().layoutPriority(1)
-                        if let crumb, !crumb.isEmpty {
-                            Text(crumb).font(Theme.body(12)).foregroundStyle(muted).oneLine()
-                        } else if let value = item.value {
-                            Text(value).font(Theme.body(12.5)).foregroundStyle(muted).oneLine()
-                        }
+            if item.kind == .footer {
+                Text("Ouch \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "")")
+                    .textStyle(.caption).foregroundStyle(muted).oneLine()
+            } else {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(item.label).oneLine().layoutPriority(1)
+                    if let crumb, !crumb.isEmpty {
+                        Text(crumb).textStyle(.caption).foregroundStyle(muted).oneLine()
+                    } else if let value = item.value {
+                        Text(value).font(Theme.body(12.5)).foregroundStyle(muted).oneLine()
                     }
-                    .layoutPriority(1)
-                    Spacer(minLength: 6)
                 }
-                if let n = item.badge {
-                    Text("\(n)").font(Theme.body(12, .medium)).monospacedDigit()
-                        .foregroundStyle(Theme.accentInk)
-                        .padding(.horizontal, 7).frame(height: 18)
-                        .background(Capsule().fill(Theme.accentSoft))
-                }
-                if item.kind == .sub && crumb == nil {
-                    Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold)).foregroundStyle(muted)
-                } else if !item.shortcut.isEmpty {
-                    Text(item.shortcut.joined()).font(Theme.keys(13)).tracking(1).foregroundStyle(muted).oneLine().fixedSize()
-                }
+                .layoutPriority(1)
             }
-            .font(Theme.body(13.5))
-            .padding(.horizontal, 10)
-            .frame(height: Theme.rowHeight)
-            .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
-                .fill(hi ? (item.danger ? Theme.dangerSoft : Theme.hover) : open ? Theme.wellHover : .clear))
-            .contentShape(Rectangle())
+        } trailing: {
+            if item.kind == .footer {
+                Image(systemName: "power").font(Theme.symbol(Theme.Icon.sm)).foregroundStyle(muted)
+                Text(item.label).font(Theme.body(12.5)).oneLine()
+            }
+            if let n = item.badge {
+                Text("\(n)").font(Theme.body(12, .medium)).monospacedDigit()
+                    .foregroundStyle(Theme.accentInk)
+                    .padding(.horizontal, 7).frame(height: 18)
+                    .background(Capsule().fill(Theme.accentSoft))
+            }
+            if item.kind == .sub && crumb == nil {
+                Image(systemName: "chevron.right").font(Theme.symbol(10, .semibold)).foregroundStyle(muted)
+            } else if !item.shortcut.isEmpty {
+                Text(item.shortcut.joined()).font(Theme.keys(13)).tracking(1).foregroundStyle(muted).oneLine().fixedSize()
+            }
         }
-        .buttonStyle(.plain)
         .disabled(!item.enabled)
         .opacity(item.enabled ? 1 : 0.45)
         .onHover { if $0 { model.hover(item, level: level) } else { model.unhover(item, level: level) } }
@@ -712,7 +672,7 @@ private struct MenuRowView: View {
     @ViewBuilder private func lead(hi: Bool, muted: Color) -> some View {
         switch item.kind {
         case .check:
-            Image(systemName: "checkmark").font(.system(size: 11, weight: .bold))
+            Image(systemName: "checkmark").font(Theme.symbol(Theme.Icon.sm, .bold))
                 .foregroundStyle(Theme.accentInk)
                 .opacity(item.checked ? 1 : 0)
                 .drawOnEffect(isActive: item.checked)
@@ -724,7 +684,7 @@ private struct MenuRowView: View {
             if let image = item.image {
                 Image(nsImage: image).resizable().interpolation(.high).frame(width: 16, height: 16)
             } else if let symbol = item.symbol {
-                let image = Image(systemName: symbol).font(.system(size: 13, weight: .medium)).foregroundStyle(muted)
+                let image = Image(systemName: symbol).font(Theme.symbol()).foregroundStyle(muted)
                 Group { if item.rotates { image.rotateEffect(value: spins.on) } else { image } }
                     .overlay(alignment: .topTrailing) { if item.dot { NotificationDot().offset(x: 3, y: -2) } }
             }

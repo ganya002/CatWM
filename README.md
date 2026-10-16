@@ -70,7 +70,7 @@ Each release (the build number is stamped from the commit count, so only `CFBund
 
 ```sh
 ./release.sh "What changed"                      # build, sign, notarize, publish
-./release.sh "Try this first" --channel beta     # beta channel (Settings → General → Advanced → Include beta releases)
+./release.sh "Try this first" --channel beta     # beta channel (Settings → General → Updates → Include beta releases)
 ./release.sh "Security fix" --critical           # prompts users to update right away
 ./release.sh "Big change" --phased-rollout       # gradual rollout
 ./release.sh "WIP" --draft                       # upload without publishing

@@ -19,6 +19,12 @@ final class ScreenState {
     var mainCount = 1
     var zoomed: CGWindowID?
     init(layout: Layout) { self.layout = layout }
+
+    func copy() -> ScreenState {
+        let c = ScreenState(layout: layout)
+        c.ratio = ratio; c.mainCount = mainCount; c.zoomed = zoomed
+        return c
+    }
 }
 
 let ipcNotification = Notification.Name("local.ouch.command")
@@ -43,19 +49,26 @@ final class WindowManager {
     var practice: (pid: pid_t, workspaces: [String: String])?
 
     var windows: [CGWindowID: Window] = [:]
-    var order: [CGWindowID] = []
-    var workspaceOf: [CGWindowID: String] = [:]
-    var monitorOf: [String: String] = [:]
-    var shown: [String: String] = [:]
-    var virtualShown: [String: String] = [:]
+    var model = WorkspaceModel()
+    var workspaceOf: [CGWindowID: String] { model.workspaceOf }
+    var order: [CGWindowID] { get { model.order } set { model.order = newValue } _modify { yield &model.order } }
+    var monitorOf: [String: String] { get { model.monitorOf } set { model.monitorOf = newValue } _modify { yield &model.monitorOf } }
+    var shown: [String: String] { get { model.shown } set { model.shown = newValue } _modify { yield &model.shown } }
+    var virtualShown: [String: String] {
+        get { model.virtualShown } set { model.virtualShown = newValue } _modify { yield &model.virtualShown }
+    }
+    var states: [String: ScreenState] { get { model.states } set { model.states = newValue } _modify { yield &model.states } }
+    var lastFocused: [String: CGWindowID] {
+        get { model.lastFocused } set { model.lastFocused = newValue } _modify { yield &model.lastFocused }
+    }
+    var focusStamps: [CGWindowID: Int] { model.focusStamps }
+    var focusClock: Int { model.focusClock }
+    var focusOrder: [CGWindowID] { model.focusOrder }
     var homeSpace: [String: UInt64] = [:]
     var displayOf: [CGWindowID: String] = [:]
     var workspaceMoves: Set<CGWindowID> = []
     var snapNextPlacement: Set<CGWindowID> = []
     var present: Set<CGWindowID> = []
-    var lastFocused: [String: CGWindowID] = [:]
-    var focusStamps: [CGWindowID: Int] = [:]
-    var focusClock = 0
     var pendingFocus: (id: CGWindowID, until: Date)?
     var refocusAfterClose: String?
     var lastClose = Date.distantPast
@@ -65,7 +78,6 @@ final class WindowManager {
     var savedFloating: [CGWindowID: Bool] = [:]
     var previousWorkspace: [String: String] = [:]
     var labels: [String: String] = [:]
-    var focusOrder: [CGWindowID] = []
     var sortSnapshot: SortSnapshot?
     var closingNow: Set<CGWindowID> = []
     var closingApps: Set<pid_t> = []
@@ -85,7 +97,6 @@ final class WindowManager {
     var focusSink: NSWindow?
     var visible: Set<CGWindowID> = []
     var targets: [CGWindowID: CGRect] = [:]
-    var states: [String: ScreenState] = [:]
     var observers: [pid_t: AXObserver] = [:]
     var corrections: [CGWindowID: (target: CGRect, count: Int)] = [:]
     var drags: [CGWindowID: Bool] = [:]
@@ -104,13 +115,12 @@ final class WindowManager {
     private let dockWindowPull = DockWindowPull()
     let dockArea = DockArea()
 
-
     func start() {
         guard !isStarted else { return }
         isStarted = true
         loadWorkspaces()
         Log.verbose = config.debugLogging || Log.verboseLaunch
-        Log.info("start: trusted=\(AXIsProcessTrusted()) windowServerFocus=\(WindowServerFocus.isAvailable) screens=\(Screen.all().count)")
+        Log.info("start: trusted=\(Permission.accessibility.isGranted) windowServerFocus=\(WindowServerFocus.isAvailable) screens=\(Screen.all().count)")
         config.errors.forEach { Log.info("config: \($0)") }
         AXUIElementSetMessagingTimeout(AXUIElementCreateSystemWide(), 1.0)
         animator.onMinimumSize = { [weak self] id, size in self?.learnMinimum(id, size) }
@@ -195,7 +205,7 @@ final class WindowManager {
         config = Config.load()
         if wasVirtual != config.virtualWorkspaces {
             if wasVirtual { restoreHiddenWindows() }
-            workspaceOf = [:]; monitorOf = [:]; shown = [:]; virtualShown = [:]; states = [:]; lastFocused = [:]
+            model.resetWorkspaces()
             labels = [:]; sortSnapshot = nil; closingNow = []; closingApps = []
             SortPanel.shared.abandon()
             Log.info("workspaces: \(config.virtualWorkspaces ? "Ouch workspaces" : "macOS Spaces")")
@@ -225,7 +235,6 @@ final class WindowManager {
         guard let s = currentScreen() else { return "" }
         return state(for: s).layout.title
     }
-
 
     lazy var grabHints: [String: (fromLeft: CGPoint, fromRight: CGPoint)] = {
         let saved = UserDefaults.standard.dictionary(forKey: "grabHints") as? [String: [Double]] ?? [:]

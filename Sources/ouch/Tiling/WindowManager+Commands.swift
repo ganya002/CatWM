@@ -18,10 +18,10 @@ extension WindowManager {
     func status() -> Status {
         let screens = Screen.all()
         let managed = visible.compactMap { windows[$0] }
-        return Status(trusted: AXIsProcessTrusted(), keybindsActive: Hotkeys.shared.isActive, running: isStarted,
+        return Status(trusted: Permission.accessibility.isGranted, keybindsActive: Hotkeys.shared.isActive, running: isStarted,
                       tilingEnabled: tilingEnabled,
                       launchAtLogin: LoginItem.isEnabled, loginNeedsApproval: LoginItem.needsApproval,
-                      inputMonitoring: Permissions.inputMonitoringGranted,
+                      inputMonitoring: Permission.inputMonitoring.isGranted,
                       tiled: managed.filter { !$0.isFloating }.count, floating: managed.filter(\.isFloating).count,
                       screens: isStarted ? screens.map { ($0.uuid, $0.ns.localizedName, state(for: $0).layout,
                                                            isVirtual(shown[$0.uuid]) ? (shown[$0.uuid] ?? "") : "") } : [])
@@ -29,6 +29,10 @@ extension WindowManager {
 
     func setLayout(_ l: Layout, screen uuid: String) {
         guard let s = Screen.all().first(where: { $0.uuid == uuid }) else { return }
+        setLayout(l, on: s)
+    }
+
+    func setLayout(_ l: Layout, on s: Screen) {
         let st = state(for: s)
         st.layout = l
         st.zoomed = nil
@@ -59,7 +63,7 @@ extension WindowManager {
     }
 
     private func dumpState() {
-        var lines = ["state: trusted=\(AXIsProcessTrusted()) keybinds=\(Hotkeys.shared.isActive) tiling=\(tilingEnabled) focused=\(focusedWindow()?.id ?? 0)"]
+        var lines = ["state: trusted=\(Permission.accessibility.isGranted) keybinds=\(Hotkeys.shared.isActive) tiling=\(tilingEnabled) focused=\(focusedWindow()?.id ?? 0)"]
         for s in Screen.all() {
             let st = state(for: s)
             lines.append("  screen \(s.ns.localizedName) workspace=\(shown[s.uuid] ?? "?") home=\(isOnHomeSpace(s)) layout=\(st.layout.rawValue) ratio=\(st.ratio) main=\(st.mainCount) usable=\(usableRect(s))")
@@ -78,11 +82,10 @@ extension WindowManager {
         lines.forEach { Log.info($0) }
     }
 
-
     func swapOrder(_ a: CGWindowID, _ b: CGWindowID) {
         guard let i = order.firstIndex(of: a), let j = order.firstIndex(of: b) else { return }
         order.swapAt(i, j)
-        (workspaceOf[a], workspaceOf[b]) = (workspaceOf[b], workspaceOf[a])
+        model.swapWorkspaces(a, b)
     }
 
     func dispatch(_ dispatcher: String, _ rawArg: String) {
@@ -103,6 +106,7 @@ extension WindowManager {
         case "fullscreen": toggleZoom()
         case "nativefullscreen": toggleNativeFullscreen()
         case "killactive": lastClose = Date(); focusedWindow()?.close()
+        case "minimize": focusedWindow()?.element.set(kAXMinimizedAttribute, kCFBooleanTrue)
         case "exec": exec(arg)
         case "focusmonitor": focusMonitor(arg)
         case "movewindowtomonitor": moveToMonitor(arg)
@@ -114,7 +118,7 @@ extension WindowManager {
                 if let ws = resolveWorkspace(arg) { moveFocusedWindow(to: ws, follow: dispatcher == "movetoworkspace") }
             } else if let n = Int(arg) { moveToSpace(n) }
         case "cyclelayout": cycleLayout(arg.lowercased().hasPrefix("prev") ? -1 : 1)
-        case "layout", "setlayout": if let l = Layout(rawValue: arg.lowercased()) { setLayout(l) }
+        case "layout", "setlayout": if let l = Layout(rawValue: arg.lowercased()), let s = currentScreen() { setLayout(l, on: s) }
         case "toggletiling": toggleTiling()
         case "toggledim": FocusDim.shared.toggleDim()
         case "toggleblur": FocusDim.shared.toggleBlur()
@@ -164,23 +168,9 @@ extension WindowManager {
         let screens = Screen.all()
         let home = screen(of: w, in: screens)
         if let home, state(for: home).zoomed == w.id { cycleFocus(d == .left || d == .up ? -1 : 1); return }
-        if let n = neighbor(of: w, d, among: candidates) { focus(n); return }
-        let f = navFrame(w)
-        let here = candidates.filter { $0.id != w.id && screen(of: $0, in: screens)?.uuid == home?.uuid }
-        let behind = here.compactMap { o -> (Window, CGFloat)? in
-            let r = relation(f, navFrame(o), d)
-            return r.overlaps && r.along < -1 ? (o, -r.along) : nil
-        }
-        if let far = behind.map(\.1).max() {
-            let ends = behind.filter { $0.1 >= far - 2 }.map(\.0)
-            if let pick = ends.max(by: { (focusStamps[$0.id] ?? 0) < (focusStamps[$1.id] ?? 0) }) { focus(pick) }
-            return
-        }
-        let hereIDs = Set(here.map(\.id))
-        let stack = candidates.filter { $0.id == w.id || (hereIDs.contains($0.id) && navFrame($0).approxEqual(f, tolerance: 2)) }
-        guard stack.count > 1, let i = stack.firstIndex(where: { $0.id == w.id }) else { return }
-        let delta = d == .left || d == .up ? -1 : 1
-        focus(stack[((i + delta) % stack.count + stack.count) % stack.count])
+        let to = FocusNavigation.target(from: navItem(w, in: screens), d,
+                                        among: candidates.map { navItem($0, in: screens) }, stamps: focusStamps)
+        if let n = to.flatMap({ windows[$0] }) { focus(n) }
     }
 
     private func moveWindow(_ d: Direction) {
@@ -188,12 +178,12 @@ extension WindowManager {
         let candidates = order.filter(visible.contains).compactMap { windows[$0] }.filter { !$0.isFloating }
         if let n = neighbor(of: w, d, among: candidates) {
             if let a = screen(of: w), let b = screen(of: n), a.uuid != b.uuid {
-                workspaceOf[w.id] = shown[b.uuid]
+                model.assign(w.id, to: shown[b.uuid])
             } else {
                 swapOrder(w.id, n.id)
             }
         } else if let src = screen(of: w), let dst = screen(from: src, spec: arg(d), in: Screen.all()) {
-            workspaceOf[w.id] = shown[dst.uuid]
+            model.assign(w.id, to: shown[dst.uuid])
         } else { return }
         refresh()
         focus(w)
@@ -231,6 +221,7 @@ extension WindowManager {
     private func changeMainCount(_ delta: Int) {
         guard let c = context() else { return }
         c.st.mainCount = max(1, min(10, c.st.mainCount + delta))
+        corrections = [:]
         refresh()
     }
 
@@ -250,6 +241,7 @@ extension WindowManager {
             return
         }
         c.st.ratio = ratio
+        corrections = [:]
         ratioChange = (c.s.uuid, Date() + (config.animate ? config.animationDuration : 0) + 0.6)
         refresh()
     }
@@ -260,7 +252,7 @@ extension WindowManager {
         if w.isFloating {
             targets[w.id] = nil
         } else {
-            if let s = screen(containing: w.frame) { workspaceOf[w.id] = shown[s.uuid] }
+            if let s = screen(containing: w.frame) { model.assign(w.id, to: shown[s.uuid]) }
             corrections[w.id] = nil
         }
         refresh()
@@ -270,7 +262,7 @@ extension WindowManager {
         guard let c = context(), let w = c.w, c.ids.contains(w.id) else { return }
         c.st.zoomed = c.st.zoomed == w.id ? nil : w.id
         refresh()
-        w.focus()
+        focus(w, warp: false)
     }
 
     private func toggleNativeFullscreen() {
@@ -295,16 +287,7 @@ extension WindowManager {
     private func cycleLayout(_ delta: Int) {
         guard let c = context(), !config.layouts.isEmpty else { return }
         let i = config.layouts.firstIndex(of: c.st.layout) ?? (delta > 0 ? -1 : 0)
-        setLayout(config.layouts[((i + delta) % config.layouts.count + config.layouts.count) % config.layouts.count])
-    }
-
-    private func setLayout(_ l: Layout) {
-        guard let c = context() else { return }
-        c.st.layout = l
-        c.st.zoomed = nil
-        corrections = [:]
-        refresh()
-        if config.enablesLayoutHUD { HUD.shared.show(l.title, layout: l, on: c.s.ns) }
+        setLayout(config.layouts[((i + delta) % config.layouts.count + config.layouts.count) % config.layouts.count], on: c.s)
     }
 
     private func exec(_ cmd: String) {
@@ -342,10 +325,10 @@ extension WindowManager {
             animator.animate([.init(window: w, to: CGRect(origin: o, size: f.size), bounds: dst.visible)],
                              duration: config.animate ? config.animationDuration : 0,
                              curve: config.animationCurve, bounce: config.animationBounce)
-            workspaceOf[w.id] = shown[dst.uuid]
+            model.assign(w.id, to: shown[dst.uuid])
             scheduleRefresh()
         } else {
-            workspaceOf[w.id] = shown[dst.uuid]
+            model.assign(w.id, to: shown[dst.uuid])
             refresh()
         }
         focus(w)

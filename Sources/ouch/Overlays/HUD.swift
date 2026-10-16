@@ -3,7 +3,7 @@ import SwiftUI
 
 final class HUD {
     static let shared = HUD()
-    private var panel: NSPanel?
+    private var panel: OuchPanel?
     private var host: NSHostingView<HUDView>?
     private let model = HUDModel()
     private var hideWork: DispatchWorkItem?
@@ -37,7 +37,7 @@ final class HUD {
             let below = avoid.minY - frame.height + Self.margin - 12
             frame.origin.y = below >= screen.visibleFrame.minY ? below : avoid.maxY - Self.margin + 12
         }
-        p.setFrame(frame, display: true)
+        p.place(size: frame.size, on: screen, anchor: .origin(frame.origin), inset: EdgeInsets(all: Self.margin))
         p.alphaValue = 1
         p.orderFrontRegardless()
 
@@ -54,16 +54,7 @@ final class HUD {
         DispatchQueue.main.asyncAfter(deadline: .now() + (warning ? 1.6 : layout == nil ? 0.8 : 1), execute: work)
     }
 
-    private func makePanel() -> NSPanel {
-        let p = NSPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        p.level = .statusBar
-        p.isOpaque = false
-        p.backgroundColor = .clear
-        p.hasShadow = false
-        p.ignoresMouseEvents = true
-        p.collectionBehavior = [.canJoinAllSpaces, .transient, .ignoresCycle]
-        return p
-    }
+    private func makePanel() -> OuchPanel { OuchPanel(role: .hud) }
 }
 
 final class HUDModel: ObservableObject {
@@ -83,7 +74,7 @@ struct HUDView: View {
         Group {
             if model.warning {
                 HStack(spacing: 8) {
-                    Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 15, weight: .semibold))
+                    Image(systemName: "exclamationmark.triangle.fill").font(Theme.symbol(Theme.Icon.lg, .semibold))
                         .foregroundStyle(Theme.warning)
                         .wiggleEffect(value: model.pops)
                     Text(model.text).font(Theme.body(14, .medium)).oneLine().fixedSize()
@@ -95,10 +86,10 @@ struct HUDView: View {
                     if let layout = model.layout {
                         LayoutThumbnail(layout: layout, selected: true).frame(width: 120)
                     }
-                    Text(model.text).font(Theme.body(22)).tracking(-0.2).oneLine().fixedSize()
+                    Text(model.text).textStyle(.title).oneLine().fixedSize()
                 }
                 .padding(.horizontal, 24).padding(.top, model.layout == nil ? 16 : 20).padding(.bottom, 16)
-                .floatingGlass(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .floatingGlass(RoundedRectangle(cornerRadius: Theme.Radius.hud, style: .continuous))
             }
         }
         .foregroundStyle(Theme.ink)

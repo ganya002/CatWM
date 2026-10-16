@@ -78,11 +78,11 @@ extension WindowManager {
         let arrivals = fresh.sorted(by: { (z[$0.id] ?? 0) < (z[$1.id] ?? 0) })
         for w in arrivals where config.virtualWorkspaces {
             if savedOwnerOf[w.id] == owner(w) {
-                if let saved = savedWorkspaceOf[w.id] { workspaceOf[w.id] = saved }
+                if let saved = savedWorkspaceOf[w.id] { model.assign(w.id, to: saved) }
                 if let float = savedFloating[w.id] { w.userFloating = float }
             }
             if let p = practice, w.pid == p.pid, let ws = titles[w.id].flatMap({ $0 }).flatMap({ p.workspaces[$0] }) {
-                workspaceOf[w.id] = ws
+                model.assign(w.id, to: ws)
                 if monitorOf[ws] == nil, let here = currentScreen() { monitorOf[ws] = here.uuid }
             }
         }
@@ -116,14 +116,12 @@ extension WindowManager {
             let st = state(for: s)
             let ids = tiled(on: s)
             if let z = st.zoomed, windows[z]?.isFloating != false || workspaceOf[z] != shown[s.uuid] { st.zoomed = nil }
-            let rect = usableRect(s)
-            guard let (raw, gap) = rawSlots(ids, on: s, st, ratio: st.ratio) else {
+            guard let slots = layoutTargets(ids, st, on: s) else {
                 ids.forEach { targets[$0] = nil }
                 continue
             }
-            let slots = fitMinimums(raw, mins: ids.map { minSizes[$0] }, gap: gap)
-            for (id, slot) in zip(ids, slots) {
-                let target = id == st.zoomed ? rect.pixelAligned : slot
+            for id in ids {
+                guard let target = slots[id] else { continue }
                 targets[id] = target
                 if let only, !only.contains(id) { continue }
                 guard let w = windows[id] else { continue }
@@ -166,14 +164,24 @@ extension WindowManager {
            let id = axApp(app.processIdentifier).element(kAXFocusedWindowAttribute)?.windowID,
            windows[id] == nil { return }
         let here = visible.filter { workspaceOf[$0] == ws }
-        guard let id = here.max(by: { (focusStamps[$0] ?? 0) < (focusStamps[$1] ?? 0) }), focusStamps[id] != nil,
-              reportedFocusedWindow()?.id != id, let w = windows[id] else { return }
+        guard let id = model.mostRecent(of: here), reportedFocusedWindow()?.id != id, let w = windows[id] else { return }
         Log.debug("focus: window closed; back to \(id)")
         focus(w)
     }
 
+    func layoutTargets(_ ids: [CGWindowID], _ st: ScreenState, on s: Screen) -> [CGWindowID: CGRect]? {
+        guard let (raw, gap) = rawSlots(ids, on: s, st, ratio: st.ratio) else { return nil }
+        let slots = fitMinimums(raw, mins: ids.map { minSizes[$0] }, gap: gap)
+        let zoomed = usableRect(s).pixelAligned
+        return Dictionary(zip(ids, slots).map { id, slot in (id, id == st.zoomed ? zoomed : slot) }, uniquingKeysWith: { a, _ in a })
+    }
+
+    func windowGap(count: Int) -> CGFloat {
+        config.windowMargins && !(config.smartWindowMargins && count == 1) ? config.windowMarginSize : 0
+    }
+
     func rawSlots(_ ids: [CGWindowID], on s: Screen, _ st: ScreenState, ratio: CGFloat) -> ([CGRect], CGFloat)? {
-        let gap = config.windowMargins && !(config.smartWindowMargins && ids.count == 1) ? config.windowMarginSize : 0
+        let gap = windowGap(count: ids.count)
         guard let raw = st.layout.frames(count: ids.count, in: usableRect(s).insetBy(dx: -gap / 2, dy: -gap / 2),
                                          ratio: ratio, mainCount: st.mainCount) else { return nil }
         let slots = raw.map { $0.insetBy(dx: gap / 2, dy: gap / 2).pixelAligned }
@@ -211,7 +219,11 @@ extension WindowManager {
     }
 
     func state(for s: Screen) -> ScreenState {
-        state(workspace: shown[s.uuid] ?? "\(s.uuid):\(Spaces.current(display: s.uuid))")
+        state(workspace: workspaceKey(for: s))
+    }
+
+    func workspaceKey(for s: Screen) -> String {
+        shown[s.uuid] ?? Self.spaceWorkspace(display: s.uuid, space: Spaces.current(display: s.uuid))
     }
 
     func state(workspace key: String) -> ScreenState {
@@ -220,7 +232,6 @@ extension WindowManager {
         states[key] = st
         return st
     }
-
 
     func screen(containing r: CGRect, in screens: [Screen] = Screen.all()) -> Screen? {
         guard !r.isNull else { return screens.first }
@@ -270,34 +281,15 @@ extension WindowManager {
         (!w.isFloating && tilingEnabled ? targets[w.id] : nil) ?? w.frame
     }
 
-    func relation(_ f: CGRect, _ of: CGRect, _ dir: Direction) -> (along: CGFloat, across: CGFloat, overlaps: Bool, edge: CGFloat) {
-        let dx = of.midX - f.midX, dy = of.midY - f.midY
-        let rows = of.minY < f.maxY && of.maxY > f.minY, cols = of.minX < f.maxX && of.maxX > f.minX
-        switch dir {
-        case .left: return (-dx, dy, rows, f.minX - of.maxX)
-        case .right: return (dx, dy, rows, of.minX - f.maxX)
-        case .up: return (-dy, dx, cols, f.minY - of.maxY)
-        case .down: return (dy, dx, cols, of.minY - f.maxY)
-        }
+    func navItem(_ w: Window, in screens: [Screen]) -> FocusNavigation.Item {
+        .init(id: w.id, frame: navFrame(w), screen: screen(of: w, in: screens)?.uuid)
     }
 
     func neighbor(of w: Window, _ dir: Direction, among candidates: [Window]) -> Window? {
-        let f = navFrame(w)
         let screens = Screen.all()
-        let home = screen(of: w, in: screens)?.uuid
-        var scored: [(w: Window, score: CGFloat, edge: CGFloat)] = []
-        for o in candidates where o.id != w.id {
-            let (along, across, overlaps, edge) = relation(f, navFrame(o), dir)
-            guard along > 1 else { continue }
-            guard overlaps || screen(of: o, in: screens)?.uuid != home else { continue }
-            scored.append((o, along + abs(across) * 2 + (overlaps ? 0 : 100_000), overlaps ? max(0, edge) : .infinity))
-        }
-        guard let best = scored.min(by: { $0.score < $1.score }) else { return nil }
-        guard let nearest = scored.map(\.edge).min(), nearest.isFinite else { return best.w }
-        let adjacent = scored.filter { $0.edge <= nearest + 2 }
-        let recent = adjacent.max { (focusStamps[$0.w.id] ?? 0) < (focusStamps[$1.w.id] ?? 0) }
-        if let recent, focusStamps[recent.w.id] != nil { return recent.w }
-        return adjacent.min(by: { $0.score < $1.score })?.w ?? best.w
+        let id = FocusNavigation.neighbor(of: navItem(w, in: screens), dir,
+                                          among: candidates.map { navItem($0, in: screens) }, stamps: focusStamps)
+        return id.flatMap { windows[$0] }
     }
 
     func screen(from s: Screen, spec: String, in screens: [Screen]) -> Screen? {

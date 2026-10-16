@@ -51,9 +51,7 @@ struct CursorActionsView: View {
     }
 
     private var head: some View {
-        Text(model.title)
-            .font(Theme.body(12, .medium)).tracking(0.24).oneLine()
-            .foregroundStyle(Theme.inkMuted)
+        OSectionHeader(model.title, tone: Theme.inkMuted)
             .padding(.horizontal, 10)
             .frame(maxWidth: .infinity, minHeight: Self.headHeight, alignment: .leading)
             .accessibilityHidden(true)
@@ -67,14 +65,13 @@ private struct MenuEntrance: ViewModifier {
 
     func body(content: Content) -> some View {
         if reduceMotion {
-            content.opacity(shown ? 1 : 0).animation(.easeOut(duration: Theme.medium), value: shown)
+            content.opacity(shown ? 1 : 0).animation(Motion.fadeMedium, value: shown)
         } else {
             content
                 .opacity(shown ? 1 : 0)
-                .animation(shown ? .easeOut(duration: 0.1) : .easeIn(duration: 0.12), value: shown)
+                .animation(shown ? Motion.fade : Motion.exit, value: shown)
                 .scaleEffect(shown ? 1 : 0.12, anchor: from)
-                .animation(shown ? .spring(response: 0.36, dampingFraction: 0.8) : .timingCurve(0.4, 0, 1, 1, duration: 0.14),
-                           value: shown)
+                .animation(shown ? Motion.pop : .timingCurve(0.4, 0, 1, 1, duration: 0.14), value: shown)
         }
     }
 }
@@ -89,39 +86,28 @@ private struct ActionRow: View {
     let hover: (Bool) -> Void
 
     var body: some View {
-        Button(action: pick) {
-            HStack(spacing: 10) {
-                Image(systemName: action.symbol)
-                    .symbolRenderingMode(.hierarchical)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(action.destructive ? Theme.danger : Theme.inkMuted)
-                    .frame(width: 16)
-                Text(action.title)
-                    .font(Theme.body(13.5)).oneLine()
-                    .foregroundStyle(action.destructive ? Theme.danger : Theme.ink)
-                    .layoutPriority(1)
-                Spacer(minLength: 6)
-                if action.isOn {
-                    Image(systemName: "checkmark").font(.system(size: 11, weight: .bold)).foregroundStyle(Theme.accentInk)
-                }
-                if !action.key.isEmpty { Kbd(keys: [action.key]).fixedSize() }
+        OMenuRow(highlighted: hovered, danger: action.destructive, action: pick) {
+            Image(systemName: action.symbol)
+                .symbolRenderingMode(.hierarchical)
+                .font(Theme.symbol())
+                .foregroundStyle(action.destructive ? Theme.danger : Theme.inkMuted)
+        } label: {
+            Text(action.title).oneLine().layoutPriority(1)
+        } trailing: {
+            if action.isOn {
+                Image(systemName: "checkmark").font(Theme.symbol(Theme.Icon.sm, .bold)).foregroundStyle(Theme.accentInk)
             }
-            .padding(.horizontal, 10)
-            .frame(height: Theme.rowHeight)
-            .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
-                .fill(hovered ? (action.destructive ? Theme.dangerSoft : Theme.well) : .clear))
-            .animation(.easeOut(duration: Theme.fast), value: hovered)
-            .contentShape(Rectangle())
+            if !action.keys.isEmpty { Kbd(keys: action.keys).fixedSize() }
         }
-        .buttonStyle(.plain)
+        .animation(Motion.fade, value: hovered)
         .opacity(shown || reduceMotion ? 1 : 0)
         .offset(y: shown || reduceMotion ? 0 : -5)
         .animation(shown ? .timingCurve(0.2, 0.8, 0.2, 1, duration: 0.24).delay(0.06 + 0.022 * Double(index))
-                         : .easeIn(duration: 0.08), value: shown)
+                         : .easeIn(duration: 0.08), value: shown) // style-ok: staggered entrance, timed to the surface
         .onHover(perform: hover)
         .accessibilityLabel(action.title)
         .accessibilityValue(action.isOn ? "On" : "")
-        .accessibilityHint(action.key.isEmpty ? "" : "Key \(action.key)")
+        .accessibilityHint(action.keys.isEmpty ? "" : "Shortcut \(action.keys.joined(separator: " "))")
         .accessibilityAddTraits(action.isOn ? .isSelected : [])
     }
 }

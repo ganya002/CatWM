@@ -2,8 +2,6 @@ import AppKit
 import CoreText
 import SwiftUI
 
-
-
 struct Palette {
     struct Pair {
         let light: UInt32, dark: UInt32
@@ -54,8 +52,12 @@ enum Theme {
         let p = palette[keyPath: token]
         return Color(nsColor: dark ? hex(p.dark, p.darkAlpha) : hex(p.light, p.lightAlpha))
     }
+    static func nsFixed(_ token: KeyPath<Palette, Palette.Pair>, dark: Bool) -> NSColor {
+        let p = palette[keyPath: token]
+        return dark ? hex(p.dark, p.darkAlpha) : hex(p.light, p.lightAlpha)
+    }
     static func rgb(_ v: UInt32, _ alpha: CGFloat = 1) -> Color { Color(nsColor: hex(v, alpha)) }
-
+    static let iconBlue = hex(0x0A74FF, 1)
 
     static let bg = token(\.bg)
     static let surface = token(\.surface)
@@ -98,7 +100,6 @@ enum Theme {
                                              .init(color: wash2, location: 1)],
                                      startPoint: UnitPoint(x: 0.1, y: 0), endPoint: UnitPoint(x: 0.9, y: 1))
 
-
     static func registerFonts() {
         guard let dir = Bundle.main.resourceURL?.appendingPathComponent("Fonts"),
               let urls = try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)
@@ -138,20 +139,31 @@ enum Theme {
             : weight == .regular ? "Chillax-Regular" : "Chillax-Medium"
         return NSFont(name: name, size: size) ?? .systemFont(ofSize: size, weight: weight)
     }
-    static func nsMono(_ size: CGFloat, weight: NSFont.Weight = .medium) -> NSFont {
-        .monospacedSystemFont(ofSize: size, weight: weight)
-    }
 
+    enum Icon {
+        static let xs: CGFloat = 9, sm: CGFloat = 11, md: CGFloat = 13, lg: CGFloat = 15, xl: CGFloat = 22
+    }
+    static func symbol(_ size: CGFloat = Icon.md, _ weight: Font.Weight = .medium) -> Font {
+        .system(size: size, weight: weight)
+    }
 
     enum Radius {
         static let xs: CGFloat = 4, sm: CGFloat = 6, md: CGFloat = 8, lg: CGFloat = 12, xl: CGFloat = 18
+        static let pane: CGFloat = 14
+        static let hud: CGFloat = 22
+        static let xxl: CGFloat = 24
+    }
+    enum Space {
+        static let xxs: CGFloat = 2, xs: CGFloat = 4, sm: CGFloat = 8, md: CGFloat = 12, lg: CGFloat = 16
+        static let xl: CGFloat = 24, xxl: CGFloat = 32
+        static let page: CGFloat = 36
     }
     static let rowHeight: CGFloat = 30
     static let controlHeight: CGFloat = 28
     static let menuWidth: CGFloat = 272
     static let submenuWidth: CGFloat = 232
 
-    static let fast = 0.12, medium = 0.18, slow = 0.28
+    static let fast = 0.12, medium = 0.18, slow = 0.28, linger = 0.45
 }
 
 extension NSColor {
@@ -162,25 +174,65 @@ extension NSColor {
     }
 }
 
-
 extension View {
     func oneLine(_ mode: Text.TruncationMode = .tail) -> some View { lineLimit(1).truncationMode(mode) }
 
     func kicker(_ color: Color = Theme.accentInk) -> some View {
         font(Theme.mono(11, .medium)).tracking(0.88).textCase(.uppercase).foregroundStyle(color)
     }
+
+    func textStyle(_ style: TextStyle) -> some View { font(style.font).tracking(style.tracking) }
 }
 
+extension Text {
+    func textStyle(_ style: TextStyle) -> Text { font(style.font).tracking(style.tracking) }
+}
+
+enum TextStyle {
+    case largeTitle
+    case title
+    case sectionTitle
+    case caption
+
+    var font: Font {
+        switch self {
+        case .largeTitle: Theme.display(40)
+        case .title: Theme.body(22)
+        case .sectionTitle: Theme.body(12, .medium)
+        case .caption: Theme.body(12)
+        }
+    }
+    var tracking: CGFloat {
+        switch self {
+        case .largeTitle: -1
+        case .title: -0.2
+        case .sectionTitle: 0.24
+        case .caption: 0
+        }
+    }
+}
 
 enum Motion {
     static let easeOut = Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: Theme.medium)
     static let spring = Animation.spring(response: 0.3, dampingFraction: 0.7)
     static let snap = Animation.spring(response: 0.34, dampingFraction: 0.7)
-    static func snap(_ reduce: Bool) -> Animation { reduce ? .easeOut(duration: 0.15) : snap }
+    static func snap(_ reduce: Bool) -> Animation { reduce ? fade : snap }
+    static let fade = Animation.easeOut(duration: Theme.fast)
+    static let fadeMedium = Animation.easeOut(duration: Theme.medium)
+    static let fadeSlow = Animation.easeOut(duration: Theme.slow)
+    static let fadeAway = Animation.easeOut(duration: Theme.linger)
+    static let exit = Animation.easeIn(duration: Theme.fast)
+    static let pop = Animation.spring(response: 0.36, dampingFraction: 0.8)
+
+    enum Curve {
+        static let easeOut = CAMediaTimingFunction(controlPoints: 0.2, 0.8, 0.2, 1)
+        static let settle = CAMediaTimingFunction(controlPoints: 0.2, 0.9, 0.2, 1)
+        static let exit = CAMediaTimingFunction(name: .easeIn)
+        static let fade = CAMediaTimingFunction(name: .easeOut)
+    }
 }
 
-
-enum Elevation { case sm, popover, float }
+enum Elevation { case sm, knob, popover, float }
 
 extension View {
     func elevation<S: Shape>(_ e: Elevation, in shape: S) -> some View {
@@ -189,16 +241,26 @@ extension View {
             let dark = Theme.isDark(a)
             switch e {
             case .sm: return NSColor.black.withAlphaComponent(dark ? 0.4 : 0.06)
+            case .knob: return NSColor.black.withAlphaComponent(0.32)
             case .popover: return NSColor.black.withAlphaComponent(dark ? 0.65 : 0.22)
             case .float: return NSColor.black.withAlphaComponent(dark ? 0.75 : 0.35)
             }
         })
+        let (radius, y): (CGFloat, CGFloat) = switch e {
+        case .sm: (1, 1)
+        case .knob: (2, 0)
+        case .popover: (13, 10)
+        case .float: (22, 18)
+        }
         return self
-            .overlay(shape.stroke(ring, lineWidth: e == .sm ? 0 : 1))
-            .shadow(color: drop, radius: e == .sm ? 1 : e == .popover ? 13 : 22, y: e == .sm ? 1 : e == .popover ? 10 : 18)
+            .overlay(shape.stroke(ring, lineWidth: e == .popover || e == .float ? 1 : 0))
+            .shadow(color: drop, radius: radius, y: y)
+    }
+
+    func legible(strong: Bool = false) -> some View {
+        shadow(color: .black.opacity(strong ? 0.45 : 0.3), radius: strong ? 8 : 12, y: strong ? 2 : 4)
     }
 }
-
 
 enum Density {
     case xs, sm, md, lg, xl
@@ -208,7 +270,7 @@ enum Density {
         case .xs: Theme.Radius.md
         case .sm, .md: Theme.Radius.lg
         case .lg: Theme.Radius.xl
-        case .xl: 24
+        case .xl: Theme.Radius.xxl
         }
     }
     var padding: EdgeInsets {
@@ -288,7 +350,7 @@ extension View {
     }
 
     func pane() -> some View {
-        let shape = RoundedRectangle(cornerRadius: 14, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: Theme.Radius.pane, style: .continuous)
         return clipShape(shape).background(shape.fill(Theme.surface).elevation(.popover, in: shape))
     }
 }
@@ -338,7 +400,6 @@ struct VisualBlur: NSViewRepresentable {
     }
 }
 
-
 extension View {
     @ViewBuilder func rotateEffect<V: Equatable>(value: V) -> some View {
         if #available(macOS 15.0, *) {
@@ -357,8 +418,6 @@ extension View {
         if #available(macOS 26.0, *) { symbolEffect(.drawOn, isActive: !isActive) } else { self }
     }
 }
-
-
 
 private struct Squish<Trigger: Equatable>: ViewModifier {
     let trigger: Trigger
@@ -392,7 +451,6 @@ extension View {
         modifier(Squish(trigger: trigger, delay: delay, anchor: anchor, enabled: when))
     }
 }
-
 
 struct DemoApp: Equatable {
     let title: String
@@ -475,7 +533,7 @@ struct LayoutThumbnail: View {
         }
         .aspectRatio(16 / 10, contentMode: .fit)
         .animation(Motion.snap(reduceMotion), value: layout)
-        .animation(.easeOut(duration: Theme.medium), value: selected)
+        .animation(Motion.fadeMedium, value: selected)
         .accessibilityHidden(true)
     }
 
@@ -500,7 +558,7 @@ struct BadgedAppIcon: View {
             .frame(width: size, height: size)
             .overlay(alignment: .bottomTrailing) {
                 Image(systemName: badge)
-                    .font(.system(size: size * 0.36, weight: .semibold))
+                    .font(Theme.symbol(size * 0.36, .semibold))
                     .symbolRenderingMode(.palette)
                     .foregroundStyle(Theme.surface, color)
                     .background(Circle().fill(Theme.surface).padding(-1.5))

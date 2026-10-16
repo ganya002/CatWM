@@ -68,7 +68,7 @@ extension WindowManager {
             return
         }
         movingToSpace = true
-        w.focus()
+        focus(w, warp: false)
         tryGrab(w, points[...], space: n, restore: mouseLocation())
     }
 

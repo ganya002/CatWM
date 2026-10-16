@@ -22,7 +22,7 @@ struct ShortcutMap: View {
                 .zIndex(1)
                 list(layer)
             }
-            .padding(.horizontal, 36).padding(.top, 22).padding(.bottom, 40)
+            .padding(.horizontal, Theme.Space.page).padding(.top, 22).padding(.bottom, 40)
         }
         .onAppear {
             model.mode = doc.submaps.contains(ui.bindMode) ? ui.bindMode : ""
@@ -38,17 +38,7 @@ struct ShortcutMap: View {
 
     private func header(_ all: [ConfigDocument.KeyAction]) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Text("Settings")
-                Image(systemName: "chevron.right").font(.system(size: 9, weight: .semibold))
-                Text("Shortcuts")
-                Image(systemName: "chevron.right").font(.system(size: 9, weight: .semibold))
-                Text("Map")
-            }
-            .font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine()
-            HStack(alignment: .center, spacing: 8) {
-                Text("Shortcut Map").font(Theme.display(40)).tracking(-1).oneLine()
-                Spacer(minLength: 12)
+            OPageTitle(crumbs: ["Settings", "Shortcuts", "Map"], title: "Shortcut Map") {
                 if doc.submaps.count > 1 {
                     OSegmented(title: "Shortcut set", options: doc.submaps.map { ($0, $0.isEmpty ? "Global" : "\($0.capitalized) mode") },
                                selection: $model.mode)
@@ -66,29 +56,10 @@ struct ShortcutMap: View {
     }
 
     private var modifierToggles: some View {
-        let mods: [(NSEvent.ModifierFlags, String, String)] = [(.control, "⌃", "Control"), (.option, "⌥", "Option"),
-                                                               (.shift, "⇧", "Shift"), (.command, "⌘", "Command")]
-        return HStack(spacing: 2) {
-            ForEach(mods, id: \.1) { flag, symbol, name in
-                let on = model.flags.contains(flag)
-                Button { model.toggle(flag) } label: {
-                    HStack(spacing: 5) {
-                        Text(symbol).font(Theme.keys(12.5, .medium))
-                        Text(name).font(Theme.body(12.5, on ? .medium : .regular))
-                    }
-                    .foregroundStyle(on ? Theme.onAccent : Theme.inkMuted)
-                    .padding(.horizontal, 11).frame(height: 24)
-                    .background(Capsule().fill(on ? Theme.accent : .clear))
-                    .contentShape(Capsule())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(name)
-                .accessibilityAddTraits(on ? [.isSelected, .isToggle] : .isToggle)
-            }
-        }
-        .padding(3)
-        .background(Capsule().fill(Theme.well))
-        .animation(Motion.spring, value: model.flags.rawValue)
+        OSegmented(title: "Modifiers", options: ShortcutMapModel.modifiers.map { OSegmentOption(value: $0.flag.rawValue, label: $0.name, keys: $0.glyph) },
+                   isOn: { model.flags.contains(NSEvent.ModifierFlags(rawValue: $0)) },
+                   toggle: { model.toggle(NSEvent.ModifierFlags(rawValue: $0)) })
+            .animation(Motion.spring, value: model.flags.rawValue)
     }
 
     private func reveal(_ row: BindRow) {
@@ -112,7 +83,7 @@ struct ShortcutMap: View {
             .map { (flags: NSEvent.ModifierFlags(rawValue: $0.key), count: $0.value) }
         return HStack(spacing: 4) {
             if !list.isEmpty {
-                Text("In use").font(Theme.body(12)).foregroundStyle(Theme.inkMuted).padding(.trailing, 4)
+                Text("In use").textStyle(.caption).foregroundStyle(Theme.inkMuted).padding(.trailing, Theme.Space.xs)
             }
             ForEach(list.prefix(5), id: \.flags.rawValue) { item in
                 let on = item.flags == model.flags
@@ -120,7 +91,7 @@ struct ShortcutMap: View {
                 Button {
                     model.held = []
                     model.selected = nil
-                    withAnimation(.easeOut(duration: 0.15)) { model.picked = item.flags }
+                    withAnimation(Motion.fade) { model.picked = item.flags }
                 } label: {
                     HStack(spacing: 5) {
                         Text(name).font(Theme.keys(12, .medium))
@@ -138,9 +109,8 @@ struct ShortcutMap: View {
                 .accessibilityAddTraits(on ? .isSelected : [])
             }
         }
-        .animation(.easeOut(duration: 0.12), value: model.flags.rawValue)
+        .animation(Motion.fade, value: model.flags.rawValue)
     }
-
 
     private func keyboard(_ layer: [ConfigDocument.KeyAction]) -> some View {
         let one = KeyHintKeyboard.size(scale: 1)
@@ -152,14 +122,14 @@ struct ShortcutMap: View {
         return GeometryReader { g in
             let scale = g.size.width / one.width
             ZStack(alignment: .topLeading) {
-                KeyHintKeyboard(binds: hints, style: .labels, pressed: pressed, hot: hot, scale: scale)
+                KeyHintKeyboard(binds: hints, pressed: pressed, hot: hot, scale: scale)
                     .onKeyTap(tap)
                     .onKeyHover { k, inside in
                         if k.modifier.isEmpty, let code = k.code { model.hover(code, inside) }
                     }
                 if let code = model.selected, let k = KeyHintKeyboard.key(for: code) {
                     Color.clear.contentShape(Rectangle())
-                        .onTapGesture { withAnimation(.easeOut(duration: Theme.fast)) { model.selected = nil } }
+                        .onTapGesture { withAnimation(Motion.fade) { model.selected = nil } }
                     selection(k, code: code, scale: scale, size: g.size, frame: g.frame(in: .global))
                 }
                 if model.selected == nil, let code = model.tip, let k = KeyHintKeyboard.key(for: code) {
@@ -243,7 +213,6 @@ struct ShortcutMap: View {
         return ConfigDocument.modifierCaps(a.flags) + [ConfigDocument.capLabel(a.key)]
     }
 
-
     private func legend(_ all: [ConfigDocument.KeyAction]) -> some View {
         let present = Set(all.map { KeyHint($0).group })
         return HStack(spacing: 16) {
@@ -296,12 +265,8 @@ struct ShortcutMap: View {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 300), spacing: 40, alignment: .top)], alignment: .leading, spacing: 28) {
                     ForEach(sections, id: \.group) { section in
                         VStack(alignment: .leading, spacing: 2) {
-                            HStack(spacing: 7) {
-                                Circle().fill(section.group.color).frame(width: 7, height: 7)
-                                Text(section.group.title).font(Theme.body(12, .medium)).tracking(0.24)
-                                    .foregroundStyle(Theme.inkMuted).oneLine()
-                            }
-                            .padding(.bottom, 2)
+                            OSectionHeader(section.group.title, tone: Theme.inkMuted, dot: section.group.color)
+                                .padding(.bottom, Theme.Space.xxs)
                             OGroup {
                                 ForEach(section.rows) { e in row(e) }
                             }
@@ -356,6 +321,9 @@ final class ShortcutMapModel: ObservableObject {
 
     var flags: NSEvent.ModifierFlags { held.isEmpty ? picked : held }
 
+    static let modifiers: [(flag: NSEvent.ModifierFlags, glyph: String, name: String)] =
+        [(.control, "⌃", "Control"), (.option, "⌥", "Option"), (.shift, "⇧", "Shift"), (.command, "⌘", "Command")]
+
     func busiest(all: [ConfigDocument.KeyAction]) -> NSEvent.ModifierFlags {
         let counts = Dictionary(grouping: all, by: { $0.flags.rawValue }).mapValues(\.count)
         return counts.max { $0.value != $1.value ? $0.value < $1.value : $0.key > $1.key }.map { NSEvent.ModifierFlags(rawValue: $0.key) } ?? []
@@ -364,7 +332,7 @@ final class ShortcutMapModel: ObservableObject {
     func toggle(_ f: NSEvent.ModifierFlags) {
         held = []
         selected = nil
-        withAnimation(.easeOut(duration: 0.15)) { picked.formSymmetricDifference(f) }
+        withAnimation(Motion.fade) { picked.formSymmetricDifference(f) }
     }
 
     func hover(_ code: UInt16, _ inside: Bool) {
@@ -374,7 +342,7 @@ final class ShortcutMapModel: ObservableObject {
             if tip != nil { tip = code; return }
             let work = DispatchWorkItem { [weak self] in
                 guard let self, self.hovered == code else { return }
-                withAnimation(.easeOut(duration: Theme.fast)) { self.tip = code }
+                withAnimation(Motion.fade) { self.tip = code }
             }
             tipTimer = work
             DispatchQueue.main.asyncAfter(deadline: .now() + OTooltip.delay, execute: work)
@@ -382,7 +350,7 @@ final class ShortcutMapModel: ObservableObject {
             hovered = nil
             let work = DispatchWorkItem { [weak self] in
                 guard let self, self.hovered == nil else { return }
-                withAnimation(.easeOut(duration: Theme.fast)) { self.tip = nil }
+                withAnimation(Motion.fade) { self.tip = nil }
             }
             tipTimer = work
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.08, execute: work)
@@ -392,8 +360,8 @@ final class ShortcutMapModel: ObservableObject {
     private func flash(_ code: UInt16, flags f: NSEvent.ModifierFlags, submap: String?) {
         guard f == flags, submap.map({ $0 == mode }) ?? true else { return }
         flashTimer?.cancel()
-        withAnimation(.easeOut(duration: Theme.fast)) { pressed = code }
-        let work = DispatchWorkItem { [weak self] in withAnimation(.easeOut(duration: Theme.slow)) { self?.pressed = nil } }
+        withAnimation(Motion.fade) { pressed = code }
+        let work = DispatchWorkItem { [weak self] in withAnimation(Motion.fadeSlow) { self?.pressed = nil } }
         flashTimer = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: work)
     }
@@ -408,7 +376,7 @@ final class ShortcutMapModel: ObservableObject {
             if e.type == .keyDown {
                 if self.selected == nil, !e.isARepeat { self.flash(e.keyCode, flags: f, submap: nil) }
             } else if f != self.held, self.selected == nil {
-                withAnimation(.easeOut(duration: 0.12)) { self.held = f }
+                withAnimation(Motion.fade) { self.held = f }
             }
             return e
         }
@@ -430,7 +398,6 @@ final class ShortcutMapModel: ObservableObject {
         hovered = nil
     }
 }
-
 
 private enum MenuCategory: String, CaseIterable, Identifiable {
     case focus = "Focus", move = "Move", workspace = "Workspace", layout = "Layout", window = "Window", mode = "Mode", app = "App"
@@ -557,11 +524,10 @@ private struct KeyEditor: View {
     private func note(_ text: String, detail: String?) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(text).font(Theme.body(13)).oneLine()
-            if let detail { Text(detail).font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine() }
+            if let detail { Text(detail).textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine() }
         }
         .padding(.horizontal, 8).padding(.vertical, 10)
     }
-
 
     private var catalog: [Action] {
         var modes = doc.submaps.filter { !$0.isEmpty }
@@ -605,7 +571,6 @@ private struct KeyEditor: View {
 
     private var canSave: Bool { candidate != nil && issue?.severity != .error && changed }
 
-
     private var head: some View {
         let capScale = min(1, 96 / key.frame.width)
         let preview = draft.dispatcher.isEmpty ? nil : KeyHint(code: code, dispatcher: draft.dispatcher, arg: draft.args, title: title)
@@ -627,7 +592,7 @@ private struct KeyEditor: View {
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 8).padding(.top, 8).padding(.bottom, 10)
-        .animation(.easeOut(duration: Theme.fast), value: title)
+        .animation(Motion.fade, value: title)
     }
 
     private func modeEntry(_ mode: String) -> [String]? {
@@ -637,7 +602,6 @@ private struct KeyEditor: View {
         return ConfigDocument.modifierCaps(a.flags) + [ConfigDocument.capLabel(a.key)]
     }
 
-
     @ViewBuilder private var menu: some View {
         let query = draft.search.trimmingCharacters(in: .whitespaces)
         VStack(spacing: 0) {
@@ -646,10 +610,11 @@ private struct KeyEditor: View {
             } else {
                 let hits = results(query)
                 ForEach(hits) { a in
-                    MenuRow(action: { pick(a) }) {
+                    OMenuRow(action: { pick(a) }) {
                         symbol(a.symbol)
+                    } label: {
                         Text(a.title).oneLine()
-                        Spacer(minLength: 8)
+                    } trailing: {
                         Text(MenuCategory(a).rawValue).foregroundStyle(Theme.inkFaint).oneLine().fixedSize()
                     }
                 }
@@ -676,19 +641,20 @@ private struct KeyEditor: View {
     }
 
     private func symbol(_ name: String) -> some View {
-        Image(systemName: name).font(.system(size: 12, weight: .medium)).foregroundStyle(Theme.inkMuted).frame(width: 18)
+        Image(systemName: name).font(Theme.symbol()).foregroundStyle(Theme.inkMuted)
     }
 
     private func categoryRow(_ c: MenuCategory) -> some View {
         let current = action.map(MenuCategory.init) == c
-        return MenuRow(highlighted: draft.open == c, action: { draft.open = draft.open == c ? nil : c }) {
+        return OMenuRow(open: draft.open == c, action: { draft.open = draft.open == c ? nil : c }) {
             symbol(c.symbol)
+        } label: {
             Text(c.rawValue).oneLine().fixedSize()
-            Spacer(minLength: 8)
+        } trailing: {
             if current, let a = action {
                 Text(a.title).foregroundStyle(Theme.accentInk).oneLine()
             }
-            Image(systemName: "chevron.right").font(.system(size: 9.5, weight: .semibold)).foregroundStyle(Theme.inkFaint)
+            Image(systemName: "chevron.right").font(Theme.symbol(Theme.Icon.xs, .semibold)).foregroundStyle(Theme.inkFaint)
         }
         .onHover { if $0 { draft.open = c } }
         .anchorPreference(key: CategoryAnchor.self, value: .bounds) { [c: $0] }
@@ -712,17 +678,19 @@ private struct KeyEditor: View {
             ForEach(Actions.menuEntries(catalog.filter { MenuCategory($0) == c })) { entry in
                 switch entry {
                 case .action(let a):
-                    MenuRow(action: { pick(a) }) {
+                    OMenuRow(action: { pick(a) }) {
                         symbol(a.symbol)
+                    } label: {
                         Text(a.title).oneLine()
-                        Spacer(minLength: 8)
+                    } trailing: {
                         if isCurrent(a) { check }
                     }
                 case .group(let name, let list):
-                    MenuRow(action: { pick(list.first(where: isCurrent) ?? list[0]) }) {
+                    OMenuRow(action: { pick(list.first(where: isCurrent) ?? list[0]) }) {
                         symbol(list[0].symbol)
+                    } label: {
                         Text(name).oneLine()
-                        Spacer(minLength: 8)
+                    } trailing: {
                         if list.contains(where: isCurrent) { check } else {
                             Text("\(list.count)").foregroundStyle(Theme.inkFaint).monospacedDigit()
                         }
@@ -735,7 +703,7 @@ private struct KeyEditor: View {
     }
 
     private var check: some View {
-        Image(systemName: "checkmark").font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.accentInk)
+        Image(systemName: "checkmark").font(Theme.symbol(Theme.Icon.sm, .semibold)).foregroundStyle(Theme.accentInk)
     }
 
     private func isCurrent(_ a: Action) -> Bool {
@@ -751,7 +719,6 @@ private struct KeyEditor: View {
         draft.search = ""
         if a.dispatcher != "exec" { searching = true }
     }
-
 
     private var hasArgument: Bool {
         draft.dispatcher == "exec" || action?.group != nil || (action == nil && !draft.dispatcher.isEmpty)
@@ -804,27 +771,10 @@ private struct KeyEditor: View {
     }
 
     private var modifierToggles: some View {
-        let mods: [(NSEvent.ModifierFlags, String, String)] = [(.control, "⌃", "Control"), (.option, "⌥", "Option"),
-                                                               (.shift, "⇧", "Shift"), (.command, "⌘", "Command")]
-        return HStack(spacing: 2) {
-            ForEach(mods, id: \.1) { flag, symbol, name in
-                let on = draft.flags.contains(flag)
-                Button { withAnimation(Motion.spring) { draft.flags.formSymmetricDifference(flag) } } label: {
-                    Text(symbol).font(Theme.keys(12.5, .medium))
-                        .foregroundStyle(on ? Theme.onAccent : Theme.inkMuted)
-                        .frame(width: 30, height: 22)
-                        .background(Capsule().fill(on ? Theme.accent : .clear))
-                        .contentShape(Capsule())
-                }
-                .buttonStyle(.plain)
-                .tooltip(name)
-                .accessibilityLabel(name)
-                .accessibilityAddTraits(on ? [.isSelected, .isToggle] : .isToggle)
-            }
-        }
-        .padding(3)
-        .background(Capsule().fill(Theme.well))
-        .fixedSize()
+        OSegmented(title: "Modifiers", options: ShortcutMapModel.modifiers.map {
+            OSegmentOption(value: $0.flag.rawValue, label: "", keys: $0.glyph, help: $0.name)
+        }, isOn: { draft.flags.contains(NSEvent.ModifierFlags(rawValue: $0)) },
+           toggle: { draft.flags.formSymmetricDifference(NSEvent.ModifierFlags(rawValue: $0)) })
     }
 
     @ViewBuilder private var others: some View {
@@ -833,25 +783,25 @@ private struct KeyEditor: View {
         if !list.isEmpty {
             hairline
             VStack(alignment: .leading, spacing: 0) {
-                Text("With other modifiers").font(Theme.body(12, .medium)).foregroundStyle(Theme.inkMuted).oneLine()
-                    .padding(.horizontal, 8).padding(.top, 8).padding(.bottom, 2)
+                OSectionHeader("With other modifiers", tone: Theme.inkMuted)
+                    .padding(.horizontal, 10).padding(.top, Theme.Space.sm).padding(.bottom, Theme.Space.xxs)
                 ForEach(list.prefix(4)) { a in
-                    MenuRow(action: {
+                    OMenuRow(action: {
                         model.held = []
-                        withAnimation(.easeOut(duration: 0.15)) { model.picked = a.flags }
+                        withAnimation(Motion.fade) { model.picked = a.flags }
                     }) {
-                        Kbd(keys: ConfigDocument.modifierCaps(a.flags) + [KeyHintKeyboard.legend(key)]).fixedSize()
-                        Circle().fill(KeyHint(a).group.color).frame(width: 7, height: 7)
-                        Text(a.title).oneLine()
-                        Spacer(minLength: 0)
-                    }
+                        HStack(spacing: Theme.Space.sm) {
+                            Kbd(keys: ConfigDocument.modifierCaps(a.flags) + [KeyHintKeyboard.legend(key)]).fixedSize()
+                            Circle().fill(KeyHint(a).group.color).frame(width: 7, height: 7)
+                            Text(a.title).oneLine()
+                        }
+                    } trailing: {}
                     .tooltip("Show \(ConfigDocument.modifierCaps(a.flags).joined()) shortcuts")
                 }
             }
             .padding(.bottom, 4)
         }
     }
-
 
     private var actions: some View {
         HStack(spacing: 6) {
@@ -873,7 +823,7 @@ private struct KeyEditor: View {
     }
 
     private func close() {
-        withAnimation(.easeOut(duration: Theme.fast)) { model.selected = nil }
+        withAnimation(Motion.fade) { model.selected = nil }
     }
 
     private func remove(_ row: BindRow) {
@@ -891,27 +841,7 @@ private struct KeyEditor: View {
             DispatchQueue.main.async { model.held = []; model.picked = flags }
         } else if flags != model.flags {
             model.held = []
-            withAnimation(.easeOut(duration: 0.15)) { model.picked = flags }
+            withAnimation(Motion.fade) { model.picked = flags }
         }
-    }
-}
-
-private struct MenuRow<Label: View>: View {
-    var highlighted = false
-    let action: () -> Void
-    @ViewBuilder let label: Label
-    @StateObject private var hover = Flag()
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 8) { label }
-                .font(Theme.body(13)).foregroundStyle(Theme.ink)
-                .padding(.horizontal, 8).frame(height: Theme.rowHeight)
-                .background(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
-                    .fill(hover.on || highlighted ? Theme.wellHover : .clear))
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .onHover { hover.on = $0 }
     }
 }

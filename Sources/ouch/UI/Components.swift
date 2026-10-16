@@ -1,9 +1,7 @@
 import AppKit
 import SwiftUI
 
-
 final class Flag: ObservableObject { @Published var on = false }
-
 
 enum ButtonVariant { case primary, secondary, ghost, danger, ghostDanger }
 enum ButtonSize { case sm, regular, lg }
@@ -38,7 +36,7 @@ private struct OButtonBody: View {
             .contentShape(Capsule())
             .scaleEffect(configuration.isPressed ? 0.95 : 1)
             .animation(Motion.spring, value: configuration.isPressed)
-            .animation(.easeOut(duration: Theme.fast), value: lit)
+            .animation(Motion.fade, value: lit)
             .opacity(enabled ? 1 : 0.45)
             .onHover { hover.on = $0 }
     }
@@ -82,7 +80,7 @@ struct OButton: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 6) {
-                if let icon { Image(systemName: icon).font(.system(size: size == .sm ? 11.5 : 13, weight: .medium)) }
+                if let icon { Image(systemName: icon).font(Theme.symbol(size == .sm ? Theme.Icon.sm : Theme.Icon.md)) }
                 Text(title)
                 if !shortcut.isEmpty {
                     Text(shortcut.joined()).font(Theme.keys(12, .medium)).opacity(0.8).padding(.trailing, -4)
@@ -102,14 +100,13 @@ struct OIconButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: symbol).font(.system(size: size == .sm ? 13 : 15, weight: .medium))
+            Image(systemName: symbol).font(Theme.symbol(size == .sm ? Theme.Icon.md : Theme.Icon.lg))
         }
         .buttonStyle(OButtonStyle(variant: variant, size: size, iconOnly: true))
         .tooltip(label)
         .accessibilityLabel(label)
     }
 }
-
 
 struct OSwitch: View {
     @Binding var isOn: Bool
@@ -137,7 +134,7 @@ struct OSwitch: View {
         .contentShape(Capsule())
         .animation(Motion.spring, value: isOn)
         .animation(Motion.spring, value: state.pressed)
-        .animation(.easeOut(duration: Theme.fast), value: shownOn)
+        .animation(Motion.fade, value: shownOn)
         .gesture(DragGesture(minimumDistance: 0)
             .onChanged { v in
                 if !state.pressed { state.pressed = true }
@@ -162,39 +159,119 @@ struct OSwitch: View {
     }
 }
 
+struct OSegmentOption<T: Hashable> {
+    let value: T
+    var label: String
+    var keys: String? = nil
+    var count: Int? = nil
+    var help: String? = nil
+}
 
 struct OSegmented<T: Hashable>: View {
     let title: String
-    let options: [(value: T, label: String)]
-    @Binding var selection: T
+    let options: [OSegmentOption<T>]
+    private let isOn: (T) -> Bool
+    private let pick: (T) -> Void
+    private let multiple: Bool
     @Namespace private var thumb
 
+    init(title: String, options: [(value: T, label: String)], selection: Binding<T>) {
+        self.title = title
+        self.options = options.map { OSegmentOption(value: $0.value, label: $0.label) }
+        isOn = { $0 == selection.wrappedValue }
+        pick = { selection.wrappedValue = $0 }
+        multiple = false
+    }
+
+    init(title: String, options: [OSegmentOption<T>], selection: T?, pick: @escaping (T) -> Void) {
+        self.title = title
+        self.options = options
+        isOn = { $0 == selection }
+        self.pick = pick
+        multiple = false
+    }
+
+    init(title: String, options: [OSegmentOption<T>], isOn: @escaping (T) -> Bool, toggle: @escaping (T) -> Void) {
+        self.title = title
+        self.options = options
+        self.isOn = isOn
+        pick = toggle
+        multiple = true
+    }
+
     var body: some View {
-        HStack(spacing: 2) {
+        OSegmentTrack(title: title) {
             ForEach(options, id: \.value) { o in
-                let on = o.value == selection
-                Button { withAnimation(Motion.spring) { selection = o.value } } label: {
-                    Text(o.label)
-                        .font(Theme.body(12.5, on ? .medium : .regular)).oneLine()
-                        .foregroundStyle(on ? Theme.onAccent : Theme.inkMuted)
-                        .padding(.horizontal, 12).frame(height: 24)
-                        .background {
-                            if on { Capsule().fill(Theme.accent).matchedGeometryEffect(id: "thumb", in: thumb) }
-                        }
-                        .contentShape(Capsule())
+                OSegment(label: o.label, keys: o.keys, count: o.count, on: isOn(o.value), thumb: multiple ? nil : thumb) {
+                    withAnimation(Motion.spring) { pick(o.value) }
                 }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(on ? .isSelected : [])
+                .tooltip(o.help ?? "")
+                .accessibilityLabel(o.help ?? o.label)
+                .accessibilityAddTraits(multiple ? .isToggle : [])
             }
         }
-        .padding(3)
-        .background(Capsule().fill(Theme.well))
-        .fixedSize()
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(title)
     }
 }
 
+struct OSegmentTrack<Content: View>: View {
+    let title: String
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        HStack(spacing: Theme.Space.xxs) { content }
+            .padding(3)
+            .background(Capsule().fill(Theme.well))
+            .fixedSize()
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(title)
+    }
+}
+
+struct OSegment<Lead: View>: View {
+    let label: String
+    var keys: String? = nil
+    var count: Int? = nil
+    let on: Bool
+    var hot = false
+    var thumb: Namespace.ID? = nil
+    let action: () -> Void
+    @ViewBuilder var lead: (Color) -> Lead
+
+    var body: some View {
+        let ink = on ? Theme.onAccent : hot ? Theme.accentInk : Theme.inkMuted
+        Button(action: action) {
+            HStack(spacing: 5) {
+                lead(ink)
+                if let keys { Text(keys).font(Theme.keys(12.5, .medium)) }
+                if !label.isEmpty { Text(label).font(Theme.body(12.5, on ? .medium : .regular)).oneLine() }
+                if let count {
+                    Text("\(count)").font(Theme.body(12)).monospacedDigit()
+                        .foregroundStyle(on ? Theme.onAccent.opacity(0.8) : Theme.inkFaint)
+                }
+            }
+            .foregroundStyle(ink)
+            .padding(.horizontal, label.isEmpty ? 9 : 12).frame(height: 24)
+            .background {
+                if on {
+                    if let thumb { Capsule().fill(Theme.accent).matchedGeometryEffect(id: "thumb", in: thumb) }
+                    else { Capsule().fill(Theme.accent) }
+                } else if hot {
+                    Capsule().fill(Theme.accentSoft)
+                }
+            }
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(on ? .isSelected : [])
+    }
+}
+
+extension OSegment where Lead == EmptyView {
+    init(label: String, keys: String? = nil, count: Int? = nil, on: Bool, hot: Bool = false, thumb: Namespace.ID? = nil,
+         action: @escaping () -> Void) {
+        self.init(label: label, keys: keys, count: count, on: on, hot: hot, thumb: thumb, action: action) { _ in EmptyView() }
+    }
+}
 
 final class SliderState: ObservableObject {
     @Published var dragging = false
@@ -203,6 +280,57 @@ final class SliderState: ObservableObject {
     @Published var hovering = false
     var start: Double = 0
     var moved = false
+}
+
+struct SliderScale {
+    let range: ClosedRange<Double>
+    var step: Double = 0
+    var ticks: [Double] = []
+
+    var span: Double { range.upperBound - range.lowerBound }
+    var unit: Double { step > 0 ? step : span / 100 }
+    func fraction(of v: Double) -> Double { span == 0 ? 0 : (v - range.lowerBound) / span }
+    func value(at fraction: Double) -> Double { snapped(range.lowerBound + min(max(fraction, 0), 1) * span) }
+
+    func snapped(_ raw: Double) -> Double {
+        var v = min(max(raw, range.lowerBound), range.upperBound)
+        if let t = ticks.min(by: { abs($0 - v) < abs($1 - v) }), abs(t - v) <= span * 0.025 { return t }
+        if step > 0 { v = (v / step).rounded() * step }
+        return min(max(v, range.lowerBound), range.upperBound)
+    }
+}
+
+extension SliderState {
+    func drag(_ g: DragGesture.Value, width w: CGFloat, scale: SliderScale, value: Binding<Double>, relative: Bool) {
+        guard w > 0 else { return }
+        if !dragging {
+            dragging = true
+            moved = false
+            start = scale.fraction(of: value.wrappedValue)
+        }
+        if abs(g.translation.width) > 2 { moved = true }
+        guard moved else { return }
+        let fine = NSEvent.modifierFlags.contains(.option)
+        let raw = relative || fine ? start + Double(g.translation.width / w) * (fine ? 0.1 : 1) : Double(g.location.x / w)
+        let over = raw < 0 ? raw * Double(w) : raw > 1 ? (raw - 1) * Double(w) : 0
+        stretch = CGFloat(over > 0 ? min(over * 0.25, 6) : max(over * 0.25, -6))
+        let clamped = min(max(raw, 0), 1)
+        fraction = clamped
+        let v = scale.value(at: clamped)
+        if v != value.wrappedValue { value.wrappedValue = v }
+    }
+
+    func end(_ g: DragGesture.Value, width w: CGFloat, scale: SliderScale, value: Binding<Double>) {
+        if !moved, w > 0 {
+            let v = scale.value(at: Double(g.location.x / w))
+            withAnimation(Motion.spring) { value.wrappedValue = v }
+        }
+        withAnimation(Motion.spring) {
+            fraction = nil
+            stretch = 0
+            dragging = false
+        }
+    }
 }
 
 struct OSlider: View {
@@ -218,18 +346,10 @@ struct OSlider: View {
     @StateObject private var s = SliderState()
     @Environment(\.isEnabled) private var enabled
 
-    private var span: Double { range.upperBound - range.lowerBound }
-    private func fraction(of v: Double) -> Double { span == 0 ? 0 : (v - range.lowerBound) / span }
-
-    private func snapped(_ raw: Double) -> Double {
-        var v = min(max(raw, range.lowerBound), range.upperBound)
-        if let t = ticks.min(by: { abs($0 - v) < abs($1 - v) }), abs(t - v) <= span * 0.025 { return t }
-        if step > 0 { v = (v / step).rounded() * step }
-        return min(max(v, range.lowerBound), range.upperBound)
-    }
+    private var scale: SliderScale { SliderScale(range: range, step: step, ticks: ticks) }
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Theme.Space.md) {
             track
             Text(format(value))
                 .font(Theme.body(13, .medium)).monospacedDigit().oneLine().fixedSize()
@@ -240,15 +360,16 @@ struct OSlider: View {
     }
 
     private var track: some View {
-        let f = s.fraction ?? fraction(of: value)
+        let scale = scale
+        let f = s.fraction ?? scale.fraction(of: value)
         return GeometryReader { g in
             let w = g.size.width
             ZStack(alignment: .leading) {
                 Capsule().fill(Theme.borderControl.opacity(0.4)).frame(height: 6)
                 Capsule().fill(Theme.accent).frame(width: max(0, w * f), height: 6)
                 ForEach(ticks, id: \.self) { t in
-                    Circle().fill(fraction(of: t) <= f ? Theme.onAccent.opacity(0.7) : Theme.borderControl)
-                        .frame(width: 4, height: 4).offset(x: w * fraction(of: t) - 2)
+                    Circle().fill(scale.fraction(of: t) <= f ? Theme.onAccent.opacity(0.7) : Theme.borderControl)
+                        .frame(width: 4, height: 4).offset(x: w * scale.fraction(of: t) - 2)
                 }
                 thumb.offset(x: w * f - 10)
             }
@@ -256,7 +377,9 @@ struct OSlider: View {
             .contentShape(Rectangle())
             .scaleEffect(x: 1 + abs(s.stretch) / max(w, 1), y: 1 - abs(s.stretch) / 60,
                          anchor: s.stretch < 0 ? .trailing : .leading)
-            .gesture(drag(width: w))
+            .gesture(DragGesture(minimumDistance: 0)
+                .onChanged { s.drag($0, width: w, scale: scale, value: $value, relative: false) }
+                .onEnded { s.end($0, width: w, scale: scale, value: $value); onCommit() })
             .simultaneousGesture(TapGesture(count: 2).onEnded {
                 withAnimation(Motion.spring) { value = resetValue ?? range.lowerBound }
                 onCommit()
@@ -266,12 +389,11 @@ struct OSlider: View {
         .onHover { s.hovering = $0 }
         .focusable()
         .onKeyPress(keys: [.leftArrow, .rightArrow, .upArrow, .downArrow, .home, .end]) { press in
-            let unit = step > 0 ? step : span / 100
             let n = press.modifiers.contains(.shift) ? 10.0 : 1.0
             withAnimation(Motion.spring) {
                 switch press.key {
-                case .leftArrow, .downArrow: value = snapped(value - unit * n)
-                case .rightArrow, .upArrow: value = snapped(value + unit * n)
+                case .leftArrow, .downArrow: value = scale.snapped(value - scale.unit * n)
+                case .rightArrow, .upArrow: value = scale.snapped(value + scale.unit * n)
                 case .home: value = range.lowerBound
                 default: value = range.upperBound
                 }
@@ -284,24 +406,20 @@ struct OSlider: View {
         .accessibilityLabel(label)
         .accessibilityValue(format(value))
         .accessibilityAdjustableAction { dir in
-            let unit = step > 0 ? step : span / 100
-            value = snapped(value + (dir == .increment ? unit : -unit))
+            value = scale.snapped(value + (dir == .increment ? scale.unit : -scale.unit))
         }
     }
 
     private var thumb: some View {
         ZStack {
-            Circle().fill(Theme.surfaceRaised)
-                .elevation(.sm, in: Circle())
-                .overlay(Circle().strokeBorder(Theme.borderControl.opacity(0.75), lineWidth: 1))
+            OKnob()
             Circle().fill(Theme.accent).frame(width: 6, height: 6).scaleEffect(s.dragging ? 1 : 0)
         }
-        .frame(width: 20, height: 20)
         .scaleEffect(s.dragging ? 1.2 : s.hovering ? 1.08 : 1)
         .overlay(alignment: .top) {
             Text(format(value)).font(Theme.body(11.5, .medium)).monospacedDigit().oneLine()
                 .foregroundStyle(Theme.surface)
-                .padding(.horizontal, 8).padding(.vertical, 3)
+                .padding(.horizontal, Theme.Space.sm).padding(.vertical, 3)
                 .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous).fill(Theme.ink))
                 .fixedSize()
                 .offset(y: -30)
@@ -309,44 +427,27 @@ struct OSlider: View {
                 .scaleEffect(s.dragging ? 1 / 1.2 : 0.85, anchor: .bottom)
         }
         .animation(Motion.spring, value: s.dragging)
-        .animation(.easeOut(duration: Theme.fast), value: s.hovering)
-    }
-
-    private func drag(width w: CGFloat) -> some Gesture {
-        DragGesture(minimumDistance: 0)
-            .onChanged { g in
-                guard w > 0 else { return }
-                if !s.dragging {
-                    s.dragging = true
-                    s.moved = false
-                    s.start = fraction(of: value)
-                }
-                if abs(g.translation.width) > 2 { s.moved = true }
-                let fine = NSEvent.modifierFlags.contains(.option)
-                let raw = fine ? s.start + Double(g.translation.width / w) * 0.1 : Double(g.location.x / w)
-                guard s.moved else { return }
-                let over = raw < 0 ? raw * Double(w) : raw > 1 ? (raw - 1) * Double(w) : 0
-                s.stretch = CGFloat(over > 0 ? min(over * 0.25, 6) : max(over * 0.25, -6))
-                let clamped = min(max(raw, 0), 1)
-                s.fraction = clamped
-                let v = snapped(range.lowerBound + clamped * span)
-                if v != value { value = v }
-            }
-            .onEnded { g in
-                if !s.moved, w > 0 {
-                    let v = snapped(range.lowerBound + min(max(Double(g.location.x / w), 0), 1) * span)
-                    withAnimation(Motion.spring) { value = v }
-                }
-                withAnimation(Motion.spring) {
-                    s.fraction = nil
-                    s.stretch = 0
-                    s.dragging = false
-                }
-                onCommit()
-            }
+        .animation(Motion.fade, value: s.hovering)
     }
 }
 
+struct OKnob: View {
+    var color: Color? = nil
+    var size: CGFloat = 20
+
+    var body: some View {
+        Group {
+            if let color {
+                Circle().fill(color).overlay(Circle().strokeBorder(.white, lineWidth: 2)).elevation(.knob, in: Circle())
+            } else {
+                Circle().fill(Theme.surfaceRaised)
+                    .elevation(.sm, in: Circle())
+                    .overlay(Circle().strokeBorder(Theme.borderControl.opacity(0.75), lineWidth: 1))
+            }
+        }
+        .frame(width: size, height: size)
+    }
+}
 
 struct OBarSlider: View {
     @Binding var value: Double
@@ -359,16 +460,11 @@ struct OBarSlider: View {
     @StateObject private var s = SliderState()
     @Environment(\.isEnabled) private var enabled
 
-    private var span: Double { range.upperBound - range.lowerBound }
-    private func fraction(of v: Double) -> Double { span == 0 ? 0 : (v - range.lowerBound) / span }
-    private func snapped(_ raw: Double) -> Double {
-        var v = min(max(raw, range.lowerBound), range.upperBound)
-        if step > 0 { v = (v / step).rounded() * step }
-        return min(max(v, range.lowerBound), range.upperBound)
-    }
+    private var scale: SliderScale { SliderScale(range: range, step: step) }
 
     var body: some View {
-        let f = s.fraction ?? fraction(of: value)
+        let scale = scale
+        let f = s.fraction ?? scale.fraction(of: value)
         GeometryReader { g in
             let w = g.size.width
             ZStack(alignment: .leading) {
@@ -387,48 +483,28 @@ struct OBarSlider: View {
             .contentShape(Capsule())
             .scaleEffect(x: 1 + abs(s.stretch) / max(w, 1), y: 1, anchor: s.stretch < 0 ? .trailing : .leading)
             .gesture(DragGesture(minimumDistance: 0)
-                .onChanged { g in
-                    guard w > 0 else { return }
-                    if !s.dragging { s.dragging = true; s.moved = false; s.start = fraction(of: value) }
-                    if abs(g.translation.width) > 2 { s.moved = true }
-                    guard s.moved else { return }
-                    let speed = NSEvent.modifierFlags.contains(.option) ? 0.1 : 1.0
-                    let raw = s.start + Double(g.translation.width / w) * speed
-                    let over = raw < 0 ? raw * Double(w) : raw > 1 ? (raw - 1) * Double(w) : 0
-                    s.stretch = CGFloat(over > 0 ? min(over * 0.25, 6) : max(over * 0.25, -6))
-                    s.fraction = min(max(raw, 0), 1)
-                    let v = snapped(range.lowerBound + (s.fraction ?? 0) * span)
-                    if v != value { value = v }
-                }
-                .onEnded { g in
-                    if !s.moved, w > 0 {
-                        let v = snapped(range.lowerBound + min(max(Double(g.location.x / w), 0), 1) * span)
-                        withAnimation(Motion.spring) { value = v }
-                    }
-                    withAnimation(Motion.spring) { s.fraction = nil; s.stretch = 0; s.dragging = false }
-                    onCommit()
-                })
+                .onChanged { s.drag($0, width: w, scale: scale, value: $value, relative: true) }
+                .onEnded { s.end($0, width: w, scale: scale, value: $value); onCommit() })
         }
         .frame(height: 34)
         .frame(minWidth: 180)
         .onHover { s.hovering = $0 }
-        .animation(.easeOut(duration: Theme.fast), value: s.hovering)
+        .animation(Motion.fade, value: s.hovering)
         .opacity(enabled ? 1 : 0.45)
         .allowsHitTesting(enabled)
         .accessibilityElement()
         .accessibilityLabel(label)
         .accessibilityValue(format(value))
         .accessibilityAdjustableAction { dir in
-            let unit = step > 0 ? step : span / 100
-            value = snapped(value + (dir == .increment ? unit : -unit))
+            value = scale.snapped(value + (dir == .increment ? scale.unit : -scale.unit))
         }
     }
 
     private func content(_ color: Color) -> some View {
-        HStack(spacing: 8) {
-            if let symbol { Image(systemName: symbol).font(.system(size: 13, weight: .medium)) }
+        HStack(spacing: Theme.Space.sm) {
+            if let symbol { Image(systemName: symbol).font(Theme.symbol()) }
             Text(label).oneLine()
-            Spacer(minLength: 8)
+            Spacer(minLength: Theme.Space.sm)
             Text(format(value)).monospacedDigit().oneLine()
         }
         .font(Theme.body(13.5, .medium))
@@ -438,48 +514,54 @@ struct OBarSlider: View {
     }
 }
 
+enum KbdSize { case small, medium, large }
 
 struct Kbd: View {
     let keys: [String]
-    var large = false
+    var size: KbdSize = .small
     var pressed = false
+    var onAccent = false
+
+    init(keys: [String], size: KbdSize = .small, pressed: Bool = false, onAccent: Bool = false) {
+        self.keys = keys; self.size = size; self.pressed = pressed; self.onAccent = onAccent
+    }
 
     var body: some View {
-        HStack(spacing: large ? 6 : 2) {
+        HStack(spacing: size == .large ? 6 : size == .medium ? Theme.Space.xs : Theme.Space.xxs) {
             ForEach(Array(keys.enumerated()), id: \.offset) { _, k in cap(k) }
         }
     }
 
     @ViewBuilder private func cap(_ k: String) -> some View {
-        if large {
-            let wide = k.count > 2
-            Text(k)
-                .font(Theme.keys(wide ? 14 : 17, .medium)).oneLine().fixedSize()
-                .foregroundStyle(pressed ? Theme.onAccent : Theme.ink)
-                .padding(.horizontal, 12)
-                .frame(minWidth: 40, minHeight: 40)
-                .background {
-                    let shape = RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
-                    if pressed {
-                        shape.fill(Theme.accent)
-                    } else {
-                        shape.fill(Theme.surface)
-                            .overlay(alignment: .bottom) {
-                                shape.fill(Theme.surfaceSunken).frame(height: 3)
-                                    .mask(shape)
-                            }
-                            .elevation(.sm, in: shape)
-                    }
-                }
-                .offset(y: pressed ? 2 : 0)
-                .animation(.easeOut(duration: Theme.fast), value: pressed)
-        } else {
+        if size == .small {
             Text(k)
                 .font(Theme.keys(11.5, .medium)).oneLine()
                 .foregroundStyle(Theme.inkMuted)
                 .padding(.horizontal, 5)
                 .frame(minWidth: 20, minHeight: 20)
                 .background(RoundedRectangle(cornerRadius: Theme.Radius.xs, style: .continuous).fill(Theme.well))
+        } else {
+            let large = size == .large, wide = k.count > 2
+            Text(k)
+                .font(Theme.keys(large ? (wide ? 14 : 17) : (wide ? 11.5 : 13), .medium)).oneLine().fixedSize()
+                .foregroundStyle(pressed ? Theme.onAccent : onAccent ? Theme.accent : Theme.ink)
+                .padding(.horizontal, large ? Theme.Space.md : Theme.Space.sm)
+                .frame(minWidth: large ? 40 : 30, minHeight: large ? 40 : 30)
+                .background {
+                    let shape = RoundedRectangle(cornerRadius: large ? Theme.Radius.md : Theme.Radius.sm, style: .continuous)
+                    if pressed {
+                        shape.fill(Theme.accent)
+                    } else {
+                        shape.fill(onAccent ? Theme.onAccent : Theme.surface)
+                            .overlay(alignment: .bottom) {
+                                shape.fill(Theme.surfaceSunken).frame(height: large ? 3 : 2)
+                                    .mask(shape)
+                            }
+                            .elevation(.sm, in: shape)
+                    }
+                }
+                .offset(y: pressed ? 2 : 0)
+                .animation(Motion.fade, value: pressed)
         }
     }
 }
@@ -509,12 +591,6 @@ struct OTooltip: View {
     }
 }
 
-struct Keycaps: View {
-    let caps: [String]
-    var body: some View { Kbd(keys: caps) }
-}
-
-
 struct OGroup<Content: View>: View {
     let title: String?
     var footer: String? = nil
@@ -529,12 +605,11 @@ struct OGroup<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let title {
-                Text(title).font(Theme.body(12, .medium)).tracking(0.24).foregroundStyle(Theme.accentInk).oneLine()
-                    .padding(.bottom, 4)
+                OSectionHeader(title).padding(.bottom, Theme.Space.xs)
             }
             _VariadicView.Tree(Separated()) { content }
             if let footer {
-                Text(footer).font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine().padding(.top, 8)
+                Text(footer).textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine().padding(.top, Theme.Space.sm)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -570,13 +645,13 @@ struct ORow<Control: View>: View {
     var body: some View {
         HStack(spacing: 12) {
             if let symbol {
-                Image(systemName: symbol).font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.accentInk)
+                Image(systemName: symbol).font(Theme.symbol(Theme.Icon.lg)).foregroundStyle(Theme.accentInk)
                     .frame(width: 18)
             }
             VStack(alignment: .leading, spacing: 1) {
                 Text(label).font(Theme.body(14)).foregroundStyle(Theme.ink).oneLine()
                 if let description {
-                    Text(description).font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine()
+                    Text(description).textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine()
                 }
             }
             .opacity(enabled ? 1 : 0.45)
@@ -610,6 +685,50 @@ struct OSwitchRow: View {
     }
 }
 
+struct OSectionHeader: View {
+    let title: String
+    var tone: Color = Theme.accentInk
+    var dot: Color? = nil
+
+    init(_ title: String, tone: Color = Theme.accentInk, dot: Color? = nil) {
+        self.title = title; self.tone = tone; self.dot = dot
+    }
+
+    var body: some View {
+        HStack(spacing: 7) {
+            if let dot { Circle().fill(dot).frame(width: 7, height: 7) }
+            Text(title).textStyle(.sectionTitle).foregroundStyle(tone).oneLine()
+        }
+        .accessibilityAddTraits(.isHeader)
+    }
+}
+
+struct OPageTitle<Trailing: View>: View {
+    let crumbs: [String]
+    let title: String
+    @ViewBuilder var trailing: Trailing
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                ForEach(Array(crumbs.enumerated()), id: \.offset) { i, c in
+                    if i > 0 { Image(systemName: "chevron.right").font(Theme.symbol(Theme.Icon.xs, .semibold)) }
+                    Text(c)
+                }
+            }
+            .textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine()
+            HStack(alignment: .center, spacing: Theme.Space.sm) {
+                Text(title).textStyle(.largeTitle).oneLine()
+                Spacer(minLength: Theme.Space.md)
+                trailing
+            }
+        }
+    }
+}
+
+extension OPageTitle where Trailing == EmptyView {
+    init(crumbs: [String], title: String) { self.init(crumbs: crumbs, title: title) { EmptyView() } }
+}
 
 struct OTextField: View {
     let placeholder: String
@@ -644,7 +763,7 @@ struct OSearchField: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass").font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.inkMuted)
+            Image(systemName: "magnifyingglass").font(Theme.symbol()).foregroundStyle(Theme.inkMuted)
             TextField("", text: $text, prompt: Text(placeholder).foregroundStyle(Theme.inkFaint))
                 .textFieldStyle(.plain)
                 .font(Theme.body(13.5))
@@ -653,7 +772,7 @@ struct OSearchField: View {
                 .onSubmit(onSubmit)
             if !text.isEmpty {
                 Button { text = "" } label: {
-                    Image(systemName: "xmark.circle.fill").font(.system(size: 12)).foregroundStyle(Theme.inkFaint)
+                    Image(systemName: "xmark.circle.fill").font(Theme.symbol(Theme.Icon.sm, .regular)).foregroundStyle(Theme.inkFaint)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Clear search")
@@ -666,7 +785,6 @@ struct OSearchField: View {
         .accessibilityElement(children: .contain)
     }
 }
-
 
 struct WorkspaceStrip: View {
     let names: [String]
@@ -810,7 +928,7 @@ struct EssentialTile: View {
             action()
         } label: {
             let image = Image(systemName: isOn == false ? offSymbol ?? symbol : symbol)
-                .font(.system(size: 15, weight: .medium))
+                .font(Theme.symbol(Theme.Icon.lg))
                 .contentTransition(.symbolEffect(.replace, options: .speed(2.2)))
             VStack(spacing: 4) {
                 Group {
@@ -828,7 +946,7 @@ struct EssentialTile: View {
         }
         .buttonStyle(PressScale())
         .onHover { model.hover = $0 }
-        .animation(.easeOut(duration: Theme.medium), value: on)
+        .animation(Motion.fadeMedium, value: on)
         .tooltip(label, keys: shortcut)
         .accessibilityLabel(label)
         .accessibilityAddTraits(isOn == nil ? [] : on ? [.isToggle, .isSelected] : .isToggle)
@@ -836,21 +954,43 @@ struct EssentialTile: View {
 }
 
 struct RemoveButton: View {
+    enum Variant { case row, close, restore, badge }
     let help: String
+    var variant: Variant = .row
     let action: () -> Void
     @StateObject private var hover = Flag()
 
+    init(help: String, variant: Variant = .row, action: @escaping () -> Void) {
+        self.help = help; self.variant = variant; self.action = action
+    }
+
     var body: some View {
         Button(action: action) {
-            Image(systemName: "minus").font(.system(size: 10, weight: .bold))
-                .foregroundStyle(hover.on ? Theme.danger : Theme.inkMuted)
-                .frame(width: 22, height: 22)
-                .background(Circle().fill(hover.on ? Theme.dangerSoft : Theme.well))
-                .contentShape(Circle())
+            switch variant {
+            case .row:
+                Image(systemName: "minus").font(Theme.symbol(10, .bold))
+                    .foregroundStyle(hover.on ? Theme.danger : Theme.inkMuted)
+                    .frame(width: 22, height: 22)
+                    .background(Circle().fill(hover.on ? Theme.dangerSoft : Theme.well))
+                    .contentShape(Circle())
+            case .close, .restore:
+                let removes = variant == .close
+                Image(systemName: removes ? "xmark" : "arrow.uturn.backward").font(Theme.symbol(10, .semibold))
+                    .foregroundStyle(hover.on && removes ? Theme.danger : hover.on ? Theme.ink : Theme.inkMuted)
+                    .frame(width: 22, height: 22)
+                    .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
+                        .fill(hover.on ? (removes ? Theme.dangerSoft : Theme.hover) : .clear))
+                    .contentShape(Rectangle())
+            case .badge:
+                Image(systemName: "xmark").font(Theme.symbol(7, .heavy)).foregroundStyle(Theme.surface)
+                    .frame(width: 16, height: 16)
+                    .background(Circle().fill(hover.on ? Theme.danger : Theme.inkMuted))
+                    .contentShape(Circle())
+            }
         }
         .buttonStyle(PressScale(scale: 0.88))
         .onHover { hover.on = $0 }
-        .animation(.easeOut(duration: Theme.fast), value: hover.on)
+        .animation(Motion.fade, value: hover.on)
         .tooltip(help)
         .accessibilityLabel(help)
     }
@@ -884,7 +1024,7 @@ struct OStatus: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Image(systemName: symbol).font(.system(size: 12, weight: .semibold))
+            Image(systemName: symbol).font(Theme.symbol(Theme.Icon.sm, .semibold))
             Text(text).font(Theme.body(12.5, .medium)).oneLine()
         }
         .foregroundStyle(color)

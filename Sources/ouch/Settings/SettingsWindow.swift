@@ -19,13 +19,12 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
             let host = NSHostingController(rootView: SettingsView(doc: doc, ui: ui))
             host.sizingOptions = []
             w.contentViewController = host
+            ArrowCursor.keep(in: host.view)
             w.setContentSize(NSSize(width: 940, height: 680))
             w.contentMinSize = NSSize(width: 840, height: 540)
             w.level = .floating
-            w.titleVisibility = .hidden
-            w.titlebarAppearsTransparent = true
+            w.clearTitlebar(hiding: [.zoomButton])
             w.collectionBehavior.insert(.fullScreenNone)
-            w.standardWindowButton(.zoomButton)?.isHidden = true
             w.delegate = self
             window = w
         }
@@ -47,10 +46,8 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
     }
 
     private func centerOnPointerScreen() {
-        guard let w = window,
-              let screen = NSScreen.screens.first(where: { $0.frame.contains(NSEvent.mouseLocation) }) ?? NSScreen.main
-        else { return }
-        let area = screen.visibleFrame
+        guard let w = window else { return }
+        let area = OuchPanel.pointerScreen().visibleFrame
         let size = NSSize(width: min(w.frame.width, area.width), height: min(w.frame.height, area.height))
         w.setFrame(NSRect(x: area.midX - size.width / 2, y: area.midY - size.height / 2, width: size.width, height: size.height),
                    display: false)
@@ -89,7 +86,6 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
         NSApp.setActivationPolicy(.accessory)
     }
 }
-
 
 enum Pane: String, CaseIterable, Identifiable {
     case general = "General", layout = "Layout", windows = "Windows", motion = "Motion", shortcuts = "Shortcuts"
@@ -165,7 +161,7 @@ final class SettingsUI: ObservableObject {
         highlight = nil
         DispatchQueue.main.async { self.highlight = entry.id }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { [weak self] in
-            if self?.highlight == entry.id { withAnimation(.easeOut(duration: 0.5)) { self?.highlight = nil } }
+            if self?.highlight == entry.id { withAnimation(Motion.fadeAway) { self?.highlight = nil } }
         }
     }
 

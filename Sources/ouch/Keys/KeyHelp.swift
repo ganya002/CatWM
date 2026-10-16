@@ -5,7 +5,7 @@ final class KeyHelp {
     static let shared = KeyHelp()
 
     private let model = KeyHelpModel()
-    private var panel: NSPanel?
+    private var panel: OuchPanel?
     private var host: NSHostingView<KeyHelpView>?
     private var holdWork: DispatchWorkItem?
     private var orderOutWork: DispatchWorkItem?
@@ -26,7 +26,6 @@ final class KeyHelp {
         }
         Hotkeys.shared.onHelpKey = { [weak self] in self?.toggle() }
     }
-
 
     func modeChanged(_ name: String) {
         holdWork?.cancel()
@@ -81,12 +80,9 @@ final class KeyHelp {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.22, execute: work)
     }
 
-
     private func show(mode: String, reason: KeyHelpModel.Reason) {
         orderOutWork?.cancel()
-        let screen = WindowManager.shared.focusedScreen
-            ?? NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main
-        guard let screen else { return }
+        let screen = WindowManager.shared.focusedScreen ?? OuchPanel.pointerScreen()
         let wasShown = model.shown
         Tips.shared.markSeen(.keyHelp)
         model.load(mode: mode, binds: WindowManager.shared.config.bindings, chord: chordMods, reason: reason,
@@ -104,10 +100,7 @@ final class KeyHelp {
         }
         guard let host else { return }
         host.layoutSubtreeIfNeeded()
-        let size = host.fittingSize
-        let area = screen.visibleFrame
-        p.setFrame(CGRect(x: area.midX - size.width / 2, y: area.minY - Self.margin + Self.bottomGap, width: size.width, height: size.height),
-                   display: true)
+        p.place(size: host.fittingSize, on: screen, anchor: .bottom(Self.bottomGap - Self.margin), inset: EdgeInsets(all: Self.margin))
         p.orderFrontRegardless()
         if !wasShown { DispatchQueue.main.async { [weak self] in self?.model.shown = true } }
 
@@ -141,22 +134,12 @@ final class KeyHelp {
         }
     }
 
-    private func makePanel() -> NSPanel {
-        let p = NSPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        p.level = .statusBar
-        p.isOpaque = false
-        p.backgroundColor = .clear
-        p.hasShadow = false
-        p.ignoresMouseEvents = true
-        p.collectionBehavior = [.canJoinAllSpaces, .transient, .ignoresCycle, .fullScreenAuxiliary]
-        return p
-    }
+    private func makePanel() -> OuchPanel { OuchPanel(role: .hud) }
 
     static func mods(_ f: CGEventFlags) -> NSEvent.ModifierFlags {
         NSEvent.ModifierFlags(rawValue: UInt(f.rawValue)).intersection([.command, .option, .control, .shift])
     }
 }
-
 
 final class KeyHelpModel: ObservableObject {
     enum Reason { case hold, toggle, menu }
@@ -168,27 +151,18 @@ final class KeyHelpModel: ObservableObject {
     @Published var held: NSEvent.ModifierFlags = []
     @Published var pressed: UInt16?
     private(set) var base: NSEvent.ModifierFlags = []
-    private(set) var chord: NSEvent.ModifierFlags = []
     private(set) var binds: [KeyBinding] = []
-    private(set) var gestures: [GestureBind] = []
     static let keyboardMax: CGFloat = 580
     private(set) var keyboardWidth: CGFloat = keyboardMax
-    private(set) var padBeside = true
 
     func load(mode: String, binds all: [KeyBinding], chord: NSEvent.ModifierFlags, reason: Reason, room: CGFloat) {
         self.mode = mode
         self.reason = reason
-        self.chord = chord
         binds = all.filter { $0.submap == mode && $0.keyCode < 0x1000 }
-        let gestureBinds = all.filter { ($0.submap == mode || $0.submap.isEmpty) && $0.keyCode >= 0x1000 }
-        let current = Int(WindowManager.shared.menuBarState()?.workspace ?? "") ?? 1
-        gestures = gestureBinds.compactMap { GestureBind($0, current: current) }
         let counts = Dictionary(grouping: binds, by: { KeyHelp.mods($0.mods).subtracting(.shift).rawValue }).mapValues(\.count)
         base = counts.max { $0.value != $1.value ? $0.value < $1.value : $0.key > $1.key }
             .map { NSEvent.ModifierFlags(rawValue: $0.key) } ?? []
-        let pad = gestures.isEmpty ? 0 : GesturePad.width + 20
-        padBeside = room >= Self.keyboardMax + pad
-        keyboardWidth = min(Self.keyboardMax, max(440, padBeside ? room - pad : room))
+        keyboardWidth = min(Self.keyboardMax, max(440, room))
     }
 
     var shiftLayer: Bool { held.contains(.shift) }
@@ -205,87 +179,22 @@ final class KeyHelpModel: ObservableObject {
     }
 }
 
-
 struct KeyHelpView: View {
     @ObservedObject var model: KeyHelpModel
     let margin: CGFloat
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 20, style: .continuous)
-        VStack(alignment: .leading, spacing: 8) {
-            header
-            if model.padBeside {
-                HStack(alignment: .center, spacing: 20) { keyboard; pad }
-            } else {
-                VStack(spacing: 14) { keyboard; pad }
-            }
-        }
-        .padding(.vertical, 10).padding(.horizontal, 12)
-        .foregroundStyle(Theme.ink)
-        .floatingGlass(shape)
-        .panelEntrance(model.shown, style: model.motion, radius: 20)
-        .padding(margin)
-        .allowsHitTesting(false)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Keyboard help")
+        keyboard
+            .panelEntrance(model.shown, style: model.motion, radius: 20)
+            .padding(margin)
+            .allowsHitTesting(false)
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Keyboard help")
     }
 
     private var keyboard: some View {
         let scale = model.keyboardWidth / KeyHintKeyboard.size(scale: 1).width
-        return KeyHintKeyboard(binds: model.hints, style: .labels, pressed: model.pressed, hot: model.hot, scale: scale)
+        return KeyHintKeyboard(binds: model.hints, pressed: model.pressed, hot: model.hot, scale: scale)
             .environment(\.keyTile, model.motion == .tile ? model.shown : nil)
-    }
-
-    @ViewBuilder private var pad: some View {
-        if !model.gestures.isEmpty { GesturePad(gestures: model.gestures) }
-    }
-
-    private var header: some View {
-        HStack(spacing: 10) {
-            Text(model.mode.isEmpty ? "Global" : "\(model.mode.capitalized) mode").font(Theme.heading(13.5)).oneLine()
-            hint.font(Theme.body(12)).foregroundStyle(Theme.inkMuted)
-            Spacer(minLength: 16)
-            layers
-        }
-        .frame(height: 24)
-    }
-
-    @ViewBuilder private var hint: some View {
-        switch model.reason {
-        case .hold:
-            HStack(spacing: 5) {
-                Text("shown while you hold").oneLine()
-                Kbd(keys: ConfigDocument.modifierCaps(model.chord))
-            }
-        case .toggle:
-            HStack(spacing: 5) {
-                Text("press").oneLine()
-                Kbd(keys: [WindowManager.shared.config.keyboardHelpKey])
-                Text("to hide").oneLine()
-            }
-        case .menu:
-            Text("click or press any key to close").oneLine()
-        }
-    }
-
-    private var layers: some View {
-        let base = ConfigDocument.modifierCaps(model.base).joined()
-        let shifted = ConfigDocument.modifierCaps(model.base.union(.shift)).joined()
-        return HStack(spacing: 2) {
-            segment((base.isEmpty ? "" : base + " ") + "Keys", on: !model.shiftLayer)
-            segment(shifted + " Keys", on: model.shiftLayer)
-        }
-        .padding(3)
-        .background(Capsule().fill(Theme.well))
-        .fixedSize()
-        .animation(Motion.spring, value: model.shiftLayer)
-    }
-
-    private func segment(_ label: String, on: Bool) -> some View {
-        Text(label)
-            .font(Theme.body(12.5, on ? .medium : .regular)).oneLine()
-            .foregroundStyle(on ? Theme.onAccent : Theme.inkMuted)
-            .padding(.horizontal, 12).frame(height: 22)
-            .background { if on { Capsule().fill(Theme.accent) } }
     }
 }

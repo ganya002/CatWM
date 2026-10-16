@@ -1,7 +1,6 @@
 import AppKit
 import SwiftUI
 
-
 private extension View {
     func zone(_ z: SortZone) -> some View {
         background(GeometryReader { g in
@@ -70,21 +69,19 @@ struct SortView: View {
         .tint(Theme.accent)
     }
 
-
     private func header(_ plan: SortPlan) -> some View {
         let n = plan.items.count
         return HStack(spacing: 12) {
-            (Text("Sort ").font(Theme.body(22))
+            (Text("Sort ")
                 + Text("\(n)").font(Theme.body(22, .medium)).foregroundColor(Theme.accentInk)
-                + Text(n == 1 ? " window" : " windows").font(Theme.body(22)))
-                .tracking(-0.2).oneLine().fixedSize()
+                + Text(n == 1 ? " window" : " windows"))
+                .textStyle(.title).oneLine().fixedSize()
             if model.displays.count > 1 { SortDisplays(model: model) }
             Spacer(minLength: 12)
             SortStrategies(selection: plan.strategy) { model.pick($0) }
         }
         .padding(.bottom, 4)
     }
-
 
     private func row(_ plan: SortPlan, rows: Int) -> some View {
         ScrollViewReader { proxy in
@@ -126,7 +123,7 @@ struct SortView: View {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(Image(systemName: "xmark")).font(Theme.display(22)).foregroundStyle(Theme.danger).fixedSize()
                 Text("Close").font(Theme.heading()).foregroundStyle(Theme.ink).oneLine()
-                Text(n > 0 ? "\(n)" : "").font(Theme.body(12)).monospacedDigit().foregroundStyle(Theme.inkFaint).fixedSize()
+                Text(n > 0 ? "\(n)" : "").textStyle(.caption).monospacedDigit().foregroundStyle(Theme.inkFaint).fixedSize()
             }
             .padding(.horizontal, 4)
             SortCloseList(model: model, plan: plan, rows: rows)
@@ -134,11 +131,10 @@ struct SortView: View {
         .padding(.vertical, 8).padding(.horizontal, 4)
         .frame(width: SortMetrics.lane, alignment: .topLeading)
         .background(shape.fill(over ? Theme.dangerSoft : .clear))
-        .animation(.easeOut(duration: Theme.medium), value: over)
+        .animation(Motion.fadeMedium, value: over)
         .zone(.close)
         .padding(.leading, 4).padding(.trailing, 8)
     }
-
 
     private func footer(_ plan: SortPlan) -> some View {
         HStack(spacing: 8) {
@@ -164,21 +160,19 @@ struct SortView: View {
         .padding(.top, 4)
     }
 
-
     @ViewBuilder private var columnGhost: some View {
         if let d = model.columnDrag {
-            let shape = RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
             VStack(alignment: .leading, spacing: 8) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(d.lane.ws).font(Theme.display(22)).monospacedDigit().tracking(-0.4).foregroundStyle(Theme.accentInk).fixedSize()
                     Text(d.lane.name.isEmpty ? "Workspace \(d.lane.ws)" : d.lane.name).font(Theme.heading()).oneLine()
                 }
-                .padding(.horizontal, 4)
-                SortThumb(layout: d.lane.layout, ids: d.lane.ids, lit: nil, ratio: d.ratio, mainCount: d.mainCount).padding(.horizontal, 4)
+                .padding(.horizontal, 2)
+                SortThumb(layout: d.lane.layout, ids: d.lane.ids, lit: nil, ratio: d.ratio, mainCount: d.mainCount).padding(.horizontal, 2)
             }
-            .padding(.vertical, 8).padding(.horizontal, 4)
-            .frame(width: SortMetrics.lane, alignment: .topLeading)
-            .background(shape.fill(Theme.surfaceRaised).elevation(.popover, in: shape))
+            .padding(.vertical, 2)
+            .frame(width: SortMetrics.lane - 12, alignment: .topLeading)
+            .surface(.md)
             .keepInside(CGPoint(x: d.location.x - d.grab.width, y: d.location.y - d.grab.height))
             .allowsHitTesting(false)
         }
@@ -197,32 +191,13 @@ struct SortView: View {
     }
 }
 
-
 private struct SortStrategies: View {
     let selection: SortStrategy?
     let pick: (SortStrategy) -> Void
-    @Namespace private var thumb
 
     var body: some View {
-        HStack(spacing: 2) {
-            ForEach(SortStrategy.allCases, id: \.self) { s in
-                let on = s == selection
-                Button { withAnimation(Motion.spring) { pick(s) } } label: {
-                    Text(s.title).font(Theme.body(12.5, on ? .medium : .regular)).oneLine()
-                        .foregroundStyle(on ? Theme.onAccent : Theme.inkMuted)
-                        .padding(.horizontal, 12).frame(height: 24)
-                        .background { if on { Capsule().fill(Theme.accent).matchedGeometryEffect(id: "thumb", in: thumb) } }
-                        .contentShape(Capsule())
-                }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(on ? .isSelected : [])
-            }
-        }
-        .padding(3)
-        .background(Capsule().fill(Theme.well))
-        .fixedSize()
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Group by")
+        OSegmented(title: "Group by", options: SortStrategy.allCases.map { OSegmentOption(value: $0, label: $0.title) },
+                   selection: selection, pick: pick)
     }
 }
 
@@ -231,37 +206,18 @@ private struct SortDisplays: View {
     @Namespace private var thumb
 
     var body: some View {
-        HStack(spacing: 2) {
+        OSegmentTrack(title: "Display to sort") {
             ForEach(model.displays) { d in
                 let on = d.id == model.current
-                let over = model.over == .display(d.id) && !on
-                Button { withAnimation(Motion.spring) { model.use(d.id) } } label: {
-                    HStack(spacing: 7) {
-                        SortScreenGlyph(display: d, color: on ? Theme.onAccent : over ? Theme.accentInk : Theme.inkMuted)
-                        Text(d.short).font(Theme.body(12.5, on ? .medium : .regular)).oneLine()
-                        Text("\(model.count(of: d.id))").font(Theme.body(12)).monospacedDigit()
-                            .foregroundStyle(on ? Theme.onAccent.opacity(0.8) : Theme.inkFaint)
-                    }
-                    .foregroundStyle(on ? Theme.onAccent : over ? Theme.accentInk : Theme.inkMuted)
-                    .padding(.leading, 9).padding(.trailing, 12).frame(height: 24)
-                    .background {
-                        if on { Capsule().fill(Theme.accent).matchedGeometryEffect(id: "thumb", in: thumb) }
-                        else if over { Capsule().fill(Theme.accentSoft) }
-                    }
-                    .contentShape(Capsule())
+                OSegment(label: d.short, count: model.count(of: d.id), on: on, hot: model.over == .display(d.id) && !on,
+                         thumb: thumb, action: { withAnimation(Motion.spring) { model.use(d.id) } }) { ink in
+                    SortScreenGlyph(display: d, color: ink).padding(.trailing, 2)
                 }
-                .buttonStyle(.plain)
                 .zone(.display(d.id))
                 .tooltip(d.name)
                 .accessibilityLabel(d.name)
-                .accessibilityAddTraits(on ? .isSelected : [])
             }
         }
-        .padding(3)
-        .background(Capsule().fill(Theme.well))
-        .fixedSize()
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Display to sort")
     }
 }
 
@@ -272,13 +228,12 @@ private struct SortScreenGlyph: View {
     var body: some View {
         let w = min(24, max(16, (12 * display.aspect).rounded()))
         VStack(spacing: 2) {
-            RoundedRectangle(cornerRadius: 2.5, style: .continuous).strokeBorder(color, lineWidth: 1.5).frame(width: w, height: 12)
+            RoundedRectangle(cornerRadius: 2.5, style: .continuous).strokeBorder(color, lineWidth: 1.5).frame(width: w, height: 12) // style-ok: a 12pt drawing of a screen
             Capsule().fill(color).frame(width: display.isLaptop ? w + 5 : 6, height: 1.5)
         }
         .frame(height: 16)
     }
 }
-
 
 private final class NumberEdit: ObservableObject {
     @Published var on = false
@@ -348,10 +303,10 @@ private struct SortLaneView: View {
                     .focused($editing)
                     .onSubmit { editing = false }
                     .accessibilityLabel("Name for workspace \(lane.ws)")
-                Text(n > 0 ? "\(n)" : "").font(Theme.body(12)).monospacedDigit().foregroundStyle(Theme.inkFaint).fixedSize()
+                Text(n > 0 ? "\(n)" : "").textStyle(.caption).monospacedDigit().foregroundStyle(Theme.inkFaint).fixedSize()
                     .gesture(carry)
                 if model.plan.lanes.count > 1 {
-                    SortRemoveButton(label: "Remove workspace \(lane.ws)") { withAnimation(Motion.easeOut) { model.removeLane(index) } }
+                    RemoveButton(help: "Remove workspace \(lane.ws)", variant: .close) { withAnimation(Motion.easeOut) { model.removeLane(index) } }
                         .opacity(hover.on || editing ? 1 : 0)
                         .padding(.vertical, -4)
                 }
@@ -374,8 +329,8 @@ private struct SortLaneView: View {
         .opacity(model.columnDrag?.lane.id == lane.id ? 0.3 : 1)
         .overlay(alignment: .leading) { slotBar(model.columnSlot == index).offset(x: -3.5) }
         .overlay(alignment: .trailing) { slotBar(model.columnSlot == index + 1 && index == model.plan.lanes.count - 1).offset(x: 3.5) }
-        .animation(.easeOut(duration: Theme.medium), value: over)
-        .animation(.easeOut(duration: Theme.fast), value: model.columnSlot)
+        .animation(Motion.fadeMedium, value: over)
+        .animation(Motion.fade, value: model.columnSlot)
         .zone(.lane(lane.id))
         .onHover { hover.on = $0 }
         .onChange(of: model.focusName) { _, id in
@@ -386,29 +341,6 @@ private struct SortLaneView: View {
 
 private func slotBar(_ on: Bool) -> some View {
     Capsule().fill(Theme.accent).frame(width: 3).padding(.vertical, 6).opacity(on ? 1 : 0).allowsHitTesting(false)
-}
-
-private struct SortRemoveButton: View {
-    let label: String
-    var removes = true
-    let action: () -> Void
-    @StateObject private var hover = Flag()
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: removes ? "xmark" : "arrow.uturn.backward").font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(hover.on && removes ? Theme.danger : hover.on ? Theme.ink : Theme.inkMuted)
-                .frame(width: 22, height: 22)
-                .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
-                    .fill(hover.on ? (removes ? Theme.dangerSoft : Theme.hover) : .clear))
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .onHover { hover.on = $0 }
-        .animation(.easeOut(duration: Theme.fast), value: hover.on)
-        .tooltip(label)
-        .accessibilityLabel(label)
-    }
 }
 
 private struct SortAddLane: View {
@@ -438,7 +370,7 @@ private struct SortAddLane: View {
                         box.strokeBorder(over ? Theme.accent : Theme.borderControl, style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
                             .opacity(over ? 1 : 0.6)
                         if drop {
-                            Image(systemName: "plus").font(.system(size: 20, weight: .regular)).foregroundStyle(Theme.accentInk)
+                            Image(systemName: "plus").font(Theme.symbol(Theme.Icon.xl, .regular)).foregroundStyle(Theme.accentInk)
                         }
                     }
                     .aspectRatio(16 / 10, contentMode: .fit)
@@ -459,7 +391,7 @@ private struct SortAddLane: View {
         .background(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous).fill(over ? Theme.accentSoft : .clear))
         .overlay { if drop { RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous).strokeBorder(Theme.accent, lineWidth: 1.5) } }
         .opacity(full ? 0.45 : 1)
-        .animation(.easeOut(duration: Theme.medium), value: over)
+        .animation(Motion.fadeMedium, value: over)
         .zone(.add)
     }
 }
@@ -475,7 +407,7 @@ private struct SortLayoutPill: View {
         Button(action: next) {
             HStack(spacing: 6) {
                 SortLayoutGlyph(layout: layout).frame(width: 16, height: 14)
-                Text(layout == .bsp ? "BSP" : layout.title).font(Theme.body(12)).oneLine()
+                Text(layout == .bsp ? "BSP" : layout.title).textStyle(.caption).oneLine()
             }
             .foregroundStyle(hover.on ? Theme.ink : Theme.inkMuted)
             .padding(.leading, 7).padding(.trailing, 10).frame(height: 24)
@@ -485,7 +417,7 @@ private struct SortLayoutPill: View {
         .buttonStyle(.plain)
         .overlay(SortRightClick(action: previous))
         .onHover { hover.on = $0 }
-        .animation(.easeOut(duration: Theme.fast), value: hover.on)
+        .animation(Motion.fade, value: hover.on)
         .tooltip(help)
         .accessibilityLabel("Layout: \(layout.title)")
         .accessibilityAction(named: "Previous layout", previous)
@@ -504,7 +436,7 @@ private struct SortLayoutGlyph: View {
                 ?? [CGRect(x: 1, y: 1, width: 9, height: 8), CGRect(x: 5, y: 4, width: 10, height: 9)]
             ZStack(alignment: .topLeading) {
                 ForEach(Array(frames.enumerated()), id: \.offset) { _, f in
-                    RoundedRectangle(cornerRadius: 1.4, style: .continuous).frame(width: f.width, height: f.height).offset(x: f.minX, y: f.minY)
+                    RoundedRectangle(cornerRadius: 1.4, style: .continuous).frame(width: f.width, height: f.height).offset(x: f.minX, y: f.minY) // style-ok: a glyph-size drawing
                 }
             }
         }
@@ -528,7 +460,7 @@ private struct SortThumb: View {
                 RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(Theme.well)
                 ForEach(Array(ids.enumerated()), id: \.element) { j, id in
                     if j < frames.count {
-                        RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        RoundedRectangle(cornerRadius: 3, style: .continuous) // style-ok: a window in a thumbnail
                             .fill(id == lit ? Theme.accent : j == 0 ? Theme.thumbMain : Theme.tint)
                             .frame(width: frames[j].width, height: frames[j].height)
                             .offset(x: frames[j].minX, y: frames[j].minY)
@@ -560,7 +492,6 @@ private struct SortThumb: View {
                                     width: r.width * 0.6, height: r.height * 0.6) }
     }
 }
-
 
 private struct SortList: View {
     @ObservedObject var model: SortModel
@@ -599,14 +530,14 @@ private struct SortRowFace: View {
                 if let icon = item.icon {
                     Image(nsImage: icon).resizable().interpolation(.high)
                 } else {
-                    RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Theme.tint)
+                    RoundedRectangle(cornerRadius: Theme.Radius.xs, style: .continuous).fill(Theme.tint)
                         .overlay(Text(String(item.app.prefix(1))).font(Theme.body(10.5, .medium)).foregroundStyle(Theme.ink))
                 }
             }
             .frame(width: 20, height: 20)
             (Text(item.title).foregroundColor(closing ? Theme.inkMuted : Theme.ink)
                 + Text(item.title.localizedCaseInsensitiveContains(item.app) ? "" : "  " + item.app)
-                    .font(Theme.body(12)).foregroundColor(Theme.inkFaint))
+                    .textStyle(.caption).foregroundColor(Theme.inkFaint))
                 .strikethrough(closing, color: Theme.danger)
                 .oneLine()
             Spacer(minLength: 0)
@@ -631,7 +562,7 @@ private struct SortRow: View {
                 .fill(closing ? (pointed ? Theme.hover : .clear) : lit ? Theme.accentSoft : .clear))
             .overlay(alignment: .trailing) {
                 if pointed && model.drag == nil {
-                    SortRemoveButton(label: closing ? "Bring back" : "Close window", removes: !closing) {
+                    RemoveButton(help: closing ? "Bring back" : "Close window", variant: closing ? .restore : .close) {
                         if closing { model.restore(item.id) } else { model.markClosing(item.id) }
                     }
                     .padding(.trailing, 2)
@@ -692,14 +623,14 @@ private struct SortClosedHeader: View {
             Text(group.name.isEmpty ? "Workspace \(group.ws)" : group.name).font(Theme.body(13.5, .medium))
                 .foregroundStyle(Theme.inkMuted).strikethrough(true, color: Theme.danger).oneLine()
             Spacer(minLength: 0)
-            Text("\(group.ids.count)").font(Theme.body(12)).monospacedDigit().foregroundStyle(Theme.inkFaint).fixedSize()
+            Text("\(group.ids.count)").textStyle(.caption).monospacedDigit().foregroundStyle(Theme.inkFaint).fixedSize()
         }
         .padding(.leading, 5).padding(.trailing, 8)
         .frame(height: SortMetrics.rowHeight)
         .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous).fill(hover.on ? Theme.hover : .clear))
         .overlay(alignment: .trailing) {
             if hover.on {
-                SortRemoveButton(label: "Bring back", removes: false) { model.reopen(group.id) }
+                RemoveButton(help: "Bring back", variant: .restore) { model.reopen(group.id) }
                     .padding(.trailing, 2)
                     .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous).fill(Theme.hover))
             }
@@ -732,7 +663,6 @@ private struct SortRightClick: NSViewRepresentable {
         override func rightMouseDown(with event: NSEvent) { action() }
     }
 }
-
 
 private struct SortScrollAccessor: NSViewRepresentable {
     let model: SortModel

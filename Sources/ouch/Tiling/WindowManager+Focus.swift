@@ -2,11 +2,11 @@ import AppKit
 
 extension WindowManager {
 
-    func focus(_ w: Window) {
+    func focus(_ w: Window, warp: Bool = true) {
         w.focus()
         noteFocus(w.id)
         pendingFocus = (w.id, Date().addingTimeInterval(0.5))
-        if config.mouseFollowsFocus {
+        if warp, config.mouseFollowsFocus {
             ignoreMouseUntil = Date().addingTimeInterval(0.3)
             CGWarpMouseCursorPosition(navFrame(w).center)
         }
@@ -25,10 +25,7 @@ extension WindowManager {
         config.focusFollowsMouse && (!config.focusFollowsMouseInModeOnly || !Hotkeys.shared.submap.isEmpty)
     }
 
-    func noteFocus(_ id: CGWindowID) {
-        focusClock += 1
-        focusStamps[id] = focusClock
-    }
+    func noteFocus(_ id: CGWindowID) { model.noteFocus(id) }
 
     private func focusUnderMouse() {
         guard focusFollowsMouseNow, !sortSession, Date() > ignoreMouseUntil, NSEvent.pressedMouseButtons == 0, !movingToSpace else { return }
@@ -36,7 +33,7 @@ extension WindowManager {
         guard let hit = CGWindowInfo.normalWindow(at: p), let w = windows[hit.id], visible.contains(w.id),
               focusedWindow()?.id != w.id else { return }
         Log.debug("ffm: focusing \(w.id) \(w.bundleID ?? "")")
-        w.focus()
+        focus(w, warp: false)
     }
 
     func mouseUp() {
@@ -48,7 +45,7 @@ extension WindowManager {
         for (id, resized) in finished {
             guard let w = windows[id], let src = screen(of: w, in: screens) else { continue }
             if floatsFreely(id) {
-                if let dst = screen(containing: w.frame, in: screens), dst.uuid != src.uuid, let ws = shown[dst.uuid] { workspaceOf[id] = ws }
+                if let dst = screen(containing: w.frame, in: screens), dst.uuid != src.uuid, let ws = shown[dst.uuid] { model.assign(id, to: ws) }
                 continue
             }
             if resized {
@@ -60,7 +57,7 @@ extension WindowManager {
                let hit = tiled(on: dst).first(where: { $0 != id && targets[$0]?.contains(p) == true }) {
                 swapOrder(id, hit)
             } else if dst.uuid != src.uuid {
-                workspaceOf[id] = shown[dst.uuid]
+                model.assign(id, to: shown[dst.uuid])
             }
         }
         corrections = [:]
@@ -79,7 +76,7 @@ extension WindowManager {
         if st.layout == .widescreenTall, isMain, mains > 1, idx != mains - 1 { return }
         if st.layout == .widescreenTallRight, isMain, mains > 1, idx != 0 { return }
         if !isMain, [.threeColumnLeft, .threeColumnRight].contains(st.layout) { return }
-        let gap = config.windowMargins ? config.windowMarginSize : 0
+        let gap = windowGap(count: ids.count)
         let total = axis.horizontal ? r.width : r.height
         func boundary(_ f: CGRect) -> CGFloat {
             switch (axis.horizontal, axis.fromStart, isMain) {
@@ -91,8 +88,7 @@ extension WindowManager {
             case (false, _, false): f.minY - r.minY
             }
         }
-        if let (slots, _) = rawSlots(ids, on: s, st, ratio: st.ratio), slots.indices.contains(idx),
-           abs(boundary(slots[idx]) - st.ratio * (total + gap)) > 3 { return }
+        if let slot = layoutTargets(ids, st, on: s)?[w.id], abs(boundary(slot) - st.ratio * (total + gap)) > 3 { return }
         st.ratio = min(0.9, max(0.1, boundary(f) / (total + gap)))
     }
 }

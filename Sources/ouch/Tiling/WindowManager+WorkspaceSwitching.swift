@@ -81,7 +81,7 @@ extension WindowManager {
         }
         let previous = shown[monitor.uuid]
         let changed = previous != ws
-        shown[monitor.uuid] = ws
+        model.show(ws, on: monitor.uuid)
         Log.debug("workspaces: showing \(ws) on \(monitor.ns.localizedName)")
         if changed, takesFocus, let previous { beginSlide(from: previous, to: ws, on: monitor) }
         refresh()
@@ -119,12 +119,10 @@ extension WindowManager {
         for id in arriving where floatsFreely(id) { unpark(floating: id, screens: screens) }
         let ids = arriving.filter { windows[$0]?.isFloating == false }
         let st = state(workspace: ws)
-        guard tilingEnabled, !ids.isEmpty, let (raw, gap) = rawSlots(ids, on: s, st, ratio: st.ratio) else { return }
-        let slots = fitMinimums(raw, mins: ids.map { minSizes[$0] }, gap: gap)
+        guard tilingEnabled, !ids.isEmpty, let slots = layoutTargets(ids, st, on: s) else { return }
         var moves: [Animator.Move] = []
-        for (id, slot) in zip(ids, slots) {
-            guard let w = windows[id] else { continue }
-            let target = id == st.zoomed ? usableRect(s).pixelAligned : slot
+        for id in ids {
+            guard let w = windows[id], let target = slots[id] else { continue }
             targets[id] = target
             if !w.frame.approxEqual(target) { moves.append(.init(window: w, to: target, bounds: s.visible)) }
         }
@@ -153,7 +151,7 @@ extension WindowManager {
         workspaceMoves.insert(w.id)
         autoSwitchAfter = Date().addingTimeInterval(0.7)
         if !known { windows[w.id] = w; order.append(w.id) }
-        workspaceOf[w.id] = ws
+        model.assign(w.id, to: ws)
         monitorOf[ws] = monitor.uuid
         snapNextPlacement.insert(w.id)
         refresh(instant: true, placing: [w.id])
@@ -172,7 +170,7 @@ extension WindowManager {
                 guard moved, w.isValid, config.virtualWorkspaces, homeSpace[monitor.uuid] == home else {
                     Log.info("workspaces: direct move of \(w.id) to \(home) failed")
                     HUD.shared.show("macOS couldn't move this window", on: monitor.ns)
-                    if known { workspaceOf[w.id] = from } else { forget(w.id) }
+                    if known { model.assign(w.id, to: from) } else { forget(w.id) }
                     if w.isValid, !frame.isNull { w.setFrame(frame) }
                     refresh()
                     release()
@@ -193,7 +191,7 @@ extension WindowManager {
             watch(w)
         }
         monitorOf[ws] = display
-        workspaceOf[w.id] = ws
+        model.assign(w.id, to: ws)
         lastFocused[ws] = w.id
         if let from, lastFocused[from] == w.id { lastFocused[from] = nil }
         corrections[w.id] = nil
@@ -317,10 +315,7 @@ extension WindowManager {
             guard p.id == w.id else { return }
             pendingFocus = nil
         }
-        if focusStamps[w.id] != focusClock { noteFocus(w.id) }
-        focusOrder.removeAll { $0 == w.id }
-        focusOrder.insert(w.id, at: 0)
-        if focusOrder.count > 80 { focusOrder.removeLast(focusOrder.count - 80) }
+        noteFocus(w.id)
         guard !sortSession else { return }
         guard config.virtualWorkspaces, let ws = workspaceOf[w.id], isVirtual(ws) else { return }
         if isShown(ws) { lastFocused[ws] = w.id; return }

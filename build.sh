@@ -23,6 +23,7 @@ if [ -n "$OUCH_CHANNEL" ]; then
 fi
 cp -R Resources/Fonts "$APP/Contents/Resources/"
 cp Resources/Icon/AppIcon.icns "$APP/Contents/Resources/"
+cp -R ".build/$CONFIG/MacKeys_MacKeysCore.bundle" "$APP/Contents/Resources/"
 cp -R Resources/AgentDocs "$APP/Contents/Resources/"
 cp Resources/ThirdPartyNotices.txt "$APP/Contents/Resources/"
 SPARKLE=$(find .build/artifacts -type d -name Sparkle.framework -path '*macos-arm64_x86_64*' | head -1)

@@ -7,7 +7,7 @@ final class SortNudge {
     static let shared = SortNudge()
     private static let key = "sort.nudged"
 
-    private var panel: OverlayPanel?
+    private var panel: OuchPanel?
     private var hideWork: DispatchWorkItem?
     private let model = SortNudgeModel()
 
@@ -45,17 +45,19 @@ final class SortNudge {
             SettingsWindow.shared.doc.load()
             wm.reload(showHUD: false)
         }
-        let host = FirstClickHostingView(rootView: SortNudgeView(model: model))
+        let host = OuchHostingView(rootView: SortNudgeView(model: model))
         let size = host.fittingSize
         let b = bw.frame
         let target = NSScreen.screens.first { $0.frame.contains(NSPoint(x: b.midX, y: b.midY)) } ?? screen
         let v = target.visibleFrame
         var x = b.midX - size.width / 2
-        x = min(max(x, target.frame.minX + 8), target.frame.maxX - size.width - 8)
+        x = min(max(x, v.minX + 8), v.maxX - size.width - 8)
         model.caret = min(max(b.midX - x, 30), size.width - 30)
         let top = v.maxY - 4 + (SortNudgeView.inset.top - 10)
-        let p = OverlayPanel(frame: NSRect(x: x, y: top - size.height, width: size.width, height: size.height).integral,
-                             level: .floating, clickThrough: false, keyable: true)
+        let p = OuchPanel(role: .card(.floating),
+                          frame: OuchPanel.frame(size: size, on: target, anchor: .origin(NSPoint(x: x, y: top - size.height)),
+                                                 inset: SortNudgeView.inset).integral)
+        p.onClose = { [weak self] in self?.dismiss() }
         p.contentView = host
         p.alphaValue = 0
         p.orderFrontRegardless()
@@ -93,7 +95,7 @@ private struct SortNudgeView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
-                Image(systemName: "lightbulb").font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.accentInk)
+                Image(systemName: "lightbulb").font(Theme.symbol(Theme.Icon.lg)).foregroundStyle(Theme.accentInk)
                     .breatheEffect().frame(width: 16)
                 Text("Workspace \(model.workspace) is packed").font(Theme.heading()).oneLine()
                 Spacer(minLength: 4)
@@ -111,7 +113,7 @@ private struct SortNudgeView: View {
                 OButton("Not now", variant: .ghost, action: model.later)
                 Spacer(minLength: 4)
                 Button("No more tips", action: model.never).buttonStyle(.plain)
-                    .font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine()
+                    .textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine()
             }
         }
         .frame(width: 276)
@@ -126,7 +128,7 @@ private struct SortNudgeView: View {
 
 final class SortOffer {
     static let shared = SortOffer()
-    private var panel: OverlayPanel?
+    private var panel: OuchPanel?
     private var finish: ((Bool) -> Void)?
     private var timeout: DispatchWorkItem?
 
@@ -134,7 +136,7 @@ final class SortOffer {
               done: @escaping (_ sort: Bool) -> Void) {
         finish = done
         let view = SortOfferView(caret: 0) { [weak self] in self?.end($0) }
-        var host = FirstClickHostingView(rootView: view)
+        var host = OuchHostingView(rootView: view)
         let size = host.fittingSize
         let v = screen.visibleFrame
         var x = v.midX - size.width / 2, y = v.maxY - size.height - 16
@@ -146,10 +148,11 @@ final class SortOffer {
             y = b.minY - 10 - (size.height - SortOfferView.inset.top - SortOfferView.inset.bottom) - SortOfferView.inset.bottom
             caret = min(max(b.midX - left, 20), card - 20)
         }
-        host = FirstClickHostingView(rootView: SortOfferView(caret: caret) { [weak self] in
+        host = OuchHostingView(rootView: SortOfferView(caret: caret) { [weak self] in
             self?.end($0)
         })
-        let p = OverlayPanel(frame: NSRect(x: x, y: y, width: size.width, height: size.height).integral, level: .floating, clickThrough: false)
+        let p = OuchPanel(role: .overlay(.floating, clickThrough: false),
+                          frame: OuchPanel.frame(size: size, on: screen, anchor: .origin(NSPoint(x: x, y: y)), inset: SortOfferView.inset).integral)
         p.contentView = host
         p.alphaValue = 0
         p.orderFrontRegardless()
@@ -181,12 +184,12 @@ private struct SortOfferView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
-                Image(systemName: "checkmark.circle.fill").font(.system(size: 13, weight: .medium))
+                Image(systemName: "checkmark.circle.fill").font(Theme.symbol())
                 Spacer(minLength: 8)
             }
             .frame(minHeight: 22)
-            Text("Your workspace is crowded").font(Theme.body(22))
-                .tracking(-0.2).fixedSize(horizontal: false, vertical: true).padding(.top, 12).padding(.bottom, 4)
+            Text("Your workspace is crowded").textStyle(.title)
+                .fixedSize(horizontal: false, vertical: true).padding(.top, 12).padding(.bottom, 4)
             HStack(spacing: 4) {
                 OButton("Sort my windows", variant: .primary, shortcut: ["↩"]) { choose(true) }
                     .keyboardShortcut(.defaultAction)

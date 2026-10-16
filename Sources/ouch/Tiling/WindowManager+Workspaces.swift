@@ -2,7 +2,7 @@ import AppKit
 
 extension WindowManager {
 
-    func isShown(_ ws: String?) -> Bool { ws.map { Set(shown.values).contains($0) } ?? false }
+    func isShown(_ ws: String?) -> Bool { model.isShown(ws) }
 
     func workspaceSort(_ a: String, _ b: String) -> Bool {
         switch (Int(a), Int(b)) {
@@ -69,7 +69,10 @@ extension WindowManager {
         return a
     }
 
-    func isVirtual(_ ws: String?) -> Bool { ws.map { !$0.hasPrefix("space:") } ?? false }
+    func isVirtual(_ ws: String?) -> Bool { ws.map { !$0.hasPrefix(Self.spacePrefix) } ?? false }
+
+    static let spacePrefix = "space:"
+    static func spaceWorkspace(display uuid: String, space: UInt64) -> String { "\(spacePrefix)\(uuid):\(space)" }
 
     static let pendingPrefix = "sort-close:"
     func isPending(_ ws: String?) -> Bool { ws?.hasPrefix(Self.pendingPrefix) == true }
@@ -96,10 +99,10 @@ extension WindowManager {
                         .map(\.key).sorted(by: workspaceSort).first
                     virtualShown[s.uuid] = own ?? firstFreeWorkspace()
                 }
-                shown[s.uuid] = virtualShown[s.uuid]
+                model.show(virtualShown[s.uuid], on: s.uuid)
                 onHome.insert(s.uuid)
             } else {
-                shown[s.uuid] = "space:\(s.uuid):\(space)"
+                model.show(Self.spaceWorkspace(display: s.uuid, space: space), on: s.uuid)
             }
             monitorOf[shown[s.uuid]!] = s.uuid
         }
@@ -112,19 +115,19 @@ extension WindowManager {
             guard let was = displayOf[id], was != now, uuids.contains(was),
                   let m = monitorOf[ws], m != now, let dest = shown[now] else { continue }
             Log.info("workspaces: window \(id) moved from \(was) to \(now) outside Ouch; it joins \(dest)")
-            workspaceOf[id] = dest
+            model.assign(id, to: dest)
         }
         for id in present where !isShown(workspaceOf[id]) {
             let ws = workspaceOf[id]
             if isVirtual(ws), let m = ws.flatMap({ monitorOf[$0] }), onHome.contains(m) { continue }
             guard let w = windows[id] else { continue }
             let s = screen(containing: w.frame, in: screens) ?? screens[0]
-            workspaceOf[id] = shown[s.uuid]
+            model.assign(id, to: shown[s.uuid])
         }
         for id in present where workspaceOf[id] == nil {
             guard let w = windows[id] else { continue }
             let s = screen(containing: w.frame, in: screens) ?? screens[0]
-            workspaceOf[id] = shown[s.uuid]
+            model.assign(id, to: shown[s.uuid])
         }
     }
 
@@ -134,7 +137,7 @@ extension WindowManager {
             homeSpace[s.uuid] = Spaces.current(display: s.uuid)
             if !isVirtual(virtualShown[s.uuid]) { virtualShown[s.uuid] = nil }
         }
-        workspaceOf = workspaceOf.filter { isVirtual($0.value) }
+        model.keepWorkspaces(where: isVirtual)
         refresh()
         HUD.shared.show("Ouch workspaces live on this Desktop", on: currentScreen()?.ns)
     }

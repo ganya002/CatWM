@@ -4,50 +4,61 @@ Hyprland syntax: `key = value`, `$var = value`, `# comments`, `bind = …` lines
 
 Apply changes with `ouch reload`, the menu bar's reload button, or by saving through Settings.
 
-Booleans accept `true yes on 1`; anything else is false.
+Booleans accept `true yes on 1` and `false no off 0`. Any other value is an error: Ouch logs it and the option becomes false. A bad number or name is also an error, and the option keeps its earlier value (the default, if no earlier line sets it). Numbers outside the range in the table are clamped to that range.
 
 ## Options
 
-| Option | Value | Notes |
-|---|---|---|
-| `$mod` | `SUPER` / `ALT` / `CTRL` / `SHIFT` | variable used in binds. Default `ALT` |
-| `layouts` | comma list | the cycle; each layout once. Names below |
-| `window-margins` | bool | gaps between windows |
-| `window-margin-size` | number (px) | `gaps_in` is accepted and doubled |
-| `smart-window-margins` / `smart-gaps` | bool | no gaps with a single window |
-| `screen-padding-left/right/top/bottom` | number | `screen-padding` or `gaps_out` sets all four |
-| `disable-padding-on-builtin-display` | bool | |
-| `ignore-menu-bar` | bool | |
-| `mouse-follows-focus` | bool | |
-| `focus-follows-mouse` / `follow_mouse` | bool | |
-| `mouse-swaps-windows` | bool | drag a tile onto another to swap |
-| `mouse-resizes-windows` | bool | drag edges to resize |
-| `floating` | comma list of bundle IDs | apps that float (or the only ones that tile, see next) |
-| `floating-is-blacklist` | bool | true: listed apps float. false: only listed apps are tiled |
-| `float-small-windows` | bool | |
-| `new-windows-to-main` / `new_is_master` | bool | |
-| `enables-layout-hud` | bool | HUD when the layout changes |
-| `enables-layout-hud-on-space-change` | bool | |
-| `window-resize-step` | number | percent (`5`) or fraction (`0.05`); ≥1 is treated as percent |
-| `animate` / `animations` | bool | `animations { enabled = … }` also works |
-| `animation-duration` | seconds, or ms if >5 | default 0.12 |
-| `animation-curve` | `ease-out` `ease-in-out` `linear` `spring` `bounce` `overshoot` `cubic-bezier(x1, y1, x2, y2)` | |
-| `animation-bounce` | 0–1 (or 0–100) | liveliness of spring/bounce/overshoot |
-| `virtual-workspaces` | bool | true: Ouch workspaces. false: macOS Spaces. See [workspaces.md](workspaces.md) |
-| `stay-on-workspace-after-close` | bool | default true |
-| `debug-logging` | bool | verbose log; prefer `--verbose` |
-| `perf-reports` | bool | default false. Sends repeated slow animations and hangs (numbers and app bundle IDs only) to the developers |
-| `keyboard-help` | bool | |
-| `keyboard-help-key` | one character | `?`; toggles the keyboard help in window mode |
-| `keyboard-finish` | `auto`, `macbook-pro`, `macbook-air`, `macbook-neo`, `magic-keyboard`, or a finish such as `macbook-pro-space-black` | look of the Shortcut Map keyboard |
-| `mode-effect` | `draw` `ripple` `corners` `none` | visual while window mode is on; `ouch modefx <style>` previews |
-| `panel-animation` | `rise` `pop` `focus` `tile` `draw` | how Sort Windows and keyboard help come and go; `tile` follows the animation curve; `ouch panelfx <style>` previews |
-| `dim-other-windows` | bool | darken every window but the focused one (`dim_inactive` works too) |
-| `dim-strength` | 0–1 | how dark; default 0.3 |
-| `blur-other-windows` | bool | blur every window but the focused one; combines with dimming |
-| `blur-radius` | points | default 20 |
-| `bind` (also `binde`, `bindr`, `bindl`, `bindel`, `bindle`) | see [keybinds.md](keybinds.md) | the `binde`/`bindel`/`bindle` forms repeat while held |
-| `submap = name` / `submap = reset` | | groups binds into a mode |
+The Settings window writes options in this order. Aliases (after `/`) are read but never written.
+
+| Option | Value | Default | Notes |
+|---|---|---|---|
+| `$mod` | `SUPER` / `ALT` / `CTRL` / `SHIFT` | `ALT` | variable used in binds |
+| `layouts` | comma list | `tall, wide, fullscreen, bsp, column` | the cycle; each layout once. Names below |
+| `floating` | comma list of bundle IDs | empty (first run: System Settings, Calculator) | apps that float (or the only ones that tile, see next). Wildcards such as `com.adobe.*` work |
+| `floating-is-blacklist` | bool | `true` | true: listed apps float. false: only listed apps are tiled |
+| `window-margins` | bool | `true` | gaps between windows |
+| `window-margin-size` | number (points) | `10` | `gaps_in` is accepted and doubled |
+| `smart-window-margins` / `smart-gaps` | bool | `false` | no gaps with a single window |
+| `screen-padding-left` | number (points) | `10` | `screen-padding` or `gaps_out` sets all four sides |
+| `screen-padding-right` | number (points) | `10` | |
+| `screen-padding-top` | number (points) | `10` | |
+| `screen-padding-bottom` | number (points) | `10` | |
+| `disable-padding-on-builtin-display` | bool | `false` | |
+| `ignore-menu-bar` | bool | `false` | tile over the menu bar area |
+| `mouse-follows-focus` | bool | `false` | |
+| `focus-follows-mouse` / `follow_mouse` | bool | `false` | |
+| `focus-follows-mouse-in-mode-only` | bool | `false` | with `focus-follows-mouse` on, hovering focuses a window only while window mode is on |
+| `mouse-swaps-windows` | bool | `true` | drag a tile onto another to swap |
+| `mouse-resizes-windows` | bool | `true` | drag edges to resize |
+| `new-windows-to-main` / `new_is_master` | bool | `false` | |
+| `float-small-windows` | bool | `true` | |
+| `window-resize-step` | number | `5` | percent (`5`) or fraction (`0.05`); 1 or more is read as percent |
+| `enables-layout-hud` | bool | `true` | HUD when the layout changes |
+| `enables-layout-hud-on-space-change` | bool | `true` | |
+| `dim-other-windows` / `dim_inactive` | bool | `false` | darken every window but the focused one |
+| `dim-strength` | 0–1 (or 0–100) | `0.3` | how dark; a value above 1 is read as percent |
+| `blur-other-windows` | bool | `false` | blur every window but the focused one; combines with dimming |
+| `blur-radius` | 1–100 (points) | `20` | rounded to whole points. The Settings slider shows 2–60 |
+| `virtual-workspaces` | bool | `true` | true: Ouch workspaces. false: macOS Spaces. See [workspaces.md](workspaces.md) |
+| `stay-on-workspace-after-close` | bool | `true` | |
+| `sort-strategy` | `task` `app` `focus` `none` | `task` | the grouping Sort Windows opens with |
+| `sort-nudge` | 0–100 (whole number) | `5` | windows on one workspace before Ouch offers to sort them; `0` turns the offer off |
+| `keyboard-help` | bool | `true` | on-screen keyboard help in window mode |
+| `keyboard-help-key` | one character | `?` | toggles the keyboard help in window mode |
+| `keyboard-finish` | `auto`, `macbook-pro`, `macbook-air`, `macbook-neo`, `magic-keyboard`, or a finish such as `macbook-pro-space-black` | `auto` | look of the Shortcut Map keyboard |
+| `cursor-actions` | bool | `true` | in window mode, a dot at the pointer; a tap of the mode's modifier opens actions for the window under it |
+| `animate` / `animations` | bool | `true` | `animations { enabled = … }` also works |
+| `animation-duration` | seconds, or ms if above 5 | `0.18` | |
+| `animation-curve` | `ease-out` `ease-in-out` `linear` `spring` `bounce` `overshoot` `cubic-bezier(x1, y1, x2, y2)` | `ease-out` | |
+| `animation-bounce` | 0–1 (or 0–100) | `0.5` | liveliness of spring/bounce/overshoot |
+| `panel-animation` | `rise` `pop` `focus` `tile` `draw` | `rise` | how Sort Windows and keyboard help come and go; `tile` follows the animation curve; `ouch panelfx <style>` previews |
+| `mode-effect` | `draw` `ripple` `corners` `none` | `draw` | visual while window mode is on; `ouch modefx <style>` previews |
+| `debug-logging` | bool | `false` | verbose log; prefer `--verbose` |
+| `perf-reports` | bool | `false` | sends repeated slow animations and hangs (numbers and app bundle IDs only) to the developers |
+| `bind` (also `binde`, `bindr`, `bindl`, `bindel`, `bindle`) | see [keybinds.md](keybinds.md) | | the `binde`/`bindel`/`bindle` forms repeat while held |
+| `submap = name` / `submap = reset` | | | groups binds into a mode |
+
+The animation options (`animate`, `animation-duration`, `animation-curve`, `animation-bounce`) make up an animation config (see below).
 
 `bindm` is accepted and ignored (dragging already moves and resizes tiles).
 

@@ -26,7 +26,7 @@ struct LayoutPane: View {
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(screen.name).font(Theme.body(14)).oneLine()
                                 Text(screen.workspace.isEmpty ? "Current layout" : "Workspace \(screen.workspace)")
-                                    .font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine()
+                                    .textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine()
                             }
                             Spacer(minLength: 8)
                             OMenuPicker(title: "Layout for \(screen.name)", options: Layout.allCases.map { ($0, $0.title) },
@@ -74,13 +74,11 @@ struct LayoutPane: View {
                 GapsPreview(config: c, layout: c.layouts.first { ![.floating, .fullscreen].contains($0) } ?? .tall)
                     .frame(height: 170)
                     .padding(.vertical, 12)
-                OSwitchRow("Gaps between windows", isOn: $doc.config.windowMargins).setting("layout.gaps", ui)
-                ORow("Gap size") { points($doc.config.windowMarginSize, "Gap size") }
+                OptionSwitch(\.windowMargins, doc: doc, ui: ui)
+                OptionSlider(\.windowMarginSize, doc: doc, ui: ui, width: 180, format: { "\(Int($0)) pt" })
                     .disabled(!c.windowMargins)
-                    .setting("layout.gapSize", ui)
-                OSwitchRow("Smart gaps", description: "No gaps when a window is alone", isOn: $doc.config.smartWindowMargins)
+                OptionSwitch(\.smartWindowMargins, doc: doc, ui: ui)
                     .disabled(!c.windowMargins)
-                    .setting("layout.smartGaps", ui)
                 if ui.linkedPadding {
                     ORow("Screen padding", description: "Space between windows and the screen edges") { points(allPadding, "Screen padding") }
                         .setting("layout.padding", ui)
@@ -90,24 +88,15 @@ struct LayoutPane: View {
                     ORow("Left padding") { points($doc.config.paddingLeft, "Left padding") }
                     ORow("Right padding") { points($doc.config.paddingRight, "Right padding") }
                 }
-                OSwitchRow("No padding on the built-in display", isOn: $doc.config.disablePaddingOnBuiltinDisplay)
-                    .setting("layout.builtin", ui)
+                OptionSwitch(\.disablePaddingOnBuiltinDisplay, doc: doc, ui: ui)
             }
 
             OGroup("Main pane") {
-                ORow("Main pane resize step", description: "How much the split moves each time") {
-                    OSlider(value: Binding(get: { Double(doc.config.windowResizeStep * 100) },
-                                           set: { doc.config.windowResizeStep = CGFloat($0.rounded()) / 100 }),
-                            range: 1...25, step: 1, ticks: [5], resetValue: 5, width: 160, label: "Main pane resize step",
-                            format: { "\(Int($0))%" })
-                }
-                .setting("layout.resizeStep", ui)
+                OptionSlider(\.windowResizeStep, doc: doc, ui: ui, format: { "\(Int($0))%" })
             }
 
             OGroup("Feedback") {
-                OSwitchRow("Show layout name on change", description: "A short card in the middle of the screen",
-                           isOn: $doc.config.enablesLayoutHUD)
-                    .setting("layout.hud", ui)
+                OptionSwitch(\.enablesLayoutHUD, doc: doc, ui: ui)
             }
 
             AdvancedSection(pane: .layout, ui: ui) {
@@ -117,13 +106,11 @@ struct LayoutPane: View {
                         if on { allPadding.wrappedValue = c.paddingTop }
                     }))
                     .setting("layout.linked", ui)
-                    OSwitchRow("Ignore menu bar when tiling", description: "Use this if you hide the menu bar", isOn: $doc.config.ignoreMenuBar)
-                        .setting("layout.menuBar", ui)
+                    OptionSwitch(\.ignoreMenuBar, doc: doc, ui: ui)
                 }
                 OGroup("Feedback") {
-                    OSwitchRow("Also when switching spaces", isOn: $doc.config.enablesLayoutHUDOnSpaceChange)
+                    OptionSwitch(\.enablesLayoutHUDOnSpaceChange, doc: doc, ui: ui)
                         .disabled(!c.enablesLayoutHUD)
-                        .setting("layout.hudSpaces", ui)
                 }
             }
         }
@@ -188,14 +175,13 @@ private struct CycleChip: View {
                 }
                 .overlay(alignment: .topTrailing) {
                     if count > 1 {
-                        Image(systemName: "xmark").font(.system(size: 7, weight: .heavy)).foregroundStyle(.white)
-                            .frame(width: 16, height: 16).background(Circle().fill(Theme.inkMuted))
+                        RemoveButton(help: "Remove \(layout.title)", variant: .badge, action: remove)
                             .offset(x: 6, y: -6)
                             .opacity(hover.on && !dragging ? 1 : 0)
                             .scaleEffect(hover.on && !dragging ? 1 : 0.5)
                     }
                 }
-            Text(layout.shortTitle).font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine()
+            Text(layout.shortTitle).textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine()
                 .frame(width: Self.width)
         }
         .frame(width: Self.width)
@@ -204,8 +190,8 @@ private struct CycleChip: View {
         .zIndex(dragging ? 1 : 0)
         .contentShape(Rectangle())
         .onHover { hover.on = $0 }
-        .animation(.easeOut(duration: Theme.fast), value: hover.on)
-        .animation(.easeOut(duration: Theme.fast), value: dragging)
+        .animation(Motion.fade, value: hover.on)
+        .animation(Motion.fade, value: dragging)
         .onTapGesture { remove() }
         .gesture(DragGesture(minimumDistance: 5, coordinateSpace: .named(Self.space))
             .onChanged { v in
@@ -237,8 +223,8 @@ private struct ScreenThumbnail: View {
         VStack(spacing: 2) {
             LayoutThumbnail(layout: layout, selected: true)
                 .padding(3)
-                .background(RoundedRectangle(cornerRadius: 4, style: .continuous).fill(Theme.well))
-                .overlay(RoundedRectangle(cornerRadius: 4, style: .continuous).strokeBorder(Theme.borderControl, lineWidth: 1.5))
+                .background(RoundedRectangle(cornerRadius: Theme.Radius.xs, style: .continuous).fill(Theme.well))
+                .overlay(RoundedRectangle(cornerRadius: Theme.Radius.xs, style: .continuous).strokeBorder(Theme.borderControl, lineWidth: 1.5))
             Capsule().fill(Theme.borderControl).frame(width: 14, height: 2.5)
         }
     }
@@ -287,18 +273,18 @@ struct GapsPreview: View {
             let bar = config.ignoreMenuBar ? 0 : menuBar * scale
             let frames = windows(in: CGRect(x: 0, y: bar, width: w, height: h - bar - dock * scale), scale: scale)
             ZStack(alignment: .topLeading) {
-                RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Self.wallpaper)
+                RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous).fill(Self.wallpaper)
                 Rectangle().fill(Theme.ink.opacity(0.1)).frame(width: w, height: menuBar * scale)
                     .opacity(config.ignoreMenuBar ? 0 : 1)
                 ForEach(Array(frames.enumerated()), id: \.offset) { i, f in
-                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    RoundedRectangle(cornerRadius: Theme.Radius.xs, style: .continuous)
                         .fill(i == 0 ? Theme.accent : Theme.thumbMain)
                         .frame(width: max(f.width, 0), height: max(f.height, 0))
                         .position(x: f.midX, y: f.midY)
                 }
             }
             .frame(width: w, height: h)
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous))
             .frame(width: g.size.width, height: g.size.height)
             .animation(Motion.snap(reduceMotion), value: geometry)
         }

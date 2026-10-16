@@ -3,7 +3,7 @@ main = "worker.js"
 compatibility_date = "2025-09-01"
 
 [vars]
-# The Linear team reports go to: OUCRP. Linear's API wants its UUID, not the prefix
+# The UUID of the Linear team that reports go to: OUC. Linear's API wants the UUID, not the team prefix
 # (Linear → the team's settings → ⌘K → "Copy model UUID").
 LINEAR_TEAM_ID = "8185c425-4169-4fa1-b6bc-ded5aeaadbfd"
 

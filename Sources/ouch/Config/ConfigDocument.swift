@@ -18,7 +18,6 @@ struct VarRow: Equatable {
     var value: String
 }
 
-
 enum ActionCategory: String, CaseIterable, Identifiable {
     case focus = "Focus", move = "Move Windows", layout = "Layout", window = "Window", displays = "Displays"
     case spaces = "Workspaces", commands = "Commands", app = "Ouch", custom = "Custom"
@@ -81,6 +80,7 @@ enum Actions {
         add("Toggle Fullscreen", .window, "fullscreen", "", "arrow.up.left.and.arrow.down.right")
         add("Toggle macOS Full Screen", .window, "nativefullscreen", "", "arrow.up.left.and.down.right.and.arrow.up.right.and.down.left")
         add("Close Window", .window, "killactive", "", "xmark.square")
+        add("Minimize Window", .window, "minimize", "", "minus.square")
         add("Sort Windows", .window, "sort", "", "square.grid.3x1.below.line.grid.1x2")
         add("Undo Last Sort", .window, "sort-undo", "", "arrow.uturn.backward")
         add("Focus Next Display", .displays, "focusmonitor", "+1", "display")
@@ -170,6 +170,18 @@ enum Actions {
         return all.first { $0.dispatcher == d && norm($0.args) == x }
     }
 
+    static func same(_ d1: String, _ a1: String, _ d2: String, _ a2: String) -> Bool {
+        let m1 = match(BindRow(mods: "", key: "", dispatcher: d1, args: a1))
+        let m2 = match(BindRow(mods: "", key: "", dispatcher: d2, args: a2))
+        if let m1, let m2 { return m1.dispatcher == m2.dispatcher && m1.args == m2.args }
+        return d1.lowercased() == d2.lowercased() && a1.lowercased() == a2.lowercased()
+    }
+
+    static func isNextWorkspace(_ dispatcher: String, _ args: String) -> Bool {
+        ["movetoworkspace", "movetoworkspacesilent"].contains(dispatcher.lowercased())
+            && ["e+1", "+1", "r+1", "m+1"].contains(args.lowercased())
+    }
+
     static func rangeSummary(_ r: BindRow) -> (title: String, category: ActionCategory, symbol: String)? {
         guard case .success(let pairs) = BindRange.pairs(key: r.key, dispatcher: r.dispatcher, arg: r.args), pairs.count > 1
         else { return nil }
@@ -188,11 +200,10 @@ enum Actions {
     }
 
     static let dispatchers = ["movefocus", "movewindow", "swapwindow", "cyclenext", "swapnext", "layoutmsg", "splitratio",
-                              "togglefloating", "fullscreen", "nativefullscreen", "killactive", "exec", "focusmonitor", "movewindowtomonitor",
+                              "togglefloating", "fullscreen", "nativefullscreen", "killactive", "minimize", "exec", "focusmonitor", "movewindowtomonitor",
                               "workspace", "movetoworkspace", "movetoworkspacesilent", "cyclelayout", "layout", "setlayout",
                               "toggletiling", "toggledim", "toggleblur", "retile", "reevaluate", "reload", "exit", "submap", "sethomespace", "sort", "sort-undo"]
 }
-
 
 final class ConfigDocument: ObservableObject {
     @Published var config = Config()
@@ -253,14 +264,7 @@ final class ConfigDocument: ObservableObject {
     }
 
     func animationText() -> String {
-        let c = config
-        return [
-            "animate = \(c.animate ? "true" : "false")",
-            "animation-duration = \(String(format: "%g", (c.animationDuration * 1000).rounded() / 1000))",
-            "animation-curve = \(c.animationCurve.name)",
-            "animation-bounce = \(String(format: "%g", (c.animationBounce * 100).rounded() / 100))",
-            "",
-        ].joined(separator: "\n")
+        (Options.all.filter { $0.group == .animation }.map { "\($0.key) = \($0.text(config))" } + [""]).joined(separator: "\n")
     }
 
     func applyKeyboard(_ text: String) {
@@ -271,10 +275,7 @@ final class ConfigDocument: ObservableObject {
 
     func applyAnimation(_ text: String) {
         let c = Config.parse(text)
-        config.animate = c.animate
-        config.animationDuration = c.animationDuration
-        config.animationCurve = c.animationCurve
-        config.animationBounce = c.animationBounce
+        for o in Options.all where o.group == .animation { o.copy(&config, c) }
     }
 
     func applyFull(_ text: String) { apply(text: text) }
@@ -286,7 +287,6 @@ final class ConfigDocument: ObservableObject {
         return (try? ("# Ouch keybind backup, \(Date())\n" + keyboardText()).write(to: url, atomically: true, encoding: .utf8)) != nil ? url : nil
     }
 
-
     var modVarName: String { vars.first { $0.name.lowercased().contains("mod") }?.name ?? "$mod" }
 
     var modValue: String {
@@ -296,7 +296,6 @@ final class ConfigDocument: ObservableObject {
             else { vars.insert(VarRow(name: modVarName, value: newValue), at: 0) }
         }
     }
-
 
     func load() {
         let text = try? String(contentsOf: Config.url, encoding: .utf8)
@@ -384,9 +383,6 @@ final class ConfigDocument: ObservableObject {
     }
 
     func serialize(includeKeyboard: Bool = true, includeAnimation: Bool = true) -> String {
-        let c = config
-        func b(_ v: Bool) -> String { v ? "true" : "false" }
-        func n(_ v: CGFloat) -> String { String(format: "%g", Double(v)) }
         func esc(_ s: String) -> String { s.replacingOccurrences(of: "#", with: "##") }
         var out = [
             "# Ouch config. Written by the Settings window; editing by hand is fine too.",
@@ -394,73 +390,7 @@ final class ConfigDocument: ObservableObject {
             "",
         ]
         if includeKeyboard { out += vars.map { "\($0.name) = \(esc($0.value))" } }
-        out += [
-            "",
-            "# tall, tall-right, wide, middle-wide, fullscreen, column, row, floating, bsp, 3column-left,",
-            "# 3column-middle, 3column-right, two-pane, two-pane-right, widescreen-tall, widescreen-tall-right",
-            "layouts = " + c.layouts.map(\.rawValue).joined(separator: ", "),
-            "",
-            "window-margins = \(b(c.windowMargins))",
-            "window-margin-size = \(n(c.windowMarginSize))",
-            "smart-window-margins = \(b(c.smartWindowMargins))",
-            "screen-padding-left = \(n(c.paddingLeft))",
-            "screen-padding-right = \(n(c.paddingRight))",
-            "screen-padding-top = \(n(c.paddingTop))",
-            "screen-padding-bottom = \(n(c.paddingBottom))",
-            "disable-padding-on-builtin-display = \(b(c.disablePaddingOnBuiltinDisplay))",
-            "ignore-menu-bar = \(b(c.ignoreMenuBar))",
-            "",
-            "mouse-follows-focus = \(b(c.mouseFollowsFocus))",
-            "focus-follows-mouse = \(b(c.focusFollowsMouse))",
-            "focus-follows-mouse-in-mode-only = \(b(c.focusFollowsMouseInModeOnly))",
-            "mouse-swaps-windows = \(b(c.mouseSwapsWindows))",
-            "mouse-resizes-windows = \(b(c.mouseResizesWindows))",
-            "new-windows-to-main = \(b(c.newWindowsToMain))",
-            "float-small-windows = \(b(c.floatSmallWindows))",
-            "window-resize-step = \(c.windowResizeStep >= 0.01 ? n(c.windowResizeStep * 100) : n(c.windowResizeStep))",
-            "enables-layout-hud = \(b(c.enablesLayoutHUD))",
-            "enables-layout-hud-on-space-change = \(b(c.enablesLayoutHUDOnSpaceChange))",
-            "# Make the focused window stand out: darken the others (strength 0-1) and/or blur them (points)",
-            "dim-other-windows = \(b(c.dimOtherWindows))",
-            "dim-strength = \(n(c.dimStrength))",
-            "blur-other-windows = \(b(c.blurOtherWindows))",
-            "blur-radius = \(n(c.blurRadius))",
-            "sort-strategy = \(c.sortStrategy.rawValue)",
-            "sort-nudge = \(c.sortNudge)",
-            "",
-            "floating = " + c.floating.joined(separator: ", "),
-            "floating-is-blacklist = \(b(c.floatingIsBlacklist))",
-            "",
-        ]
-        if includeAnimation {
-            out += [
-                "animate = \(b(c.animate))",
-                "animation-duration = \(String(format: "%g", (c.animationDuration * 1000).rounded() / 1000))",
-                "# ease-out, ease-in-out, linear, spring, bounce, overshoot or cubic-bezier(x1, y1, x2, y2)",
-                "animation-curve = \(c.animationCurve.name)",
-                "animation-bounce = \(String(format: "%g", (c.animationBounce * 100).rounded() / 100))",
-                "",
-            ]
-        }
-        out += [
-            "debug-logging = \(b(c.debugLogging))",
-            "# Send repeated animation slowdowns and hangs (numbers and app IDs only) to the developers",
-            "perf-reports = \(b(c.perfReports))",
-            "virtual-workspaces = \(b(c.virtualWorkspaces))",
-            "stay-on-workspace-after-close = \(b(c.stayOnWorkspaceAfterClose))",
-            "# On-screen keyboard help: keep holding the window-mode chord's modifier, or press ? in the mode",
-            "keyboard-help = \(b(c.keyboardHelp))",
-            "keyboard-help-key = \(esc(c.keyboardHelpKey))",
-            "# In window mode: a dot beside the pointer, and a tap of the mode's modifier opens window actions there",
-            "cursor-actions = \(b(c.cursorActions))",
-            "# The keyboard drawn there and in Settings: auto (this Mac), a model (macbook-pro, macbook-air,",
-            "# macbook-neo, magic-keyboard) or a finish such as macbook-air-midnight or imac-blue",
-            "keyboard-finish = \(c.keyboardFinish)",
-            "# The screen-edge effect while window mode is on: draw, ripple, corners or none",
-            "mode-effect = \(c.modeEffect.rawValue)",
-            "# How Sort Windows and keyboard help come and go: rise, pop, focus, tile or draw",
-            "panel-animation = \(c.panelAnimation.rawValue)",
-        ]
+        out += [""] + Options.lines(config, includeAnimation: includeAnimation)
         out += [
             "",
             "# bind = MODS, key, dispatcher, args. Binds inside `submap = name` … `submap = reset` only work in",
@@ -479,7 +409,6 @@ final class ConfigDocument: ObservableObject {
         }
         return out.joined(separator: "\n") + "\n"
     }
-
 
     func resolvedMods(_ mods: String) -> String {
         var s = mods
@@ -649,7 +578,6 @@ final class ConfigDocument: ObservableObject {
     ]
 
     static func capLabel(_ key: String) -> String { keySymbols[key.lowercased()] ?? key.uppercased() }
-
 
     struct KeyAction: Identifiable {
         let code: UInt16

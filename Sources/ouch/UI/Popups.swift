@@ -1,8 +1,6 @@
 import AppKit
 import SwiftUI
 
-
-
 final class ScreenAnchor: ObservableObject {
     weak var view: NSView?
 
@@ -22,12 +20,11 @@ private class PassThroughView: NSView {
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
 }
 
-
 final class Popup: NSObject, NSWindowDelegate {
     static let shared = Popup()
 
     private struct Entry {
-        let panel: MenuPanel
+        let panel: OuchPanel
         let generation: Int
         weak var parent: NSWindow?
         var onClose: (() -> Void)?
@@ -35,7 +32,7 @@ final class Popup: NSObject, NSWindowDelegate {
     }
 
     private var stack: [Entry] = []
-    private var monitors: [Any] = []
+    private let dismiss = DismissMonitor()
     private static let margin: CGFloat = 26
 
     var isOpen: Bool { !stack.isEmpty }
@@ -85,8 +82,10 @@ final class Popup: NSObject, NSWindowDelegate {
         if !stack.contains(where: { $0.panel === key }) { closeAll() }
         generation += 1
         let p = makePanel()
+        let g = generation
+        p.onClose = { [weak self] in self?.close(generation: g) }
         stack.append(Entry(panel: p, generation: generation, parent: key, onClose: onClose, keys: keys))
-        p.contentView = NSHostingView(rootView: view)
+        p.contentView = OuchHostingView(rootView: view)
         p.setFrame(frame, display: true)
         p.makeKeyAndOrderFront(nil)
         installMonitors()
@@ -116,18 +115,11 @@ final class Popup: NSObject, NSWindowDelegate {
             if let parent = entry.parent, parent.isVisible { parent.makeKey() }
             done?()
         }
-        if stack.isEmpty { removeMonitors() }
+        if stack.isEmpty { dismiss.stop() }
     }
 
-    private func makePanel() -> MenuPanel {
-        let p = MenuPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        p.level = .popUpMenu
-        p.isOpaque = false
-        p.backgroundColor = .clear
-        p.hasShadow = false
-        p.isReleasedWhenClosed = false
-        p.hidesOnDeactivate = false
-        p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle, .transient]
+    private func makePanel() -> OuchPanel {
+        let p = OuchPanel(role: .menu)
         p.delegate = self
         return p
     }
@@ -143,29 +135,15 @@ final class Popup: NSObject, NSWindowDelegate {
     }
 
     private func installMonitors() {
-        removeMonitors()
-        if let m = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown], handler: { [weak self] _ in
-            self?.closeAll()
-        }) { monitors.append(m) }
-        if let m = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown], handler: { [weak self] e in
-            guard let self else { return e }
-            if let i = self.stack.firstIndex(where: { $0.panel === e.window }) {
-                if i < self.stack.count - 1 { self.close(from: i + 1) }
-                return e
-            }
-            self.closeAll()
-            return nil
-        }) { monitors.append(m) }
-        if let m = NSEvent.addLocalMonitorForEvents(matching: .keyDown, handler: { [weak self] e in
-            guard let self, let top = self.stack.last, top.panel.isKeyWindow else { return e }
-            if e.keyCode == 53 { if !top.keys(e) { self.close() }; return nil }
-            return top.keys(e) ? nil : e
-        }) { monitors.append(m) }
-    }
-
-    private func removeMonitors() {
-        monitors.forEach(NSEvent.removeMonitor)
-        monitors = []
+        dismiss.start(keeps: { [weak self] w in
+            guard let self, let i = stack.firstIndex(where: { $0.panel === w }) else { return false }
+            if i < stack.count - 1 { close(from: i + 1) }
+            return true
+        }, swallowsClick: true, key: { [weak self] e in
+            guard let self, let top = stack.last, top.panel.isKeyWindow else { return false }
+            if e.keyCode == 53 { if !top.keys(e) { close() }; return true }
+            return top.keys(e)
+        }, close: { [weak self] in self?.closeAll() })
     }
 
     private static func menuKey(_ e: NSEvent, _ model: MenuModel) -> Bool {
@@ -198,7 +176,6 @@ extension MenuItem {
     }
 }
 
-
 struct OMenuButton<Label: View>: View {
     let items: () -> [MenuItem]
     var minWidth: CGFloat = 0
@@ -227,20 +204,82 @@ struct OMenuButton<Label: View>: View {
     }
 }
 
-struct MenuRowStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View { MenuRowBody(configuration: configuration) }
+struct OMenuRowStyle: ButtonStyle {
+    var highlighted: Bool? = nil
+    var open = false
+    var danger = false
+    var bare = false
+
+    func makeBody(configuration: Configuration) -> some View { OMenuRowBody(configuration: configuration, style: self) }
 }
 
-private struct MenuRowBody: View {
+private struct OMenuRowBody: View {
     let configuration: ButtonStyleConfiguration
+    let style: OMenuRowStyle
     @StateObject private var hover = Flag()
 
     var body: some View {
-        configuration.label
-            .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
-                .fill(configuration.isPressed ? Theme.wellHover : hover.on ? Theme.well : .clear))
-            .contentShape(Rectangle())
-            .onHover { hover.on = $0 }
+        let lit = style.highlighted ?? hover.on
+        let fill: Color = configuration.isPressed ? Theme.wellHover
+            : lit ? (style.danger ? Theme.dangerSoft : Theme.well)
+            : style.open ? Theme.wellHover : .clear
+        Group {
+            if style.bare {
+                configuration.label
+            } else {
+                configuration.label
+                    .padding(.horizontal, 10)
+                    .frame(maxWidth: .infinity, minHeight: Theme.rowHeight, maxHeight: Theme.rowHeight, alignment: .leading)
+            }
+        }
+        .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous).fill(fill))
+        .contentShape(Rectangle())
+        .onHover { hover.on = $0 }
+    }
+}
+
+struct OMenuRow<Lead: View, Label: View, Trailing: View>: View {
+    var highlighted: Bool? = nil
+    var open = false
+    var danger = false
+    let action: () -> Void
+    @ViewBuilder var lead: Lead
+    @ViewBuilder var label: Label
+    @ViewBuilder var trailing: Trailing
+
+    init(highlighted: Bool? = nil, open: Bool = false, danger: Bool = false, action: @escaping () -> Void,
+         @ViewBuilder lead: () -> Lead, @ViewBuilder label: () -> Label, @ViewBuilder trailing: () -> Trailing) {
+        self.highlighted = highlighted; self.open = open; self.danger = danger; self.action = action
+        self.lead = lead(); self.label = label(); self.trailing = trailing()
+    }
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                if Lead.self != EmptyView.self { lead.frame(width: 16) }
+                label
+                Spacer(minLength: 6)
+                trailing
+            }
+            .font(Theme.body(13.5))
+            .foregroundStyle(danger ? Theme.danger : Theme.ink)
+        }
+        .buttonStyle(OMenuRowStyle(highlighted: highlighted, open: open, danger: danger))
+    }
+}
+
+extension OMenuRow where Trailing == EmptyView {
+    init(highlighted: Bool? = nil, open: Bool = false, danger: Bool = false, action: @escaping () -> Void,
+         @ViewBuilder lead: () -> Lead, @ViewBuilder label: () -> Label) {
+        self.init(highlighted: highlighted, open: open, danger: danger, action: action, lead: lead, label: label) { EmptyView() }
+    }
+}
+
+extension OMenuRow where Lead == EmptyView {
+    init(highlighted: Bool? = nil, open: Bool = false, danger: Bool = false, action: @escaping () -> Void,
+         @ViewBuilder label: () -> Label, @ViewBuilder trailing: () -> Trailing) {
+        self.init(highlighted: highlighted, open: open, danger: danger, action: action, lead: { EmptyView() }, label: label,
+                  trailing: trailing)
     }
 }
 
@@ -261,7 +300,7 @@ struct OMenuPicker<T: Hashable>: View {
         }) {
             HStack(spacing: 6) {
                 Text(options.first { $0.value == selection }?.label ?? "").font(Theme.body(13)).oneLine()
-                Image(systemName: "chevron.up.chevron.down").font(.system(size: 9, weight: .semibold)).foregroundStyle(Theme.inkMuted)
+                Image(systemName: "chevron.up.chevron.down").font(Theme.symbol(Theme.Icon.xs, .semibold)).foregroundStyle(Theme.inkMuted)
             }
             .foregroundStyle(Theme.ink)
             .padding(.horizontal, 12).frame(height: Theme.controlHeight)
@@ -270,12 +309,11 @@ struct OMenuPicker<T: Hashable>: View {
         }
         .fixedSize()
         .onHover { hover.on = $0 }
-        .animation(.easeOut(duration: Theme.fast), value: lit)
+        .animation(Motion.fade, value: lit)
         .accessibilityLabel(title)
         .accessibilityValue(options.first { $0.value == selection }?.label ?? "")
     }
 }
-
 
 private final class PopoverState: ObservableObject { var generation = -1 }
 
@@ -305,7 +343,6 @@ extension View {
         modifier(PopoverModifier(isPresented: isPresented, content: content))
     }
 }
-
 
 final class Tooltip {
     static let shared = Tooltip()
@@ -351,7 +388,7 @@ final class Tooltip {
         guard let window = view.window, window.isVisible else { return }
         let r = window.convertToScreen(view.convert(view.bounds, to: nil))
         let screen = window.screen ?? NSScreen.main ?? NSScreen.screens[0]
-        let v = screen.frame, m = Self.margin
+        let v = screen.visibleFrame, m = Self.margin
 
         let measure = NSHostingView(rootView: OTooltip(text: text, chords: chords, caret: .none))
         let tip = measure.fittingSize
@@ -364,7 +401,8 @@ final class Tooltip {
 
         let p = panel ?? makePanel()
         panel = p
-        let frame = NSRect(x: x - m, y: y - m, width: tip.width + 2 * m, height: tip.height + 2 * m)
+        let frame = OuchPanel.frame(size: CGSize(width: tip.width + 2 * m, height: tip.height + 2 * m), on: screen,
+                                    anchor: .origin(NSPoint(x: x - m, y: y - m)), inset: EdgeInsets(all: m))
         let host = NSHostingView(rootView: OTooltip(text: text, chords: chords, caret: caret).padding(m))
         host.sizingOptions = []
         host.frame = NSRect(origin: .zero, size: frame.size)
@@ -386,18 +424,7 @@ final class Tooltip {
         }
     }
 
-    private func makePanel() -> NSPanel {
-        let p = NSPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        p.level = NSWindow.Level(rawValue: NSWindow.Level.popUpMenu.rawValue + 1)
-        p.isOpaque = false
-        p.backgroundColor = .clear
-        p.hasShadow = false
-        p.ignoresMouseEvents = true
-        p.isReleasedWhenClosed = false
-        p.hidesOnDeactivate = false
-        p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle, .transient]
-        return p
-    }
+    private func makePanel() -> NSPanel { OuchPanel(role: .tooltip) }
 }
 
 private final class TooltipTrackingView: PassThroughView {

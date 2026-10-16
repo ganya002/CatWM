@@ -2,10 +2,6 @@ import AppKit
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
-    private var watchdog: Timer?
-    private var wasTrusted = true
-    private var hadInputMonitoring = Permissions.inputMonitoringGranted
-    private var watchdogTicks = 0
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         closePreviousInstances()
@@ -30,16 +26,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         LoginItem.enableOnFirstLaunch()
         Onboarding.shared.statusButton = statusItem.button
 
-        wasTrusted = AXIsProcessTrusted()
-        if wasTrusted { WindowManager.shared.start() } else { Log.info("launch: Accessibility not granted") }
-        if Onboarding.shouldShow(firstRun: firstRun, trusted: wasTrusted) || CommandLine.arguments.contains("--onboarding") {
+        let watcher = PermissionWatcher.shared
+        watcher.start()
+        let trusted = watcher.granted.contains(.accessibility)
+        if trusted { WindowManager.shared.start() } else { Log.info("launch: Accessibility not granted") }
+        if Onboarding.shouldShow(firstRun: firstRun, trusted: trusted) || CommandLine.arguments.contains("--onboarding") {
             Onboarding.shared.start()
-        } else if !wasTrusted {
-            Permissions.request()
+        } else if !trusted {
+            Permission.accessibility.request()
         }
         Tips.shared.launched()
         updateIcon()
-        watchdog = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in self?.checkPermission() }
+        watcher.subscribe { [weak self] granted, changed in self?.permissionsChecked(granted, changed) }
     }
 
     private func closePreviousInstances() {
@@ -74,28 +72,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Log.info("migrated \(old.count) settings from Hyprthyst")
     }
 
-    private func checkPermission() {
-        let trusted = AXIsProcessTrusted()
-        if trusted, !Hotkeys.shared.rawCapsActive { Hotkeys.shared.startRawCaps() }
-        let monitoring = Permissions.inputMonitoringGranted
-        if monitoring != hadInputMonitoring {
-            hadInputMonitoring = monitoring
+    private func permissionsChecked(_ granted: Set<Permission>, _ changed: Set<Permission>) {
+        let trusted = granted.contains(.accessibility)
+        if changed.contains(.inputMonitoring) {
+            let monitoring = granted.contains(.inputMonitoring)
             Log.info("Input Monitoring \(monitoring ? "granted" : "revoked")")
             if monitoring { PermissionGuide.shared.granted(.inputMonitoring) }
         }
-        watchdogTicks += 1
-        if watchdogTicks % 20 == 0 { Hotkeys.shared.refreshCapsLockDelay() }
         if trusted && !WindowManager.shared.isStarted {
             Log.info("Accessibility granted")
             WindowManager.shared.start()
         } else if trusted && !Hotkeys.shared.isActive {
             Hotkeys.shared.restart()
         }
-        if trusted != wasTrusted {
+        if changed.contains(.accessibility) {
             Log.info("Accessibility \(trusted ? "granted" : "revoked")")
-            wasTrusted = trusted
             updateIcon()
-            if trusted { PermissionGuide.shared.granted() } else { Permissions.reset() }
+            if trusted { PermissionGuide.shared.granted() } else { Permission.accessibility.reset() }
         }
     }
 
@@ -106,12 +99,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         WindowManager.shared.restoreHiddenWindows()
-        Hotkeys.shared.restoreCapsLockDelay()
         CrashWatch.cleanExit()
     }
 
     private func updateIcon() {
-        let trusted = AXIsProcessTrusted()
+        let trusted = Permission.accessibility.isGranted
         guard let button = statusItem.button else { return }
         button.attributedTitle = NSAttributedString(string: "")
         guard trusted, let state = WindowManager.shared.menuBarState() else {
@@ -130,7 +122,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let updates = appMenu.addItem(withTitle: "Check for Updates…", action: #selector(checkForUpdatesItem), keyEquivalent: "")
         updates.target = self
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "Close Window", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        appMenu.addItem(withTitle: "Close Window", action: #selector(closeWindow), keyEquivalent: "w").target = self
         appMenu.addItem(withTitle: "Quit Ouch", action: #selector(quitOrCloseWindow), keyEquivalent: "q").target = self
         main.addItem(withTitle: "Ouch", action: nil, keyEquivalent: "").submenu = appMenu
         let edit = NSMenu(title: "Edit")
@@ -158,10 +150,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Updater.shared.checkForUpdates()
     }
     @objc private func quitOrCloseWindow() {
-        if SortPanel.shared.isOpen { SortPanel.shared.revert() }
-        else if let w = SettingsWindow.shared.window, w.isVisible, w.isKeyWindow { w.performClose(nil) }
-        else if KeyHelp.shared.isVisible { KeyHelp.shared.hide() }
-        else { NSApp.terminate(nil) }
+        if OuchPanel.closeKeyWindow() { return }
+        if KeyHelp.shared.isVisible { KeyHelp.shared.hide() } else { NSApp.terminate(nil) }
+    }
+    @objc private func closeWindow() {
+        if !OuchPanel.closeKeyWindow() && KeyHelp.shared.isVisible { KeyHelp.shared.hide() }
     }
     @objc private func checkForUpdatesItem() { Self.checkForUpdates() }
     @objc private func toggleMenu() { StatusMenu.shared.toggle() }

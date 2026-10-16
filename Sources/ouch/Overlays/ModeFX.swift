@@ -1,7 +1,6 @@
 import AppKit
 import SwiftUI
 
-
 final class ModeFX {
     static let shared = ModeFX()
 
@@ -96,56 +95,17 @@ final class ModeFX {
     }
 
     private func makePanel(_ screen: NSScreen) -> NSPanel {
-        let p = NSPanel(contentRect: screen.frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        p.level = .screenSaver
-        p.isOpaque = false
-        p.backgroundColor = .clear
-        p.hasShadow = false
-        p.ignoresMouseEvents = true
-        p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
+        let p = OuchPanel(role: .fullscreenFX, frame: screen.frame)
         p.contentView = NSHostingView(rootView: view(for: screen))
         return p
     }
 
     private func view(for screen: NSScreen) -> ModeFXView {
-        let uuid = screen.displayID.flatMap { CGDisplayCreateUUIDFromDisplayID($0) }
-            .map { CFUUIDCreateString(nil, $0.takeRetainedValue()) as String }
-        if let uuid, Spaces.isFullscreen(display: uuid) {
-            return ModeFXView(model: model, radius: 0, origin: screen.frame.origin, topInset: screen.safeAreaInsets.top)
-        }
-        return ModeFXView(model: model, radius: Self.topCornerRadius(screen), origin: screen.frame.origin,
-                          notchHalfWidth: Self.notchHalfWidth(screen), notchHeight: Self.notchHeight(screen))
+        let shape = ScreenShape.of(screen)
+        return ModeFXView(model: model, radius: shape.topRadius, origin: screen.frame.origin,
+                          notchHalfWidth: shape.notchHalfWidth, notchHeight: shape.notchHeight, topInset: shape.topInset)
     }
-
-    private typealias CornerRadiiFn = @convention(c) (CGDirectDisplayID, UnsafeMutablePointer<Double>?, UnsafeMutablePointer<Double>?,
-                                                      UnsafeMutablePointer<Double>?, UnsafeMutablePointer<Double>?) -> Int32
-    private static let cornerRadii: CornerRadiiFn? = symbol("SLSDisplayGetCornerRadii",
-                                                            in: "/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight")
-
-    static func notchHalfWidth(_ screen: NSScreen) -> CGFloat {
-        guard screen.safeAreaInsets.top > 0, let l = screen.auxiliaryTopLeftArea, let r = screen.auxiliaryTopRightArea else { return 0 }
-        return max(0, (r.minX - l.maxX) / 2)
-    }
-
-    static func notchHeight(_ screen: NSScreen) -> CGFloat {
-        notchHalfWidth(screen) > 0 ? (screen.auxiliaryTopLeftArea?.height ?? screen.safeAreaInsets.top) : 0
-    }
-
-    static func topCornerRadius(_ screen: NSScreen) -> CGFloat {
-        var radii = [Double](repeating: 0, count: 4)
-        if let f = cornerRadii, let id = screen.displayID,
-           radii.withUnsafeMutableBufferPointer({ f(id, $0.baseAddress, $0.baseAddress! + 1, $0.baseAddress! + 2, $0.baseAddress! + 3) }) == 0 {
-            return radii.max() ?? 0
-        }
-        return screen.safeAreaInsets.top > 0 ? 20 : 0
-    }
-
 }
-
-private extension NSScreen {
-    var displayID: CGDirectDisplayID? { deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID }
-}
-
 
 final class ModeFXModel: ObservableObject {
     @Published var active = false
@@ -198,7 +158,7 @@ struct ModeFXView: View {
     @ViewBuilder private func effect(size: CGSize) -> some View {
         if reduceMotion && model.style != .none {
             border(width: 4)
-                .opacity(on ? 1 : 0).animation(.easeOut(duration: 0.15), value: on)
+                .opacity(on ? 1 : 0).animation(Motion.fade, value: on)
         } else {
             animated(size: size)
         }
@@ -291,7 +251,6 @@ struct ModeFXView: View {
 
     private struct Ripple { var t: CGFloat = 0; var edge: Double = 0 }
 }
-
 
 private enum Notch {
     static let bottomRadius: CGFloat = 8

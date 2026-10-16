@@ -2,6 +2,14 @@ import AppKit
 import SwiftUI
 
 
+private struct CursorShortcutSpec: Identifiable {
+    let id: String
+    let title: String
+    let dispatcher: String
+    let args: String
+    var nextWorkspace = false
+}
+
 struct WindowsPane: View {
     @ObservedObject var doc: ConfigDocument
     @ObservedObject var ui: SettingsUI
@@ -17,54 +25,35 @@ struct WindowsPane: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 30) {
             OGroup("Focus") {
-                OSwitchRow("Focus follows mouse", description: "Hovering a window focuses it", isOn: $doc.config.focusFollowsMouse)
-                    .setting("windows.ffm", ui)
-                OSwitchRow("Only in window mode", description: "Hovering focuses a window only while window mode is on",
-                           isOn: $doc.config.focusFollowsMouseInModeOnly)
+                OptionSwitch(\.focusFollowsMouse, doc: doc, ui: ui)
+                OptionSwitch(\.focusFollowsMouseInModeOnly, doc: doc, ui: ui)
                     .disabled(!doc.config.focusFollowsMouse)
-                    .setting("windows.ffmModeOnly", ui)
-                OSwitchRow("Mouse follows focus", description: "The pointer jumps to the window you focus", isOn: $doc.config.mouseFollowsFocus)
-                    .setting("windows.mff", ui)
-                OSwitchRow("Dim other windows", description: "Darkens everything but the focused window", isOn: $doc.config.dimOtherWindows)
-                    .setting("windows.dimOthers", ui)
-                ORow("Dim strength", description: "How dark the other windows get") {
-                    OSlider(value: Binding(get: { Double(doc.config.dimStrength * 100) },
-                                           set: { doc.config.dimStrength = CGFloat($0.rounded()) / 100 }),
-                            range: 0...100, step: 1, ticks: [30], resetValue: 30, width: 160, label: "Dim strength",
-                            format: { "\(Int($0))%" })
-                }
-                .disabled(!doc.config.dimOtherWindows)
-                .setting("windows.dimStrength", ui)
-                OSwitchRow("Blur other windows", description: "Softens everything but the focused window", isOn: $doc.config.blurOtherWindows)
-                    .setting("windows.blurOthers", ui)
-                ORow("Blur radius", description: "How soft the other windows look") {
-                    OSlider(value: Binding(get: { Double(doc.config.blurRadius) },
-                                           set: { doc.config.blurRadius = CGFloat($0.rounded()) }),
-                            range: 2...60, step: 1, ticks: [20], resetValue: 20, width: 160, label: "Blur radius",
-                            format: { "\(Int($0)) pt" })
-                }
-                .disabled(!doc.config.blurOtherWindows)
-                .setting("windows.blurRadius", ui)
+                OptionSwitch(\.mouseFollowsFocus, doc: doc, ui: ui)
+                OptionSwitch(\.dimOtherWindows, doc: doc, ui: ui)
+                OptionSlider(\.dimStrength, doc: doc, ui: ui, format: { "\(Int($0))%" })
+                    .disabled(!doc.config.dimOtherWindows)
+                OptionSwitch(\.blurOtherWindows, doc: doc, ui: ui)
+                OptionSlider(\.blurRadius, doc: doc, ui: ui, format: { "\(Int($0)) pt" })
+                    .disabled(!doc.config.blurOtherWindows)
             }
 
             OGroup("Mouse") {
-                OSwitchRow("Drag to swap", description: "Drop a window on another to trade places", isOn: $doc.config.mouseSwapsWindows)
-                    .setting("windows.dragSwap", ui)
-                OSwitchRow("Drag window edges to resize the main pane",
-                           description: "Resize a tiled window with the mouse, and the main pane follows", isOn: $doc.config.mouseResizesWindows)
-                    .setting("windows.resizeMain", ui)
-                OSwitchRow("Quick actions at the pointer",
-                           description: "In window mode, tap the mode's modifier for actions on the window under the pointer",
-                           isOn: $doc.config.cursorActions)
-                    .setting("windows.cursorActions", ui)
+                OptionSwitch(\.mouseSwapsWindows, doc: doc, ui: ui)
+                OptionSwitch(\.mouseResizesWindows, doc: doc, ui: ui)
+            }
+
+            OGroup("Pointer menu") {
+                OptionSwitch(\.cursorActions, doc: doc, ui: ui)
+                if doc.config.cursorActions {
+                    ForEach(pointerShortcuts) { spec in pointerShortcutRow(spec) }
+                }
             }
 
             OGroup("Floating") {
-                ORow("Apps in the list", description: doc.config.floatingIsBlacklist ? "Float; everything else tiles" : "Are the only ones that tile") {
-                    OSegmented(title: "Apps in the list", options: [(true, "Float"), (false, "Tile")],
-                               selection: $doc.config.floatingIsBlacklist)
+                OptionRow(\Config.floatingIsBlacklist, ui: ui,
+                          description: doc.config.floatingIsBlacklist ? "Float; everything else tiles" : "Are the only ones that tile") { label in
+                    OSegmented(title: label, options: [(true, "Float"), (false, "Tile")], selection: $doc.config.floatingIsBlacklist)
                 }
-                .setting("windows.floatingMode", ui)
                 if doc.config.floating.isEmpty {
                     ORow("No apps yet", description: "Add one that's running, or by bundle ID under Advanced") { addMenu }
                 } else {
@@ -87,24 +76,21 @@ struct WindowsPane: View {
             }
 
             OGroup("Workspaces") {
-                OSwitchRow("Use Ouch workspaces", description: "Instant, per-display workspaces instead of macOS Spaces",
-                           isOn: $doc.config.virtualWorkspaces)
-                    .setting("windows.workspaces", ui)
-                ORow("Sort windows by", description: "How the Sort Windows panel groups them when it opens") {
-                    OMenuPicker(title: "Sort windows by", options: SortStrategy.allCases.map { ($0, $0.title) },
-                                selection: $doc.config.sortStrategy)
+                OptionSwitch(\.virtualWorkspaces, doc: doc, ui: ui)
+                OptionRow(\Config.sortStrategy, ui: ui) { label in
+                    OMenuPicker(title: label, options: SortStrategy.allCases.map { ($0, $0.title) }, selection: $doc.config.sortStrategy)
                 }
                 .disabled(!doc.config.virtualWorkspaces)
-                .setting("windows.sortStrategy", ui)
-                OSwitchRow("Suggest sorting a crowded workspace", description: "A tip under the menu bar icon, at most once a day",
-                           isOn: Binding(get: { doc.config.sortNudge > 0 }, set: { doc.config.sortNudge = $0 ? 5 : 0 }))
+                let nudge = ConfigOption.at(\Config.sortNudge)
+                OSwitchRow(nudge.ui.label, description: nudge.ui.help,
+                           isOn: Binding(get: { doc.config.sortNudge > 0 }, set: { doc.config.sortNudge = $0 ? Int(nudge.resetValue) : 0 }))
                     .disabled(!doc.config.virtualWorkspaces)
-                    .setting("windows.sortNudge", ui)
+                    .setting(nudge.ui.id, ui)
                 ORow("Crowded from", description: "Windows on one workspace") {
                     OSlider(value: Binding(get: { Double(doc.config.sortNudge) },
                                            set: { doc.config.sortNudge = Int($0.rounded()) }),
-                            range: Double(min(3, doc.config.sortNudge))...Double(max(20, doc.config.sortNudge)), step: 1, ticks: [5], resetValue: 5, width: 160, label: "Crowded from",
-                            format: { "\(Int($0)) windows" })
+                            range: nudge.sliderRange(holding: Double(doc.config.sortNudge)), step: 1, ticks: [nudge.resetValue],
+                            resetValue: nudge.resetValue, width: 160, label: "Crowded from", format: { "\(Int($0)) windows" })
                 }
                 .disabled(!doc.config.virtualWorkspaces || doc.config.sortNudge == 0)
                 .setting("windows.sortCrowded", ui)
@@ -112,9 +98,8 @@ struct WindowsPane: View {
 
             AdvancedSection(pane: .windows, ui: ui) {
                 OGroup("Windows") {
-                    OSwitchRow("New windows become main", isOn: $doc.config.newWindowsToMain).setting("windows.newMain", ui)
-                    OSwitchRow("Float small windows", description: "Dialogs and panels stay put", isOn: $doc.config.floatSmallWindows)
-                        .setting("windows.floatSmall", ui)
+                    OptionSwitch(\.newWindowsToMain, doc: doc, ui: ui)
+                    OptionSwitch(\.floatSmallWindows, doc: doc, ui: ui)
                     ORow("Add app by bundle ID", description: "Wildcards like com.adobe.* work too") {
                         OTextField(placeholder: "com.example.app", text: $ui.newID, mono: true, onSubmit: add).frame(width: 190)
                         OButton("Add", size: .sm, action: add)
@@ -123,9 +108,8 @@ struct WindowsPane: View {
                     .setting("windows.bundleID", ui)
                 }
                 OGroup("Workspaces") {
-                    OSwitchRow("Stay on this workspace when closing a window", isOn: $doc.config.stayOnWorkspaceAfterClose)
+                    OptionSwitch(\.stayOnWorkspaceAfterClose, doc: doc, ui: ui)
                         .disabled(!doc.config.virtualWorkspaces)
-                        .setting("windows.stay", ui)
                     ORow("Home Desktop", description: WindowManager.shared.homeSpaceSummary.isEmpty ? "The Desktop you're on when Ouch starts"
                         : "Workspaces live on \(WindowManager.shared.homeSpaceSummary)") {
                         OButton("Use This Desktop", size: .sm) { WindowManager.shared.makeCurrentSpaceHome() }
@@ -135,6 +119,78 @@ struct WindowsPane: View {
                 }
             }
         }
+    }
+
+    private var windowMode: String {
+        doc.binds.first { $0.submap.isEmpty && $0.dispatcher == "submap" && !["", "reset"].contains($0.args.lowercased()) }?.args ?? ""
+    }
+
+    private var pointerShortcuts: [CursorShortcutSpec] {
+        Self.pointerShortcutList.filter { $0.id != "workspace" || doc.config.virtualWorkspaces }
+    }
+
+    private static let pointerShortcutList: [CursorShortcutSpec] = [
+        CursorShortcutSpec(id: "float", title: "Float or tile", dispatcher: "togglefloating", args: ""),
+        CursorShortcutSpec(id: "zoom", title: "Zoom", dispatcher: "fullscreen", args: ""),
+        CursorShortcutSpec(id: "native", title: "Native Full Screen", dispatcher: "nativefullscreen", args: ""),
+        CursorShortcutSpec(id: "main", title: "Make Main", dispatcher: "layoutmsg", args: "swapwithmaster"),
+        CursorShortcutSpec(id: "layout", title: "Next Layout", dispatcher: "cyclelayout", args: "next"),
+        CursorShortcutSpec(id: "display", title: "Send to Next Display", dispatcher: "movewindowtomonitor", args: "+1"),
+        CursorShortcutSpec(id: "workspace", title: "Send to Next Workspace", dispatcher: "movetoworkspacesilent", args: "+1", nextWorkspace: true),
+        CursorShortcutSpec(id: "minimize", title: "Minimize", dispatcher: "minimize", args: ""),
+        CursorShortcutSpec(id: "close", title: "Close", dispatcher: "killactive", args: ""),
+    ]
+
+    private func shortcut(for spec: CursorShortcutSpec) -> ConfigDocument.KeyAction? {
+        doc.keyActions(in: windowMode).first {
+            $0.code < 0x1000 && (spec.nextWorkspace
+                ? Actions.isNextWorkspace($0.row.dispatcher, $0.arg)
+                : Actions.same($0.row.dispatcher, $0.arg, spec.dispatcher, spec.args))
+        }
+    }
+
+    private func pointerShortcutRow(_ spec: CursorShortcutSpec) -> some View {
+        let hit = shortcut(for: spec)
+        return ORow(spec.title) {
+            if let hit {
+                let caps = ConfigDocument.modifierCaps(hit.flags) + [ConfigDocument.capLabel(hit.key)]
+                Button {
+                    ui.open(SettingEntry(id: "bind.\(hit.row.id)", title: doc.title(hit.row), pane: .shortcuts, bind: hit.row))
+                } label: { Kbd(keys: caps) }
+                    .buttonStyle(.plain)
+                    .tooltip("Edit in Shortcuts")
+                    .accessibilityLabel("Shortcut \(caps.joined(separator: " ")) for \(spec.title)")
+            } else {
+                OButton("Add", size: .sm) { addShortcut(spec) }
+                    .accessibilityLabel("Add a shortcut for \(spec.title)")
+            }
+        }
+    }
+
+    private func unfinishedShortcut(_ spec: CursorShortcutSpec) -> BindRow? {
+        doc.binds.first { row in
+            guard row.submap == windowMode else { return false }
+            let matches = spec.nextWorkspace
+                ? Actions.isNextWorkspace(row.dispatcher, row.args)
+                : Actions.same(row.dispatcher, row.args, spec.dispatcher, spec.args)
+            guard matches else { return false }
+            guard case .success(let pairs) = BindRange.pairs(key: row.key, dispatcher: row.dispatcher, arg: row.args) else { return true }
+            return !pairs.contains { keyCodes[$0.key.lowercased()] != nil }
+        }
+    }
+
+    private func addShortcut(_ spec: CursorShortcutSpec) {
+        let row: BindRow
+        if let existing = unfinishedShortcut(spec) {
+            row = existing
+        } else {
+            let mode = windowMode
+            row = BindRow(mods: mode.isEmpty ? doc.modVarName : "", key: "",
+                          dispatcher: spec.dispatcher, args: spec.args, submap: mode)
+            doc.binds.append(row)
+        }
+        ui.open(SettingEntry(id: "bind.\(row.id)", title: spec.title, pane: .shortcuts, bind: row))
+        DispatchQueue.main.async { ui.recording = row.id }
     }
 
     private var addMenu: some View {
@@ -147,7 +203,7 @@ struct WindowsPane: View {
             }
         }) {
             HStack(spacing: 6) {
-                Image(systemName: "plus").font(.system(size: 11.5, weight: .medium))
+                Image(systemName: "plus").font(Theme.symbol(Theme.Icon.sm))
                 Text("Add Running App")
             }
         }
@@ -177,7 +233,7 @@ struct WindowsPane: View {
         if let url = appURL(id) {
             Image(nsImage: NSWorkspace.shared.icon(forFile: url.path)).resizable().frame(width: 28, height: 28)
         } else {
-            RoundedRectangle(cornerRadius: 7).strokeBorder(Theme.borderControl, style: StrokeStyle(lineWidth: 1.5, dash: [3, 2]))
+            RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous).strokeBorder(Theme.borderControl, style: StrokeStyle(lineWidth: 1.5, dash: [3, 2]))
                 .frame(width: 26, height: 26).padding(1)
         }
     }
