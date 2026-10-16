@@ -55,6 +55,7 @@ final class WindowManager {
     var shown: [String: String] = [:]            // display UUID → workspace it shows right now
     var virtualShown: [String: String] = [:]     // display UUID → Ouch workspace on its home Space
     var homeSpace: [String: UInt64] = [:]        // display UUID → the macOS Space workspaces live on
+    var displayOf: [CGWindowID: String] = [:]    // display UUID each window was last seen on (see `syncWorkspaces`)
     var workspaceMoves: Set<CGWindowID> = []
     var snapNextPlacement: Set<CGWindowID> = []
     var present: Set<CGWindowID> = []
