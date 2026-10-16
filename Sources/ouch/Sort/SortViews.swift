@@ -289,6 +289,13 @@ private struct SortScreenGlyph: View {
 
 // MARK: - Lanes
 
+/// The state of typing over a workspace number, in an object rather than @State (the Command Line Tools ship
+/// without SwiftUI's macro plugin).
+private final class NumberEdit: ObservableObject {
+    @Published var on = false
+    @Published var draft = ""
+}
+
 private struct SortLaneView: View {
     @ObservedObject var model: SortModel
     let index: Int
@@ -296,6 +303,8 @@ private struct SortLaneView: View {
     let rows: Int
     @StateObject private var hover = Flag()
     @FocusState private var editing: Bool
+    @StateObject private var number = NumberEdit()
+    @FocusState private var numberFocus: Bool
 
     /// Dragging the number, the count or the thumbnail carries the whole workspace: to Close, onto another
     /// workspace to merge the two, or to the edge of one to move it there.
@@ -305,16 +314,49 @@ private struct SortLaneView: View {
             .onEnded { _ in model.columnDragEnded() }
     }
 
+    /// The workspace number. Dragging carries the workspace and a double-click goes to it; a single click
+    /// (the double-click gets its chance first) types a new number, which `commitNumber` applies.
+    @ViewBuilder private func numberView(filled: Bool) -> some View {
+        if number.on {
+            TextField("", text: $number.draft)
+                .textFieldStyle(.plain).font(Theme.display(22)).monospacedDigit().tracking(-0.4)
+                .foregroundStyle(Theme.accentInk)
+                .frame(width: 32)
+                .focused($numberFocus)
+                .onChange(of: number.draft) { _, v in
+                    let digits = String(v.filter { $0.isASCII && $0.isNumber }.prefix(2))
+                    if digits != v { number.draft = digits }
+                }
+                .onSubmit { numberFocus = false }
+                .onChange(of: numberFocus) { _, on in if !on { commitNumber() } }
+                .accessibilityLabel("Number for workspace \(lane.ws)")
+        } else {
+            Text(lane.ws).font(Theme.display(22)).monospacedDigit().tracking(-0.4)
+                .foregroundStyle(filled ? Theme.accentInk : Theme.inkFaint).fixedSize()
+                .contentShape(Rectangle())
+                .onTapGesture(count: 2) { model.finish(lane.ws) }
+                .onTapGesture {
+                    number.draft = lane.ws
+                    number.on = true
+                    DispatchQueue.main.async { numberFocus = true }
+                }
+                .gesture(carry)
+                .tooltip("Click to change the number, double-click to go to workspace \(lane.ws)")
+        }
+    }
+
+    private func commitNumber() {
+        guard number.on else { return }
+        number.on = false
+        withAnimation(Motion.spring) { model.renumber(lane.id, to: number.draft) }
+    }
+
     var body: some View {
         let over = model.over == .lane(lane.id)
         let n = lane.ids.count
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(lane.ws).font(Theme.display(22)).monospacedDigit().tracking(-0.4)
-                    .foregroundStyle(n > 0 ? Theme.accentInk : Theme.inkFaint).fixedSize()
-                    .contentShape(Rectangle())
-                    .onTapGesture(count: 2) { model.finish(lane.ws) }
-                    .gesture(carry)
+                numberView(filled: n > 0)
                 TextField("", text: Binding(get: { lane.name }, set: { model.rename(lane.id, $0) }),
                           prompt: Text("Workspace \(lane.ws)").foregroundStyle(Theme.inkFaint))
                     .textFieldStyle(.plain).font(Theme.heading()).foregroundStyle(editing ? Theme.accentInk : Theme.ink)

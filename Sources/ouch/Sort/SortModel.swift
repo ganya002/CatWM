@@ -191,6 +191,27 @@ final class SortModel: ObservableObject {
         }
     }
 
+    /// Changes a workspace's number to what was typed, when that number is free: no other display or open plan
+    /// uses it and the lane here that holds it, if any, is empty and has no name.
+    func renumber(_ lane: UUID, to text: String) {
+        let p = plan
+        let t = text.trimmingCharacters(in: .whitespaces)
+        guard let i = p.lanes.firstIndex(where: { $0.id == lane }), !t.isEmpty, t != p.lanes[i].ws else { return }
+        guard t.allSatisfy(\.isASCII), let n = Int(t), (1...SortPlan.maxLanes).contains(n) else {
+            notice = SortNotice(text: "Workspace numbers run from 1 to \(SortPlan.maxLanes).", undo: nil)
+            return
+        }
+        let ws = String(n)
+        if p.taken.contains(ws) || reserved().contains(ws) {
+            notice = SortNotice(text: "Workspace \(ws) is on another display.", undo: nil)
+        } else if let held = p.lanes.first(where: { $0.ws == ws }), !held.ids.isEmpty || !held.name.trimmingCharacters(in: .whitespaces).isEmpty {
+            notice = SortNotice(text: "Workspace \(ws) is in use. Move its windows away first.", undo: nil)
+        } else {
+            edit { $0.renumberLane(i, to: ws) }
+            reveal = SortReveal(id: 0, lane: lane, token: reveal.token + 1)
+        }
+    }
+
     /// Plans edited since they were last applied, the display being sorted last.
     func pendingApplies() -> [SortApply] {
         let others = displays.map(\.id).filter { $0 != current }.compactMap { plans[$0] }.filter(\.pending)

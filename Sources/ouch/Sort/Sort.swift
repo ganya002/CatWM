@@ -331,6 +331,18 @@ struct SortPlan {
         lanes.insert(SortLane(ws: ws, name: g.name, layout: g.layout, ids: g.ids), at: lanes.firstIndex { Self.order(ws, $0.ws) } ?? lanes.count)
     }
 
+    /// Gives lane `i` the workspace number `ws`, which an empty lane may hold (that lane goes). The lanes stay
+    /// in numeric order, and windows marked to close remember the new number.
+    mutating func renumberLane(_ i: Int, to ws: String) {
+        guard lanes.indices.contains(i) else { return }
+        let id = lanes[i].id, old = lanes[i].ws
+        lanes.removeAll { $0.ws == ws && $0.id != id }
+        guard let at = lanes.firstIndex(where: { $0.id == id }) else { return }
+        lanes[at].ws = ws
+        lanes.sort { Self.order($0.ws, $1.ws) }
+        for (k, o) in origin where o.ws == old { origin[k] = (ws, o.at) }
+    }
+
     /// Takes a lane away. Its windows go to the lane before it, or after it for the first.
     /// Returns the lane they moved to (as its index after the removal) and how many moved.
     mutating func removeLane(at i: Int) -> (target: Int, moved: Int)? {
