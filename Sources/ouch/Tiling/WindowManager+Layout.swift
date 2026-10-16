@@ -94,11 +94,11 @@ extension WindowManager {
         let arrivals = fresh.sorted(by: { (z[$0.id] ?? 0) < (z[$1.id] ?? 0) })
         for w in arrivals where config.virtualWorkspaces {
             if savedOwnerOf[w.id] == owner(w) {
-                if let saved = savedWorkspaceOf[w.id] { workspaceOf[w.id] = saved }
+                if let saved = savedWorkspaceOf[w.id] { model.assign(w.id, to: saved) }
                 if let float = savedFloating[w.id] { w.userFloating = float }
             }
             if let p = practice, w.pid == p.pid, let ws = titles[w.id].flatMap({ $0 }).flatMap({ p.workspaces[$0] }) {
-                workspaceOf[w.id] = ws
+                model.assign(w.id, to: ws)
                 if monitorOf[ws] == nil, let here = currentScreen() { monitorOf[ws] = here.uuid }
             }
         }
@@ -136,14 +136,12 @@ extension WindowManager {
             let ids = tiled(on: s)
             // Not while it's only out of sight for a moment (app hidden, minimised, mid Space switch).
             if let z = st.zoomed, windows[z]?.isFloating != false || workspaceOf[z] != shown[s.uuid] { st.zoomed = nil }
-            let rect = usableRect(s)
-            guard let (raw, gap) = rawSlots(ids, on: s, st, ratio: st.ratio) else {
+            guard let slots = layoutTargets(ids, st, on: s) else {
                 ids.forEach { targets[$0] = nil } // floating layout: navigate by where windows really are
                 continue
             }
-            let slots = fitMinimums(raw, mins: ids.map { minSizes[$0] }, gap: gap)
-            for (id, slot) in zip(ids, slots) {
-                let target = id == st.zoomed ? rect.pixelAligned : slot
+            for id in ids {
+                guard let target = slots[id] else { continue }
                 targets[id] = target
                 if let only, !only.contains(id) { continue }
                 guard let w = windows[id] else { continue }
@@ -193,15 +191,29 @@ extension WindowManager {
            let id = axApp(app.processIdentifier).element(kAXFocusedWindowAttribute)?.windowID,
            windows[id] == nil { return }
         let here = visible.filter { workspaceOf[$0] == ws }
-        guard let id = here.max(by: { (focusStamps[$0] ?? 0) < (focusStamps[$1] ?? 0) }), focusStamps[id] != nil,
-              reportedFocusedWindow()?.id != id, let w = windows[id] else { return }
+        guard let id = model.mostRecent(of: here), reportedFocusedWindow()?.id != id, let w = windows[id] else { return }
         Log.debug("focus: window closed; back to \(id)")
         focus(w)
     }
 
+    /// The frame each of `ids` (tiled windows in tiling order) gets on `s` with the workspace state `st`:
+    /// its layout slot fitted around known minimum sizes, or the whole tiling area when zoomed.
+    /// Nil for the floating layout. Every tiling of windows (refresh, staging, mouse resize) uses this.
+    func layoutTargets(_ ids: [CGWindowID], _ st: ScreenState, on s: Screen) -> [CGWindowID: CGRect]? {
+        guard let (raw, gap) = rawSlots(ids, on: s, st, ratio: st.ratio) else { return nil }
+        let slots = fitMinimums(raw, mins: ids.map { minSizes[$0] }, gap: gap)
+        let zoomed = usableRect(s).pixelAligned
+        return Dictionary(zip(ids, slots).map { id, slot in (id, id == st.zoomed ? zoomed : slot) }, uniquingKeysWith: { a, _ in a })
+    }
+
+    /// The gap between `count` tiled windows: none for a lone window with smart margins.
+    func windowGap(count: Int) -> CGFloat {
+        config.windowMargins && !(config.smartWindowMargins && count == 1) ? config.windowMarginSize : 0
+    }
+
     /// Each window's slot before fitting around minimum sizes, and the gap between windows.
     func rawSlots(_ ids: [CGWindowID], on s: Screen, _ st: ScreenState, ratio: CGFloat) -> ([CGRect], CGFloat)? {
-        let gap = config.windowMargins && !(config.smartWindowMargins && ids.count == 1) ? config.windowMarginSize : 0
+        let gap = windowGap(count: ids.count)
         // Lay out in a rect grown by half a gap, then shrink every slot by half a gap: windows get
         // a full gap between them and sit exactly on the padding at the screen edges.
         guard let raw = st.layout.frames(count: ids.count, in: usableRect(s).insetBy(dx: -gap / 2, dy: -gap / 2),
@@ -243,7 +255,13 @@ extension WindowManager {
     }
 
     func state(for s: Screen) -> ScreenState {
-        state(workspace: shown[s.uuid] ?? "\(s.uuid):\(Spaces.current(display: s.uuid))")
+        state(workspace: workspaceKey(for: s))
+    }
+
+    /// The workspace a display shows, which keys its layout state. Before `syncWorkspaces` has run
+    /// for the display, that is the workspace of its current macOS Space, as `syncWorkspaces` names it.
+    func workspaceKey(for s: Screen) -> String {
+        shown[s.uuid] ?? Self.spaceWorkspace(display: s.uuid, space: Spaces.current(display: s.uuid))
     }
 
     func state(workspace key: String) -> ScreenState {
@@ -307,42 +325,17 @@ extension WindowManager {
         (!w.isFloating && tilingEnabled ? targets[w.id] : nil) ?? w.frame
     }
 
-    /// How `o` lies from `f` going `dir`: distance between centres along the way (negative when
-    /// behind), offset across it, whether the two share a row/column, and the gap between near edges.
-    func relation(_ f: CGRect, _ of: CGRect, _ dir: Direction) -> (along: CGFloat, across: CGFloat, overlaps: Bool, edge: CGFloat) {
-        let dx = of.midX - f.midX, dy = of.midY - f.midY
-        let rows = of.minY < f.maxY && of.maxY > f.minY, cols = of.minX < f.maxX && of.maxX > f.minX
-        switch dir {
-        case .left: return (-dx, dy, rows, f.minX - of.maxX)
-        case .right: return (dx, dy, rows, of.minX - f.maxX)
-        case .up: return (-dy, dx, cols, f.minY - of.maxY)
-        case .down: return (dy, dx, cols, of.minY - f.maxY)
-        }
+    /// `w` as focus navigation sees it (see `FocusNavigation`).
+    func navItem(_ w: Window, in screens: [Screen]) -> FocusNavigation.Item {
+        .init(id: w.id, frame: navFrame(w), screen: screen(of: w, in: screens)?.uuid)
     }
 
-    /// The window to go to from `w` in direction `dir`. On its own screen only windows sharing its
-    /// row (left/right) or column (up/down) count, so up/down never drifts sideways. Like Hyprland,
-    /// when several windows share the nearest edge that way (the stack beside a main window), the
-    /// one you used last wins, so going left and back right returns to the window you started from.
+    /// The window to go to from `w` in direction `dir` (see `FocusNavigation.neighbor`).
     func neighbor(of w: Window, _ dir: Direction, among candidates: [Window]) -> Window? {
-        let f = navFrame(w)
         let screens = Screen.all()
-        let home = screen(of: w, in: screens)?.uuid
-        var scored: [(w: Window, score: CGFloat, edge: CGFloat)] = []
-        for o in candidates where o.id != w.id {
-            let (along, across, overlaps, edge) = relation(f, navFrame(o), dir)
-            guard along > 1 else { continue }
-            // Off the row/column is only allowed when crossing to another display.
-            guard overlaps || screen(of: o, in: screens)?.uuid != home else { continue }
-            scored.append((o, along + abs(across) * 2 + (overlaps ? 0 : 100_000), overlaps ? max(0, edge) : .infinity))
-        }
-        guard let best = scored.min(by: { $0.score < $1.score }) else { return nil }
-        // Overlapping windows whose near edge is as close as the nearest one's are all adjacent.
-        guard let nearest = scored.map(\.edge).min(), nearest.isFinite else { return best.w }
-        let adjacent = scored.filter { $0.edge <= nearest + 2 }
-        let recent = adjacent.max { (focusStamps[$0.w.id] ?? 0) < (focusStamps[$1.w.id] ?? 0) }
-        if let recent, focusStamps[recent.w.id] != nil { return recent.w }
-        return adjacent.min(by: { $0.score < $1.score })?.w ?? best.w
+        let id = FocusNavigation.neighbor(of: navItem(w, in: screens), dir,
+                                          among: candidates.map { navItem($0, in: screens) }, stamps: focusStamps)
+        return id.flatMap { windows[$0] }
     }
 
     func screen(from s: Screen, spec: String, in screens: [Screen]) -> Screen? {

@@ -84,9 +84,10 @@ extension WindowManager {
         if pendingFocus?.id == id { pendingFocus = nil }
         windows[id] = nil
         snapNextPlacement.remove(id)
-        order.removeAll { $0 == id }
-        workspaceOf[id] = nil; floatFrames[id] = nil; targets[id] = nil; minSizes[id] = nil; corrections[id] = nil; drags[id] = nil
-        focusStamps[id] = nil; displayOf[id] = nil
+        model.forget(id) // workspace, tiling order and focus history
+        floatFrames[id] = nil; targets[id] = nil; minSizes[id] = nil; corrections[id] = nil; drags[id] = nil
+        displayOf[id] = nil
+        closingNow.remove(id) // macOS reuses window IDs: a new window must not stay hidden for a sort
         visible.remove(id)
     }
 

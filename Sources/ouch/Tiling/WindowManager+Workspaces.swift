@@ -4,7 +4,7 @@ import AppKit
 extension WindowManager {
     // MARK: - Ouch workspaces
 
-    func isShown(_ ws: String?) -> Bool { ws.map { Set(shown.values).contains($0) } ?? false }
+    func isShown(_ ws: String?) -> Bool { model.isShown(ws) }
 
     /// Workspaces sort numerically first ("2" before "10"), then by name.
     func workspaceSort(_ a: String, _ b: String) -> Bool {
@@ -78,7 +78,12 @@ extension WindowManager {
 
     /// Keeps workspace bookkeeping consistent with the displays that exist. In macOS-Spaces mode,
     /// mirrors whatever Space each display is showing.
-    func isVirtual(_ ws: String?) -> Bool { ws.map { !$0.hasPrefix("space:") } ?? false }
+    func isVirtual(_ ws: String?) -> Bool { ws.map { !$0.hasPrefix(Self.spacePrefix) } ?? false }
+
+    /// The workspace a display has on a macOS Space that is not its home Space (or in macOS-Spaces mode).
+    /// Every key for such a workspace (`shown`, `states`, `workspaceOf`) comes from here.
+    static let spacePrefix = "space:"
+    static func spaceWorkspace(display uuid: String, space: UInt64) -> String { "\(spacePrefix)\(uuid):\(space)" }
 
     /// While the Sort panel is open, windows put in Close wait on a workspace of their own per display, which
     /// is never shown (so the usual parking hides them), never listed and never saved.
@@ -113,10 +118,10 @@ extension WindowManager {
                         .map(\.key).sorted(by: workspaceSort).first
                     virtualShown[s.uuid] = own ?? firstFreeWorkspace()
                 }
-                shown[s.uuid] = virtualShown[s.uuid]
+                model.show(virtualShown[s.uuid], on: s.uuid)
                 onHome.insert(s.uuid)
             } else {
-                shown[s.uuid] = "space:\(s.uuid):\(space)"
+                model.show(Self.spaceWorkspace(display: s.uuid, space: space), on: s.uuid)
             }
             monitorOf[shown[s.uuid]!] = s.uuid
         }
@@ -133,7 +138,7 @@ extension WindowManager {
             guard let was = displayOf[id], was != now, uuids.contains(was),
                   let m = monitorOf[ws], m != now, let dest = shown[now] else { continue }
             Log.info("workspaces: window \(id) moved from \(was) to \(now) outside Ouch; it joins \(dest)")
-            workspaceOf[id] = dest
+            model.assign(id, to: dest)
         }
         // A window we can see but whose workspace isn't showing is either parked (a Ouch
         // workspace whose display is on its home Space) or has moved between macOS Spaces, in
@@ -143,12 +148,12 @@ extension WindowManager {
             if isVirtual(ws), let m = ws.flatMap({ monitorOf[$0] }), onHome.contains(m) { continue }
             guard let w = windows[id] else { continue }
             let s = screen(containing: w.frame, in: screens) ?? screens[0]
-            workspaceOf[id] = shown[s.uuid]
+            model.assign(id, to: shown[s.uuid])
         }
         for id in present where workspaceOf[id] == nil {
             guard let w = windows[id] else { continue }
             let s = screen(containing: w.frame, in: screens) ?? screens[0]
-            workspaceOf[id] = shown[s.uuid]
+            model.assign(id, to: shown[s.uuid])
         }
     }
 
@@ -160,7 +165,7 @@ extension WindowManager {
             if !isVirtual(virtualShown[s.uuid]) { virtualShown[s.uuid] = nil }
         }
         // Windows here join the workspace that's now showing instead of a per-Space one.
-        workspaceOf = workspaceOf.filter { isVirtual($0.value) }
+        model.keepWorkspaces(where: isVirtual)
         refresh()
         HUD.shared.show("Ouch workspaces live on this Desktop", on: currentScreen()?.ns)
     }

@@ -6,12 +6,9 @@ extension WindowManager {
 
     /// Everything a sort can change, as it was when the panel opened, for Revert and the toast's Undo.
     struct SortSnapshot {
-        var workspaceOf: [CGWindowID: String]
-        var order: [CGWindowID]
-        var monitorOf: [String: String]
+        /// Workspaces, tiling order, displays, layouts and focus history (see `WorkspaceModel.snapshot`).
+        var model: WorkspaceModel
         var labels: [String: String]
-        var layouts: [String: (layout: Layout, ratio: CGFloat, mainCount: Int)]
-        var shown: [String: String]
         var focused: CGWindowID?
     }
 
@@ -70,10 +67,7 @@ extension WindowManager {
     /// The panel opened: remember how everything is now (for Revert and Undo), and from here on keep
     /// focus and workspace switching out of the way until `finishSort`, `revertSort` or `endSort`.
     func beginSort() {
-        var layouts: [String: (layout: Layout, ratio: CGFloat, mainCount: Int)] = [:]
-        for (name, st) in states { layouts[name] = (st.layout, st.ratio, st.mainCount) }
-        sortSnapshot = SortSnapshot(workspaceOf: workspaceOf, order: order, monitorOf: monitorOf, labels: labels, layouts: layouts,
-                                    shown: virtualShown, focused: focusedWindow()?.id)
+        sortSnapshot = SortSnapshot(model: model.snapshot(), labels: labels, focused: focusedWindow()?.id)
         sortSession = true
     }
 
@@ -103,7 +97,7 @@ extension WindowManager {
             guard let land else { continue }
             landing[p.display] = land
             let dropped = gone[p.display] ?? []
-            for (id, ws) in workspaceOf where dropped.contains(ws) && !moving.contains(id) { workspaceOf[id] = land }
+            for (id, ws) in workspaceOf where dropped.contains(ws) && !moving.contains(id) { model.assign(id, to: land) }
         }
         for p in plans {
             for lane in p.lanes {
@@ -112,13 +106,13 @@ extension WindowManager {
                 let st = state(workspace: lane.name)
                 st.layout = lane.layout
                 st.zoomed = nil
-                for id in lane.ids where windows[id] != nil { workspaceOf[id] = lane.name }
+                for id in lane.ids where windows[id] != nil { model.assign(id, to: lane.name) }
             }
             for name in gone[p.display] ?? [] { labels[name] = nil }
             // Windows in Close disappear from the screen right away; the usual parking hides them.
             let hidden = Self.pendingPrefix + p.display
             monitorOf[hidden] = p.display
-            for id in p.close where windows[id] != nil { workspaceOf[id] = hidden }
+            for id in p.close where windows[id] != nil { model.assign(id, to: hidden) }
         }
         order = order.filter { !moving.contains($0) } + planned
         lastFocused = lastFocused.filter { !moving.contains($0.value) }
@@ -270,7 +264,7 @@ extension WindowManager {
         let screens = Screen.all()
         for (id, key) in waiting {
             let display = String(key.dropFirst(Self.pendingPrefix.count))
-            workspaceOf[id] = virtualShown[display] ?? screens.first.flatMap { virtualShown[$0.uuid] } ?? screens.first.flatMap { shown[$0.uuid] }
+            model.assign(id, to: virtualShown[display] ?? screens.first.flatMap { virtualShown[$0.uuid] } ?? screens.first.flatMap { shown[$0.uuid] })
         }
         let used = Set(workspaceOf.values.filter(isPending))
         for key in monitorOf.keys where isPending(key) && !used.contains(key) { monitorOf[key] = nil }
@@ -295,21 +289,24 @@ extension WindowManager {
     }
 
     /// Windows being closed keep their place (hidden) so they never flash back on screen.
-    private func restoreSort(_ u: SortSnapshot) {
-        for (id, ws) in u.workspaceOf where windows[id] != nil && !closingNow.contains(id) { workspaceOf[id] = ws }
+    private func restoreSort(_ snapshot: SortSnapshot) {
+        let u = snapshot.model
+        for (id, ws) in u.workspaceOf where windows[id] != nil && !closingNow.contains(id) { model.assign(id, to: ws) }
         let known = Set(u.order)
         order = u.order.filter { windows[$0] != nil } + order.filter { !known.contains($0) }
         monitorOf = u.monitorOf
-        labels = u.labels
-        for name in Array(states.keys) where u.layouts[name] == nil { states[name] = nil }
-        for (name, l) in u.layouts {
+        labels = snapshot.labels
+        for name in Array(states.keys) where u.states[name] == nil { states[name] = nil }
+        for (name, l) in u.states {
             let st = state(workspace: name)
             st.layout = l.layout; st.ratio = l.ratio.isFinite ? min(0.9, max(0.1, l.ratio)) : 0.5; st.mainCount = l.mainCount; st.zoomed = nil
         }
+        // The sort dropped the last focused window of workspaces it changed; those windows are back now.
+        for (ws, id) in u.lastFocused where lastFocused[ws] == nil && windows[id] != nil && workspaceOf[id] == ws { lastFocused[ws] = id }
         corrections = [:]
         quietWorkspaceHUD = true
         defer { quietWorkspaceHUD = false }
-        for (display, ws) in u.shown where virtualShown[display] != ws { showWorkspace(ws, focus: false) }
+        for (display, ws) in u.virtualShown where virtualShown[display] != ws { showWorkspace(ws, focus: false) }
         refresh()
     }
 

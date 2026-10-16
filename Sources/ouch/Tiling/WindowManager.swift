@@ -20,6 +20,12 @@ final class ScreenState {
     var mainCount = 1
     var zoomed: CGWindowID?
     init(layout: Layout) { self.layout = layout }
+
+    func copy() -> ScreenState {
+        let c = ScreenState(layout: layout)
+        c.ratio = ratio; c.mainCount = mainCount; c.zoomed = zoomed
+        return c
+    }
 }
 
 let ipcNotification = Notification.Name("local.ouch.command")
@@ -47,21 +53,29 @@ final class WindowManager {
     var practice: (pid: pid_t, workspaces: [String: String])?
 
     var windows: [CGWindowID: Window] = [:]
-    var order: [CGWindowID] = []            // tiling order; first window on a screen is "main"
     // Workspaces. In virtual mode these are Ouch's own (windows on hidden workspaces are parked
     // off-screen); in macOS-Spaces mode each display's current Space is treated as its workspace.
-    var workspaceOf: [CGWindowID: String] = [:] // workspace each window belongs to
-    var monitorOf: [String: String] = [:]        // display UUID each workspace lives on
-    var shown: [String: String] = [:]            // display UUID → workspace it shows right now
-    var virtualShown: [String: String] = [:]     // display UUID → Ouch workspace on its home Space
+    // The bookkeeping lives in `model`; the properties below forward to it (see `WorkspaceModel`).
+    var model = WorkspaceModel()
+    var workspaceOf: [CGWindowID: String] { model.workspaceOf } // change it with `model.assign`
+    var order: [CGWindowID] { get { model.order } set { model.order = newValue } _modify { yield &model.order } }
+    var monitorOf: [String: String] { get { model.monitorOf } set { model.monitorOf = newValue } _modify { yield &model.monitorOf } }
+    var shown: [String: String] { get { model.shown } set { model.shown = newValue } _modify { yield &model.shown } }
+    var virtualShown: [String: String] {
+        get { model.virtualShown } set { model.virtualShown = newValue } _modify { yield &model.virtualShown }
+    }
+    var states: [String: ScreenState] { get { model.states } set { model.states = newValue } _modify { yield &model.states } }
+    var lastFocused: [String: CGWindowID] {
+        get { model.lastFocused } set { model.lastFocused = newValue } _modify { yield &model.lastFocused }
+    }
+    var focusStamps: [CGWindowID: Int] { model.focusStamps } // change it with `model.noteFocus` / `model.forget`
+    var focusClock: Int { model.focusClock }
+    var focusOrder: [CGWindowID] { model.focusOrder }
     var homeSpace: [String: UInt64] = [:]        // display UUID → the macOS Space workspaces live on
     var displayOf: [CGWindowID: String] = [:]    // display UUID each window was last seen on (see `syncWorkspaces`)
     var workspaceMoves: Set<CGWindowID> = []
     var snapNextPlacement: Set<CGWindowID> = []
     var present: Set<CGWindowID> = []
-    var lastFocused: [String: CGWindowID] = [:]
-    var focusStamps: [CGWindowID: Int] = [:] // focus history: higher was focused more recently
-    var focusClock = 0
     /// A window we just focused. macOS takes a moment to report it, and a key press in between
     /// must navigate from it, not from the window before (or spamming a key goes nowhere).
     var pendingFocus: (id: CGWindowID, until: Date)?
@@ -73,7 +87,6 @@ final class WindowManager {
     var savedFloating: [CGWindowID: Bool] = [:]  // windows floated or tiled by hand, from the last run
     var previousWorkspace: [String: String] = [:] // display UUID → workspace it showed before
     var labels: [String: String] = [:]           // workspace → the name the Sort panel gave it
-    var focusOrder: [CGWindowID] = []            // most recently focused first
     var sortSnapshot: SortSnapshot?
     var closingNow: Set<CGWindowID> = []          // closed by a finished sort, kept hidden until checked
     var closingApps: Set<pid_t> = []              // apps of those windows, quit if the sort leaves them windowless
@@ -95,7 +108,6 @@ final class WindowManager {
     var focusSink: NSWindow?
     var visible: Set<CGWindowID> = []       // managed windows on the current space(s)
     var targets: [CGWindowID: CGRect] = [:] // slot each tiled window was last given
-    var states: [String: ScreenState] = [:] // per workspace
     var observers: [pid_t: AXObserver] = [:]
     var corrections: [CGWindowID: (target: CGRect, count: Int)] = [:]
     var drags: [CGWindowID: Bool] = [:]     // window -> was resized (vs. only moved)
@@ -213,7 +225,7 @@ final class WindowManager {
         config = Config.load()
         if wasVirtual != config.virtualWorkspaces {
             if wasVirtual { restoreHiddenWindows() }
-            workspaceOf = [:]; monitorOf = [:]; shown = [:]; virtualShown = [:]; states = [:]; lastFocused = [:]
+            model.resetWorkspaces()
             labels = [:]; sortSnapshot = nil; closingNow = []; closingApps = []
             SortPanel.shared.abandon()
             Log.info("workspaces: \(config.virtualWorkspaces ? "Ouch workspaces" : "macOS Spaces")")
