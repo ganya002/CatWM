@@ -104,6 +104,7 @@ final class CursorActions {
     private func show() {
         guard !shown else { return }
         shown = true
+        model.modGlyph = Self.glyph(of: WindowManager.shared.config.mainMod)
         let dot = dotPanel ?? makeDotPanel()
         dotPanel = dot
         dot.alphaValue = 1
@@ -168,10 +169,19 @@ final class CursorActions {
         model.anchor = CGPoint(x: point.x - frame.minX, y: frame.maxY - point.y)
     }
 
+    /// The key cap symbol for `$mod`: the first of ⌘ ⌥ ⌃ ⇧ it holds.
+    private static func glyph(of flags: CGEventFlags) -> String {
+        if flags.contains(.maskCommand) { return "⌘" }
+        if flags.contains(.maskAlternate) { return "⌥" }
+        if flags.contains(.maskControl) { return "⌃" }
+        if flags.contains(.maskShift) { return "⇧" }
+        return "⌥"
+    }
+
     private func makeDotPanel() -> NSPanel {
         let p = Self.makePanel()
         p.ignoresMouseEvents = true
-        let host = NSHostingView(rootView: CursorMarkView())
+        let host = NSHostingView(rootView: CursorMarkView(model: model))
         p.setContentSize(CGSize(width: Self.dotSize, height: Self.dotSize))
         p.contentView = host
         return p
