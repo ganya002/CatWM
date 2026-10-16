@@ -190,13 +190,13 @@ final class MenuModel: ObservableObject {
 
         out.append(.sep("s2"))
 
+        // A waiting crash report: Send Feedback in Settings takes it.
         out.append(MenuItem(id: "settings", label: "Settings…", symbol: "gearshape", shortcut: ["⌘", ","], keywords: "preferences options",
-                            rotates: true, action: { SettingsWindow.shared.show(pane: nil) }))
+                            rotates: true, dot: CrashWatch.pending != nil, action: { SettingsWindow.shared.show(pane: nil) }))
         let paused = TutorialLesson.paused
         out.append(MenuItem(id: "tutorial", label: paused == nil ? "Keyboard Tutorial…" : "Resume Tutorial…", symbol: "graduationcap",
                             value: paused?.name, enabled: trusted, keywords: "learn practice drill keys lessons onboarding help",
                             action: { Onboarding.shared.startTutorial() }))
-        let crashed = CrashWatch.pending != nil
         out.append(MenuItem(id: "help", kind: .sub, label: "Help", symbol: "questionmark.circle", children: [
             MenuItem(id: "map", label: "Shortcut Map", symbol: "keyboard", shortcut: ["⌘", "/"], keywords: "keys overview cheat sheet",
                      action: { SettingsWindow.shared.show(pane: .shortcuts, map: true) }),
@@ -212,9 +212,7 @@ final class MenuModel: ObservableObject {
                      hidden: true, keywords: "refresh file", keepOpen: true, rotates: true, action: { wm.reload() }),
             MenuItem(id: "updates", label: "Check for Updates…", symbol: "arrow.down.circle", keywords: "version upgrade",
                      action: { AppDelegate.checkForUpdates() }),
-            MenuItem(id: "bug", label: "Report a Bug…", symbol: "ladybug", value: crashed ? "Crashed" : nil,
-                     keywords: "problem issue crash feedback agent", dot: crashed, action: { CrashWatch.openReport() }),
-        ], dot: crashed))
+        ]))
         out.append(.sep("s3"))
         out.append(MenuItem(id: "quit", kind: .footer, label: "Quit Ouch", shortcut: ["⌘", "Q"], keywords: "exit",
                             action: { NSApp.terminate(nil) }))

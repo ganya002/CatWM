@@ -127,11 +127,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         CrashWatch.cleanExit()
     }
 
-    /// `ouch://report?id=…`: an agent hands back a finished bug report.
-    func application(_ application: NSApplication, open urls: [URL]) {
-        for url in urls where url.scheme == "ouch" { BugReportPanel.shared.handle(url) }
-    }
-
     /// Menu bar indicator: the focused display's workspace, a drawing of its layout, and the
     /// apps on it.
     private func updateIcon() {

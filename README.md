@@ -28,11 +28,11 @@ After onboarding, small tips turn up once each where they help: beside a Setting
 
 The app is ad-hoc signed, so after each rebuild you may need to remove and re-add it in Accessibility.
 
-## Bug reports
+## Feedback
 
-**Help › Report a Bug…** collects a report folder in `~/Library/Application Support/Ouch/Reports/<time>/`: setup, recent log, config and (after a crash) the macOS crash report, plus `prompt.md` with instructions for an agent. Agents get only the path to `prompt.md` and read the rest themselves. The card shows the AI apps and coding agents installed on the Mac, as their icons. Clicking one opens it with the prompt filled in: Claude, Codex and Cursor through their deep links, editors with the folder opened, chat apps with the prompt on the clipboard, and command-line agents in Terminal. When the report is done, the agent runs `open "ouch://report?id=<folder>"` and Ouch shows it, ready to send. Users can also write it themselves.
+The ladybug button at the foot of the Settings sidebar opens **Send feedback**, a sheet on the Settings window. The user writes a description. Ouch sends it with its recent log, the config, the Mac's setup and (after a crash) the macOS crash report. The sheet tells the user what it sends.
 
-**Send** files the report as a Linear issue through the relay in `report-relay/`, a Cloudflare Worker that holds the Linear API key, since a key shipped inside the app could be pulled out. Deploy it once:
+**Send** files the feedback as a Linear issue through the relay in `report-relay/`, a Cloudflare Worker that holds the Linear API key, since a key shipped inside the app could be pulled out. Deploy it once:
 
 ```sh
 cd report-relay
@@ -40,7 +40,7 @@ npx wrangler deploy
 npx wrangler secret put LINEAR_API_KEY   # Linear → Settings → Security & access → Personal API keys
 ```
 
-Set `LINEAR_TEAM_ID` in `wrangler.toml` to the team's UUID, and put the worker's URL plus `/report` into `OuchReportURL` in `Info.plist`. Until then, Send opens a Mail draft to `OuchReportEmail` (Linear's intake address), and with neither set it copies the report.
+Set `LINEAR_TEAM_ID` in `wrangler.toml` to the team's UUID, and put the worker's URL plus `/report` into `OuchReportURL` in `Info.plist`.
 
 ## Performance reports
 
@@ -48,7 +48,7 @@ Set `LINEAR_TEAM_ID` in `wrangler.toml` to the team's UUID, and put the worker's
 
 The relay files one Linear issue per fingerprint (`[perf:<id>]` in the title) and adds a comment for each repeat, up to 10. Its API key needs the read and create comment scopes besides create issues. Set `LINEAR_PERF_LABEL_ID` to label the issues.
 
-If Ouch crashes, a small watchdog reopens it once macOS has written the crash report. Nothing pops up: the menu bar icon, Help and Report a Bug… get a yellow dot, and Report a Bug… then opens with the crash attached. `open build/ouch.app --args --crash-report` marks the newest crash report as waiting.
+If Ouch crashes, a small watchdog reopens it once macOS has written the crash report. Nothing pops up: the menu bar icon, Settings… and the feedback button in Settings get a yellow dot, and Send feedback then sends the crash report with the description. `open build/ouch.app --args --crash-report` marks the newest crash report as waiting.
 
 ## Releasing with Amore
 
