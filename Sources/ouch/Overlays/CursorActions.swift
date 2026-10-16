@@ -15,7 +15,9 @@ final class CursorActions {
     private var dotPanel: NSPanel?
     /// The menu, placed and shown only while it is open or playing out.
     private var menuPanel: NSPanel?
-    private var followTimer: Timer?
+    /// Mouse moves, seen as they happen, so the mark moves with the pointer and not after it.
+    private var moveTap: CFMachPort?
+    private var moveSource: CFRunLoopSource?
     private var lastFollow = CGPoint(x: -1, y: -1)
     private var shown = false
     /// The menu panel is placed but the view has not been told to open yet.
@@ -96,7 +98,9 @@ final class CursorActions {
         closeWork = nil
         menuPanel?.orderOut(nil)
         menuPanel?.ignoresMouseEvents = true
-        if shown { fadeDot(out: false) }
+        guard shown else { return }
+        placeDot(at: NSEvent.mouseLocation) // the pointer may have left while the menu was up
+        fadeDot(out: false)
     }
 
     // MARK: Panels
@@ -109,16 +113,11 @@ final class CursorActions {
         dot.alphaValue = 1
         placeDot(at: NSEvent.mouseLocation)
         dot.orderFrontRegardless()
-        // Polled, not driven by mouse events: those reach a global monitor a frame or two late and in bursts,
-        // so the mark would trail the pointer. The live pointer position read at 120 Hz keeps it beside the arrow.
-        let t = Timer(timeInterval: 1.0 / 120, repeats: true) { [weak self] _ in self?.follow() }
-        RunLoop.main.add(t, forMode: .common)
-        followTimer = t
+        startMoveTap()
     }
 
     private func hide() {
-        followTimer?.invalidate()
-        followTimer = nil
+        stopMoveTap()
         guard shown else { return }
         shown = false
         closeMenuPanel()
@@ -134,10 +133,37 @@ final class CursorActions {
         }
     }
 
-    /// The mark stays where the menu opened while the menu is up.
-    private func follow() {
+    /// A listen-only tap for mouse moves and drags. A global monitor gets them a frame or two late and in
+    /// bursts, and a timer reads the pointer up to a tick late; the tap sees each move as it happens.
+    private func startMoveTap() {
+        guard moveTap == nil else { return }
+        let mask = [CGEventType.mouseMoved, .leftMouseDragged, .rightMouseDragged, .otherMouseDragged]
+            .reduce(CGEventMask(0)) { $0 | CGEventMask(1 << $1.rawValue) }
+        guard let t = CGEvent.tapCreate(tap: .cgSessionEventTap, place: .tailAppendEventTap, options: .listenOnly,
+                                        eventsOfInterest: mask, callback: cursorMoveCallback, userInfo: nil) else { return }
+        let src = CFMachPortCreateRunLoopSource(nil, t, 0)
+        CFRunLoopAddSource(CFRunLoopGetMain(), src, .commonModes)
+        CGEvent.tapEnable(tap: t, enable: true)
+        moveTap = t
+        moveSource = src
+    }
+
+    private func stopMoveTap() {
+        if let t = moveTap { CGEvent.tapEnable(tap: t, enable: false); CFMachPortInvalidate(t) }
+        if let src = moveSource { CFRunLoopRemoveSource(CFRunLoopGetMain(), src, .commonModes) }
+        moveTap = nil
+        moveSource = nil
+    }
+
+    fileprivate func reenableMoveTap() {
+        if let t = moveTap { CGEvent.tapEnable(tap: t, enable: true) }
+    }
+
+    /// The mark stays where the menu opened while the menu is up. `cgPoint` is global, y down from the top
+    /// of the main display, as an event has it.
+    fileprivate func follow(cgPoint: CGPoint) {
         guard shown, !model.open, !opening, menuPanel?.isVisible != true else { return }
-        let p = NSEvent.mouseLocation
+        let p = CGPoint(x: cgPoint.x, y: (NSScreen.screens.first?.frame.height ?? 0) - cgPoint.y)
         guard p != lastFollow else { return }
         lastFollow = p
         placeDot(at: p)
@@ -194,8 +220,19 @@ final class CursorActions {
         p.hidesOnDeactivate = false
         p.becomesKeyOnlyIfNeeded = true
         p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
+        p.animationBehavior = .none
         return p
     }
+}
+
+private func cursorMoveCallback(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent,
+                                refcon: UnsafeMutableRawPointer?) -> Unmanaged<CGEvent>? {
+    if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+        CursorActions.shared.reenableMoveTap()
+    } else {
+        CursorActions.shared.follow(cgPoint: event.location)
+    }
+    return Unmanaged.passUnretained(event)
 }
 
 /// The panel is never key, so its first click must already press the menu's buttons.
