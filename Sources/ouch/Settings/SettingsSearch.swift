@@ -42,6 +42,8 @@ enum SettingsIndex {
         SettingEntry(id: "layout.hudSpaces", title: "Show layout name when switching spaces", pane: .layout, advanced: true, keywords: "hud desktop"),
 
         SettingEntry(id: "windows.ffm", title: "Focus follows mouse", pane: .windows, keywords: "hover pointer"),
+        SettingEntry(id: "windows.ffmModeOnly", title: "Focus follows mouse only in window mode", pane: .windows,
+                     keywords: "hover pointer submap"),
         SettingEntry(id: "windows.mff", title: "Mouse follows focus", pane: .windows, keywords: "pointer cursor warp"),
         SettingEntry(id: "windows.dimOthers", title: "Dim other windows", pane: .windows, keywords: "focus darken inactive spotlight hazeover"),
         SettingEntry(id: "windows.dimStrength", title: "Dim strength", pane: .windows, keywords: "darken amount opacity"),

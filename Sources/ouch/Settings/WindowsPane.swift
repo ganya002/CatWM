@@ -21,6 +21,10 @@ struct WindowsPane: View {
             OGroup("Focus") {
                 OSwitchRow("Focus follows mouse", description: "Hovering a window focuses it", isOn: $doc.config.focusFollowsMouse)
                     .setting("windows.ffm", ui)
+                OSwitchRow("Only in window mode", description: "Hovering focuses a window only while window mode is on",
+                           isOn: $doc.config.focusFollowsMouseInModeOnly)
+                    .disabled(!doc.config.focusFollowsMouse)
+                    .setting("windows.ffmModeOnly", ui)
                 OSwitchRow("Mouse follows focus", description: "The pointer jumps to the window you focus", isOn: $doc.config.mouseFollowsFocus)
                     .setting("windows.mff", ui)
                 OSwitchRow("Dim other windows", description: "Darkens everything but the focused window", isOn: $doc.config.dimOtherWindows)

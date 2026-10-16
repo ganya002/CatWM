@@ -436,6 +436,7 @@ final class ConfigDocument: ObservableObject {
             "",
             "mouse-follows-focus = \(b(c.mouseFollowsFocus))",
             "focus-follows-mouse = \(b(c.focusFollowsMouse))",
+            "focus-follows-mouse-in-mode-only = \(b(c.focusFollowsMouseInModeOnly))",
             "mouse-swaps-windows = \(b(c.mouseSwapsWindows))",
             "mouse-resizes-windows = \(b(c.mouseResizesWindows))",
             "new-windows-to-main = \(b(c.newWindowsToMain))",

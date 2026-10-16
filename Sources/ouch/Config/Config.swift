@@ -38,6 +38,8 @@ struct Config {
     var paddingLeft: CGFloat = 10, paddingRight: CGFloat = 10, paddingTop: CGFloat = 10, paddingBottom: CGFloat = 10
     var mouseFollowsFocus = false
     var focusFollowsMouse = false
+    /// Focus follows mouse only while window mode (or another submap) is on.
+    var focusFollowsMouseInModeOnly = false
     var mouseSwapsWindows = true
     var mouseResizesWindows = true
     var floating: [String] = []
@@ -202,6 +204,7 @@ struct Config {
             return needNum { paddingLeft = $0; paddingRight = $0; paddingTop = $0; paddingBottom = $0 }
         case "mouse_follows_focus": mouseFollowsFocus = bool
         case "focus_follows_mouse", "follow_mouse": focusFollowsMouse = bool
+        case "focus_follows_mouse_in_mode_only": focusFollowsMouseInModeOnly = bool
         case "mouse_swaps_windows": mouseSwapsWindows = bool
         case "mouse_resizes_windows": mouseResizesWindows = bool
         case "floating":
@@ -422,6 +425,8 @@ ignore-menu-bar = false
 # ---- behaviour -------------------------------------------------------------
 mouse-follows-focus = false
 focus-follows-mouse = false
+# With focus-follows-mouse on: hovering focuses a window only while window mode is on.
+focus-follows-mouse-in-mode-only = false
 mouse-swaps-windows = true
 mouse-resizes-windows = true
 new-windows-to-main = false
