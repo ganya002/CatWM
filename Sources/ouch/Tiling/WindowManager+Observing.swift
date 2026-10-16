@@ -86,7 +86,7 @@ extension WindowManager {
         snapNextPlacement.remove(id)
         order.removeAll { $0 == id }
         workspaceOf[id] = nil; floatFrames[id] = nil; targets[id] = nil; minSizes[id] = nil; corrections[id] = nil; drags[id] = nil
-        focusStamps[id] = nil
+        focusStamps[id] = nil; displayOf[id] = nil
         visible.remove(id)
     }
 

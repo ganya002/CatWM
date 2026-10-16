@@ -120,6 +120,21 @@ extension WindowManager {
             }
             monitorOf[shown[s.uuid]!] = s.uuid
         }
+        // A window that left the display it was last seen on, for one other than its workspace's, was
+        // moved by the user (Mission Control to another display's Space): it joins the workspace showing
+        // there instead of being put back. Ouch's own moves change the workspace first and the display
+        // after, while the animator owns the window, so they never look like this.
+        let held = movingToSpace || NSEvent.pressedMouseButtons & 1 != 0 // mid-drag: `mouseUp` decides
+        for id in present where !held && !workspaceMoves.contains(id) && !animator.isBusy(id) {
+            guard let w = windows[id], let ws = workspaceOf[id], isShown(ws) else { continue }
+            let f = w.frame
+            guard !f.isNull, !isParked(f, screens), let now = screen(containing: f, in: screens)?.uuid else { continue }
+            defer { displayOf[id] = now }
+            guard let was = displayOf[id], was != now, uuids.contains(was),
+                  let m = monitorOf[ws], m != now, let dest = shown[now] else { continue }
+            Log.info("workspaces: window \(id) moved from \(was) to \(now) outside Ouch; it joins \(dest)")
+            workspaceOf[id] = dest
+        }
         // A window we can see but whose workspace isn't showing is either parked (a Ouch
         // workspace whose display is on its home Space) or has moved between macOS Spaces, in
         // which case it joins whatever is showing where it is now.
