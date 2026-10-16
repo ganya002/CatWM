@@ -12,7 +12,7 @@ final class KeyHelp {
     static let shared = KeyHelp()
 
     private let model = KeyHelpModel()
-    private var panel: NSPanel?
+    private var panel: OuchPanel?
     private var host: NSHostingView<KeyHelpView>?
     private var holdWork: DispatchWorkItem?
     private var orderOutWork: DispatchWorkItem?
@@ -100,9 +100,7 @@ final class KeyHelp {
 
     private func show(mode: String, reason: KeyHelpModel.Reason) {
         orderOutWork?.cancel()
-        let screen = WindowManager.shared.focusedScreen
-            ?? NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main
-        guard let screen else { return }
+        let screen = WindowManager.shared.focusedScreen ?? OuchPanel.pointerScreen()
         let wasShown = model.shown
         Tips.shared.markSeen(.keyHelp)
         model.load(mode: mode, binds: WindowManager.shared.config.bindings, chord: chordMods, reason: reason,
@@ -122,11 +120,8 @@ final class KeyHelp {
         }
         guard let host else { return }
         host.layoutSubtreeIfNeeded()
-        let size = host.fittingSize
-        let area = screen.visibleFrame
-        // Low on the screen, just above the Dock, so it sits under what you're looking at.
-        p.setFrame(CGRect(x: area.midX - size.width / 2, y: area.minY - Self.margin + Self.bottomGap, width: size.width, height: size.height),
-                   display: true)
+        // Low on the screen, just above the Dock, so it sits under what you're looking at. Kept on the screen.
+        p.place(size: host.fittingSize, on: screen, anchor: .bottom(Self.bottomGap - Self.margin), inset: EdgeInsets(all: Self.margin))
         p.orderFrontRegardless()
         // A turn later, so the view sees `shown` change and fades and scales in.
         if !wasShown { DispatchQueue.main.async { [weak self] in self?.model.shown = true } }
@@ -163,16 +158,7 @@ final class KeyHelp {
         }
     }
 
-    private func makePanel() -> NSPanel {
-        let p = NSPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        p.level = .statusBar
-        p.isOpaque = false
-        p.backgroundColor = .clear
-        p.hasShadow = false // drawn by SwiftUI, so it follows the scale
-        p.ignoresMouseEvents = true
-        p.collectionBehavior = [.canJoinAllSpaces, .transient, .ignoresCycle, .fullScreenAuxiliary]
-        return p
-    }
+    private func makePanel() -> OuchPanel { OuchPanel(role: .hud) }
 
     static func mods(_ f: CGEventFlags) -> NSEvent.ModifierFlags {
         NSEvent.ModifierFlags(rawValue: UInt(f.rawValue)).intersection([.command, .option, .control, .shift])

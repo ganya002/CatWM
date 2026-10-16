@@ -6,7 +6,7 @@ import SwiftUI
 /// next one when you cycle quickly.
 final class HUD {
     static let shared = HUD()
-    private var panel: NSPanel?
+    private var panel: OuchPanel?
     private var host: NSHostingView<HUDView>?
     private let model = HUDModel()
     private var hideWork: DispatchWorkItem?
@@ -46,7 +46,8 @@ final class HUD {
             let below = avoid.minY - frame.height + Self.margin - 12
             frame.origin.y = below >= screen.visibleFrame.minY ? below : avoid.maxY - Self.margin + 12
         }
-        p.setFrame(frame, display: true)
+        // Clear of the menu bar and the Dock, however the card had to move.
+        p.place(size: frame.size, on: screen, anchor: .origin(frame.origin), inset: EdgeInsets(all: Self.margin))
         p.alphaValue = 1
         p.orderFrontRegardless()
 
@@ -64,16 +65,8 @@ final class HUD {
         DispatchQueue.main.asyncAfter(deadline: .now() + (warning ? 1.6 : layout == nil ? 0.8 : 1), execute: work)
     }
 
-    private func makePanel() -> NSPanel {
-        let p = NSPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        p.level = .statusBar
-        p.isOpaque = false
-        p.backgroundColor = .clear
-        p.hasShadow = false // drawn by SwiftUI, so it follows the pop
-        p.ignoresMouseEvents = true
-        p.collectionBehavior = [.canJoinAllSpaces, .transient, .ignoresCycle]
-        return p
-    }
+    /// Shows over full-screen apps too, like the keyboard help.
+    private func makePanel() -> OuchPanel { OuchPanel(role: .hud) }
 }
 
 final class HUDModel: ObservableObject {

@@ -222,16 +222,13 @@ final class PermissionGuide {
         let p = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 300, height: 10),
                         styleMask: [.titled, .fullSizeContentView, .nonactivatingPanel, .utilityWindow],
                         backing: .buffered, defer: false)
-        for button in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
-            p.standardWindowButton(button)?.isHidden = true
-        }
-        p.titleVisibility = .hidden
-        p.titlebarAppearsTransparent = true
+        p.clearTitlebar(hiding: [.closeButton, .miniaturizeButton, .zoomButton])
         p.isMovableByWindowBackground = true
         p.isReleasedWhenClosed = false
         p.hidesOnDeactivate = false
         p.level = .floating
-        p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        // Not in the window cycle, like the other panels.
+        p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
         let host = NSHostingView(rootView: GuideView(model: model, dismiss: { [weak self] in self?.hide() }))
         host.sizingOptions = [.intrinsicContentSize] // measured by fittingSize; layout() applies it in one move
         // The hidden title bar's safe area would otherwise count toward fittingSize, leaving a blank strip

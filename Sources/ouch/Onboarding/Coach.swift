@@ -77,8 +77,8 @@ final class Coach {
     private var helper: Process?
     private var helperPID: pid_t = 0
 
-    private var panel: OverlayPanel!
-    private var host: FirstClickHostingView<CoachCardView>!
+    private var panel: OuchPanel!
+    private var host: OuchHostingView<CoachCardView>!
     private let model = CoachModel()
     private var follow: Timer?
     private var target = NSRect.zero
@@ -117,8 +117,8 @@ final class Coach {
         model.headSymbol = lesson.pausable ? "pause.fill" : nil
         model.reveal = { [weak self] in self?.revealHint() }
         model.tutorial = { [weak self] in self?.end(.tutorial) }
-        host = FirstClickHostingView(rootView: CoachCardView(model: model))
-        panel = OverlayPanel(frame: .zero, level: .floating, clickThrough: false)
+        host = OuchHostingView(rootView: CoachCardView(model: model))
+        panel = OuchPanel(role: .overlay(.floating, clickThrough: false))
         panel.contentView = host
         enter()
 

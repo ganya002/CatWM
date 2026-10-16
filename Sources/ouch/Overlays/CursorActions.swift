@@ -183,14 +183,14 @@ final class CursorActions {
     private func place(menu panel: NSPanel, at point: CGPoint) {
         let m = CursorActionsView.margin, gap: CGFloat = 10
         let size = CursorActionsView.menuSize(for: model.actions)
-        let screen = (NSScreen.screens.first { $0.frame.contains(point) } ?? NSScreen.main)?.frame ?? .zero
+        let screen = OuchPanel.screen(at: point)
+        let v = screen.visibleFrame // clear of the menu bar and the Dock
         var x = point.x + gap, top = point.y - gap
-        if x + size.width > screen.maxX { x = point.x - gap - size.width }
-        if top - size.height < screen.minY { top = point.y + gap + size.height }
-        x = min(max(x, screen.minX), screen.maxX - size.width)
-        top = min(max(top, screen.minY + size.height), screen.maxY)
-        let frame = CGRect(x: (x - m).rounded(), y: (top - size.height - m).rounded(),
-                           width: size.width + 2 * m, height: size.height + 2 * m)
+        if x + size.width > v.maxX { x = point.x - gap - size.width }
+        if top - size.height < v.minY { top = point.y + gap + size.height }
+        let frame = OuchPanel.frame(size: CGSize(width: size.width + 2 * m, height: size.height + 2 * m), on: screen,
+                                    anchor: .origin(NSPoint(x: (x - m).rounded(), y: (top - size.height - m).rounded())),
+                                    inset: EdgeInsets(all: m))
         panel.setFrame(frame, display: true)
         model.anchor = CGPoint(x: point.x - frame.minX, y: frame.maxY - point.y)
     }
@@ -215,24 +215,13 @@ final class CursorActions {
 
     private func makeMenuPanel() -> NSPanel {
         let p = Self.makePanel()
-        let host = FirstClickHost(rootView: CursorActionsView(model: model))
+        let host = OuchHostingView(rootView: CursorActionsView(model: model)) // never key, so the first click must press
         host.sizingOptions = [] // only `place` sizes the panel
         p.contentView = host
         return p
     }
 
-    private static func makePanel() -> NSPanel {
-        let p = NSPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        p.level = .screenSaver
-        p.isOpaque = false
-        p.backgroundColor = .clear
-        p.hasShadow = false // drawn by SwiftUI
-        p.hidesOnDeactivate = false
-        p.becomesKeyOnlyIfNeeded = true
-        p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
-        p.animationBehavior = .none
-        return p
-    }
+    private static func makePanel() -> NSPanel { OuchPanel(role: .pointer) }
 }
 
 private func cursorMoveCallback(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent,
@@ -243,9 +232,4 @@ private func cursorMoveCallback(proxy: CGEventTapProxy, type: CGEventType, event
         CursorActions.shared.follow(cgPoint: event.location)
     }
     return Unmanaged.passUnretained(event)
-}
-
-/// The panel is never key, so its first click must already press the menu's buttons.
-private final class FirstClickHost<Content: View>: NSHostingView<Content> {
-    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }

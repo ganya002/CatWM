@@ -377,8 +377,8 @@ final class StatusMenu: NSObject, NSWindowDelegate {
 
     weak var button: NSStatusBarButton?
     let model = MenuModel()
-    private var panel: MenuPanel?
-    private var monitors: [Any] = []
+    private var panel: OuchPanel?
+    private let dismiss = DismissMonitor()
     private static let margin: CGFloat = 26
 
     var isOpen: Bool { panel?.isVisible == true }
@@ -406,7 +406,7 @@ final class StatusMenu: NSObject, NSWindowDelegate {
 
         let p = panel ?? makePanel()
         panel = p
-        p.contentView = NSHostingView(rootView: MenuRoot(model: model, rootX: rootX, top: m / 4,
+        p.contentView = OuchHostingView(rootView: MenuRoot(model: model, rootX: rootX, top: m / 4,
                                                          size: frame.size))
         p.setFrame(frame, display: true)
         p.makeKeyAndOrderFront(nil)
@@ -417,7 +417,7 @@ final class StatusMenu: NSObject, NSWindowDelegate {
 
     func close() {
         guard let panel, panel.isVisible else { return }
-        removeMonitors()
+        dismiss.stop()
         button?.highlight(false)
         NSAnimationContext.runAnimationGroup({ ctx in
             ctx.duration = 0.12
@@ -433,46 +433,27 @@ final class StatusMenu: NSObject, NSWindowDelegate {
     /// Live state changed (tiling, a window moved): refresh the rows if open.
     func refreshIfOpen() { if isOpen { model.refresh() } }
 
-    private func makePanel() -> MenuPanel {
-        let p = MenuPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        p.level = .popUpMenu
-        p.isOpaque = false
-        p.backgroundColor = .clear
-        p.hasShadow = false // drawn by the surfaces
-        p.isReleasedWhenClosed = false
-        p.hidesOnDeactivate = false
-        p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle, .transient]
+    private func makePanel() -> OuchPanel {
+        let p = OuchPanel(role: .menu)
+        p.onClose = { [weak self] in self?.close() } // ⌘W; Esc and ⌘Q are the menu's own keys
         p.delegate = self
         return p
     }
 
     func windowDidResignKey(_ notification: Notification) { close() }
 
+    /// Clicks in other apps, and in our own windows outside the menu, close it; the status item toggles by itself.
     private func installMonitors() {
-        removeMonitors()
-        // Clicks in other apps close it.
-        if let m = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown], handler: { [weak self] _ in
-            self?.close()
-        }) { monitors.append(m) }
-        // Clicks in our own windows outside the menu close it too; the status item toggles by itself.
-        if let m = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown], handler: { [weak self] e in
-            guard let self else { return e }
-            if e.window !== self.panel && e.window !== self.button?.window { self.close() }
-            return e
-        }) { monitors.append(m) }
-        if let m = NSEvent.addLocalMonitorForEvents(matching: .keyDown, handler: { [weak self] e in
-            guard let self, self.panel?.isKeyWindow == true else { return e }
-            return self.key(e) ? nil : e
-        }) { monitors.append(m) }
+        dismiss.start(keeps: { [weak self] w in w === self?.panel || w === self?.button?.window },
+                      key: { [weak self] e in
+                          guard let self, panel?.isKeyWindow == true else { return false }
+                          return key(e)
+                      },
+                      close: { [weak self] in self?.close() })
     }
 
-    private func removeMonitors() {
-        monitors.forEach(NSEvent.removeMonitor)
-        monitors = []
-    }
-
-    /// Menu keys: ↑↓ move, → opens, ← and Esc go back, ↩ runs; ⌘, ⌘/ ⌘Q work as shown. Everything
-    /// else types into the search field.
+    /// Menu keys: ↑↓ move, → opens, ← and Esc go back, ↩ runs; ⌘, ⌘/ ⌘Q work as shown (⌘Q quits, as the
+    /// Quit row says). Everything else types into the search field.
     private func key(_ e: NSEvent) -> Bool {
         let cmd = e.modifierFlags.contains(.command)
         switch (e.keyCode, cmd) {
@@ -490,13 +471,6 @@ final class StatusMenu: NSObject, NSWindowDelegate {
         }
         return true
     }
-}
-
-/// A borderless panel that takes the keyboard without activating Ouch, so the window you were in
-/// stays focused for Float and Fullscreen.
-final class MenuPanel: NSPanel {
-    override var canBecomeKey: Bool { true }
-    override var canBecomeMain: Bool { false }
 }
 
 // MARK: - Views

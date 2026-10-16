@@ -37,7 +37,7 @@ final class Popup: NSObject, NSWindowDelegate {
     static let shared = Popup()
 
     private struct Entry {
-        let panel: MenuPanel
+        let panel: OuchPanel
         let generation: Int
         weak var parent: NSWindow?
         var onClose: (() -> Void)?
@@ -46,7 +46,7 @@ final class Popup: NSObject, NSWindowDelegate {
 
     /// Open pop-ups, the innermost last.
     private var stack: [Entry] = []
-    private var monitors: [Any] = []
+    private let dismiss = DismissMonitor()
     /// Room around the surface for its shadow.
     private static let margin: CGFloat = 26
 
@@ -102,8 +102,10 @@ final class Popup: NSObject, NSWindowDelegate {
         generation += 1
         // A fresh panel each time: the last one may still be fading out.
         let p = makePanel()
+        let g = generation
+        p.onClose = { [weak self] in self?.close(generation: g) } // ⌘W and ⌘Q close it, not Ouch or the window under it
         stack.append(Entry(panel: p, generation: generation, parent: key, onClose: onClose, keys: keys))
-        p.contentView = NSHostingView(rootView: view)
+        p.contentView = OuchHostingView(rootView: view)
         p.setFrame(frame, display: true)
         p.makeKeyAndOrderFront(nil)
         installMonitors()
@@ -137,18 +139,11 @@ final class Popup: NSObject, NSWindowDelegate {
             if let parent = entry.parent, parent.isVisible { parent.makeKey() }
             done?()
         }
-        if stack.isEmpty { removeMonitors() }
+        if stack.isEmpty { dismiss.stop() }
     }
 
-    private func makePanel() -> MenuPanel {
-        let p = MenuPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        p.level = .popUpMenu
-        p.isOpaque = false
-        p.backgroundColor = .clear
-        p.hasShadow = false // drawn by the surfaces
-        p.isReleasedWhenClosed = false
-        p.hidesOnDeactivate = false
-        p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle, .transient]
+    private func makePanel() -> OuchPanel {
+        let p = OuchPanel(role: .menu)
         p.delegate = self
         return p
     }
@@ -166,30 +161,17 @@ final class Popup: NSObject, NSWindowDelegate {
     }
 
     private func installMonitors() {
-        removeMonitors()
-        if let m = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown], handler: { [weak self] _ in
-            self?.closeAll()
-        }) { monitors.append(m) }
-        if let m = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown], handler: { [weak self] e in
-            guard let self else { return e }
-            if let i = self.stack.firstIndex(where: { $0.panel === e.window }) {
-                // A click in a pop-up closes only those opened from it.
-                if i < self.stack.count - 1 { self.close(from: i + 1) }
-                return e
-            }
-            self.closeAll()
-            return nil // the click only closes, like a native menu
-        }) { monitors.append(m) }
-        if let m = NSEvent.addLocalMonitorForEvents(matching: .keyDown, handler: { [weak self] e in
-            guard let self, let top = self.stack.last, top.panel.isKeyWindow else { return e }
-            if e.keyCode == 53 { if !top.keys(e) { self.close() }; return nil } // keys(e) once: Esc steps back a level
-            return top.keys(e) ? nil : e
-        }) { monitors.append(m) }
-    }
-
-    private func removeMonitors() {
-        monitors.forEach(NSEvent.removeMonitor)
-        monitors = []
+        // A click outside every pop-up only closes them, like a native menu.
+        dismiss.start(keeps: { [weak self] w in
+            guard let self, let i = stack.firstIndex(where: { $0.panel === w }) else { return false }
+            // A click in a pop-up closes only those opened from it.
+            if i < stack.count - 1 { close(from: i + 1) }
+            return true
+        }, swallowsClick: true, key: { [weak self] e in
+            guard let self, let top = stack.last, top.panel.isKeyWindow else { return false }
+            if e.keyCode == 53 { if !top.keys(e) { close() }; return true } // keys(e) once: Esc steps back a level
+            return top.keys(e)
+        }, close: { [weak self] in self?.closeAll() })
     }
 
     /// ↑↓ move, → opens, ← goes back, ↩ picks, Esc goes back then closes.
@@ -393,7 +375,7 @@ final class Tooltip {
         guard let window = view.window, window.isVisible else { return }
         let r = window.convertToScreen(view.convert(view.bounds, to: nil))
         let screen = window.screen ?? NSScreen.main ?? NSScreen.screens[0]
-        let v = screen.frame, m = Self.margin
+        let v = screen.visibleFrame, m = Self.margin
 
         let measure = NSHostingView(rootView: OTooltip(text: text, chords: chords, caret: .none))
         let tip = measure.fittingSize
@@ -410,7 +392,8 @@ final class Tooltip {
         panel = p
         // The frame is set here alone: a hosting view left to size its window would resize it on layout
         // and slide the pill down over the view.
-        let frame = NSRect(x: x - m, y: y - m, width: tip.width + 2 * m, height: tip.height + 2 * m)
+        let frame = OuchPanel.frame(size: CGSize(width: tip.width + 2 * m, height: tip.height + 2 * m), on: screen,
+                                    anchor: .origin(NSPoint(x: x - m, y: y - m)), inset: EdgeInsets(all: m))
         let host = NSHostingView(rootView: OTooltip(text: text, chords: chords, caret: caret).padding(m))
         host.sizingOptions = []
         host.frame = NSRect(origin: .zero, size: frame.size)
@@ -432,18 +415,7 @@ final class Tooltip {
         }
     }
 
-    private func makePanel() -> NSPanel {
-        let p = NSPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        p.level = NSWindow.Level(rawValue: NSWindow.Level.popUpMenu.rawValue + 1) // over the menus too
-        p.isOpaque = false
-        p.backgroundColor = .clear
-        p.hasShadow = false
-        p.ignoresMouseEvents = true
-        p.isReleasedWhenClosed = false
-        p.hidesOnDeactivate = false
-        p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle, .transient]
-        return p
-    }
+    private func makePanel() -> NSPanel { OuchPanel(role: .tooltip) }
 }
 
 /// Watches the pointer over the view it sits behind; never takes a click.

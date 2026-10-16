@@ -148,7 +148,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let updates = appMenu.addItem(withTitle: "Check for Updates…", action: #selector(checkForUpdatesItem), keyEquivalent: "")
         updates.target = self
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "Close Window", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        appMenu.addItem(withTitle: "Close Window", action: #selector(closeWindow), keyEquivalent: "w").target = self
         appMenu.addItem(withTitle: "Quit Ouch", action: #selector(quitOrCloseWindow), keyEquivalent: "q").target = self
         main.addItem(withTitle: "Ouch", action: nil, keyEquivalent: "").submenu = appMenu
         let edit = NSMenu(title: "Edit")
@@ -176,12 +176,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
         Updater.shared.checkForUpdates()
     }
-    /// ⌘Q inside Settings, Sort Windows or the key help closes just that window; otherwise it quits.
+    /// ⌘Q in Settings or any Ouch panel with the keyboard closes just that window (an OuchPanel catches it
+    /// itself first), and so does it while the key help shows; otherwise it quits.
     @objc private func quitOrCloseWindow() {
-        if SortPanel.shared.isOpen { SortPanel.shared.revert() }
-        else if let w = SettingsWindow.shared.window, w.isVisible, w.isKeyWindow { w.performClose(nil) }
-        else if KeyHelp.shared.isVisible { KeyHelp.shared.hide() }
-        else { NSApp.terminate(nil) }
+        if OuchPanel.closeKeyWindow() { return }
+        if KeyHelp.shared.isVisible { KeyHelp.shared.hide() } else { NSApp.terminate(nil) }
+    }
+    /// ⌘W: the same, but never quits. Borderless panels can't `performClose`, so this doesn't send it to them.
+    @objc private func closeWindow() {
+        if !OuchPanel.closeKeyWindow() && KeyHelp.shared.isVisible { KeyHelp.shared.hide() }
     }
     @objc private func checkForUpdatesItem() { Self.checkForUpdates() }
     @objc private func toggleMenu() { StatusMenu.shared.toggle() }

@@ -13,7 +13,7 @@ final class MenuBarTip {
     /// The tour's own card points at the menu bar on some steps; the tip steps aside for those.
     var suppressed = false { didSet { if suppressed != oldValue { update() } } }
 
-    private var panel: OverlayPanel?
+    private var panel: OuchPanel?
     private var host: NSHostingView<MenuBarTipView>?
     private let model = MenuBarTipModel()
     private var timer: Timer?
@@ -26,7 +26,7 @@ final class MenuBarTip {
         guard timer == nil else { return }
         if panel == nil {
             let h = NSHostingView(rootView: MenuBarTipView(model: model))
-            let p = OverlayPanel(frame: .zero, level: .floating, clickThrough: true)
+            let p = OuchPanel(role: .overlay(.floating, clickThrough: true))
             p.contentView = h
             p.alphaValue = 0
             panel = p
@@ -55,10 +55,11 @@ final class MenuBarTip {
         let size = host.fittingSize
         let top = screen.visibleFrame.maxY - 4 + (MenuBarTipView.inset.top - 10) // keeps the card where it was
         var x = (anchor?.midX ?? screen.frame.maxX - 40) - size.width / 2
-        x = min(max(x, screen.frame.minX + 8), screen.frame.maxX - size.width - 8)
+        x = min(max(x, screen.visibleFrame.minX + 8), screen.visibleFrame.maxX - size.width - 8)
         let caret = anchor.map { min(max($0.midX - x, 30), size.width - 30) } // clear of the rounded corners
         if model.caret != caret { model.caret = caret }
-        let frame = NSRect(x: x, y: top - size.height, width: size.width, height: size.height).integral
+        let frame = OuchPanel.frame(size: size, on: screen, anchor: .origin(NSPoint(x: x, y: top - size.height)),
+                                    inset: MenuBarTipView.inset).integral
         if panel.frame != frame {
             if shown && abs(panel.frame.minX - frame.minX) > 1 {
                 animate(0.3) { panel.animator().setFrame(frame, display: true) }
@@ -85,7 +86,7 @@ final class MenuBarTip {
     /// Where the item is and whether that's a good spot. A hidden item has no anchor; the tip then
     /// sits at the right end of the menu bar of the screen with the pointer.
     private func locate() -> (MenuBarTipModel.State, NSRect?, NSScreen?) {
-        let focused = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main
+        let focused: NSScreen? = OuchPanel.pointerScreen()
         guard let w = statusButton?.window, w.occlusionState.contains(.visible),
               let itemScreen = NSScreen.screens.first(where: { $0.frame.contains(NSPoint(x: w.frame.midX, y: w.frame.midY)) })
         else { return (.hidden, nil, focused) }

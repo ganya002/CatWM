@@ -30,7 +30,7 @@ final class Tips: ObservableObject {
     /// The tip showing inside Settings, if any.
     @Published private(set) var settings: Tip?
     private var global: Tip?
-    private var panel: OverlayPanel?
+    private var panel: OuchPanel?
     private var hideWork: DispatchWorkItem?
     private var pendingWork: DispatchWorkItem?
     private var modeEntries = 0
@@ -224,10 +224,9 @@ final class Tips: ObservableObject {
     }
 
     private func showPanel(_ tip: Tip) -> Bool {
-        let host = FirstClickHostingView(rootView: TipView(tip: tip, inset: TipView.panelInset))
+        let host = OuchHostingView(rootView: TipView(tip: tip, inset: TipView.panelInset))
         let size = host.fittingSize
-        let screen = WindowManager.shared.focusedScreen ?? NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main
-        guard let screen else { return false }
+        var screen = WindowManager.shared.focusedScreen ?? OuchPanel.pointerScreen()
         let v = screen.visibleFrame
         var frame: NSRect
         var caret: Caret
@@ -237,16 +236,18 @@ final class Tips: ObservableObject {
                   let target = NSScreen.screens.first(where: { $0.frame.contains(NSPoint(x: b.midX, y: b.midY)) }) else { return false }
             let tv = target.visibleFrame
             var x = b.midX - size.width / 2
-            x = min(max(x, target.frame.minX + 8), target.frame.maxX - size.width - 8)
+            x = min(max(x, tv.minX + 8), tv.maxX - size.width - 8)
             caret = .top(min(max(b.midX - x, 30), size.width - 30) - TipView.panelInset.leading)
             frame = NSRect(x: x, y: tv.maxY - 4 + (TipView.panelInset.top - 10) - size.height, width: size.width, height: size.height)
+            screen = target
         default:
             caret = .bottom
             frame = NSRect(x: v.midX - size.width / 2, y: v.minY + 18 + 28 + 16 - TipView.panelInset.bottom,
                            width: size.width, height: size.height)
         }
         host.rootView = TipView(tip: tip, inset: TipView.panelInset, caret: caret)
-        let p = OverlayPanel(frame: frame.integral, level: .floating, clickThrough: false)
+        let p = OuchPanel(role: .overlay(.floating, clickThrough: false),
+                          frame: OuchPanel.frame(size: frame.size, on: screen, anchor: .origin(frame.origin), inset: TipView.panelInset).integral)
         p.contentView = host
         p.alphaValue = 0
         p.orderFrontRegardless()

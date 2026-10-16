@@ -106,13 +106,7 @@ final class ModeFX {
     }
 
     private func makePanel(_ screen: NSScreen) -> NSPanel {
-        let p = NSPanel(contentRect: screen.frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        p.level = .screenSaver
-        p.isOpaque = false
-        p.backgroundColor = .clear
-        p.hasShadow = false
-        p.ignoresMouseEvents = true
-        p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
+        let p = OuchPanel(role: .fullscreenFX, frame: screen.frame)
         p.contentView = NSHostingView(rootView: view(for: screen))
         return p
     }

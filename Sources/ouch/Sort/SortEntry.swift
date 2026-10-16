@@ -13,7 +13,7 @@ final class SortNudge {
     static let shared = SortNudge()
     private static let key = "sort.nudged"
 
-    private var panel: OverlayPanel?
+    private var panel: OuchPanel?
     private var hideWork: DispatchWorkItem?
     private let model = SortNudgeModel()
 
@@ -52,17 +52,19 @@ final class SortNudge {
             SettingsWindow.shared.doc.load() // an open Settings window must not write the old value back
             wm.reload(showHUD: false)
         }
-        let host = FirstClickHostingView(rootView: SortNudgeView(model: model))
+        let host = OuchHostingView(rootView: SortNudgeView(model: model))
         let size = host.fittingSize
         let b = bw.frame
         let target = NSScreen.screens.first { $0.frame.contains(NSPoint(x: b.midX, y: b.midY)) } ?? screen
         let v = target.visibleFrame
         var x = b.midX - size.width / 2
-        x = min(max(x, target.frame.minX + 8), target.frame.maxX - size.width - 8)
+        x = min(max(x, v.minX + 8), v.maxX - size.width - 8)
         model.caret = min(max(b.midX - x, 30), size.width - 30)
         let top = v.maxY - 4 + (SortNudgeView.inset.top - 10)
-        let p = OverlayPanel(frame: NSRect(x: x, y: top - size.height, width: size.width, height: size.height).integral,
-                             level: .floating, clickThrough: false, keyable: true)
+        let p = OuchPanel(role: .card(.floating),
+                          frame: OuchPanel.frame(size: size, on: target, anchor: .origin(NSPoint(x: x, y: top - size.height)),
+                                                 inset: SortNudgeView.inset).integral)
+        p.onClose = { [weak self] in self?.dismiss() } // Esc, ⌘W and ⌘Q: "Not now", never quit Ouch
         p.contentView = host
         p.alphaValue = 0
         p.orderFrontRegardless()
@@ -135,7 +137,7 @@ private struct SortNudgeView: View {
 /// The tour's closing card: the user's windows came back crowded onto one workspace, sort them?
 final class SortOffer {
     static let shared = SortOffer()
-    private var panel: OverlayPanel?
+    private var panel: OuchPanel?
     private var finish: ((Bool) -> Void)?
     private var timeout: DispatchWorkItem?
 
@@ -143,7 +145,7 @@ final class SortOffer {
               done: @escaping (_ sort: Bool) -> Void) {
         finish = done
         let view = SortOfferView(caret: 0) { [weak self] in self?.end($0) }
-        var host = FirstClickHostingView(rootView: view)
+        var host = OuchHostingView(rootView: view)
         let size = host.fittingSize
         let v = screen.visibleFrame
         // Hangs under the menu bar icon like the tour's own cards do.
@@ -156,10 +158,11 @@ final class SortOffer {
             y = b.minY - 10 - (size.height - SortOfferView.inset.top - SortOfferView.inset.bottom) - SortOfferView.inset.bottom
             caret = min(max(b.midX - left, 20), card - 20)
         }
-        host = FirstClickHostingView(rootView: SortOfferView(caret: caret) { [weak self] in
+        host = OuchHostingView(rootView: SortOfferView(caret: caret) { [weak self] in
             self?.end($0)
         })
-        let p = OverlayPanel(frame: NSRect(x: x, y: y, width: size.width, height: size.height).integral, level: .floating, clickThrough: false)
+        let p = OuchPanel(role: .overlay(.floating, clickThrough: false),
+                          frame: OuchPanel.frame(size: size, on: screen, anchor: .origin(NSPoint(x: x, y: y)), inset: SortOfferView.inset).integral)
         p.contentView = host
         p.alphaValue = 0
         p.orderFrontRegardless()

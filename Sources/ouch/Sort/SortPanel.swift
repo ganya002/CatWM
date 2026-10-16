@@ -2,16 +2,9 @@
 import AppKit
 import SwiftUI
 
-/// A key-capable borderless panel that takes the keyboard without activating Ouch.
-private final class SortWindow: NSPanel {
-    override var canBecomeKey: Bool { true }
-    override var canBecomeMain: Bool { false }
-}
-
-/// The Sort view's host: takes the first click, and says when the content's size changes so the panel can follow it.
-private final class SortHost: NSHostingView<SortView> {
+/// The Sort view's host: says when the content's size changes so the panel can follow it.
+private final class SortHost: OuchHostingView<SortView> {
     var sizeChanged: (() -> Void)?
-    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
     override func invalidateIntrinsicContentSize() {
         super.invalidateIntrinsicContentSize()
         sizeChanged?()
@@ -27,23 +20,22 @@ final class SortPanel: NSObject, NSWindowDelegate {
 
     private let wm = WindowManager.shared
     private let model = SortModel()
-    private var panel: SortWindow?
+    private var panel: OuchPanel?
     private var host: SortHost?
-    private var monitors: [Any] = []
-    private var screenObserver: Any?
+    private let dismiss = DismissMonitor()
     private var active = false
     private var fitQueued = false
     private var wasPaused = false
     private var width: CGFloat = 0
-    /// Where the panel's bottom edge sits and the display it must stay inside, set when it opens.
-    private var anchor = (minY: CGFloat(0), visible: NSRect.zero)
+    /// The display the panel must stay inside, set when it opens.
+    private var screen: NSScreen?
     private var generation = 0 // so a fade-out that finishes after a reopen leaves the new panel alone
     private var liveWork: DispatchWorkItem?
     private var pruneTimer: Timer?
     /// Our own live applies can shuffle windows and focus under the panel; until then a resign-key is not the user's doing.
     private var applyingUntil = Date.distantPast
 
-    private var toast: OverlayPanel?
+    private var toast: OuchPanel?
     private var toastWork: DispatchWorkItem?
 
     var isOpen: Bool { active }
@@ -62,7 +54,7 @@ final class SortPanel: NSObject, NSWindowDelegate {
         dismissToast()
         SortNudge.shared.dismiss()
         generation += 1
-        let screen = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main ?? NSScreen.screens[0]
+        let screen = OuchPanel.pointerScreen()
         let start = displays.first { $0.screen == screen && !$0.items.isEmpty } ?? displays.first { !$0.items.isEmpty } ?? displays[0]
         wm.beginSort()
         model.finish = { [weak self] ws in self?.finish(goTo: ws, focus: true) }
@@ -88,7 +80,7 @@ final class SortPanel: NSObject, NSWindowDelegate {
         self.host = host
         p.contentView = host
         host.layoutSubtreeIfNeeded()
-        anchor = (v.minY + 18 - SortView.inset.bottom, v)
+        self.screen = screen
         p.setFrame(placed(host.fittingSize), display: true)
 
         wasPaused = Hotkeys.shared.paused
@@ -109,24 +101,20 @@ final class SortPanel: NSObject, NSWindowDelegate {
         DispatchQueue.main.async { [weak self] in self?.model.shown = true }
     }
 
-    private func makePanel() -> SortWindow {
-        let p = SortWindow(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        p.level = .popUpMenu
-        p.isOpaque = false
-        p.backgroundColor = .clear
-        p.hasShadow = false // drawn by the surface
-        p.isReleasedWhenClosed = false
-        p.hidesOnDeactivate = false
-        p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle, .transient]
+    private func makePanel() -> OuchPanel {
+        let p = OuchPanel(role: .menu)
+        // Esc is the key monitor's; ⌘W and ⌘Q revert like it, and never quit Ouch.
+        p.onClose = { [weak self] in self?.revert() }
         return p
     }
 
-    /// The panel's frame for a content size: centred on its display, bottom edge on the anchor, never taller
-    /// or wider than the display so the surface can't end up off screen.
+    /// The panel's frame for a content size: centred on its display, bottom edge just above the Dock, never
+    /// taller or wider than the display so the surface can't end up off screen. Only the shadow room under
+    /// the surface may hang past the visible area.
     private func placed(_ size: CGSize) -> NSRect {
-        let v = anchor.visible
-        let w = min(size.width, v.width), h = min(size.height, v.maxY - anchor.minY)
-        return NSRect(x: v.midX - w / 2, y: anchor.minY, width: w, height: h)
+        guard let screen else { return .zero }
+        return OuchPanel.frame(size: size, on: screen, anchor: .bottom(18 - SortView.inset.bottom),
+                               inset: EdgeInsets(top: 0, leading: 0, bottom: SortView.inset.bottom, trailing: 0))
     }
 
     /// Once per turn, after SwiftUI has finished the update that changed the size.
@@ -206,31 +194,13 @@ final class SortPanel: NSObject, NSWindowDelegate {
 
     /// Clicks in other apps and in our other windows finish it, like a menu; so does a change of displays.
     private func installMonitors() {
-        removeMonitors()
-        if let m = NSEvent.addLocalMonitorForEvents(matching: .keyDown, handler: { [weak self] e in self?.key(e) == true ? nil : e }) {
-            monitors.append(m)
-        }
-        if let m = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown], handler: { [weak self] _ in
-            self?.finish()
-        }) { monitors.append(m) }
-        if let m = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown], handler: { [weak self] e in
-            if let self, e.window !== self.panel { self.finish() }
-            return e
-        }) { monitors.append(m) }
-        screenObserver = NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification,
-                                                                object: nil, queue: .main) { [weak self] _ in self?.finish() }
-    }
-
-    private func removeMonitors() {
-        monitors.forEach(NSEvent.removeMonitor)
-        monitors = []
-        if let o = screenObserver { NotificationCenter.default.removeObserver(o) }
-        screenObserver = nil
+        dismiss.start(keeps: { [weak self] in $0 === self?.panel }, screens: true,
+                      key: { [weak self] e in self?.key(e) == true }, close: { [weak self] in self?.finish() })
     }
 
     /// Gives the keyboard back and drops the monitors. Safe to run on any close path, any number of times.
     private func teardown() {
-        removeMonitors()
+        dismiss.stop()
         pruneTimer?.invalidate()
         pruneTimer = nil
         guard active else { return }
@@ -319,11 +289,10 @@ final class SortPanel: NSObject, NSWindowDelegate {
         guard let screen else { return }
         dismissToast()
         let view = SortToastView(text: text, keys: ShortcutIndex().keys("sort-undo")) { [weak self] in self?.undoApplied() }
-        let host = FirstClickHostingView(rootView: view)
-        let size = host.fittingSize
-        let v = screen.visibleFrame
-        let p = OverlayPanel(frame: NSRect(x: v.midX - size.width / 2, y: v.minY + 24 - SortToastView.inset.bottom, width: size.width, height: size.height),
-                             level: .statusBar, clickThrough: false)
+        let host = OuchHostingView(rootView: view)
+        let p = OuchPanel(role: .overlay(.statusBar, clickThrough: false),
+                          frame: OuchPanel.frame(size: host.fittingSize, on: screen, anchor: .bottom(24 - SortToastView.inset.bottom),
+                                                 inset: SortToastView.inset))
         p.contentView = host
         p.alphaValue = 0
         p.orderFrontRegardless()
