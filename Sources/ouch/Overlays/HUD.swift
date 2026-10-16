@@ -88,7 +88,7 @@ struct HUDView: View {
         Group {
             if model.warning {
                 HStack(spacing: 8) {
-                    Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 15, weight: .semibold))
+                    Image(systemName: "exclamationmark.triangle.fill").font(Theme.symbol(Theme.Icon.lg, .semibold))
                         .foregroundStyle(Theme.warning)
                         .wiggleEffect(value: model.pops)
                     Text(model.text).font(Theme.body(14, .medium)).oneLine().fixedSize()
@@ -100,10 +100,10 @@ struct HUDView: View {
                     if let layout = model.layout {
                         LayoutThumbnail(layout: layout, selected: true).frame(width: 120)
                     }
-                    Text(model.text).font(Theme.body(22)).tracking(-0.2).oneLine().fixedSize()
+                    Text(model.text).textStyle(.title).oneLine().fixedSize()
                 }
                 .padding(.horizontal, 24).padding(.top, model.layout == nil ? 16 : 20).padding(.bottom, 16)
-                .floatingGlass(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .floatingGlass(RoundedRectangle(cornerRadius: Theme.Radius.hud, style: .continuous))
             }
         }
         .foregroundStyle(Theme.ink)

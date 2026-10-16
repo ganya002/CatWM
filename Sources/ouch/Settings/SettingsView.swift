@@ -62,12 +62,12 @@ private struct Sidebar: View {
             OSearchField(placeholder: "Search settings", text: $ui.search, shortcut: ["⌘", "K"], focus: searchFocused) {
                 if let first = SettingsIndex.search(ui.search, doc: doc).first { ui.open(first) }
             }
-            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.surface.opacity(0.6)))
+            .background(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous).fill(Theme.surface.opacity(0.6)))
             .padding(.bottom, 14)
             VStack(spacing: 2) {
                 ForEach(Pane.allCases) { p in
                     SideItem(pane: p, on: p == ui.pane && ui.search.isEmpty, badge: badge(p)) {
-                        withAnimation(.easeOut(duration: Theme.fast)) {
+                        withAnimation(Motion.fade) {
                             ui.search = ""
                             ui.showMap = false
                             ui.pane = p
@@ -77,7 +77,7 @@ private struct Sidebar: View {
             }
             Spacer(minLength: 12)
             VStack(alignment: .leading, spacing: 8) {
-                Text("Config").font(Theme.body(12, .medium)).foregroundStyle(Theme.inkMuted).padding(.leading, 10)
+                OSectionHeader("Config", tone: Theme.inkMuted).padding(.leading, 10)
                 HStack(spacing: 4) {
                     ConfigSelector(kind: .full, library: library)
                     ConfigTransferMenu(kind: .full, library: library)
@@ -122,14 +122,14 @@ private struct SideItem: View {
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: pane.icon)
-                    .font(.system(size: 14, weight: .medium))
+                    .font(Theme.symbol(Theme.Icon.lg))
                     .foregroundStyle(on ? Theme.accentInk : Theme.inkMuted)
                     .frame(width: 18)
                 Text(pane.rawValue).font(Theme.body(13.5, on ? .medium : .regular)).oneLine()
                 Spacer(minLength: 0)
                 switch badge {
                 case .attention:
-                    Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 11)).foregroundStyle(Theme.warning)
+                    Image(systemName: "exclamationmark.triangle.fill").font(Theme.symbol(Theme.Icon.sm, .regular)).foregroundStyle(Theme.warning)
                         .accessibilityLabel("Needs attention")
                 case .count(let n):
                     Text("\(n)").font(Theme.body(11, .medium)).foregroundStyle(Theme.danger)
@@ -143,7 +143,7 @@ private struct SideItem: View {
             .foregroundStyle(Theme.ink)
             .padding(.horizontal, 10).frame(height: 34)
             .background {
-                let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
+                let shape = RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
                 if on {
                     shape.fill(Theme.surface).elevation(.sm, in: shape)
                 } else {
@@ -154,7 +154,7 @@ private struct SideItem: View {
         }
         .buttonStyle(.plain)
         .onHover { model.hover = $0 }
-        .animation(.easeOut(duration: Theme.fast), value: model.hover)
+        .animation(Motion.fade, value: model.hover)
         .accessibilityAddTraits(on ? .isSelected : [])
         .tipAnchor("pane.\(pane.rawValue)")
     }
@@ -216,7 +216,7 @@ private struct PaneHost: View {
                     case .shortcuts: ShortcutsPane(doc: doc, ui: ui)
                     }
                 }
-                .padding(.horizontal, 36).padding(.top, 22).padding(.bottom, 64)
+                .padding(.horizontal, Theme.Space.page).padding(.top, 22).padding(.bottom, 64)
                 .frame(maxWidth: 660, alignment: .leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -236,7 +236,7 @@ private struct PaneHost: View {
                 guard let id = ui.reveal else { return }
                 DispatchQueue.main.async { proxy.scrollTo("bind.\(id)", anchor: .center) }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
-                    if ui.reveal == id { withAnimation(.easeOut(duration: 0.4)) { ui.reveal = nil } }
+                    if ui.reveal == id { withAnimation(Motion.fadeAway) { ui.reveal = nil } }
                 }
             }
         }
@@ -244,20 +244,10 @@ private struct PaneHost: View {
 
     /// Breadcrumb, the 40pt light title, and the pane's config selector.
     private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Text("Settings")
-                Image(systemName: "chevron.right").font(.system(size: 9, weight: .semibold))
-                Text(ui.pane.rawValue)
-            }
-            .font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine()
-            HStack(alignment: .center, spacing: 8) {
-                Text(ui.pane.rawValue).font(Theme.display(40)).tracking(-1).oneLine()
-                Spacer(minLength: 12)
-                if let kind = ui.pane.configKind {
-                    ConfigSelector(kind: kind, library: library, width: 180)
-                    ConfigTransferMenu(kind: kind, library: library)
-                }
+        OPageTitle(crumbs: ["Settings", ui.pane.rawValue], title: ui.pane.rawValue) {
+            if let kind = ui.pane.configKind {
+                ConfigSelector(kind: kind, library: library, width: 180)
+                ConfigTransferMenu(kind: kind, library: library)
             }
         }
     }
@@ -273,16 +263,8 @@ private struct SearchResults: View {
         let results = SettingsIndex.search(ui.search, doc: doc)
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                VStack(alignment: .leading, spacing: 6) {
-                    // The same breadcrumb as the panes, so the title doesn't jump when results replace a pane.
-                    HStack(spacing: 6) {
-                        Text("Settings")
-                        Image(systemName: "chevron.right").font(.system(size: 9, weight: .semibold))
-                        Text("Search")
-                    }
-                    .font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine()
-                    Text("“\(ui.search)”").font(Theme.display(40)).tracking(-1).oneLine()
-                }
+                // The same page title as the panes, so the title doesn't jump when results replace a pane.
+                OPageTitle(crumbs: ["Settings", "Search"], title: "“\(ui.search)”")
                 if results.isEmpty {
                     Text("Nothing matches. Try another word, like “gaps” or “focus”.")
                         .font(Theme.body(13.5)).foregroundStyle(Theme.inkMuted).oneLine()
@@ -296,7 +278,7 @@ private struct SearchResults: View {
                     }
                 }
             }
-            .padding(.horizontal, 36).padding(.top, 22).padding(.bottom, 40)
+            .padding(.horizontal, Theme.Space.page).padding(.top, 22).padding(.bottom, 40)
             .frame(maxWidth: 660, alignment: .leading)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -313,14 +295,14 @@ private struct ResultRow: View {
         Button(action: action) {
             HStack(spacing: 10) {
                 Image(systemName: entry.bind != nil ? "command" : entry.pane.icon)
-                    .font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.accentInk).frame(width: 18)
+                    .font(Theme.symbol()).foregroundStyle(Theme.accentInk).frame(width: 18)
                 Text(entry.title).font(Theme.body(14)).oneLine()
                 if entry.advanced {
-                    Text("Advanced").font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine()
+                    Text("Advanced").textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine()
                 }
                 Spacer(minLength: 8)
                 if first { Text("↩").font(Theme.keys(12)).foregroundStyle(Theme.inkMuted) }
-                Image(systemName: "arrow.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.inkMuted)
+                Image(systemName: "arrow.right").font(Theme.symbol(Theme.Icon.sm, .semibold)).foregroundStyle(Theme.inkMuted)
                     .opacity(hover.on ? 1 : 0)
             }
             .padding(.horizontal, 10).frame(height: 40)
@@ -348,7 +330,7 @@ private struct StatusPill: View {
         func flash() {
             withAnimation(Motion.easeOut) { saved = true }
             hide?.cancel()
-            let work = DispatchWorkItem { [weak self] in withAnimation(.easeOut(duration: 0.3)) { self?.saved = false } }
+            let work = DispatchWorkItem { [weak self] in withAnimation(Motion.fadeSlow) { self?.saved = false } }
             hide = work
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.4, execute: work)
         }
@@ -402,7 +384,7 @@ private struct StatusPill: View {
                 .tooltip(doc.fileErrors.joined(separator: "\n"))
         case .saved:
             HStack(spacing: 6) {
-                Image(systemName: "checkmark.circle.fill").font(.system(size: 12, weight: .semibold))
+                Image(systemName: "checkmark.circle.fill").font(Theme.symbol(Theme.Icon.sm, .semibold))
                     .foregroundStyle(Theme.success)
                 Text("Saved").font(Theme.body(12.5, .medium)).foregroundStyle(Theme.inkMuted)
             }
@@ -427,8 +409,8 @@ struct AdvancedSection<Content: View>: View {
                 }
             } label: {
                 HStack(spacing: 6) {
-                    Text("Advanced").font(Theme.body(12, .medium)).tracking(0.24)
-                    Image(systemName: "chevron.right").font(.system(size: 9, weight: .bold))
+                    Text("Advanced").textStyle(.sectionTitle)
+                    Image(systemName: "chevron.right").font(Theme.symbol(Theme.Icon.xs, .bold))
                         .rotationEffect(.degrees(open ? 90 : 0))
                     Rectangle().fill(Theme.hairline).frame(height: 1).padding(.leading, 6)
                 }

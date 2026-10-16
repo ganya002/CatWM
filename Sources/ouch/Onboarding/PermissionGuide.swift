@@ -176,7 +176,7 @@ final class PermissionGuide {
             if animated && panel.isVisible {
                 NSAnimationContext.runAnimationGroup { ctx in
                     ctx.duration = 0.28
-                    ctx.timingFunction = CAMediaTimingFunction(controlPoints: 0.2, 0.9, 0.2, 1)
+                    ctx.timingFunction = Motion.Curve.settle
                     panel.animator().setFrame(frame, display: true)
                 }
             } else {
@@ -196,7 +196,7 @@ final class PermissionGuide {
         panel.orderFrontRegardless()
         NSAnimationContext.runAnimationGroup { ctx in
             ctx.duration = 0.22
-            ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            ctx.timingFunction = Motion.Curve.fade
             panel.animator().alphaValue = 1
             panel.animator().setFrame(frame, display: true)
         }
@@ -292,17 +292,17 @@ private struct GuideView: View {
         VStack(alignment: .leading, spacing: 14) {
             if model.granted {
                 HStack(spacing: 10) {
-                    Image(systemName: "checkmark.circle.fill").font(.system(size: 22)).foregroundStyle(Theme.success)
+                    Image(systemName: "checkmark.circle.fill").font(Theme.symbol(Theme.Icon.xl, .regular)).foregroundStyle(Theme.success)
                         .transition(.symbolEffect(.appear))
-                    Text("All set").font(Theme.body(22)).oneLine()
+                    Text("All set").textStyle(.title).oneLine()
                 }
             } else {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 8) {
-                        Image(systemName: "lock.open").font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.accentInk)
+                        Image(systemName: "lock.open").font(Theme.symbol()).foregroundStyle(Theme.accentInk)
                         Text(model.kind.title).kicker()
                     }
-                    Text("Allow Ouch").font(Theme.body(22)).tracking(-0.2).oneLine().padding(.top, 6)
+                    Text("Allow Ouch").textStyle(.title).oneLine().padding(.top, 6)
                     Text(model.alertUp ? "macOS asks first, then System Settings opens." : "Follow these steps in System Settings.")
                         .font(Theme.body(13)).foregroundStyle(Theme.inkMuted).lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
@@ -321,7 +321,7 @@ private struct GuideView: View {
 
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small).scaleEffect(0.7).frame(width: 14, height: 14)
-                    Text("Waiting…").font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine()
+                    Text("Waiting…").textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine()
                     Spacer(minLength: 4)
                     OButton("Reset", variant: .ghost, size: .sm) {
                         model.kind.reset()

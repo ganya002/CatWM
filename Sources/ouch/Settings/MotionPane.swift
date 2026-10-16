@@ -149,7 +149,7 @@ struct MotionPane: View {
         GeometryReader { geo in
             let w = geo.size.width, h = geo.size.height, flipped = ui.previewFlipped
             ZStack(alignment: .topLeading) {
-                RoundedRectangle(cornerRadius: 10, style: .continuous).fill(GapsPreview.wallpaper)
+                RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous).fill(GapsPreview.wallpaper)
                 DemoWindow(app: Self.previewApps[0], main: true, corner: 5)
                     .frame(width: max(1, (flipped ? w * 0.35 : w * 0.6) - 12), height: h - 16)
                     .offset(x: flipped ? w * 0.65 + 4 : 8, y: 8)
@@ -157,7 +157,7 @@ struct MotionPane: View {
                     .frame(width: max(1, (flipped ? w * 0.65 : w * 0.4) - 12), height: h - 16)
                     .offset(x: flipped ? 8 : w * 0.6 + 4, y: 8)
             }
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous))
             .contentShape(Rectangle())
             .onTapGesture(perform: play)
         }

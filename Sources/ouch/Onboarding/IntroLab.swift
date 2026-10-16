@@ -82,7 +82,7 @@ private struct IntroLabView: View {
                 .foregroundStyle(Theme.inkMuted).frame(width: 34, alignment: .trailing)
             VStack(alignment: .leading, spacing: 2) {
                 Text(a.name).font(Theme.body(13.5, .medium)).lineLimit(1)
-                Text(a.blurb).font(Theme.body(12)).foregroundStyle(Theme.inkMuted).lineLimit(1)
+                Text(a.blurb).textStyle(.caption).foregroundStyle(Theme.inkMuted).lineLimit(1)
             }
             Spacer(minLength: 8)
             Button(on ? "Playing" : "Music", systemImage: on ? "speaker.wave.2.fill" : "music.note") { model.music(a) }
@@ -90,6 +90,6 @@ private struct IntroLabView: View {
                 .help("Plays the whole intro with this music. Click anywhere to skip.")
         }
         .padding(.horizontal, 8).padding(.vertical, 8)
-        .background(RoundedRectangle(cornerRadius: 8).fill(on ? Theme.accentSoft : .clear))
+        .background(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(on ? Theme.accentSoft : .clear))
     }
 }

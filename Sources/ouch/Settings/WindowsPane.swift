@@ -214,7 +214,7 @@ struct WindowsPane: View {
             }
         }) {
             HStack(spacing: 6) {
-                Image(systemName: "plus").font(.system(size: 11.5, weight: .medium))
+                Image(systemName: "plus").font(Theme.symbol(Theme.Icon.sm))
                 Text("Add Running App")
             }
         }
@@ -244,7 +244,7 @@ struct WindowsPane: View {
         if let url = appURL(id) {
             Image(nsImage: NSWorkspace.shared.icon(forFile: url.path)).resizable().frame(width: 28, height: 28)
         } else {
-            RoundedRectangle(cornerRadius: 7).strokeBorder(Theme.borderControl, style: StrokeStyle(lineWidth: 1.5, dash: [3, 2]))
+            RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous).strokeBorder(Theme.borderControl, style: StrokeStyle(lineWidth: 1.5, dash: [3, 2]))
                 .frame(width: 26, height: 26).padding(1)
         }
     }

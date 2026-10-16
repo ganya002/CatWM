@@ -7,10 +7,10 @@ struct FeedbackSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Send feedback").font(Theme.body(22)).tracking(-0.2).oneLine()
+            Text("Send feedback").textStyle(.title).oneLine()
             editor
             Text(disclosure)
-                .font(Theme.body(12)).foregroundStyle(Theme.inkMuted)
+                .textStyle(.caption).foregroundStyle(Theme.inkMuted)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 8) {
                 Spacer()

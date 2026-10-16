@@ -180,7 +180,7 @@ struct ModeFXView: View {
         if reduceMotion && model.style != .none {
             // No motion: just the finished border, faded in.
             border(width: 4)
-                .opacity(on ? 1 : 0).animation(.easeOut(duration: 0.15), value: on)
+                .opacity(on ? 1 : 0).animation(Motion.fade, value: on)
         } else {
             animated(size: size)
         }

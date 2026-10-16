@@ -48,7 +48,7 @@ final class MenuBarTip {
     private func update() {
         guard let panel, let host else { return }
         let (state, anchor, screen) = locate()
-        if model.state != state { withAnimation(.easeOut(duration: 0.25)) { model.state = state } }
+        if model.state != state { withAnimation(Motion.fadeSlow) { model.state = state } }
         if state == .good { goodSince = goodSince ?? Date() } else { goodSince = nil }
         let settled = goodSince.map { Date().timeIntervalSince($0) > 3 } ?? false
         guard let screen, !suppressed, !settled, timer != nil else { return setVisible(false) }

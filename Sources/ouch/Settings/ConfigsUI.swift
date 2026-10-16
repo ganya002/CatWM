@@ -17,7 +17,7 @@ struct ConfigGlyph: View {
                 .frame(width: size * 1.7, height: size * 1.7)
         } else {
             Image(systemName: config.symbol ?? config.kind.genericSymbol)
-                .font(.system(size: size * 0.92, weight: .semibold))
+                .font(Theme.symbol(size * 0.92, .semibold))
                 .foregroundStyle(tint)
                 .frame(width: size * 1.7, height: size * 1.7)
         }
@@ -56,7 +56,7 @@ struct ConfigSelector: View {
                 ConfigGlyph(config: c, size: 13, tint: fg)
                 Text(c.name).font(Theme.body(13, .medium)).oneLine().foregroundStyle(fg)
                 Spacer(minLength: 0)
-                Image(systemName: "chevron.up.chevron.down").font(.system(size: 9, weight: .semibold)).foregroundStyle(fg.opacity(0.7))
+                Image(systemName: "chevron.up.chevron.down").font(Theme.symbol(Theme.Icon.xs, .semibold)).foregroundStyle(fg.opacity(0.7))
             }
             .padding(.leading, 6).padding(.trailing, 12).frame(width: width, height: Theme.controlHeight)
             .background(Capsule().fill(configFill(for: c) ?? (hover.on ? Theme.wellHover : Theme.well)))
@@ -78,18 +78,14 @@ private struct ConfigList: View {
         VStack(spacing: 4) {
             ForEach(library.configs(kind)) { c in row(c) }
             Rectangle().fill(Theme.hairline).frame(height: 1).padding(.horizontal, 6).padding(.vertical, 2)
-            Button {
+            OMenuRow {
                 dismiss()
                 library.sheet = .create(kind: kind, baseID: library.current(kind).id)
+            } lead: {
+                Image(systemName: "plus").font(Theme.symbol(Theme.Icon.sm, .semibold)).foregroundStyle(Theme.inkMuted)
             } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: "plus").font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.inkMuted).frame(width: 16)
-                    Text("New config from “\(library.current(kind).name)”").font(Theme.body(13.5)).oneLine()
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 10).frame(height: Theme.rowHeight)
+                Text("New config from “\(library.current(kind).name)”").oneLine()
             }
-            .buttonStyle(MenuRowStyle())
         }
         .frame(width: Theme.menuWidth - 12) // the Surface adds 6 each side
         .foregroundStyle(Theme.ink)
@@ -104,7 +100,7 @@ private struct ConfigList: View {
                     Text(c.name).font(Theme.body(13.5, library.isActive(c) ? .medium : .regular)).oneLine().foregroundStyle(fg)
                     Spacer(minLength: 0)
                     if library.isActive(c) {
-                        Image(systemName: "checkmark").font(.system(size: 11, weight: .bold))
+                        Image(systemName: "checkmark").font(Theme.symbol(Theme.Icon.sm, .bold))
                             .foregroundStyle(configFill(for: c) == nil ? Theme.accentInk : fg)
                     }
                 }
@@ -112,7 +108,7 @@ private struct ConfigList: View {
                 .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
                     .fill(configFill(for: c) ?? (library.isActive(c) ? Theme.accentSoft : .clear)))
             }
-            .buttonStyle(MenuRowStyle())
+            .buttonStyle(OMenuRowStyle(bare: true))
             if c.isBuiltIn {
                 OIconButton(symbol: "plus", label: "New config based on “\(c.name)”") {
                     dismiss(); library.sheet = .create(kind: kind, baseID: c.id)
@@ -126,7 +122,7 @@ private struct ConfigList: View {
                         MenuItem(id: "delete", label: "Delete…", symbol: "trash", danger: true, action: { confirmDelete(c) }),
                     ]
                 }) {
-                    Image(systemName: "ellipsis").font(.system(size: 13, weight: .medium))
+                    Image(systemName: "ellipsis").font(Theme.symbol())
                 }
                 .tooltip("Edit, duplicate or delete “\(c.name)”")
                 .accessibilityLabel("Edit, duplicate or delete \(c.name)")
@@ -158,7 +154,7 @@ struct ConfigTransferMenu: View {
                          action: { library.sheet = .export(kind: kind) }),
             ]
         }) {
-            Image(systemName: "square.and.arrow.up.on.square").font(.system(size: 13, weight: .medium))
+            Image(systemName: "square.and.arrow.up.on.square").font(Theme.symbol())
         }
         .fixedSize()
         .tooltip("Import or export").accessibilityLabel("Import or export \(kind.title.lowercased()) config")
@@ -215,7 +211,7 @@ struct ConfigSheetView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(title).font(Theme.body(22)).tracking(-0.2).oneLine()
+            Text(title).textStyle(.title).oneLine()
             if case .export(let kind) = sheet { exportBody(kind) } else { editorBody }
         }
         .padding(24).frame(width: 400)
@@ -229,7 +225,7 @@ struct ConfigSheetView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 Button { model.pickingSymbol.toggle() } label: {
-                    Image(systemName: model.symbol ?? kinds[0].genericSymbol).font(.system(size: 14, weight: .medium))
+                    Image(systemName: model.symbol ?? kinds[0].genericSymbol).font(Theme.symbol(Theme.Icon.lg))
                         .foregroundStyle(Theme.accentInk)
                         .frame(width: 34, height: Theme.controlHeight)
                         .background(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(Theme.well))
@@ -341,7 +337,7 @@ private struct SymbolGrid: View {
                 LazyVGrid(columns: Array(repeating: GridItem(.fixed(34), spacing: 4), count: 7), spacing: 4) {
                     ForEach(shown, id: \.self) { s in
                         Button { selection = s; close() } label: {
-                            Image(systemName: s).font(.system(size: 15, weight: .medium)).frame(width: 34, height: 34)
+                            Image(systemName: s).font(Theme.symbol(Theme.Icon.lg)).frame(width: 34, height: 34)
                                 .foregroundStyle(selection == s ? Theme.onAccent : Theme.ink)
                                 .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous).fill(selection == s ? Theme.accent : .clear))
                                 .contentShape(Rectangle())
@@ -458,8 +454,7 @@ private struct ShadeSquare: View {
             ZStack {
                 LinearGradient(colors: [.white, Color(hue: color.h, saturation: 1, brightness: 1)], startPoint: .leading, endPoint: .trailing)
                 LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)
-                Circle().strokeBorder(.white, lineWidth: 2).background(Circle().fill(Color(hue: color.h, saturation: color.s, brightness: color.b)))
-                    .frame(width: 18, height: 18).shadow(color: .black.opacity(0.35), radius: 2)
+                OKnob(color: Color(hue: color.h, saturation: color.s, brightness: color.b), size: 18)
                     .position(x: color.s * geo.size.width, y: (1 - color.b) * geo.size.height)
             }
             .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous))
@@ -490,8 +485,7 @@ private struct GradientSlider: View {
                     } }
                 }.clipShape(Capsule()) }
                 Capsule().fill(LinearGradient(colors: colors, startPoint: .leading, endPoint: .trailing))
-                Circle().fill(knob).overlay(Circle().strokeBorder(.white, lineWidth: 2)).shadow(color: .black.opacity(0.3), radius: 2)
-                    .frame(width: 18, height: 18).offset(x: value * (geo.size.width - 18))
+                OKnob(color: knob, size: 18).offset(x: value * (geo.size.width - 18))
             }
             .contentShape(Rectangle())
             .gesture(DragGesture(minimumDistance: 0).onChanged { v in value = min(max((v.location.x - 9) / (geo.size.width - 18), 0), 1) })

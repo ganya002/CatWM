@@ -240,21 +240,92 @@ struct OMenuButton<Label: View>: View {
     }
 }
 
-/// A row in a popover list, lit on hover like a menu row; for rows that carry their own colours.
-struct MenuRowStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View { MenuRowBody(configuration: configuration) }
+/// A menu row and its look: one `row-height` line, 10pt in from the surface's edge, on a rounded fill
+/// while hovered or highlighted by the keyboard. Every menu-like list uses it: the menu bar menu, pop-up
+/// menus, the pointer menu, the key editor and popover lists.
+struct OMenuRowStyle: ButtonStyle {
+    /// Lit by something other than the pointer, e.g. the keyboard. Without it the row lights on hover.
+    var highlighted: Bool? = nil
+    /// Its submenu is out.
+    var open = false
+    /// A destructive row: its hover fill is `danger-soft`.
+    var danger = false
+    /// Fills the row's own label, without the row's height and padding: for rows that carry their own
+    /// layout and colours, such as configs.
+    var bare = false
+
+    func makeBody(configuration: Configuration) -> some View { OMenuRowBody(configuration: configuration, style: self) }
 }
 
-private struct MenuRowBody: View {
+private struct OMenuRowBody: View {
     let configuration: ButtonStyleConfiguration
+    let style: OMenuRowStyle
     @StateObject private var hover = Flag()
 
     var body: some View {
-        configuration.label
-            .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
-                .fill(configuration.isPressed ? Theme.wellHover : hover.on ? Theme.well : .clear))
-            .contentShape(Rectangle())
-            .onHover { hover.on = $0 }
+        let lit = style.highlighted ?? hover.on
+        let fill: Color = configuration.isPressed ? Theme.wellHover
+            : lit ? (style.danger ? Theme.dangerSoft : Theme.well)
+            : style.open ? Theme.wellHover : .clear
+        Group {
+            if style.bare {
+                configuration.label
+            } else {
+                configuration.label
+                    .padding(.horizontal, 10)
+                    .frame(maxWidth: .infinity, minHeight: Theme.rowHeight, maxHeight: Theme.rowHeight, alignment: .leading)
+            }
+        }
+        .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous).fill(fill))
+        .contentShape(Rectangle())
+        .onHover { hover.on = $0 }
+    }
+}
+
+/// One menu row with slots: a 16pt lead (a symbol, a check, a radio dot), the label in `body` type,
+/// and a trailing slot (a value, keys, a chevron) pushed to the right edge.
+struct OMenuRow<Lead: View, Label: View, Trailing: View>: View {
+    var highlighted: Bool? = nil
+    var open = false
+    var danger = false
+    let action: () -> Void
+    @ViewBuilder var lead: Lead
+    @ViewBuilder var label: Label
+    @ViewBuilder var trailing: Trailing
+
+    init(highlighted: Bool? = nil, open: Bool = false, danger: Bool = false, action: @escaping () -> Void,
+         @ViewBuilder lead: () -> Lead, @ViewBuilder label: () -> Label, @ViewBuilder trailing: () -> Trailing) {
+        self.highlighted = highlighted; self.open = open; self.danger = danger; self.action = action
+        self.lead = lead(); self.label = label(); self.trailing = trailing()
+    }
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                if Lead.self != EmptyView.self { lead.frame(width: 16) }
+                label
+                Spacer(minLength: 6)
+                trailing
+            }
+            .font(Theme.body(13.5))
+            .foregroundStyle(danger ? Theme.danger : Theme.ink)
+        }
+        .buttonStyle(OMenuRowStyle(highlighted: highlighted, open: open, danger: danger))
+    }
+}
+
+extension OMenuRow where Trailing == EmptyView {
+    init(highlighted: Bool? = nil, open: Bool = false, danger: Bool = false, action: @escaping () -> Void,
+         @ViewBuilder lead: () -> Lead, @ViewBuilder label: () -> Label) {
+        self.init(highlighted: highlighted, open: open, danger: danger, action: action, lead: lead, label: label) { EmptyView() }
+    }
+}
+
+extension OMenuRow where Lead == EmptyView {
+    init(highlighted: Bool? = nil, open: Bool = false, danger: Bool = false, action: @escaping () -> Void,
+         @ViewBuilder label: () -> Label, @ViewBuilder trailing: () -> Trailing) {
+        self.init(highlighted: highlighted, open: open, danger: danger, action: action, lead: { EmptyView() }, label: label,
+                  trailing: trailing)
     }
 }
 
@@ -277,7 +348,7 @@ struct OMenuPicker<T: Hashable>: View {
         }) {
             HStack(spacing: 6) {
                 Text(options.first { $0.value == selection }?.label ?? "").font(Theme.body(13)).oneLine()
-                Image(systemName: "chevron.up.chevron.down").font(.system(size: 9, weight: .semibold)).foregroundStyle(Theme.inkMuted)
+                Image(systemName: "chevron.up.chevron.down").font(Theme.symbol(Theme.Icon.xs, .semibold)).foregroundStyle(Theme.inkMuted)
             }
             .foregroundStyle(Theme.ink)
             .padding(.horizontal, 12).frame(height: Theme.controlHeight)
@@ -286,7 +357,7 @@ struct OMenuPicker<T: Hashable>: View {
         }
         .fixedSize()
         .onHover { hover.on = $0 }
-        .animation(.easeOut(duration: Theme.fast), value: lit)
+        .animation(Motion.fade, value: lit)
         .accessibilityLabel(title)
         .accessibilityValue(options.first { $0.value == selection }?.label ?? "")
     }

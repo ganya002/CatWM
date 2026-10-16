@@ -127,7 +127,7 @@ struct ShortcutsPane: View {
             ]
         }) {
             HStack(spacing: 6) {
-                Image(systemName: "plus").font(.system(size: 12, weight: .medium))
+                Image(systemName: "plus").font(Theme.symbol(Theme.Icon.sm))
                 Text("Add Shortcut")
             }
         }
@@ -201,14 +201,14 @@ private struct BindRowView: View {
                         .transition(.opacity.combined(with: .move(edge: .top)))
                 }
                 if let issue, issue.severity == .error {
-                    Text(issue.message).font(Theme.body(12)).foregroundStyle(Theme.danger).oneLine()
+                    Text(issue.message).textStyle(.caption).foregroundStyle(Theme.danger).oneLine()
                         .padding(.leading, Recorder.width + 12)
                 }
             }
             .frame(minHeight: 48)
             .padding(.vertical, 6)
             .background {
-                RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.accentSoft)
+                RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(Theme.accentSoft)
                     .padding(.horizontal, -12)
                     .opacity(ui.reveal == rowID ? 1 : 0)
             }
@@ -221,13 +221,13 @@ private struct BindRowView: View {
             HStack(spacing: 8) {
                 OMenuPicker(title: "Dispatcher", options: dispatcherOptions(row.dispatcher), selection: $doc.binds[i].dispatcher)
                 OTextField(placeholder: "1..0", text: $doc.binds[i].key, mono: true).frame(minWidth: 90, maxWidth: 150)
-                Image(systemName: "arrow.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.inkMuted)
+                Image(systemName: "arrow.right").font(Theme.symbol(Theme.Icon.sm, .semibold)).foregroundStyle(Theme.inkMuted)
                     .accessibilityHidden(true)
                 OTextField(placeholder: "1..10", text: $doc.binds[i].args, mono: true).frame(minWidth: 90, maxWidth: 150)
                 Spacer(minLength: 0)
             }
             if valid {
-                Text(rangePreview(row)).font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine()
+                Text(rangePreview(row)).textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine()
             }
         }
         .padding(.leading, Recorder.width + 12)
@@ -240,7 +240,7 @@ private struct BindRowView: View {
             }
         } label: {
             Image(systemName: "slider.horizontal.3")
-                .font(.system(size: 12, weight: .medium))
+                .font(Theme.symbol(Theme.Icon.sm))
                 .foregroundStyle(open ? Theme.accentInk : Theme.inkMuted)
                 .frame(width: 24, height: 24)
                 .background(Circle().fill(open ? Theme.accentSoft : .clear))
@@ -278,7 +278,7 @@ private struct BindRowView: View {
         }) {
             HStack(spacing: 5) {
                 Text(action?.title ?? "Custom").font(Theme.body(14)).oneLine()
-                Image(systemName: "chevron.up.chevron.down").font(.system(size: 8, weight: .semibold)).foregroundStyle(Theme.inkMuted)
+                Image(systemName: "chevron.up.chevron.down").font(Theme.symbol(Theme.Icon.xs, .semibold)).foregroundStyle(Theme.inkMuted)
             }
             .foregroundStyle(Theme.ink)
             .contentShape(Rectangle())
@@ -304,7 +304,7 @@ private struct Recorder: View {
             Group {
                 if recording {
                     HStack(spacing: 6) {
-                        Image(systemName: "record.circle").font(.system(size: 11, weight: .semibold))
+                        Image(systemName: "record.circle").font(Theme.symbol(Theme.Icon.sm, .semibold))
                         Text(BindRange.isRange(row.key) ? "Press modifiers…" : "Press keys…")
                     }
                     .font(Theme.body(12.5, .medium)).foregroundStyle(Theme.accentInk).oneLine()

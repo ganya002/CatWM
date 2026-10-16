@@ -115,7 +115,7 @@ private struct PracticeWindowView: View {
             // The focused window wears a ring, so it's obvious where focus went.
             .overlay {
                 if active == .key {
-                    RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    RoundedRectangle(cornerRadius: 11, style: .continuous) // style-ok: follows the macOS window corner
                         .strokeBorder(Theme.accent, lineWidth: 2.5)
                         .padding(2)
                         .ignoresSafeArea()

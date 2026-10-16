@@ -682,59 +682,50 @@ private struct MenuRowView: View {
     var body: some View {
         let hi = model.highlight[level] == item.id
         let open = model.path.count > level && model.path[level] == item.id
-        let fg: Color = item.danger ? Theme.danger : Theme.ink
         let muted: Color = Theme.inkMuted
-        Button {
+        OMenuRow(highlighted: hi, open: open, danger: item.danger) {
             if item.kind == .sub {
                 withAnimation(Motion.easeOut) { model.path = Array(model.path.prefix(level)) + [item.id] }
             } else {
                 if item.rotates { spins.on.toggle() }
                 model.run(item)
             }
+        } lead: {
+            lead(hi: hi, muted: muted)
         } label: {
-            HStack(spacing: 10) {
-                lead(hi: hi, muted: muted)
-                    .frame(width: 16)
-                if item.kind == .footer {
-                    Text("Ouch \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "")")
-                        .font(Theme.body(12)).foregroundStyle(muted).oneLine()
-                    Spacer(minLength: 4)
-                    // The power symbol goes with Quit, not with the version number.
-                    Image(systemName: "power").font(.system(size: 11, weight: .medium)).foregroundStyle(muted)
-                    Text(item.label).font(Theme.body(12.5)).foregroundStyle(fg).oneLine()
-                } else {
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        // The name wins over the value beside it: "Resume Tutorial…" stays whole, "Window mode" gives way.
-                        Text(item.label).foregroundStyle(fg).oneLine().layoutPriority(1)
-                        if let crumb, !crumb.isEmpty {
-                            Text(crumb).font(Theme.body(12)).foregroundStyle(muted).oneLine()
-                        } else if let value = item.value {
-                            Text(value).font(Theme.body(12.5)).foregroundStyle(muted).oneLine()
-                        }
+            if item.kind == .footer {
+                Text("Ouch \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "")")
+                    .textStyle(.caption).foregroundStyle(muted).oneLine()
+            } else {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    // The name wins over the value beside it: "Resume Tutorial…" stays whole, "Window mode" gives way.
+                    Text(item.label).oneLine().layoutPriority(1)
+                    if let crumb, !crumb.isEmpty {
+                        Text(crumb).textStyle(.caption).foregroundStyle(muted).oneLine()
+                    } else if let value = item.value {
+                        Text(value).font(Theme.body(12.5)).foregroundStyle(muted).oneLine()
                     }
-                    .layoutPriority(1)
-                    Spacer(minLength: 6)
                 }
-                if let n = item.badge {
-                    Text("\(n)").font(Theme.body(12, .medium)).monospacedDigit()
-                        .foregroundStyle(Theme.accentInk)
-                        .padding(.horizontal, 7).frame(height: 18)
-                        .background(Capsule().fill(Theme.accentSoft))
-                }
-                if item.kind == .sub && crumb == nil {
-                    Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold)).foregroundStyle(muted)
-                } else if !item.shortcut.isEmpty {
-                    Text(item.shortcut.joined()).font(Theme.keys(13)).tracking(1).foregroundStyle(muted).oneLine().fixedSize()
-                }
+                .layoutPriority(1)
             }
-            .font(Theme.body(13.5))
-            .padding(.horizontal, 10)
-            .frame(height: Theme.rowHeight)
-            .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
-                .fill(hi ? (item.danger ? Theme.dangerSoft : Theme.hover) : open ? Theme.wellHover : .clear))
-            .contentShape(Rectangle())
+        } trailing: {
+            if item.kind == .footer {
+                // The power symbol goes with Quit, not with the version number.
+                Image(systemName: "power").font(Theme.symbol(Theme.Icon.sm)).foregroundStyle(muted)
+                Text(item.label).font(Theme.body(12.5)).oneLine()
+            }
+            if let n = item.badge {
+                Text("\(n)").font(Theme.body(12, .medium)).monospacedDigit()
+                    .foregroundStyle(Theme.accentInk)
+                    .padding(.horizontal, 7).frame(height: 18)
+                    .background(Capsule().fill(Theme.accentSoft))
+            }
+            if item.kind == .sub && crumb == nil {
+                Image(systemName: "chevron.right").font(Theme.symbol(10, .semibold)).foregroundStyle(muted)
+            } else if !item.shortcut.isEmpty {
+                Text(item.shortcut.joined()).font(Theme.keys(13)).tracking(1).foregroundStyle(muted).oneLine().fixedSize()
+            }
         }
-        .buttonStyle(.plain)
         .disabled(!item.enabled)
         .opacity(item.enabled ? 1 : 0.45)
         .onHover { if $0 { model.hover(item, level: level) } else { model.unhover(item, level: level) } }
@@ -748,7 +739,7 @@ private struct MenuRowView: View {
     @ViewBuilder private func lead(hi: Bool, muted: Color) -> some View {
         switch item.kind {
         case .check:
-            Image(systemName: "checkmark").font(.system(size: 11, weight: .bold))
+            Image(systemName: "checkmark").font(Theme.symbol(Theme.Icon.sm, .bold))
                 .foregroundStyle(Theme.accentInk)
                 .opacity(item.checked ? 1 : 0)
                 .drawOnEffect(isActive: item.checked)
@@ -760,7 +751,7 @@ private struct MenuRowView: View {
             if let image = item.image {
                 Image(nsImage: image).resizable().interpolation(.high).frame(width: 16, height: 16)
             } else if let symbol = item.symbol {
-                let image = Image(systemName: symbol).font(.system(size: 13, weight: .medium)).foregroundStyle(muted)
+                let image = Image(systemName: symbol).font(Theme.symbol()).foregroundStyle(muted)
                 Group { if item.rotates { image.rotateEffect(value: spins.on) } else { image } }
                     .overlay(alignment: .topTrailing) { if item.dot { NotificationDot().offset(x: 3, y: -2) } }
             }

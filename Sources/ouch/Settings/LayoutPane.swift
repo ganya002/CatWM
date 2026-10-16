@@ -28,7 +28,7 @@ struct LayoutPane: View {
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(screen.name).font(Theme.body(14)).oneLine()
                                 Text(screen.workspace.isEmpty ? "Current layout" : "Workspace \(screen.workspace)")
-                                    .font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine()
+                                    .textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine()
                             }
                             Spacer(minLength: 8)
                             OMenuPicker(title: "Layout for \(screen.name)", options: Layout.allCases.map { ($0, $0.title) },
@@ -182,14 +182,13 @@ private struct CycleChip: View {
                 }
                 .overlay(alignment: .topTrailing) {
                     if count > 1 {
-                        Image(systemName: "xmark").font(.system(size: 7, weight: .heavy)).foregroundStyle(.white)
-                            .frame(width: 16, height: 16).background(Circle().fill(Theme.inkMuted))
+                        RemoveButton(help: "Remove \(layout.title)", variant: .badge, action: remove)
                             .offset(x: 6, y: -6)
                             .opacity(hover.on && !dragging ? 1 : 0)
                             .scaleEffect(hover.on && !dragging ? 1 : 0.5)
                     }
                 }
-            Text(layout.shortTitle).font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine()
+            Text(layout.shortTitle).textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine()
                 .frame(width: Self.width)
         }
         .frame(width: Self.width)
@@ -198,8 +197,8 @@ private struct CycleChip: View {
         .zIndex(dragging ? 1 : 0)
         .contentShape(Rectangle())
         .onHover { hover.on = $0 }
-        .animation(.easeOut(duration: Theme.fast), value: hover.on)
-        .animation(.easeOut(duration: Theme.fast), value: dragging)
+        .animation(Motion.fade, value: hover.on)
+        .animation(Motion.fade, value: dragging)
         .onTapGesture { remove() }
         .gesture(DragGesture(minimumDistance: 5, coordinateSpace: .named(Self.space))
             .onChanged { v in
@@ -233,8 +232,8 @@ private struct ScreenThumbnail: View {
         VStack(spacing: 2) {
             LayoutThumbnail(layout: layout, selected: true)
                 .padding(3)
-                .background(RoundedRectangle(cornerRadius: 4, style: .continuous).fill(Theme.well))
-                .overlay(RoundedRectangle(cornerRadius: 4, style: .continuous).strokeBorder(Theme.borderControl, lineWidth: 1.5))
+                .background(RoundedRectangle(cornerRadius: Theme.Radius.xs, style: .continuous).fill(Theme.well))
+                .overlay(RoundedRectangle(cornerRadius: Theme.Radius.xs, style: .continuous).strokeBorder(Theme.borderControl, lineWidth: 1.5))
             Capsule().fill(Theme.borderControl).frame(width: 14, height: 2.5)
         }
     }
@@ -288,18 +287,18 @@ struct GapsPreview: View {
             let bar = config.ignoreMenuBar ? 0 : menuBar * scale
             let frames = windows(in: CGRect(x: 0, y: bar, width: w, height: h - bar - dock * scale), scale: scale)
             ZStack(alignment: .topLeading) {
-                RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Self.wallpaper)
+                RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous).fill(Self.wallpaper)
                 Rectangle().fill(Theme.ink.opacity(0.1)).frame(width: w, height: menuBar * scale)
                     .opacity(config.ignoreMenuBar ? 0 : 1)
                 ForEach(Array(frames.enumerated()), id: \.offset) { i, f in
-                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    RoundedRectangle(cornerRadius: Theme.Radius.xs, style: .continuous)
                         .fill(i == 0 ? Theme.accent : Theme.thumbMain)
                         .frame(width: max(f.width, 0), height: max(f.height, 0))
                         .position(x: f.midX, y: f.midY)
                 }
             }
             .frame(width: w, height: h)
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous))
             .frame(width: g.size.width, height: g.size.height)
             // Dragging a slider retargets constantly, which a spring takes in stride.
             .animation(Motion.snap(reduceMotion), value: geometry)

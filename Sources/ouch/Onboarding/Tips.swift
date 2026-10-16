@@ -284,7 +284,7 @@ struct TipView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
-                Image(systemName: "lightbulb").font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.accentInk)
+                Image(systemName: "lightbulb").font(Theme.symbol(Theme.Icon.lg)).foregroundStyle(Theme.accentInk)
                     .breatheEffect().frame(width: 16)
                 Text(tip.title).font(Theme.heading()).oneLine()
                 Spacer(minLength: 4)
@@ -297,7 +297,7 @@ struct TipView: View {
             if !tip.chords.isEmpty {
                 HStack(spacing: 6) {
                     ForEach(Array(tip.chords.enumerated()), id: \.offset) { i, keys in
-                        if i > 0 { Text("then").font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine() }
+                        if i > 0 { Text("then").textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine() }
                         Kbd(keys: keys)
                     }
                 }

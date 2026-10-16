@@ -34,7 +34,7 @@ struct AmoreCredit: View {
             }
             .font(Theme.body(11))
             .foregroundStyle(Theme.inkMuted.opacity(hovering ? 1 : 0.6))
-            .animation(reduce ? .easeOut(duration: 0.15) : Motion.spring, value: hovering)
+            .animation(reduce ? Motion.fade : Motion.spring, value: hovering)
         }
         .buttonStyle(PressScale(scale: reduce ? 1 : 0.95))
         .onHover { hover.on = $0 }

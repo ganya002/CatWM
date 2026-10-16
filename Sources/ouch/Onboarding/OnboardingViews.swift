@@ -74,10 +74,10 @@ struct WelcomeView: View {
             Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 72, height: 72)
                 .offset(y: model.landed || reduceMotion ? 0 : -28)
                 .opacity(model.landed ? 1 : 0)
-                .animation(.easeIn(duration: 0.22), value: model.landed)
+                .animation(.easeIn(duration: 0.22), value: model.landed) // style-ok: the drop lands on the squish's beat
                 .squish(on: model.landed, delay: 0.22)
                 .padding(.leading, -6).padding(.vertical, -6) // the icon artwork has its own transparent margin
-            Text("Welcome to Ouch").font(Theme.display(40)).tracking(-1).oneLine()
+            Text("Welcome to Ouch").textStyle(.largeTitle).oneLine()
                 .padding(.top, 16).padding(.bottom, 8)
             Text("Each button opens System Settings, with steps beside it.")
                 .font(Theme.body(13.5)).lineSpacing(2).foregroundStyle(Theme.inkMuted)
@@ -110,7 +110,7 @@ struct WelcomeView: View {
             // The row's own symbol stays (a lock opens); the trailing status carries the check, so the
             // row doesn't show two of them.
             Image(systemName: granted && symbol == "lock" ? "lock.open" : symbol)
-                .font(.system(size: 15, weight: .medium))
+                .font(Theme.symbol(Theme.Icon.lg))
                 .foregroundStyle(Theme.accentInk)
                 .contentTransition(.symbolEffect(.replace))
                 .frame(width: 22)
@@ -120,7 +120,7 @@ struct WelcomeView: View {
                     Text(required ? "Required" : "Optional").font(Theme.body(11.5, .medium))
                         .foregroundStyle(required ? Theme.accentInk : Theme.inkMuted).oneLine()
                 }
-                Text(detail).font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine()
+                Text(detail).textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine()
             }
             Spacer(minLength: 0)
             ZStack(alignment: .leading) {
@@ -140,7 +140,7 @@ struct WelcomeView: View {
 
     private var keys: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Ouch shortcut guide").font(Theme.display(40)).tracking(-1).oneLine()
+            Text("Ouch shortcut guide").textStyle(.largeTitle).oneLine()
                 .padding(.top, 2).padding(.bottom, 8)
             Text("Like Vim, Photoshop or Blender, it takes some time to learn. Then you work faster.")
                 .font(Theme.body(13.5)).lineSpacing(2).foregroundStyle(Theme.inkMuted)
@@ -195,11 +195,11 @@ private struct KeyStyleTile: View {
                     Text(style.title).font(Theme.heading()).oneLine()
                     Spacer(minLength: 0)
                     Image(systemName: selected ? "checkmark.circle.fill" : "circle")
-                        .font(.system(size: 14, weight: .medium))
+                        .font(Theme.symbol(Theme.Icon.lg))
                         .contentTransition(.symbolEffect(.replace))
                 }
                 .padding(.top, 12)
-                Text(style.caption).font(Theme.body(12)).oneLine()
+                Text(style.caption).textStyle(.caption).oneLine()
                     .foregroundStyle(selected ? Theme.onAccent.opacity(0.85) : Theme.inkMuted)
                     .padding(.top, 1)
             }
@@ -211,7 +211,7 @@ private struct KeyStyleTile: View {
         }
         .buttonStyle(PressScale(scale: 0.97))
         .onHover { model.hover = $0 }
-        .animation(.easeOut(duration: Theme.medium), value: selected)
+        .animation(Motion.fadeMedium, value: selected)
         .accessibilityLabel("\(style.title): \(style.caption)")
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
@@ -230,11 +230,7 @@ private struct KeyStyleTile: View {
     }
 
     private func cap(_ k: String) -> some View {
-        let shape = RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
-        return Text(k).font(Theme.keys(13, .medium))
-            .foregroundStyle(selected ? Theme.accent : Theme.ink)
-            .frame(width: 32, height: 32)
-            .background(shape.fill(selected ? Theme.onAccent : Theme.surface).elevation(.sm, in: shape))
+        Kbd(keys: [k], size: .medium, onAccent: selected)
     }
 }
 
@@ -253,13 +249,13 @@ struct WordmarkView: View {
     var body: some View {
         VStack(spacing: 14) {
             Text("Ouch").font(Theme.wordmark(size)).foregroundStyle(.white)
-                .shadow(color: .black.opacity(0.3), radius: 12, y: 4)
+                .legible()
                 .squish(on: model.landed, delay: 0.3) // on the melody note
             tagline(max(16, min(22, size / 6)))
                 .foregroundStyle(Color.white.opacity(0.92))
-                .shadow(color: .black.opacity(0.45), radius: 8, y: 2) // reads over the tiles behind it
+                .legible(strong: true) // reads over the tiles behind it
                 .opacity(model.subtitle ? 1 : 0)
-                .animation(.easeOut(duration: 0.9), value: model.subtitle)
+                .animation(.easeOut(duration: 0.9), value: model.subtitle) // style-ok: the intro's timing, set to the music
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -271,8 +267,8 @@ struct WordmarkView: View {
     }
 }
 
-/// Hyprland's accent (its default active border, #33CCFF).
-private let hyprlandBlue = Color(red: 0x33 / 255, green: 0xCC / 255, blue: 1)
+/// Hyprland's accent (its default active border, #33CCFF): Hyprland's own colour, not a token.
+private let hyprlandBlue = Theme.rgb(0x33CCFF)
 
 
 // MARK: - Coach card
@@ -326,7 +322,7 @@ struct CoachCardView: View {
             // head: lead symbol, Skip or Pause
             HStack(spacing: 8) {
                 Image(systemName: model.recall ? "brain" : "keyboard")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(Theme.symbol())
                     .contentTransition(.symbolEffect(.replace))
                 Spacer(minLength: 8)
                 if model.canHead {
@@ -336,7 +332,7 @@ struct CoachCardView: View {
                 }
             }
             .frame(minHeight: 22)
-            Text(model.title).font(Theme.body(22)).tracking(-0.2).fixedSize(horizontal: false, vertical: true)
+            Text(model.title).textStyle(.title).fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 12).padding(.bottom, 4)
             if !model.text.isEmpty {
                 Text(model.text).font(Theme.body(13.5)).lineSpacing(2).opacity(0.86)
@@ -373,8 +369,8 @@ struct CoachCardView: View {
         .frame(width: Self.width - 40)
         .surface(.lg, caret: caret)
         .padding(Self.inset)
-        .animation(.easeOut(duration: 0.2), value: model.done)
-        .animation(.easeOut(duration: 0.2), value: model.hidden)
+        .animation(Motion.fadeMedium, value: model.done)
+        .animation(Motion.fadeMedium, value: model.hidden)
     }
 
     /// Large keycaps and the live state beside them. Hidden in a recall drill until the hint.
@@ -382,7 +378,7 @@ struct CoachCardView: View {
         HStack(spacing: 12) {
             if model.hidden {
                 // Blank caps, one per key, so you know how many to remember.
-                Kbd(keys: model.caps.map { _ in " " }, large: true).opacity(0.5)
+                Kbd(keys: model.caps.map { _ in " " }, size: .large).opacity(0.5)
                     .accessibilityHidden(true)
                 Button(action: model.reveal) {
                     HStack(spacing: 6) {
@@ -406,10 +402,10 @@ struct CoachCardView: View {
         if model.capsDone.count == model.caps.count, !model.capsDone.isEmpty {
             HStack(spacing: 6) {
                 ForEach(Array(model.caps.enumerated()), id: \.offset) { i, k in
-                    Kbd(keys: [k], large: true, pressed: model.capsDone[i])
+                    Kbd(keys: [k], size: .large, pressed: model.capsDone[i])
                         .overlay(alignment: .topTrailing) {
                             if model.capsDone[i] {
-                                Image(systemName: "checkmark.circle.fill").font(.system(size: 14, weight: .semibold))
+                                Image(systemName: "checkmark.circle.fill").font(Theme.symbol(Theme.Icon.md, .semibold))
                                     .symbolRenderingMode(.palette)
                                     .foregroundStyle(Theme.onAccent, Theme.success)
                                     .background(Circle().fill(Theme.surfaceRaised).padding(-1.5))
@@ -421,7 +417,7 @@ struct CoachCardView: View {
                 }
             }
         } else {
-            Kbd(keys: model.caps, large: true, pressed: model.pressed)
+            Kbd(keys: model.caps, size: .large, pressed: model.pressed)
         }
     }
 
@@ -499,14 +495,11 @@ struct FinishCardView: View {
     /// The mode chord on mid-size caps, its name and how to leave, above a hairline.
     private var mode: some View {
         HStack(spacing: 10) {
-            HStack(spacing: 4) {
-                ForEach(Array(summary.modeCaps.enumerated()), id: \.offset) { _, k in ModeCap(key: k) }
-            }
-            .fixedSize()
+            Kbd(keys: summary.modeCaps, size: .medium).fixedSize()
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(summary.modeName).font(Theme.body(13.5, .medium)).oneLine().fixedSize()
                 (Text("Press it first. ") + Text("Esc").font(Theme.keys(12, .medium)) + Text(" or a click leaves it."))
-                    .font(Theme.body(12)).foregroundStyle(Theme.inkMuted)
+                    .textStyle(.caption).foregroundStyle(Theme.inkMuted)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -531,8 +524,7 @@ struct FinishCardView: View {
 
     private func group(_ g: Coach.Summary.Group) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(g.title).font(Theme.body(12, .medium)).tracking(0.24).foregroundStyle(Theme.inkMuted).oneLine()
-                .padding(.bottom, 4)
+            OSectionHeader(g.title, tone: Theme.inkMuted).padding(.bottom, Theme.Space.xs)
             ForEach(Array(g.rows.enumerated()), id: \.offset) { i, row in
                 HStack(spacing: 10) {
                     Text(row.label).font(Theme.body()).oneLine()
@@ -565,7 +557,7 @@ struct FinishCardView: View {
             HStack(spacing: 4) {
                 Kbd(keys: [key])
                 Text("in \(summary.modeName.lowercased()) shows every key on the keyboard")
-                    .font(Theme.body(12)).foregroundStyle(Theme.inkFaint).oneLine()
+                    .textStyle(.caption).foregroundStyle(Theme.inkFaint).oneLine()
             }
             .fixedSize()
         }
@@ -581,24 +573,6 @@ struct FinishCardView: View {
     }
 }
 
-/// A 28pt keycap for the mode chord: between the small hint caps and the 40pt tour caps.
-private struct ModeCap: View {
-    let key: String
-
-    var body: some View {
-        let shape = RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
-        Text(key)
-            .font(Theme.keys(key.count > 2 ? 11.5 : 13, .medium)).oneLine().fixedSize()
-            .padding(.horizontal, 8)
-            .frame(minWidth: 28, minHeight: 28)
-            .background {
-                shape.fill(Theme.surface)
-                    .overlay(alignment: .bottom) { shape.fill(Theme.surfaceSunken).frame(height: 2).mask(shape) }
-                    .elevation(.sm, in: shape)
-            }
-    }
-}
-
 // MARK: - Menu bar tip
 
 /// Hangs under the menu bar item during onboarding: a Surface `md` with a caret pointing at the item.
@@ -611,7 +585,7 @@ struct MenuBarTipView: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
             Image(systemName: model.state == .good ? "checkmark.circle.fill" : "lightbulb")
-                .font(.system(size: 14, weight: .medium))
+                .font(Theme.symbol(Theme.Icon.lg))
                 .foregroundStyle(model.state == .good ? Theme.success : Theme.accentInk)
                 .contentTransition(.symbolEffect(.replace))
                 .frame(width: 16)

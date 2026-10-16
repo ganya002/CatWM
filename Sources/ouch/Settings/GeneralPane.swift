@@ -120,7 +120,7 @@ private struct StatusHero: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(!s.trusted ? "Ouch needs Accessibility access" : !s.tilingEnabled ? "Tiling is paused"
                          : s.keybindsActive ? "Ouch is running" : "Keyboard shortcuts aren't active")
-                        .font(Theme.body(22)).tracking(-0.2).oneLine()
+                        .textStyle(.title).oneLine()
                         .contentTransition(.opacity)
                     Text(s.trusted ? summary(s) : "macOS only lets apps move other apps' windows with this permission.")
                         .font(Theme.body(13.5)).foregroundStyle(Theme.inkMuted).oneLine()
@@ -142,7 +142,7 @@ private struct StatusHero: View {
                     OButton("Reset Permission", variant: .ghost) { Permissions.reset() }
                     Spacer()
                     ProgressView().controlSize(.small).scaleEffect(0.7).frame(width: 12, height: 12)
-                    Text("Waiting…").font(Theme.body(12)).foregroundStyle(Theme.inkMuted)
+                    Text("Waiting…").textStyle(.caption).foregroundStyle(Theme.inkMuted)
                 }
                 .transition(.opacity)
             }

@@ -66,8 +66,16 @@ enum Theme {
         let p = palette[keyPath: token]
         return Color(nsColor: dark ? hex(p.dark, p.darkAlpha) : hex(p.light, p.lightAlpha))
     }
+    /// `fixed` as an AppKit colour, for layers drawn on their own ground.
+    static func nsFixed(_ token: KeyPath<Palette, Palette.Pair>, dark: Bool) -> NSColor {
+        let p = palette[keyPath: token]
+        return dark ? hex(p.dark, p.darkAlpha) : hex(p.light, p.lightAlpha)
+    }
     /// A raw sRGB colour, for drawings of real hardware. Interface colours always come from tokens.
     static func rgb(_ v: UInt32, _ alpha: CGFloat = 1) -> Color { Color(nsColor: hex(v, alpha)) }
+    /// The app icon's electric blue, brighter than `accent`: only for the intro, which plays over graphite
+    /// like the icon's own ground.
+    static let iconBlue = hex(0x0A74FF, 1)
 
     // MARK: Colour tokens
 
@@ -178,10 +186,35 @@ enum Theme {
         return NSFont(name: name, size: size) ?? .systemFont(ofSize: size, weight: weight)
     }
 
+    /// SF Symbol sizes. Symbols sit beside Chillax text, so they follow their own small scale:
+    /// `xs` chevrons and badges, `sm` checks and inline status, `md` row and button icons,
+    /// `lg` lead icons and tiles, `xl` a status that is the whole message.
+    enum Icon {
+        static let xs: CGFloat = 9, sm: CGFloat = 11, md: CGFloat = 13, lg: CGFloat = 15, xl: CGFloat = 22
+    }
+    /// An SF Symbol at a size from `Icon`; 500 by default, like the labels beside it.
+    static func symbol(_ size: CGFloat = Icon.md, _ weight: Font.Weight = .medium) -> Font {
+        .system(size: size, weight: weight)
+    }
+
     // MARK: Metrics
 
+    /// Corner radii. Nested shapes step down the scale: a `pane` holds `lg` cards, a card holds `md` rows.
     enum Radius {
         static let xs: CGFloat = 4, sm: CGFloat = 6, md: CGFloat = 8, lg: CGFloat = 12, xl: CGFloat = 18
+        /// The one content pane in a window, and panes drawn inside it (the gesture pad).
+        static let pane: CGFloat = 14
+        /// Floating glass confirmations: the HUD and the keyboard help.
+        static let hud: CGFloat = 22
+        /// The welcome card and the lesson's finish card (`Density.xl`).
+        static let xxl: CGFloat = 24
+    }
+    /// Spacing: gaps in stacks and padding. Most layouts use `sm`, `md` and `lg`.
+    enum Space {
+        static let xxs: CGFloat = 2, xs: CGFloat = 4, sm: CGFloat = 8, md: CGFloat = 12, lg: CGFloat = 16
+        static let xl: CGFloat = 24, xxl: CGFloat = 32
+        /// Side margins of a Settings pane and the Shortcut Map.
+        static let page: CGFloat = 36
     }
     /// Menu and command rows.
     static let rowHeight: CGFloat = 30
@@ -190,8 +223,8 @@ enum Theme {
     static let menuWidth: CGFloat = 272
     static let submenuWidth: CGFloat = 232
 
-    /// Durations: 120 / 180 / 280 ms.
-    static let fast = 0.12, medium = 0.18, slow = 0.28
+    /// Durations: 120 / 180 / 280 ms, and 450 ms for a mark that fades after it has been seen.
+    static let fast = 0.12, medium = 0.18, slow = 0.28, linger = 0.45
 }
 
 extension NSColor {
@@ -213,11 +246,49 @@ extension View {
     func kicker(_ color: Color = Theme.accentInk) -> some View {
         font(Theme.mono(11, .medium)).tracking(0.88).textCase(.uppercase).foregroundStyle(color)
     }
+
+    /// One of the named type styles: its size, weight and tracking together.
+    func textStyle(_ style: TextStyle) -> some View { font(style.font).tracking(style.tracking) }
+}
+
+extension Text {
+    /// `textStyle` that stays a `Text`, for text joined with `+`.
+    func textStyle(_ style: TextStyle) -> Text { font(style.font).tracking(style.tracking) }
+}
+
+/// The type styles that repeat across windows. Other text uses `Theme.body` at 12.5 to 14.
+enum TextStyle {
+    /// 40 light, tracked in: pane titles, the Shortcut Map, the welcome card.
+    case largeTitle
+    /// 22, tracked in a little: sheet, card and HUD titles.
+    case title
+    /// 12 at 500, tracked out: group titles and the labels over a list. Colour by context.
+    case sectionTitle
+    /// 12: descriptions under a label, breadcrumbs, footers and hints.
+    case caption
+
+    var font: Font {
+        switch self {
+        case .largeTitle: Theme.display(40)
+        case .title: Theme.body(22)
+        case .sectionTitle: Theme.body(12, .medium)
+        case .caption: Theme.body(12)
+        }
+    }
+    var tracking: CGFloat {
+        switch self {
+        case .largeTitle: -1
+        case .title: -0.2
+        case .sectionTitle: 0.24
+        case .caption: 0
+        }
+    }
 }
 
 // MARK: - Motion
 
-/// Two curves: ease-out for things appearing, a spring for things that move under the hand.
+/// Two curves: ease-out for things appearing, a spring for things that move under the hand. Fades
+/// are for state that changes in place; `exit` is quicker than what came in.
 enum Motion {
     static let easeOut = Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: Theme.medium)
     /// SwiftUI's `.spring(response: 0.3, dampingFraction: 0.7)`: switch and slider thumbs, HUD pop, keycaps.
@@ -225,12 +296,37 @@ enum Motion {
     /// Springy settle for things snapping into place.
     static let snap = Animation.spring(response: 0.34, dampingFraction: 0.7)
     /// `snap`, or a plain short ease under Reduce Motion.
-    static func snap(_ reduce: Bool) -> Animation { reduce ? .easeOut(duration: 0.15) : snap }
+    static func snap(_ reduce: Bool) -> Animation { reduce ? fade : snap }
+    /// Hover, press and small swaps: 120 ms.
+    static let fade = Animation.easeOut(duration: Theme.fast)
+    /// A selection or a panel's content changing: 180 ms.
+    static let fadeMedium = Animation.easeOut(duration: Theme.medium)
+    /// A message or state that takes its time: 280 ms.
+    static let fadeSlow = Animation.easeOut(duration: Theme.slow)
+    /// A highlight going away after it has been seen: 450 ms.
+    static let fadeAway = Animation.easeOut(duration: Theme.linger)
+    /// Things leaving: an ease-in, quicker than they came.
+    static let exit = Animation.easeIn(duration: Theme.fast)
+    /// A menu opening from a point: springs out with little bounce.
+    static let pop = Animation.spring(response: 0.36, dampingFraction: 0.8)
+
+    /// The same curves for AppKit and Core Animation (`NSAnimationContext`, `CAAnimation`).
+    enum Curve {
+        /// `Motion.easeOut`.
+        static let easeOut = CAMediaTimingFunction(controlPoints: 0.2, 0.8, 0.2, 1)
+        /// A longer settle for panels and windows that slide into place.
+        static let settle = CAMediaTimingFunction(controlPoints: 0.2, 0.9, 0.2, 1)
+        /// `Motion.exit`.
+        static let exit = CAMediaTimingFunction(name: .easeIn)
+        /// A plain fade.
+        static let fade = CAMediaTimingFunction(name: .easeOut)
+    }
 }
 
 // MARK: - Shadows
 
-enum Elevation { case sm, popover, float }
+/// `knob`: a colour picker's knob, which must read on any colour, light or dark.
+enum Elevation { case sm, knob, popover, float }
 
 extension View {
     /// The design's shadows: a 1px ring plus a soft drop. Apply it to a background shape, never to a view
@@ -241,13 +337,26 @@ extension View {
             let dark = Theme.isDark(a)
             switch e {
             case .sm: return NSColor.black.withAlphaComponent(dark ? 0.4 : 0.06)
+            case .knob: return NSColor.black.withAlphaComponent(0.32)
             case .popover: return NSColor.black.withAlphaComponent(dark ? 0.65 : 0.22)
             case .float: return NSColor.black.withAlphaComponent(dark ? 0.75 : 0.35)
             }
         })
+        let (radius, y): (CGFloat, CGFloat) = switch e {
+        case .sm: (1, 1)
+        case .knob: (2, 0)
+        case .popover: (13, 10)
+        case .float: (22, 18)
+        }
         return self
-            .overlay(shape.stroke(ring, lineWidth: e == .sm ? 0 : 1))
-            .shadow(color: drop, radius: e == .sm ? 1 : e == .popover ? 13 : 22, y: e == .sm ? 1 : e == .popover ? 10 : 18)
+            .overlay(shape.stroke(ring, lineWidth: e == .popover || e == .float ? 1 : 0))
+            .shadow(color: drop, radius: radius, y: y)
+    }
+
+    /// Light text over a picture or moving tiles: a soft dark shadow under the glyphs, so they read on
+    /// any ground. `strong` for small or thin text. The one place a shadow goes on text.
+    func legible(strong: Bool = false) -> some View {
+        shadow(color: .black.opacity(strong ? 0.45 : 0.3), radius: strong ? 8 : 12, y: strong ? 2 : 4)
     }
 }
 
@@ -263,7 +372,7 @@ enum Density {
         case .xs: Theme.Radius.md
         case .sm, .md: Theme.Radius.lg
         case .lg: Theme.Radius.xl
-        case .xl: 24
+        case .xl: Theme.Radius.xxl
         }
     }
     var padding: EdgeInsets {
@@ -350,9 +459,9 @@ extension View {
         modifier(SurfaceModifier(density: density, glass: glass, caret: caret))
     }
 
-    /// The one content pane in a window: `surface`, 14pt radius, popover shadow.
+    /// The one content pane in a window: `surface`, `Radius.pane`, popover shadow.
     func pane() -> some View {
-        let shape = RoundedRectangle(cornerRadius: 14, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: Theme.Radius.pane, style: .continuous)
         return clipShape(shape).background(shape.fill(Theme.surface).elevation(.popover, in: shape))
     }
 }
@@ -514,6 +623,7 @@ struct DemoWindow: View {
     var main = false
     var corner: CGFloat = 4
 
+    /// The real traffic-light colours.
     private static let lights = [Color(red: 1, green: 0.37, blue: 0.34), Color(red: 1, green: 0.74, blue: 0.18),
                                  Color(red: 0.16, green: 0.79, blue: 0.25)]
 
@@ -565,7 +675,7 @@ struct LayoutThumbnail: View {
         }
         .aspectRatio(16 / 10, contentMode: .fit)
         .animation(Motion.snap(reduceMotion), value: layout)
-        .animation(.easeOut(duration: Theme.medium), value: selected)
+        .animation(Motion.fadeMedium, value: selected)
         .accessibilityHidden(true)
     }
 
@@ -591,7 +701,7 @@ struct BadgedAppIcon: View {
             .frame(width: size, height: size)
             .overlay(alignment: .bottomTrailing) {
                 Image(systemName: badge)
-                    .font(.system(size: size * 0.36, weight: .semibold))
+                    .font(Theme.symbol(size * 0.36, .semibold))
                     .symbolRenderingMode(.palette)
                     .foregroundStyle(Theme.surface, color)
                     .background(Circle().fill(Theme.surface).padding(-1.5))

@@ -81,7 +81,7 @@ private struct SettingAnchor: ViewModifier {
     func body(content: Content) -> some View {
         content
             .background {
-                RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.accentSoft)
+                RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(Theme.accentSoft)
                     .padding(.horizontal, -12)
                     .opacity(ui.highlight == id ? 1 : 0)
             }

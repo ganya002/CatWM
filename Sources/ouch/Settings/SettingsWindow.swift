@@ -187,7 +187,7 @@ final class SettingsUI: ObservableObject {
         highlight = nil
         DispatchQueue.main.async { self.highlight = entry.id }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { [weak self] in
-            if self?.highlight == entry.id { withAnimation(.easeOut(duration: 0.5)) { self?.highlight = nil } }
+            if self?.highlight == entry.id { withAnimation(Motion.fadeAway) { self?.highlight = nil } }
         }
     }
 

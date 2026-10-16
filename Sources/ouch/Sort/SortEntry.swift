@@ -102,7 +102,7 @@ private struct SortNudgeView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
-                Image(systemName: "lightbulb").font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.accentInk)
+                Image(systemName: "lightbulb").font(Theme.symbol(Theme.Icon.lg)).foregroundStyle(Theme.accentInk)
                     .breatheEffect().frame(width: 16)
                 Text("Workspace \(model.workspace) is packed").font(Theme.heading()).oneLine()
                 Spacer(minLength: 4)
@@ -120,7 +120,7 @@ private struct SortNudgeView: View {
                 OButton("Not now", variant: .ghost, action: model.later)
                 Spacer(minLength: 4)
                 Button("No more tips", action: model.never).buttonStyle(.plain)
-                    .font(Theme.body(12)).foregroundStyle(Theme.inkMuted).oneLine()
+                    .textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine()
             }
         }
         .frame(width: 276)
@@ -195,12 +195,12 @@ private struct SortOfferView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
-                Image(systemName: "checkmark.circle.fill").font(.system(size: 13, weight: .medium))
+                Image(systemName: "checkmark.circle.fill").font(Theme.symbol())
                 Spacer(minLength: 8)
             }
             .frame(minHeight: 22)
-            Text("Your workspace is crowded").font(Theme.body(22))
-                .tracking(-0.2).fixedSize(horizontal: false, vertical: true).padding(.top, 12).padding(.bottom, 4)
+            Text("Your workspace is crowded").textStyle(.title)
+                .fixedSize(horizontal: false, vertical: true).padding(.top, 12).padding(.bottom, 4)
             HStack(spacing: 4) {
                 OButton("Sort my windows", variant: .primary, shortcut: ["↩"]) { choose(true) }
                     .keyboardShortcut(.defaultAction)
