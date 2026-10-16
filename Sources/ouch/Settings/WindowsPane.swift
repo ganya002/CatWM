@@ -72,10 +72,8 @@ struct WindowsPane: View {
                            description: "In window mode, tap the mode's modifier. Press a shortcut below to run it",
                            isOn: $doc.config.cursorActions)
                     .setting("windows.cursorActions", ui)
-                if showCursorShortcuts {
-                    ForEach(cursorShortcutSpecs) { spec in
-                        cursorShortcutRow(spec).setting("windows.cursor.\(spec.id)", ui)
-                    }
+                if doc.config.cursorActions {
+                    ForEach(pointerShortcuts) { spec in pointerShortcutRow(spec) }
                 }
             }
 
@@ -162,22 +160,12 @@ struct WindowsPane: View {
         doc.binds.first { $0.submap.isEmpty && $0.dispatcher == "submap" && !["", "reset"].contains($0.args.lowercased()) }?.args ?? ""
     }
 
-    /// Shown with the feature on, and also when search just opened one, so the row it names is there.
-    private var showCursorShortcuts: Bool {
-        if doc.config.cursorActions { return true }
-        guard let id = ui.highlight else { return false }
-        return id.hasPrefix("windows.cursor.") && id != "windows.cursorActions"
+    /// The pointer menu's actions, in menu order. Send to Next Workspace is only there with Ouch workspaces.
+    private var pointerShortcuts: [CursorShortcutSpec] {
+        Self.pointerShortcutList.filter { $0.id != "workspace" || doc.config.virtualWorkspaces }
     }
 
-    /// What the pointer menu can do, in the order the menu lists them. Each one's shortcut is the
-    /// window-mode bind for that action; Add records one when it has none.
-    private var cursorShortcutSpecs: [CursorShortcutSpec] {
-        var specs = Self.cursorShortcutCatalog
-        if !doc.config.virtualWorkspaces { specs.removeAll { $0.id == "workspace" } }
-        return specs
-    }
-
-    private static let cursorShortcutCatalog: [CursorShortcutSpec] = [
+    private static let pointerShortcutList: [CursorShortcutSpec] = [
         CursorShortcutSpec(id: "float", title: "Float or tile", dispatcher: "togglefloating", args: ""),
         CursorShortcutSpec(id: "zoom", title: "Zoom", dispatcher: "fullscreen", args: ""),
         CursorShortcutSpec(id: "native", title: "Native Full Screen", dispatcher: "nativefullscreen", args: ""),
@@ -189,63 +177,40 @@ struct WindowsPane: View {
         CursorShortcutSpec(id: "close", title: "Close", dispatcher: "killactive", args: ""),
     ]
 
-    private func cursorShortcutRow(_ spec: CursorShortcutSpec) -> some View {
-        let row = shortcutRow(spec)
+    /// The window-mode key already bound to this action. `keyActions` has split range binds, so one key shows.
+    private func shortcut(for spec: CursorShortcutSpec) -> ConfigDocument.KeyAction? {
+        doc.keyActions(in: windowMode).first {
+            $0.code < 0x1000 && (spec.nextWorkspace
+                ? Actions.isNextWorkspace($0.row.dispatcher, $0.arg)
+                : Actions.same($0.row.dispatcher, $0.arg, spec.dispatcher, spec.args))
+        }
+    }
+
+    private func pointerShortcutRow(_ spec: CursorShortcutSpec) -> some View {
+        let hit = shortcut(for: spec)
         return ORow(spec.title) {
-            if let row {
-                Button { showShortcut(row, record: false) } label: { Kbd(keys: shortcutCaps(row, spec)) }
+            if let hit {
+                let caps = ConfigDocument.modifierCaps(hit.flags) + [ConfigDocument.capLabel(hit.key)]
+                Button {
+                    ui.open(SettingEntry(id: "bind.\(hit.row.id)", title: doc.title(hit.row), pane: .shortcuts, bind: hit.row))
+                } label: { Kbd(keys: caps) }
                     .buttonStyle(.plain)
                     .tooltip("Edit in Shortcuts")
-                    .accessibilityLabel("Shortcut \(shortcutCaps(row, spec).joined(separator: " ")) for \(spec.title)")
+                    .accessibilityLabel("Shortcut \(caps.joined(separator: " ")) for \(spec.title)")
             } else {
                 OButton("Add", size: .sm) { addShortcut(spec) }
-                    .tooltip("Add a shortcut")
                     .accessibilityLabel("Add a shortcut for \(spec.title)")
             }
         }
     }
 
-    private func shortcutRow(_ spec: CursorShortcutSpec) -> BindRow? {
-        let mode = windowMode
-        return doc.binds.first { row in
-            guard row.submap == mode else { return false }
-            return spec.nextWorkspace ? matchesNextWorkspace(row) : matches(row, spec.dispatcher, spec.args)
-        }
-    }
-
-    private func matches(_ row: BindRow, _ dispatcher: String, _ args: String) -> Bool {
-        if Actions.same(row.dispatcher, row.args, dispatcher, args) { return true }
-        guard case .success(let pairs) = BindRange.pairs(key: row.key, dispatcher: row.dispatcher, arg: row.args) else { return false }
-        return pairs.contains { Actions.same(row.dispatcher, $0.arg, dispatcher, args) }
-    }
-
-    private func matchesNextWorkspace(_ row: BindRow) -> Bool {
-        if Actions.isNextWorkspace(row.dispatcher, row.args) { return true }
-        guard case .success(let pairs) = BindRange.pairs(key: row.key, dispatcher: row.dispatcher, arg: row.args) else { return false }
-        return pairs.contains { Actions.isNextWorkspace(row.dispatcher, $0.arg) }
-    }
-
-    /// Keycaps for the one key this action uses, so a range bind shows that key and not the whole range.
-    private func shortcutCaps(_ row: BindRow, _ spec: CursorShortcutSpec) -> [String] {
-        guard let flags = ConfigDocument.flags(doc.resolvedMods(row.mods)),
-              case .success(let pairs) = BindRange.pairs(key: row.key, dispatcher: row.dispatcher, arg: row.args),
-              let key = pairs.first(where: { spec.nextWorkspace ? Actions.isNextWorkspace(row.dispatcher, $0.arg) : Actions.same(row.dispatcher, $0.arg, spec.dispatcher, spec.args) })?.key
-        else { return doc.prettyShortcut(row) }
-        return ConfigDocument.modifierCaps(flags) + [ConfigDocument.capLabel(key)]
-    }
-
-    private func showShortcut(_ row: BindRow, record: Bool) {
-        ui.open(SettingEntry(id: "bind.\(row.id)", title: doc.title(row), pane: .shortcuts, bind: row))
-        if record { DispatchQueue.main.async { ui.recording = row.id } }
-    }
-
     private func addShortcut(_ spec: CursorShortcutSpec) {
         let mode = windowMode
         let row = BindRow(mods: mode.isEmpty ? doc.modVarName : "", key: "",
-                          dispatcher: spec.nextWorkspace ? "movetoworkspacesilent" : spec.dispatcher,
-                          args: spec.nextWorkspace ? "+1" : spec.args, submap: mode)
+                          dispatcher: spec.dispatcher, args: spec.args, submap: mode)
         doc.binds.append(row)
-        showShortcut(row, record: true)
+        ui.open(SettingEntry(id: "bind.\(row.id)", title: spec.title, pane: .shortcuts, bind: row))
+        DispatchQueue.main.async { ui.recording = row.id }
     }
 
     private var addMenu: some View {

@@ -7,8 +7,7 @@ import SwiftUI
 /// under the pointer; a second tap, Esc or a click outside closes it (a click outside also leaves the mode,
 /// like any click). A small click-through panel with the mark follows the pointer; the menu has a panel of its own, which
 /// takes clicks only while it is open. Neither becomes key, so focus stays with the app. While the menu is
-/// open, the window-mode shortcut drawn on a row runs that row, and ↑↓ and Return move through it.
-/// `cursor-actions = false` turns it off.
+/// open, the window-mode shortcut drawn on a row runs that row. `cursor-actions = false` turns it off.
 final class CursorActions {
     static let shared = CursorActions()
 
@@ -71,7 +70,7 @@ final class CursorActions {
         closeWork = nil
         model.title = found.title
         model.actions = found.actions
-        model.hovered = found.actions.first?.id
+        model.hovered = nil
         let menu = menuPanel ?? makeMenuPanel()
         menuPanel = menu
         place(menu: menu, at: point)
@@ -87,38 +86,15 @@ final class CursorActions {
         }
     }
 
-    /// A key while the menu is open. The shortcut on a row runs that row; ↑↓ and Return move through it.
-    /// Asked inside the key tap, so it only reads and returns; the action runs a turn later.
+    /// A key while the menu is open. The shortcut drawn on a row runs that row. Asked inside the key tap,
+    /// so it only reads and returns; the action runs a turn later. A repeat is swallowed so the bind underneath
+    /// does not also fire.
     private func menuKey(_ code: UInt16, _ flags: CGEventFlags, _ isRepeat: Bool) -> Bool {
         guard model.open else { return false }
         let mods = flags.intersection([.maskCommand, .maskAlternate, .maskControl, .maskShift])
-        if mods.isEmpty {
-            switch code {
-            case 125, 126:
-                let delta = code == 126 ? -1 : 1
-                DispatchQueue.main.async { [weak self] in self?.moveHighlight(delta) }
-                return true
-            case 36, 76:
-                if !isRepeat { DispatchQueue.main.async { [weak self] in self?.activateHighlighted() } }
-                return true
-            default: break
-            }
-        }
         guard let action = model.actions.first(where: { $0.keyCode == code && $0.keyMods == mods }) else { return false }
         if !isRepeat { DispatchQueue.main.async { [weak self] in self?.model.onPick?(action) } }
         return true
-    }
-
-    private func moveHighlight(_ delta: Int) {
-        let ids = model.actions.map(\.id)
-        guard !ids.isEmpty else { return }
-        let current = model.hovered.flatMap { id in ids.firstIndex(of: id) } ?? (delta > 0 ? -1 : ids.count)
-        model.hovered = ids[(current + delta + ids.count) % ids.count]
-    }
-
-    private func activateHighlighted() {
-        guard let action = model.actions.first(where: { $0.id == model.hovered }) else { return }
-        model.onPick?(action)
     }
 
     func dismissMenu() {

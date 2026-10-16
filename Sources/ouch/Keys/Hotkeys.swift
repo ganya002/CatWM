@@ -30,7 +30,7 @@ final class Hotkeys {
     /// Asked on Esc while set; true takes the key. The cursor quick-action menu closes on it and the mode stays.
     var onEscape: (() -> Bool)?
     /// Asked on a key while a mode is on, before that mode's binds. True takes the key. The cursor menu
-    /// uses it so the shortcut drawn on a row runs that row, and arrows and Return move through the menu.
+    /// uses it so the shortcut drawn on a row runs that row.
     var onMenuKey: ((_ code: UInt16, _ flags: CGEventFlags, _ isRepeat: Bool) -> Bool)?
     /// A modifier tapped on its own in a mode (see `trackModifierTap`). Called on the main queue.
     var onModifierTap: (() -> Void)?

@@ -45,9 +45,7 @@ struct CursorActionsView: View {
                     ActionRow(action: action, hovered: model.hovered == action.id, shown: model.open, index: i) {
                         model.onPick?(action)
                     } hover: { inside in
-                        // Leaving a row keeps the highlight. Clearing it made Return run the first
-                        // action, and the next arrow key start again from the end of the list.
-                        if inside { model.hovered = action.id }
+                        if inside { model.hovered = action.id } else if model.hovered == action.id { model.hovered = nil }
                     }
                 }
             }
