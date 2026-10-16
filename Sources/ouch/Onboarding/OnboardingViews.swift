@@ -304,7 +304,7 @@ final class CoachModel: ObservableObject {
     var reveal: () -> Void = {}
 }
 
-/// One step of a lesson: Surface `lg` filled with `accent`, pointing at the real target.
+/// One step of a lesson: a plain raised Surface `lg`, pointing at the real target.
 struct CoachCardView: View {
     @ObservedObject var model: CoachModel
     static let width: CGFloat = 344
@@ -322,7 +322,7 @@ struct CoachCardView: View {
                 Spacer(minLength: 8)
                 if model.canHead {
                     // The Surface head's close slot: Skip (×) or Pause, named in the tooltip.
-                    OIconButton(symbol: model.headSymbol ?? "xmark", label: model.headLabel, onAccent: true, action: model.headAction)
+                    OIconButton(symbol: model.headSymbol ?? "xmark", label: model.headLabel, action: model.headAction)
                         .padding(.trailing, -6)
                 }
             }
@@ -336,26 +336,26 @@ struct CoachCardView: View {
             if !model.caps.isEmpty { keys.padding(.top, 16) }
             if let warning = model.warning {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Image(systemName: "exclamationmark.triangle.fill")
+                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.warning)
                     Text(warning).font(Theme.body(12.5)).fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.horizontal, 12).padding(.vertical, 8)
-                .background(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(Theme.onAccent.opacity(0.16)))
+                .background(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(Theme.well))
                 .padding(.top, 14)
             }
             if model.final { summary.padding(.top, 14) }
             if let button = model.button {
                 HStack {
                     Spacer()
-                    OButton(button, variant: .primary, shortcut: ["↩"], onAccent: true, action: model.next)
+                    OButton(button, variant: .primary, shortcut: ["↩"], action: model.next)
                         .keyboardShortcut(.defaultAction)
                 }
                 .padding(.top, 20)
             }
             GeometryReader { g in
                 ZStack(alignment: .leading) {
-                    Capsule().fill(Theme.onAccent.opacity(0.25))
-                    Capsule().fill(Theme.onAccent).frame(width: g.size.width * model.progress)
+                    Capsule().fill(Theme.surfaceSunken)
+                    Capsule().fill(Theme.accent).frame(width: g.size.width * model.progress)
                 }
             }
             .frame(height: 3)
@@ -363,7 +363,7 @@ struct CoachCardView: View {
             .animation(Motion.spring, value: model.progress)
         }
         .frame(width: Self.width - 40)
-        .surface(.lg, tone: .accent, caret: caret)
+        .surface(.lg, caret: caret)
         .padding(Self.inset)
         .animation(.easeOut(duration: 0.2), value: model.done)
         .animation(.easeOut(duration: 0.2), value: model.hidden)
@@ -374,7 +374,7 @@ struct CoachCardView: View {
         HStack(spacing: 12) {
             if model.hidden {
                 // Blank caps, one per key, so you know how many to remember.
-                Kbd(keys: model.caps.map { _ in " " }, large: true, onAccent: true).opacity(0.5)
+                Kbd(keys: model.caps.map { _ in " " }, large: true).opacity(0.5)
                     .accessibilityHidden(true)
                 Button(action: model.reveal) {
                     HStack(spacing: 6) {
@@ -382,7 +382,7 @@ struct CoachCardView: View {
                         Text("Hint")
                     }
                 }
-                .buttonStyle(OButtonStyle(variant: .ghost, size: .sm, onAccent: true))
+                .buttonStyle(OButtonStyle(variant: .ghost, size: .sm))
                 .tooltip("Show the keys")
             } else {
                 Button(action: model.tryKeys) { caps.fixedSize().contentShape(Rectangle()) }
@@ -398,14 +398,13 @@ struct CoachCardView: View {
         if model.capsDone.count == model.caps.count, !model.capsDone.isEmpty {
             HStack(spacing: 6) {
                 ForEach(Array(model.caps.enumerated()), id: \.offset) { i, k in
-                    Kbd(keys: [k], large: true, pressed: model.capsDone[i], onAccent: true)
+                    Kbd(keys: [k], large: true, pressed: model.capsDone[i])
                         .overlay(alignment: .topTrailing) {
                             if model.capsDone[i] {
-                                // An `on-accent` disc with an accent tick: an accent disc vanished into the card.
                                 Image(systemName: "checkmark.circle.fill").font(.system(size: 14, weight: .semibold))
                                     .symbolRenderingMode(.palette)
-                                    .foregroundStyle(Theme.accent, Theme.onAccent)
-                                    .background(Circle().fill(Theme.accent).padding(-1.5))
+                                    .foregroundStyle(Theme.onAccent, Theme.success)
+                                    .background(Circle().fill(Theme.surfaceRaised).padding(-1.5))
                                     .offset(x: 6, y: -6)
                                     .transition(.symbolEffect(.appear))
                             }
@@ -414,7 +413,7 @@ struct CoachCardView: View {
                 }
             }
         } else {
-            Kbd(keys: model.caps, large: true, pressed: model.pressed, onAccent: true)
+            Kbd(keys: model.caps, large: true, pressed: model.pressed)
         }
     }
 
@@ -422,7 +421,7 @@ struct CoachCardView: View {
     /// shows (with the words as its tooltip) rather than a truncated "Pre…".
     @ViewBuilder private var status: some View {
         if model.done {
-            Image(systemName: "checkmark.circle.fill")
+            Image(systemName: "checkmark.circle.fill").foregroundStyle(Theme.success)
                 .transition(.symbolEffect(.appear))
                 .accessibilityLabel("Done")
                 .transition(.opacity.combined(with: .scale(scale: 0.8)))
@@ -444,7 +443,7 @@ struct CoachCardView: View {
         Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 7) {
             ForEach(Array(model.rows.enumerated()), id: \.offset) { _, row in
                 if row.caps.isEmpty { // a section heading
-                    Text(row.label).kicker(Theme.onAccent).opacity(0.75)
+                    Text(row.label).kicker(Theme.inkMuted)
                         .padding(.top, 6)
                         .gridCellColumns(2)
                 } else {
@@ -453,7 +452,7 @@ struct CoachCardView: View {
                             ForEach(Array(row.caps.enumerated()), id: \.offset) { _, c in
                                 Text(c).font(Theme.keys(11.5, .medium)).oneLine()
                                     .padding(.horizontal, 5).frame(minWidth: 20, minHeight: 20)
-                                    .background(RoundedRectangle(cornerRadius: Theme.Radius.xs).fill(Theme.onAccent.opacity(0.18)))
+                                    .background(RoundedRectangle(cornerRadius: Theme.Radius.xs).fill(Theme.well))
                             }
                         }
                         Text(row.label).font(Theme.body(12.5)).oneLine()

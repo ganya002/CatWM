@@ -14,12 +14,11 @@ enum ButtonVariant { case primary, secondary, ghost, danger, ghostDanger }
 enum ButtonSize { case sm, regular, lg }
 
 /// The one push button. One `primary` per surface; `ghost` for ways out; `danger` only for destructive
-/// verbs, `ghostDanger` for one that sits quietly beside the others. Set `onAccent` inside an accent surface (the tour card).
+/// verbs, `ghostDanger` for one that sits quietly beside the others.
 struct OButtonStyle: ButtonStyle {
     var variant: ButtonVariant = .secondary
     var size: ButtonSize = .regular
     var iconOnly = false
-    var onAccent = false
 
     func makeBody(configuration: Configuration) -> some View {
         OButtonBody(configuration: configuration, style: self)
@@ -53,19 +52,19 @@ private struct OButtonBody: View {
 
     private var ink: Color {
         switch style.variant {
-        case .primary: style.onAccent ? Theme.accent : Theme.onAccent
+        case .primary: Theme.onAccent
         case .secondary: Theme.ink
-        case .ghost: style.onAccent ? Theme.onAccent : hover.on ? Theme.ink : Theme.inkMuted
+        case .ghost: hover.on ? Theme.ink : Theme.inkMuted
         case .danger, .ghostDanger: Theme.danger
         }
     }
 
     private var fill: Color {
         switch style.variant {
-        case .primary: style.onAccent ? Theme.onAccent : hover.on ? Theme.accentHover : Theme.accent
+        case .primary: hover.on ? Theme.accentHover : Theme.accent
         // A translucent well, not `surface-sunken`: on a raised surface or glass that reads as a black hole.
         case .secondary: hover.on ? Theme.wellHover : Theme.well
-        case .ghost: hover.on ? (style.onAccent ? Theme.onAccent.opacity(0.16) : Theme.hover) : .clear
+        case .ghost: hover.on ? Theme.hover : .clear
         case .danger: Theme.dangerSoft
         case .ghostDanger: hover.on ? Theme.dangerSoft : .clear
         }
@@ -80,13 +79,12 @@ struct OButton: View {
     var size: ButtonSize = .regular
     /// Keycaps shown after the label, e.g. ["↩"].
     var shortcut: [String] = []
-    var onAccent = false
     let action: () -> Void
 
     init(_ title: String, icon: String? = nil, variant: ButtonVariant = .secondary, size: ButtonSize = .regular,
-         shortcut: [String] = [], onAccent: Bool = false, action: @escaping () -> Void) {
+         shortcut: [String] = [], action: @escaping () -> Void) {
         self.title = title; self.icon = icon; self.variant = variant; self.size = size
-        self.shortcut = shortcut; self.onAccent = onAccent; self.action = action
+        self.shortcut = shortcut; self.action = action
     }
 
     var body: some View {
@@ -99,7 +97,7 @@ struct OButton: View {
                 }
             }
         }
-        .buttonStyle(OButtonStyle(variant: variant, size: size, onAccent: onAccent))
+        .buttonStyle(OButtonStyle(variant: variant, size: size))
     }
 }
 
@@ -109,14 +107,13 @@ struct OIconButton: View {
     let label: String
     var size: ButtonSize = .sm
     var variant: ButtonVariant = .ghost
-    var onAccent = false
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Image(systemName: symbol).font(.system(size: size == .sm ? 13 : 15, weight: .medium))
         }
-        .buttonStyle(OButtonStyle(variant: variant, size: size, iconOnly: true, onAccent: onAccent))
+        .buttonStyle(OButtonStyle(variant: variant, size: size, iconOnly: true))
         .tooltip(label)
         .accessibilityLabel(label)
     }
@@ -475,10 +472,6 @@ struct Kbd: View {
     let keys: [String]
     var large = false
     var pressed = false
-    /// On an accent surface the caps invert.
-    var onAccent = false
-    /// Outlined small caps in the surrounding text colour, for the inverted tooltip.
-    var outlined = false
 
     var body: some View {
         HStack(spacing: large ? 6 : 2) {
@@ -491,17 +484,17 @@ struct Kbd: View {
             let wide = k.count > 2
             Text(k)
                 .font(Theme.keys(wide ? 14 : 17, .medium)).oneLine().fixedSize()
-                .foregroundStyle(pressed ? (onAccent ? Theme.accent : Theme.onAccent) : onAccent ? Theme.accent : Theme.ink)
+                .foregroundStyle(pressed ? Theme.onAccent : Theme.ink)
                 .padding(.horizontal, 12)
                 .frame(minWidth: 40, minHeight: 40)
                 .background {
                     let shape = RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
                     if pressed {
-                        shape.fill(onAccent ? Theme.onAccent.opacity(0.72) : Theme.accent)
+                        shape.fill(Theme.accent)
                     } else {
-                        shape.fill(onAccent ? Theme.onAccent : Theme.surface)
+                        shape.fill(Theme.surface)
                             .overlay(alignment: .bottom) {
-                                shape.fill(onAccent ? Theme.accent.opacity(0.22) : Theme.surfaceSunken).frame(height: 3)
+                                shape.fill(Theme.surfaceSunken).frame(height: 3)
                                     .mask(shape)
                             }
                             .elevation(.sm, in: shape)
@@ -509,12 +502,6 @@ struct Kbd: View {
                 }
                 .offset(y: pressed ? 2 : 0)
                 .animation(.easeOut(duration: Theme.fast), value: pressed)
-        } else if outlined {
-            Text(k)
-                .font(Theme.keys(11, .medium)).oneLine()
-                .padding(.horizontal, 4)
-                .frame(minWidth: 18, minHeight: 18)
-                .overlay(RoundedRectangle(cornerRadius: Theme.Radius.xs, style: .continuous).strokeBorder(.secondary, lineWidth: 1))
         } else {
             Text(k)
                 .font(Theme.keys(11.5, .medium)).oneLine()
@@ -526,7 +513,7 @@ struct Kbd: View {
     }
 }
 
-/// The tooltip: an inverted xs Surface with a caret, a one-line description and its keys as outlined
+/// The tooltip: a plain raised xs Surface with a caret, a one-line description and its keys as small
 /// caps. Each chord after the first reads "then", e.g. "⌘⇪ then L". Show it after `delay`.
 struct OTooltip: View {
     static let delay = 0.5
@@ -542,14 +529,14 @@ struct OTooltip: View {
             if !chords.isEmpty {
                 HStack(spacing: 5) {
                     ForEach(Array(chords.enumerated()), id: \.offset) { i, keys in
-                        if i > 0 { Text("then").font(Theme.body(11.5)).foregroundStyle(.secondary).oneLine() }
-                        Kbd(keys: keys, outlined: true)
+                        if i > 0 { Text("then").font(Theme.body(11.5)).foregroundStyle(Theme.inkMuted).oneLine() }
+                        Kbd(keys: keys)
                     }
                 }
                 .fixedSize()
             }
         }
-        .surface(.xs, tone: .inverted, caret: caret)
+        .surface(.xs, caret: caret)
         .accessibilityElement(children: .combine)
     }
 }

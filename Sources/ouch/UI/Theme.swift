@@ -22,24 +22,22 @@ struct Palette {
 
     var bg, surface, surfaceRaised, surfaceSunken, hover, hairline, borderControl: Pair
     var ink, inkMuted, inkFaint: Pair
-    var accent, accentHover, onAccent, accentInk, accentSoft, accent2, accent2Ink, sky, tint, focus: Pair
+    var accent, accentHover, onAccent, accentInk, accentSoft, tint, focus: Pair
     var success, warning, danger, dangerSoft: Pair
     var glass, wash1, wash2: Pair
 
-    /// From the app icon: graphite ground, the main window's electric blue, the white windows' cool
-    /// greys, and the impact marks' yellow as `accent2` (shapes only, never text).
+    /// From the app icon: graphite ground, the main window's electric blue, the white windows' cool greys.
     static let ouch = Palette(
         bg: Pair(0xF4F4F6, 0x1B1B1E), surface: Pair(0xFFFFFF, 0x232326), surfaceRaised: Pair(0xFFFFFF, 0x2C2C30),
         surfaceSunken: Pair(0xECECF0, 0x18181B), hover: Pair(0xECECF0, 0x36363B), hairline: Pair(0xE2E2E7, 0x38383D),
         borderControl: Pair(0x7E7E87, 0x7A7A82),
-        ink: Pair(0x18181B, 0xF5F5F7), inkMuted: Pair(0x55555C, 0xB4B4BB), inkFaint: Pair(0x6B6B73, 0x97979F),
+        ink: Pair(0x18181B, 0xF5F5F7), inkMuted: Pair(0x55555C, 0xB4B4BB), inkFaint: Pair(0x68686F, 0x97979F),
         accent: Pair(0x0A68E6, 0x3F95FF), accentHover: Pair(0x0A58C4, 0x5AA8FF), onAccent: Pair(0xFFFFFF, 0x0B0B0D),
-        accentInk: Pair(0x0A5FD1, 0x8DC3FF), accentSoft: Pair(0xE3EEFF, 0x1B2C47), accent2: Pair(0xFFCC00, 0xFFCC00),
-        accent2Ink: Pair(0x8F6A00, 0xFFCC00), sky: Pair(0x3D8BE0, 0x8DC3FF),
+        accentInk: Pair(0x0A5FD1, 0x8DC3FF), accentSoft: Pair(0xE3EEFF, 0x1B2C47),
         tint: Pair(0xC7C7CC, 0x4A4A50), focus: Pair(0x0A68E6, 0x8DC3FF),
         success: Pair(0x1F7A3D, 0x5FD38A), warning: Pair(0x8A5A00, 0xFFCC00), danger: Pair(0xC42B1C, 0xFF7B6B),
         dangerSoft: Pair(0xFDE8E6, 0x3D2220),
-        glass: Pair(0xFFFFFF, 0x2C2C30, alpha: (0.82, 0.80)), wash1: Pair(0xF7EABB, 0x4D4217), wash2: Pair(0xE5E5E8, 0x2B2B2F))
+        glass: Pair(0xFFFFFF, 0x2C2C30, alpha: (0.82, 0.80)), wash1: Pair(0xDDE9FB, 0x1F2C42), wash2: Pair(0xE5E5E8, 0x2B2B2F))
 }
 
 enum Theme {
@@ -96,13 +94,7 @@ enum Theme {
     /// Accent used as text: group titles, links, kickers, checks.
     static let accentInk = token(\.accentInk)
     static let accentSoft = token(\.accentSoft)
-    /// The logo's spark yellow. Shapes only: occupied-workspace dots, impact marks. Never text.
-    static let accent2 = token(\.accent2)
-    /// The yellow where it has to be read: the workspace group's key labels. Deepened in light mode.
-    static let accent2Ink = token(\.accent2Ink)
-    /// A lighter blue beside `accent`: the layout group's key labels.
-    static let sky = token(\.sky)
-    /// Quiet fill for illustrations and layout thumbnails.
+    /// Quiet fill for shapes only: illustrations and layout thumbnails. Never text.
     static let tint = token(\.tint)
     static let focus = token(\.focus)
     static let success = token(\.success)
@@ -247,15 +239,13 @@ extension View {
     /// The design's shadows: a 1px ring plus a soft drop. Apply it to a background shape, never to a view
     /// with text in it, or the text casts its own shadow (which shows through glass).
     func elevation<S: Shape>(_ e: Elevation, in shape: S) -> some View {
-        let ring = Color(nsColor: NSColor(name: nil) { a in
-            NSColor.black.withAlphaComponent(Theme.isDark(a) ? (e == .float ? 0.5 : 0.45) : (e == .float ? 0.06 : 0.05))
-        })
+        let ring = Theme.hairline
         let drop = Color(nsColor: NSColor(name: nil) { a in
             let dark = Theme.isDark(a)
             switch e {
             case .sm: return NSColor.black.withAlphaComponent(dark ? 0.4 : 0.06)
-            case .popover: return NSColor.black.withAlphaComponent(dark ? 0.6 : 0.2)
-            case .float: return NSColor.black.withAlphaComponent(dark ? 0.7 : 0.3)
+            case .popover: return NSColor.black.withAlphaComponent(dark ? 0.65 : 0.22)
+            case .float: return NSColor.black.withAlphaComponent(dark ? 0.75 : 0.35)
             }
         })
         return self
@@ -281,9 +271,9 @@ enum Density {
     }
     var padding: EdgeInsets {
         switch self {
-        case .xs: EdgeInsets(top: 6, leading: 10, bottom: 6, trailing: 10)
+        case .xs: EdgeInsets(top: 5, leading: 8, bottom: 5, trailing: 8)
         case .sm: EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16)
-        case .md: EdgeInsets(top: 4, leading: 4, bottom: 4, trailing: 4)
+        case .md: EdgeInsets(top: 6, leading: 6, bottom: 6, trailing: 6)
         case .lg: EdgeInsets(top: 20, leading: 20, bottom: 16, trailing: 20)
         case .xl: EdgeInsets(top: 32, leading: 32, bottom: 32, trailing: 32)
         }
@@ -306,11 +296,8 @@ enum Caret: Equatable {
     case leadingBottom(CGFloat)
 }
 
-enum SurfaceTone { case plain, accent, inverted }
-
 private struct SurfaceModifier: ViewModifier {
     let density: Density
-    let tone: SurfaceTone
     let glass: Bool
     let caret: Caret
 
@@ -318,21 +305,13 @@ private struct SurfaceModifier: ViewModifier {
         let shape = RoundedRectangle(cornerRadius: density.radius, style: .continuous)
         content
             .padding(density.padding)
-            .foregroundStyle(tone == .accent ? Theme.onAccent : tone == .inverted ? Theme.surface : Theme.ink)
+            .foregroundStyle(Theme.ink)
             .background(alignment: caretAlignment) { caretView }
             .background { fill(shape) }
     }
 
-    private var fillColor: Color {
-        switch tone {
-        case .plain: Theme.surfaceRaised
-        case .accent: Theme.accent
-        case .inverted: Theme.ink
-        }
-    }
-
     @ViewBuilder private func fill(_ shape: RoundedRectangle) -> some View {
-        if glass && tone == .plain {
+        if glass {
             if #available(macOS 26.0, *) {
                 Color.clear.glassEffect(.regular, in: shape) // glass draws its own edge and depth
             } else {
@@ -340,7 +319,7 @@ private struct SurfaceModifier: ViewModifier {
                     .background(shape.fill(Color.clear).elevation(density.elevation, in: shape))
             }
         } else {
-            shape.fill(fillColor).elevation(density.elevation, in: shape)
+            shape.fill(Theme.surfaceRaised).elevation(density.elevation, in: shape)
         }
     }
 
@@ -354,7 +333,7 @@ private struct SurfaceModifier: ViewModifier {
 
     @ViewBuilder private var caretView: some View {
         let diamond = RoundedRectangle(cornerRadius: 3, style: .continuous)
-            .fill(tone == .plain ? Theme.surfaceRaised : fillColor)
+            .fill(Theme.surfaceRaised)
             .frame(width: 14, height: 14).rotationEffect(.degrees(45))
         switch caret {
         case .none: EmptyView()
@@ -370,8 +349,8 @@ private struct SurfaceModifier: ViewModifier {
 extension View {
     /// Wraps the view in a Surface. Slots inside always follow the same order: head, title, body,
     /// keys, children, actions, progress.
-    func surface(_ density: Density, tone: SurfaceTone = .plain, glass: Bool = false, caret: Caret = .none) -> some View {
-        modifier(SurfaceModifier(density: density, tone: tone, glass: glass, caret: caret))
+    func surface(_ density: Density, glass: Bool = false, caret: Caret = .none) -> some View {
+        modifier(SurfaceModifier(density: density, glass: glass, caret: caret))
     }
 
     /// The one content pane in a window: `surface`, 14pt radius, popover shadow.

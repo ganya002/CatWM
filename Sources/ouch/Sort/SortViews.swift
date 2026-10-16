@@ -498,7 +498,7 @@ private struct SortThumb: View {
                 ForEach(Array(ids.enumerated()), id: \.element) { j, id in
                     if j < frames.count {
                         RoundedRectangle(cornerRadius: 3, style: .continuous)
-                            .fill(id == lit ? Theme.accent2 : j == 0 ? Theme.thumbMain : Theme.tint)
+                            .fill(id == lit ? Theme.accent : j == 0 ? Theme.thumbMain : Theme.tint)
                             .frame(width: frames[j].width, height: frames[j].height)
                             .offset(x: frames[j].minX, y: frames[j].minY)
                     }
