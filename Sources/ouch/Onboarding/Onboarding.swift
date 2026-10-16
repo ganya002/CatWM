@@ -65,8 +65,8 @@ final class Onboarding {
     private func makeWelcome(on screen: NSScreen) -> OuchPanel {
         welcomeModel.page = .permissions
         welcomeModel.style = KeyStyle.current
-        welcomeModel.allowAccessibility = { Permissions.request() }
-        welcomeModel.allowInputMonitoring = { Permissions.requestInputMonitoring() }
+        welcomeModel.allowAccessibility = { Permission.accessibility.request() }
+        welcomeModel.allowInputMonitoring = { Permission.inputMonitoring.request() }
         welcomeModel.allowLogin = { [weak self] in
             LoginItem.set(true)
             if !LoginItem.isEnabled { // needs approval in System Settings
@@ -78,12 +78,12 @@ final class Onboarding {
         PermissionGuide.shared.onGranted = { [weak self] in self?.welcome?.makeKeyAndOrderFront(nil) }
         welcomeModel.skip = { [weak self] in self?.hideWelcome { self?.finish() } }
         welcomeModel.next = { [weak self] in
-            guard AXIsProcessTrusted() else { Permissions.request(); return }
+            guard Permission.accessibility.isGranted else { Permission.accessibility.request(); return }
             self?.welcomeModel.page = .keys
         }
         welcomeModel.start = { [weak self] in
             guard let self else { return }
-            guard AXIsProcessTrusted() else { welcomeModel.page = .permissions; return }
+            guard Permission.accessibility.isGranted else { welcomeModel.page = .permissions; return }
             // The tour reads the keys from the config, so they're switched before it starts.
             if let style = welcomeModel.style, style != KeyStyle.current,
                let config = SettingsWindow.shared.library.config(id: style.configID) {
@@ -106,15 +106,15 @@ final class Onboarding {
     }
 
     private func refreshWelcome() {
-        let ax = AXIsProcessTrusted(), login = LoginItem.isEnabled
+        let ax = Permission.accessibility.isGranted, login = LoginItem.isEnabled
         if welcomeModel.accessibility != ax { welcomeModel.accessibility = ax }
-        let im = Permissions.inputMonitoringGranted
+        let im = Permission.inputMonitoring.isGranted
         if welcomeModel.inputMonitoring != im { welcomeModel.inputMonitoring = im }
         if welcomeModel.login != login { welcomeModel.login = login }
         // Approved in the Login Items list we opened: close it again, like the Accessibility flow does.
         if login, openedLoginItems {
             openedLoginItems = false
-            if ax { Permissions.closeSettingsWindows() }
+            if ax { Permission.closeSettingsWindows() }
             welcome?.makeKeyAndOrderFront(nil)
         }
     }
@@ -194,7 +194,7 @@ final class Onboarding {
                 HUD.shared.show("Ouch needs Accessibility first", on: nil)
                 MenuBarTip.shared.hide()
                 // Trusted, so the next launch won't offer the tour again: count it as done, or Tips never show.
-                if firstRun, AXIsProcessTrusted() { UserDefaults.standard.set(true, forKey: Self.doneKey) }
+                if firstRun, Permission.accessibility.isGranted { UserDefaults.standard.set(true, forKey: Self.doneKey) }
                 firstRun = false
             }
             return
@@ -229,7 +229,7 @@ final class Onboarding {
         MenuBarTip.shared.hide()
         firstRun = false
         UserDefaults.standard.set(true, forKey: Self.doneKey)
-        guard AXIsProcessTrusted() else { return }
+        guard Permission.accessibility.isGranted else { return }
         HUD.shared.show("Tiling on", on: nil)
     }
 }

@@ -20,10 +20,10 @@ extension WindowManager {
     func status() -> Status {
         let screens = Screen.all()
         let managed = visible.compactMap { windows[$0] }
-        return Status(trusted: AXIsProcessTrusted(), keybindsActive: Hotkeys.shared.isActive, running: isStarted,
+        return Status(trusted: Permission.accessibility.isGranted, keybindsActive: Hotkeys.shared.isActive, running: isStarted,
                       tilingEnabled: tilingEnabled,
                       launchAtLogin: LoginItem.isEnabled, loginNeedsApproval: LoginItem.needsApproval,
-                      inputMonitoring: Permissions.inputMonitoringGranted,
+                      inputMonitoring: Permission.inputMonitoring.isGranted,
                       tiled: managed.filter { !$0.isFloating }.count, floating: managed.filter(\.isFloating).count,
                       screens: isStarted ? screens.map { ($0.uuid, $0.ns.localizedName, state(for: $0).layout,
                                                            isVirtual(shown[$0.uuid]) ? (shown[$0.uuid] ?? "") : "") } : [])
@@ -63,7 +63,7 @@ extension WindowManager {
     }
 
     private func dumpState() {
-        var lines = ["state: trusted=\(AXIsProcessTrusted()) keybinds=\(Hotkeys.shared.isActive) tiling=\(tilingEnabled) focused=\(focusedWindow()?.id ?? 0)"]
+        var lines = ["state: trusted=\(Permission.accessibility.isGranted) keybinds=\(Hotkeys.shared.isActive) tiling=\(tilingEnabled) focused=\(focusedWindow()?.id ?? 0)"]
         for s in Screen.all() {
             let st = state(for: s)
             lines.append("  screen \(s.ns.localizedName) workspace=\(shown[s.uuid] ?? "?") home=\(isOnHomeSpace(s)) layout=\(st.layout.rawValue) ratio=\(st.ratio) main=\(st.mainCount) usable=\(usableRect(s))")

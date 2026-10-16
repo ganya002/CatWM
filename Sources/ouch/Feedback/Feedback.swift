@@ -126,8 +126,8 @@ final class Feedback: ObservableObject {
             "- macOS \(os)",
             "- Mac: \(hardwareModel()), \(arch())",
             "- Displays: \(displays.joined(separator: "; "))",
-            "- Accessibility: \(AXIsProcessTrusted() ? "granted" : "not granted")",
-            "- Input Monitoring: \(Permissions.inputMonitoringGranted ? "granted" : "not granted")",
+            "- Accessibility: \(Permission.accessibility.isGranted ? "granted" : "not granted")",
+            "- Input Monitoring: \(Permission.inputMonitoring.isGranted ? "granted" : "not granted")",
             "- Window manager running: \(WindowManager.shared.isStarted ? "yes" : "no")",
             "- Sent: \(date)",
         ]

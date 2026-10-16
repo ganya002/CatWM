@@ -330,9 +330,8 @@ struct Screen {
         let h = primary.frame.height
         func flip(_ r: CGRect) -> CGRect { CGRect(x: r.minX, y: h - r.maxY, width: r.width, height: r.height) }
         return NSScreen.screens.compactMap { s in
-            guard let n = s.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else { return nil }
-            let id = CGDirectDisplayID(n.uint32Value)
-            let uuid = CGDisplayCreateUUIDFromDisplayID(id).map { CFUUIDCreateString(nil, $0.takeRetainedValue()) as String } ?? "\(id)"
+            guard let id = s.displayID else { return nil }
+            let uuid = s.displayUUID ?? "\(id)"
             return Screen(id: id, uuid: uuid, frame: flip(s.frame), visible: flip(s.visibleFrame),
                           isBuiltin: CGDisplayIsBuiltin(id) != 0, ns: s)
         }

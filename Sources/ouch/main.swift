@@ -3,10 +3,6 @@ import AppKit
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
-    private var watchdog: Timer?
-    private var wasTrusted = true
-    private var hadInputMonitoring = Permissions.inputMonitoringGranted
-    private var watchdogTicks = 0
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         closePreviousInstances()
@@ -32,18 +28,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         LoginItem.enableOnFirstLaunch()
         Onboarding.shared.statusButton = statusItem.button
 
-        wasTrusted = AXIsProcessTrusted()
-        if wasTrusted { WindowManager.shared.start() } else { Log.info("launch: Accessibility not granted") }
+        let watcher = PermissionWatcher.shared
+        watcher.start()
+        let trusted = watcher.granted.contains(.accessibility)
+        if trusted { WindowManager.shared.start() } else { Log.info("launch: Accessibility not granted") }
         // `open ouch.app --args --onboarding` plays it regardless, for working on it.
-        if Onboarding.shouldShow(firstRun: firstRun, trusted: wasTrusted) || CommandLine.arguments.contains("--onboarding") {
+        if Onboarding.shouldShow(firstRun: firstRun, trusted: trusted) || CommandLine.arguments.contains("--onboarding") {
             Onboarding.shared.start() // its welcome card asks for Accessibility
-        } else if !wasTrusted {
-            Permissions.request()
+        } else if !trusted {
+            Permission.accessibility.request()
         }
         Tips.shared.launched()
         updateIcon()
-        // Permission can be granted later, or silently revoked (a rebuild changes the signature).
-        watchdog = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in self?.checkPermission() }
+        watcher.subscribe { [weak self] granted, changed in self?.permissionsChecked(granted, changed) }
     }
 
     /// The newest Ouch wins: any other copy (same bundle ID, or same executable for unbundled dev
@@ -84,30 +81,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Log.info("migrated \(old.count) settings from Hyprthyst")
     }
 
-    private func checkPermission() {
-        let trusted = AXIsProcessTrusted()
-        if trusted, !Hotkeys.shared.rawCapsActive { Hotkeys.shared.startRawCaps() }
-        let monitoring = Permissions.inputMonitoringGranted
-        if monitoring != hadInputMonitoring {
-            hadInputMonitoring = monitoring
+    private func permissionsChecked(_ granted: Set<Permission>, _ changed: Set<Permission>) {
+        let trusted = granted.contains(.accessibility)
+        if changed.contains(.inputMonitoring) {
+            let monitoring = granted.contains(.inputMonitoring)
             Log.info("Input Monitoring \(monitoring ? "granted" : "revoked")")
             if monitoring { PermissionGuide.shared.granted(.inputMonitoring) }
         }
-        // Keyboards plugged in later start with macOS's Caps Lock delay again.
-        watchdogTicks += 1
-        if watchdogTicks % 20 == 0 { Hotkeys.shared.refreshCapsLockDelay() }
         if trusted && !WindowManager.shared.isStarted {
             Log.info("Accessibility granted")
             WindowManager.shared.start()
         } else if trusted && !Hotkeys.shared.isActive {
             Hotkeys.shared.restart()
         }
-        if trusted != wasTrusted {
+        if changed.contains(.accessibility) {
             Log.info("Accessibility \(trusted ? "granted" : "revoked")")
-            wasTrusted = trusted
             updateIcon()
             // Revoked (or a rebuild invalidated it): start over so we're listed again.
-            if trusted { PermissionGuide.shared.granted() } else { Permissions.reset() }
+            if trusted { PermissionGuide.shared.granted() } else { Permission.accessibility.reset() }
         }
     }
 
@@ -119,16 +110,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         WindowManager.shared.restoreHiddenWindows()
-        Hotkeys.shared.restoreCapsLockDelay()
         CrashWatch.cleanExit()
     }
 
     /// Menu bar indicator: the focused display's workspace, a drawing of its layout, and the
     /// apps on it.
     private func updateIcon() {
-        // Only checkPermission() updates wasTrusted; doing it here too (window events call this)
-        // could swallow a revocation before the watchdog sees it.
-        let trusted = AXIsProcessTrusted()
+        // A live check, not the watcher's last state: window events call this too, and only the
+        // watcher may record a change, or a revocation could be swallowed before it sees it.
+        let trusted = Permission.accessibility.isGranted
         guard let button = statusItem.button else { return }
         button.attributedTitle = NSAttributedString(string: "")
         guard trusted, let state = WindowManager.shared.menuBarState() else {

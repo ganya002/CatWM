@@ -123,7 +123,7 @@ final class WindowManager {
         isStarted = true
         loadWorkspaces()
         Log.verbose = config.debugLogging || Log.verboseLaunch
-        Log.info("start: trusted=\(AXIsProcessTrusted()) windowServerFocus=\(WindowServerFocus.isAvailable) screens=\(Screen.all().count)")
+        Log.info("start: trusted=\(Permission.accessibility.isGranted) windowServerFocus=\(WindowServerFocus.isAvailable) screens=\(Screen.all().count)")
         config.errors.forEach { Log.info("config: \($0)") }
         AXUIElementSetMessagingTimeout(AXUIElementCreateSystemWide(), 1.0) // a hung app can't freeze us
         animator.onMinimumSize = { [weak self] id, size in self?.learnMinimum(id, size) }

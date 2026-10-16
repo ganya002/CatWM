@@ -192,8 +192,7 @@ final class FocusDim {
     private func layoutPanels() {
         var seen = Set<CGDirectDisplayID>()
         for screen in NSScreen.screens {
-            guard let n = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else { continue }
-            let display = CGDirectDisplayID(n.uint32Value)
+            guard let display = screen.displayID else { continue }
             seen.insert(display)
             if pairs[display] == nil { pairs[display] = Pair(front: makePanel(screen), spare: makePanel(screen)) }
             for p in [pairs[display]!.front, pairs[display]!.spare] where p.frame != screen.frame {

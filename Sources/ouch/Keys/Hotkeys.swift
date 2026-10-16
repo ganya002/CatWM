@@ -1,7 +1,5 @@
-// Keys: global key binds through a CGEventTap, modes (submaps) and Caps Lock chords.
+// Keys: global key binds through a CGEventTap and modes (submaps). Caps Lock's part is in CapsLockChord.
 import AppKit
-import IOKit
-import IOKit.hid
 
 /// Global keybinds via a CGEventTap. Carbon's RegisterEventHotKey can't be used: since macOS 15 it
 /// rejects Option-only and Option+Shift combos, which are exactly the Hyprland/Amethyst-style binds.
@@ -48,11 +46,7 @@ final class Hotkeys {
     func setBindings(_ list: [KeyBinding]) {
         tables = [:]
         for b in list { tables[b.submap, default: [:]][Self.key(b.keyCode, b.mods)] = b }
-        let bound = list.contains { $0.keyCode == 57 }
-        if bound != capsBound {
-            capsBound = bound
-            Self.setCapsLockDelay(bound ? 0 : -1)
-        }
+        CapsLockChord.shared.setBound(list.contains { $0.keyCode == CapsLockChord.keyCode })
         if !submap.isEmpty, tables[submap] == nil { setSubmap("") }
     }
 
@@ -67,7 +61,7 @@ final class Hotkeys {
 
     enum Match { case bind(KeyBinding), swallow, pass }
 
-    // MARK: - Event tap and Caps Lock
+    // MARK: - Event tap
 
     @discardableResult
     func start() -> Bool {
@@ -80,154 +74,8 @@ final class Hotkeys {
         CFRunLoopAddSource(CFRunLoopGetMain(), CFMachPortCreateRunLoopSource(nil, t, 0), .commonModes)
         CGEvent.tapEnable(tap: t, enable: true)
         startSwipes()
-        startRawCaps()
-        refreshCapsLockDelay()
+        CapsLockChord.shared.start()
         return true
-    }
-
-    /// macOS makes you hold Caps Lock a moment before it turns the lock *on* (turning it off is
-    /// instant), and the raw HID report is held back the same way. That is why Super + Caps only felt
-    /// instant while the lock was already on. The keyboards' delay override removes it, no permission
-    /// needed. It lasts until the keyboard is unplugged or the Mac restarts, so it's re-applied now and
-    /// then. Only on while a Caps Lock bind exists; -1 is "no override" and gives the normal behaviour back.
-    private(set) var capsBound = false
-
-    func refreshCapsLockDelay() {
-        if capsBound { Self.setCapsLockDelay(0) }
-    }
-
-    private static func setCapsLockDelay(_ ms: Int, wait: Bool = false) {
-        let run = {
-            let p = Process()
-            p.executableURL = URL(fileURLWithPath: "/usr/bin/hidutil")
-            p.arguments = ["property", "--matching", "{\"PrimaryUsagePage\":1,\"PrimaryUsage\":6}",
-                           "--set", "{\"CapsLockDelayOverride\":\(ms)}"]
-            p.standardOutput = FileHandle.nullDevice
-            p.standardError = FileHandle.nullDevice
-            try? p.run()
-            p.waitUntilExit()
-        }
-        if wait { run() } else { DispatchQueue.global(qos: .utility).async(execute: run) }
-    }
-
-    /// Back to macOS's own Caps Lock behaviour (on quit).
-    func restoreCapsLockDelay() {
-        if capsBound { Self.setCapsLockDelay(-1, wait: true) }
-    }
-
-    /// Caps Lock is debounced by macOS: the key must be held a moment before a flagsChanged shows up,
-    /// and a quick tap can be dropped. The keyboard's raw HID report has no such delay, so a listener
-    /// (read-only, nothing is seized or remapped) fires the bind at the real key-down. The lock toggle
-    /// macOS applies afterwards is then undone by the tap. Needs Input Monitoring; without it the
-    /// flagsChanged path below still works, just slower.
-    private var hidManager: IOHIDManager?
-    /// One press fires a Caps Lock bind once. A long hold can bring more than one flagsChanged (the
-    /// late toggle, our own restore); matching those again would run ⌘⇪'s exit bind right after the
-    /// enter and leave the lock on. So every flagsChanged of a press that already fired is an echo.
-    private var capsFired = false // a Caps Lock bind fired for the current press
-    private var capsHeld = false // raw key state
-    private var capsUpAt: TimeInterval = 0
-    private var slowCapsAt: TimeInterval = 0 // the slow path fired before the raw report came
-    private var capsLock = false // lock state before the press, put back after it
-    private var restoreAt: TimeInterval = 0
-
-    var rawCapsActive: Bool { hidManager != nil }
-
-    /// Whether Input Monitoring was already on when the app started (decides if a relaunch could help).
-    private let grantedAtLaunch = Permissions.inputMonitoringGranted
-    private var rawMisses = 0
-
-    /// Safe to call repeatedly: the watchdog retries it until Input Monitoring has been granted.
-    func startRawCaps() {
-        guard hidManager == nil, Permissions.inputMonitoringGranted else { return }
-        let m = IOHIDManagerCreate(kCFAllocatorDefault, IOOptionBits(kIOHIDOptionsTypeNone))
-        IOHIDManagerSetDeviceMatching(m, [kIOHIDDeviceUsagePageKey: kHIDPage_GenericDesktop,
-                                          kIOHIDDeviceUsageKey: kHIDUsage_GD_Keyboard] as CFDictionary)
-        IOHIDManagerRegisterInputValueCallback(m, { _, _, _, value in
-            let el = IOHIDValueGetElement(value)
-            guard IOHIDElementGetUsagePage(el) == UInt32(kHIDPage_KeyboardOrKeypad),
-                  IOHIDElementGetUsage(el) == UInt32(kHIDUsage_KeyboardCapsLock) else { return }
-            if IOHIDValueGetIntegerValue(value) == 1 { Hotkeys.shared.rawCapsDown() } else { Hotkeys.shared.rawCapsUp() }
-        }, nil)
-        IOHIDManagerScheduleWithRunLoop(m, CFRunLoopGetMain(), CFRunLoopMode.commonModes.rawValue)
-        if IOHIDManagerOpen(m, IOOptionBits(kIOHIDOptionsTypeNone)) == kIOReturnSuccess {
-            hidManager = m
-        } else {
-            IOHIDManagerUnscheduleFromRunLoop(m, CFRunLoopGetMain(), CFRunLoopMode.commonModes.rawValue)
-        }
-    }
-
-    private func stopRawCaps() {
-        guard let m = hidManager else { return }
-        IOHIDManagerRegisterInputValueCallback(m, nil, nil)
-        IOHIDManagerUnscheduleFromRunLoop(m, CFRunLoopGetMain(), CFRunLoopMode.commonModes.rawValue)
-        IOHIDManagerClose(m, IOOptionBits(kIOHIDOptionsTypeNone))
-        hidManager = nil
-    }
-
-    /// A Caps Lock bind just fired through the slow path although the raw listener should have caught
-    /// it first: macOS granted the permission but isn't delivering events to this process yet. First
-    /// try a fresh listener; if that doesn't help and the grant came after launch, relaunch ourselves
-    /// once (the new process starts with the permission in place), so the user never has to.
-    fileprivate func rawListenerMissed() {
-        guard hidManager != nil else { return }
-        rawMisses += 1
-        if rawMisses == 1 {
-            stopRawCaps()
-            startRawCaps()
-        } else if rawMisses == 2, !grantedAtLaunch {
-            Log.info("Input Monitoring granted but no events: relaunching")
-            let path = Bundle.main.bundlePath
-            let p = Process()
-            p.executableURL = URL(fileURLWithPath: "/bin/sh")
-            p.arguments = ["-c", "sleep 0.7; /usr/bin/open -n \"$0\"", path]
-            try? p.run()
-            DispatchQueue.main.async { NSApp.terminate(nil) }
-        }
-    }
-
-    private func rawCapsDown() {
-        capsHeld = true
-        let now = ProcessInfo.processInfo.systemUptime
-        // The flagsChanged of this same press won the race and already fired the bind.
-        if capsFired, now - slowCapsAt < 0.3 { slowCapsAt = 0; return }
-        capsFired = false
-        guard !paused else { return }
-        let flags = CGEventSource.flagsState(.combinedSessionState)
-        guard let b = lookup(57, flags), repeatOK(b, nil) else { return }
-        capsFired = true
-        capsLock = flags.contains(.maskAlphaShift)
-        fire(b)
-    }
-
-    private func rawCapsUp() {
-        capsHeld = false
-        capsUpAt = ProcessInfo.processInfo.systemUptime
-    }
-
-    /// True if this Caps Lock flagsChanged belongs to a press whose bind already fired, or is the
-    /// echo of our own lock restore. Either way it must not be matched again.
-    fileprivate func capsEcho(_ lockNow: Bool) -> Bool {
-        let now = ProcessInfo.processInfo.systemUptime
-        if now - restoreAt < 0.3, lockNow == capsLock { return true }
-        guard capsFired else { return false }
-        if hidManager != nil { return capsHeld || now - capsUpAt < 1.5 }
-        return false
-    }
-
-    /// The slow path fired a Caps Lock bind for this press.
-    fileprivate func slowCapsFired(lockBefore: Bool) {
-        capsFired = true
-        capsLock = lockBefore
-        slowCapsAt = ProcessInfo.processInfo.systemUptime
-    }
-
-    /// Puts the lock back to how it was before the press, if the press changed it.
-    fileprivate func restoreCapsLock(_ lockNow: Bool) {
-        guard lockNow != capsLock else { return }
-        let want = capsLock
-        restoreAt = ProcessInfo.processInfo.systemUptime
-        DispatchQueue.main.async { Hotkeys.setCapsLock(want) }
     }
 
     // MARK: - Swipes, lookup and firing
@@ -251,6 +99,14 @@ final class Hotkeys {
     private func lookup(_ code: UInt16, _ flags: CGEventFlags) -> KeyBinding? {
         let k = Self.key(code, flags)
         return (submap.isEmpty ? nil : tables[submap]?[k]) ?? tables[""]?[k]
+    }
+
+    /// The raw Caps Lock listener's key-down (see CapsLockChord): fires a Caps Lock bind for `flags`.
+    /// Returns whether one fired.
+    func fireCapsLock(_ flags: CGEventFlags) -> Bool {
+        guard !paused, let b = lookup(CapsLockChord.keyCode, flags), repeatOK(b, nil) else { return false }
+        fire(b)
+        return true
     }
 
     fileprivate func fire(_ b: KeyBinding) {
@@ -308,18 +164,6 @@ final class Hotkeys {
 
     fileprivate func reenable() { if let tap { CGEvent.tapEnable(tap: tap, enable: true) } }
 
-    /// Caps Lock arrives as flagsChanged (keycode 57), never keyDown. Swallowing the event isn't enough
-    /// to keep the lock from toggling, so the lock state is put back through IOKit afterwards.
-    static func setCapsLock(_ on: Bool) {
-        let service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching(kIOHIDSystemClass))
-        guard service != 0 else { return }
-        defer { IOObjectRelease(service) }
-        var conn: io_connect_t = 0
-        guard IOServiceOpen(service, mach_task_self_, UInt32(kIOHIDParamConnectType), &conn) == KERN_SUCCESS else { return }
-        defer { IOServiceClose(conn) }
-        IOHIDSetModifierLockState(conn, Int32(kIOHIDCapsLockState), on)
-    }
-
     // MARK: - Modifier tap
 
     private static let tapMods: CGEventFlags = [.maskCommand, .maskAlternate, .maskControl, .maskShift]
@@ -337,7 +181,7 @@ final class Hotkeys {
         let mods = event.flags.intersection(Self.tapMods)
         defer { lastMods = mods }
         guard onModifierTap != nil, !paused, !submap.isEmpty,
-              event.getIntegerValueField(.keyboardEventKeycode) != 57,
+              event.getIntegerValueField(.keyboardEventKeycode) != Int64(CapsLockChord.keyCode),
               event.getIntegerValueField(.eventSourceUserData) != Self.syntheticMarker else { tapDown = nil; return }
         if let down = tapDown {
             tapDown = nil
@@ -463,20 +307,18 @@ private func tapCallback(proxy: CGEventTapProxy, type: CGEventType, event: CGEve
     if type == .flagsChanged { Hotkeys.shared.trackModifierTap(event) } else { Hotkeys.shared.tapDown = nil }
     if type == .flagsChanged {
         // Only Caps Lock can be bound as a key; every other modifier change passes untouched.
-        guard event.getIntegerValueField(.keyboardEventKeycode) == 57 else { return Unmanaged.passUnretained(event) }
+        guard event.getIntegerValueField(.keyboardEventKeycode) == Int64(CapsLockChord.keyCode) else { return Unmanaged.passUnretained(event) }
     }
-    let capsNow = event.flags.contains(.maskAlphaShift)
-    if type == .flagsChanged, Hotkeys.shared.capsEcho(capsNow) {
-        Hotkeys.shared.restoreCapsLock(capsNow)
+    let lockNow = CapsLockChord.isLocked(event.flags)
+    if type == .flagsChanged, CapsLockChord.shared.isEcho(lockNow: lockNow) {
+        CapsLockChord.shared.restoreLock(lockNow)
         return nil
     }
     let result = Hotkeys.shared.match(event)
     if type == .flagsChanged {
         guard case .bind = result else { return Unmanaged.passUnretained(event) }
-        Hotkeys.shared.rawListenerMissed()
         // Undo the toggle this press caused.
-        Hotkeys.shared.slowCapsFired(lockBefore: !capsNow)
-        Hotkeys.shared.restoreCapsLock(capsNow)
+        CapsLockChord.shared.slowPathFired(lockNow: lockNow)
     }
     switch result {
     case .pass:

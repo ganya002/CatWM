@@ -134,14 +134,15 @@ final class MenuModel: ObservableObject {
     static func build() -> [MenuItem] {
         let wm = WindowManager.shared
         let keys = ShortcutIndex()
-        let trusted = AXIsProcessTrusted() && wm.isStarted
+        let axGranted = Permission.accessibility.isGranted
+        let trusted = axGranted && wm.isStarted
         let state = wm.menuBarState()
         let layout = state?.layout
         var out: [MenuItem] = []
 
-        if !AXIsProcessTrusted() {
+        if !axGranted {
             out.append(MenuItem(id: "attention", kind: .attention, label: "Ouch needs Accessibility", keywords: "permission grant",
-                                action: { Permissions.request() }))
+                                action: { Permission.accessibility.request() }))
         }
 
         // Hidden alias so search finds it.

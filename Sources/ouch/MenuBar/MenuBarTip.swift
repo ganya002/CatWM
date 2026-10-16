@@ -101,7 +101,7 @@ final class MenuBarTip {
     }
 
     private func state(for frame: NSRect, on screen: NSScreen) -> MenuBarTipModel.State {
-        if let left = screen.auxiliaryTopLeftArea, let right = screen.auxiliaryTopRightArea {
+        if let (left, right) = screen.notchSides {
             if frame.maxX > left.maxX && frame.minX < right.minX { return .hidden } // under the notch
             // Left of the notch, or the first in line to be pushed under it when more items appear.
             return frame.minX >= right.minX + right.width * 0.25 ? .good : .move
