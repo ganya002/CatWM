@@ -204,11 +204,26 @@ struct WindowsPane: View {
         }
     }
 
+    /// A bind `keyActions` cannot show, usually because its key is still empty. Add resumes that row
+    /// instead of appending another one.
+    private func unfinishedShortcut(_ spec: CursorShortcutSpec) -> BindRow? {
+        doc.binds.first {
+            $0.submap == windowMode && (spec.nextWorkspace
+                ? Actions.isNextWorkspace($0.dispatcher, $0.args)
+                : Actions.same($0.dispatcher, $0.args, spec.dispatcher, spec.args))
+        }
+    }
+
     private func addShortcut(_ spec: CursorShortcutSpec) {
-        let mode = windowMode
-        let row = BindRow(mods: mode.isEmpty ? doc.modVarName : "", key: "",
+        let row: BindRow
+        if let existing = unfinishedShortcut(spec) {
+            row = existing
+        } else {
+            let mode = windowMode
+            row = BindRow(mods: mode.isEmpty ? doc.modVarName : "", key: "",
                           dispatcher: spec.dispatcher, args: spec.args, submap: mode)
-        doc.binds.append(row)
+            doc.binds.append(row)
+        }
         ui.open(SettingEntry(id: "bind.\(row.id)", title: spec.title, pane: .shortcuts, bind: row))
         DispatchQueue.main.async { ui.recording = row.id }
     }
