@@ -1,5 +1,3 @@
-/* Ouch components. Colours, radii, spacing and shadows come from tokens.css; motion lives here (no motion tokens).
-   Layout rule: content sits on the ground. Only things that float (menus, tips, tour cards, HUD) get a surface. */
 :root {
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
@@ -23,7 +21,6 @@
 
 :where(.o-root) :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
-/* ---------- Symbol (SF Symbols stand-in, Lucide outlines) ---------- */
 .o-sym { display: inline-flex; flex: none; width: 16px; height: 16px; color: inherit; vertical-align: -3px; }
 .o-sym svg { width: 100%; height: 100%; overflow: visible; transform-origin: 50% 60%; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
 .o-sym svg .fill { fill: currentColor; stroke: currentColor; }
@@ -54,7 +51,6 @@
 @keyframes o-draw { from { stroke-dashoffset: 80 } to { stroke-dashoffset: 0 } }
 @keyframes o-layer { 0%, 100% { opacity: 0.25 } 35% { opacity: 1 } }
 
-/* ---------- Kbd ---------- */
 .o-keys { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
 .o-keys--seq { gap: 6px; }
 .o-keys__then { font: 400 11px/14px var(--font-sans); color: var(--ink-muted); }
@@ -75,7 +71,6 @@
 .o-kbd--lg.is-wide { font-size: 14px; }
 .o-kbd--lg.is-down { transform: translateY(2px); background: var(--tint); color: var(--ink); box-shadow: none; }
 
-/* ---------- Button ---------- */
 .o-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex: none;
   height: var(--size-control); padding: 0 14px; border-radius: var(--radius-full);
@@ -98,7 +93,6 @@
 .o-btn[disabled] { opacity: 0.45; pointer-events: none; }
 .o-btn .o-kbd { height: 18px; min-width: 18px; margin-right: -6px; background: transparent; color: inherit; opacity: 0.8; }
 
-/* ---------- Switch ---------- */
 .o-switch {
   position: relative; flex: none; width: 34px; height: 20px; border-radius: var(--radius-full);
   background: var(--surface-sunken); border: 0; box-shadow: inset 0 0 0 1px var(--border-control); cursor: default; padding: 0;
@@ -116,14 +110,12 @@
 .o-switch.is-dragging::after { transform: translateX(var(--x)); width: 16px; transition: background var(--dur-2), width var(--dur-1); }
 .o-switch.is-dragging.is-on::after { transform: translateX(calc(var(--x) - 2px)); }
 
-/* ---------- Segmented ---------- */
 .o-seg { position: relative; display: inline-flex; padding: 3px; gap: 2px; border-radius: var(--radius-full); background: var(--surface-sunken); white-space: nowrap; }
 .o-seg__thumb { position: absolute; top: 3px; bottom: 3px; border-radius: var(--radius-full); background: var(--surface-raised); box-shadow: var(--shadow-sm); transition: left var(--dur-3) var(--ease-spring), width var(--dur-3) var(--ease-spring); }
 .o-seg__item { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 12px; border: 0; background: transparent; border-radius: var(--radius-full); font: 400 12.5px/16px var(--font-sans); color: var(--ink-muted); cursor: default; transition: color var(--dur-2); }
 .o-seg__item:hover { color: var(--ink); }
 .o-seg__item.is-on { color: var(--ink); font-weight: 500; }
 
-/* ---------- Row / Group: open lists, no boxes ---------- */
 .o-group__title { font: 500 12px/16px var(--font-sans); letter-spacing: 0.02em; color: var(--ink-muted); margin: 0 0 var(--space-1); }
 .o-group__foot { font: 400 12px/16px var(--font-sans); color: var(--ink-muted); margin: var(--space-2) 0 0; }
 .o-row { display: flex; align-items: center; gap: var(--space-3); min-height: 48px; padding: var(--space-2) 0; }
@@ -134,12 +126,10 @@
 .o-row__desc { font: 400 12px/16px var(--font-sans); color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .o-row__ctl { flex: none; display: flex; align-items: center; gap: var(--space-2); }
 
-/* ---------- Surface: the one floating pattern ---------- */
 .o-surface { position: relative; background: var(--surface-raised); color: var(--ink); box-shadow: var(--shadow-popover); }
 .o-surface--glass { background: var(--glass); -webkit-backdrop-filter: blur(24px) saturate(1.7); backdrop-filter: blur(24px) saturate(1.7); }
 .o-surface--xs { padding: 5px 8px; border-radius: var(--radius-md); }
 .o-surface--sm { padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); }
-/* 6px padding keeps rows concentric: radius-lg 12 = radius-sm 6 + 6 */
 .o-surface--md { padding: 6px; border-radius: var(--radius-lg); }
 .o-surface--lg { padding: var(--space-5) var(--space-5) var(--space-4); border-radius: var(--radius-xl); box-shadow: var(--shadow-float); width: 344px; }
 .o-surface--xl { padding: var(--space-8); border-radius: 24px; box-shadow: var(--shadow-float); width: 480px; }
@@ -170,10 +160,8 @@
 .o-surface__dots > i.is-on { width: 18px; background: var(--accent); }
 .o-surface__dots > i.is-past { background: var(--accent); }
 
-/* accent tone is no longer blue: the tour card is a plain raised surface. */
 .o-surface--accent { background: var(--surface-raised); color: var(--ink); }
 
-/* caret: a 20x10 window onto a rotated square. The square carries the surface fill and a 1px hairline, the window clips it to the half that sticks out, so the edge runs unbroken into the surface's own hairline ring. */
 .o-caret { position: absolute; width: 20px; height: 10px; overflow: hidden; pointer-events: none; }
 .o-caret::before { content: ""; position: absolute; left: 3px; top: 3px; width: 14px; height: 14px; box-sizing: border-box; background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 3px; transform: rotate(45deg); }
 .o-caret--top { top: -10px; }
@@ -181,7 +169,6 @@
 .o-caret--bottom::before { top: -7px; }
 .o-caret--left { left: -10px; width: 10px; height: 20px; }
 
-/* ---------- Tooltip (Surface xs, plain raised like menus) ---------- */
 .o-tip { display: inline-flex; align-items: center; gap: var(--space-2); font: 500 12px/16px var(--font-sans); white-space: nowrap; min-height: 28px; box-sizing: border-box; }
 .o-tip-anchor { position: relative; display: inline-flex; }
 .o-tip-pop { position: absolute; z-index: 20; pointer-events: none; animation: o-pop var(--dur-1) var(--ease-out) both; }
@@ -189,7 +176,6 @@
 .o-tip-pop--top { bottom: calc(100% + 10px); left: 50%; translate: -50% 0; }
 .o-tip-pop--right { left: calc(100% + 10px); top: 50%; translate: 0 -50%; }
 
-/* ---------- Menu ---------- */
 .o-menu { width: var(--size-menu); font: 400 13.5px/18px var(--font-sans); user-select: none; outline: none; }
 .o-menu--sub { width: 232px; position: absolute; left: calc(100% + 2px); top: -6px; z-index: 5; animation: o-sub var(--dur-1) var(--ease-out) both; }
 @keyframes o-sub { from { opacity: 0; transform: translateX(-4px) scale(0.98) } to { opacity: 1; transform: none } }
@@ -225,7 +211,6 @@
 .o-badge { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border-radius: var(--radius-full); background: var(--ink); color: var(--surface); font: 500 11.5px/14px var(--font-sans); white-space: nowrap; }
 .o-menu__custom { padding: 2px 10px 8px; }
 
-/* ---------- Workspace strip ---------- */
 .o-ws { display: flex; gap: 2px; }
 .o-ws__pill {
   position: relative; display: grid; place-items: center; width: 24px; height: 24px; border-radius: var(--radius-full);
@@ -238,7 +223,6 @@
 .o-ws__pill:active { transform: scale(0.88); }
 .o-ws__pill.is-current { background: var(--accent); color: var(--on-accent); font-weight: 500; transform: scale(1.04); }
 
-/* ---------- Layout thumbnail + picker ---------- */
 .o-thumb { display: inline-block; flex: none; transition: transform var(--dur-2) var(--ease-spring); }
 .o-thumb svg { display: block; width: 100%; height: 100%; }
 .o-thumb .pane { fill: var(--tint); transition: fill var(--dur-2); }
@@ -253,7 +237,6 @@
 .o-picker__name { font-weight: 500; }
 .o-picker__desc { color: var(--ink-muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
 
-/* ---------- HUD ---------- */
 .o-hud { display: inline-flex; flex-direction: column; align-items: center; gap: var(--space-3); padding: var(--space-5) var(--space-6) var(--space-4); border-radius: 22px; box-shadow: var(--shadow-float); white-space: nowrap; }
 .o-hud__label { font: 400 22px/26px var(--font-sans); letter-spacing: -0.01em; }
 .o-hud.is-pop { animation: o-hudpop 450ms var(--ease-spring); }
@@ -263,7 +246,6 @@
 .o-hud .o-caption { color: var(--ink-muted); font-size: 12px; }
 @keyframes o-hudpop { 0% { transform: scale(0.9) } 100% { transform: none } }
 
-/* ---------- showcase scaffolding ---------- */
 .o-caption { font: 400 12px/16px var(--font-sans); color: var(--ink-muted); }
 .o-eyebrow { display: flex; align-items: baseline; gap: 10px; white-space: nowrap; }
 .o-eyebrow__n { font: 300 34px/34px var(--font-sans); color: var(--ink-muted); letter-spacing: -0.02em; }
@@ -276,7 +258,6 @@
   .o-root *, .o-root *::before, .o-root *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
 }
 
-/* ---------- Zen-style chrome: a wash, items directly on it, one floating pane ---------- */
 .o-pane { background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-popover); }
 .o-side { display: grid; align-content: start; gap: 2px; }
 .o-side__item {
@@ -300,7 +281,6 @@
 .o-picker__cell { min-width: 0; }
 .o-picker__cell .o-thumb { max-width: 100%; height: auto !important; aspect-ratio: 16 / 10; }
 
-/* ---------- Slider: line ---------- */
 .o-slider { display: grid; gap: 6px; min-width: 120px; }
 .o-slider__head { display: flex; align-items: baseline; gap: 12px; white-space: nowrap; }
 .o-slider__label { font: 400 13.5px/19px var(--font-sans); }
@@ -338,7 +318,6 @@
 .o-slider__track:focus:not([data-kb]) .o-slider__thumb { outline: none; }
 @keyframes o-detent { 0% { transform: scale(1.38) } 100% { transform: scale(1.2) } }
 
-/* ---------- Slider: bar (Control Center style) ---------- */
 .o-bar {
   --press: 1;
   position: relative; height: 34px; min-width: 180px; border-radius: var(--radius-full); overflow: hidden; touch-action: none; outline: none; cursor: default;
@@ -361,7 +340,6 @@
 .o-bar__value { margin-left: auto; font-variant-numeric: tabular-nums; animation: o-valuepop 260ms var(--ease-spring); }
 .o-bar.is-dragging .o-bar__fill, .o-bar.is-dragging .o-bar__content, .o-bar.is-dragging .o-bar__value { transition: none; animation: none; }
 @keyframes o-valuepop { 0% { transform: scale(1.12) } 100% { transform: none } }
-/* landing on a detent settles without overshoot; anywhere else keeps the springy overshoot */
 .o-bar.is-exact .o-bar__fill, .o-bar.is-exact .o-bar__content { transition-timing-function: var(--ease-out); }
 .o-slider.is-exact .o-slider__fill { transition-timing-function: var(--ease-out); }
 .o-slider.is-exact:not(.is-dragging) .o-slider__thumb { transition-timing-function: var(--ease-out); }

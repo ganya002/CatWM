@@ -1,82 +1,1886 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="ouch-light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ouch design system</title>
 <link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="components.css">
 <style>
   html, body { margin: 0; background: var(--bg); color: var(--ink); font: var(--text-body); }
-  header { display: flex; align-items: center; gap: 16px; padding: 20px 32px; position: sticky; top: 0; background: var(--bg); z-index: 1; border-bottom: 1px solid var(--hairline); }
-  h1 { margin: 0; font: var(--text-title); flex: 1; }
-  select { font: var(--text-body); color: var(--ink); background: var(--surface-sunken); border: 1px solid var(--border-control); border-radius: var(--radius-md); height: var(--size-control); padding: 0 8px; }
-  main { padding: 24px 32px 64px; display: grid; gap: 32px; }
-  h2 { margin: 0 0 12px; font: var(--text-label); color: var(--ink-muted); }
-  .grid { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
-  figure { margin: 0; background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden; }
-  figcaption { display: flex; justify-content: space-between; gap: 12px; padding: 8px 12px; border-bottom: 1px solid var(--hairline); font: var(--text-label); }
-  figcaption span { font: var(--text-caption); color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  iframe { display: block; border: 0; width: 100%; }
-  .cover iframe { width: 960px; max-width: 100%; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 16px 32px; border-bottom: 1px solid var(--hairline); }
+  header h1 { margin: 0; font: var(--text-title); white-space: nowrap; }
+  nav { max-width: 960px; margin: 0 auto; padding: 12px 32px 0; display: flex; flex-wrap: wrap; gap: 4px 16px; font: var(--text-caption); }
+  nav a { color: var(--ink-muted); text-decoration: none; }
+  nav a:hover { color: var(--ink); }
+  main { max-width: 960px; margin: 0 auto; padding: 24px 32px 96px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  h2.group { margin: 32px 0 0; font: var(--text-label); color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  section { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  h3 { margin: 0; font: var(--text-heading); }
+  h3 span { font: var(--text-caption); color: var(--ink-muted); margin-left: 8px; }
+  .rules p { margin: 0 0 6px; }
+  .rules ul { margin: 0; padding-left: 20px; color: var(--ink-muted); }
+  .rules code, .swatch code, .sample code { font: var(--text-code); }
+  .stage { padding: 24px; border-radius: var(--radius-lg); border: 1px solid var(--hairline); overflow-x: auto; }
+  .swatches, .rules.type, .rules:has(.swatch) { display: grid; gap: 8px; }
+  .swatch, .sample { display: grid; grid-template-columns: 56px 220px 1fr; gap: 12px; align-items: center; font: var(--text-caption); }
+  .sample { grid-template-columns: 1fr 140px 1fr; }
+  .chip { display: block; width: 56px; height: 24px; border-radius: var(--radius-sm); border: 1px solid var(--hairline); }
 </style>
 </head>
 <body>
 <header>
   <h1>Ouch design system</h1>
-  <label>Theme <select id="theme"></select></label>
+  <button type="button" class="o-btn o-btn--secondary o-btn--sm" onclick="var r = document.documentElement; r.dataset.theme = r.dataset.theme === 'ouch-dark' ? 'ouch-light' : 'ouch-dark'">Light / dark</button>
 </header>
-<main id="main"></main>
-<script>
-const REACT = "https://unpkg.com/react@18.3.1/umd/react.production.min.js";
-const REACT_DOM = "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js";
-const abs = (p) => new URL(p, location.href).href;
-const frames = [];
-
-function inject(html, theme) {
-  const head = `<link rel="stylesheet" href="${abs("tokens.css")}"><link rel="stylesheet" href="${abs("components/bundle.css")}">` +
-    `<script src="${REACT}"><\/script><script src="${REACT_DOM}"><\/script><script src="${abs("components/bundle.js")}"><\/script>`;
-  return html.replace("<html>", `<html data-theme="${theme}">`).replace("</head>", head + "</head>");
-}
-
-async function render(theme) {
-  await Promise.all(frames.map(async (f) => {
-    f.el.srcdoc = inject(f.html, theme);
-  }));
-}
-
-async function main() {
-  const index = await (await fetch("components/index.json")).json();
-  const select = document.getElementById("theme");
-  index.themes.forEach((t) => select.add(new Option(t, t)));
-  const groups = {};
-  for (const card of index.cards) (groups[card.group || "Cover"] ||= []).push(card);
-  const main = document.getElementById("main");
-  const order = ["Cover", ...Object.keys(groups).filter((g) => g !== "Cover")];
-  for (const name of order) {
-    const section = document.createElement("section");
-    if (name !== "Cover") section.innerHTML = `<h2>${name}</h2>`;
-    const grid = document.createElement("div");
-    grid.className = "grid" + (name === "Cover" ? " cover" : "");
-    for (const card of groups[name]) {
-      const html = await (await fetch(`components/${card.name}/preview.html`)).text();
-      const fig = document.createElement("figure");
-      if (card.width) fig.style.width = card.width + "px";
-      else if (name !== "Cover") fig.style.width = "460px";
-      fig.innerHTML = `<figcaption>${card.name}<span>${card.subtitle}</span></figcaption>`;
-      const el = document.createElement("iframe");
-      el.style.height = card.height + "px";
-      el.title = card.name;
-      fig.append(el);
-      grid.append(fig);
-      frames.push({ el, html });
-    }
-    section.append(grid);
-    main.append(section);
-  }
-  select.addEventListener("change", () => render(select.value));
-  render(select.value);
-}
-main();
-</script>
+<nav><a href="#button">Button</a> <a href="#kbd">Kbd</a> <a href="#symbol">Symbol</a> <a href="#row">Row</a> <a href="#segmented">Segmented</a> <a href="#slider">Slider</a> <a href="#switch">Switch</a> <a href="#commandmenu">CommandMenu</a> <a href="#menu">Menu</a> <a href="#surface">Surface</a> <a href="#tooltip">Tooltip</a> <a href="#coachmark">CoachMark</a> <a href="#hud">HUD</a> <a href="#layoutpicker">LayoutPicker</a> <a href="#layoutthumb">LayoutThumb</a> <a href="#workspacestrip">WorkspaceStrip</a></nav>
+<main>
+    <h2 class="group">Primitives</h2>
+    <section id="button">
+      <h3>Button</h3>
+      <div class="rules">
+        <p>Button is the one push button: primary, secondary, ghost or danger, in three sizes.</p>
+        <ul>
+          <li>One <code>primary</code> per surface; it carries the ↩ shortcut.</li>
+          <li><code>ghost</code> for Skip, Back, Close and other ways out.</li>
+          <li><code>danger</code> (on <code>danger-soft</code>) only for destructive actions, always with a verb ("Reset Shortcuts").</li>
+          <li>Icon-only buttons need <code>label</code> and a Tooltip.</li>
+        </ul>
+      </div>
+      <div class="stage o-root o-ground">
+        <div style="display: grid; gap: 14px;">
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <button type="button" class="o-btn o-btn--primary o-btn--lg">
+              Take the tour
+              <span class="o-keys">
+                <kbd aria-label="↩" class="o-kbd">
+                  <span class="o-sym" aria-hidden="true" data-sf="key.return" style="width: 12px; height: 12px;">
+                    <svg viewBox="0 0 24 24" stroke-width="2">
+                      <polyline points="9 10 4 15 9 20"></polyline>
+                      <path d="M20 4v7a4 4 0 0 1-4 4H4"></path>
+                    </svg>
+                  </span>
+                </kbd>
+              </span>
+            </button>
+            <button type="button" class="o-btn o-btn--secondary">Open Config</button>
+            <button type="button" class="o-btn o-btn--secondary">
+              <span class="o-sym" aria-hidden="true" data-sf="arrow.down.circle" style="width: 16px; height: 16px;">
+                <svg viewBox="0 0 24 24" stroke-width="1.75">
+                  <circle data-layer="1" cx="12" cy="12" r="10"></circle>
+                  <path data-layer="2" d="M12 8v8"></path>
+                  <path data-layer="3" d="m8 12 4 4 4-4"></path>
+                </svg>
+              </span>
+              Check for Updates
+            </button>
+            <button type="button" class="o-btn o-btn--ghost">Skip</button>
+            <button type="button" class="o-btn o-btn--danger">
+              <span class="o-sym" aria-hidden="true" data-sf="arrow.uturn.backward" style="width: 16px; height: 16px;">
+                <svg viewBox="0 0 24 24" stroke-width="1.75">
+                  <path data-layer="1" d="M9 14 4 9l5-5"></path>
+                  <path data-layer="2" d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"></path>
+                </svg>
+              </span>
+              Reset Shortcuts
+            </button>
+            <button type="button" class="o-btn o-btn--secondary o-btn--icon" aria-label="More">
+              <span class="o-sym" aria-hidden="true" data-sf="ellipsis" style="width: 16px; height: 16px;">
+                <svg viewBox="0 0 24 24" stroke-width="1.75">
+                  <circle data-layer="1" cx="12" cy="12" r="1"></circle>
+                  <circle data-layer="2" cx="19" cy="12" r="1"></circle>
+                  <circle data-layer="3" cx="5" cy="12" r="1"></circle>
+                </svg>
+              </span>
+            </button>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button type="button" class="o-btn o-btn--primary o-btn--sm">Next</button>
+            <button type="button" class="o-btn o-btn--ghost o-btn--sm">Back</button>
+            <button type="button" class="o-btn o-btn--secondary" disabled="">Disabled</button>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section id="kbd">
+      <h3>Kbd <span>Press H</span></h3>
+      <div class="rules">
+        <p>Kbd renders keycaps for a shortcut, a chord, or a sequence of chords.</p>
+        <ul>
+          <li>Small keycaps (<code>size-kbd</code>, 20px) for hints in tooltips, labels and buttons; menu rows use plain <code>kbd</code> text instead.</li>
+          <li>Large keycaps (40px, <code>surface</code> with a <code>surface-sunken</code> lip) only inside coach marks, where the real key press sinks them 2px onto <code>tint</code>.</li>
+          <li>Order modifiers the macOS way: ⌃ ⌥ ⇧ ⌘, then the key.</li>
+        </ul>
+      </div>
+      <div class="stage o-root o-ground">
+        <div style="display: flex; gap: 28px; align-items: center; flex-wrap: wrap;">
+          <span class="o-keys">
+            <kbd aria-label="H" class="o-kbd o-kbd--lg">H</kbd>
+          </span>
+          <span class="o-keys">
+            <kbd aria-label="⌘" class="o-kbd o-kbd--lg">
+              <span class="o-sym" aria-hidden="true" data-sf="key.cmd" style="width: 18px; height: 18px;">
+                <svg viewBox="0 0 24 24" stroke-width="1.75">
+                  <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"></path>
+                </svg>
+              </span>
+            </kbd>
+            <kbd aria-label="⇪" class="o-kbd o-kbd--lg">
+              <span class="o-sym" aria-hidden="true" data-sf="key.caps" style="width: 18px; height: 18px;">
+                <svg viewBox="0 0 24 24" stroke-width="1.75">
+                  <path d="M9 19h6"></path>
+                  <path d="M9 15v-3H5l7-7 7 7h-4v3H9z"></path>
+                </svg>
+              </span>
+            </kbd>
+          </span>
+          <span class="o-keys">
+            <kbd aria-label="⌘" class="o-kbd">
+              <span class="o-sym" aria-hidden="true" data-sf="key.cmd" style="width: 12px; height: 12px;">
+                <svg viewBox="0 0 24 24" stroke-width="2">
+                  <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"></path>
+                </svg>
+              </span>
+            </kbd>
+            <kbd aria-label="K" class="o-kbd">K</kbd>
+          </span>
+          <span class="o-keys">
+            <kbd aria-label="⌥" class="o-kbd">
+              <span class="o-sym" aria-hidden="true" data-sf="key.opt" style="width: 12px; height: 12px;">
+                <svg viewBox="0 0 24 24" stroke-width="2">
+                  <path d="M3 3h6l6 18h6"></path>
+                  <path d="M14 3h7"></path>
+                </svg>
+              </span>
+            </kbd>
+            <kbd aria-label="⇧" class="o-kbd">
+              <span class="o-sym" aria-hidden="true" data-sf="key.shift" style="width: 12px; height: 12px;">
+                <svg viewBox="0 0 24 24" stroke-width="2">
+                  <path d="M9 18v-6H5l7-7 7 7h-4v6H9z"></path>
+                </svg>
+              </span>
+            </kbd>
+            <kbd aria-label="H" class="o-kbd">H</kbd>
+          </span>
+          <span class="o-keys o-keys--seq">
+            <span class="o-keys">
+              <kbd aria-label="⌘" class="o-kbd">
+                <span class="o-sym" aria-hidden="true" data-sf="key.cmd" style="width: 12px; height: 12px;">
+                  <svg viewBox="0 0 24 24" stroke-width="2">
+                    <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"></path>
+                  </svg>
+                </span>
+              </kbd>
+              <kbd aria-label="⇪" class="o-kbd">
+                <span class="o-sym" aria-hidden="true" data-sf="key.caps" style="width: 12px; height: 12px;">
+                  <svg viewBox="0 0 24 24" stroke-width="2">
+                    <path d="M9 19h6"></path>
+                    <path d="M9 15v-3H5l7-7 7 7h-4v3H9z"></path>
+                  </svg>
+                </span>
+              </kbd>
+            </span>
+            <span class="o-keys__then">then</span>
+            <span class="o-keys">
+              <kbd aria-label="N" class="o-kbd">N</kbd>
+            </span>
+          </span>
+        </div>
+      </div>
+    </section>
+    <section id="symbol">
+      <h3>Symbol <span>SF Symbols, driven by effect. Click to replay.</span></h3>
+      <div class="rules">
+        <p>Symbol draws an SF Symbol by its real name and plays one of its effects.</p>
+        <ul>
+          <li>Discrete effects (<code>bounce</code>, <code>wiggle</code>, <code>rotate</code>) report that something just happened; bind them to a counter.</li>
+          <li>Indefinite effects (<code>pulse</code>, <code>breathe</code>, <code>variable</code>) report a state that lasts; switch them off when it ends.</li>
+          <li><code>replace</code> is for one control changing state (tiling on/off), never for unrelated icons.</li>
+          <li>Don't animate a symbol on every hover except <code>scale</code> in menu rows.</li>
+        </ul>
+      </div>
+      <div class="stage o-root o-ground">
+        <div style="display: grid; grid-template-columns: repeat(3, max-content); gap: 4px 24px;">
+          <button class="o-btn o-btn--ghost" style="height: auto; padding: 10px 12px; justify-content: flex-start; gap: 14px; border-radius: 14px; color: var(--ink);">
+            <span style="color: var(--accent-ink); display: inline-flex;">
+              <span class="o-sym" aria-hidden="true" data-sf="arrow.down.circle" style="width: 26px; height: 26px;">
+                <svg viewBox="0 0 24 24" stroke-width="1.75">
+                  <circle data-layer="1" cx="12" cy="12" r="10"></circle>
+                  <path data-layer="2" d="M12 8v8"></path>
+                  <path data-layer="3" d="m8 12 4 4 4-4"></path>
+                </svg>
+              </span>
+            </span>
+            <span style="display: grid; text-align: left;">
+              <span style="font: 500 12px/16px var(--font-mono);">.bounce</span>
+              <span class="o-caption" style="font-weight: 400;">Action landed</span>
+            </span>
+          </button>
+          <button class="o-btn o-btn--ghost" style="height: auto; padding: 10px 12px; justify-content: flex-start; gap: 14px; border-radius: 14px; color: var(--ink);">
+            <span style="color: var(--accent-ink); display: inline-flex;">
+              <span class="o-sym" aria-hidden="true" data-sf="exclamationmark.triangle" style="width: 26px; height: 26px;">
+                <svg viewBox="0 0 24 24" stroke-width="1.75">
+                  <path data-layer="1" d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path>
+                  <path data-layer="2" d="M12 9v4"></path>
+                  <path data-layer="3" d="M12 17h.01"></path>
+                </svg>
+              </span>
+            </span>
+            <span style="display: grid; text-align: left;">
+              <span style="font: 500 12px/16px var(--font-mono);">.wiggle</span>
+              <span class="o-caption" style="font-weight: 400;">Something refused</span>
+            </span>
+          </button>
+          <button class="o-btn o-btn--ghost" style="height: auto; padding: 10px 12px; justify-content: flex-start; gap: 14px; border-radius: 14px; color: var(--ink);">
+            <span style="color: var(--accent-ink); display: inline-flex;">
+              <span class="o-sym" aria-hidden="true" data-sf="arrow.triangle.2.circlepath" style="width: 26px; height: 26px;">
+                <svg viewBox="0 0 24 24" stroke-width="1.75">
+                  <path data-layer="1" d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+                  <path data-layer="2" d="M21 3v5h-5"></path>
+                  <path data-layer="3" d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+                  <path data-layer="4" d="M8 16H3v5"></path>
+                </svg>
+              </span>
+            </span>
+            <span style="display: grid; text-align: left;">
+              <span style="font: 500 12px/16px var(--font-mono);">.rotate</span>
+              <span class="o-caption" style="font-weight: 400;">Retile, reload</span>
+            </span>
+          </button>
+          <button class="o-btn o-btn--ghost" style="height: auto; padding: 10px 12px; justify-content: flex-start; gap: 14px; border-radius: 14px; color: var(--ink);">
+            <span style="color: var(--accent-ink); display: inline-flex;">
+              <span class="o-sym o-fx-variable" aria-hidden="true" data-sf="rectangle.split.3x1" style="width: 26px; height: 26px;">
+                <svg viewBox="0 0 24 24" stroke-width="1.75">
+                  <rect data-layer="1" x="2.5" y="4" width="5.4" height="16" rx="1.6"></rect>
+                  <rect data-layer="2" x="9.3" y="4" width="5.4" height="16" rx="1.6"></rect>
+                  <rect data-layer="3" x="16.1" y="4" width="5.4" height="16" rx="1.6"></rect>
+                </svg>
+              </span>
+            </span>
+            <span style="display: grid; text-align: left;">
+              <span style="font: 500 12px/16px var(--font-mono);">.variableColor</span>
+              <span class="o-caption" style="font-weight: 400;">Windows tiling</span>
+            </span>
+          </button>
+          <button class="o-btn o-btn--ghost" style="height: auto; padding: 10px 12px; justify-content: flex-start; gap: 14px; border-radius: 14px; color: var(--ink);">
+            <span style="color: var(--accent-ink); display: inline-flex;">
+              <span class="o-sym o-fx-pulse" aria-hidden="true" data-sf="cursorarrow.rays" style="width: 26px; height: 26px;">
+                <svg viewBox="0 0 24 24" stroke-width="1.75">
+                  <path data-layer="1" d="M14 4.1 12 6"></path>
+                  <path data-layer="2" d="m5.1 8-2.9-.8"></path>
+                  <path data-layer="3" d="m6 12-1.9 2"></path>
+                  <path data-layer="4" d="M7.2 2.2 8 5.1"></path>
+                  <path data-layer="5" d="M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074z"></path>
+                </svg>
+              </span>
+            </span>
+            <span style="display: grid; text-align: left;">
+              <span style="font: 500 12px/16px var(--font-mono);">.pulse</span>
+              <span class="o-caption" style="font-weight: 400;">Waiting for a key</span>
+            </span>
+          </button>
+          <button class="o-btn o-btn--ghost" style="height: auto; padding: 10px 12px; justify-content: flex-start; gap: 14px; border-radius: 14px; color: var(--ink);">
+            <span style="color: var(--accent-ink); display: inline-flex;">
+              <span class="o-sym o-fx-breathe" aria-hidden="true" data-sf="lightbulb" style="width: 26px; height: 26px;">
+                <svg viewBox="0 0 24 24" stroke-width="1.75">
+                  <path data-layer="1" d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"></path>
+                  <path data-layer="2" d="M9 18h6"></path>
+                  <path data-layer="3" d="M10 22h4"></path>
+                </svg>
+              </span>
+            </span>
+            <span style="display: grid; text-align: left;">
+              <span style="font: 500 12px/16px var(--font-mono);">.breathe</span>
+              <span class="o-caption" style="font-weight: 400;">Tip available</span>
+            </span>
+          </button>
+          <button class="o-btn o-btn--ghost" style="height: auto; padding: 10px 12px; justify-content: flex-start; gap: 14px; border-radius: 14px; color: var(--ink);">
+            <span style="color: var(--accent-ink); display: inline-flex;">
+              <span class="o-sym" aria-hidden="true" data-sf="checkmark.circle.fill" style="width: 26px; height: 26px;">
+                <svg viewBox="0 0 24 24" stroke-width="1.75">
+                  <circle cx="12" cy="12" r="10" class="fill"></circle>
+                  <path d="m8.5 12 2.5 2.5 4.5-5" class="knock"></path>
+                </svg>
+              </span>
+            </span>
+            <span style="display: grid; text-align: left;">
+              <span style="font: 500 12px/16px var(--font-mono);">.replace</span>
+              <span class="o-caption" style="font-weight: 400;">State flips</span>
+            </span>
+          </button>
+          <button class="o-btn o-btn--ghost" style="height: auto; padding: 10px 12px; justify-content: flex-start; gap: 14px; border-radius: 14px; color: var(--ink);">
+            <span style="color: var(--accent-ink); display: inline-flex;">
+              <span class="o-sym" aria-hidden="true" data-sf="checkmark" style="width: 26px; height: 26px;">
+                <svg viewBox="0 0 24 24" stroke-width="1.75">
+                  <path data-layer="1" d="M20 6 9 17l-5-5"></path>
+                </svg>
+              </span>
+            </span>
+            <span style="display: grid; text-align: left;">
+              <span style="font: 500 12px/16px var(--font-mono);">.drawOn</span>
+              <span class="o-caption" style="font-weight: 400;">Checkmarks</span>
+            </span>
+          </button>
+          <button class="o-btn o-btn--ghost" style="height: auto; padding: 10px 12px; justify-content: flex-start; gap: 14px; border-radius: 14px; color: var(--ink);">
+            <span style="color: var(--accent-ink); display: inline-flex;">
+              <span class="o-sym" aria-hidden="true" data-sf="sparkles" style="width: 26px; height: 26px;">
+                <svg viewBox="0 0 24 24" stroke-width="1.75">
+                  <path data-layer="1" d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path>
+                  <path data-layer="2" d="M20 3v4"></path>
+                  <path data-layer="3" d="M22 5h-4"></path>
+                  <path data-layer="4" d="M4 17v2"></path>
+                  <path data-layer="5" d="M5 18H3"></path>
+                </svg>
+              </span>
+            </span>
+            <span style="display: grid; text-align: left;">
+              <span style="font: 500 12px/16px var(--font-mono);">.appear</span>
+              <span class="o-caption" style="font-weight: 400;">Something new</span>
+            </span>
+          </button>
+        </div>
+      </div>
+    </section>
+    <h2 class="group">Controls</h2>
+    <section id="row">
+      <h3>Row <span>Open list: no box, hairlines between rows</span></h3>
+      <div class="rules">
+        <p>Row is one line of a settings Group: optional symbol, label, description, and a control on the right.</p>
+        <ul>
+          <li>Labels are sentence case and name the effect ("Focus follows mouse").</li>
+          <li>Put units and current values in the description, not the label.</li>
+        </ul>
+      </div>
+      <div class="stage o-root o-ground">
+        <div style="max-width: 560px;">
+          <section class="o-group">
+            <h3 class="o-group__title">Behavior</h3>
+            <div class="o-group__box">
+              <div class="o-row">
+                <span class="o-row__lead">
+                  <span class="o-sym" aria-hidden="true" data-sf="cursorarrow" style="width: 18px; height: 18px;">
+                    <svg viewBox="0 0 24 24" stroke-width="1.75">
+                      <path data-layer="1" d="M4.037 4.688a.495.495 0 0 1 .651-.651l16 6.5a.5.5 0 0 1-.063.947l-6.124 1.58a2 2 0 0 0-1.438 1.435l-1.579 6.126a.5.5 0 0 1-.947.063z"></path>
+                    </svg>
+                  </span>
+                </span>
+                <div class="o-row__text">
+                  <div class="o-row__label">Focus follows mouse</div>
+                  <div class="o-row__desc">Hovering a window focuses it</div>
+                </div>
+                <div class="o-row__ctl">
+                  <button type="button" role="switch" aria-checked="false" aria-label="Focus follows mouse" class="o-switch"></button>
+                </div>
+              </div>
+              <div class="o-row">
+                <span class="o-row__lead">
+                  <span class="o-sym" aria-hidden="true" data-sf="macwindow.on.rectangle" style="width: 18px; height: 18px;">
+                    <svg viewBox="0 0 24 24" stroke-width="1.75">
+                      <path data-layer="1" d="m16.02 12 5.48 3.13a1 1 0 0 1 0 1.74L13 21.74a2 2 0 0 1-2 0l-8.5-4.87a1 1 0 0 1 0-1.74L7.98 12"></path>
+                      <path data-layer="2" d="M13 13.74a2 2 0 0 1-2 0L2.5 8.87a1 1 0 0 1 0-1.74L11 2.26a2 2 0 0 1 2 0l8.5 4.87a1 1 0 0 1 0 1.74Z"></path>
+                    </svg>
+                  </span>
+                </span>
+                <div class="o-row__text">
+                  <div class="o-row__label">New windows go to main</div>
+                  <div class="o-row__desc">Instead of the end of the stack</div>
+                </div>
+                <div class="o-row__ctl">
+                  <button type="button" role="switch" aria-checked="true" aria-label="New windows to main" class="o-switch is-on"></button>
+                </div>
+              </div>
+              <div class="o-row">
+                <span class="o-row__lead">
+                  <span class="o-sym" aria-hidden="true" data-sf="wand.and.stars" style="width: 18px; height: 18px;">
+                    <svg viewBox="0 0 24 24" stroke-width="1.75">
+                      <path data-layer="1" d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"></path>
+                      <path data-layer="2" d="m14 7 3 3"></path>
+                      <path data-layer="3" d="M5 6v4"></path>
+                      <path data-layer="4" d="M19 14v4"></path>
+                      <path data-layer="5" d="M10 2v2"></path>
+                      <path data-layer="6" d="M7 8H3"></path>
+                      <path data-layer="7" d="M21 16h-4"></path>
+                      <path data-layer="8" d="M11 3H9"></path>
+                    </svg>
+                  </span>
+                </span>
+                <div class="o-row__text">
+                  <div class="o-row__label">Animation curve</div>
+                </div>
+                <div class="o-row__ctl">
+                  <div class="o-seg" role="radiogroup">
+                    <span class="o-seg__thumb" style="left: 58px; width: 63px;"></span>
+                    <button type="button" role="radio" aria-checked="false" class="o-seg__item">Ease</button>
+                    <button type="button" role="radio" aria-checked="true" class="o-seg__item is-on">Spring</button>
+                    <button type="button" role="radio" aria-checked="false" class="o-seg__item">Off</button>
+                  </div>
+                </div>
+              </div>
+              <div class="o-row">
+                <span class="o-row__lead">
+                  <span class="o-sym" aria-hidden="true" data-sf="keyboard" style="width: 18px; height: 18px;">
+                    <svg viewBox="0 0 24 24" stroke-width="1.75">
+                      <path data-layer="1" d="M10 8h.01"></path>
+                      <path data-layer="2" d="M12 12h.01"></path>
+                      <path data-layer="3" d="M14 8h.01"></path>
+                      <path data-layer="4" d="M16 12h.01"></path>
+                      <path data-layer="5" d="M18 8h.01"></path>
+                      <path data-layer="6" d="M6 8h.01"></path>
+                      <path data-layer="7" d="M7 16h10"></path>
+                      <path data-layer="8" d="M8 12h.01"></path>
+                      <rect data-layer="9" width="20" height="16" x="2" y="4" rx="2"></rect>
+                    </svg>
+                  </span>
+                </span>
+                <div class="o-row__text">
+                  <div class="o-row__label">Enter window mode</div>
+                </div>
+                <div class="o-row__ctl">
+                  <span class="o-keys">
+                    <kbd aria-label="⌘" class="o-kbd">
+                      <span class="o-sym" aria-hidden="true" data-sf="key.cmd" style="width: 12px; height: 12px;">
+                        <svg viewBox="0 0 24 24" stroke-width="2">
+                          <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"></path>
+                        </svg>
+                      </span>
+                    </kbd>
+                    <kbd aria-label="⇪" class="o-kbd">
+                      <span class="o-sym" aria-hidden="true" data-sf="key.caps" style="width: 12px; height: 12px;">
+                        <svg viewBox="0 0 24 24" stroke-width="2">
+                          <path d="M9 19h6"></path>
+                          <path d="M9 15v-3H5l7-7 7 7h-4v3H9z"></path>
+                        </svg>
+                      </span>
+                    </kbd>
+                  </span>
+                </div>
+              </div>
+            </div>
+            <p class="o-group__foot">Applies to new windows only.</p>
+          </section>
+        </div>
+      </div>
+    </section>
+    <section id="segmented">
+      <h3>Segmented</h3>
+      <div class="rules">
+        <p>Segmented picks one of two to four options with a sliding thumb.</p>
+        <ul>
+          <li>More than four options: use a Menu submenu or the layout thumbnail grid.</li>
+        </ul>
+      </div>
+      <div class="stage o-root o-ground">
+        <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+          <div class="o-seg" role="radiogroup" aria-label="Curve">
+            <span class="o-seg__thumb" style="left: 84px; width: 63px;"></span>
+            <button type="button" role="radio" aria-checked="false" class="o-seg__item">Ease Out</button>
+            <button type="button" role="radio" aria-checked="true" class="o-seg__item is-on">Spring</button>
+            <button type="button" role="radio" aria-checked="false" class="o-seg__item">Bounce</button>
+            <button type="button" role="radio" aria-checked="false" class="o-seg__item">Linear</button>
+          </div>
+          <div class="o-seg" role="radiogroup" aria-label="Modifier">
+            <span class="o-seg__thumb" style="left: 3px; width: 86px;"></span>
+            <button type="button" role="radio" aria-checked="true" class="o-seg__item is-on">
+              <span class="o-sym" aria-hidden="true" data-sf="option" style="width: 14px; height: 14px;">
+                <svg viewBox="0 0 24 24" stroke-width="1.75">
+                  <path data-layer="1" d="M3 3h6l6 18h6"></path>
+                  <path data-layer="2" d="M14 3h7"></path>
+                </svg>
+              </span>
+              Option
+            </button>
+            <button type="button" role="radio" aria-checked="false" class="o-seg__item">
+              <span class="o-sym" aria-hidden="true" data-sf="command" style="width: 14px; height: 14px;">
+                <svg viewBox="0 0 24 24" stroke-width="1.75">
+                  <path data-layer="1" d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"></path>
+                </svg>
+              </span>
+              Command
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section id="slider">
+      <h3>Slider <span>Drag, hold Option for fine control, double-click to reset</span></h3>
+      <div class="rules">
+        <p>Slider sets a number by dragging, in two shapes: <code>line</code> (thin track and thumb) and <code>bar</code> (a Control Center style pill whose fill is the indicator).</p>
+        <ul>
+          <li><strong>Tap to jump, drag to adjust.</strong> A press without moving sends the value to the press point and springs there, in both shapes. Dragging a line follows the pointer; dragging a bar moves relative to where you grabbed it, so grabbing never makes it jump.</li>
+          <li><strong>Smooth under the hand.</strong> While dragging, the fill follows the pointer continuously and only the value rounds to <code>step</code>. A bar keeps its size while held: its track darkens a touch, its edge handle grows, and the value pops when it lands on a detent; the icon bounces at either end.</li>
+          <li><strong>No ring on click.</strong> Pressing a slider focuses it without a focus ring, so arrow keys still work; the ring and value bubble show only when focus arrives from the keyboard.</li>
+          <li><strong>Hold ⌥ while dragging</strong> to move at a tenth of the speed for fine values.</li>
+          <li><strong>Detents.</strong> Within 2.5% of a tick the value snaps to it and the thumb gives a small spring bump. Moving to a value springs with a little overshoot, but landing on a tick (by tap or release) eases in without overshoot, so the handle settles exactly on the mark.</li>
+          <li><strong>Rubber band.</strong> Dragging past either end stretches the control a few pixels (and thins it slightly) and springs back on release.</li>
+          <li><strong>Double-click resets</strong> to the default. Arrow keys step (⇧ for ×10), Page Up/Down move a tenth, Home/End jump to the ends.</li>
+          <li>While dragging, the line's thumb grows, shows an <code>accent</code> core and an inverted value bubble; the bar's label and value switch from <code>ink</code> to <code>on-accent</code> exactly where the fill passes under them.</li>
+          <li>Use <code>line</code> inside settings rows and <code>bar</code> for a stack of related values (spring bounce, stiffness) where the label belongs inside the control.</li>
+        </ul>
+      </div>
+      <div class="stage o-root o-ground">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 28px 48px; align-items: start; padding-top: 18px;">
+          <div style="display: grid; gap: 26px;">
+            <div class="o-slider">
+              <div class="o-slider__head">
+                <span class="o-slider__label">Window gap</span>
+                <span class="o-slider__value">12 px</span>
+              </div>
+              <div role="slider" tabindex="0" aria-label="Window gap" aria-valuemin="0" aria-valuemax="40" aria-valuenow="12" aria-valuetext="12 px" title="Double-click to reset · hold ⌥ for fine control" class="o-slider__track" style="--f: 0.3; --sx: 1; --sy: 1; transform-origin: left center;">
+                <span class="o-slider__rail"></span>
+                <span class="o-slider__fill"></span>
+                <i class="o-slider__tick is-passed" style="left: 20%;"></i>
+                <i class="o-slider__tick" style="left: 40%;"></i>
+                <i class="o-slider__tick" style="left: 60%;"></i>
+                <i class="o-slider__tick" style="left: 80%;"></i>
+                <span class="o-slider__thumb">
+                  <span class="o-slider__bubble">12 px</span>
+                </span>
+              </div>
+            </div>
+            <div class="o-slider is-exact">
+              <div class="o-slider__head">
+                <span class="o-slider__label">Split ratio</span>
+                <span class="o-slider__value">50 / 50</span>
+              </div>
+              <div role="slider" tabindex="0" aria-label="Split ratio" aria-valuemin="20" aria-valuemax="80" aria-valuenow="50" aria-valuetext="50 / 50" title="Double-click to reset · hold ⌥ for fine control" class="o-slider__track" style="--f: 0.5; --sx: 1; --sy: 1; transform-origin: left center;">
+                <span class="o-slider__rail"></span>
+                <span class="o-slider__fill"></span>
+                <i class="o-slider__tick is-passed" style="left: 50%;"></i>
+                <span class="o-slider__thumb">
+                  <span class="o-slider__bubble">50 / 50</span>
+                </span>
+              </div>
+            </div>
+            <div class="o-slider">
+              <div class="o-slider__head">
+                <span class="o-slider__label">Duration</span>
+                <span class="o-slider__value">0.25 s</span>
+              </div>
+              <div role="slider" tabindex="0" aria-label="Duration" aria-valuemin="0.1" aria-valuemax="1" aria-valuenow="0.25" aria-valuetext="0.25 s" title="Double-click to reset · hold ⌥ for fine control" class="o-slider__track" style="--f: 0.16666666666666666; --sx: 1; --sy: 1; transform-origin: left center;">
+                <span class="o-slider__rail"></span>
+                <span class="o-slider__fill"></span>
+                <span class="o-slider__thumb">
+                  <span class="o-slider__bubble">0.25 s</span>
+                </span>
+              </div>
+            </div>
+          </div>
+          <div style="display: grid; gap: 12px;">
+            <div role="slider" tabindex="0" aria-label="Gap" aria-valuemin="0" aria-valuemax="40" aria-valuenow="12" aria-valuetext="12 px" title="Double-click to reset · hold ⌥ for fine control" class="o-bar" style="--f: 0.3; --sx: 1; --sy: 1; transform-origin: left center;">
+              <span class="o-bar__fill"></span>
+              <span class="o-bar__content is-off" aria-hidden="false">
+                <span class="o-sym" aria-hidden="true" data-sf="square.dashed" style="width: 16px; height: 16px;">
+                  <svg viewBox="0 0 24 24" stroke-width="1.75">
+                    <path data-layer="1" d="M5 3a2 2 0 0 0-2 2"></path>
+                    <path data-layer="2" d="M19 3a2 2 0 0 1 2 2"></path>
+                    <path data-layer="3" d="M21 19a2 2 0 0 1-2 2"></path>
+                    <path data-layer="4" d="M5 21a2 2 0 0 1-2-2"></path>
+                    <path data-layer="5" d="M9 3h1"></path>
+                    <path data-layer="6" d="M9 21h1"></path>
+                    <path data-layer="7" d="M14 3h1"></path>
+                    <path data-layer="8" d="M14 21h1"></path>
+                    <path data-layer="9" d="M3 9v1"></path>
+                    <path data-layer="10" d="M21 9v1"></path>
+                    <path data-layer="11" d="M3 14v1"></path>
+                    <path data-layer="12" d="M21 14v1"></path>
+                  </svg>
+                </span>
+                <span class="o-bar__label">Gap</span>
+                <span class="o-bar__value">12 px</span>
+              </span>
+              <span class="o-bar__content is-on" aria-hidden="true">
+                <span class="o-sym" aria-hidden="true" data-sf="square.dashed" style="width: 16px; height: 16px;">
+                  <svg viewBox="0 0 24 24" stroke-width="1.75">
+                    <path data-layer="1" d="M5 3a2 2 0 0 0-2 2"></path>
+                    <path data-layer="2" d="M19 3a2 2 0 0 1 2 2"></path>
+                    <path data-layer="3" d="M21 19a2 2 0 0 1-2 2"></path>
+                    <path data-layer="4" d="M5 21a2 2 0 0 1-2-2"></path>
+                    <path data-layer="5" d="M9 3h1"></path>
+                    <path data-layer="6" d="M9 21h1"></path>
+                    <path data-layer="7" d="M14 3h1"></path>
+                    <path data-layer="8" d="M14 21h1"></path>
+                    <path data-layer="9" d="M3 9v1"></path>
+                    <path data-layer="10" d="M21 9v1"></path>
+                    <path data-layer="11" d="M3 14v1"></path>
+                    <path data-layer="12" d="M21 14v1"></path>
+                  </svg>
+                </span>
+                <span class="o-bar__label">Gap</span>
+                <span class="o-bar__value">12 px</span>
+              </span>
+            </div>
+            <div role="slider" tabindex="0" aria-label="Speed" aria-valuemin="0" aria-valuemax="100" aria-valuenow="64" aria-valuetext="64%" title="Double-click to reset · hold ⌥ for fine control" class="o-bar" style="--f: 0.64; --sx: 1; --sy: 1; transform-origin: left center;">
+              <span class="o-bar__fill"></span>
+              <i class="o-bar__tick is-passed" style="left: 50%;"></i>
+              <span class="o-bar__content is-off" aria-hidden="false">
+                <span class="o-sym" aria-hidden="true" data-sf="wand.and.stars" style="width: 16px; height: 16px;">
+                  <svg viewBox="0 0 24 24" stroke-width="1.75">
+                    <path data-layer="1" d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"></path>
+                    <path data-layer="2" d="m14 7 3 3"></path>
+                    <path data-layer="3" d="M5 6v4"></path>
+                    <path data-layer="4" d="M19 14v4"></path>
+                    <path data-layer="5" d="M10 2v2"></path>
+                    <path data-layer="6" d="M7 8H3"></path>
+                    <path data-layer="7" d="M21 16h-4"></path>
+                    <path data-layer="8" d="M11 3H9"></path>
+                  </svg>
+                </span>
+                <span class="o-bar__label">Speed</span>
+                <span class="o-bar__value">64%</span>
+              </span>
+              <span class="o-bar__content is-on" aria-hidden="true">
+                <span class="o-sym" aria-hidden="true" data-sf="wand.and.stars" style="width: 16px; height: 16px;">
+                  <svg viewBox="0 0 24 24" stroke-width="1.75">
+                    <path data-layer="1" d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"></path>
+                    <path data-layer="2" d="m14 7 3 3"></path>
+                    <path data-layer="3" d="M5 6v4"></path>
+                    <path data-layer="4" d="M19 14v4"></path>
+                    <path data-layer="5" d="M10 2v2"></path>
+                    <path data-layer="6" d="M7 8H3"></path>
+                    <path data-layer="7" d="M21 16h-4"></path>
+                    <path data-layer="8" d="M11 3H9"></path>
+                  </svg>
+                </span>
+                <span class="o-bar__label">Speed</span>
+                <span class="o-bar__value">64%</span>
+              </span>
+            </div>
+            <div role="slider" tabindex="0" aria-label="Bounce" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0.3" aria-valuetext="0.30" title="Double-click to reset · hold ⌥ for fine control" class="o-bar" style="--f: 0.3; --sx: 1; --sy: 1; transform-origin: left center;">
+              <span class="o-bar__fill"></span>
+              <span class="o-bar__content is-off" aria-hidden="false">
+                <span class="o-sym" aria-hidden="true" data-sf="sparkles" style="width: 16px; height: 16px;">
+                  <svg viewBox="0 0 24 24" stroke-width="1.75">
+                    <path data-layer="1" d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path>
+                    <path data-layer="2" d="M20 3v4"></path>
+                    <path data-layer="3" d="M22 5h-4"></path>
+                    <path data-layer="4" d="M4 17v2"></path>
+                    <path data-layer="5" d="M5 18H3"></path>
+                  </svg>
+                </span>
+                <span class="o-bar__label">Bounce</span>
+                <span class="o-bar__value">0.30</span>
+              </span>
+              <span class="o-bar__content is-on" aria-hidden="true">
+                <span class="o-sym" aria-hidden="true" data-sf="sparkles" style="width: 16px; height: 16px;">
+                  <svg viewBox="0 0 24 24" stroke-width="1.75">
+                    <path data-layer="1" d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path>
+                    <path data-layer="2" d="M20 3v4"></path>
+                    <path data-layer="3" d="M22 5h-4"></path>
+                    <path data-layer="4" d="M4 17v2"></path>
+                    <path data-layer="5" d="M5 18H3"></path>
+                  </svg>
+                </span>
+                <span class="o-bar__label">Bounce</span>
+                <span class="o-bar__value">0.30</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section id="switch">
+      <h3>Switch</h3>
+      <div class="rules">
+        <p>Switch toggles one setting on or off immediately.</p>
+        <p>Click, Space or Return toggles it. The thumb can also be dragged: it follows the pointer, the track colour flips as it crosses the middle, and on release it springs to the nearer side.</p>
+        <ul>
+          <li>Use for settings that apply instantly. For choices of 2–4 options use Segmented.</li>
+        </ul>
+      </div>
+      <div class="stage o-root o-ground">
+        <div style="display: flex; gap: 20px; align-items: center;">
+          <button type="button" role="switch" aria-checked="true" aria-label="Tiling" class="o-switch is-on"></button>
+          <button type="button" role="switch" aria-checked="false" aria-label="Focus follows mouse" class="o-switch"></button>
+        </div>
+      </div>
+    </section>
+    <h2 class="group">Surfaces</h2>
+    <section id="commandmenu">
+      <h3>CommandMenu <span>The menu, flattened by a query</span></h3>
+      <div class="rules">
+        <p>CommandMenu is a Menu that opens with the search field first and is wider (360px).</p>
+        <ul>
+          <li>Results group under their top-level parent and show the rest of the path as a breadcrumb.</li>
+          <li>Use it for ⌘K in Settings and the menu bar; the data is shared with the Menu so the two never disagree.</li>
+        </ul>
+      </div>
+      <div class="stage o-root o-ground">
+        <div class="o-root" style="position: relative; display: inline-block;">
+          <div tabindex="-1" role="menu" class="o-surface o-surface--md o-menu" style="width: 380px;">
+            <div class="o-menu__search">
+              <span class="o-sym" aria-hidden="true" data-sf="magnifyingglass" style="width: 15px; height: 15px;">
+                <svg viewBox="0 0 24 24" stroke-width="1.75">
+                  <circle data-layer="1" cx="11" cy="11" r="8"></circle>
+                  <path data-layer="2" d="m21 21-4.3-4.3"></path>
+                </svg>
+              </span>
+              <input placeholder="Type a command or search…" aria-label="Search commands" value="work"></input>
+              <span class="o-keys">
+                <kbd aria-label="⌘" class="o-kbd">
+                  <span class="o-sym" aria-hidden="true" data-sf="key.cmd" style="width: 12px; height: 12px;">
+                    <svg viewBox="0 0 24 24" stroke-width="2">
+                      <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"></path>
+                    </svg>
+                  </span>
+                </kbd>
+                <kbd aria-label="K" class="o-kbd">K</kbd>
+              </span>
+            </div>
+            <div class="o-menu__label">Window</div>
+            <div class="o-menu__slot">
+              <div role="menuitem" class="o-menu__item is-hi">
+                <span class="o-menu__lead"></span>
+                <span class="o-menu__text">
+                  Workspace 1
+                  <span class="o-menu__crumb">Send to Workspace</span>
+                </span>
+                <span class="o-menu__sc">
+                  <span class="o-sc">
+                    <span class="o-sym" role="img" aria-label="⇧" data-sf="key.shift" style="width: 12px; height: 12px;">
+                      <svg viewBox="0 0 24 24" stroke-width="2">
+                        <path d="M9 18v-6H5l7-7 7 7h-4v6H9z"></path>
+                      </svg>
+                    </span>
+                    <span>1</span>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div class="o-menu__slot">
+              <div role="menuitem" class="o-menu__item">
+                <span class="o-menu__lead"></span>
+                <span class="o-menu__text">
+                  Workspace 2
+                  <span class="o-menu__crumb">Send to Workspace</span>
+                </span>
+                <span class="o-menu__sc">
+                  <span class="o-sc">
+                    <span class="o-sym" role="img" aria-label="⇧" data-sf="key.shift" style="width: 12px; height: 12px;">
+                      <svg viewBox="0 0 24 24" stroke-width="2">
+                        <path d="M9 18v-6H5l7-7 7 7h-4v6H9z"></path>
+                      </svg>
+                    </span>
+                    <span>2</span>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div class="o-menu__slot">
+              <div role="menuitem" class="o-menu__item">
+                <span class="o-menu__lead"></span>
+                <span class="o-menu__text">
+                  Workspace 3
+                  <span class="o-menu__crumb">Send to Workspace</span>
+                </span>
+                <span class="o-menu__sc">
+                  <span class="o-sc">
+                    <span class="o-sym" role="img" aria-label="⇧" data-sf="key.shift" style="width: 12px; height: 12px;">
+                      <svg viewBox="0 0 24 24" stroke-width="2">
+                        <path d="M9 18v-6H5l7-7 7 7h-4v6H9z"></path>
+                      </svg>
+                    </span>
+                    <span>3</span>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div class="o-menu__slot">
+              <div role="menuitem" class="o-menu__item">
+                <span class="o-menu__lead"></span>
+                <span class="o-menu__text">
+                  Workspace 4
+                  <span class="o-menu__crumb">Send to Workspace</span>
+                </span>
+                <span class="o-menu__sc">
+                  <span class="o-sc">
+                    <span class="o-sym" role="img" aria-label="⇧" data-sf="key.shift" style="width: 12px; height: 12px;">
+                      <svg viewBox="0 0 24 24" stroke-width="2">
+                        <path d="M9 18v-6H5l7-7 7 7h-4v6H9z"></path>
+                      </svg>
+                    </span>
+                    <span>4</span>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div class="o-menu__slot">
+              <div role="menuitem" class="o-menu__item">
+                <span class="o-menu__lead"></span>
+                <span class="o-menu__text">
+                  Workspace 5
+                  <span class="o-menu__crumb">Send to Workspace</span>
+                </span>
+                <span class="o-menu__sc">
+                  <span class="o-sc">
+                    <span class="o-sym" role="img" aria-label="⇧" data-sf="key.shift" style="width: 12px; height: 12px;">
+                      <svg viewBox="0 0 24 24" stroke-width="2">
+                        <path d="M9 18v-6H5l7-7 7 7h-4v6H9z"></path>
+                      </svg>
+                    </span>
+                    <span>5</span>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div class="o-menu__slot">
+              <div role="menuitem" class="o-menu__item">
+                <span class="o-menu__lead"></span>
+                <span class="o-menu__text">
+                  Workspace 6
+                  <span class="o-menu__crumb">Send to Workspace</span>
+                </span>
+                <span class="o-menu__sc">
+                  <span class="o-sc">
+                    <span class="o-sym" role="img" aria-label="⇧" data-sf="key.shift" style="width: 12px; height: 12px;">
+                      <svg viewBox="0 0 24 24" stroke-width="2">
+                        <path d="M9 18v-6H5l7-7 7 7h-4v6H9z"></path>
+                      </svg>
+                    </span>
+                    <span>6</span>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div class="o-menu__slot">
+              <div role="menuitem" class="o-menu__item">
+                <span class="o-menu__lead"></span>
+                <span class="o-menu__text">
+                  Workspace 7
+                  <span class="o-menu__crumb">Send to Workspace</span>
+                </span>
+                <span class="o-menu__sc">
+                  <span class="o-sc">
+                    <span class="o-sym" role="img" aria-label="⇧" data-sf="key.shift" style="width: 12px; height: 12px;">
+                      <svg viewBox="0 0 24 24" stroke-width="2">
+                        <path d="M9 18v-6H5l7-7 7 7h-4v6H9z"></path>
+                      </svg>
+                    </span>
+                    <span>7</span>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div class="o-menu__slot">
+              <div role="menuitem" class="o-menu__item">
+                <span class="o-menu__lead"></span>
+                <span class="o-menu__text">
+                  Workspace 8
+                  <span class="o-menu__crumb">Send to Workspace</span>
+                </span>
+                <span class="o-menu__sc">
+                  <span class="o-sc">
+                    <span class="o-sym" role="img" aria-label="⇧" data-sf="key.shift" style="width: 12px; height: 12px;">
+                      <svg viewBox="0 0 24 24" stroke-width="2">
+                        <path d="M9 18v-6H5l7-7 7 7h-4v6H9z"></path>
+                      </svg>
+                    </span>
+                    <span>8</span>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div class="o-menu__slot">
+              <div role="menuitem" class="o-menu__item">
+                <span class="o-menu__lead"></span>
+                <span class="o-menu__text">
+                  Workspace 9
+                  <span class="o-menu__crumb">Send to Workspace</span>
+                </span>
+                <span class="o-menu__sc">
+                  <span class="o-sc">
+                    <span class="o-sym" role="img" aria-label="⇧" data-sf="key.shift" style="width: 12px; height: 12px;">
+                      <svg viewBox="0 0 24 24" stroke-width="2">
+                        <path d="M9 18v-6H5l7-7 7 7h-4v6H9z"></path>
+                      </svg>
+                    </span>
+                    <span>9</span>
+                  </span>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section id="menu">
+      <h3>Menu <span>Hover, arrows, or just type</span></h3>
+      <div class="rules">
+        <p>Menu is the dropdown with groups, checks, radios, switches, inline controls and nested submenus, plus type-to-search.</p>
+        <ul>
+          <li>Nest one level, two at most; put the current choice of a radio group in the parent row's <code>value</code>.</li>
+          <li>Every actionable row shows its shortcut. Give hidden aliases (<code>hidden: true</code>) to commands that live inside a custom control so search still finds them.</li>
+          <li>Hover opens after 100 ms with a 180 ms grace period; ↑↓ → ← ↩ esc work; typing focuses search.</li>
+        </ul>
+      </div>
+      <div class="stage o-root o-ground">
+        <div class="o-root" style="position: relative; display: inline-block;">
+          <div tabindex="-1" role="menu" class="o-surface o-surface--md o-menu o-surface--glass">
+            <div class="o-menu__search">
+              <span class="o-sym" aria-hidden="true" data-sf="magnifyingglass" style="width: 15px; height: 15px;">
+                <svg viewBox="0 0 24 24" stroke-width="1.75">
+                  <circle data-layer="1" cx="11" cy="11" r="8"></circle>
+                  <path data-layer="2" d="m21 21-4.3-4.3"></path>
+                </svg>
+              </span>
+              <input placeholder="Search commands…" aria-label="Search commands" value=""></input>
+              <span class="o-keys">
+                <kbd aria-label="⌘" class="o-kbd">
+                  <span class="o-sym" aria-hidden="true" data-sf="key.cmd" style="width: 12px; height: 12px;">
+                    <svg viewBox="0 0 24 24" stroke-width="2">
+                      <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"></path>
+                    </svg>
+                  </span>
+                </kbd>
+                <kbd aria-label="K" class="o-kbd">K</kbd>
+              </span>
+            </div>
+            <div class="o-menu__label">Workspace 1 · Fullscreen</div>
+            <div class="o-menu__custom">
+              <div class="o-ws" role="radiogroup" aria-label="Workspaces">
+                <button type="button" role="radio" aria-checked="true" title="Workspace 1" class="o-ws__pill is-current">1</button>
+                <button type="button" role="radio" aria-checked="false" title="Workspace 2" class="o-ws__pill">2</button>
+                <button type="button" role="radio" aria-checked="false" title="Workspace 3" class="o-ws__pill">3</button>
+                <button type="button" role="radio" aria-checked="false" title="Workspace 4" class="o-ws__pill">4</button>
+                <button type="button" role="radio" aria-checked="false" title="Workspace 5" class="o-ws__pill">5</button>
+                <button type="button" role="radio" aria-checked="false" title="Workspace 6" class="o-ws__pill">6</button>
+                <button type="button" role="radio" aria-checked="false" title="Workspace 7" class="o-ws__pill">7</button>
+                <button type="button" role="radio" aria-checked="false" title="Workspace 8" class="o-ws__pill">8</button>
+                <button type="button" role="radio" aria-checked="false" title="Workspace 9" class="o-ws__pill">9</button>
+              </div>
+            </div>
+            <div class="o-menu__sep" role="separator"></div>
+            <div class="o-menu__slot">
+              <div role="menuitem" aria-haspopup="menu" aria-expanded="false" class="o-menu__item">
+                <span class="o-menu__lead">
+                  <span class="o-sym" aria-hidden="true" data-sf="square.grid.2x2" style="width: 15px; height: 15px;">
+                    <svg viewBox="0 0 24 24" stroke-width="1.75">
+                      <rect data-layer="1" width="7" height="7" x="3" y="3" rx="1"></rect>
+                      <rect data-layer="2" width="7" height="7" x="14" y="3" rx="1"></rect>
+                      <rect data-layer="3" width="7" height="7" x="14" y="14" rx="1"></rect>
+                      <rect data-layer="4" width="7" height="7" x="3" y="14" rx="1"></rect>
+                    </svg>
+                  </span>
+                </span>
+                <span class="o-menu__text">
+                  Layout
+                  <span class="o-menu__value">Fullscreen</span>
+                </span>
+                <span class="o-menu__chev">
+                  <span class="o-sym" aria-hidden="true" data-sf="chevron.right" style="width: 12px; height: 12px;">
+                    <svg viewBox="0 0 24 24" stroke-width="2">
+                      <path data-layer="1" d="m9 18 6-6-6-6"></path>
+                    </svg>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div class="o-menu__sep" role="separator"></div>
+            <div class="o-menu__slot">
+              <div role="menuitem" class="o-menu__item">
+                <span class="o-menu__lead">
+                  <span class="o-sym" aria-hidden="true" data-sf="gearshape" style="width: 15px; height: 15px;">
+                    <svg viewBox="0 0 24 24" stroke-width="1.75">
+                      <path data-layer="1" d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+                      <circle data-layer="2" cx="12" cy="12" r="3"></circle>
+                    </svg>
+                  </span>
+                </span>
+                <span class="o-menu__text">Settings…</span>
+                <span class="o-menu__sc">
+                  <span class="o-sc">
+                    <span class="o-sym" role="img" aria-label="⌘" data-sf="key.cmd" style="width: 12px; height: 12px;">
+                      <svg viewBox="0 0 24 24" stroke-width="2">
+                        <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"></path>
+                      </svg>
+                    </span>
+                    <span>,</span>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div class="o-menu__slot">
+              <div role="menuitem" class="o-menu__item">
+                <span class="o-menu__lead">
+                  <span class="o-sym" aria-hidden="true" data-sf="graduationcap" style="width: 15px; height: 15px;">
+                    <svg viewBox="0 0 24 24" stroke-width="1.75">
+                      <circle data-layer="1" cx="12" cy="12" r="10"></circle>
+                      <path data-layer="2" d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                      <path data-layer="3" d="M12 17h.01"></path>
+                    </svg>
+                  </span>
+                </span>
+                <span class="o-menu__text">Keyboard Tutorial…</span>
+              </div>
+            </div>
+            <div class="o-menu__slot">
+              <div role="menuitem" aria-haspopup="menu" aria-expanded="false" class="o-menu__item">
+                <span class="o-menu__lead">
+                  <span class="o-sym" aria-hidden="true" data-sf="questionmark.circle" style="width: 15px; height: 15px;">
+                    <svg viewBox="0 0 24 24" stroke-width="1.75">
+                      <circle data-layer="1" cx="12" cy="12" r="10"></circle>
+                      <path data-layer="2" d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                      <path data-layer="3" d="M12 17h.01"></path>
+                    </svg>
+                  </span>
+                </span>
+                <span class="o-menu__text">Help</span>
+                <span class="o-menu__chev">
+                  <span class="o-sym" aria-hidden="true" data-sf="chevron.right" style="width: 12px; height: 12px;">
+                    <svg viewBox="0 0 24 24" stroke-width="2">
+                      <path data-layer="1" d="m9 18 6-6-6-6"></path>
+                    </svg>
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div class="o-menu__sep" role="separator"></div>
+            <div class="o-menu__foot">
+              <span>Ouch 0.2-beta</span>
+              <span style="display: inline-flex; align-items: center; gap: 8px;">
+                <span class="o-sym" aria-hidden="true" data-sf="power" style="width: 14px; height: 14px;">
+                  <svg viewBox="0 0 24 24" stroke-width="1.75">
+                    <path data-layer="1" d="M12 2v10"></path>
+                    <path data-layer="2" d="M18.4 6.6a9 9 0 1 1-12.77.04"></path>
+                  </svg>
+                </span>
+                Quit Ouch
+              </span>
+              <span class="o-keys">
+                <kbd aria-label="⌘" class="o-kbd">
+                  <span class="o-sym" aria-hidden="true" data-sf="key.cmd" style="width: 12px; height: 12px;">
+                    <svg viewBox="0 0 24 24" stroke-width="2">
+                      <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"></path>
+                    </svg>
+                  </span>
+                </kbd>
+                <kbd aria-label="Q" class="o-kbd">Q</kbd>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section id="surface">
+      <h3>Surface <span>One floating pattern, five densities</span></h3>
+      <div class="rules">
+        <p>Surface is the single floating container behind every menu, tooltip, tip, coach mark, HUD and welcome card.</p>
+        <ul>
+          <li>Pick the density by job, not by size: tooltip <code>xs</code>, confirmation <code>sm</code>, menu or tip <code>md</code>, tour step <code>lg</code>, welcome <code>xl</code>.</li>
+          <li>Slots always appear in the same order; leave a slot out rather than reordering.</li>
+          <li>Anything with a button is <code>md</code> or larger. Coach marks always point at a real target with the caret.</li>
+        </ul>
+      </div>
+      <div class="stage o-root o-ground">
+        <div style="display: grid; gap: 40px;">
+          <div style="display: flex; gap: 48px; align-items: flex-start; flex-wrap: wrap;">
+            <div style="display: grid; gap: 12px; align-content: start; justify-items: start;">
+              <div class="o-eyebrow">
+                <span class="o-eyebrow__n">xs</span>
+                <span class="o-eyebrow__t">Tooltip</span>
+              </div>
+              <span class="o-root">
+                <div class="o-surface o-surface--xs o-tip" role="tooltip">
+                  <i class="o-caret o-caret--top" aria-hidden="true" style="left: 50%; margin-left: -10px;"></i>
+                  Retile
+                  <span class="o-keys">
+                    <kbd aria-label="Z" class="o-kbd">Z</kbd>
+                  </span>
+                </div>
+              </span>
+            </div>
+            <div style="display: grid; gap: 12px; align-content: start; justify-items: start;">
+              <div class="o-eyebrow">
+                <span class="o-eyebrow__n">sm</span>
+                <span class="o-eyebrow__t">Toast, HUD</span>
+              </div>
+              <div class="o-surface o-surface--sm o-surface--glass">
+                <div class="o-surface__head">
+                  <span class="o-surface__lead">
+                    <span class="o-sym" aria-hidden="true" data-sf="checkmark.circle.fill" style="width: 18px; height: 18px;">
+                      <svg viewBox="0 0 24 24" stroke-width="1.75">
+                        <circle cx="12" cy="12" r="10" class="fill"></circle>
+                        <path d="m8.5 12 2.5 2.5 4.5-5" class="knock"></path>
+                      </svg>
+                    </span>
+                  </span>
+                </div>
+                <div class="o-surface__title">Config reloaded</div>
+                <div class="o-surface__body">3 binds changed</div>
+              </div>
+            </div>
+            <div style="display: grid; gap: 12px; align-content: start; justify-items: start;">
+              <div class="o-eyebrow">
+                <span class="o-eyebrow__n">md</span>
+                <span class="o-eyebrow__t">Menu, tip</span>
+              </div>
+              <div class="o-surface o-surface--md" style="padding: 14px; width: 250px;">
+                <div class="o-surface__head">
+                  <span class="o-surface__lead">
+                    <span class="o-sym o-fx-breathe" aria-hidden="true" data-sf="lightbulb" style="width: 18px; height: 18px;">
+                      <svg viewBox="0 0 24 24" stroke-width="1.75">
+                        <path data-layer="1" d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"></path>
+                        <path data-layer="2" d="M9 18h6"></path>
+                        <path data-layer="3" d="M10 22h4"></path>
+                      </svg>
+                    </span>
+                  </span>
+                  <span class="o-surface__kicker">Tip</span>
+                  <button type="button" class="o-btn o-btn--ghost o-btn--sm o-btn--icon o-surface__close" aria-label="Close">
+                    <span class="o-sym" aria-hidden="true" data-sf="xmark" style="width: 14px; height: 14px;">
+                      <svg viewBox="0 0 24 24" stroke-width="1.75">
+                        <path data-layer="1" d="M18 6 6 18"></path>
+                        <path data-layer="2" d="m6 6 12 12"></path>
+                      </svg>
+                    </span>
+                  </button>
+                </div>
+                <div class="o-surface__body">Hold ⌥ and drag anywhere in a window to move it.</div>
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 48px; align-items: flex-start;">
+            <div style="display: grid; gap: 12px; align-content: start; justify-items: start;">
+              <div class="o-eyebrow">
+                <span class="o-eyebrow__n">lg</span>
+                <span class="o-eyebrow__t">Tour card</span>
+              </div>
+              <div class="o-root" style="display: inline-block;">
+                <div class="o-surface o-surface--lg o-surface--accent">
+                  <i class="o-caret o-caret--top" aria-hidden="true" style="left: 40px; margin-left: -3px;"></i>
+                  <div class="o-surface__head">
+                    <span class="o-surface__kicker">Step 2 of 6</span>
+                  </div>
+                  <div class="o-surface__title">Move focus</div>
+                  <div class="o-surface__body">Use H J K L to jump between windows.</div>
+                  <div class="o-surface__keys">
+                    <span class="o-keys">
+                      <kbd aria-label="H" class="o-kbd o-kbd--lg">H</kbd>
+                    </span>
+                    <span class="o-surface__hint">
+                      <span class="o-sym o-fx-pulse" aria-hidden="true" data-sf="cursorarrow.rays" style="width: 16px; height: 16px;">
+                        <svg viewBox="0 0 24 24" stroke-width="1.75">
+                          <path data-layer="1" d="M14 4.1 12 6"></path>
+                          <path data-layer="2" d="m5.1 8-2.9-.8"></path>
+                          <path data-layer="3" d="m6 12-1.9 2"></path>
+                          <path data-layer="4" d="M7.2 2.2 8 5.1"></path>
+                          <path data-layer="5" d="M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074z"></path>
+                        </svg>
+                      </span>
+                      Press it now
+                    </span>
+                  </div>
+                  <div class="o-surface__actions">
+                    <span class="o-surface__dots" aria-hidden="true">
+                      <i class="is-past"></i>
+                      <i class="is-on"></i>
+                      <i class=""></i>
+                      <i class=""></i>
+                      <i class=""></i>
+                      <i class=""></i>
+                    </span>
+                    <span class="o-spacer"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style="display: grid; gap: 12px; align-content: start; justify-items: start;">
+              <div class="o-eyebrow">
+                <span class="o-eyebrow__n">xl</span>
+                <span class="o-eyebrow__t">Welcome</span>
+              </div>
+              <div class="o-surface o-surface--xl">
+                <div class="o-surface__head">
+                  <span class="o-surface__lead">
+                    <span class="o-sym o-fx-variable" aria-hidden="true" data-sf="rectangle.split.3x1" style="width: 18px; height: 18px;">
+                      <svg viewBox="0 0 24 24" stroke-width="1.75">
+                        <rect data-layer="1" x="2.5" y="4" width="5.4" height="16" rx="1.6"></rect>
+                        <rect data-layer="2" x="9.3" y="4" width="5.4" height="16" rx="1.6"></rect>
+                        <rect data-layer="3" x="16.1" y="4" width="5.4" height="16" rx="1.6"></rect>
+                      </svg>
+                    </span>
+                  </span>
+                  <span class="o-surface__kicker">Welcome</span>
+                </div>
+                <div class="o-surface__title">Tile without thinking</div>
+                <div class="o-surface__body">Ouch arranges your windows as you open them.</div>
+                <div class="o-surface__actions">
+                  <button type="button" class="o-btn o-btn--primary o-btn--lg">Continue</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section id="tooltip">
+      <h3>Tooltip</h3>
+      <div class="rules">
+        <p>Tooltip is the smallest Surface: a plain raised label, the same surface as menus, with an optional shortcut.</p>
+        <p>Wrap the target as children; provide <code>label</code>, optional <code>keys</code>/<code>then</code>, <code>side</code> (<code>bottom</code>, <code>top</code>, <code>right</code>) and <code>delay</code> (500 ms default). <code>open</code> forces it visible.</p>
+        <ul>
+          <li>One short phrase in sentence case, no full stop. Never a button inside: use a tip (Surface <code>md</code>).</li>
+          <li>Every icon-only button gets one.</li>
+          <li>All tooltips share one height (28px), padding (5 × 8) and type. A shortcut is one chord at most; a sequence belongs in a tip.</li>
+          <li>A tooltip always points at its target with a small caret, centred on the side it opens from.</li>
+          <li>It uses the same pointer as every other surface: the rounded diamond, no extra border. Depth comes from the shared popover shadow.</li>
+        </ul>
+      </div>
+      <div class="stage o-root o-ground">
+        <div style="display: flex; gap: 56px; align-items: flex-start; padding-bottom: 48px;">
+          <span class="o-root o-tip-anchor">
+            <button type="button" class="o-btn o-btn--secondary o-btn--icon" aria-label="Retile">
+              <span class="o-sym" aria-hidden="true" data-sf="arrow.triangle.2.circlepath" style="width: 16px; height: 16px;">
+                <svg viewBox="0 0 24 24" stroke-width="1.75">
+                  <path data-layer="1" d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+                  <path data-layer="2" d="M21 3v5h-5"></path>
+                  <path data-layer="3" d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+                  <path data-layer="4" d="M8 16H3v5"></path>
+                </svg>
+              </span>
+            </button>
+            <span class="o-tip-pop o-tip-pop--bottom">
+              <div class="o-surface o-surface--xs o-tip" role="tooltip">
+                <i class="o-caret o-caret--top" aria-hidden="true" style="left: 50%; margin-left: -10px;"></i>
+                Retile
+                <span class="o-keys">
+                  <kbd aria-label="Z" class="o-kbd">Z</kbd>
+                </span>
+              </div>
+            </span>
+          </span>
+          <span class="o-root o-tip-anchor">
+            <button type="button" class="o-btn o-btn--secondary o-btn--icon" aria-label="Layout">
+              <span class="o-sym" aria-hidden="true" data-sf="square.grid.2x2" style="width: 16px; height: 16px;">
+                <svg viewBox="0 0 24 24" stroke-width="1.75">
+                  <rect data-layer="1" width="7" height="7" x="3" y="3" rx="1"></rect>
+                  <rect data-layer="2" width="7" height="7" x="14" y="3" rx="1"></rect>
+                  <rect data-layer="3" width="7" height="7" x="14" y="14" rx="1"></rect>
+                  <rect data-layer="4" width="7" height="7" x="3" y="14" rx="1"></rect>
+                </svg>
+              </span>
+            </button>
+            <span class="o-tip-pop o-tip-pop--bottom">
+              <div class="o-surface o-surface--xs o-tip" role="tooltip">
+                <i class="o-caret o-caret--top" aria-hidden="true" style="left: 50%; margin-left: -10px;"></i>
+                Next layout
+                <span class="o-keys">
+                  <kbd aria-label="N" class="o-kbd">N</kbd>
+                </span>
+              </div>
+            </span>
+          </span>
+          <span class="o-root o-tip-anchor">
+            <button type="button" class="o-btn o-btn--secondary o-btn--icon" aria-label="Settings">
+              <span class="o-sym" aria-hidden="true" data-sf="gearshape" style="width: 16px; height: 16px;">
+                <svg viewBox="0 0 24 24" stroke-width="1.75">
+                  <path data-layer="1" d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+                  <circle data-layer="2" cx="12" cy="12" r="3"></circle>
+                </svg>
+              </span>
+            </button>
+            <span class="o-tip-pop o-tip-pop--bottom">
+              <div class="o-surface o-surface--xs o-tip" role="tooltip">
+                <i class="o-caret o-caret--top" aria-hidden="true" style="left: 50%; margin-left: -10px;"></i>
+                Settings
+                <span class="o-keys">
+                  <kbd aria-label="⌘" class="o-kbd">
+                    <span class="o-sym" aria-hidden="true" data-sf="key.cmd" style="width: 12px; height: 12px;">
+                      <svg viewBox="0 0 24 24" stroke-width="2">
+                        <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"></path>
+                      </svg>
+                    </span>
+                  </kbd>
+                  <kbd aria-label="," class="o-kbd">,</kbd>
+                </span>
+              </div>
+            </span>
+          </span>
+          <span class="o-root o-tip-anchor">
+            <button type="button" class="o-btn o-btn--secondary o-btn--icon" aria-label="Swap">
+              <span class="o-sym" aria-hidden="true" data-sf="arrow.left.arrow.right" style="width: 16px; height: 16px;">
+                <svg viewBox="0 0 24 24" stroke-width="1.75">
+                  <path data-layer="1" d="M8 3 4 7l4 4"></path>
+                  <path data-layer="2" d="M4 7h16"></path>
+                  <path data-layer="3" d="m16 21 4-4-4-4"></path>
+                  <path data-layer="4" d="M20 17H4"></path>
+                </svg>
+              </span>
+            </button>
+            <span class="o-tip-pop o-tip-pop--bottom">
+              <div class="o-surface o-surface--xs o-tip" role="tooltip">
+                <i class="o-caret o-caret--top" aria-hidden="true" style="left: 50%; margin-left: -10px;"></i>
+                Swap with main
+              </div>
+            </span>
+          </span>
+        </div>
+      </div>
+    </section>
+    <h2 class="group">Guidance</h2>
+    <section id="coachmark">
+      <h3>CoachMark <span>A tour step. Press L.</span></h3>
+      <div class="rules">
+        <p>CoachMark is one step of the keyboard tour: a plain raised Surface <code>lg</code> with step dots, a title, body, live keycaps and Next.</p>
+        <ul>
+          <li>The step completes only when the real key is pressed; Next appears (with ↩) after.</li>
+          <li>Point the caret at the real menu bar item or practice window. Never dim or cover the desktop.</li>
+          <li>Kicker counts ("STEP 3 OF 6"); the done line is short ("Focus moved").</li>
+        </ul>
+      </div>
+      <div class="stage o-root o-ground">
+        <div style="padding-top: 8px;">
+          <div class="o-root" style="display: inline-block;">
+            <div class="o-surface o-surface--lg o-surface--accent">
+              <i class="o-caret o-caret--top" aria-hidden="true" style="left: 40px; margin-left: -3px;"></i>
+              <div class="o-surface__head">
+                <span class="o-surface__kicker">Step 3 of 6</span>
+                <span style="margin-left: auto;">
+                  <button type="button" class="o-btn o-btn--ghost o-btn--sm">Skip tour</button>
+                </span>
+              </div>
+              <div class="o-surface__title">
+                Focus
+                <em>right</em>
+              </div>
+              <div class="o-surface__body">L moves focus one window to the right.</div>
+              <div class="o-surface__keys">
+                <span class="o-keys">
+                  <kbd aria-label="L" class="o-kbd o-kbd--lg">L</kbd>
+                </span>
+                <span class="o-surface__hint">
+                  <span class="o-sym o-fx-pulse" aria-hidden="true" data-sf="cursorarrow.rays" style="width: 16px; height: 16px;">
+                    <svg viewBox="0 0 24 24" stroke-width="1.75">
+                      <path data-layer="1" d="M14 4.1 12 6"></path>
+                      <path data-layer="2" d="m5.1 8-2.9-.8"></path>
+                      <path data-layer="3" d="m6 12-1.9 2"></path>
+                      <path data-layer="4" d="M7.2 2.2 8 5.1"></path>
+                      <path data-layer="5" d="M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074z"></path>
+                    </svg>
+                  </span>
+                  Press it now
+                </span>
+              </div>
+              <div class="o-surface__actions">
+                <span class="o-surface__dots" aria-hidden="true">
+                  <i class="is-past"></i>
+                  <i class="is-past"></i>
+                  <i class="is-on"></i>
+                  <i class=""></i>
+                  <i class=""></i>
+                  <i class=""></i>
+                </span>
+                <span class="o-spacer"></span>
+                <button type="button" class="o-btn o-btn--ghost o-btn--sm">Back</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section id="hud">
+      <h3>HUD <span>Click to replay</span></h3>
+      <div class="rules">
+        <p>HUD confirms a keyboard action in the middle of the screen: glass Surface with a layout thumbnail and its name.</p>
+        <ul>
+          <li>Shown for about a second, never interactive, ignores the mouse.</li>
+          <li>The warning variant wiggles <code>exclamationmark.triangle.fill</code> and names the app that refused.</li>
+        </ul>
+      </div>
+      <div class="stage o-root o-ground">
+        <div style="display: flex; gap: 32px; align-items: center; flex-wrap: wrap;">
+          <div>
+            <div class="o-root" style="display: inline-block;">
+              <div class="o-surface o-surface--glass o-hud" role="status">
+                <span class="o-thumb" style="width: 120px; height: 75px;">
+                  <svg viewBox="0 0 160 100" aria-hidden="true">
+                    <rect class="pane main" x="2" y="2" width="85.60000000000001" height="96" rx="6"></rect>
+                    <rect class="pane" x="91.60000000000001" y="2" width="66.4" height="46" rx="6"></rect>
+                    <rect class="pane" x="91.60000000000001" y="52" width="66.4" height="46" rx="6"></rect>
+                  </svg>
+                </span>
+                <span class="o-hud__label">Tall</span>
+                <span class="o-caption" style="display: inline-flex; gap: 6px; align-items: center;">
+                  Next
+                  <span class="o-keys">
+                    <kbd aria-label="N" class="o-kbd">N</kbd>
+                  </span>
+                </span>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="o-root" style="display: inline-block;">
+              <div class="o-surface o-surface--glass o-hud o-hud--warn" role="status">
+                <span class="o-sym o-fx-wiggle" aria-hidden="true" data-sf="exclamationmark.triangle.fill" style="width: 18px; height: 18px;">
+                  <svg viewBox="0 0 24 24" stroke-width="1.75">
+                    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" class="fill"></path>
+                    <path d="M12 9v4" class="knock"></path>
+                    <path d="M12 17h.01" class="knock"></path>
+                  </svg>
+                </span>
+                <span class="o-hud__label">Safari won’t go below 520 pt</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <h2 class="group">Tiling</h2>
+    <section id="layoutpicker">
+      <h3>LayoutPicker <span>Hover a layout</span></h3>
+      <div class="rules">
+        <p>LayoutPicker chooses one of the 13 layouts from a grid of thumbnails, with the hovered layout's name and description on one line below.</p>
+        <ul>
+          <li>Thumbnails carry no labels, so nothing wraps; the info line truncates.</li>
+          <li>Used inside the Layout submenu and in Settings.</li>
+        </ul>
+      </div>
+      <div class="stage o-root o-ground">
+        <div style="width: 300px;">
+          <div class="o-picker">
+            <div class="o-picker__grid" style="grid-template-columns: repeat(5, minmax(0px, 1fr));">
+              <button type="button" aria-label="Tall" aria-pressed="true" class="o-picker__cell is-on">
+                <span class="o-thumb is-selected" style="width: 44px; height: 28px;">
+                  <svg viewBox="0 0 160 100" aria-hidden="true">
+                    <rect class="pane main" x="2" y="2" width="85.60000000000001" height="96" rx="6"></rect>
+                    <rect class="pane" x="91.60000000000001" y="2" width="66.4" height="46" rx="6"></rect>
+                    <rect class="pane" x="91.60000000000001" y="52" width="66.4" height="46" rx="6"></rect>
+                  </svg>
+                </span>
+              </button>
+              <button type="button" aria-label="Tall Right" aria-pressed="false" class="o-picker__cell">
+                <span class="o-thumb" style="width: 44px; height: 28px;">
+                  <svg viewBox="0 0 160 100" aria-hidden="true">
+                    <rect class="pane main" x="72.4" y="2" width="85.60000000000001" height="96" rx="6"></rect>
+                    <rect class="pane" x="2" y="2" width="66.4" height="46" rx="6"></rect>
+                    <rect class="pane" x="2" y="52" width="66.4" height="46" rx="6"></rect>
+                  </svg>
+                </span>
+              </button>
+              <button type="button" aria-label="Wide" aria-pressed="false" class="o-picker__cell">
+                <span class="o-thumb" style="width: 44px; height: 28px;">
+                  <svg viewBox="0 0 160 100" aria-hidden="true">
+                    <rect class="pane main" x="2" y="2" width="156" height="52.00000000000001" rx="6"></rect>
+                    <rect class="pane" x="2" y="58.00000000000001" width="76" height="40" rx="6"></rect>
+                    <rect class="pane" x="82" y="58.00000000000001" width="76" height="40" rx="6"></rect>
+                  </svg>
+                </span>
+              </button>
+              <button type="button" aria-label="Middle Wide" aria-pressed="false" class="o-picker__cell">
+                <span class="o-thumb" style="width: 44px; height: 28px;">
+                  <svg viewBox="0 0 160 100" aria-hidden="true">
+                    <rect class="pane main" x="42" y="2" width="76" height="96" rx="6"></rect>
+                    <rect class="pane" x="2" y="2" width="36" height="46" rx="6"></rect>
+                    <rect class="pane" x="2" y="52" width="36" height="46" rx="6"></rect>
+                    <rect class="pane" x="122" y="2" width="36" height="96" rx="6"></rect>
+                  </svg>
+                </span>
+              </button>
+              <button type="button" aria-label="Fullscreen" aria-pressed="false" class="o-picker__cell">
+                <span class="o-thumb" style="width: 44px; height: 28px;">
+                  <svg viewBox="0 0 160 100" aria-hidden="true">
+                    <rect class="pane main" x="2" y="2" width="156" height="96" rx="6"></rect>
+                  </svg>
+                </span>
+              </button>
+              <button type="button" aria-label="Column" aria-pressed="false" class="o-picker__cell">
+                <span class="o-thumb" style="width: 44px; height: 28px;">
+                  <svg viewBox="0 0 160 100" aria-hidden="true">
+                    <rect class="pane main" x="2" y="2" width="49.327999999999996" height="96" rx="6"></rect>
+                    <rect class="pane" x="55.327999999999996" y="2" width="49.343999999999994" height="96" rx="6"></rect>
+                    <rect class="pane" x="108.672" y="2" width="49.327999999999996" height="96" rx="6"></rect>
+                  </svg>
+                </span>
+              </button>
+              <button type="button" aria-label="Row" aria-pressed="false" class="o-picker__cell">
+                <span class="o-thumb" style="width: 44px; height: 28px;">
+                  <svg viewBox="0 0 160 100" aria-hidden="true">
+                    <rect class="pane main" x="2" y="2" width="156" height="29.33" rx="6"></rect>
+                    <rect class="pane" x="2" y="35.33" width="156" height="29.339999999999996" rx="6"></rect>
+                    <rect class="pane" x="2" y="68.67" width="156" height="29.33" rx="6"></rect>
+                  </svg>
+                </span>
+              </button>
+              <button type="button" aria-label="Floating" aria-pressed="false" class="o-picker__cell">
+                <span class="o-thumb" style="width: 44px; height: 28px;">
+                  <svg viewBox="0 0 160 100" aria-hidden="true">
+                    <rect class="pane main" x="11.6" y="12" width="79.2" height="52.00000000000001" rx="6"></rect>
+                    <rect class="pane" x="66" y="36" width="82.4" height="52.00000000000001" rx="6"></rect>
+                  </svg>
+                </span>
+              </button>
+              <button type="button" aria-label="BSP" aria-pressed="false" class="o-picker__cell">
+                <span class="o-thumb" style="width: 44px; height: 28px;">
+                  <svg viewBox="0 0 160 100" aria-hidden="true">
+                    <rect class="pane main" x="2" y="2" width="76" height="96" rx="6"></rect>
+                    <rect class="pane" x="82" y="2" width="76" height="46" rx="6"></rect>
+                    <rect class="pane" x="82" y="52" width="36" height="46" rx="6"></rect>
+                    <rect class="pane" x="122" y="52" width="36" height="46" rx="6"></rect>
+                  </svg>
+                </span>
+              </button>
+              <button type="button" aria-label="3 Column Left" aria-pressed="false" class="o-picker__cell">
+                <span class="o-thumb" style="width: 44px; height: 28px;">
+                  <svg viewBox="0 0 160 100" aria-hidden="true">
+                    <rect class="pane main" x="2" y="2" width="76" height="96" rx="6"></rect>
+                    <rect class="pane" x="82" y="2" width="36" height="96" rx="6"></rect>
+                    <rect class="pane" x="122" y="2" width="36" height="96" rx="6"></rect>
+                  </svg>
+                </span>
+              </button>
+              <button type="button" aria-label="3 Column Middle" aria-pressed="false" class="o-picker__cell">
+                <span class="o-thumb" style="width: 44px; height: 28px;">
+                  <svg viewBox="0 0 160 100" aria-hidden="true">
+                    <rect class="pane main" x="42" y="2" width="76" height="96" rx="6"></rect>
+                    <rect class="pane" x="2" y="2" width="36" height="96" rx="6"></rect>
+                    <rect class="pane" x="122" y="2" width="36" height="96" rx="6"></rect>
+                  </svg>
+                </span>
+              </button>
+              <button type="button" aria-label="3 Column Right" aria-pressed="false" class="o-picker__cell">
+                <span class="o-thumb" style="width: 44px; height: 28px;">
+                  <svg viewBox="0 0 160 100" aria-hidden="true">
+                    <rect class="pane main" x="82" y="2" width="76" height="96" rx="6"></rect>
+                    <rect class="pane" x="2" y="2" width="36" height="96" rx="6"></rect>
+                    <rect class="pane" x="42" y="2" width="36" height="96" rx="6"></rect>
+                  </svg>
+                </span>
+              </button>
+              <button type="button" aria-label="Two Pane" aria-pressed="false" class="o-picker__cell">
+                <span class="o-thumb" style="width: 44px; height: 28px;">
+                  <svg viewBox="0 0 160 100" aria-hidden="true">
+                    <rect class="pane main" x="2" y="2" width="76" height="96" rx="6"></rect>
+                    <rect class="pane" x="82" y="2" width="76" height="96" rx="6"></rect>
+                  </svg>
+                </span>
+              </button>
+            </div>
+            <div class="o-picker__info">
+              <span class="o-picker__name">Tall</span>
+              <span class="o-picker__desc">Main on the left, the rest stacked on the right</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section id="layoutthumb">
+      <h3>LayoutThumb</h3>
+      <div class="rules">
+        <p>LayoutThumb draws a miniature of one of the 13 tiling layouts.</p>
+        <ul>
+          <li>Use the layout descriptions from <code>LayoutThumb.layouts[k].desc</code> as tooltips; they are the app's own copy.</li>
+        </ul>
+      </div>
+      <div class="stage o-root o-ground">
+        <div style="display: flex; gap: 18px; flex-wrap: wrap; align-items: center;">
+          <span title="Tall">
+            <span class="o-thumb is-selected" style="width: 64px; height: 40px;">
+              <svg viewBox="0 0 160 100" aria-hidden="true">
+                <rect class="pane main" x="2" y="2" width="85.60000000000001" height="96" rx="6"></rect>
+                <rect class="pane" x="91.60000000000001" y="2" width="66.4" height="46" rx="6"></rect>
+                <rect class="pane" x="91.60000000000001" y="52" width="66.4" height="46" rx="6"></rect>
+              </svg>
+            </span>
+          </span>
+          <span title="Tall Right">
+            <span class="o-thumb" style="width: 64px; height: 40px;">
+              <svg viewBox="0 0 160 100" aria-hidden="true">
+                <rect class="pane main" x="72.4" y="2" width="85.60000000000001" height="96" rx="6"></rect>
+                <rect class="pane" x="2" y="2" width="66.4" height="46" rx="6"></rect>
+                <rect class="pane" x="2" y="52" width="66.4" height="46" rx="6"></rect>
+              </svg>
+            </span>
+          </span>
+          <span title="Wide">
+            <span class="o-thumb" style="width: 64px; height: 40px;">
+              <svg viewBox="0 0 160 100" aria-hidden="true">
+                <rect class="pane main" x="2" y="2" width="156" height="52.00000000000001" rx="6"></rect>
+                <rect class="pane" x="2" y="58.00000000000001" width="76" height="40" rx="6"></rect>
+                <rect class="pane" x="82" y="58.00000000000001" width="76" height="40" rx="6"></rect>
+              </svg>
+            </span>
+          </span>
+          <span title="Middle Wide">
+            <span class="o-thumb" style="width: 64px; height: 40px;">
+              <svg viewBox="0 0 160 100" aria-hidden="true">
+                <rect class="pane main" x="42" y="2" width="76" height="96" rx="6"></rect>
+                <rect class="pane" x="2" y="2" width="36" height="46" rx="6"></rect>
+                <rect class="pane" x="2" y="52" width="36" height="46" rx="6"></rect>
+                <rect class="pane" x="122" y="2" width="36" height="96" rx="6"></rect>
+              </svg>
+            </span>
+          </span>
+          <span title="Fullscreen">
+            <span class="o-thumb" style="width: 64px; height: 40px;">
+              <svg viewBox="0 0 160 100" aria-hidden="true">
+                <rect class="pane main" x="2" y="2" width="156" height="96" rx="6"></rect>
+              </svg>
+            </span>
+          </span>
+          <span title="Column">
+            <span class="o-thumb" style="width: 64px; height: 40px;">
+              <svg viewBox="0 0 160 100" aria-hidden="true">
+                <rect class="pane main" x="2" y="2" width="49.327999999999996" height="96" rx="6"></rect>
+                <rect class="pane" x="55.327999999999996" y="2" width="49.343999999999994" height="96" rx="6"></rect>
+                <rect class="pane" x="108.672" y="2" width="49.327999999999996" height="96" rx="6"></rect>
+              </svg>
+            </span>
+          </span>
+          <span title="Row">
+            <span class="o-thumb" style="width: 64px; height: 40px;">
+              <svg viewBox="0 0 160 100" aria-hidden="true">
+                <rect class="pane main" x="2" y="2" width="156" height="29.33" rx="6"></rect>
+                <rect class="pane" x="2" y="35.33" width="156" height="29.339999999999996" rx="6"></rect>
+                <rect class="pane" x="2" y="68.67" width="156" height="29.33" rx="6"></rect>
+              </svg>
+            </span>
+          </span>
+          <span title="Floating">
+            <span class="o-thumb" style="width: 64px; height: 40px;">
+              <svg viewBox="0 0 160 100" aria-hidden="true">
+                <rect class="pane main" x="11.6" y="12" width="79.2" height="52.00000000000001" rx="6"></rect>
+                <rect class="pane" x="66" y="36" width="82.4" height="52.00000000000001" rx="6"></rect>
+              </svg>
+            </span>
+          </span>
+          <span title="BSP">
+            <span class="o-thumb" style="width: 64px; height: 40px;">
+              <svg viewBox="0 0 160 100" aria-hidden="true">
+                <rect class="pane main" x="2" y="2" width="76" height="96" rx="6"></rect>
+                <rect class="pane" x="82" y="2" width="76" height="46" rx="6"></rect>
+                <rect class="pane" x="82" y="52" width="36" height="46" rx="6"></rect>
+                <rect class="pane" x="122" y="52" width="36" height="46" rx="6"></rect>
+              </svg>
+            </span>
+          </span>
+          <span title="3 Column Left">
+            <span class="o-thumb" style="width: 64px; height: 40px;">
+              <svg viewBox="0 0 160 100" aria-hidden="true">
+                <rect class="pane main" x="2" y="2" width="76" height="96" rx="6"></rect>
+                <rect class="pane" x="82" y="2" width="36" height="96" rx="6"></rect>
+                <rect class="pane" x="122" y="2" width="36" height="96" rx="6"></rect>
+              </svg>
+            </span>
+          </span>
+          <span title="3 Column Middle">
+            <span class="o-thumb" style="width: 64px; height: 40px;">
+              <svg viewBox="0 0 160 100" aria-hidden="true">
+                <rect class="pane main" x="42" y="2" width="76" height="96" rx="6"></rect>
+                <rect class="pane" x="2" y="2" width="36" height="96" rx="6"></rect>
+                <rect class="pane" x="122" y="2" width="36" height="96" rx="6"></rect>
+              </svg>
+            </span>
+          </span>
+          <span title="3 Column Right">
+            <span class="o-thumb" style="width: 64px; height: 40px;">
+              <svg viewBox="0 0 160 100" aria-hidden="true">
+                <rect class="pane main" x="82" y="2" width="76" height="96" rx="6"></rect>
+                <rect class="pane" x="2" y="2" width="36" height="96" rx="6"></rect>
+                <rect class="pane" x="42" y="2" width="36" height="96" rx="6"></rect>
+              </svg>
+            </span>
+          </span>
+          <span title="Two Pane">
+            <span class="o-thumb" style="width: 64px; height: 40px;">
+              <svg viewBox="0 0 160 100" aria-hidden="true">
+                <rect class="pane main" x="2" y="2" width="76" height="96" rx="6"></rect>
+                <rect class="pane" x="82" y="2" width="76" height="96" rx="6"></rect>
+              </svg>
+            </span>
+          </span>
+        </div>
+      </div>
+    </section>
+    <section id="workspacestrip">
+      <h3>WorkspaceStrip</h3>
+      <div class="rules">
+        <p>WorkspaceStrip shows workspaces 1–9 (or 10) as pills; click to switch.</p>
+        <ul>
+          <li>Current is filled <code>accent</code> with <code>on-accent</code> text. Workspaces with windows are <code>ink</code> at 500; empty ones are <code>ink-faint</code> at 400. Both read at 4.5:1, so no number fades out.</li>
+        </ul>
+      </div>
+      <div class="stage o-root o-ground">
+        <div class="o-ws" role="radiogroup" aria-label="Workspaces">
+          <button type="button" role="radio" aria-checked="false" title="Workspace 1" class="o-ws__pill has-windows">1</button>
+          <button type="button" role="radio" aria-checked="true" title="Workspace 2" class="o-ws__pill is-current has-windows">2</button>
+          <button type="button" role="radio" aria-checked="false" title="Workspace 3" class="o-ws__pill has-windows">3</button>
+          <button type="button" role="radio" aria-checked="false" title="Workspace 4" class="o-ws__pill">4</button>
+          <button type="button" role="radio" aria-checked="false" title="Workspace 5" class="o-ws__pill has-windows">5</button>
+          <button type="button" role="radio" aria-checked="false" title="Workspace 6" class="o-ws__pill">6</button>
+          <button type="button" role="radio" aria-checked="false" title="Workspace 7" class="o-ws__pill">7</button>
+          <button type="button" role="radio" aria-checked="false" title="Workspace 8" class="o-ws__pill">8</button>
+          <button type="button" role="radio" aria-checked="false" title="Workspace 9" class="o-ws__pill">9</button>
+        </div>
+      </div>
+    </section>
+    <h2 class="group">Tokens</h2>
+    <section id="colors">
+      <h3>Colour</h3>
+      <div class="swatches">
+        <div class="swatch">
+          <span class="chip" style="background: var(--bg)"></span>
+          <code>--bg</code>
+          <span>Window ground: Settings window, welcome backdrop, the area behind cards.</span>
+        </div>
+        <div class="swatch">
+          <span class="chip" style="background: var(--surface)"></span>
+          <code>--surface</code>
+          <span>The one content pane (o-pane), the selected sidebar pill on the wash, large keycaps. The default ground for body text.</span>
+        </div>
+        <div class="swatch">
+          <span class="chip" style="background: var(--surface-raised)"></span>
+          <code>--surface-raised</code>
+          <span>Floating surfaces: menus, submenus, tooltips, coach marks, HUD (under glass).</span>
+        </div>
+        <div class="swatch">
+          <span class="chip" style="background: var(--surface-sunken)"></span>
+          <code>--surface-sunken</code>
+          <span>Wells inside a surface: secondary buttons, keycaps, segmented track, switch track off, slider bar track, progress track.</span>
+        </div>
+        <div class="swatch">
+          <span class="chip" style="background: var(--hover)"></span>
+          <code>--hover</code>
+          <span>Neutral highlight for a hovered row, sidebar item or ghost button.</span>
+        </div>
+        <div class="swatch">
+          <span class="chip" style="background: var(--hairline)"></span>
+          <code>--hairline</code>
+          <span>Separators between rows and menu groups, and the 1px ring inside shadow-popover and shadow-float. Decorative only: never the only edge of a control, never a box around content.</span>
+        </div>
+        <div class="swatch">
+          <span class="chip" style="background: var(--border-control)"></span>
+          <code>--border-control</code>
+          <span>Edges of interactive controls (switch track off, inputs, secondary buttons). 3:1 on surface and surface-sunken.</span>
+        </div>
+        <div class="swatch">
+          <span class="chip" style="background: var(--ink)"></span>
+          <code>--ink</code>
+          <span>Primary text and symbols on bg, surface, surface-raised, surface-sunken, hover and accent-soft.</span>
+        </div>
+        <div class="swatch">
+          <span class="chip" style="background: var(--ink-muted)"></span>
+          <code>--ink-muted</code>
+          <span>Secondary text: descriptions, group labels, shortcut hints, footnotes. On bg, surface, surface-raised and hover.</span>
+        </div>
+        <div class="swatch">
+          <span class="chip" style="background: var(--ink-faint)"></span>
+          <code>--ink-faint</code>
+          <span>Placeholders and tertiary metadata. Meets 4.5:1 on surface, surface-raised and surface-sunken; disabled items use it at 60% opacity.</span>
+        </div>
+        <div class="swatch">
+          <span class="chip" style="background: var(--accent)"></span>
+          <code>--accent</code>
+          <span>The palette&#x27;s brand fill: primary button, switch on, selected segment, progress, current workspace pill.</span>
+        </div>
+        <div class="swatch">
+          <span class="chip" style="background: var(--accent-hover)"></span>
+          <code>--accent-hover</code>
+          <span>accent while hovered or pressed.</span>
+        </div>
+        <div class="swatch">
+          <span class="chip" style="background: var(--on-accent)"></span>
+          <code>--on-accent</code>
+          <span>Text and symbols on accent and accent-hover.</span>
+        </div>
+        <div class="swatch">
+          <span class="chip" style="background: var(--accent-ink)"></span>
+          <code>--accent-ink</code>
+          <span>Accent used as text or a meaningful symbol: links, the Symbol showcase. On surface, surface-raised, accent-soft and wash-1. Never for hover or keyboard highlight.</span>
+        </div>
+        <div class="swatch">
+          <span class="chip" style="background: var(--accent-soft)"></span>
+          <code>--accent-soft</code>
+          <span>Info callouts only. Holds ink and accent-ink. Never a hover or keyboard highlight: those use hover.</span>
+        </div>
+        <div class="swatch">
+          <span class="chip" style="background: var(--tint)"></span>
+          <code>--tint</code>
+          <span>The palette&#x27;s quiet tone: illustration fills, layout-thumbnail panes, empty states.</span>
+        </div>
+        <div class="swatch">
+          <span class="chip" style="background: var(--focus)"></span>
+          <code>--focus</code>
+          <span>Keyboard focus ring, 2px solid with 2px offset. 3:1 on every surface.</span>
+        </div>
+        <div class="swatch">
+          <span class="chip" style="background: var(--success)"></span>
+          <code>--success</code>
+          <span>Done states: tour step passed, permission granted. Always paired with checkmark.circle.fill.</span>
+        </div>
+        <div class="swatch">
+          <span class="chip" style="background: var(--warning)"></span>
+          <code>--warning</code>
+          <span>Window refuses to resize, config warnings. Always paired with exclamationmark.triangle.fill.</span>
+        </div>
+        <div class="swatch">
+          <span class="chip" style="background: var(--danger)"></span>
+          <code>--danger</code>
+          <span>Destructive menu items (Quit, Reset), errors. Always a word plus a symbol, never colour alone.</span>
+        </div>
+        <div class="swatch">
+          <span class="chip" style="background: var(--danger-soft)"></span>
+          <code>--danger-soft</code>
+          <span>Ground for a highlighted destructive row and error callouts. Holds danger and ink.</span>
+        </div>
+        <div class="swatch">
+          <span class="chip" style="background: var(--glass)"></span>
+          <code>--glass</code>
+          <span>Translucent fill for floating chrome when real Liquid Glass is unavailable (web, pre-macOS 26).</span>
+        </div>
+        <div class="swatch">
+          <span class="chip" style="background: var(--wash-1)"></span>
+          <code>--wash-1</code>
+          <span>Zen-style chrome wash, first stop (top-left): accent mixed into bg. Window chrome and sidebars sit on the wash; ink, ink-muted and accent-ink read on it.</span>
+        </div>
+        <div class="swatch">
+          <span class="chip" style="background: var(--wash-2)"></span>
+          <code>--wash-2</code>
+          <span>Chrome wash, second stop (bottom-right): tint mixed into bg. Use as linear-gradient(140deg, wash-1, bg 55%, wash-2).</span>
+        </div>
+      </div>
+    </section>
+    <section id="type">
+      <h3>Type</h3>
+      <div class="rules type">
+        <div class="sample"><span class="display">Tile without thinking</span><code>.display</code><span>Welcome card title, cover, showcase headlines. Light, never bold; one per screen.</span></div>
+        <div class="sample"><span class="numeral">01</span><code>.numeral</code><span>Step numbers in flows and showcase eyebrows, in ink-muted.</span></div>
+        <div class="sample"><span class="title">Move focus with H J K L</span><code>.title</code><span>Tour-card titles, Settings pane titles, HUD layout name. Emphasise one word at 500, never more.</span></div>
+        <div class="sample"><span class="heading">Gaps &amp; Padding</span><code>.heading</code><span>Headings inside a pane and tip titles.</span></div>
+        <div class="sample"><span class="body">Main on the left, the rest stacked on the right</span><code>.body</code><span>Menu items, settings row labels, tour-card body, tips.</span></div>
+        <div class="sample"><span class="body-medium">Retile</span><code>.body-medium</code><span>Button labels, selected states.</span></div>
+        <div class="sample"><span class="caption">Applies to new windows only</span><code>.caption</code><span>Row descriptions, footnotes, breadcrumbs. Single line; truncate, don&#x27;t wrap.</span></div>
+        <div class="sample"><span class="label">Behavior</span><code>.label</code><span>Group titles and menu group labels, in ink-muted.</span></div>
+        <div class="sample"><span class="kbd">⌥ ⇧ H</span><code>.kbd</code><span>Keycaps and shortcut hints.</span></div>
+        <div class="sample"><span class="kicker">STEP 2 OF 6</span><code>.kicker</code><span>Step counters on tour cards; the only uppercase.</span></div>
+        <div class="sample"><span class="code">bind = $mod, H, movefocus, l</span><code>.code</code><span>Config snippets and paths.</span></div>
+      </div>
+    </section>
+    <section id="space">
+      <h3>Space, radius, shadow and size</h3>
+      <div class="rules">
+        <div class="swatch"><span class="chip" style="width: var(--space-0-5); height: 12px; border-radius: 0; background: var(--accent)"></span><code>--space-0-5</code><span>Inset between the menu panel padding and its rows (space-1 + space-0-5 = 6px menu padding).</span></div>
+        <div class="swatch"><span class="chip" style="width: var(--space-0-5); height: 12px; border-radius: 0; background: var(--accent)"></span><code>--space-1</code><span>Icon-to-label inside a pill; tip padding; gap below a group title.</span></div>
+        <div class="swatch"><span class="chip" style="width: var(--space-0-5); height: 12px; border-radius: 0; background: var(--accent)"></span><code>--space-2</code><span>Menu row horizontal padding, symbol-to-label gap, gap between keycaps.</span></div>
+        <div class="swatch"><span class="chip" style="width: var(--space-0-5); height: 12px; border-radius: 0; background: var(--accent)"></span><code>--space-3</code><span>Gap between a row&#x27;s symbol, text and control; toast vertical padding; gap between controls.</span></div>
+        <div class="swatch"><span class="chip" style="width: var(--space-0-5); height: 12px; border-radius: 0; background: var(--accent)"></span><code>--space-4</code><span>Toast horizontal padding, tour-card bottom padding, gap between stacked groups.</span></div>
+        <div class="swatch"><span class="chip" style="width: var(--space-0-5); height: 12px; border-radius: 0; background: var(--accent)"></span><code>--space-5</code><span>Tour-card padding, Settings pane padding, space above surface actions.</span></div>
+        <div class="swatch"><span class="chip" style="width: var(--space-0-5); height: 12px; border-radius: 0; background: var(--accent)"></span><code>--space-6</code><span>Gap between sections; HUD horizontal padding.</span></div>
+        <div class="swatch"><span class="chip" style="width: var(--space-0-5); height: 12px; border-radius: 0; background: var(--accent)"></span><code>--space-8</code><span>Welcome card padding, hero spacing.</span></div>
+        <div class="swatch"><span class="chip" style="border-radius: var(--radius-xs); background: var(--tint)"></span><code>--radius-xs</code><span>Small keycaps, the menu bar icon highlight.</span></div>
+        <div class="swatch"><span class="chip" style="border-radius: var(--radius-xs); background: var(--tint)"></span><code>--radius-sm</code><span>Menu rows, layout picker cells, the slider value bubble: anything inset inside a panel.</span></div>
+        <div class="swatch"><span class="chip" style="border-radius: var(--radius-xs); background: var(--tint)"></span><code>--radius-md</code><span>Tooltips (Surface xs), large tour keycaps.</span></div>
+        <div class="swatch"><span class="chip" style="border-radius: var(--radius-xs); background: var(--tint)"></span><code>--radius-lg</code><span>Menus, submenus, tips and toasts (Surface sm and md). Concentric with the rows inside: radius-lg 12 = radius-sm 6 + 6px menu padding.</span></div>
+        <div class="swatch"><span class="chip" style="border-radius: var(--radius-xs); background: var(--tint)"></span><code>--radius-xl</code><span>Tour cards (Surface lg). Fixed exceptions: sidebar items 10px, the content pane 14px, the HUD 22px, the welcome card 24px.</span></div>
+        <div class="swatch"><span class="chip" style="border-radius: var(--radius-xs); background: var(--tint)"></span><code>--radius-full</code><span>Buttons, switches, segmented controls and thumbs, workspace pills, sliders, progress, the HUD warning pill.</span></div>
+        <div class="swatch"><span class="chip" style="box-shadow: var(--shadow-sm); background: var(--surface-raised)"></span><code>--shadow-sm</code><span>Keycaps and the switch thumb: a 1px lift.</span></div>
+        <div class="swatch"><span class="chip" style="box-shadow: var(--shadow-sm); background: var(--surface-raised)"></span><code>--shadow-popover</code><span>Menus, submenus, tooltips, command menu.</span></div>
+        <div class="swatch"><span class="chip" style="box-shadow: var(--shadow-sm); background: var(--surface-raised)"></span><code>--shadow-float</code><span>Coach marks, HUD, welcome card: things that float over other apps.</span></div>
+        <div class="swatch"><span class="chip" style="width: var(--size-row); max-width: 120px; height: 12px; border-radius: 0; background: var(--ink-muted)"></span><code>--size-row</code><span>Menu and command rows.</span></div>
+        <div class="swatch"><span class="chip" style="width: var(--size-row); max-width: 120px; height: 12px; border-radius: 0; background: var(--ink-muted)"></span><code>--size-control</code><span>Buttons (sm 26px, lg 36px), icon buttons.</span></div>
+        <div class="swatch"><span class="chip" style="width: var(--size-row); max-width: 120px; height: 12px; border-radius: 0; background: var(--ink-muted)"></span><code>--size-kbd</code><span>Small keycap height in hints, tooltips and labels; tour-card keycaps are 40px.</span></div>
+        <div class="swatch"><span class="chip" style="width: var(--size-row); max-width: 120px; height: 12px; border-radius: 0; background: var(--ink-muted)"></span><code>--size-menu</code><span>Menu-bar menu width; submenus 232px; the command menu 360px.</span></div>
+      </div>
+    </section>
+</main>
 </body>
 </html>

@@ -6,12 +6,9 @@ Source: the Ouch design system artifact, https://claude.ai/artifact/GY1GAH7xBUwA
 
 ## Visual reference and editing
 
-The `design/` folder is a local copy of the artifact, with live previews of every component. Run `Tools/design.sh` and open http://localhost:4173 to see them. Use the theme menu to switch between light and dark.
+The `design/` folder has the visual reference: plain HTML and CSS with no build step. Run `open design/index.html` to see every component and token, in light and dark. `design/README.md` says which file to edit for which change.
 
-- `design/tokens.json` is the source for colour, type, space, radius, shadow and size. Edit it, then run `python3 design/build.py`. The script rebuilds `design/tokens.css` and `design/components/index.json`. Do not edit those two files by hand.
-- `design/components/<Name>/README.md` holds the rules for one component. `preview.html` shows it. `bundle.js` and `bundle.css` are the web components that the previews use.
-- `design/README.md` is the brand book of the artifact. This file maps it to the Swift code.
-- A change to a token or a component rule is not finished until `Theme.swift`, `Components.swift` and this file agree with it. The artifact has live previews of each component. The values are in code: `Sources/ouch/UI/Theme.swift` (tokens), `Components.swift` and `Popups.swift` (controls). When this file and the code disagree, the code is correct. Update this file.
+A change to a token or a component rule is not finished until `Theme.swift`, `Components.swift` and this file agree with it.
 
 ## Principles
 
