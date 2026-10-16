@@ -10,7 +10,8 @@ import SwiftUI
 final class Coach {
     enum Target { case center, window, bar, mode }
     enum Event { case mode(String), command(String, String, inMode: Bool), tick }
-    enum Ending { case finished, skipped, paused }
+    /// `tutorial`: the tour finished and the user asked for the long tutorial next.
+    enum Ending { case finished, skipped, paused, tutorial }
 
     struct Step {
         var title: String
@@ -29,8 +30,27 @@ final class Coach {
         var accept: (Event) -> String? = { _ in nil }
         /// What clicking the keycaps does: runs the step's command for you.
         var simulate: (() -> Void)?
-        var rows: [(caps: [String], label: String)] = []
-        var final = false
+        /// The last step: a cheat sheet of every key the lesson taught.
+        var summary: Summary?
+        var final: Bool { summary != nil }
+    }
+
+    /// The keys on the last card, grouped. All of it comes from the user's own config.
+    struct Summary {
+        struct Group {
+            var title: String
+            /// 1 for the left column, 2 for the right.
+            var column = 1
+            var rows: [(caps: [String], label: String)]
+        }
+        /// The chord that turns the mode on, shown big above the groups.
+        var modeCaps: [String] = []
+        var modeName = ""
+        var groups: [Group] = []
+        /// The keyboard help key, for the footer hint; nil when keyboard help is off.
+        var helpKey: String?
+        /// Offers the long tutorial next to Finish.
+        var tutorial = false
     }
 
     let wm = WindowManager.shared
@@ -96,6 +116,7 @@ final class Coach {
         model.headLabel = lesson.pausable ? "Pause" : "Skip tour"
         model.headSymbol = lesson.pausable ? "pause.fill" : nil
         model.reveal = { [weak self] in self?.revealHint() }
+        model.tutorial = { [weak self] in self?.end(.tutorial) }
         host = FirstClickHostingView(rootView: CoachCardView(model: model))
         panel = OverlayPanel(frame: .zero, level: .floating, clickThrough: false)
         panel.contentView = host
@@ -302,8 +323,7 @@ final class Coach {
         model.recall = s.recall
         model.done = done
         model.button = s.button
-        model.final = s.final
-        model.rows = s.rows
+        model.summary = s.summary
         model.canHead = !s.final
         let lastIndex = Double(max(1, lesson.count - 1))
         model.progress = min(1, (Double(index) + (done ? 1 : 0)) / lastIndex)
@@ -320,7 +340,7 @@ final class Coach {
         let size = host.fittingSize
         // The card sits inside the panel with room for its caret and shadow (see CoachCardView).
         let pad = CoachCardView.inset
-        let card = NSSize(width: CoachCardView.width, height: size.height - pad.top - pad.bottom)
+        let card = NSSize(width: size.width - pad.leading - pad.trailing, height: size.height - pad.top - pad.bottom)
         let v = screen.visibleFrame
         var o = NSPoint(x: v.midX - card.width / 2, y: v.midY - card.height / 2) // card's bottom-left
         var caret = CoachModel.Caret.none

@@ -156,8 +156,14 @@ final class Onboarding {
     /// The keyboard tour on its own (also from the menu bar).
     func startTour() {
         let lesson = TourLesson()
-        run(lesson) { [weak self] _ in
-            self?.offerSort { self?.finish() }
+        run(lesson) { [weak self] how in
+            guard let self else { return }
+            if how == .tutorial {
+                finish()
+                startTutorial()
+            } else {
+                offerSort { self.finish() }
+            }
         }
     }
 
@@ -169,7 +175,7 @@ final class Onboarding {
             case .paused:
                 let at = TutorialLesson.paused?.name
                 HUD.shared.show(at.map { "Paused at \($0)" } ?? "Tutorial paused", on: nil)
-            case .finished:
+            case .finished, .tutorial:
                 HUD.shared.show("Tutorial complete", on: nil)
             case .skipped:
                 break
