@@ -156,7 +156,7 @@ final class FocusDim {
         var id: CGWindowID?
         if app.processIdentifier == getpid() {
             if let n = NSApp.keyWindow?.windowNumber, n > 0, !owns(n) { id = CGWindowID(n) }
-        } else if var el = AXUIElementCreateApplication(app.processIdentifier).element(kAXFocusedWindowAttribute) {
+        } else if var el = axApp(app.processIdentifier).element(kAXFocusedWindowAttribute) {
             if el.string(kAXRoleAttribute) == kAXSheetRole, let parent = el.element(kAXParentAttribute) { el = parent }
             id = el.windowID
         }

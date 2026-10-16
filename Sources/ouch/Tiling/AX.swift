@@ -197,17 +197,40 @@ final class Window {
         AXUIElementSetMessagingTimeout(element, 0.5)
     }
 
-    var frame: CGRect { element.frame }
+    // The frame last read from the app or written to it. Read and written from any thread.
+    private let frameLock = NSLock()
+    private var lastFrame = CGRect.null
+
+    /// Asks the app. Also updates `cachedFrame` when the app answers.
+    var frame: CGRect {
+        let f = element.frame
+        if !f.isNull { frameLock.withLock { lastFrame = f } }
+        return f
+    }
+    /// The frame last read or written, without a call to the app. A scan reads it again on each
+    /// refresh that discovers windows. Asks the app only when nothing is known yet.
+    var cachedFrame: CGRect {
+        let f = frameLock.withLock { lastFrame }
+        return f.isNull ? frame : f
+    }
+    /// Sets the cached frame, for a window that a scan read off the main thread.
+    func remember(_ f: CGRect) {
+        if !f.isNull { frameLock.withLock { lastFrame = f } }
+    }
     var isValid: Bool { element.string(kAXRoleAttribute) != nil }
     var isNativeFullscreen: Bool { element.bool("AXFullScreen") ?? false }
 
     func setPosition(_ p: CGPoint) {
         var p = p
-        if let v = AXValueCreate(.cgPoint, &p) { element.set(kAXPositionAttribute, v) }
+        if let v = AXValueCreate(.cgPoint, &p), element.set(kAXPositionAttribute, v) {
+            frameLock.withLock { if !lastFrame.isNull { lastFrame.origin = p } }
+        }
     }
     func setSize(_ s: CGSize) {
         var s = s
-        if let v = AXValueCreate(.cgSize, &s) { element.set(kAXSizeAttribute, v) }
+        if let v = AXValueCreate(.cgSize, &s), element.set(kAXSizeAttribute, v) {
+            frameLock.withLock { if !lastFrame.isNull { lastFrame.size = s } }
+        }
     }
     /// Size → position → size. Setting position first lets macOS clamp a window that is still
     /// too big for its new spot (e.g. moving to a smaller display), which is a classic mis-tile.
@@ -219,7 +242,7 @@ final class Window {
 
     func focus() {
         if !WindowServerFocus.focus(pid: pid, window: id) {
-            AXUIElementCreateApplication(pid).set(kAXFrontmostAttribute, kCFBooleanTrue)
+            axApp(pid).set(kAXFrontmostAttribute, kCFBooleanTrue)
             NSRunningApplication(processIdentifier: pid)?.activate()
         }
         element.set(kAXMainAttribute, kCFBooleanTrue)
@@ -239,7 +262,7 @@ final class Window {
 
     /// Chooses Close Window from the app's menu bar. Only for the app's focused window: the menu acts on that one.
     func closeFromMenu() -> Bool {
-        let bar = AXUIElementCreateApplication(pid).element(kAXMenuBarAttribute)
+        let bar = axApp(pid).element(kAXMenuBarAttribute)
         for top in bar?.elements(kAXChildrenAttribute) ?? [] {
             for menu in top.elements(kAXChildrenAttribute) {
                 for item in menu.elements(kAXChildrenAttribute) where ["Close Window", "Close"].contains(item.string(kAXTitleAttribute) ?? "") {
@@ -266,7 +289,7 @@ enum EnhancedUI {
         let l = lock(pid)
         l.lock(); defer { l.unlock() }
         if let h = tableLock.withLock({ held[pid] }) { tableLock.withLock { held[pid] = (h.count + 1, h.wasOn) }; return }
-        let app = AXUIElementCreateApplication(pid)
+        let app = axApp(pid)
         let on = app.bool(attr) ?? false
         if on { app.set(attr, kCFBooleanFalse) }
         tableLock.withLock { held[pid] = (1, on) }
@@ -277,7 +300,7 @@ enum EnhancedUI {
         guard let h = tableLock.withLock({ held[pid] }) else { return }
         if h.count > 1 { tableLock.withLock { held[pid] = (h.count - 1, h.wasOn) }; return }
         tableLock.withLock { held[pid] = nil }
-        if h.wasOn { AXUIElementCreateApplication(pid).set(attr, kCFBooleanTrue) }
+        if h.wasOn { axApp(pid).set(attr, kCFBooleanTrue) }
     }
 
     private static func lock(_ pid: pid_t) -> NSLock {
