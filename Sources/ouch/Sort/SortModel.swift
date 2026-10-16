@@ -503,13 +503,20 @@ final class SortModel: ObservableObject {
             drag = SortDrag(item: item, closing: plan.isClosing(item.id), location: v.location,
                             grab: CGSize(width: v.startLocation.x - origin.x, height: v.startLocation.y - origin.y))
             hover = item.id
-            edgeTimer = Timer.scheduledTimer(withTimeInterval: 1 / 60, repeats: true) { [weak self] _ in self?.edgeScroll() }
+            startEdgeTimer()
         }
         drag?.location = v.location
         let zone = zone(at: v.location)
         let source = plan.lane(of: item.id).map { SortZone.lane(plan.lanes[$0].id) } ?? (plan.isClosing(item.id) ? .close : nil)
         let next = zone == source ? nil : zone
         if over != next { over = next }
+    }
+
+    /// In the common modes, so the row keeps scrolling while the pointer is held still in the zone.
+    private func startEdgeTimer() {
+        let t = Timer(timeInterval: 1 / 60, repeats: true) { [weak self] _ in self?.edgeScroll() }
+        RunLoop.main.add(t, forMode: .common)
+        edgeTimer = t
     }
 
     func dragEnded() {
@@ -537,7 +544,7 @@ final class SortModel: ObservableObject {
             let g = plan.geometry[lane.ws]
             columnDrag = SortColumnDrag(lane: lane, ratio: g?.ratio ?? 0.5, mainCount: g?.mainCount ?? 1, location: v.location,
                                         grab: CGSize(width: v.startLocation.x - origin.x, height: v.startLocation.y - origin.y))
-            edgeTimer = Timer.scheduledTimer(withTimeInterval: 1 / 60, repeats: true) { [weak self] _ in self?.edgeScroll() }
+            startEdgeTimer()
         }
         columnDrag?.location = v.location
         let t = columnTarget(lane.id, at: v.location)
@@ -592,12 +599,13 @@ final class SortModel: ObservableObject {
         return nil
     }
 
-    /// Dragging near either end of the row scrolls it.
+    /// Dragging near either end of the row scrolls it, faster the deeper the pointer is in the zone. Past the left
+    /// end the row keeps scrolling at full speed; the right end is bounded by the Close column.
     private func edgeScroll() {
-        guard let d = drag?.location ?? columnDrag?.location, let s = zones[.scroller], d.y > s.minY - 20, d.y < s.maxY + 20 else { return }
-        let edge: CGFloat = 40
-        if d.x > s.maxX - edge, d.x < s.maxX + edge { scrollRow(by: 9) }
-        else if d.x < s.minX + edge, d.x > s.minX - edge { scrollRow(by: -9) }
+        guard let d = drag?.location ?? columnDrag?.location, let s = zones[.scroller], d.y > s.minY - 40, d.y < s.maxY + 40 else { return }
+        let edge: CGFloat = 56, top: CGFloat = 14
+        if d.x > s.maxX - edge, d.x <= s.maxX { scrollRow(by: 2 + top * (d.x - (s.maxX - edge)) / edge) }
+        else if d.x < s.minX + edge { scrollRow(by: -(2 + top * min(1, (s.minX + edge - d.x) / edge))) }
     }
 
     // MARK: The row of lanes

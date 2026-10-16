@@ -13,11 +13,30 @@ private extension View {
             Color.clear.preference(key: SortZoneKey.self, value: [z: g.frame(in: .named("sort"))])
         })
     }
+
+    func keepInside(_ origin: CGPoint) -> some View { KeepInside(origin: origin) { self } }
 }
 
 private struct SortZoneKey: PreferenceKey {
     static var defaultValue: [SortZone: CGRect] = [:]
     static func reduce(value: inout [SortZone: CGRect], nextValue: () -> [SortZone: CGRect]) { value.merge(nextValue()) { $1 } }
+}
+
+/// Places a drag ghost under the pointer but keeps it inside the panel window, which would clip it.
+private struct KeepInside: SwiftUI.Layout {
+    /// Where the ghost's top-left corner wants to be, in the panel's coordinate space.
+    let origin: CGPoint
+    private let margin: CGFloat = 8 // keeps the popover shadow inside too
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: SwiftUI.LayoutSubviews, cache: inout ()) -> CGSize { proposal.replacingUnspecifiedDimensions() }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: SwiftUI.LayoutSubviews, cache: inout ()) {
+        guard let ghost = subviews.first else { return }
+        let size = ghost.sizeThatFits(.unspecified)
+        let x = max(margin, min(origin.x, bounds.width - size.width - margin))
+        let y = max(margin, min(origin.y, bounds.height - size.height - margin))
+        ghost.place(at: CGPoint(x: bounds.minX + x, y: bounds.minY + y), anchor: .topLeading, proposal: .unspecified)
+    }
 }
 
 private enum SortMetrics {
@@ -184,7 +203,7 @@ struct SortView: View {
             .padding(.vertical, 8).padding(.horizontal, 4)
             .frame(width: SortMetrics.lane, alignment: .topLeading)
             .background(shape.fill(Theme.surfaceRaised).elevation(.popover, in: shape))
-            .offset(x: d.location.x - d.grab.width, y: d.location.y - d.grab.height)
+            .keepInside(CGPoint(x: d.location.x - d.grab.width, y: d.location.y - d.grab.height))
             .allowsHitTesting(false)
         }
     }
@@ -196,7 +215,7 @@ struct SortView: View {
                 .frame(width: 168, height: SortMetrics.rowHeight)
                 .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous).fill(Theme.surfaceRaised)
                     .elevation(.popover, in: RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)))
-                .offset(x: d.location.x - d.grab.width, y: d.location.y - d.grab.height)
+                .keepInside(CGPoint(x: d.location.x - d.grab.width, y: d.location.y - d.grab.height))
                 .allowsHitTesting(false)
         }
     }
