@@ -39,6 +39,7 @@ The app source is in `Sources/ouch/`. Each folder has one job:
 
 # UI rules
 
+- Read `docs/design-system.md` before you build or change UI. It says how each component must look and when to use it.
 - Use the tokens in `UI/Theme.swift` for colour, type, symbol size, radius, spacing, shadow and motion. Do not type a raw value when a token exists.
 - Use the components in `UI/Components.swift` and `UI/Popups.swift`. Do not make a local copy of a control. If a control cannot do what you need, extend it.
 - For a new window or panel, use `OuchPanel` (`UI/OuchPanel.swift`).
