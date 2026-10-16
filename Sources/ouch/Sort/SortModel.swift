@@ -508,7 +508,7 @@ final class SortModel: ObservableObject {
         drag?.location = v.location
         let zone = zone(at: v.location)
         let source = plan.lane(of: item.id).map { SortZone.lane(plan.lanes[$0].id) } ?? (plan.isClosing(item.id) ? .close : nil)
-        let next = zone == source ? nil : zone
+        let next = zone == source || (zone == .add && nextName == nil) ? nil : zone // no room, no new workspace
         if over != next { over = next }
     }
 
@@ -590,11 +590,12 @@ final class SortModel: ObservableObject {
     }
 
     /// What is under a point, display chips first, then Close, the new-workspace column and the lanes.
+    /// The new-workspace column counts only where the row shows it, not where it is scrolled out of view.
     private func zone(at p: CGPoint) -> SortZone? {
         for (z, f) in zones { if case .display = z, f.contains(p) { return z } }
         if let f = zones[.close], f.contains(p) { return .close }
-        if let f = zones[.add], f.contains(p) { return .add }
         guard let s = zones[.scroller], s.contains(p) else { return nil }
+        if let f = zones[.add], f.contains(p) { return .add }
         for (z, f) in zones { if case .lane = z, f.minX <= p.x, p.x < f.maxX { return z } }
         return nil
     }
