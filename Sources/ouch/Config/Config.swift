@@ -76,6 +76,11 @@ struct Config {
     var keyboardHelp = true
     /// The character that toggles the keyboard help inside a mode.
     var keyboardHelpKey = "?"
+    /// In window mode, a dot beside the pointer; tapping the mode's modifier opens quick actions for the
+    /// window under it.
+    var cursorActions = true
+    /// The main modifier (`$mod`, or Hyprland's `$mainMod`), resolved. A tap of it in a mode opens the quick actions.
+    var mainMod: CGEventFlags = .maskAlternate
     /// The keyboard drawn in the Shortcut Map and the keyboard help: `auto` (this Mac), a finish such as
     /// `macbook-air-midnight`, or a family (`macbook-pro`, `macbook-air`, `macbook-neo`, `magic-keyboard`).
     var keyboardFinish = "auto"
@@ -130,6 +135,7 @@ struct Config {
     static func parse(_ text: String) -> Config {
         var c = Config()
         var vars: [(String, String)] = []
+        var modVar: String? // the first variable named like a modifier, as Settings reads it
         var blocks: [String] = [] // enclosing Hyprland category blocks, outermost first
         for (n, raw) in text.components(separatedBy: .newlines).enumerated() {
             var line = stripComment(raw)
@@ -146,6 +152,10 @@ struct Config {
                 vars.removeAll { $0.0 == key }
                 vars.append((key, value))
                 vars.sort { $0.0.count > $1.0.count } // so $mod2 isn't eaten by $mod
+                if key.lowercased().contains("mod"), (modVar ?? key) == key, let f = ConfigDocument.flags(value) {
+                    modVar = key
+                    c.mainMod = CGEventFlags(rawValue: UInt64(f.rawValue))
+                }
                 continue
             }
             // Hyprland submaps: binds after `submap = name` only work in that mode, until `submap = reset`.
@@ -232,6 +242,7 @@ struct Config {
         case "keyboard_help_key":
             guard v.count == 1 else { return "keyboard-help-key must be a single character, such as ?" }
             keyboardHelpKey = v
+        case "cursor_actions": cursorActions = bool
         case "keyboard_finish":
             guard MacKeyboard.isValid(v) else {
                 return "unknown keyboard finish `\(v)` (auto, macbook-pro, macbook-air, macbook-neo, magic-keyboard, or a finish like macbook-pro-space-black)"
@@ -422,6 +433,9 @@ enables-layout-hud-on-space-change = true
 # every window-mode key on an on-screen keyboard.
 keyboard-help = true
 keyboard-help-key = ?
+# Cursor quick actions: in window mode a dot follows the pointer; tap Cmd (or $mod) to open actions
+# for the window under it.
+cursor-actions = true
 # Make the focused window stand out: darken the others (strength 0-1) and/or blur them (radius in points).
 dim-other-windows = false
 dim-strength = 0.3

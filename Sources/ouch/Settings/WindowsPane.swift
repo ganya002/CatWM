@@ -51,6 +51,10 @@ struct WindowsPane: View {
                 OSwitchRow("Drag window edges to resize the main pane",
                            description: "Resize a tiled window with the mouse, and the main pane follows", isOn: $doc.config.mouseResizesWindows)
                     .setting("windows.resizeMain", ui)
+                OSwitchRow("Quick actions at the pointer",
+                           description: "In window mode, tap the mode's modifier for actions on the window under the pointer",
+                           isOn: $doc.config.cursorActions)
+                    .setting("windows.cursorActions", ui)
             }
 
             OGroup("Floating") {
