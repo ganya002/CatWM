@@ -1,6 +1,7 @@
 // Settings: the Shortcuts pane (action catalog, bind rows, shortcut recorder).
 import AppKit
 import SwiftUI
+import MacKeysCore
 
 // MARK: - Shortcuts
 
@@ -36,7 +37,7 @@ struct ShortcutsPane: View {
             (value: "macbook-air", label: "MacBook Air (family)"),
             (value: "macbook-neo", label: "MacBook Neo (family)"),
             (value: "magic-keyboard", label: "Magic Keyboard (family)"),
-        ] + MacKeyboard.Finish.all.map { (value: $0.slug, label: $0.name) }
+        ] + FinishID.allCases.map { (value: MacKeyboard.slug($0.name), label: $0.name) }
         if !options.contains(where: { $0.value == doc.config.keyboardFinish }) {
             options.append((value: doc.config.keyboardFinish, label: doc.config.keyboardFinish))
         }

@@ -544,12 +544,6 @@ struct OTooltip: View {
     }
 }
 
-/// Small keycaps for a shortcut (the older name, kept for call sites).
-struct Keycaps: View {
-    let caps: [String]
-    var body: some View { Kbd(keys: caps) }
-}
-
 // MARK: - Row and Group
 
 /// An open list: a title in `accent-ink`, rows separated by hairlines, no surrounding box.

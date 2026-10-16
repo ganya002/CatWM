@@ -30,6 +30,8 @@ if [ -n "$OUCH_CHANNEL" ]; then
 fi
 cp -R Resources/Fonts "$APP/Contents/Resources/"  # Chillax (ITF), registered at launch
 cp Resources/Icon/AppIcon.icns "$APP/Contents/Resources/"
+# SwiftPM resource bundles of the MacKeys SDK (key data and click sounds); Bundle.module finds them here.
+cp -R ".build/$CONFIG/MacKeys_MacKeysCore.bundle" "$APP/Contents/Resources/"
 cp -R Resources/AgentDocs "$APP/Contents/Resources/"  # docs for AI agents; `ouch docs` prints the path
 cp Resources/ThirdPartyNotices.txt "$APP/Contents/Resources/"
 # Sparkle ships as a prebuilt framework inside the SwiftPM artifact bundle.

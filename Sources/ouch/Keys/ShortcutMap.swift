@@ -163,7 +163,7 @@ struct ShortcutMap: View {
         return GeometryReader { g in
             let scale = g.size.width / one.width
             ZStack(alignment: .topLeading) {
-                KeyHintKeyboard(binds: hints, style: .labels, pressed: pressed, hot: hot, scale: scale)
+                KeyHintKeyboard(binds: hints, pressed: pressed, hot: hot, scale: scale)
                     .onKeyTap(tap)
                     .onKeyHover { k, inside in
                         if k.modifier.isEmpty, let code = k.code { model.hover(code, inside) }

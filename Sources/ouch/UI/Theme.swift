@@ -177,9 +177,6 @@ enum Theme {
             : weight == .regular ? "Chillax-Regular" : "Chillax-Medium"
         return NSFont(name: name, size: size) ?? .systemFont(ofSize: size, weight: weight)
     }
-    static func nsMono(_ size: CGFloat, weight: NSFont.Weight = .medium) -> NSFont {
-        .monospacedSystemFont(ofSize: size, weight: weight)
-    }
 
     // MARK: Metrics
 

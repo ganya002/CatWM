@@ -1,6 +1,15 @@
 {
   "pins" : [
     {
+      "identity" : "mackeys-sdk",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/noxaur/mackeys-sdk.git",
+      "state" : {
+        "revision" : "7c5c19b76e3d32b8a0ef151d81f7729cfa9b54c0",
+        "version" : "0.2.0"
+      }
+    },
+    {
       "identity" : "sparkle",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/sparkle-project/Sparkle",
