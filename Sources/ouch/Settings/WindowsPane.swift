@@ -4,6 +4,16 @@ import SwiftUI
 
 // MARK: - Windows
 
+/// One action the pointer menu can run, and the dispatcher whose window-mode shortcut it shows.
+private struct CursorShortcutSpec: Identifiable {
+    let id: String
+    let title: String
+    let dispatcher: String
+    let args: String
+    /// Follows whichever bind sends a window to the next workspace, rather than one fixed dispatcher.
+    var nextWorkspace = false
+}
+
 struct WindowsPane: View {
     @ObservedObject var doc: ConfigDocument
     @ObservedObject var ui: SettingsUI
@@ -55,10 +65,16 @@ struct WindowsPane: View {
                 OSwitchRow("Drag window edges to resize the main pane",
                            description: "Resize a tiled window with the mouse, and the main pane follows", isOn: $doc.config.mouseResizesWindows)
                     .setting("windows.resizeMain", ui)
+            }
+
+            OGroup("Pointer menu") {
                 OSwitchRow("Quick actions at the pointer",
-                           description: "In window mode, tap the mode's modifier for actions on the window under the pointer",
+                           description: "In window mode, tap the mode's modifier. Press a shortcut below to run it",
                            isOn: $doc.config.cursorActions)
                     .setting("windows.cursorActions", ui)
+                if doc.config.cursorActions {
+                    ForEach(pointerShortcuts) { spec in pointerShortcutRow(spec) }
+                }
             }
 
             OGroup("Floating") {
@@ -137,6 +153,84 @@ struct WindowsPane: View {
                 }
             }
         }
+    }
+
+    /// The window mode the pointer menu reads its shortcuts from, or "" when there is none.
+    private var windowMode: String {
+        doc.binds.first { $0.submap.isEmpty && $0.dispatcher == "submap" && !["", "reset"].contains($0.args.lowercased()) }?.args ?? ""
+    }
+
+    /// The pointer menu's actions, in menu order. Send to Next Workspace is only there with Ouch workspaces.
+    private var pointerShortcuts: [CursorShortcutSpec] {
+        Self.pointerShortcutList.filter { $0.id != "workspace" || doc.config.virtualWorkspaces }
+    }
+
+    private static let pointerShortcutList: [CursorShortcutSpec] = [
+        CursorShortcutSpec(id: "float", title: "Float or tile", dispatcher: "togglefloating", args: ""),
+        CursorShortcutSpec(id: "zoom", title: "Zoom", dispatcher: "fullscreen", args: ""),
+        CursorShortcutSpec(id: "native", title: "Native Full Screen", dispatcher: "nativefullscreen", args: ""),
+        CursorShortcutSpec(id: "main", title: "Make Main", dispatcher: "layoutmsg", args: "swapwithmaster"),
+        CursorShortcutSpec(id: "layout", title: "Next Layout", dispatcher: "cyclelayout", args: "next"),
+        CursorShortcutSpec(id: "display", title: "Send to Next Display", dispatcher: "movewindowtomonitor", args: "+1"),
+        CursorShortcutSpec(id: "workspace", title: "Send to Next Workspace", dispatcher: "movetoworkspacesilent", args: "+1", nextWorkspace: true),
+        CursorShortcutSpec(id: "minimize", title: "Minimize", dispatcher: "minimize", args: ""),
+        CursorShortcutSpec(id: "close", title: "Close", dispatcher: "killactive", args: ""),
+    ]
+
+    /// The window-mode key already bound to this action. `keyActions` has split range binds, so one key shows.
+    private func shortcut(for spec: CursorShortcutSpec) -> ConfigDocument.KeyAction? {
+        doc.keyActions(in: windowMode).first {
+            $0.code < 0x1000 && (spec.nextWorkspace
+                ? Actions.isNextWorkspace($0.row.dispatcher, $0.arg)
+                : Actions.same($0.row.dispatcher, $0.arg, spec.dispatcher, spec.args))
+        }
+    }
+
+    private func pointerShortcutRow(_ spec: CursorShortcutSpec) -> some View {
+        let hit = shortcut(for: spec)
+        return ORow(spec.title) {
+            if let hit {
+                let caps = ConfigDocument.modifierCaps(hit.flags) + [ConfigDocument.capLabel(hit.key)]
+                Button {
+                    ui.open(SettingEntry(id: "bind.\(hit.row.id)", title: doc.title(hit.row), pane: .shortcuts, bind: hit.row))
+                } label: { Kbd(keys: caps) }
+                    .buttonStyle(.plain)
+                    .tooltip("Edit in Shortcuts")
+                    .accessibilityLabel("Shortcut \(caps.joined(separator: " ")) for \(spec.title)")
+            } else {
+                OButton("Add", size: .sm) { addShortcut(spec) }
+                    .accessibilityLabel("Add a shortcut for \(spec.title)")
+            }
+        }
+    }
+
+    /// A bind `keyActions` cannot show because its key is empty or unknown. Add resumes that row
+    /// instead of appending another one. A scroll or swipe bind is a real shortcut this list leaves
+    /// out, so it is left alone and a new row is recorded.
+    private func unfinishedShortcut(_ spec: CursorShortcutSpec) -> BindRow? {
+        doc.binds.first { row in
+            guard row.submap == windowMode else { return false }
+            let matches = spec.nextWorkspace
+                ? Actions.isNextWorkspace(row.dispatcher, row.args)
+                : Actions.same(row.dispatcher, row.args, spec.dispatcher, spec.args)
+            guard matches else { return false }
+            guard case .success(let pairs) = BindRange.pairs(key: row.key, dispatcher: row.dispatcher, arg: row.args) else { return true }
+            return !pairs.contains { keyCodes[$0.key.lowercased()] != nil }
+        }
+    }
+
+    private func addShortcut(_ spec: CursorShortcutSpec) {
+        let row: BindRow
+        if let existing = unfinishedShortcut(spec) {
+            row = existing
+        } else {
+            let mode = windowMode
+            row = BindRow(mods: mode.isEmpty ? doc.modVarName : "", key: "",
+                          dispatcher: spec.dispatcher, args: spec.args, submap: mode)
+            doc.binds.append(row)
+        }
+        ui.open(SettingEntry(id: "bind.\(row.id)", title: spec.title, pane: .shortcuts, bind: row))
+        DispatchQueue.main.async { ui.recording = row.id }
     }
 
     private var addMenu: some View {

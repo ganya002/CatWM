@@ -6,7 +6,8 @@ import SwiftUI
 /// Tapping `$mod` (or the mode chord's modifier, ⌘ for ⌘⇪) opens a menu there with actions for the window
 /// under the pointer; a second tap, Esc or a click outside closes it (a click outside also leaves the mode,
 /// like any click). A small click-through panel with the mark follows the pointer; the menu has a panel of its own, which
-/// takes clicks only while it is open. Neither becomes key, so focus stays with the app. `cursor-actions = false` turns it off.
+/// takes clicks only while it is open. Neither becomes key, so focus stays with the app. While the menu is
+/// open, the window-mode shortcut drawn on a row runs that row. `cursor-actions = false` turns it off.
 final class CursorActions {
     static let shared = CursorActions()
 
@@ -37,6 +38,9 @@ final class CursorActions {
             guard let self, model.open else { return false }
             DispatchQueue.main.async { [weak self] in self?.dismissMenu() }
             return true
+        }
+        Hotkeys.shared.onMenuKey = { [weak self] code, flags, isRepeat in
+            self?.menuKey(code, flags, isRepeat) ?? false
         }
         model.onPick = { [weak self] action in
             self?.dismissMenu()
@@ -80,6 +84,17 @@ final class CursorActions {
             opening = false
             if shown, !Hotkeys.shared.submap.isEmpty { model.open = true } else { closeMenuPanel() }
         }
+    }
+
+    /// A key while the menu is open. The shortcut drawn on a row runs that row. Asked inside the key tap,
+    /// so it only reads and returns; the action runs a turn later. A repeat is swallowed so the bind underneath
+    /// does not also fire.
+    private func menuKey(_ code: UInt16, _ flags: CGEventFlags, _ isRepeat: Bool) -> Bool {
+        guard model.open else { return false }
+        let mods = flags.intersection([.maskCommand, .maskAlternate, .maskControl, .maskShift])
+        guard let action = model.actions.first(where: { $0.keyCode == code && $0.keyMods == mods }) else { return false }
+        if !isRepeat { DispatchQueue.main.async { [weak self] in self?.model.onPick?(action) } }
+        return true
     }
 
     func dismissMenu() {

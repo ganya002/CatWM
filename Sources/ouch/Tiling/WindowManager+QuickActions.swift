@@ -18,8 +18,10 @@ extension WindowManager {
 
         func action(_ actionID: String, _ title: String, _ symbol: String, _ dispatcher: String, _ arg: String = "",
                     isOn: Bool = false, destructive: Bool = false) -> QuickAction {
-            QuickAction(id: actionID, title: title, symbol: symbol, key: quickActionKey(dispatcher, arg, mode: mode),
-                        isOn: isOn, destructive: destructive) { [weak self] in
+            let shortcut = quickActionShortcut(dispatcher, arg, mode: mode)
+            return QuickAction(id: actionID, title: title, symbol: symbol, keys: shortcut?.keys ?? [],
+                               keyCode: shortcut?.code, keyMods: shortcut?.mods ?? [],
+                               isOn: isOn, destructive: destructive) { [weak self] in
                 self?.runQuickAction(actionID, on: id) { $0.dispatch(dispatcher, arg) }
             }
         }
@@ -44,10 +46,7 @@ extension WindowManager {
             let (d, a) = nextWorkspaceDispatch(mode: mode)
             out.append(action("workspace", "Send to Next Workspace", "arrow.right.square", d, a))
         }
-        // No dispatcher minimizes, so this one sets the attribute; the observer then retiles as for the yellow button.
-        out.append(QuickAction(id: "minimize", title: "Minimize", symbol: "minus.square") { [weak self] in
-            self?.runQuickAction("minimize", on: id) { wm in wm.windows[id]?.element.set(kAXMinimizedAttribute, kCFBooleanTrue) }
-        })
+        out.append(action("minimize", "Minimize", "minus.square", "minimize"))
         out.append(action("close", "Close", "xmark.square", "killactive", destructive: true))
         return (quickActionTitle(w), out)
     }
@@ -84,28 +83,22 @@ extension WindowManager {
         return config.bindings.first { $0.submap.isEmpty && $0.dispatcher == "submap" && $0.arg.lowercased() != "reset" }?.arg ?? ""
     }
 
-    /// The window-mode key bound to this dispatcher, e.g. "F" or "⇧F"; empty when none is.
+    /// The window-mode shortcut bound to this dispatcher, as keycaps plus the key the menu matches.
     /// Aliases count (`movewindowtomonitor +1` is `movewindow mon:+1`), so a renamed bind still shows.
-    private func quickActionKey(_ dispatcher: String, _ arg: String, mode: String) -> String {
+    /// Scroll and swipe binds are left out: the menu is driven from the keyboard.
+    private func quickActionShortcut(_ dispatcher: String, _ arg: String, mode: String) -> (keys: [String], code: UInt16, mods: CGEventFlags)? {
         guard !mode.isEmpty, let b = config.bindings.first(where: {
-            $0.submap == mode && sameAction($0.dispatcher, $0.arg, dispatcher, arg)
-        }) else { return "" }
-        return KeyWords.caps(b, long: false).joined()
-    }
-
-    private func sameAction(_ d1: String, _ a1: String, _ d2: String, _ a2: String) -> Bool {
-        let m1 = Actions.match(BindRow(mods: "", key: "", dispatcher: d1, args: a1))
-        let m2 = Actions.match(BindRow(mods: "", key: "", dispatcher: d2, args: a2))
-        if let m1, let m2 { return m1.dispatcher == m2.dispatcher && m1.args == m2.args }
-        return d1.lowercased() == d2.lowercased() && a1.lowercased() == a2.lowercased()
+            $0.submap == mode && $0.keyCode < 0x1000 && Actions.same($0.dispatcher, $0.arg, dispatcher, arg)
+        }) else { return nil }
+        let mods = b.mods.intersection([.maskCommand, .maskAlternate, .maskControl, .maskShift])
+        return (KeyWords.caps(b, long: false), b.keyCode, mods)
     }
 
     /// The user's own "next workspace" move when window mode binds one (so the hint is its key),
     /// else a quiet move to the next workspace by number.
     private func nextWorkspaceDispatch(mode: String) -> (String, String) {
         let b = config.bindings.first {
-            $0.submap == mode && ["movetoworkspace", "movetoworkspacesilent"].contains($0.dispatcher)
-                && ["e+1", "+1", "r+1", "m+1"].contains($0.arg.lowercased())
+            $0.submap == mode && Actions.isNextWorkspace($0.dispatcher, $0.arg)
         }
         return b.map { ($0.dispatcher, $0.arg) } ?? ("movetoworkspacesilent", "+1")
     }

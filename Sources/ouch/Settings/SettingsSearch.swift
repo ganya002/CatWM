@@ -51,7 +51,7 @@ enum SettingsIndex {
         SettingEntry(id: "windows.blurRadius", title: "Blur radius", pane: .windows, keywords: "soft amount points"),
         SettingEntry(id: "windows.dragSwap", title: "Drag to swap", pane: .windows, keywords: "mouse move"),
         SettingEntry(id: "windows.cursorActions", title: "Quick actions at the pointer", pane: .windows,
-                     keywords: "cursor mouse menu window mode tap modifier command dot indicator"),
+                     keywords: "cursor mouse menu window mode tap modifier shortcut float zoom fullscreen minimize close"),
         SettingEntry(id: "windows.resizeMain", title: "Drag window edges to resize the main pane", pane: .windows, keywords: "mouse ratio"),
         SettingEntry(id: "windows.floatingMode", title: "Floating apps", pane: .windows, keywords: "float exclude blacklist whitelist tile only"),
         SettingEntry(id: "windows.workspaces", title: "Use Ouch workspaces", pane: .windows, keywords: "spaces desktops virtual"),

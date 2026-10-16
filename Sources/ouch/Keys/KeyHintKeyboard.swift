@@ -108,6 +108,7 @@ struct KeyHint: Identifiable, Equatable {
         case "toggleblur": return "Blur"
         case "reload": return "Reload"
         case "killactive": return "Close"
+        case "minimize": return "Min"
         case "exec": return "Run"
         case "exit": return "Quit"
         case "sethomespace": return "Home"
