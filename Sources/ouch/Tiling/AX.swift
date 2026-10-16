@@ -348,8 +348,10 @@ extension CGWindowInfo {
             let alpha = d[kCGWindowAlpha as String] as? Double ?? 1
             if alpha < 0.01 || FocusDim.shared.owns(n) { continue } // invisible overlays, the focus dim
             if pid == Int(getpid()) {
-                if layer == 0 { return nil } // over the Settings window: leave focus alone
-                continue // the layout HUD
+                // Over Settings, a menu or a card: leave focus alone. Overlays the mouse passes through
+                // (the HUD, tooltips) don't count. Settings floats, so its layer doesn't tell.
+                if NSApp.window(withWindowNumber: n)?.ignoresMouseEvents == false { return nil }
+                continue
             }
             if layer == 0 { return CGWindowInfo(id: CGWindowID(n), pid: pid_t(pid), bounds: bounds) }
             if blocking.contains(layer) { return nil }
