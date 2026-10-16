@@ -1,4 +1,3 @@
-// Keys: this Mac's keyboard for the MacKeys SDK: model, finish, physical layout and input-source layout.
 import AppKit
 import Carbon
 import IOKit
@@ -6,10 +5,6 @@ import IOKit.ps
 import MacKeysCore
 import MacKeysUI
 
-/// The keyboard KeyHintKeyboard draws, as a MacKeys `MacDevice`: this Mac's model and finish (and its
-/// housing colour when the IORegistry has one), the layout of its physical keyboard (ANSI, ISO or JIS)
-/// and the input source in use. Follows input source and Light/Dark changes. `keyboard-finish` in the
-/// config picks another finish or family.
 final class MacKeyboard: ObservableObject {
     static let shared = MacKeyboard()
 
@@ -24,7 +19,6 @@ final class MacKeyboard: ObservableObject {
 
     var deckLayout: MacDeckLayout { MacDeckLayout(device) }
 
-    /// `auto`, a finish (`macbook-air-midnight`) or a family (`macbook-pro`). Set from the config.
     var setting = "auto" {
         didSet { if setting != oldValue { refresh() } }
     }
@@ -39,7 +33,6 @@ final class MacKeyboard: ObservableObject {
         DistributedNotificationCenter.default().addObserver(
             forName: Notification.Name(kTISNotifySelectedKeyboardInputSourceChanged as String), object: nil, queue: .main
         ) { [weak self] _ in self?.refresh() }
-        // Another keyboard (an ISO one plugged in) shows up as a new keyboard type on the next key press.
         NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
             self?.refresh()
         }
@@ -48,7 +41,6 @@ final class MacKeyboard: ObservableObject {
         }
     }
 
-    /// Reads the model, finish and layout again; publishes only what changed.
     func refresh() {
         let dark = NSApp.map { Theme.isDark($0.effectiveAppearance) } ?? false
         let f = Self.resolve(setting, dark: dark)
@@ -61,11 +53,6 @@ final class MacKeyboard: ObservableObject {
         keys = device.keyboard.keys.map { KeyHintKeyboard.Key($0, layout: deck) }
     }
 
-    // MARK: Model and finish
-
-    /// What this Mac is: the product name on Apple silicon ("MacBook Air (13-inch, M4, 2025)"), the
-    /// model identifier on Intel ("MacBookPro16,1"). A laptop we can't name gets the Air; a desktop the
-    /// Magic Keyboard.
     static let detectedFamily: Family = {
         let name = ((productName() ?? "") + " " + (sysctl("hw.model") ?? "")).lowercased()
         if name.contains("macbook pro") || name.contains("macbookpro") { return .pro }
@@ -77,8 +64,6 @@ final class MacKeyboard: ObservableObject {
         return hasBattery() ? .air : .mk
     }()
 
-    /// The finish for a config value. `auto` uses this Mac's family and its housing colour when the
-    /// IORegistry names one, otherwise a finish that suits Light or Dark Mode.
     static func resolve(_ setting: String, dark: Bool) -> FinishID {
         let v = slug(setting)
         if let f = FinishID.allCases.first(where: { slug($0.name) == v }) { return f }
@@ -87,7 +72,6 @@ final class MacKeyboard: ObservableObject {
         return automatic(family, dark: dark)
     }
 
-    /// Whether `keyboard-finish` understands the value.
     static func isValid(_ setting: String) -> Bool {
         let v = slug(setting)
         return v == "auto" || familyFor(v) != nil || FinishID.allCases.contains { slug($0.name) == v }
@@ -112,7 +96,6 @@ final class MacKeyboard: ObservableObject {
             .joined(separator: "-")
     }
 
-    /// Without a known housing colour: the dark finish in Dark Mode, silver in Light Mode.
     private static func automatic(_ family: Family, dark: Bool) -> FinishID {
         switch family {
         case .pro: dark ? .proSpaceBlack : .proSilver
@@ -160,7 +143,6 @@ final class MacKeyboard: ObservableObject {
         }
     }
 
-    /// The housing colour, if the IORegistry exposes one: a name ("blue") or an RGB triple.
     static let housingColor: String? = {
         for path in ["IODeviceTree:/product", "IODeviceTree:/"] {
             for key in ["housing-color", "device-color", "enclosure-color", "DeviceEnclosureColor"] {
@@ -178,7 +160,6 @@ final class MacKeyboard: ObservableObject {
         return nil
     }()
 
-    /// The family's finish closest to the housing colour: by name, or the nearest deck colour.
     private static func housingFinish(_ family: Family) -> FinishID? {
         guard let colour = housingColor?.lowercased() else { return nil }
         let options = FinishID.allCases.filter { $0.model == family }
@@ -198,8 +179,6 @@ final class MacKeyboard: ObservableObject {
         return options.min { distance(deck($0), v) < distance(deck($1), v) }
     }
 
-    // MARK: Layout and input source
-
     private static func physicalShape() -> Shape {
         switch Int(KBGetLayoutType(Int16(LMGetKbdType()))) {
         case kKeyboardISO: .iso
@@ -214,9 +193,6 @@ final class MacKeyboard: ObservableObject {
         return Unmanaged<CFString>.fromOpaque(ptr).takeUnretainedValue() as String
     }
 
-    /// The MacKeys layout for the physical keyboard and the input source in use. A JIS keyboard is
-    /// always Japanese; an ANSI one shows the source's layout only where that layout has no ISO key
-    /// (US English and Korean) or is non-Latin (Russian); an ISO one shows the source's own layout.
     static func layout(shape: Shape, source: String) -> LayoutID {
         if shape == .jis { return .ja }
         let name = source.replacingOccurrences(of: "com.apple.keylayout.", with: "").lowercased()

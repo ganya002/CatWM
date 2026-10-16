@@ -1,12 +1,7 @@
-// Tiling: macOS Spaces: switches desktops and moves windows between Spaces by grabbing them.
 import AppKit
 
 extension WindowManager {
-    // MARK: - Spaces
 
-    /// Goes to desktop `n` (1-based) on the display under the pointer. Uses "Switch to Desktop N" when
-    /// it's turned on in Keyboard Shortcuts; otherwise steps there with "Move left/right a space",
-    /// which macOS has on by default. Returns how many switches were posted, or nil on failure.
     @discardableResult
     func goToSpace(_ n: Int, autoCorrect: Bool = true) -> Int? {
         if let combo = SystemShortcut.desktop(n) {
@@ -39,8 +34,6 @@ extension WindowManager {
         spaceGeneration += 1
         let generation = spaceGeneration
         guard autoCorrect else { return abs(delta) }
-        // macOS sometimes drops a step when presses reverse direction mid-slide. Once it settles,
-        // check where we actually are and step the rest of the way (twice at most).
         DispatchQueue.main.asyncAfter(deadline: .now() + settle) { [weak self] in
             self?.correctSpace(display: s.uuid, target: info.desktops[n - 1], generation: generation, attemptsLeft: 2)
         }
@@ -63,11 +56,7 @@ extension WindowManager {
         }
     }
 
-    // MARK: Moving windows between spaces
 
-    /// Fallback for macOS Spaces mode: hold the window by an empty part of its title bar and switch
-    /// spaces. The grab point is found by asking Accessibility what's under each candidate point,
-    /// then confirmed by nudging the window and checking it followed.
     func moveToSpace(_ n: Int) {
         guard !movingToSpace, let w = focusedWindow() else { return }
         let f = w.frame
@@ -79,7 +68,7 @@ extension WindowManager {
             return
         }
         movingToSpace = true
-        focus(w, warp: false) // the grab presses at its own points
+        focus(w, warp: false)
         tryGrab(w, points[...], space: n, restore: mouseLocation())
     }
 
@@ -90,9 +79,6 @@ extension WindowManager {
         e.post(tap: .cghidEventTap)
     }
 
-    /// Presses at `p` and drags gradually. Chromium-based apps only start a window drag after the
-    /// pointer passes a threshold, so a tiny nudge isn't enough. Calls back with whether the window
-    /// followed, and the point where the button is still held.
     private func attemptGrab(_ w: Window, at p: CGPoint, completion: @escaping (Bool, CGPoint) -> Void) {
         let before = serverFrame(w.id) ?? w.frame
         let offsets: [CGFloat] = [4, 12, 22]
@@ -102,8 +88,6 @@ extension WindowManager {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.09) { [weak self] in
                     guard let self else { return }
                     let after = serverFrame(w.id) ?? w.frame
-                    // Any frame change counts: dragging a window that fills the screen makes macOS
-                    // restore its earlier size around the pointer, which can move it left.
                     let grabbed = !after.approxEqual(before, tolerance: 4)
                     Log.info("move to space: pressed \(w.bundleID ?? "pid \(w.pid)") at \(p); frame \(before) → \(after)")
                     completion(grabbed, CGPoint(x: p.x + offsets.last!, y: p.y))
@@ -129,7 +113,6 @@ extension WindowManager {
         attemptGrab(w, at: p) { [weak self] grabbed, held in
             guard let self else { return }
             guard grabbed else {
-                // Not a draggable spot: let go and try the next one.
                 postMouse(.leftMouseUp, held)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) { [weak self] in
                     self?.tryGrab(w, points.dropFirst(), space: n, restore: restore)
@@ -148,8 +131,6 @@ extension WindowManager {
         }
     }
 
-    /// Diagnostics (`ouch grabtest`): try each grab point on the focused window without
-    /// switching spaces, logging which ones pick the window up.
     func grabTest() {
         guard !movingToSpace, let w = focusedWindow() else { Log.info("grabtest: no focused window"); return }
         let points = grabPoints(for: w, frame: w.frame)
@@ -169,8 +150,6 @@ extension WindowManager {
         next(points[...])
     }
 
-    /// Keep holding the window until the switch has finished on the right space, correcting any
-    /// step macOS dropped, then let go.
     private func holdUntilArrived(space n: Int, release: CGPoint, restore: CGPoint, waited: Double, settle: Double, attemptsLeft: Int) {
         DispatchQueue.main.asyncAfter(deadline: .now() + settle) { [weak self] in
             guard let self else { return }
@@ -198,7 +177,6 @@ extension WindowManager {
         scheduleRefresh(after: 0.2)
     }
 
-    /// The window server's idea of the frame; it updates during a title-bar drag before AX does.
     private func serverFrame(_ id: CGWindowID) -> CGRect? {
         guard let list = CGWindowListCopyWindowInfo(.optionIncludingWindow, id) as? [[String: Any]],
               let b = list.first?[kCGWindowBounds as String] as? NSDictionary else { return nil }
@@ -213,9 +191,6 @@ extension WindowManager {
                                   forKey: "grabHints")
     }
 
-    /// Candidate spots to hold a window by, best first: where it worked last time for this app,
-    /// spots on the bare window background, then everything else along the top strip that isn't a
-    /// control. Each one is still confirmed by a test drag.
     private func grabPoints(for w: Window, frame f: CGRect) -> [CGPoint] {
         var raw: [CGPoint] = []
         if let id = w.bundleID, let h = grabHints[id] {
@@ -225,7 +200,6 @@ extension WindowManager {
         if let zoom = w.element.element(kAXZoomButtonAttribute)?.frame, !zoom.isNull {
             raw.append(CGPoint(x: zoom.maxX + 14, y: zoom.midY))
         }
-        // Not the top few pixels: that's the resize border in apps that draw their own title bar.
         for dy: CGFloat in [9, 15, 22, 30] {
             var x = f.minX + 72
             while x < f.maxX - 30 {
@@ -258,8 +232,6 @@ extension WindowManager {
             if let owner, let oid = owner.windowID, oid != w.id { skipped["covered", default: 0] += 1; continue }
             if background.contains(role) { best.append(p) } else { ok.append(p) }
         }
-        // Spread the picks out (neighbouring points usually hit the same element) and alternate
-        // between the left and right ends, where the empty gaps in toolbars usually are.
         func spaced(_ ps: [CGPoint], _ limit: Int) -> [CGPoint] {
             var thin: [CGPoint] = []
             for p in ps where !thin.contains(where: { abs($0.x - p.x) < 30 && abs($0.y - p.y) < 6 }) { thin.append(p) }

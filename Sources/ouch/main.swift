@@ -1,4 +1,3 @@
-// App: entry point and AppDelegate (launch, migration from Hyprthyst, CLI subcommands, wiring).
 import AppKit
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -10,7 +9,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Theme.registerFonts()
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.button?.image = NSImage(systemSymbolName: "rectangle.split.3x1", accessibilityDescription: "Ouch")
-        // The menu is Ouch's own (see StatusMenu); it opens on mouse down like a native one.
         statusItem.button?.target = self
         statusItem.button?.action = #selector(toggleMenu)
         statusItem.button?.sendAction(on: [.leftMouseDown, .rightMouseDown])
@@ -32,9 +30,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         watcher.start()
         let trusted = watcher.granted.contains(.accessibility)
         if trusted { WindowManager.shared.start() } else { Log.info("launch: Accessibility not granted") }
-        // `open ouch.app --args --onboarding` plays it regardless, for working on it.
         if Onboarding.shouldShow(firstRun: firstRun, trusted: trusted) || CommandLine.arguments.contains("--onboarding") {
-            Onboarding.shared.start() // its welcome card asks for Accessibility
+            Onboarding.shared.start()
         } else if !trusted {
             Permission.accessibility.request()
         }
@@ -43,9 +40,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         watcher.subscribe { [weak self] granted, changed in self?.permissionsChecked(granted, changed) }
     }
 
-    /// The newest Ouch wins: any other copy (same bundle ID, or same executable for unbundled dev
-    /// builds) is asked to quit, then force-quit after a short wait. Waiting matters because the old
-    /// copy puts parked windows back on exit, which must finish before this one reads window state.
     private func closePreviousInstances() {
         let me = ProcessInfo.processInfo.processIdentifier
         let myExe = Bundle.main.executableURL?.resolvingSymlinksInPath()
@@ -67,14 +61,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// The app used to be called Hyprthyst (bundle ID local.hyprthyst). Copies its saved workspace
-    /// assignments, grab hints and update choices once, so the rename doesn't lose them.
     private func migrateLegacyDefaults() {
         let d = UserDefaults.standard
         guard !d.bool(forKey: "migratedFromHyprthyst") else { return }
         d.set(true, forKey: "migratedFromHyprthyst")
         guard let old = d.persistentDomain(forName: "local.hyprthyst") else { return }
-        // The login item belongs to the app bundle, so the new app still has to register its own.
         for (key, value) in old where d.object(forKey: key) == nil && !key.hasPrefix("NSWindow Frame") && key != "didSetUpLaunchAtLogin" {
             d.set(value, forKey: key)
         }
@@ -97,12 +88,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if changed.contains(.accessibility) {
             Log.info("Accessibility \(trusted ? "granted" : "revoked")")
             updateIcon()
-            // Revoked (or a rebuild invalidated it): start over so we're listed again.
             if trusted { PermissionGuide.shared.granted() } else { Permission.accessibility.reset() }
         }
     }
 
-    /// Opening the app again (Finder, Spotlight, `open`) while it runs shows Settings.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         SettingsWindow.shared.show(pane: nil)
         return false
@@ -113,11 +102,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         CrashWatch.cleanExit()
     }
 
-    /// Menu bar indicator: the focused display's workspace, a drawing of its layout, and the
-    /// apps on it.
     private func updateIcon() {
-        // A live check, not the watcher's last state: window events call this too, and only the
-        // watcher may record a change, or a revocation could be swallowed before it sees it.
         let trusted = Permission.accessibility.isGranted
         guard let button = statusItem.button else { return }
         button.attributedTitle = NSAttributedString(string: "")
@@ -131,7 +116,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                          pids: state.pids)
     }
 
-    /// Only shown while the settings window is active; without an Edit menu, ⌘C/⌘V/⌘Z don't work in text fields.
     private func makeMainMenu() -> NSMenu {
         let main = NSMenu()
         let appMenu = NSMenu()
@@ -153,7 +137,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return main
     }
 
-    /// Sparkle's check, or a note when this build has no update feed.
     static func checkForUpdates() {
         guard Updater.shared.isConfigured else {
             let a = NSAlert()
@@ -166,13 +149,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
         Updater.shared.checkForUpdates()
     }
-    /// ⌘Q in Settings or any Ouch panel with the keyboard closes just that window (an OuchPanel catches it
-    /// itself first), and so does it while the key help shows; otherwise it quits.
     @objc private func quitOrCloseWindow() {
         if OuchPanel.closeKeyWindow() { return }
         if KeyHelp.shared.isVisible { KeyHelp.shared.hide() } else { NSApp.terminate(nil) }
     }
-    /// ⌘W: the same, but never quits. Borderless panels can't `performClose`, so this doesn't send it to them.
     @objc private func closeWindow() {
         if !OuchPanel.closeKeyWindow() && KeyHelp.shared.isVisible { KeyHelp.shared.hide() }
     }
@@ -180,14 +160,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func toggleMenu() { StatusMenu.shared.toggle() }
 }
 
-// The onboarding tour's practice windows run as a second copy of this binary (see PracticeDesk).
 if CommandLine.arguments.dropFirst().first == "practice" {
-    let args = Array(CommandLine.arguments.dropFirst(2)) // <parent pid> [comma-separated app titles]
+    let args = Array(CommandLine.arguments.dropFirst(2))
     let titles = args.count > 1 ? args[1].split(separator: ",").map(String.init) : []
     PracticeDesk.run(parent: pid_t(args.first ?? "") ?? getppid(), titles: titles)
 }
 
-// `ouch docs` prints the folder of agent-readable docs bundled in the app.
 if CommandLine.arguments.dropFirst().first == "docs" {
     if let dir = Bundle.main.resourceURL?.appendingPathComponent("AgentDocs"),
        FileManager.default.fileExists(atPath: dir.path) {
@@ -198,7 +176,6 @@ if CommandLine.arguments.dropFirst().first == "docs" {
     exit(1)
 }
 
-// Command-line mode, like hyprctl: `ouch dispatch movefocus l`, `ouch dump`, `ouch reload`.
 let cliArgs = Array(CommandLine.arguments.dropFirst())
 if let cmd = cliArgs.first, ["dispatch", "dump", "reload", "poststyle", "grabtest", "modefx", "panelfx", "intro", "introlab"].contains(cmd) {
     DistributedNotificationCenter.default().postNotificationName(ipcNotification, object: cliArgs.joined(separator: " "),
@@ -207,7 +184,6 @@ if let cmd = cliArgs.first, ["dispatch", "dump", "reload", "poststyle", "grabtes
     exit(0)
 }
 
-// Killed (e.g. by build.sh) or interrupted: put parked windows back before exiting.
 var signalSources: [DispatchSourceSignal] = []
 for sig in [SIGTERM, SIGINT, SIGHUP] {
     signal(sig, SIG_IGN)

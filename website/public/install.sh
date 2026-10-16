@@ -1,7 +1,4 @@
 #!/bin/sh
-# Installs the latest Ouch to /Applications. Pass --beta for the beta channel.
-# Usage: curl -fsSL https://ouch.perwko.com/install.sh | sh
-#        curl -fsSL https://ouch.perwko.com/install.sh | sh -s -- --beta
 set -e
 CHANNEL=
 case "${1:-}" in
@@ -14,8 +11,6 @@ DEST=/Applications/Ouch.app
 
 [ "$(uname)" = Darwin ] || { echo "Ouch needs macOS." >&2; exit 1; }
 
-# The appcast lists the newest release first. Take the newest one on the chosen channel
-# (no channel tag means stable).
 URL=$(curl -fsSL "$FEED" | awk -v want="$CHANNEL" '
   /<item>/ { chan = ""; url = "" }
   /<sparkle:channel>/ { chan = $0; sub(/.*<sparkle:channel>/, "", chan); sub(/<.*/, "", chan) }

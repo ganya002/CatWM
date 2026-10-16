@@ -1,11 +1,7 @@
 #!/bin/bash
-# Fails when a view outside Sources/ouch/UI/ hard-codes a style that has a Theme token.
-# Use the tokens in UI/Theme.swift and the components in UI/Components.swift and UI/Popups.swift.
-# For a deliberate one-off (real hardware colours, the intro timing), add `// style-ok` to the line.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-# Drawings of real Apple keyboards: their sizes and colours are measured, not design tokens.
 allow='^Sources/ouch/(UI/|Keys/KeyHintKeyboard\.swift|Keys/MacKeyboard\.swift)'
 
 patterns=(

@@ -1,14 +1,6 @@
-// Onboarding: SwiftUI views for the onboarding overlays (welcome card, coach steps).
 import AppKit
 import SwiftUI
 
-// SwiftUI content for the onboarding overlays. Each one is hosted in its own borderless panel
-// (see Onboarding.swift); none of them is a regular window. All of them are Surfaces: the welcome
-// card at `xl`, coach steps at `lg` in the accent tone, the menu bar tip at `md`.
-
-// MARK: - Welcome card
-
-/// The two built-in key sets the welcome card offers.
 enum KeyStyle: String, CaseIterable {
     case vim, wasd
 
@@ -16,7 +8,6 @@ enum KeyStyle: String, CaseIterable {
     var title: String { self == .vim ? "Vim" : "WASD" }
     var caption: String { self == .vim ? "Right hand on the home row" : "Left hand, like a game" }
 
-    /// The built-in set that's active now, if one is.
     static var current: KeyStyle? {
         let id = SettingsWindow.shared.library.current(.keyboard).id
         return allCases.first { $0.configID == id }
@@ -30,7 +21,6 @@ final class WelcomeModel: ObservableObject {
     @Published var inputMonitoring = false
     @Published var login = false
     @Published var style: KeyStyle?
-    /// Set once the card is on screen; the icon drops in and lands.
     @Published var landed = false
     var allowAccessibility: () -> Void = {}
     var allowInputMonitoring: () -> Void = {}
@@ -43,12 +33,10 @@ final class WelcomeModel: ObservableObject {
 struct WelcomeView: View {
     @ObservedObject var model: WelcomeModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    /// Transparent room around the card for its shadow.
     static let margin: CGFloat = 44
     static let width: CGFloat = 480 - 64
 
     var body: some View {
-        // Both pages are always laid out so the card keeps one size; the hidden one steps aside.
         ZStack(alignment: .topLeading) {
             permissions
                 .opacity(model.page == .permissions ? 1 : 0)
@@ -67,8 +55,6 @@ struct WelcomeView: View {
         .padding(Self.margin)
     }
 
-    // MARK: Permissions
-
     private var permissions: some View {
         VStack(alignment: .leading, spacing: 0) {
             Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 72, height: 72)
@@ -76,7 +62,7 @@ struct WelcomeView: View {
                 .opacity(model.landed ? 1 : 0)
                 .animation(.easeIn(duration: 0.22), value: model.landed) // style-ok: the drop lands on the squish's beat
                 .squish(on: model.landed, delay: 0.22)
-                .padding(.leading, -6).padding(.vertical, -6) // the icon artwork has its own transparent margin
+                .padding(.leading, -6).padding(.vertical, -6)
             Text("Welcome to Ouch").textStyle(.largeTitle).oneLine()
                 .padding(.top, 16).padding(.bottom, 8)
             Text("Each button opens System Settings, with steps beside it.")
@@ -99,7 +85,7 @@ struct WelcomeView: View {
                 OButton("Continue", variant: .primary, size: .lg, shortcut: ["↩"], action: model.next)
                     .disabled(!model.accessibility)
                     .tooltip(model.accessibility ? "" : "Allow Accessibility first")
-                    .keyboardShortcut(model.page == .permissions ? .defaultAction : nil) // both pages stay laid out
+                    .keyboardShortcut(model.page == .permissions ? .defaultAction : nil)
             }
         }
     }
@@ -107,8 +93,6 @@ struct WelcomeView: View {
     private func permission(granted: Bool, symbol: String, title: String, required: Bool,
                             detail: String, primary: Bool, action: @escaping () -> Void) -> some View {
         HStack(spacing: 12) {
-            // The row's own symbol stays (a lock opens); the trailing status carries the check, so the
-            // row doesn't show two of them.
             Image(systemName: granted && symbol == "lock" ? "lock.open" : symbol)
                 .font(Theme.symbol(Theme.Icon.lg))
                 .foregroundStyle(Theme.accentInk)
@@ -136,8 +120,6 @@ struct WelcomeView: View {
         .animation(Motion.easeOut, value: granted)
     }
 
-    // MARK: Keys
-
     private var keys: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Ouch shortcut guide").textStyle(.largeTitle).oneLine()
@@ -164,11 +146,10 @@ struct WelcomeView: View {
         }
     }
 
-    /// Where you are in the card: two small dots, the current one in accent.
     private func dots(_ current: Int) -> some View {
         HStack(spacing: 6) {
             ForEach(0..<2, id: \.self) { i in
-                Capsule().fill(i == current ? Theme.accent : Theme.inkFaint.opacity(0.45)) // hairline vanished on raised dark
+                Capsule().fill(i == current ? Theme.accent : Theme.inkFaint.opacity(0.45))
                     .frame(width: i == current ? 16 : 6, height: 6)
             }
         }
@@ -177,8 +158,6 @@ struct WelcomeView: View {
     }
 }
 
-/// One of the two key sets: its four direction keys drawn where they sit, the name, and a caption.
-/// A control, so it gets a fill; the chosen one is `accent`.
 private struct KeyStyleTile: View {
     let style: KeyStyle
     let selected: Bool
@@ -216,7 +195,6 @@ private struct KeyStyleTile: View {
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
-    /// H J K L in a row, or W over A S D.
     @ViewBuilder private var cluster: some View {
         switch style {
         case .vim:
@@ -234,11 +212,8 @@ private struct KeyStyleTile: View {
     }
 }
 
-// MARK: - Intro wordmark
-
 final class WordmarkModel: ObservableObject {
     @Published var subtitle = false
-    /// Flipped when the wordmark arrives; it lands with a bump.
     @Published var landed = false
 }
 
@@ -250,39 +225,33 @@ struct WordmarkView: View {
         VStack(spacing: 14) {
             Text("Ouch").font(Theme.wordmark(size)).foregroundStyle(.white)
                 .legible()
-                .squish(on: model.landed, delay: 0.3) // on the melody note
+                .squish(on: model.landed, delay: 0.3)
             tagline(max(16, min(22, size / 6)))
                 .foregroundStyle(Color.white.opacity(0.92))
-                .legible(strong: true) // reads over the tiles behind it
+                .legible(strong: true)
                 .opacity(model.subtitle ? 1 : 0)
                 .animation(.easeOut(duration: 0.9), value: model.subtitle) // style-ok: the intro's timing, set to the music
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    /// "*Hyprland*-style tiling for macOS.", light, with "Hyprland" at 500 in Hyprland's blue.
     private func tagline(_ pt: CGFloat) -> Text {
         Text("Hyprland").font(Theme.body(pt, .medium)).foregroundColor(hyprlandBlue)
             + Text("-style tiling for macOS.").font(Theme.body(pt, .light))
     }
 }
 
-/// Hyprland's accent (its default active border, #33CCFF): Hyprland's own colour, not a token.
 private let hyprlandBlue = Theme.rgb(0x33CCFF)
 
-
-// MARK: - Coach card
 
 final class CoachModel: ObservableObject {
     enum Caret: Equatable { case none, up(CGFloat), down }
     @Published var title = ""
     @Published var text = ""
     @Published var caps: [String] = []
-    /// One flag per cap once it has been pressed, for steps that want every key.
     @Published var capsDone: [Bool] = []
     @Published var pressed = false
     @Published var done = false
-    /// A recall drill: the keys hide behind a hint until asked for.
     @Published var recall = false
     @Published var hidden = false
     @Published var warning: String?
@@ -301,12 +270,9 @@ final class CoachModel: ObservableObject {
     var tutorial: () -> Void = {}
 }
 
-/// One step of a lesson: a plain raised Surface `lg`, pointing at the real target.
 struct CoachCardView: View {
     @ObservedObject var model: CoachModel
     static let width: CGFloat = 344
-    /// Transparent room around the card for its caret and the float shadow, which reaches about twice its
-    /// radius; with less, the panel edge clips it into a visible tinted rectangle. Clicks pass through.
     static let inset = EdgeInsets(top: 32, leading: 52, bottom: 68, trailing: 52)
 
     var body: some View {
@@ -319,14 +285,12 @@ struct CoachCardView: View {
 
     private var step: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // head: lead symbol, Skip or Pause
             HStack(spacing: 8) {
                 Image(systemName: model.recall ? "brain" : "keyboard")
                     .font(Theme.symbol())
                     .contentTransition(.symbolEffect(.replace))
                 Spacer(minLength: 8)
                 if model.canHead {
-                    // The Surface head's close slot: Skip (×) or Pause, named in the tooltip.
                     OIconButton(symbol: model.headSymbol ?? "xmark", label: model.headLabel, action: model.headAction)
                         .padding(.trailing, -6)
                 }
@@ -373,11 +337,9 @@ struct CoachCardView: View {
         .animation(Motion.fadeMedium, value: model.hidden)
     }
 
-    /// Large keycaps and the live state beside them. Hidden in a recall drill until the hint.
     private var keys: some View {
         HStack(spacing: 12) {
             if model.hidden {
-                // Blank caps, one per key, so you know how many to remember.
                 Kbd(keys: model.caps.map { _ in " " }, size: .large).opacity(0.5)
                     .accessibilityHidden(true)
                 Button(action: model.reveal) {
@@ -392,7 +354,6 @@ struct CoachCardView: View {
                 Button(action: model.tryKeys) { caps.fixedSize().contentShape(Rectangle()) }
                     .buttonStyle(.plain)
                     .tooltip("Press the keys, or click them.")
-                // A step with a button only shows its keys; the button moves on.
                 if model.button == nil { status }
             }
         }
@@ -421,8 +382,6 @@ struct CoachCardView: View {
         }
     }
 
-    /// The live state beside the caps. When a long chord leaves no room for the words, only the symbol
-    /// shows (with the words as its tooltip) rather than a truncated "Pre…".
     @ViewBuilder private var status: some View {
         if model.done {
             Image(systemName: "checkmark.circle.fill").foregroundStyle(Theme.success)
@@ -452,10 +411,6 @@ struct CoachCardView: View {
     }
 }
 
-// MARK: - Finish card
-
-/// The last step of a lesson: a cheat sheet of the keys it taught, at the centre of the screen. The
-/// mode chord sits on top, the rest in up to two columns of label rows with their keys on the right.
 struct FinishCardView: View {
     @ObservedObject var model: CoachModel
     let summary: Coach.Summary
@@ -477,13 +432,12 @@ struct FinishCardView: View {
         }
         .padding(Self.pad)
         .frame(width: Self.width, alignment: .leading)
-        .overlay(alignment: .bottom) { Rectangle().fill(Theme.accent).frame(height: 3) } // the full progress bar
+        .overlay(alignment: .bottom) { Rectangle().fill(Theme.accent).frame(height: 3) }
         .clipShape(shape)
         .foregroundStyle(Theme.ink)
         .background(shape.fill(Theme.surfaceRaised).elevation(.float, in: shape))
     }
 
-    /// Display type; a word in *stars* is set at 500.
     private var title: Text {
         let parts = model.title.split(separator: "*", omittingEmptySubsequences: false)
         return parts.enumerated().reduce(Text("")) { text, part in
@@ -492,7 +446,6 @@ struct FinishCardView: View {
         .tracking(-0.68)
     }
 
-    /// The mode chord on mid-size caps, its name and how to leave, above a hairline.
     private var mode: some View {
         HStack(spacing: 10) {
             Kbd(keys: summary.modeCaps, size: .medium).fixedSize()
@@ -537,7 +490,6 @@ struct FinishCardView: View {
         }
     }
 
-    /// The help hint and the buttons on one line, or the hint above the buttons when both don't fit.
     private var footer: some View {
         ViewThatFits(in: .horizontal) {
             HStack(spacing: 8) {
@@ -573,13 +525,8 @@ struct FinishCardView: View {
     }
 }
 
-// MARK: - Menu bar tip
-
-/// Hangs under the menu bar item during onboarding: a Surface `md` with a caret pointing at the item.
 struct MenuBarTipView: View {
     @ObservedObject var model: MenuBarTipModel
-    /// Transparent room for the caret and the popover shadow, enough that the panel edge doesn't clip it;
-    /// the panel ignores the mouse anyway.
     static let inset = EdgeInsets(top: 18, leading: 32, bottom: 44, trailing: 32)
 
     var body: some View {

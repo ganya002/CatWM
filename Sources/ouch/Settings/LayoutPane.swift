@@ -1,8 +1,6 @@
-// Settings: the Layout pane (layout cycle chips, layout grid, gaps preview).
 import AppKit
 import SwiftUI
 
-// MARK: - Layout
 
 struct LayoutPane: View {
     @ObservedObject var doc: ConfigDocument
@@ -118,7 +116,6 @@ struct LayoutPane: View {
         }
     }
 
-    /// The keys bound to focus left and right, so a focused layout moves with them as well as the arrows.
     private var moveKeys: (left: Set<String>, right: Set<String>) {
         var left = Set<String>(), right = Set<String>()
         for submap in doc.submaps {
@@ -146,7 +143,6 @@ struct LayoutPane: View {
     }
 }
 
-// MARK: - Cycle chips and layout grid
 
 final class CycleDrag: ObservableObject {
     @Published var layout: Layout?
@@ -154,12 +150,9 @@ final class CycleDrag: ObservableObject {
     var origin = 0
 }
 
-/// An active layout, numbered. Drag it to reorder, click it to remove it, or Tab to it and use the
-/// arrow keys (or the keys you bound to focus left and right).
 private struct CycleChip: View {
     static let width: CGFloat = 78
     static let gap: CGFloat = 12
-    /// The row's own space: a chip's local space moves as it is reordered, which made the drag jitter.
     static let space = "cycleRow"
     let index: Int
     let layout: Layout
@@ -208,7 +201,6 @@ private struct CycleChip: View {
                 if target != index { move(target) }
             }
             .onEnded { _ in
-                // Settle into the slot while it stops being lifted, instead of snapping.
                 withAnimation(Motion.snap) { drag.x = 0; drag.layout = nil }
             })
         .focusable()
@@ -224,7 +216,6 @@ private struct CycleChip: View {
     }
 }
 
-/// A display with its layout on it.
 private struct ScreenThumbnail: View {
     let layout: Layout
 
@@ -239,7 +230,6 @@ private struct ScreenThumbnail: View {
     }
 }
 
-/// A layout in the grid; in the cycle it's lit and lands with a bump.
 private struct LayoutCell: View {
     let layout: Layout
     let on: Bool
@@ -264,16 +254,12 @@ private struct LayoutCell: View {
     }
 }
 
-// MARK: - Gaps preview
 
-/// The main display, scaled down, with three windows placed exactly as the tiler would place them. They
-/// spring to their new places as gaps and padding change.
 struct GapsPreview: View {
     let config: Config
     let layout: Layout
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// Desktop backdrop shared with the animation preview: a quiet wash of the palette.
     static let wallpaper = LinearGradient(colors: [Theme.accentSoft, Theme.tint], startPoint: .topLeading, endPoint: .bottomTrailing)
 
     var body: some View {
@@ -300,13 +286,11 @@ struct GapsPreview: View {
             .frame(width: w, height: h)
             .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous))
             .frame(width: g.size.width, height: g.size.height)
-            // Dragging a slider retargets constantly, which a spring takes in stride.
             .animation(Motion.snap(reduceMotion), value: geometry)
         }
         .accessibilityHidden(true)
     }
 
-    /// Everything from the settings that moves the windows.
     private var geometry: [CGFloat] {
         [config.paddingTop, config.paddingBottom, config.paddingLeft, config.paddingRight, config.windowMarginSize,
          config.windowMargins ? 1 : 0, config.ignoreMenuBar ? 1 : 0]

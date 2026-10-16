@@ -10,7 +10,6 @@ export default defineConfig({
     rules: { "vite-plus/prefer-vite-plus-imports": "error" },
     options: { typeAware: true, typeCheck: true },
   },
-  // Void must come before the React Router plugin.
   plugins: lazyPlugins(() => [voidPlugin(), tailwindcss(), reactRouter()]),
   resolve: {
     tsconfigPaths: true,

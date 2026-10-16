@@ -1,10 +1,8 @@
-// Config: named saved configs (model, store, import and export).
 import AppKit
 import Combine
 import SwiftUI
 import UniformTypeIdentifiers
 
-// MARK: - Model
 
 enum ConfigKind: String, Codable, CaseIterable {
     case keyboard, animation, full
@@ -12,7 +10,6 @@ enum ConfigKind: String, Codable, CaseIterable {
     var title: String {
         switch self { case .keyboard: "Keyboard"; case .animation: "Animation"; case .full: "Full" }
     }
-    /// What the user is editing, for "Create a new config to edit …".
     var noun: String {
         switch self { case .keyboard: "shortcuts"; case .animation: "animations"; case .full: "settings" }
     }
@@ -21,24 +18,19 @@ enum ConfigKind: String, Codable, CaseIterable {
     }
 }
 
-/// A named, saved set of settings. `text` is config-file text: variables and binds for keyboard,
-/// the animation options for animation, and the whole file for full.
 struct SavedConfig: Codable, Identifiable, Equatable {
     var id: String
     var kind: ConfigKind
     var name: String
     var symbol: String?
-    /// RRGGBBAA, nil for no background.
     var colorHex: String?
     var text: String
-    /// Full configs remember which keyboard and animation configs were selected.
     var keyboardID: String?
     var animationID: String?
 
     var isBuiltIn: Bool { id.hasPrefix(ConfigLibrary.builtInPrefix) }
 }
 
-/// The file Import and Export read and write: one config, plus the configs a full config links to.
 struct ConfigBundle: Codable {
     var app = "ouch"
     var version = 1
@@ -50,7 +42,6 @@ extension UTType {
     static let ouchConfig = UTType(filenameExtension: "ouchconfig", conformingTo: .json) ?? .json
 }
 
-// MARK: - Sheets
 
 enum ConfigSheet: Identifiable {
     case create(kind: ConfigKind, baseID: String)
@@ -66,10 +57,7 @@ enum ConfigSheet: Identifiable {
     }
 }
 
-// MARK: - Library
 
-/// Owns every saved config and which one is active per kind. The active config follows the live
-/// settings: changes are written into it, except for built-ins, which get a copy of the edited settings.
 final class ConfigLibrary: ObservableObject {
     static let builtInPrefix = "builtin."
     static let reservedNames: [ConfigKind: [String]] = [.keyboard: ["Vim", "WASD"], .animation: ["Default"], .full: ["Default"]]
@@ -94,7 +82,6 @@ final class ConfigLibrary: ObservableObject {
             .sink { [weak self] in self?.reconcile() }
     }
 
-    // MARK: Built-ins
 
     private static func makeBuiltIns() -> [SavedConfig] {
         func normalised(_ text: String) -> ConfigDocument { ConfigDocument(text: text) }
@@ -122,7 +109,6 @@ final class ConfigLibrary: ObservableObject {
     }
     func isActive(_ c: SavedConfig) -> Bool { active[c.kind] == c.id }
 
-    // MARK: Persistence
 
     private struct Stored: Codable { var custom: [SavedConfig]; var active: [String: String] }
 
@@ -131,7 +117,7 @@ final class ConfigLibrary: ObservableObject {
             custom = stored.custom
             for (k, v) in stored.active { if let kind = ConfigKind(rawValue: k) { active[kind] = v } }
         } else {
-            if FileManager.default.fileExists(atPath: Self.url.path) { // can't decode it: keep a copy before it's replaced
+            if FileManager.default.fileExists(atPath: Self.url.path) {
                 let bak = Self.url.appendingPathExtension("bak")
                 try? FileManager.default.removeItem(at: bak)
                 try? FileManager.default.moveItem(at: Self.url, to: bak)
@@ -148,8 +134,6 @@ final class ConfigLibrary: ObservableObject {
         try? data.write(to: Self.url, options: .atomic)
     }
 
-    /// First launch: the settings people already have become the active configs. If they match a built-in
-    /// they just start on it, otherwise they're kept as "My config".
     private func adoptCurrentSettings() {
         for kind in ConfigKind.allCases {
             let text = extract(kind)
@@ -165,7 +149,6 @@ final class ConfigLibrary: ObservableObject {
         save()
     }
 
-    // MARK: Live settings <-> configs
 
     private func extract(_ kind: ConfigKind) -> String {
         switch kind {
@@ -175,8 +158,6 @@ final class ConfigLibrary: ObservableObject {
         }
     }
 
-    /// Text of a full config with the keyboard and animation parts left out. A built-in full config
-    /// only guards these other settings, since the other two have their own configs.
     private func otherSettings(_ text: String) -> String {
         ConfigDocument(text: text).serialize(includeKeyboard: false, includeAnimation: false)
     }
@@ -187,8 +168,6 @@ final class ConfigLibrary: ObservableObject {
         custom[i].animationID = active[.animation]
     }
 
-    /// Runs after every settings change: custom configs are updated in place, a built-in that no longer
-    /// matches is left untouched and the edited settings move into a new config.
     private func reconcile() {
         guard !applying else { return }
         var violated: [ConfigKind] = []
@@ -210,7 +189,6 @@ final class ConfigLibrary: ObservableObject {
         if !violated.isEmpty { createFromEdit(kinds: violated, name: Self.editCopyName, symbol: nil, colorHex: nil) }
     }
 
-    /// Puts a config's settings into the live document. `reconcile` ignores the resulting changes.
     private func apply(_ c: SavedConfig) {
         applying = true
         switch c.kind {
@@ -222,16 +200,13 @@ final class ConfigLibrary: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in self?.applying = false }
     }
 
-    // MARK: Actions
 
     func select(_ c: SavedConfig) {
         apply(c)
         active[c.kind] = c.id
         if c.kind == .full {
-            // A full config brings its keyboard and animation selection along.
             active[.keyboard] = config(id: c.keyboardID)?.id ?? builtIns[0].id
             active[.animation] = config(id: c.animationID)?.id ?? Self.builtInPrefix + "animation.default"
-            // Its embedded binds and animation may be older than those configs: put the configs' current text in.
             doc.applyKeyboard(current(.keyboard).text)
             doc.applyAnimation(current(.animation).text)
             doc.save()
@@ -254,7 +229,6 @@ final class ConfigLibrary: ObservableObject {
         return (Self.reservedNames[kind] ?? []).contains { $0.lowercased() == lower }
     }
 
-    /// Adds a config copied from `baseID` and makes it active.
     @discardableResult
     func create(kind: ConfigKind, baseID: String, name: String, symbol: String?, colorHex: String?) -> SavedConfig {
         let base = config(id: baseID) ?? current(kind)
@@ -267,7 +241,6 @@ final class ConfigLibrary: ObservableObject {
 
     static let editCopyName = "My config"
 
-    /// The edit-a-built-in answer: the live settings (already changed) become new configs, one per kind.
     func createFromEdit(kinds: [ConfigKind], name: String, symbol: String?, colorHex: String?) {
         for kind in kinds {
             let c = SavedConfig(id: UUID().uuidString, kind: kind, name: uniqueName(name, kind: kind), symbol: symbol, colorHex: colorHex,
@@ -303,7 +276,6 @@ final class ConfigLibrary: ObservableObject {
         if wasActive { select(configs(c.kind)[0]) } else { save() }
     }
 
-    // MARK: Export
 
     func export(_ c: SavedConfig, to url: URL) throws {
         var bundle = ConfigBundle(config: c)
@@ -327,7 +299,6 @@ final class ConfigLibrary: ObservableObject {
         if let w = SettingsWindow.shared.window { panel.beginSheetModal(for: w, completionHandler: finish) } else { finish(panel.runModal()) }
     }
 
-    // MARK: Import
 
     func runImportPanel(only kind: ConfigKind? = nil) {
         let panel = NSOpenPanel()
@@ -352,12 +323,11 @@ final class ConfigLibrary: ObservableObject {
             Self.alert("Wrong kind of config", "This is a \(bundle.config.kind.title.lowercased()) config. Import it from \(there) instead.")
             return
         }
-        // Linked configs first, so the full config can point at their new ids.
         var remap: [String: String] = [:]
         var skipped = 0
         var added: [SavedConfig] = []
         for source in bundle.included + [bundle.config] {
-            guard let result = importOne(source, remap: remap) else { return } // cancelled
+            guard let result = importOne(source, remap: remap) else { return }
             remap[source.id] = result.config.id
             skipped += result.skipped
             added.append(result.config)
@@ -370,7 +340,6 @@ final class ConfigLibrary: ObservableObject {
         if Self.confirm("Use “\(main.name)” now?", detail, yes: "Use Now", no: "Not Now") { select(main) }
     }
 
-    /// Adds one config from a file, asking what to do about a clashing name. nil means the user cancelled.
     private func importOne(_ source: SavedConfig, remap: [String: String]) -> (config: SavedConfig, skipped: Int)? {
         var c = source
         c.id = UUID().uuidString
@@ -385,7 +354,6 @@ final class ConfigLibrary: ObservableObject {
         } else {
             c.keyboardID = nil; c.animationID = nil
         }
-        // Anything the parser can't place is dropped, and counted.
         let probe = ConfigDocument(text: c.text)
         let skipped = probe.skippedLineCount
 
@@ -410,7 +378,6 @@ final class ConfigLibrary: ObservableObject {
         return (c, skipped)
     }
 
-    // MARK: Dialogs
 
     private enum Clash { case keepBoth, rename, override, cancel }
 
@@ -460,7 +427,6 @@ final class ConfigLibrary: ObservableObject {
         return a.runModal() == .alertFirstButtonReturn
     }
 
-    // MARK: Colors
 
     static func color(hex: String) -> Color? {
         let h = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
@@ -473,7 +439,6 @@ final class ConfigLibrary: ObservableObject {
         return Color(.sRGB, red: r, green: g, blue: b, opacity: a)
     }
 
-    /// Whether dark text reads better on this color.
     static func prefersDarkText(hex: String) -> Bool {
         let h = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
         guard h.count >= 6, let v = UInt64(h.prefix(6), radix: 16) else { return false }
@@ -483,6 +448,5 @@ final class ConfigLibrary: ObservableObject {
 }
 
 extension ConfigDocument {
-    /// Lines the parser kept aside because it doesn't know them.
     var skippedLineCount: Int { extraLineCount }
 }

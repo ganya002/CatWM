@@ -1,20 +1,11 @@
-// UI: design-system controls (buttons, switches, sliders, segmented, rows, groups).
 import AppKit
 import SwiftUI
 
-// The design system's controls. View state lives in small ObservableObjects instead of @State: the
-// Command Line Tools ship without SwiftUI's macro plugin.
-
-/// Hover or press state for one view.
 final class Flag: ObservableObject { @Published var on = false }
-
-// MARK: - Button
 
 enum ButtonVariant { case primary, secondary, ghost, danger, ghostDanger }
 enum ButtonSize { case sm, regular, lg }
 
-/// The one push button. One `primary` per surface; `ghost` for ways out; `danger` only for destructive
-/// verbs, `ghostDanger` for one that sits quietly beside the others.
 struct OButtonStyle: ButtonStyle {
     var variant: ButtonVariant = .secondary
     var size: ButtonSize = .regular
@@ -50,7 +41,6 @@ private struct OButtonBody: View {
             .onHover { hover.on = $0 }
     }
 
-    /// Hover lights only a button that can be pressed.
     private var lit: Bool { hover.on && enabled }
 
     private var ink: Color {
@@ -65,7 +55,6 @@ private struct OButtonBody: View {
     private var fill: Color {
         switch style.variant {
         case .primary: lit ? Theme.accentHover : Theme.accent
-        // A translucent well, not `surface-sunken`: on a raised surface or glass that reads as a black hole.
         case .secondary: lit ? Theme.wellHover : Theme.well
         case .ghost: lit ? Theme.hover : .clear
         case .danger: Theme.dangerSoft
@@ -74,13 +63,11 @@ private struct OButtonBody: View {
     }
 }
 
-/// A labelled button with an optional SF Symbol and shortcut hint.
 struct OButton: View {
     let title: String
     var icon: String? = nil
     var variant: ButtonVariant = .secondary
     var size: ButtonSize = .regular
-    /// Keycaps shown after the label, e.g. ["↩"].
     var shortcut: [String] = []
     let action: () -> Void
 
@@ -104,7 +91,6 @@ struct OButton: View {
     }
 }
 
-/// Icon-only button; always carries a tooltip and an accessibility label.
 struct OIconButton: View {
     let symbol: String
     let label: String
@@ -122,11 +108,6 @@ struct OIconButton: View {
     }
 }
 
-// MARK: - Switch
-
-/// Toggles one setting immediately. Off is a `border-control` outline on `surface-sunken`; on is
-/// `accent` with an `on-accent` thumb that springs across and stretches while pressed. The thumb can be
-/// dragged; it follows the pointer and settles on the nearer side.
 struct OSwitch: View {
     @Binding var isOn: Bool
     let label: String
@@ -135,7 +116,6 @@ struct OSwitch: View {
 
     final class SwitchState: ObservableObject {
         @Published var pressed = false
-        /// Thumb offset (0...14) while dragged.
         @Published var drag: CGFloat?
     }
 
@@ -179,25 +159,15 @@ struct OSwitch: View {
     }
 }
 
-// MARK: - Segmented
-
-/// One option of a segmented control.
 struct OSegmentOption<T: Hashable> {
     let value: T
-    /// Shown text. Empty for a key-only segment, which then needs `help`.
     var label: String
-    /// Key glyphs before the label, in the keys face, e.g. "⌥".
     var keys: String? = nil
-    /// A number after the label, e.g. how many windows a display has.
     var count: Int? = nil
-    /// Tooltip and VoiceOver name, when the label alone doesn't say it.
     var help: String? = nil
 }
 
-/// Picks from two to five options on one `well` track: one at a time with a sliding `accent` thumb
-/// (optionally none), or any number as toggles.
 struct OSegmented<T: Hashable>: View {
-    /// Spoken by VoiceOver; not shown.
     let title: String
     let options: [OSegmentOption<T>]
     private let isOn: (T) -> Bool
@@ -205,7 +175,6 @@ struct OSegmented<T: Hashable>: View {
     private let multiple: Bool
     @Namespace private var thumb
 
-    /// Exactly one option is on.
     init(title: String, options: [(value: T, label: String)], selection: Binding<T>) {
         self.title = title
         self.options = options.map { OSegmentOption(value: $0.value, label: $0.label) }
@@ -214,7 +183,6 @@ struct OSegmented<T: Hashable>: View {
         multiple = false
     }
 
-    /// One option or none is on; `pick` gets the one clicked.
     init(title: String, options: [OSegmentOption<T>], selection: T?, pick: @escaping (T) -> Void) {
         self.title = title
         self.options = options
@@ -223,7 +191,6 @@ struct OSegmented<T: Hashable>: View {
         multiple = false
     }
 
-    /// Each option is a toggle; any number can be on.
     init(title: String, options: [OSegmentOption<T>], isOn: @escaping (T) -> Bool, toggle: @escaping (T) -> Void) {
         self.title = title
         self.options = options
@@ -246,10 +213,7 @@ struct OSegmented<T: Hashable>: View {
     }
 }
 
-/// The `well` track behind segments. Use it directly only for segments that need more than
-/// `OSegmented` gives, such as a drop target.
 struct OSegmentTrack<Content: View>: View {
-    /// Spoken by VoiceOver; not shown.
     let title: String
     @ViewBuilder var content: Content
 
@@ -263,9 +227,6 @@ struct OSegmentTrack<Content: View>: View {
     }
 }
 
-/// One segment: a lead view, key glyphs, the label and a count, on the `accent` thumb when on.
-/// `hot` lights it in `accent-soft`, for something dragged over it. Segments that share `thumb` slide
-/// one thumb between them.
 struct OSegment<Lead: View>: View {
     let label: String
     var keys: String? = nil
@@ -312,28 +273,21 @@ extension OSegment where Lead == EmptyView {
     }
 }
 
-// MARK: - Slider (line)
-
 final class SliderState: ObservableObject {
     @Published var dragging = false
-    /// Fill position while dragging, 0...1; follows the pointer exactly while the value rounds to the step.
     @Published var fraction: Double?
-    /// Rubber-band stretch past either end, in points (negative: past the start).
     @Published var stretch: CGFloat = 0
     @Published var hovering = false
     var start: Double = 0
     var moved = false
 }
 
-/// The value maths both sliders share: where a value sits on the track, and what a raw value snaps to.
 struct SliderScale {
     let range: ClosedRange<Double>
     var step: Double = 0
-    /// Within 2.5% of a tick the value snaps to it.
     var ticks: [Double] = []
 
     var span: Double { range.upperBound - range.lowerBound }
-    /// One arrow-key press.
     var unit: Double { step > 0 ? step : span / 100 }
     func fraction(of v: Double) -> Double { span == 0 ? 0 : (v - range.lowerBound) / span }
     func value(at fraction: Double) -> Double { snapped(range.lowerBound + min(max(fraction, 0), 1) * span) }
@@ -347,9 +301,6 @@ struct SliderScale {
 }
 
 extension SliderState {
-    /// Follows a drag across a track `w` wide. `relative` moves from where the track was grabbed, so
-    /// grabbing never makes it jump; otherwise the value goes under the pointer. ⌥ moves at a tenth of
-    /// the speed from where it was grabbed. Past either end the track stretches a little.
     func drag(_ g: DragGesture.Value, width w: CGFloat, scale: SliderScale, value: Binding<Double>, relative: Bool) {
         guard w > 0 else { return }
         if !dragging {
@@ -369,7 +320,6 @@ extension SliderState {
         if v != value.wrappedValue { value.wrappedValue = v }
     }
 
-    /// Ends a drag. A tap that didn't move jumps to where it landed and springs there.
     func end(_ g: DragGesture.Value, width w: CGFloat, scale: SliderScale, value: Binding<Double>) {
         if !moved, w > 0 {
             let v = scale.value(at: Double(g.location.x / w))
@@ -383,8 +333,6 @@ extension SliderState {
     }
 }
 
-/// Sets a number by dragging. Tap to jump, drag to adjust, ⌥ for fine control, double-click to reset.
-/// Within 2.5% of a tick the value snaps to it; past either end the track stretches and springs back.
 struct OSlider: View {
     @Binding var value: Double
     let range: ClosedRange<Double>
@@ -394,7 +342,6 @@ struct OSlider: View {
     var width: CGFloat = 200
     let label: String
     let format: (Double) -> String
-    /// Called when a drag or tap ends, e.g. to play a preview.
     var onCommit: () -> Void = {}
     @StateObject private var s = SliderState()
     @Environment(\.isEnabled) private var enabled
@@ -407,7 +354,7 @@ struct OSlider: View {
             Text(format(value))
                 .font(Theme.body(13, .medium)).monospacedDigit().oneLine().fixedSize()
                 .foregroundStyle(s.dragging ? Theme.accentInk : Theme.inkMuted)
-                .frame(minWidth: 56, alignment: .trailing) // grows rather than truncating "8 windows"
+                .frame(minWidth: 56, alignment: .trailing)
         }
         .opacity(enabled ? 1 : 0.45)
     }
@@ -484,8 +431,6 @@ struct OSlider: View {
     }
 }
 
-/// A slider's knob: a 20pt disc. Plain, it is `surface-raised` with a `border-control` edge. Given a
-/// colour (a colour picker's), it is that colour in a white ring, with a shadow that reads on any ground.
 struct OKnob: View {
     var color: Color? = nil
     var size: CGFloat = 20
@@ -504,10 +449,6 @@ struct OKnob: View {
     }
 }
 
-// MARK: - Slider (bar)
-
-/// Control Center style pill whose fill is the indicator, with its label inside. For stacks of related
-/// values. Dragging moves relative to where you grabbed it, so grabbing never makes it jump.
 struct OBarSlider: View {
     @Binding var value: Double
     let range: ClosedRange<Double>
@@ -533,7 +474,7 @@ struct OBarSlider: View {
                     .overlay(alignment: .trailing) {
                         Capsule().fill(Theme.onAccent).frame(width: 3, height: s.dragging ? 18 : 12)
                             .opacity(s.dragging ? 0.95 : 0.5).padding(.trailing, 7)
-                            .opacity(w * f > 44 ? 1 : 0) // only once the fill clears the label
+                            .opacity(w * f > 44 ? 1 : 0)
                     }
                 content(Theme.ink)
                 content(Theme.onAccent).mask(alignment: .leading) { Rectangle().frame(width: w * f) }
@@ -573,18 +514,12 @@ struct OBarSlider: View {
     }
 }
 
-// MARK: - Keycaps
-
-/// Keycap sizes: `small` (20pt) for hints beside text, `medium` (30pt) for a chord that heads a card,
-/// `large` (40pt) only on tour cards, where the real key press pushes them down into `accent`.
 enum KbdSize { case small, medium, large }
 
-/// Keycaps for a shortcut. Small caps are flat wells; medium and large ones are raised, with a lip.
 struct Kbd: View {
     let keys: [String]
     var size: KbdSize = .small
     var pressed = false
-    /// Raised caps on an `accent` ground: `on-accent` caps with `accent` legends.
     var onAccent = false
 
     init(keys: [String], size: KbdSize = .small, pressed: Bool = false, onAccent: Bool = false) {
@@ -631,8 +566,6 @@ struct Kbd: View {
     }
 }
 
-/// The tooltip: a plain raised xs Surface with a caret, a one-line description and its keys as small
-/// caps. Each chord after the first reads "then", e.g. "⌘⇪ then L". Show it after `delay`.
 struct OTooltip: View {
     static let delay = 0.5
     let text: String
@@ -641,7 +574,6 @@ struct OTooltip: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            // One line; a long message (a config problem) wraps rather than running across the screen.
             Text(text).font(Theme.body(12.5)).lineLimit(4).fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: 320, alignment: .leading)
             if !chords.isEmpty {
@@ -659,9 +591,6 @@ struct OTooltip: View {
     }
 }
 
-// MARK: - Row and Group
-
-/// An open list: a title in `accent-ink`, rows separated by hairlines, no surrounding box.
 struct OGroup<Content: View>: View {
     let title: String?
     var footer: String? = nil
@@ -699,8 +628,6 @@ struct OGroup<Content: View>: View {
     }
 }
 
-/// One line of a group: optional symbol, a label, a one-line description and a control on the right.
-/// Labels name the effect; units and current values go in the description.
 struct ORow<Control: View>: View {
     let label: String
     var description: String? = nil
@@ -742,7 +669,6 @@ extension ORow where Control == EmptyView {
     }
 }
 
-/// A switch row, the most common kind.
 struct OSwitchRow: View {
     let label: String
     var description: String? = nil
@@ -759,10 +685,6 @@ struct OSwitchRow: View {
     }
 }
 
-// MARK: - Titles
-
-/// The title over a group or a list: `section-title` type in `accent-ink`, or `ink-muted` over lists
-/// inside menus and cards. An optional dot carries the list's colour.
 struct OSectionHeader: View {
     let title: String
     var tone: Color = Theme.accentInk
@@ -781,8 +703,6 @@ struct OSectionHeader: View {
     }
 }
 
-/// The head of a full page (a Settings pane, the search results, the Shortcut Map): a breadcrumb in
-/// `caption` type, then the title in `large-title` type with the page's controls on its right.
 struct OPageTitle<Trailing: View>: View {
     let crumbs: [String]
     let title: String
@@ -810,15 +730,11 @@ extension OPageTitle where Trailing == EmptyView {
     init(crumbs: [String], title: String) { self.init(crumbs: crumbs, title: title) { EmptyView() } }
 }
 
-// MARK: - Inputs
-
-/// A text field on a sunken well, with a focus ring in `focus`.
 struct OTextField: View {
     let placeholder: String
     @Binding var text: String
     var mono = false
     var onSubmit: () -> Void = {}
-    /// Takes focus when it appears, so typing doesn't fall through to another field in the window.
     var autofocus = false
     @FocusState private var focused: Bool
 
@@ -838,7 +754,6 @@ struct OTextField: View {
     }
 }
 
-/// Search pill: magnifier, field and the shortcut that focuses it.
 struct OSearchField: View {
     let placeholder: String
     @Binding var text: String
@@ -871,9 +786,6 @@ struct OSearchField: View {
     }
 }
 
-// MARK: - Ouch pieces
-
-/// Workspaces as pills: the current one filled `accent`, a short `accent-2` mark under ones with windows.
 struct WorkspaceStrip: View {
     let names: [String]
     let current: String?
@@ -914,7 +826,6 @@ private struct WorkspacePill: View {
     }
 }
 
-/// Dips while held and springs back.
 struct PressScale: ButtonStyle {
     var scale: CGFloat = 0.93
     func makeBody(configuration: Configuration) -> some View {
@@ -924,7 +835,6 @@ struct PressScale: ButtonStyle {
     }
 }
 
-/// Chooses a layout from a grid of thumbnails, with the hovered layout's name and description on one line below.
 struct LayoutPicker: View {
     let layouts: [Layout]
     let selection: Layout?
@@ -957,7 +867,6 @@ struct LayoutPicker: View {
                 }
             }
             if let shown {
-                // The blurb only shows whole; a long name alone beats "the rest stacked on…".
                 ViewThatFits(in: .horizontal) {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text(shown.title).font(Theme.body(13.5, .medium)).foregroundStyle(Theme.ink).oneLine().fixedSize()
@@ -973,7 +882,6 @@ struct LayoutPicker: View {
 }
 
 extension Layout {
-    /// One line on what the layout does, the app's own copy.
     var blurb: String {
         switch self {
         case .tall: "Main left, the rest stacked right"
@@ -996,12 +904,8 @@ extension Layout {
     }
 }
 
-/// A toggle in the essentials row: a symbol over a one-word name, `accent` when on, swapping its symbol
-/// with `.replace`.
 struct EssentialTile: View {
-    /// One word under the symbol.
     let title: String
-    /// Tooltip and VoiceOver name.
     let label: String
     let symbol: String
     var offSymbol: String? = nil
@@ -1049,11 +953,6 @@ struct EssentialTile: View {
     }
 }
 
-/// The small button that takes a thing away, in four looks:
-/// - `row`: a minus in a well, at the end of a list row (a shortcut, a floating app).
-/// - `close`: an × that lights `danger` on hover, on things that close or go (a column, a window).
-/// - `restore`: the same place and size, an arrow that brings back what `close` took away.
-/// - `badge`: a small filled × on the corner of a thumbnail, shown while the thumbnail is hovered.
 struct RemoveButton: View {
     enum Variant { case row, close, restore, badge }
     let help: String
@@ -1097,8 +996,6 @@ struct RemoveButton: View {
     }
 }
 
-/// A numbered step: the number in `accent-ink` light display type, then one line of text. `**bold**`
-/// marks what to click, set at 500: plain markdown bold would pick Chillax Bold, the wordmark's weight.
 struct OStep: View {
     let n: Int
     let text: String
@@ -1120,7 +1017,6 @@ struct OStep: View {
     }
 }
 
-/// A status line: a symbol in its colour and a word, never colour alone.
 struct OStatus: View {
     enum Kind { case success, warning, danger, info }
     let kind: Kind

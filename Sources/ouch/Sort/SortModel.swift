@@ -1,18 +1,13 @@
-// Sort: the Sort panel's state and every edit keys and mouse can make.
 import AppKit
 import SwiftUI
 
-// The Sort panel's state: one pending plan per display, the pointer and selection, drags, and every
-// edit the keys and the mouse can make. Views read it; `SortPanel` owns it and applies the result.
 
-/// Something a drag can land on, and the frames the views report for hit-testing.
 enum SortZone: Hashable {
     case lane(UUID), add, close, display(String), row(CGWindowID), scroller
 }
 
 struct SortNotice {
     var text: String
-    /// Put the plan back as it was (removing or closing a workspace).
     var undo: (display: String, plan: SortPlan)?
 }
 
@@ -30,7 +25,6 @@ struct SortDrag {
     var id: CGWindowID { item.id }
 }
 
-/// A workspace column being carried: to Close, onto another workspace to merge, or between two to reorder.
 struct SortColumnDrag {
     let lane: SortLane
     let ratio: CGFloat
@@ -43,45 +37,33 @@ final class SortModel: ObservableObject {
     @Published private(set) var displays: [SortDisplay] = []
     @Published private(set) var current = ""
     @Published private(set) var plans: [String: SortPlan] = [:]
-    /// The window under the pointer; keys act on it before the selection.
     @Published var hover: CGWindowID?
     @Published var selected: CGWindowID?
     @Published var notice: SortNotice?
-    /// The layout every added workspace starts with, until changed.
     @Published var nextLayout: Layout = .tall
     @Published var drag: SortDrag?
     @Published var columnDrag: SortColumnDrag?
     @Published var over: SortZone?
-    /// Where a carried workspace would go: the index of the lane it would sit before, `lanes.count` for the end.
     @Published var columnSlot: Int?
     @Published var reveal = SortReveal()
-    /// Set to focus a lane's name field.
     @Published var focusName: UUID?
-    /// More lanes sit past the right edge of the row.
     @Published var moreToRight = false
-    /// The panel is up; flips a turn after it orders front so the entrance plays.
     @Published var shown = false
-    /// How the panel comes and goes, fixed while it's up.
     var motion = PanelMotion.current
 
     var layouts: [Layout] = [.tall]
     var strategy: SortStrategy = .task
     var maxRows = 7
     var zones: [SortZone: CGRect] = [:]
-    /// Keep the changes and close; the workspace, if any, is shown and its main window focused.
     var finish: (String?) -> Void = { _ in }
-    /// Put everything back as it was when the panel opened, and close.
     var revert: () -> Void = {}
-    /// The plans were edited: apply them to the real windows (the controller debounces).
     var changed: () -> Void = {}
     weak var scroller: NSScrollView?
     private var binds: [UInt64: KeyBinding] = [:]
     private var edgeTimer: Timer?
     private var scrollObserver: Any?
-    /// Between `begin` and `end`; a late view update must not attach to the row once the panel is gone.
     private var running = false
 
-    // MARK: Opening
 
     func begin(displays: [SortDisplay], start: String, config: Config) {
         self.displays = displays
@@ -91,7 +73,6 @@ final class SortModel: ObservableObject {
         plans = [:]
         hover = nil; selected = nil; notice = nil; drag = nil; columnDrag = nil; over = nil; columnSlot = nil; focusName = nil
         running = true
-        // The keys of the mode called "window" if there is one, else the first; with no modes, the global binds.
         binds = [:]
         var modes: [String] = []
         for b in config.bindings where !b.submap.isEmpty && !modes.contains(b.submap) { modes.append(b.submap) }
@@ -114,7 +95,6 @@ final class SortModel: ObservableObject {
         drag = nil; columnDrag = nil; over = nil; columnSlot = nil; hover = nil
     }
 
-    // MARK: Plans
 
     var plan: SortPlan {
         plans[current] ?? SortPlan(display: current, items: [:], lanes: [], strategy: nil, existing: [], taken: [], active: nil)
@@ -123,15 +103,11 @@ final class SortModel: ObservableObject {
     var currentDisplay: SortDisplay? { displays.first { $0.id == current } }
     func display(_ uuid: String) -> SortDisplay? { displays.first { $0.id == uuid } }
 
-    /// Windows on a display as the panel has them now.
     func count(of uuid: String) -> Int { plans[uuid]?.items.count ?? display(uuid)?.items.count ?? 0 }
 
-    /// A display's plan: a crowded unsorted display is grouped the way the config says; one that already
-    /// has several workspaces, or that only receives a window, starts as it is.
     private func ensurePlan(_ uuid: String, grouped: Bool) {
         guard plans[uuid] == nil, let d = display(uuid) else { return }
         if grouped && !d.isSorted {
-            // The suggested grouping is applied like any other edit.
             var p = SortPlan.grouped(d, by: strategy, layouts: layouts, avoiding: reserved(excluding: uuid))
             p.touched = true
             p.pending = true
@@ -141,12 +117,10 @@ final class SortModel: ObservableObject {
         }
     }
 
-    /// Workspace names the lanes of the other open plans use, which a plan must not pick for a new lane.
     func reserved(excluding uuid: String? = nil) -> Set<String> {
         Set(plans.filter { $0.key != (uuid ?? current) }.values.flatMap { $0.lanes.map(\.ws) })
     }
 
-    /// The workspace a new lane would be, if there is a free one.
     var nextName: String? { plan.canAdd(avoiding: reserved()) ? plan.available(avoiding: reserved()).first : nil }
 
     func use(_ uuid: String) {
@@ -163,7 +137,6 @@ final class SortModel: ObservableObject {
         use(displays[((i + delta) % displays.count + displays.count) % displays.count].id)
     }
 
-    /// An edit to the plan being shown. Edits clear the footer notice.
     func edit(keepNotice: Bool = false, _ change: (inout SortPlan) -> Void) {
         guard var p = plans[current] else { return }
         change(&p)
@@ -182,7 +155,6 @@ final class SortModel: ObservableObject {
         scrollToStart()
     }
 
-    /// Moves the duplicates into Close, where each can be clicked back like any other closed window.
     func closeDuplicates() { edit { $0.closeDuplicates() } }
 
     func rename(_ lane: UUID, _ name: String) {
@@ -191,8 +163,6 @@ final class SortModel: ObservableObject {
         }
     }
 
-    /// Changes a workspace's number to what was typed, when that number is free: no other display or open plan
-    /// uses it and the lane here that holds it, if any, is empty and has no name.
     func renumber(_ lane: UUID, to text: String) {
         let p = plan
         let t = text.trimmingCharacters(in: .whitespaces)
@@ -212,7 +182,6 @@ final class SortModel: ObservableObject {
         }
     }
 
-    /// Plans edited since they were last applied, the display being sorted last.
     func pendingApplies() -> [SortApply] {
         let others = displays.map(\.id).filter { $0 != current }.compactMap { plans[$0] }.filter(\.pending)
         return (others + [plans[current]].compactMap { $0 }.filter(\.pending)).map(\.applied)
@@ -225,13 +194,11 @@ final class SortModel: ObservableObject {
         }
     }
 
-    /// What the panel leaves behind: whether anything was edited, what is marked to close, and the counts for the toast.
     func result() -> (changed: Bool, closing: [CGWindowID], workspaces: Int) {
         let edited = plans.values.filter(\.touched)
         return (!edited.isEmpty, edited.flatMap(\.close), edited.reduce(0) { $0 + $1.lanes.filter { !$0.ids.isEmpty }.count })
     }
 
-    /// Drops windows that have closed since the panel opened.
     func prune(alive: Set<CGWindowID>) {
         for k in plans.keys {
             guard var p = plans[k] else { continue }
@@ -244,7 +211,6 @@ final class SortModel: ObservableObject {
         }
     }
 
-    // MARK: Moving windows
 
     private func target() -> CGWindowID? { hover ?? selected }
 
@@ -260,7 +226,6 @@ final class SortModel: ObservableObject {
 
     func toggleClose(_ id: CGWindowID) { plan.isClosing(id) ? restore(id) : markClosing(id) }
 
-    /// Moves a window to workspace `ws`, making its lane when there is none and the name is free.
     func send(_ id: CGWindowID, toWorkspace ws: String) {
         if let i = plan.lanes.firstIndex(where: { $0.ws == ws }) {
             place(id, inLane: i)
@@ -288,7 +253,6 @@ final class SortModel: ObservableObject {
         nextLayout = layouts[((i + delta) % layouts.count + layouts.count) % layouts.count]
     }
 
-    /// Marks every window of a workspace for Close and takes the column away.
     func closeLane(_ id: UUID) {
         guard var p = plans[current], p.lanes.count > 1, let i = p.lanes.firstIndex(where: { $0.id == id }) else { return }
         let before = p, title = p.title(of: i)
@@ -301,7 +265,6 @@ final class SortModel: ObservableObject {
                             undo: (current, before))
     }
 
-    /// Brings a window back from Close (its whole workspace, if that is closed too).
     func restore(_ id: CGWindowID) {
         let other = reserved()
         edit { $0.restore(id, avoiding: other) }
@@ -325,7 +288,6 @@ final class SortModel: ObservableObject {
                                               : "Removed \(title).", undo: (current, before))
     }
 
-    /// Puts every window of one workspace into another and takes the first away.
     func mergeLane(_ id: UUID, into target: UUID) {
         guard var p = plans[current], let i = p.lanes.firstIndex(where: { $0.id == id }),
               let j = p.lanes.firstIndex(where: { $0.id == target }) else { return }
@@ -340,7 +302,6 @@ final class SortModel: ObservableObject {
                                               : "Removed \(title).", undo: (current, before))
     }
 
-    /// Moves a workspace to another place in the row; the numbers stay in order, so the workspaces between swap numbers.
     func moveLane(_ id: UUID, toSlot slot: Int) {
         guard let i = plan.lanes.firstIndex(where: { $0.id == id }) else { return }
         var at: Int?
@@ -352,7 +313,6 @@ final class SortModel: ObservableObject {
     func undoRemove() {
         guard let u = notice?.undo else { return }
         var restored = u.plan
-        // Renames keep the notice, so carry any made since the removal over into the restored plan.
         for (i, lane) in restored.lanes.enumerated() {
             if let now = plans[u.display]?.lanes.first(where: { $0.id == lane.id }) { restored.lanes[i].name = now.name }
         }
@@ -363,8 +323,6 @@ final class SortModel: ObservableObject {
         changed()
     }
 
-    /// Left and right send a window to the neighbouring workspace (Close is the last stop), at the
-    /// same position; up and down reorder it, the top row being the main window.
     func nudge(_ id: CGWindowID, _ d: Direction) {
         let p = plan
         switch d {
@@ -390,7 +348,6 @@ final class SortModel: ObservableObject {
         show(id)
     }
 
-    /// Sends a window to the workspace another display is showing.
     func moveToDisplay(_ id: CGWindowID, _ uuid: String) {
         guard uuid != current, var src = plans[current], let item = src.items[id], let to = display(uuid) else { return }
         ensurePlan(uuid, grouped: false)
@@ -413,7 +370,6 @@ final class SortModel: ObservableObject {
         notice = SortNotice(text: "Moved \(item.title) to \(to.short), \(name.isEmpty ? "workspace \(dst.lanes[lane].ws)" : name).", undo: nil)
     }
 
-    /// Moves the selection with the focus keys.
     func moveSelection(_ d: Direction) {
         let p = plan
         let zones = p.lanes.map(\.ids) + [p.close]
@@ -437,22 +393,18 @@ final class SortModel: ObservableObject {
         if let s = selected { show(s) }
     }
 
-    /// Scrolls the lists and the row so a window is in view.
     func show(_ id: CGWindowID) {
         reveal = SortReveal(id: id, lane: plan.lane(of: id).map { plan.lanes[$0].id } ?? nil, token: reveal.token + 1)
     }
 
-    // MARK: Keys
 
     private static let digits: [UInt16: Int] = Dictionary(uniqueKeysWithValues: (0...9).compactMap { n in
         keyCodes["\(n)"].map { ($0, n == 0 ? 10 : n) }
     })
 
-    /// The window-mode binds from the config, then the keys that always work.
     func handle(code: UInt16, mods: CGEventFlags, characters: String) -> Bool {
         let t = target()
         if let b = binds[Self.key(code, mods)], run(b, on: t) { return true }
-        // Number keys by key code, so any layout's digit row works; the + key by what it types.
         if let t, mods.isEmpty, let n = Self.digits[code] { send(t, toWorkspace: String(n)); return true }
         if mods.subtracting(.maskShift).isEmpty, characters == "+" || code == 69 || (characters == "=" && code == 24) {
             let new = addLane(focus: t == nil)
@@ -460,7 +412,7 @@ final class SortModel: ObservableObject {
             return true
         }
         guard let t, mods.isEmpty else { return false }
-        if [51, 117, 7].contains(code) { toggleClose(t); return true } // ⌫ ⌦ x
+        if [51, 117, 7].contains(code) { toggleClose(t); return true }
         return false
     }
 
@@ -516,7 +468,6 @@ final class SortModel: ObservableObject {
         }
     }
 
-    // MARK: Dragging
 
     func dragChanged(_ item: SortItem, _ v: DragGesture.Value) {
         if drag == nil {
@@ -529,11 +480,10 @@ final class SortModel: ObservableObject {
         drag?.location = v.location
         let zone = zone(at: v.location)
         let source = plan.lane(of: item.id).map { SortZone.lane(plan.lanes[$0].id) } ?? (plan.isClosing(item.id) ? .close : nil)
-        let next = zone == source || (zone == .add && nextName == nil) ? nil : zone // no room, no new workspace
+        let next = zone == source || (zone == .add && nextName == nil) ? nil : zone
         if over != next { over = next }
     }
 
-    /// In the common modes, so the row keeps scrolling while the pointer is held still in the zone.
     private func startEdgeTimer() {
         let t = Timer(timeInterval: 1 / 60, repeats: true) { [weak self] _ in self?.edgeScroll() }
         RunLoop.main.add(t, forMode: .common)
@@ -547,7 +497,7 @@ final class SortModel: ObservableObject {
         let landing = zone(at: d.location)
         drag = nil
         over = nil
-        hover = nil // keys wait for the pointer to point at something again
+        hover = nil
         switch landing {
         case .display(let uuid): moveToDisplay(d.id, uuid)
         case .close: if !plan.isClosing(d.id) { markClosing(d.id) }
@@ -589,8 +539,6 @@ final class SortModel: ObservableObject {
         }
     }
 
-    /// Where a carried workspace lands. The middle of another workspace merges into it; the outer part of a
-    /// column, or the gap beside it, puts the workspace there; the new-workspace column is the end of the row.
     private func columnTarget(_ id: UUID, at p: CGPoint) -> (over: SortZone?, slot: Int?) {
         let z = zone(at: p)
         if z == .close { return (.close, nil) }
@@ -610,8 +558,6 @@ final class SortModel: ObservableObject {
         return (nil, nil)
     }
 
-    /// What is under a point, display chips first, then Close, the new-workspace column and the lanes.
-    /// The new-workspace column counts only where the row shows it, not where it is scrolled out of view.
     private func zone(at p: CGPoint) -> SortZone? {
         for (z, f) in zones { if case .display = z, f.contains(p) { return z } }
         if let f = zones[.close], f.contains(p) { return .close }
@@ -621,8 +567,6 @@ final class SortModel: ObservableObject {
         return nil
     }
 
-    /// Dragging near either end of the row scrolls it, faster the deeper the pointer is in the zone. Past the left
-    /// end the row keeps scrolling at full speed; the right end is bounded by the Close column.
     private func edgeScroll() {
         guard let d = drag?.location ?? columnDrag?.location, let s = zones[.scroller], d.y > s.minY - 40, d.y < s.maxY + 40 else { return }
         let edge: CGFloat = 56, top: CGFloat = 14
@@ -630,7 +574,6 @@ final class SortModel: ObservableObject {
         else if d.x < s.minX + edge { scrollRow(by: -(2 + top * min(1, (s.minX + edge - d.x) / edge))) }
     }
 
-    // MARK: The row of lanes
 
     func attach(_ scroll: NSScrollView?) {
         guard running, let scroll, scroller !== scroll else { return }

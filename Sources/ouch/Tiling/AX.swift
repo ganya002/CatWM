@@ -1,8 +1,6 @@
-// Tiling: Accessibility and private-API wrappers (Window, Screen, Spaces, CGWindowInfo).
 import AppKit
 import ApplicationServices
 
-// MARK: - Private symbols (looked up at runtime so a missing one degrades instead of failing to link)
 
 func symbol<T>(_ name: String, in path: String? = nil) -> T? {
     guard let handle = dlopen(path, RTLD_LAZY), let p = dlsym(handle, name) else { return nil }
@@ -15,10 +13,8 @@ private let axGetWindow: GetWindowFn? = symbol(
     in: "/System/Library/Frameworks/ApplicationServices.framework/Frameworks/HIServices.framework/HIServices")
 
 enum Spaces {
-    /// This asynchronous bridge works for foreign windows on macOS 27 where the older
-    /// move/compat APIs are refused. Never treat the issued request as a successful move.
     static var canMoveWindows: Bool {
-        _ = conn?() // load SkyLight before resolving its internal operation
+        _ = conn?()
         return NativeSpaceMove.isAvailable
     }
 
@@ -30,8 +26,6 @@ enum Spaces {
         let deadline = Date().addingTimeInterval(0.5)
         func check() {
             if of(window: id) == [target] {
-                // Membership can update before the imported window joins the visible window
-                // list. Committing then produces one layout without it and a second with it.
                 let info = CGWindowListCopyWindowInfo(.optionIncludingWindow, id) as? [[String: Any]]
                 if !waitUntilOnScreen || info?.first?[kCGWindowIsOnscreen as String] as? Bool == true {
                     completion(true)
@@ -54,12 +48,11 @@ enum Spaces {
     private static let copySpaces: CopySpacesFn? = symbol("SLSCopyManagedDisplaySpaces", in: skylight)
 
     struct DisplaySpaces {
-        let ids: [UInt64]     // every space on the display, left to right
-        let desktops: [Int]   // indices into `ids` of normal desktops (not fullscreen apps)
-        let current: Int?     // index into `ids`
+        let ids: [UInt64]
+        let desktops: [Int]
+        let current: Int?
     }
 
-    /// The spaces on a display, in Mission Control order.
     static func list(display uuid: String) -> DisplaySpaces? {
         guard let conn, let copySpaces, let arr = copySpaces(conn())?.takeRetainedValue() as? [[String: Any]] else { return nil }
         let entry = arr.first { ($0["Display Identifier"] as? String) == uuid } ?? (arr.count == 1 ? arr[0] : nil)
@@ -70,7 +63,6 @@ enum Spaces {
         return DisplaySpaces(ids: ids, desktops: desktops, current: cur.flatMap { ids.firstIndex(of: $0) })
     }
 
-    /// Whether the display shows a fullscreen app's space instead of a desktop.
     static func isFullscreen(display uuid: String) -> Bool {
         guard let s = list(display: uuid), let cur = s.current else { return false }
         return !s.desktops.contains(cur)
@@ -79,7 +71,6 @@ enum Spaces {
     private typealias WindowSpacesFn = @convention(c) (Int32, Int32, CFArray) -> Unmanaged<CFArray>?
     private static let windowSpaces: WindowSpacesFn? = symbol("SLSCopySpacesForWindows", in: skylight)
 
-    /// The spaces a window is on; empty when unknown.
     static func of(window id: CGWindowID) -> [UInt64] {
         guard let conn, let windowSpaces,
               let arr = windowSpaces(conn(), 0x7, [NSNumber(value: id)] as CFArray)?.takeRetainedValue() as? [NSNumber]
@@ -87,15 +78,12 @@ enum Spaces {
         return arr.map(\.uint64Value)
     }
 
-    /// Current space on a display, so layouts are remembered per space like Amethyst.
     static func current(display uuid: String) -> UInt64 {
         guard let conn, let space else { return 0 }
         return space(conn(), uuid as CFString)
     }
 }
 
-/// Focusing through the window server, like yabai. `NSRunningApplication.activate()` is often
-/// ignored on macOS 14+ when the caller isn't the active app, so FFM and movefocus can't rely on it.
 enum WindowServerFocus {
     private typealias PSNFn = @convention(c) (pid_t, UnsafeMutablePointer<ProcessSerialNumber>) -> OSStatus
     private typealias FrontFn = @convention(c) (UnsafeMutablePointer<ProcessSerialNumber>, CGWindowID, UInt32) -> CGError
@@ -112,8 +100,7 @@ enum WindowServerFocus {
         guard let psn, let front, let post else { return false }
         var p = ProcessSerialNumber()
         guard psn(pid, &p) == noErr else { return false }
-        guard front(&p, window, 0x200) == .success else { return false } // kCPSUserGenerated
-        // Two synthetic "make key window" records, the format the window server expects.
+        guard front(&p, window, 0x200) == .success else { return false }
         var bytes = [UInt8](repeating: 0, count: 0xf8)
         bytes[0x04] = 0xf8
         bytes[0x3a] = 0x10
@@ -127,7 +114,6 @@ enum WindowServerFocus {
     }
 }
 
-// MARK: - AXUIElement helpers
 
 extension AXUIElement {
     func value(_ attr: String) -> CFTypeRef? {
@@ -152,9 +138,6 @@ extension AXUIElement {
         var s = CGSize.zero
         return AXValueGetValue(v as! AXValue, .cgSize, &s) ? s : nil
     }
-    /// `.null` when the app doesn't answer or reports something that isn't a real rect. Apps that
-    /// are closing (kitty does this under load) can report infinite or NaN geometry, and every
-    /// caller that treats `isNull` as "unknown" then ignores the window instead of tiling with it.
     var frame: CGRect {
         guard let p = point(kAXPositionAttribute), let s = size(kAXSizeAttribute),
               [p.x, p.y, s.width, s.height].allSatisfy(\.isFinite) else { return .null }
@@ -178,7 +161,6 @@ extension AXUIElement {
     }
 }
 
-// MARK: - Window
 
 final class Window {
     let id: CGWindowID
@@ -187,33 +169,26 @@ final class Window {
     let bundleID: String?
     var autoFloating = false
     var userFloating: Bool?
-    var naturalFrame = CGRect.null // size when first discovered, before we tiled it
+    var naturalFrame = CGRect.null
     var isFloating: Bool { userFloating ?? autoFloating }
 
     init(id: CGWindowID, element: AXUIElement, pid: pid_t, bundleID: String?) {
         self.id = id; self.element = element; self.pid = pid; self.bundleID = bundleID
-        // A hung app would hold its write queue for the default six seconds. Half a second is long enough
-        // for a slow one; `verify` corrects a frame that was dropped.
         AXUIElementSetMessagingTimeout(element, 0.5)
     }
 
-    // The frame last read from the app or written to it. Read and written from any thread.
     private let frameLock = NSLock()
     private var lastFrame = CGRect.null
 
-    /// Asks the app. Also updates `cachedFrame` when the app answers.
     var frame: CGRect {
         let f = element.frame
         if !f.isNull { frameLock.withLock { lastFrame = f } }
         return f
     }
-    /// The frame last read or written, without a call to the app. A scan reads it again on each
-    /// refresh that discovers windows. Asks the app only when nothing is known yet.
     var cachedFrame: CGRect {
         let f = frameLock.withLock { lastFrame }
         return f.isNull ? frame : f
     }
-    /// Sets the cached frame, for a window that a scan read off the main thread.
     func remember(_ f: CGRect) {
         if !f.isNull { frameLock.withLock { lastFrame = f } }
     }
@@ -232,8 +207,6 @@ final class Window {
             frameLock.withLock { if !lastFrame.isNull { lastFrame.size = s } }
         }
     }
-    /// Size → position → size. Setting position first lets macOS clamp a window that is still
-    /// too big for its new spot (e.g. moving to a smaller display), which is a classic mis-tile.
     func setFrame(_ r: CGRect) {
         setSize(r.size)
         setPosition(r.origin)
@@ -249,8 +222,6 @@ final class Window {
         element.perform(kAXRaiseAction)
     }
 
-    /// Presses the window's close button (looked for among its children when the app doesn't publish it as
-    /// an attribute). Says what happened, for the log.
     @discardableResult
     func close() -> String {
         let button = element.element(kAXCloseButtonAttribute)
@@ -260,7 +231,6 @@ final class Window {
         return result == .success ? "pressed" : "press failed (AX error \(result.rawValue))"
     }
 
-    /// Chooses Close Window from the app's menu bar. Only for the app's focused window: the menu acts on that one.
     func closeFromMenu() -> Bool {
         let bar = axApp(pid).element(kAXMenuBarAttribute)
         for top in bar?.elements(kAXChildrenAttribute) ?? [] {
@@ -275,14 +245,10 @@ final class Window {
     }
 }
 
-/// Apps with AXEnhancedUserInterface on (set by VoiceOver, Magnet, Grammarly, ...) animate or
-/// ignore frame changes. Turn it off while we move their windows, then restore it.
-/// Called from the main thread and from the animator's per-app queues, so each app has its own lock:
-/// a slow app's AX call only ever waits on that same app.
 enum EnhancedUI {
     private static var held: [pid_t: (count: Int, wasOn: Bool)] = [:]
     private static var locks: [pid_t: NSLock] = [:]
-    private static let tableLock = NSLock() // guards `held` and `locks`
+    private static let tableLock = NSLock()
     private static let attr = "AXEnhancedUserInterface"
 
     static func suspend(_ pid: pid_t) {
@@ -313,7 +279,6 @@ enum EnhancedUI {
     }
 }
 
-// MARK: - Screens & CG window list (all rects in top-left-origin "Quartz" coordinates, same as AX)
 
 struct Screen {
     let id: CGDirectDisplayID
@@ -344,8 +309,6 @@ struct CGWindowInfo {
     let pid: pid_t
     let bounds: CGRect
 
-    /// Normal-layer windows on screen right now, front to back. This is the source of truth for
-    /// "what is on the current space", which AX alone can't answer reliably.
     static func onScreen() -> [CGWindowInfo] {
         guard let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else { return [] }
         return list.compactMap { d in
@@ -360,7 +323,6 @@ struct CGWindowInfo {
 }
 
 extension CGWindowInfo {
-    /// The normal window under the point, or nil if a menu, the menu bar or the Dock is on top of it.
     static func normalWindow(at p: CGPoint) -> CGWindowInfo? {
         guard let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else { return nil }
         let blocking: Set<Int> = [Int(CGWindowLevelForKey(.dockWindow)), Int(CGWindowLevelForKey(.mainMenuWindow)),
@@ -371,10 +333,8 @@ extension CGWindowInfo {
             else { continue }
             let layer = d[kCGWindowLayer as String] as? Int ?? 0
             let alpha = d[kCGWindowAlpha as String] as? Double ?? 1
-            if alpha < 0.01 || FocusDim.shared.owns(n) { continue } // invisible overlays, the focus dim
+            if alpha < 0.01 || FocusDim.shared.owns(n) { continue }
             if pid == Int(getpid()) {
-                // Over Settings, a menu or a card: leave focus alone. Overlays the mouse passes through
-                // (the HUD, tooltips) don't count. Settings floats, so its layer doesn't tell.
                 if NSApp.window(withWindowNumber: n)?.ignoresMouseEvents == false { return nil }
                 continue
             }
@@ -389,7 +349,6 @@ func mouseLocation() -> CGPoint { CGEvent(source: nil)?.location ?? .zero }
 
 extension CGRect {
     var center: CGPoint { CGPoint(x: midX, y: midY) }
-    /// Round edges independently so neighbouring windows never get 1px gaps or overlaps.
     var pixelAligned: CGRect {
         let x0 = minX.rounded(), y0 = minY.rounded(), x1 = maxX.rounded(), y1 = maxY.rounded()
         return CGRect(x: x0, y: y0, width: x1 - x0, height: y1 - y0)
@@ -399,7 +358,6 @@ extension CGRect {
     }
 }
 
-/// macOS's own Mission Control shortcuts, read from the user's keyboard settings.
 enum SystemShortcut {
     struct Combo { let keyCode: UInt16; let flags: CGEventFlags }
 
@@ -411,13 +369,11 @@ enum SystemShortcut {
         return (enabled, Combo(keyCode: params[1].uint16Value, flags: CGEventFlags(rawValue: params[2].uint64Value)))
     }
 
-    /// "Switch to Desktop N", only when it's turned on.
     static func desktop(_ n: Int) -> Combo? {
         guard (1...16).contains(n), let s = read(117 + n), s.enabled else { return nil }
         return s.combo
     }
 
-    /// "Move left/right a space". On by default (Ctrl-←/→), so missing entries fall back to that.
     static func step(right: Bool) -> Combo? {
         if let s = read(right ? 81 : 79) { return s.enabled ? s.combo : nil }
         return Combo(keyCode: right ? 124 : 123, flags: [.maskControl, .maskSecondaryFn])

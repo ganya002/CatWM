@@ -1,13 +1,10 @@
-// Settings: the Motion pane (animation curves, presets and their previews).
 import AppKit
 import SwiftUI
 
-// MARK: - Motion
 
 struct MotionPane: View {
     @ObservedObject var doc: ConfigDocument
     @ObservedObject var ui: SettingsUI
-    /// The preview's two windows: a random pair, one light and one dark so they never blend.
     static let previewApps = [DemoApp.all.filter(\.dark).randomElement()!, DemoApp.all.filter { !$0.dark }.randomElement()!].shuffled()
 
     struct Preset {
@@ -48,7 +45,7 @@ struct MotionPane: View {
                                 doc.config.animationDuration = p.duration
                                 if p.curve.usesBounce { doc.config.animationBounce = p.bounce }
                             }
-                            play() // feel it right away
+                            play()
                         }
                     }
                 }
@@ -168,14 +165,12 @@ struct MotionPane: View {
 
     private func play() {
         let c = doc.config
-        // Exactly the curve the real animator uses.
         withAnimation(c.animate ? Animation(CurveAnimation(curve: c.animationCurve, bounce: c.animationBounce, duration: c.animationDuration)) : nil) {
             ui.previewFlipped.toggle()
         }
     }
 }
 
-/// SwiftUI animation that follows an `AnimationCurve`, so the preview moves like real windows do.
 struct CurveAnimation: CustomAnimation {
     let curve: AnimationCurve
     let bounce: Double
@@ -187,7 +182,6 @@ struct CurveAnimation: CustomAnimation {
     }
 }
 
-/// Plot of a curve's progress over time: a soft gradient under a rounded line, ending in a dot.
 private struct CurveGraph: View {
     let curve: AnimationCurve
     let bounce: Double
@@ -197,7 +191,6 @@ private struct CurveGraph: View {
 
     var body: some View {
         Canvas { ctx, size in
-            // Leave headroom above and below for overshoot and anticipation, and room for the end dot.
             let inset: CGFloat = 4
             let w = size.width - inset * 2, h = size.height - inset * 2
             let samples = (0...120).map { Double($0) / 120 }
@@ -221,7 +214,6 @@ private struct CurveGraph: View {
     }
 }
 
-/// A preset as a tile with its curve: outlined in `accent` when it's the current style.
 private struct PresetTile: View {
     let preset: MotionPane.Preset
     let selected: Bool

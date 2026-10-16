@@ -1,9 +1,7 @@
-// Checks that the option table, the saved file, the default config and the agent docs agree.
 import Foundation
 import Testing
 @testable import ouch
 
-/// Every option at a value that is not its default, written as a hand-edited file would be (aliases, `_`, case).
 private let changed = """
 floating = com.example.app
 floating_is_blacklist = no
@@ -67,7 +65,6 @@ private func values(_ c: Config) -> [String: String] {
         #expect(again.errors.isEmpty, "\(again.errors)")
         #expect(values(again) == values(first))
         #expect(again.layouts == first.layouts && again.floating == first.floating)
-        // Nothing the parser read is left in the "lines Ouch doesn't recognise" part.
         #expect(!saved.contains("doesn't recognise"))
     }
 }

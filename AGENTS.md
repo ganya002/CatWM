@@ -1,3 +1,9 @@
+# Comments
+
+Comments are unallowed. Do not add comments.
+
+`Package.swift` keeps its `// swift-tools-version:` line. Swift Package Manager requires that line.
+
 Building the project
 
 ```text

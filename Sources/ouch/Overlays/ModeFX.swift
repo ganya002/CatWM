@@ -1,12 +1,6 @@
-// Overlays: the screen-edge effect shown while a mode (submap) is on.
 import AppKit
 import SwiftUI
 
-// MARK: - Panels
-
-/// Screen-edge effect while a mode (submap) is on, so you can tell keys are going to ouch and not the
-/// app. A click-through panel on every screen. The style is `mode-effect` in the config (Settings: Motion ›
-/// Advanced); `ouch modefx <style>` previews one and `ouch modefx all` plays them one after another.
 final class ModeFX {
     static let shared = ModeFX()
 
@@ -23,7 +17,6 @@ final class ModeFX {
         }
     }
 
-    /// The configured style; previews show others without changing it.
     var style: Style = .draw
     private let model = ModeFXModel()
     private var panels: [CGDirectDisplayID: NSPanel] = [:]
@@ -44,8 +37,6 @@ final class ModeFX {
             model.cursor = NSEvent.mouseLocation
             model.active = true
             PerfMonitor.track("ui:modefx-\(style)", for: 0.6)
-            // A turn later, so a view that just appeared for a new style sees the trigger change
-            // (one built with the new value already in place wouldn't animate).
             DispatchQueue.main.async { [weak self] in self?.model.enters += 1 }
         } else {
             model.active = false
@@ -55,7 +46,6 @@ final class ModeFX {
         }
     }
 
-    /// `modefx <style>` or `modefx all`.
     func command(_ args: [String]) {
         demo.forEach { $0.cancel() }
         demo = []
@@ -94,7 +84,6 @@ final class ModeFX {
             seen.insert(id)
             let p = panels[id] ?? makePanel(screen)
             panels[id] = p
-            // A reused panel's view still has the origin and corners of where its screen used to be.
             if let host = p.contentView as? NSHostingView<ModeFXView> { host.rootView = view(for: screen) }
             p.setFrame(screen.frame, display: false)
             p.orderFrontRegardless()
@@ -111,7 +100,6 @@ final class ModeFX {
         return p
     }
 
-    /// Follows the screen's rounded top and notch, or a fullscreen app's window (see ScreenShape).
     private func view(for screen: NSScreen) -> ModeFXView {
         let shape = ScreenShape.of(screen)
         return ModeFXView(model: model, radius: shape.topRadius, origin: screen.frame.origin,
@@ -119,14 +107,11 @@ final class ModeFX {
     }
 }
 
-// MARK: - Views
-
 final class ModeFXModel: ObservableObject {
     @Published var active = false
     @Published var enters = 0
     @Published var style: ModeFX.Style = .draw
     @Published var color = Theme.accent
-    /// Where the pointer was on entering, in global (bottom-left) coordinates, for the ripple.
     var cursor: CGPoint = .zero
 }
 
@@ -136,7 +121,6 @@ struct ModeFXView: View {
     let origin: CGPoint
     var notchHalfWidth: CGFloat = 0
     var notchHeight: CGFloat = 0
-    /// Space at the top of the screen the effect leaves out: the black menu bar band over a fullscreen app.
     var topInset: CGFloat = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -151,13 +135,9 @@ struct ModeFXView: View {
         .allowsHitTesting(false)
     }
 
-    /// The screen's outline: rounded at the top only, like the built-in display.
     private var shape: UnevenRoundedRectangle {
         UnevenRoundedRectangle(topLeadingRadius: radius, topTrailingRadius: radius, style: .circular)
     }
-    /// Borders are drawn this much thicker on the side facing the screen edge or the notch. The extra part is
-    /// off screen or behind the notch, so what shows is the same, but the line meets the notch whatever its
-    /// exact curve is and leaves no sliver of gap.
     private var tuck: CGFloat { notchHalfWidth > 0 ? 6 : 0 }
     private var notchCutout: some View {
         NotchCutout(halfWidth: notchHalfWidth, height: notchHeight).fill(style: FillStyle(eoFill: true))
@@ -165,7 +145,6 @@ struct ModeFXView: View {
     private var c: Color { model.color }
     private var on: Bool { model.active }
 
-    /// The finished screen border: two mirrored halves that begin at the notch edges, so nothing runs under it.
     private func border(width: CGFloat) -> some View {
         ZStack {
             ForEach([false, true], id: \.self) { mirrored in
@@ -178,7 +157,6 @@ struct ModeFXView: View {
 
     @ViewBuilder private func effect(size: CGSize) -> some View {
         if reduceMotion && model.style != .none {
-            // No motion: just the finished border, faded in.
             border(width: 4)
                 .opacity(on ? 1 : 0).animation(Motion.fade, value: on)
         } else {
@@ -189,7 +167,6 @@ struct ModeFXView: View {
     @ViewBuilder private func animated(size: CGSize) -> some View {
         switch model.style {
         case .ripple:
-            // A ring from the pointer out past the screen corners; the border lights as it arrives.
             let p = CGPoint(x: model.cursor.x - origin.x, y: size.height - (model.cursor.y - origin.y))
             let reach = [CGPoint.zero, CGPoint(x: size.width, y: 0), CGPoint(x: 0, y: size.height), CGPoint(x: size.width, y: size.height)]
                 .map { hypot($0.x - p.x, $0.y - p.y) }.max() ?? 1000
@@ -200,7 +177,7 @@ struct ModeFXView: View {
                         .frame(width: reach * 2 * v.t, height: reach * 2 * v.t)
                         .position(p)
                         .opacity(v.t >= 1 ? 0 : 1 - v.t * 0.6)
-                        .mask(notchCutout) // the ring stops at the notch; the border below tucks into it
+                        .mask(notchCutout)
                     border(width: 3.5).opacity(v.edge)
                 }
                 .clipShape(shape)
@@ -240,7 +217,6 @@ struct ModeFXView: View {
             .opacity(on ? 1 : 0).animation(.easeOut(duration: on ? 0 : 0.2), value: on)
 
         case .draw:
-            // The border draws itself from the top centre, both ways, with a bright head.
             Color.clear.keyframeAnimator(initialValue: 0.0, trigger: model.enters) { _, k in
                 ZStack {
                     ForEach([false, true], id: \.self) { mirrored in
@@ -276,16 +252,11 @@ struct ModeFXView: View {
     private struct Ripple { var t: CGFloat = 0; var edge: Double = 0 }
 }
 
-// MARK: - Shapes
-
-/// The notch's outline, in points: the side walls meet the screen top through a concave flare, and the
-/// bottom corners are rounded.
 private enum Notch {
     static let bottomRadius: CGFloat = 8
     static let flareRadius: CGFloat = 6
 }
 
-/// The whole rect with the notch cut out of the top centre (fill it even-odd as a mask).
 private struct NotchCutout: Shape {
     let halfWidth: CGFloat
     let height: CGFloat
@@ -305,7 +276,6 @@ private struct NotchCutout: Shape {
     }
 }
 
-/// A top-left corner bracket; rotated for the other three.
 private struct Bracket: Shape {
     let radius: CGFloat
     func path(in r: CGRect) -> Path {
@@ -317,12 +287,9 @@ private struct Bracket: Shape {
     }
 }
 
-/// The right half of the screen outline, from top centre round to bottom centre; mirrored for the left.
-/// Only the top corner is rounded, like the screen.
 private struct DrawnHalf: Shape {
     let radius: CGFloat
     let inset: CGFloat
-    /// With a notch, the path starts under it and curves round it instead of running behind it.
     var notchHalfWidth: CGFloat = 0
     var notchHeight: CGFloat = 0
     func path(in rect: CGRect) -> Path {
@@ -330,8 +297,6 @@ private struct DrawnHalf: Shape {
         let rad = max(0, radius - inset)
         var p = Path()
         if notchHalfWidth > 0 {
-            // Hug the notch, just outside its outline: out from under its middle, round the bottom corner,
-            // up the wall and out along the flare to the top edge.
             let x = r.midX + notchHalfWidth + inset, y = rect.minY + notchHeight + inset
             p.move(to: CGPoint(x: r.midX, y: y))
             p.addArc(tangent1End: CGPoint(x: x, y: y), tangent2End: CGPoint(x: x, y: r.minY), radius: Notch.bottomRadius + inset)

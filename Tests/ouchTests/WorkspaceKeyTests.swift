@@ -1,4 +1,3 @@
-// Tests: the names of per-Space workspaces, which key layout state and window assignments.
 import CoreGraphics
 import Testing
 @testable import ouch

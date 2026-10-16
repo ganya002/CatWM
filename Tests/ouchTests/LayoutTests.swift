@@ -1,4 +1,3 @@
-// Tests: the layout algorithms and the fit around minimum window sizes.
 import CoreGraphics
 import Testing
 @testable import ouch

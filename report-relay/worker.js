@@ -1,16 +1,6 @@
-// Receives bug reports from Ouch and files them as Linear issues. The Linear API key stays here:
-// anything shipped inside the app can be pulled out of it. The key only needs "Create issues", so
-// the files go into the issue itself as collapsible sections instead of uploads.
-//
-// POST /report, multipart form: title, body, version, and up to 6 `file` parts.
-// POST /perf, JSON: an automatic slow-animation or hang report. One open issue per fingerprint; a repeat
-// adds a comment instead (the first 10, then it only counts). Needs the key to read issues and create comments.
-// Secrets/vars: LINEAR_API_KEY (secret), LINEAR_TEAM_ID (the team's UUID), optional LINEAR_LABEL_ID,
-// optional LINEAR_PERF_LABEL_ID (label for perf issues).
 
 const MAX_BYTES = 4 * 1024 * 1024
 const MAX_FILES = 6
-// Per file, from the end: the newest log lines matter most.
 const MAX_FILE_CHARS = 40000
 
 export default {
@@ -18,13 +8,11 @@ export default {
     const url = new URL(req.url)
     if (req.method !== "POST" || !["/report", "/perf"].includes(url.pathname)) return json({ error: "not found" }, 404)
 
-    // Ouch sends a handful of reports at most; anything faster is someone poking at the endpoint.
     if (env.LIMITER) {
       const { success } = await env.LIMITER.limit({ key: req.headers.get("cf-connecting-ip") ?? "unknown" })
       if (!success) return json({ error: "too many reports" }, 429)
     }
     if (url.pathname === "/perf") return perf(req, env)
-    // Without a length (a chunked body) the size can't be checked before formData() buffers it all.
     const length = req.headers.get("content-length")
     if (length === null) return json({ error: "length required" }, 411)
     if (Number(length) > MAX_BYTES) return json({ error: "too large" }, 413)
@@ -71,7 +59,6 @@ async function perf(req, env) {
   } catch {
     return json({ error: "bad json" }, 400)
   }
-  // Every field is checked and rebuilt: nothing from the request goes into Linear as it came.
   const fp = word(p.fingerprint, 8)
   const kind = word(p.kind, 60)
   if (!/^[0-9a-f]{8}$/.test(fp) || !kind) return json({ error: "bad report" }, 400)
@@ -113,7 +100,6 @@ async function perf(req, env) {
   }
 }
 
-// A file as a collapsed block in the issue: Linear's `+++ title` … `+++` syntax.
 async function section(file) {
   let text = await file.text()
   if (text.length > MAX_FILE_CHARS) text = "…\n" + text.slice(-MAX_FILE_CHARS)

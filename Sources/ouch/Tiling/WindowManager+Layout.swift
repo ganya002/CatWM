@@ -1,14 +1,9 @@
-// Tiling: refresh loop that tiles windows into layout slots, plus screen and neighbor geometry.
 import AppKit
 
 extension WindowManager {
-    // MARK: - Refresh & tiling
 
-    /// Relayouts moving more windows than this land at once instead of animating (see `refresh`).
     static let maxAnimatedMoves = 6
 
-    /// Coalesces refresh requests. A pending earlier refresh is kept rather than pushed back, so a
-    /// steady stream of events can't postpone tiling indefinitely.
     func scheduleRefresh(after delay: Double = 0.05) {
         let deadline = DispatchTime.now() + delay
         if refreshWork != nil, refreshDeadline <= deadline { return }
@@ -19,7 +14,6 @@ extension WindowManager {
         DispatchQueue.main.asyncAfter(deadline: deadline, execute: work)
     }
 
-    /// Reads every app's windows off the main thread (see `WindowScanner`), then refreshes with them.
     private func scanAndRefresh() {
         refreshWork = nil
         guard isStarted else { return }
@@ -36,22 +30,16 @@ extension WindowManager {
         scanner.scan(jobs, done: { [weak self] in self?.refresh() }, late: { [weak self] in self?.refresh() })
     }
 
-    /// Discovers and prunes windows with the last scan's results, then lays out. It makes no AX reads
-    /// on the main thread: frames come from `Window.cachedFrame`. `scheduleRefresh` scans again first.
-    /// `placing` limits the frame writes to those windows; the rest keep their frames until the next refresh.
     func refresh(instant instantLayout: Bool = false, placing only: Set<CGWindowID>? = nil) {
         guard isStarted else { return }
-        if scanner.lastScan == 0 { scheduleRefresh(after: 0) } // nothing scanned yet
+        if scanner.lastScan == 0 { scheduleRefresh(after: 0) }
         let screens = Screen.all()
         guard !screens.isEmpty else { return }
 
-        // 1. Discover windows on the current space(s).
         let onScreen = CGWindowInfo.onScreen()
         let onScreenIDs = Set(onScreen.map(\.id))
         let pidsOnScreen = Set(onScreen.map(\.pid))
         let firstRun = windows.isEmpty
-        // While macOS slides between Spaces, windows of the Space being left are still listed on screen.
-        // Counting them would file them under the Space arriving and tile them there.
         let currentSpaces = Set(screens.map { Spaces.current(display: $0.uuid) })
         func onOtherSpace(_ id: CGWindowID) -> Bool {
             let spaces = Spaces.of(window: id)
@@ -59,7 +47,7 @@ extension WindowManager {
         }
         var present = Set<CGWindowID>()
         var fresh: [Window] = []
-        var titles: [CGWindowID: String?] = [:] // of the fresh windows, as the scan read them
+        var titles: [CGWindowID: String?] = [:]
 
         for app in NSWorkspace.shared.runningApplications
         where app.activationPolicy == .regular && !app.isHidden && app.processIdentifier != getpid() {
@@ -67,8 +55,6 @@ extension WindowManager {
             let pid = app.processIdentifier
             guard pidsOnScreen.contains(pid), let scan = scanner.results[pid] else { continue }
             for id in scan.listed {
-                // A bridged move can become discoverable before its completion commits the
-                // destination workspace. Do not tile that intermediate state as a new arrival.
                 guard !workspaceMoves.contains(id), onScreenIDs.contains(id), !onOtherSpace(id) else { continue }
                 if windows[id] != nil {
                     if !scan.fullscreen.contains(id) { present.insert(id) }
@@ -86,10 +72,8 @@ extension WindowManager {
                 present.insert(id)
             }
         }
-        // An import in progress already belongs to its destination workspace (see `moveWindow`).
         present.formUnion(workspaceMoves.filter { windows[$0] != nil })
 
-        // Front-most first, so on launch the window you were using becomes main.
         let z = Dictionary(onScreen.enumerated().map { ($1.id, $0) }, uniquingKeysWith: { a, _ in a })
         let arrivals = fresh.sorted(by: { (z[$0.id] ?? 0) < (z[$1.id] ?? 0) })
         for w in arrivals where config.virtualWorkspaces {
@@ -106,9 +90,8 @@ extension WindowManager {
         for w in fresh {
             Log.debug("new window \(w.id) \(w.bundleID ?? "pid \(w.pid)") floating=\(w.isFloating) frame=\(w.cachedFrame)")
         }
-        if !fresh.isEmpty { scheduleRefresh(after: 0.4) } // second pass for apps that reposition after opening
+        if !fresh.isEmpty { scheduleRefresh(after: 0.4) }
 
-        // 2. Prune closed windows; keep ones that are merely on another space, minimized or hidden.
         for (id, w) in windows where !present.contains(id) {
             if NSRunningApplication(processIdentifier: w.pid) == nil || scanner.results[w.pid]?.gone.contains(id) == true { forget(id) }
         }
@@ -122,22 +105,19 @@ extension WindowManager {
         }
 
         watchCrowding(screens)
-        // A new window may be why the old one closed (a dialog, a replacement): let it keep focus.
         if let ws = refocusAfterClose {
             refocusAfterClose = nil
             if fresh.isEmpty { DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in self?.refocusRecent(on: ws) } }
         }
 
-        // 3. Lay out each screen.
         guard tilingEnabled else { onChange?(); return }
         var moves: [Animator.Move] = [], instant: [Animator.Move] = []
         for s in screens {
             let st = state(for: s)
             let ids = tiled(on: s)
-            // Not while it's only out of sight for a moment (app hidden, minimised, mid Space switch).
             if let z = st.zoomed, windows[z]?.isFloating != false || workspaceOf[z] != shown[s.uuid] { st.zoomed = nil }
             guard let slots = layoutTargets(ids, st, on: s) else {
-                ids.forEach { targets[$0] = nil } // floating layout: navigate by where windows really are
+                ids.forEach { targets[$0] = nil }
                 continue
             }
             for id in ids {
@@ -160,10 +140,8 @@ extension WindowManager {
                     }
                     continue
                 }
-                // Already heading there: asking again would restart the curve at full speed.
                 if animator.isMoving(id, to: target) { continue }
                 if animator.isBusy(id) { moves.append(.init(window: w, to: target, bounds: s.visible)); continue }
-                // Don't fight an app that keeps refusing the same frame (minimum size etc.).
                 var c = corrections[id] ?? (target, 0)
                 if c.target != target { c = (target, 0) }
                 c.count += 1
@@ -173,20 +151,15 @@ extension WindowManager {
             }
         }
         if !moves.isEmpty { Log.debug("tile: moving \(moves.map { "\($0.window.id)→\($0.to)" }.joined(separator: ", "))") }
-        animator.animate(instant, duration: 0) // windows that don't slide in with a workspace swap snap into place
-        // An animated move costs AX calls on every frame for every window in it. With a crowd of
-        // windows that keeps the main thread busy enough to stall events, so a big relayout lands at once.
+        animator.animate(instant, duration: 0)
         let animated = !instantLayout && config.animate && moves.count <= Self.maxAnimatedMoves
         animator.animate(moves, duration: animated ? config.animationDuration : 0,
                          curve: config.animationCurve, bounce: config.animationBounce)
         onChange?()
     }
 
-    /// After the focused window closes, macOS hands focus to whatever it likes (often another
-    /// column, or the app's other window). Like Hyprland, go back to the window used before it.
     private func refocusRecent(on ws: String) {
         guard isShown(ws), pendingFocus == nil else { return }
-        // A dialog or other window we don't manage took focus: leave it be.
         if let app = NSWorkspace.shared.frontmostApplication,
            let id = axApp(app.processIdentifier).element(kAXFocusedWindowAttribute)?.windowID,
            windows[id] == nil { return }
@@ -196,9 +169,6 @@ extension WindowManager {
         focus(w)
     }
 
-    /// The frame each of `ids` (tiled windows in tiling order) gets on `s` with the workspace state `st`:
-    /// its layout slot fitted around known minimum sizes, or the whole tiling area when zoomed.
-    /// Nil for the floating layout. Every tiling of windows (refresh, staging, mouse resize) uses this.
     func layoutTargets(_ ids: [CGWindowID], _ st: ScreenState, on s: Screen) -> [CGWindowID: CGRect]? {
         guard let (raw, gap) = rawSlots(ids, on: s, st, ratio: st.ratio) else { return nil }
         let slots = fitMinimums(raw, mins: ids.map { minSizes[$0] }, gap: gap)
@@ -206,25 +176,19 @@ extension WindowManager {
         return Dictionary(zip(ids, slots).map { id, slot in (id, id == st.zoomed ? zoomed : slot) }, uniquingKeysWith: { a, _ in a })
     }
 
-    /// The gap between `count` tiled windows: none for a lone window with smart margins.
     func windowGap(count: Int) -> CGFloat {
         config.windowMargins && !(config.smartWindowMargins && count == 1) ? config.windowMarginSize : 0
     }
 
-    /// Each window's slot before fitting around minimum sizes, and the gap between windows.
     func rawSlots(_ ids: [CGWindowID], on s: Screen, _ st: ScreenState, ratio: CGFloat) -> ([CGRect], CGFloat)? {
         let gap = windowGap(count: ids.count)
-        // Lay out in a rect grown by half a gap, then shrink every slot by half a gap: windows get
-        // a full gap between them and sit exactly on the padding at the screen edges.
         guard let raw = st.layout.frames(count: ids.count, in: usableRect(s).insetBy(dx: -gap / 2, dy: -gap / 2),
                                          ratio: ratio, mainCount: st.mainCount) else { return nil }
         let slots = raw.map { $0.insetBy(dx: gap / 2, dy: gap / 2).pixelAligned }
-        // A non-finite slot (bad display geometry mid-reconfiguration) must never reach the AX calls.
         guard slots.allSatisfy({ [$0.minX, $0.minY, $0.width, $0.height].allSatisfy(\.isFinite) }) else { return nil }
         return (slots, gap)
     }
 
-    /// The first window whose known minimum size the new ratio squeezes further than the old one did.
     func windowRefusingRatio(_ ratio: CGFloat, from old: CGFloat, ids: [CGWindowID], on s: Screen, _ st: ScreenState) -> CGWindowID? {
         guard ids.contains(where: { minSizes[$0] != nil }),
               let (before, _) = rawSlots(ids, on: s, st, ratio: old),
@@ -258,8 +222,6 @@ extension WindowManager {
         state(workspace: workspaceKey(for: s))
     }
 
-    /// The workspace a display shows, which keys its layout state. Before `syncWorkspaces` has run
-    /// for the display, that is the workspace of its current macOS Space, as `syncWorkspaces` names it.
     func workspaceKey(for s: Screen) -> String {
         shown[s.uuid] ?? Self.spaceWorkspace(display: s.uuid, space: Spaces.current(display: s.uuid))
     }
@@ -270,8 +232,6 @@ extension WindowManager {
         states[key] = st
         return st
     }
-
-    // MARK: - Geometry helpers
 
     func screen(containing r: CGRect, in screens: [Screen] = Screen.all()) -> Screen? {
         guard !r.isNull else { return screens.first }
@@ -287,7 +247,6 @@ extension WindowManager {
         return screen(containing: w.frame, in: screens)
     }
 
-    /// The screen with the focused window, else the one under the pointer.
     var focusedScreen: NSScreen? { currentScreen()?.ns }
 
     func currentScreen() -> Screen? {
@@ -297,7 +256,6 @@ extension WindowManager {
         return screens.first { $0.frame.contains(p) } ?? screens.first
     }
 
-    /// The focused window's floating and fullscreen state, for the menu's toggles.
     func focusedWindowState() -> (floating: Bool, fullscreen: Bool)? {
         guard let w = focusedWindow() else { return nil }
         let zoomed = screen(of: w).map { state(for: $0).zoomed == w.id } ?? false
@@ -312,7 +270,6 @@ extension WindowManager {
         return reportedFocusedWindow()
     }
 
-    /// The focused window as macOS reports it, which lags behind `focus(_:)`.
     func reportedFocusedWindow() -> Window? {
         guard let app = NSWorkspace.shared.frontmostApplication,
               let el = axApp(app.processIdentifier).element(kAXFocusedWindowAttribute),
@@ -320,17 +277,14 @@ extension WindowManager {
         return windows[id]
     }
 
-    /// Frame used for navigation: the tile slot when tiled (stable even mid-animation), else the real frame.
     func navFrame(_ w: Window) -> CGRect {
         (!w.isFloating && tilingEnabled ? targets[w.id] : nil) ?? w.frame
     }
 
-    /// `w` as focus navigation sees it (see `FocusNavigation`).
     func navItem(_ w: Window, in screens: [Screen]) -> FocusNavigation.Item {
         .init(id: w.id, frame: navFrame(w), screen: screen(of: w, in: screens)?.uuid)
     }
 
-    /// The window to go to from `w` in direction `dir` (see `FocusNavigation.neighbor`).
     func neighbor(of w: Window, _ dir: Direction, among candidates: [Window]) -> Window? {
         let screens = Screen.all()
         let id = FocusNavigation.neighbor(of: navItem(w, in: screens), dir,

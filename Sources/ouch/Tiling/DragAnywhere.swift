@@ -1,9 +1,5 @@
-// Tiling: the macOS hidden "drag windows from anywhere" (Ctrl+Cmd drag) setting.
 import Foundation
 
-/// macOS's hidden "drag windows from anywhere" setting: hold Ctrl+Cmd and drag any part of a window.
-/// It's a global default (`NSWindowShouldDragOnGesture`) that apps read at launch, so apps that are
-/// already running need a restart to pick up a change.
 enum DragAnywhere {
     private static let key = "NSWindowShouldDragOnGesture" as CFString
 

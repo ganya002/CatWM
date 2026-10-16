@@ -1,4 +1,3 @@
-// Tests: the workspace bookkeeping value the window manager and the Sort snapshot share.
 import CoreGraphics
 import Testing
 @testable import ouch
@@ -31,7 +30,6 @@ import Testing
         #expect(m.focusStamps[7] == nil)
         #expect(m.focusOrder == [8])
         #expect(m.lastFocused["1"] == nil)
-        // A new window that gets the reused ID starts with no history.
         #expect(m.mostRecent(of: [7]) == nil)
         #expect(m.mostRecent(of: [7, 8]) == 8)
     }
@@ -42,7 +40,7 @@ import Testing
         #expect(m.focusOrder == [1, 2])
         #expect(m.mostRecent(of: [1, 2]) == 1)
         let clock = m.focusClock
-        m.noteFocus(1) // already the latest: no new stamp
+        m.noteFocus(1)
         #expect(m.focusClock == clock)
     }
 

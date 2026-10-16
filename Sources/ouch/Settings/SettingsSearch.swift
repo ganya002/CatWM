@@ -1,22 +1,17 @@
-// Settings: the search index of every setting and the anchors that scroll to one.
 import AppKit
 import SwiftUI
 
-// MARK: - Search index
 
-/// One setting the search can find, hidden ones included.
 struct SettingEntry: Identifiable {
     let id: String
     let title: String
     let pane: Pane
     var advanced = false
     var keywords = ""
-    /// For shortcut results: the row to reveal.
     var bind: BindRow? = nil
 }
 
 enum SettingsIndex {
-    /// Every row, pane by pane: the rows below, then the config options' rows from `Options`.
     static let all: [SettingEntry] = {
         let options = Options.all.compactMap(\.setting).map {
             SettingEntry(id: $0.id, title: $0.label, pane: $0.pane, advanced: $0.advanced, keywords: $0.keywords)
@@ -24,7 +19,6 @@ enum SettingsIndex {
         return Pane.allCases.flatMap { pane in (rows + options).filter { $0.pane == pane } }
     }()
 
-    /// Rows that are not one config option: permissions, login, updates, reset, and rows that set several options.
     private static let rows: [SettingEntry] = [
         SettingEntry(id: "general.status", title: "Accessibility access", pane: .general, keywords: "permission status running grant"),
         SettingEntry(id: "general.login", title: "Open at login", pane: .general, keywords: "startup launch login items"),
@@ -54,7 +48,6 @@ enum SettingsIndex {
         SettingEntry(id: "shortcuts.map", title: "Shortcut map", pane: .shortcuts, keywords: "keyboard overview"),
     ]
 
-    /// Settings, then shortcuts, whose words all appear in the query's order-free word list.
     static func search(_ query: String, doc: ConfigDocument) -> [SettingEntry] {
         let words = query.lowercased().split(separator: " ").map(String.init)
         guard !words.isEmpty else { return [] }
@@ -68,7 +61,6 @@ enum SettingsIndex {
 }
 
 extension View {
-    /// Marks a setting the search can open: the scroll target, lit up when it was just opened.
     func setting(_ id: String, _ ui: SettingsUI) -> some View {
         modifier(SettingAnchor(id: id, ui: ui))
     }

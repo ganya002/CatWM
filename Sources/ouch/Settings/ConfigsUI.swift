@@ -1,10 +1,7 @@
-// Settings: the saved-config selector, editor sheets, icon picker and color picker.
 import AppKit
 import SwiftUI
 
-// MARK: - Glyphs
 
-/// A config's icon: the Ouch logo for built-ins, otherwise its symbol (or a generic one).
 struct ConfigGlyph: View {
     let config: SavedConfig
     var size: CGFloat = 16
@@ -24,7 +21,6 @@ struct ConfigGlyph: View {
     }
 }
 
-/// Text and icon colors that stay readable on a config's background.
 private func configInk(for config: SavedConfig) -> Color {
     guard let hex = config.colorHex else { return Theme.ink }
     return ConfigLibrary.prefersDarkText(hex: hex) ? Color.black.opacity(0.85) : .white
@@ -34,13 +30,9 @@ private func configFill(for config: SavedConfig) -> Color? {
     config.colorHex.flatMap { ConfigLibrary.color(hex: $0) }
 }
 
-// MARK: - Selector
 
-/// Popover state lives in an object instead of @State (the Command Line Tools ship without SwiftUI's macro plugin).
 final class PopoverFlag: ObservableObject { @Published var open = false }
 
-/// The pill that names the active config and opens the list of configs. Only this pill and the rows
-/// in its list take the configs' own colours.
 struct ConfigSelector: View {
     let kind: ConfigKind
     @ObservedObject var library: ConfigLibrary
@@ -87,7 +79,7 @@ private struct ConfigList: View {
                 Text("New config from “\(library.current(kind).name)”").oneLine()
             }
         }
-        .frame(width: Theme.menuWidth - 12) // the Surface adds 6 each side
+        .frame(width: Theme.menuWidth - 12)
         .foregroundStyle(Theme.ink)
     }
 
@@ -138,9 +130,7 @@ private struct ConfigList: View {
     }
 }
 
-// MARK: - Import / export button
 
-/// One button that holds both Import and Export.
 struct ConfigTransferMenu: View {
     let kind: ConfigKind
     @ObservedObject var library: ConfigLibrary
@@ -161,7 +151,6 @@ struct ConfigTransferMenu: View {
     }
 }
 
-// MARK: - Sheets
 
 final class ConfigEditorModel: ObservableObject {
     @Published var name = ""
@@ -220,7 +209,6 @@ struct ConfigSheetView: View {
         .onAppear(perform: setUp)
     }
 
-    // Name, with the icon to its left and the color dot to its right.
     private var editorBody: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
@@ -305,7 +293,6 @@ struct ConfigSheetView: View {
     }
 }
 
-// MARK: - Icon picker
 
 private let curatedSymbols: [String] = [
     "star.fill", "bolt.fill", "flame.fill", "leaf.fill", "heart.fill", "moon.fill", "sun.max.fill", "cloud.fill", "drop.fill",
@@ -354,9 +341,7 @@ private struct SymbolGrid: View {
     }
 }
 
-// MARK: - Color picker
 
-/// Hue, saturation, brightness and opacity: what the picker edits.
 struct HSBA: Equatable {
     var h = 0.12, s = 0.8, b = 1.0, a = 1.0
 
@@ -368,7 +353,6 @@ struct HSBA: Equatable {
         return (v(c.redComponent), v(c.greenComponent), v(c.blueComponent), v(c.alphaComponent))
     }
     var hexRGB: String { let (r, g, b, _) = bytes; return String(format: "#%02X%02X%02X", r, g, b) }
-    /// Storage form, RRGGBBAA.
     var hex: String { let (r, g, b, a) = bytes; return String(format: "%02X%02X%02X%02X", r, g, b, a) }
 
     init() {}
@@ -379,7 +363,6 @@ struct HSBA: Equatable {
         self.h = Double(h); self.s = Double(s); self.b = Double(v); self.a = Double(al)
     }
 
-    /// RRGGBB or RRGGBBAA.
     init?(hex: String) {
         let t = hex.trimmingCharacters(in: CharacterSet(charactersIn: "# ")).uppercased()
         guard t.count == 6 || t.count == 8, let v = UInt64(t, radix: 16) else { return nil }
@@ -388,10 +371,8 @@ struct HSBA: Equatable {
                   b: Double((v >> (alpha ? 8 : 0)) & 0xFF) / 255, a: alpha ? Double(v & 0xFF) / 255 : 1)
     }
 
-    /// What people type: "#E8460C", "E8460C", "rgb(232, 70, 12)" or "hsl(16, 90%, 48%)".
     init?(text: String) {
         let t = text.trimmingCharacters(in: .whitespaces).lowercased()
-        // "-" is kept so hsl(-30, …) is hue 330; other negative numbers clamp to 0.
         let signed = t.split(whereSeparator: { !"0123456789.-".contains($0) }).compactMap { Double($0) }
         let nums = signed.map { max($0, 0) }
         if t.hasPrefix("rgb"), nums.count >= 3 {

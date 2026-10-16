@@ -1,17 +1,8 @@
-// UI: design tokens (palette, type scale, radii, shadows, motion) and the Surface.
 import AppKit
 import CoreText
 import SwiftUI
 
-// The Ouch design system (https://claude.ai/artifact/GY1GAH7xBUwAzBP1B9mtfY) in SwiftUI: semantic colour
-// tokens, the Chillax type scale, radii, shadows and the one floating Surface. Every view reads the
-// tokens below, never raw colours, so another palette is a swap of `Theme.palette`.
-
-// MARK: - Palette
-
-/// One palette: a light and a dark value for every semantic token.
 struct Palette {
-    /// sRGB hex, light then dark, with optional alpha.
     struct Pair {
         let light: UInt32, dark: UInt32
         var lightAlpha: CGFloat = 1, darkAlpha: CGFloat = 1
@@ -26,7 +17,6 @@ struct Palette {
     var success, warning, danger, dangerSoft: Pair
     var glass, wash1, wash2: Pair
 
-    /// From the app icon: graphite ground, the main window's electric blue, the white windows' cool greys.
     static let ouch = Palette(
         bg: Pair(0xF4F4F6, 0x1B1B1E), surface: Pair(0xFFFFFF, 0x232326), surfaceRaised: Pair(0xFFFFFF, 0x2C2C30),
         surfaceSunken: Pair(0xECECF0, 0x18181B), hover: Pair(0xECECF0, 0x36363B), hairline: Pair(0xE2E2E7, 0x38383D),
@@ -41,7 +31,6 @@ struct Palette {
 }
 
 enum Theme {
-    /// The palette every token reads. Tokens resolve at draw time, so changing it repaints on the next redraw.
     static var palette = Palette.ouch
 
     static func isDark(_ a: NSAppearance) -> Bool { a.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua }
@@ -51,7 +40,6 @@ enum Theme {
                 blue: CGFloat(v & 0xFF) / 255, alpha: alpha)
     }
 
-    /// A token as an AppKit colour that follows light and dark appearance.
     static func ns(_ token: KeyPath<Palette, Palette.Pair>) -> NSColor {
         NSColor(name: nil) { a in
             let p = palette[keyPath: token]
@@ -60,62 +48,42 @@ enum Theme {
     }
     private static func token(_ kp: KeyPath<Palette, Palette.Pair>) -> Color { Color(nsColor: ns(kp)) }
 
-    /// A token's light or dark value whatever the appearance: for things with their own ground, like
-    /// the dark keycaps of a MacBook Pro drawn in Light Mode.
     static func fixed(_ token: KeyPath<Palette, Palette.Pair>, dark: Bool) -> Color {
         let p = palette[keyPath: token]
         return Color(nsColor: dark ? hex(p.dark, p.darkAlpha) : hex(p.light, p.lightAlpha))
     }
-    /// `fixed` as an AppKit colour, for layers drawn on their own ground.
     static func nsFixed(_ token: KeyPath<Palette, Palette.Pair>, dark: Bool) -> NSColor {
         let p = palette[keyPath: token]
         return dark ? hex(p.dark, p.darkAlpha) : hex(p.light, p.lightAlpha)
     }
-    /// A raw sRGB colour, for drawings of real hardware. Interface colours always come from tokens.
     static func rgb(_ v: UInt32, _ alpha: CGFloat = 1) -> Color { Color(nsColor: hex(v, alpha)) }
-    /// The app icon's electric blue, brighter than `accent`: only for the intro, which plays over graphite
-    /// like the icon's own ground.
     static let iconBlue = hex(0x0A74FF, 1)
 
-    // MARK: Colour tokens
-
-    /// Window ground: behind the Settings pane and everything else.
     static let bg = token(\.bg)
-    /// The content pane, rows' ground; default for body text.
     static let surface = token(\.surface)
-    /// Floating things: menus, tips, coach marks, HUD.
     static let surfaceRaised = token(\.surfaceRaised)
-    /// Wells: search fields, keycaps, segmented tracks, switch tracks.
     static let surfaceSunken = token(\.surfaceSunken)
     static let hover = token(\.hover)
-    /// Separators. Decorative only: never the only edge of a control.
     static let hairline = token(\.hairline)
-    /// Edges of controls: switch off, inputs. 3:1 on surface.
     static let borderControl = token(\.borderControl)
     static let ink = token(\.ink)
     static let inkMuted = token(\.inkMuted)
     static let inkFaint = token(\.inkFaint)
-    /// One fill per view: the primary button, the switch that is on, the current workspace.
     static let accent = token(\.accent)
     static let accentHover = token(\.accentHover)
     static let onAccent = token(\.onAccent)
-    /// Accent used as text: group titles, links, kickers, checks.
     static let accentInk = token(\.accentInk)
     static let accentSoft = token(\.accentSoft)
-    /// Quiet fill for shapes only: illustrations and layout thumbnails. Never text.
     static let tint = token(\.tint)
     static let focus = token(\.focus)
     static let success = token(\.success)
     static let warning = token(\.warning)
     static let danger = token(\.danger)
     static let dangerSoft = token(\.dangerSoft)
-    /// Floating chrome where Liquid Glass isn't available.
     static let glass = token(\.glass)
     static let wash1 = token(\.wash1)
     static let wash2 = token(\.wash2)
 
-    /// A translucent well: keycaps, tiles and hovered rows on glass, where an opaque `surface-sunken`
-    /// would read as a hole. Works on solid surfaces too.
     static let well = Color(nsColor: NSColor(name: nil) { a in
         ns(\.ink).resolved(a).withAlphaComponent(isDark(a) ? 0.09 : 0.06)
     })
@@ -123,21 +91,15 @@ enum Theme {
         ns(\.ink).resolved(a).withAlphaComponent(isDark(a) ? 0.15 : 0.1)
     })
 
-    /// The main pane of a layout thumbnail: accent mixed into tint.
     static let thumbMain = Color(nsColor: NSColor(name: nil) { a in
         let accent = ns(\.accent).resolved(a), tint = ns(\.tint).resolved(a)
         return accent.blended(withFraction: 0.45, of: tint) ?? accent
     })
 
-    /// Zen-style chrome: window chrome and sidebars sit on this wash.
     static let wash = LinearGradient(stops: [.init(color: wash1, location: 0), .init(color: bg, location: 0.55),
                                              .init(color: wash2, location: 1)],
                                      startPoint: UnitPoint(x: 0.1, y: 0), endPoint: UnitPoint(x: 0.9, y: 1))
 
-    // MARK: Type
-
-    /// Chillax (ITF, Fontshare) at 300, 400 and 500 ships in Contents/Resources/Fonts, plus 700 for the
-    /// wordmark. Keys use SF Mono.
     static func registerFonts() {
         guard let dir = Bundle.main.resourceURL?.appendingPathComponent("Fonts"),
               let urls = try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)
@@ -149,7 +111,6 @@ enum Theme {
     private static let hasChillaxBold = NSFont(name: "Chillax-Bold", size: 12) != nil
     private static let hasChillax = NSFont(name: "Chillax-Regular", size: 12) != nil
 
-    /// Chillax at the nearest of its three weights; nothing heavier than 500.
     private static func chillax(_ weight: Font.Weight) -> String {
         switch weight {
         case .ultraLight, .thin, .light: "Chillax-Light"
@@ -158,24 +119,17 @@ enum Theme {
         }
     }
 
-    /// The one face. 400 for text, 500 for emphasis, 300 for large display.
     static func body(_ size: CGFloat = 13.5, _ weight: Font.Weight = .regular) -> Font {
         hasChillax ? .custom(chillax(weight), size: size) : .system(size: size, weight: weight)
     }
-    /// Key glyphs (⌘ ⌥ ⇧ ⇪ ↩) and the letters beside them, in SF Pro like native menus: SF Mono draws
-    /// the glyphs small and off the baseline.
     static func keys(_ size: CGFloat = 12.5, _ weight: Font.Weight = .regular) -> Font {
         .system(size: size, weight: weight)
     }
-    /// Code: config snippets, bundle IDs, commands.
     static func mono(_ size: CGFloat = 11.5, _ weight: Font.Weight = .medium) -> Font {
         .system(size: size, weight: weight, design: .monospaced)
     }
-    /// Headings inside a pane and tip titles: 15/20 at 500.
     static func heading(_ size: CGFloat = 15) -> Font { body(size, .medium) }
-    /// Light display type: the welcome title, pane titles, showcase headlines.
     static func display(_ size: CGFloat) -> Font { body(size, .light) }
-    /// Chillax Bold, for the "Ouch" wordmark only: it is the logo, the one place above 500.
     static func wordmark(_ size: CGFloat) -> Font {
         hasChillaxBold ? .custom("Chillax-Bold", size: size) : .system(size: size, weight: .bold)
     }
@@ -186,49 +140,33 @@ enum Theme {
         return NSFont(name: name, size: size) ?? .systemFont(ofSize: size, weight: weight)
     }
 
-    /// SF Symbol sizes. Symbols sit beside Chillax text, so they follow their own small scale:
-    /// `xs` chevrons and badges, `sm` checks and inline status, `md` row and button icons,
-    /// `lg` lead icons and tiles, `xl` a status that is the whole message.
     enum Icon {
         static let xs: CGFloat = 9, sm: CGFloat = 11, md: CGFloat = 13, lg: CGFloat = 15, xl: CGFloat = 22
     }
-    /// An SF Symbol at a size from `Icon`; 500 by default, like the labels beside it.
     static func symbol(_ size: CGFloat = Icon.md, _ weight: Font.Weight = .medium) -> Font {
         .system(size: size, weight: weight)
     }
 
-    // MARK: Metrics
-
-    /// Corner radii. Nested shapes step down the scale: a `pane` holds `lg` cards, a card holds `md` rows.
     enum Radius {
         static let xs: CGFloat = 4, sm: CGFloat = 6, md: CGFloat = 8, lg: CGFloat = 12, xl: CGFloat = 18
-        /// The one content pane in a window, and panes drawn inside it (the gesture pad).
         static let pane: CGFloat = 14
-        /// Floating glass confirmations: the HUD and the keyboard help.
         static let hud: CGFloat = 22
-        /// The welcome card and the lesson's finish card (`Density.xl`).
         static let xxl: CGFloat = 24
     }
-    /// Spacing: gaps in stacks and padding. Most layouts use `sm`, `md` and `lg`.
     enum Space {
         static let xxs: CGFloat = 2, xs: CGFloat = 4, sm: CGFloat = 8, md: CGFloat = 12, lg: CGFloat = 16
         static let xl: CGFloat = 24, xxl: CGFloat = 32
-        /// Side margins of a Settings pane and the Shortcut Map.
         static let page: CGFloat = 36
     }
-    /// Menu and command rows.
     static let rowHeight: CGFloat = 30
-    /// Buttons, inputs, segmented controls.
     static let controlHeight: CGFloat = 28
     static let menuWidth: CGFloat = 272
     static let submenuWidth: CGFloat = 232
 
-    /// Durations: 120 / 180 / 280 ms, and 450 ms for a mark that fades after it has been seen.
     static let fast = 0.12, medium = 0.18, slow = 0.28, linger = 0.45
 }
 
 extension NSColor {
-    /// The colour as it draws under `appearance`.
     func resolved(_ appearance: NSAppearance) -> NSColor {
         var out = self
         appearance.performAsCurrentDrawingAppearance { out = self.usingColorSpace(.sRGB) ?? self }
@@ -236,35 +174,24 @@ extension NSColor {
     }
 }
 
-// MARK: - Type styles
-
 extension View {
-    /// Single-line text that truncates: labels, captions, buttons, keys and rows never wrap.
     func oneLine(_ mode: Text.TruncationMode = .tail) -> some View { lineLimit(1).truncationMode(mode) }
 
-    /// `kicker`: the only uppercase, for counts like "STEP 2 OF 6".
     func kicker(_ color: Color = Theme.accentInk) -> some View {
         font(Theme.mono(11, .medium)).tracking(0.88).textCase(.uppercase).foregroundStyle(color)
     }
 
-    /// One of the named type styles: its size, weight and tracking together.
     func textStyle(_ style: TextStyle) -> some View { font(style.font).tracking(style.tracking) }
 }
 
 extension Text {
-    /// `textStyle` that stays a `Text`, for text joined with `+`.
     func textStyle(_ style: TextStyle) -> Text { font(style.font).tracking(style.tracking) }
 }
 
-/// The type styles that repeat across windows. Other text uses `Theme.body` at 12.5 to 14.
 enum TextStyle {
-    /// 40 light, tracked in: pane titles, the Shortcut Map, the welcome card.
     case largeTitle
-    /// 22, tracked in a little: sheet, card and HUD titles.
     case title
-    /// 12 at 500, tracked out: group titles and the labels over a list. Colour by context.
     case sectionTitle
-    /// 12: descriptions under a label, breadcrumbs, footers and hints.
     case caption
 
     var font: Font {
@@ -285,52 +212,29 @@ enum TextStyle {
     }
 }
 
-// MARK: - Motion
-
-/// Two curves: ease-out for things appearing, a spring for things that move under the hand. Fades
-/// are for state that changes in place; `exit` is quicker than what came in.
 enum Motion {
     static let easeOut = Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: Theme.medium)
-    /// SwiftUI's `.spring(response: 0.3, dampingFraction: 0.7)`: switch and slider thumbs, HUD pop, keycaps.
     static let spring = Animation.spring(response: 0.3, dampingFraction: 0.7)
-    /// Springy settle for things snapping into place.
     static let snap = Animation.spring(response: 0.34, dampingFraction: 0.7)
-    /// `snap`, or a plain short ease under Reduce Motion.
     static func snap(_ reduce: Bool) -> Animation { reduce ? fade : snap }
-    /// Hover, press and small swaps: 120 ms.
     static let fade = Animation.easeOut(duration: Theme.fast)
-    /// A selection or a panel's content changing: 180 ms.
     static let fadeMedium = Animation.easeOut(duration: Theme.medium)
-    /// A message or state that takes its time: 280 ms.
     static let fadeSlow = Animation.easeOut(duration: Theme.slow)
-    /// A highlight going away after it has been seen: 450 ms.
     static let fadeAway = Animation.easeOut(duration: Theme.linger)
-    /// Things leaving: an ease-in, quicker than they came.
     static let exit = Animation.easeIn(duration: Theme.fast)
-    /// A menu opening from a point: springs out with little bounce.
     static let pop = Animation.spring(response: 0.36, dampingFraction: 0.8)
 
-    /// The same curves for AppKit and Core Animation (`NSAnimationContext`, `CAAnimation`).
     enum Curve {
-        /// `Motion.easeOut`.
         static let easeOut = CAMediaTimingFunction(controlPoints: 0.2, 0.8, 0.2, 1)
-        /// A longer settle for panels and windows that slide into place.
         static let settle = CAMediaTimingFunction(controlPoints: 0.2, 0.9, 0.2, 1)
-        /// `Motion.exit`.
         static let exit = CAMediaTimingFunction(name: .easeIn)
-        /// A plain fade.
         static let fade = CAMediaTimingFunction(name: .easeOut)
     }
 }
 
-// MARK: - Shadows
-
-/// `knob`: a colour picker's knob, which must read on any colour, light or dark.
 enum Elevation { case sm, knob, popover, float }
 
 extension View {
-    /// The design's shadows: a 1px ring plus a soft drop. Apply it to a background shape, never to a view
-    /// with text in it, or the text casts its own shadow (which shows through glass).
     func elevation<S: Shape>(_ e: Elevation, in shape: S) -> some View {
         let ring = Theme.hairline
         let drop = Color(nsColor: NSColor(name: nil) { a in
@@ -353,17 +257,11 @@ extension View {
             .shadow(color: drop, radius: radius, y: y)
     }
 
-    /// Light text over a picture or moving tiles: a soft dark shadow under the glyphs, so they read on
-    /// any ground. `strong` for small or thin text. The one place a shadow goes on text.
     func legible(strong: Bool = false) -> some View {
         shadow(color: .black.opacity(strong ? 0.45 : 0.3), radius: strong ? 8 : 12, y: strong ? 2 : 4)
     }
 }
 
-// MARK: - Surface
-
-/// The single floating container behind every menu, tooltip, tip, coach mark, HUD and welcome card.
-/// Pick the density by job: tooltip `xs`, confirmation `sm`, menu or tip `md`, tour step `lg`, welcome `xl`.
 enum Density {
     case xs, sm, md, lg, xl
 
@@ -387,18 +285,12 @@ enum Density {
     var elevation: Elevation { self == .xs || self == .md ? .popover : .float }
 }
 
-/// Where a surface's caret points from: a rotated square sharing the surface's fill.
 enum Caret: Equatable {
     case none
-    /// On the top edge, `x` from the leading edge.
     case top(CGFloat)
-    /// Centred on the bottom edge.
     case bottom
-    /// On the bottom edge, `x` from its centre: for a surface nudged in from a window edge.
     case bottomAt(CGFloat)
-    /// On the leading edge, `y` from the top: for a tip beside what it's about.
     case leading(CGFloat)
-    /// On the leading edge, `y` from the bottom.
     case leadingBottom(CGFloat)
 }
 
@@ -419,7 +311,7 @@ private struct SurfaceModifier: ViewModifier {
     @ViewBuilder private func fill(_ shape: RoundedRectangle) -> some View {
         if glass {
             if #available(macOS 26.0, *) {
-                Color.clear.glassEffect(.regular, in: shape) // glass draws its own edge and depth
+                Color.clear.glassEffect(.regular, in: shape)
             } else {
                 shape.fill(Theme.glass).background(VisualBlur(radius: density.radius))
                     .background(shape.fill(Color.clear).elevation(density.elevation, in: shape))
@@ -453,13 +345,10 @@ private struct SurfaceModifier: ViewModifier {
 }
 
 extension View {
-    /// Wraps the view in a Surface. Slots inside always follow the same order: head, title, body,
-    /// keys, children, actions, progress.
     func surface(_ density: Density, glass: Bool = false, caret: Caret = .none) -> some View {
         modifier(SurfaceModifier(density: density, glass: glass, caret: caret))
     }
 
-    /// The one content pane in a window: `surface`, `Radius.pane`, popover shadow.
     func pane() -> some View {
         let shape = RoundedRectangle(cornerRadius: Theme.Radius.pane, style: .continuous)
         return clipShape(shape).background(shape.fill(Theme.surface).elevation(.popover, in: shape))
@@ -481,13 +370,9 @@ private struct FloatingGlass<S: InsettableShape>: ViewModifier {
 }
 
 extension View {
-    /// Liquid Glass in `shape` on macOS 26 and later; the `glass` token over a blur, with the float
-    /// shadow, before that. For small floating confirmations: the HUD, the save pill.
     func floatingGlass<S: InsettableShape>(_ shape: S) -> some View { modifier(FloatingGlass(shape: shape)) }
 }
 
-/// Behind-window blur with rounded corners, for glass before macOS 26. A mask image, because a layer
-/// corner radius leaves the blur's edges square.
 struct VisualBlur: NSViewRepresentable {
     var radius: CGFloat
     var material: NSVisualEffectView.Material = .popover
@@ -515,13 +400,7 @@ struct VisualBlur: NSViewRepresentable {
     }
 }
 
-// MARK: - Symbol effects
-
-/// SF Symbol effects that report something: an action landed, a thing refused, a tip is waiting. The
-/// newer effects fall back to older ones on earlier macOS, and everything stops under Reduce Motion.
 extension View {
-    /// Retile, Reload Config, Settings: a turn each time `value` changes.
-    /// Quick, so it lands while the windows are still settling.
     @ViewBuilder func rotateEffect<V: Equatable>(value: V) -> some View {
         if #available(macOS 15.0, *) {
             symbolEffect(.rotate, options: .speed(2.2), value: value)
@@ -529,25 +408,16 @@ extension View {
             symbolEffect(.bounce, options: .speed(2), value: value)
         }
     }
-    /// Something refused: a window that won't resize.
     @ViewBuilder func wiggleEffect<V: Equatable>(value: V) -> some View {
         if #available(macOS 15.0, *) { symbolEffect(.wiggle, value: value) } else { symbolEffect(.bounce, value: value) }
     }
-    /// A state that lasts, such as a tip waiting.
     @ViewBuilder func breatheEffect(isActive: Bool = true) -> some View {
         if #available(macOS 15.0, *) { symbolEffect(.breathe, isActive: isActive) } else { symbolEffect(.pulse, isActive: isActive) }
     }
-    /// A check being drawn in.
     @ViewBuilder func drawOnEffect(isActive: Bool) -> some View {
         if #available(macOS 26.0, *) { symbolEffect(.drawOn, isActive: !isActive) } else { self }
     }
 }
-
-// MARK: - Personality
-
-/// Ouch's bit of personality, taken from the icon: things land with a small squish. Reserved for
-/// state changes (a layout joins the cycle, a permission is granted, a preview window lands), never
-/// for navigation, and dropped under Reduce Motion.
 
 private struct Squish<Trigger: Equatable>: ViewModifier {
     let trigger: Trigger
@@ -577,17 +447,11 @@ private struct Squish<Trigger: Equatable>: ViewModifier {
 }
 
 extension View {
-    /// Squashes and springs back, as if it just bumped into something, each time `trigger` changes
-    /// (only while `when` holds, so e.g. joining bumps but leaving doesn't).
     func squish<T: Equatable>(on trigger: T, when: Bool = true, delay: Double = 0, anchor: UnitPoint = .bottom) -> some View {
         modifier(Squish(trigger: trigger, delay: delay, anchor: anchor, enabled: when))
     }
 }
 
-// MARK: - Miniatures
-
-/// A made-up app for the demo windows. The tones are all low-saturation and alternate light and
-/// dark, so any two side by side read as different apps without clashing.
 struct DemoApp: Equatable {
     let title: String
     let dark: Bool
@@ -610,20 +474,16 @@ struct DemoApp: Equatable {
         DemoApp(title: "Podcasts", dark: true, r: 0.24, g: 0.17, b: 0.14),
     ]
 
-    /// A random app that isn't already on screen (unless every one is).
     static func pick(avoiding taken: [DemoApp] = []) -> DemoApp {
         (all.filter { !taken.contains($0) }.randomElement() ?? all.randomElement())!
     }
 }
 
-/// A miniature app window like the real thing: traffic lights and a title on a flat tone. The main
-/// window wears a thin accent ring.
 struct DemoWindow: View {
     let app: DemoApp
     var main = false
     var corner: CGFloat = 4
 
-    /// The real traffic-light colours.
     private static let lights = [Color(red: 1, green: 0.37, blue: 0.34), Color(red: 1, green: 0.74, blue: 0.18),
                                  Color(red: 0.16, green: 0.79, blue: 0.25)]
 
@@ -652,8 +512,6 @@ struct DemoWindow: View {
     }
 }
 
-/// Miniature of a layout, drawn with the real layout code: the main pane in accent mixed into tint (full
-/// accent when selected), the rest in tint. When the layout changes, the panes spring to their places.
 struct LayoutThumbnail: View {
     let layout: Layout
     var count = 4
@@ -689,7 +547,6 @@ struct LayoutThumbnail: View {
     }
 }
 
-/// The app icon with a status badge in its corner; the badge symbol swaps with a bounce.
 struct BadgedAppIcon: View {
     let badge: String
     let color: Color

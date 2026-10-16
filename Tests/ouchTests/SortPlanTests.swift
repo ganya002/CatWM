@@ -1,4 +1,3 @@
-// Tests: the Sort panel's plan, which the panel edits before the window manager applies it.
 import CoreGraphics
 import Testing
 @testable import ouch
@@ -7,7 +6,6 @@ private func item(_ id: CGWindowID, _ app: String, title: String = "", bundle: S
     SortItem(id: id, title: title, app: app, bundleID: bundle, icon: nil, recency: recency ?? Int(id))
 }
 
-/// A display with workspaces "1" (windows 1, 2) and "2" (window 3), showing "1".
 private func plan(items: [SortItem]? = nil, lanes: [SortLane]? = nil, taken: Set<String> = []) -> SortPlan {
     let items = items ?? [item(1, "Safari"), item(2, "Mail"), item(3, "Xcode")]
     let lanes = lanes ?? [SortLane(ws: "1", name: "", layout: .tall, ids: [1, 2]), SortLane(ws: "2", name: "", layout: .bsp, ids: [3])]

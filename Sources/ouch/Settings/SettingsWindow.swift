@@ -1,9 +1,6 @@
-// Settings: the Settings window, its panes enum and the SettingsUI view state.
 import AppKit
 import SwiftUI
 
-/// Settings, shaped like Zen Browser: traffic lights, a search pill and the panes sit straight on the
-/// chrome wash, and the content is one floating pane.
 final class SettingsWindow: NSObject, NSWindowDelegate {
     static let shared = SettingsWindow()
     private(set) var window: NSWindow?
@@ -25,9 +22,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
             ArrowCursor.keep(in: host.view)
             w.setContentSize(NSSize(width: 940, height: 680))
             w.contentMinSize = NSSize(width: 840, height: 540)
-            // Pinned: stays above every ordinary window while open, even when another app is active.
             w.level = .floating
-            // Settings has no use for full screen: drop the green button and the full-screen behaviour.
             w.clearTitlebar(hiding: [.zoomButton])
             w.collectionBehavior.insert(.fullScreenNone)
             w.delegate = self
@@ -43,17 +38,13 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
             ui.beginSession()
             centerOnPointerScreen()
         }
-        // Show in the Dock and ⌘-Tab while settings are open, like other menu bar apps do.
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
-        // AppKit hands the keyboard to the first text field, the search; it waits for ⌘K or a click instead.
         if !wasVisible { DispatchQueue.main.async { self.window?.makeFirstResponder(nil) } }
         Tips.shared.paneShown(ui.pane)
     }
 
-    /// Each time the window opens it starts centred on the display under the pointer; while it's
-    /// open it can be moved freely. (The tiler always floats our windows, so nothing moves it back.)
     private func centerOnPointerScreen() {
         guard let w = window else { return }
         let area = OuchPanel.pointerScreen().visibleFrame
@@ -69,10 +60,8 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
 
     func windowDidResize(_ notification: Notification) { placeTrafficLights() }
 
-    /// Height of the band the traffic lights sit in, above the sidebar's search pill.
     static let titlebarHeight: CGFloat = 48
 
-    /// Insets the close and minimise buttons from the corner and centres them in the taller band.
     private func placeTrafficLights() {
         guard let w = window, let close = w.standardWindowButton(.closeButton), let mini = w.standardWindowButton(.miniaturizeButton),
               let bar = close.superview, let container = bar.superview else { return }
@@ -89,7 +78,6 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
         }
     }
 
-    /// Double-clicking the title bar would still zoom; Settings keeps the size it was given.
     func windowShouldZoom(_ window: NSWindow, toFrame newFrame: NSRect) -> Bool { false }
 
     func windowWillClose(_ notification: Notification) {
@@ -98,8 +86,6 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
         NSApp.setActivationPolicy(.accessory)
     }
 }
-
-// MARK: - View state
 
 enum Pane: String, CaseIterable, Identifiable {
     case general = "General", layout = "Layout", windows = "Windows", motion = "Motion", shortcuts = "Shortcuts"
@@ -114,37 +100,26 @@ enum Pane: String, CaseIterable, Identifiable {
         case .shortcuts: "keyboard"
         }
     }
-    /// The library of saved configs a pane has a selector for.
     var configKind: ConfigKind? {
         switch self { case .motion: .animation; case .shortcuts: .keyboard; default: nil }
     }
 }
 
-/// View state lives here instead of in @State (the Command Line Tools ship without SwiftUI's macro plugin).
 final class SettingsUI: ObservableObject {
     @Published var pane: Pane = .general
-    /// The settings search in the sidebar.
     @Published var search = ""
-    /// Filters the shortcut list.
     @Published var shortcutFilter = ""
-    @Published var bindMode = "" // which mode the shortcuts pane shows; "" = global
-    /// Panes whose Advanced section is open.
+    @Published var bindMode = ""
     @Published var advancedOpen: Set<Pane> = []
-    /// The setting a search result just opened: scrolled to and lit for a moment.
     @Published var highlight: String?
-    /// Range and custom rows whose raw editor is open.
     @Published var expanded: Set<UUID> = []
-    /// Row to scroll to and flash when the shortcuts pane appears (from the shortcut map or search).
     @Published var reveal: UUID?
-    /// The keyboard map is showing in the pane.
     @Published var showMap = false
     @Published var newID = ""
     @Published var previewFlipped = false
     @Published var bezierText = ""
     @Published var linkedPadding = true
     @Published var status = WindowManager.shared.status()
-    /// Row whose shortcut is being recorded. Global keybinds are paused meanwhile so the combo
-    /// arrives here instead of moving windows.
     @Published var recording: UUID? { didSet { updateMonitor() } }
 
     private let doc: ConfigDocument
@@ -159,7 +134,7 @@ final class SettingsUI: ObservableObject {
         refreshStatus()
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in self?.refreshStatus() }
-        timer?.tolerance = 0.2 // coalesces with other wakeups
+        timer?.tolerance = 0.2
     }
 
     func endSession() {
@@ -172,7 +147,6 @@ final class SettingsUI: ObservableObject {
 
     func refreshStatus() { status = WindowManager.shared.status() }
 
-    /// Opens a search result: its pane, its Advanced section if it's hidden there, then lights it up.
     func open(_ entry: SettingEntry) {
         search = ""
         showMap = false
@@ -205,22 +179,20 @@ final class SettingsUI: ObservableObject {
     }
 
     private func record(_ e: NSEvent) -> NSEvent? {
-        // Caps Lock only ever arrives as a modifier change; other modifiers alone aren't a shortcut.
         if e.type == .flagsChanged && e.keyCode != 57 { return e }
         guard let id = recording, let i = doc.binds.firstIndex(where: { $0.id == id }) else { recording = nil; return e }
         let flags = e.modifierFlags.intersection([.command, .option, .control, .shift])
         let esc = e.keyCode == 53 && flags.isEmpty
         let isRange = BindRange.isRange(doc.binds[i].key)
-        if esc && (doc.binds[i].submap.isEmpty || isRange) { // Esc cancels, except on a mode's single-key rows
+        if esc && (doc.binds[i].submap.isEmpty || isRange) {
             recording = nil
             return nil
         }
         guard let name = ConfigDocument.keyName(for: e.keyCode) else { NSSound.beep(); return nil }
         if esc {
-            // Esc inside a mode row is a legit key to bind (e.g. to leave the mode).
             doc.binds[i].key = "escape"; doc.binds[i].mods = ""
         } else if isRange {
-            doc.binds[i].mods = doc.modsString(for: flags) // range rows: only the modifiers are recorded
+            doc.binds[i].mods = doc.modsString(for: flags)
         } else {
             doc.binds[i].key = name
             doc.binds[i].mods = doc.modsString(for: flags)
@@ -231,7 +203,6 @@ final class SettingsUI: ObservableObject {
 }
 
 
-/// Asks before a destructive change; the first button is the destructive one.
 func confirm(_ title: String, _ detail: String, button: String = "Reset") -> Bool {
     let a = NSAlert()
     a.messageText = title

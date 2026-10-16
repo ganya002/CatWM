@@ -1,4 +1,3 @@
-// Tiling: WindowManager core state and lifecycle. Its features live in the WindowManager+*.swift extensions.
 import AppKit
 
 enum Direction {
@@ -45,19 +44,13 @@ final class WindowManager {
     private(set) var config = Config.load()
     private(set) var tilingEnabled = true
     var onChange: (() -> Void)?
-    /// Every command run (and whether a mode was on), and every mode change. The onboarding tour listens.
     var onDispatch: ((_ dispatcher: String, _ arg: String, _ inMode: Bool) -> Void)?
     var onModeChange: ((String) -> Void)?
-    /// The onboarding tour's practice windows: their process, and the workspace each window title opens on.
-    /// They come from a helper process because our own windows are never tiled.
     var practice: (pid: pid_t, workspaces: [String: String])?
 
     var windows: [CGWindowID: Window] = [:]
-    // Workspaces. In virtual mode these are Ouch's own (windows on hidden workspaces are parked
-    // off-screen); in macOS-Spaces mode each display's current Space is treated as its workspace.
-    // The bookkeeping lives in `model`; the properties below forward to it (see `WorkspaceModel`).
     var model = WorkspaceModel()
-    var workspaceOf: [CGWindowID: String] { model.workspaceOf } // change it with `model.assign`
+    var workspaceOf: [CGWindowID: String] { model.workspaceOf }
     var order: [CGWindowID] { get { model.order } set { model.order = newValue } _modify { yield &model.order } }
     var monitorOf: [String: String] { get { model.monitorOf } set { model.monitorOf = newValue } _modify { yield &model.monitorOf } }
     var shown: [String: String] { get { model.shown } set { model.shown = newValue } _modify { yield &model.shown } }
@@ -68,67 +61,59 @@ final class WindowManager {
     var lastFocused: [String: CGWindowID] {
         get { model.lastFocused } set { model.lastFocused = newValue } _modify { yield &model.lastFocused }
     }
-    var focusStamps: [CGWindowID: Int] { model.focusStamps } // change it with `model.noteFocus` / `model.forget`
+    var focusStamps: [CGWindowID: Int] { model.focusStamps }
     var focusClock: Int { model.focusClock }
     var focusOrder: [CGWindowID] { model.focusOrder }
-    var homeSpace: [String: UInt64] = [:]        // display UUID → the macOS Space workspaces live on
-    var displayOf: [CGWindowID: String] = [:]    // display UUID each window was last seen on (see `syncWorkspaces`)
+    var homeSpace: [String: UInt64] = [:]
+    var displayOf: [CGWindowID: String] = [:]
     var workspaceMoves: Set<CGWindowID> = []
     var snapNextPlacement: Set<CGWindowID> = []
     var present: Set<CGWindowID> = []
-    /// A window we just focused. macOS takes a moment to report it, and a key press in between
-    /// must navigate from it, not from the window before (or spamming a key goes nowhere).
     var pendingFocus: (id: CGWindowID, until: Date)?
-    var refocusAfterClose: String? // workspace whose focused window just closed
-    var lastClose = Date.distantPast // when a window last closed (macOS then refocuses the previous app's window)
-    var floatFrames: [CGWindowID: CGRect] = [:]  // floating windows' frames while parked
+    var refocusAfterClose: String?
+    var lastClose = Date.distantPast
+    var floatFrames: [CGWindowID: CGRect] = [:]
     var savedWorkspaceOf: [CGWindowID: String] = [:]
-    var savedOwnerOf: [CGWindowID: String] = [:]  // "pid bundleID" when saved; window IDs are reused after a logout
-    var savedFloating: [CGWindowID: Bool] = [:]  // windows floated or tiled by hand, from the last run
-    var previousWorkspace: [String: String] = [:] // display UUID → workspace it showed before
-    var labels: [String: String] = [:]           // workspace → the name the Sort panel gave it
+    var savedOwnerOf: [CGWindowID: String] = [:]
+    var savedFloating: [CGWindowID: Bool] = [:]
+    var previousWorkspace: [String: String] = [:]
+    var labels: [String: String] = [:]
     var sortSnapshot: SortSnapshot?
-    var closingNow: Set<CGWindowID> = []          // closed by a finished sort, kept hidden until checked
-    var closingApps: Set<pid_t> = []              // apps of those windows, quit if the sort leaves them windowless
-    /// The Sort panel is open: workspaces change under it, but nothing may take the keyboard or switch workspace.
+    var closingNow: Set<CGWindowID> = []
+    var closingApps: Set<pid_t> = []
     var sortSession = false
     var quietWorkspaceHUD = false
-    /// A workspace swap in progress: leaving windows slide out, arriving ones slide in (see `beginSlide`).
     struct Slide {
-        let monitor: String           // display UUID the swap happens on
-        let to: String                // workspace arriving
-        let outgoing: Set<CGWindowID> // windows leaving
-        let forward: Bool             // the new workspace sorts later: leaving windows go left, arriving ones come from the right
-        let until: CFTimeInterval     // when the slide is done
+        let monitor: String
+        let to: String
+        let outgoing: Set<CGWindowID>
+        let forward: Bool
+        let until: CFTimeInterval
     }
     var slide: Slide?
     var crowdWork: DispatchWorkItem?
     var autoSwitchAfter = Date.distantPast
     var lastSavedWorkspaces = ""
     var focusSink: NSWindow?
-    var visible: Set<CGWindowID> = []       // managed windows on the current space(s)
-    var targets: [CGWindowID: CGRect] = [:] // slot each tiled window was last given
+    var visible: Set<CGWindowID> = []
+    var targets: [CGWindowID: CGRect] = [:]
     var observers: [pid_t: AXObserver] = [:]
     var corrections: [CGWindowID: (target: CGRect, count: Int)] = [:]
-    var drags: [CGWindowID: Bool] = [:]     // window -> was resized (vs. only moved)
+    var drags: [CGWindowID: Bool] = [:]
     var refreshWork: DispatchWorkItem?
     var ffmWork: DispatchWorkItem?
-    var minSizes: [CGWindowID: CGSize] = [:] // learned from windows that refuse to shrink
-    var ratioChange: (screen: String, until: Date)? // a split resize whose windows are still settling
+    var minSizes: [CGWindowID: CGSize] = [:]
+    var ratioChange: (screen: String, until: Date)?
     var refreshDeadline = DispatchTime.distantFuture
     private(set) var isStarted = false
     var ignoreMouseUntil = Date.distantPast
     var movingToSpace = false
-    /// Where an in-flight space switch is heading. macOS keeps reporting the old space until the
-    /// slide finishes, so quick repeated presses must count from here or they overshoot.
     var pendingSpace: (display: String, index: Int, until: Date)?
     var spaceGeneration = 0
     let animator = Animator()
     let scanner = WindowScanner()
     private let dockWindowPull = DockWindowPull()
     let dockArea = DockArea()
-
-    // MARK: - Lifecycle
 
     func start() {
         guard !isStarted else { return }
@@ -137,13 +122,13 @@ final class WindowManager {
         Log.verbose = config.debugLogging || Log.verboseLaunch
         Log.info("start: trusted=\(Permission.accessibility.isGranted) windowServerFocus=\(WindowServerFocus.isAvailable) screens=\(Screen.all().count)")
         config.errors.forEach { Log.info("config: \($0)") }
-        AXUIElementSetMessagingTimeout(AXUIElementCreateSystemWide(), 1.0) // a hung app can't freeze us
+        AXUIElementSetMessagingTimeout(AXUIElementCreateSystemWide(), 1.0)
         animator.onMinimumSize = { [weak self] id, size in self?.learnMinimum(id, size) }
 
         let ws = NSWorkspace.shared.notificationCenter
         ws.addObserver(forName: NSWorkspace.didLaunchApplicationNotification, object: nil, queue: .main) { [weak self] n in
             guard let app = n.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else { return }
-            for delay in [0.3, 1.0, 2.5] { // apps take a moment before AX answers
+            for delay in [0.3, 1.0, 2.5] {
                 DispatchQueue.main.asyncAfter(deadline: .now() + delay) { self?.observe(app); self?.scheduleRefresh() }
             }
         }
@@ -158,7 +143,6 @@ final class WindowManager {
         for name in [NSWorkspace.didHideApplicationNotification, NSWorkspace.didUnhideApplicationNotification] {
             ws.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in self?.scheduleRefresh() }
         }
-        // ⌘-Tab or a Dock click onto a window on a hidden workspace switches to that workspace.
         ws.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] _ in
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { self?.followFocus() }
         }
@@ -173,9 +157,8 @@ final class WindowManager {
                                                object: nil, queue: .main) { [weak self] _ in self?.scheduleRefresh(after: 0.4) }
 
         NSEvent.addGlobalMonitorForEvents(matching: .leftMouseUp) { [weak self] _ in self?.mouseUp() }
-        // Clicking somewhere means you've moved on: leave any mode, like vim leaving normal mode.
         NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-            self?.pendingFocus = nil // a click decides focus itself
+            self?.pendingFocus = nil
             if !Hotkeys.shared.submap.isEmpty { Hotkeys.shared.setSubmap("") }
         }
         Hotkeys.shared.onSubmapChange = { [weak self] name in
@@ -207,14 +190,11 @@ final class WindowManager {
         dockWindowPull.prepare = { [weak self] point in self?.prepareDockPull(at: point) }
         if dockWindowPull.start() { dockArea.refresh() } else { Log.info("Dock window import: mouse event tap unavailable") }
 
-        // `ouch dispatch movefocus l`, `ouch dump`, `ouch reload` from a terminal (like hyprctl).
         DistributedNotificationCenter.default().addObserver(forName: ipcNotification, object: nil, queue: .main) { [weak self] n in
             if let cmd = n.object as? String { self?.ipc(cmd) }
         }
 
         refresh()
-        // Apps that were already running don't send a launch notification, and some (especially
-        // at login) don't answer AX yet. Look again a few times so their windows still get tiled.
         for delay in [0.5, 1.5, 3.0, 6.0] {
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in self?.scheduleRefresh() }
         }
@@ -256,10 +236,6 @@ final class WindowManager {
         return state(for: s).layout.title
     }
 
-    // MARK: - Spaces state
-
-    /// Where a grab last worked for each app, measured from the window's top-left and top-right
-    /// corners, so the next move tries it first.
     lazy var grabHints: [String: (fromLeft: CGPoint, fromRight: CGPoint)] = {
         let saved = UserDefaults.standard.dictionary(forKey: "grabHints") as? [String: [Double]] ?? [:]
         return saved.compactMapValues { v in

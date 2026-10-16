@@ -1,12 +1,5 @@
-// MenuBar: the menu under the menu bar item (items, search, Layout submenu).
 import AppKit
 import SwiftUI
-
-// The menu under the menu bar item: a Surface `md` on glass with a search field, the essentials, where
-// you are, then the Layout submenu. The search reads the same items, so the two never
-// disagree. Rows show window-mode keys; the label row states the chord that enters the mode once.
-
-// MARK: - Items
 
 struct MenuItem: Identifiable {
     enum Kind { case action, check, radio, sub, label, separator, essentials, workspaces, layoutPicker, attention, footer }
@@ -15,26 +8,19 @@ struct MenuItem: Identifiable {
     var kind: Kind = .action
     var label = ""
     var symbol: String? = nil
-    /// An app icon in place of a symbol.
     var image: NSImage? = nil
     var shortcut: [String] = []
-    /// The current choice, shown muted after a submenu's label.
     var value: String? = nil
     var checked = false
     var danger = false
     var enabled = true
-    /// Only reachable through search (aliases for things inside a custom control).
     var hidden = false
     var keywords = ""
     var width: CGFloat = Theme.submenuWidth
     var children: [MenuItem] = []
-    /// Leaves the menu open after running (toggles you want to see flip).
     var keepOpen = false
-    /// Turns its symbol on use: Retile, Reload, Settings.
     var rotates = false
-    /// A count shown in a pill before the shortcut.
     var badge: Int? = nil
-    /// A notification dot on the symbol: something here is waiting (a crash report).
     var dot = false
     var action: (() -> Void)? = nil
 
@@ -49,13 +35,10 @@ struct MenuItem: Identifiable {
     }
 }
 
-/// Keys for actions as the config binds them: window-mode keys first, then global ones.
 struct ShortcutIndex {
     private var mode: [String: [String]] = [:]
     private var global: [String: [String]] = [:]
-    /// The configured window mode name, if there is one.
     var modeName: String? = nil
-    /// The chord that enters window mode, e.g. ⌘⇪.
     var modeChord: [String] = []
 
     init() {
@@ -77,45 +60,31 @@ struct ShortcutIndex {
         global = table("")
     }
 
-    /// The keys for a catalog action, without the mode chord.
     func keys(_ dispatcher: String, _ args: String = "") -> [String] {
         guard let title = Actions.all.first(where: { $0.dispatcher == dispatcher && $0.args == args })?.title else { return [] }
         return mode[title] ?? global[title] ?? []
     }
 }
 
-// MARK: - Model
-
 final class MenuModel: ObservableObject {
     @Published var items: [MenuItem] = []
     @Published var query = "" {
-        // Leading spaces are dropped, so a query of only spaces is no query rather than one matching nothing.
         didSet { if query.first?.isWhitespace == true { query = String(query.drop { $0.isWhitespace }) } }
     }
-    /// Ids of the open submenus, one per level below the root.
     @Published var path: [String] = []
-    /// Highlighted item per level (0 is the root or the search results).
     @Published var highlight: [Int: String] = [:]
     @Published var appeared = false
-    /// Row frames in the menu's coordinate space, for placing submenus beside their row.
     @Published var rowFrames: [String: CGRect] = [:]
     @Published var columnHeights: [Int: CGFloat] = [:]
-    /// Submenus open to the left when the item sits near the right edge of the screen.
     var opensLeft = true
     var close: () -> Void = {}
-    /// The status menu has a search field; pop-up menus elsewhere don't.
     var searchable = true
-    /// Where the items come from: live state for the status menu, a fixed list for a pop-up.
     var source: () -> [MenuItem] = MenuModel.build
 
     private var openWork: DispatchWorkItem?
-    /// The submenu row `openWork` opens.
     private var opening: String?
     private var trimWork: DispatchWorkItem?
-    /// The level `trimWork` trims to.
     private var trimLevel = 0
-
-    // MARK: Building
 
     func rebuild() {
         items = source()
@@ -130,7 +99,6 @@ final class MenuModel: ObservableObject {
         trimWork?.cancel()
     }
 
-    /// The real menu, from live state.
     static func build() -> [MenuItem] {
         let wm = WindowManager.shared
         let keys = ShortcutIndex()
@@ -145,12 +113,10 @@ final class MenuModel: ObservableObject {
                                 action: { Permission.accessibility.request() }))
         }
 
-        // Hidden alias so search finds it.
         out.append(MenuItem(id: "tiling", kind: .check, label: "Tiling", symbol: "rectangle.split.3x1", shortcut: keys.keys("toggletiling"),
                             checked: wm.tilingEnabled, enabled: trusted, hidden: true, keywords: "enable disable pause toggle",
                             keepOpen: true, action: { wm.toggleTiling() }))
 
-        // Where you are.
         let wsName = state?.workspace.map { "Workspace \($0)" } ?? "Desktop"
         out.append(.label("where", layout.map { "\(wsName) · \($0.title)" } ?? wsName))
         let summary = wm.workspaceSummary()
@@ -164,7 +130,6 @@ final class MenuModel: ObservableObject {
         }
         out.append(.sep("s1"))
 
-        // Layout.
         var layoutItems: [MenuItem] = [
             MenuItem(id: "picker", kind: .layoutPicker),
             MenuItem(id: "next-layout", label: "Next Layout", symbol: "chevron.right", shortcut: keys.keys("cyclelayout", "next"),
@@ -223,8 +188,6 @@ final class MenuModel: ObservableObject {
         return out
     }
 
-    // MARK: Lookup
-
     func item(_ id: String, in list: [MenuItem]? = nil) -> MenuItem? {
         for i in list ?? items {
             if i.id == id { return i }
@@ -233,7 +196,6 @@ final class MenuModel: ObservableObject {
         return nil
     }
 
-    /// Items of a level: the root, or the open submenu above it.
     func column(_ level: Int) -> [MenuItem] {
         if !query.isEmpty { return level == 0 ? results.map(\.item) : [] }
         guard level > 0 else { return items }
@@ -241,7 +203,6 @@ final class MenuModel: ObservableObject {
         return parent.children
     }
 
-    /// Every leaf the search can run, with where it lives.
     var results: [(item: MenuItem, crumb: String)] {
         let words = query.lowercased().split(separator: " ").map(String.init)
         guard !words.isEmpty else { return [] }
@@ -264,8 +225,6 @@ final class MenuModel: ObservableObject {
         return out
     }
 
-    // MARK: Pointer
-
     func hover(_ item: MenuItem, level: Int) {
         guard item.selectable else { return }
         highlight[level] = item.id
@@ -282,7 +241,6 @@ final class MenuModel: ObservableObject {
             opening = item.id
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: work)
         } else if open != nil {
-            // A grace period, so a diagonal move toward the open submenu doesn't close it.
             let work = DispatchWorkItem { [weak self] in self?.trim(to: level) }
             trimWork = work
             trimLevel = level
@@ -290,15 +248,12 @@ final class MenuModel: ObservableObject {
         }
     }
 
-    /// The pointer left a row: it goes dark, unless its submenu is open, and its submenu no longer opens.
     func unhover(_ item: MenuItem, level: Int) {
         if opening == item.id { openWork?.cancel(); opening = nil }
         let open = path.count > level ? path[level] : nil
         if highlight[level] == item.id, open != item.id { highlight[level] = nil }
     }
 
-    /// The pointer reached a submenu: keep it, and its parent row lit. Coming back into the column
-    /// that asked for the trim doesn't stop it.
     func enterColumn(_ level: Int) {
         if level > trimLevel { trimWork?.cancel() }
         if level > 0, level <= path.count { highlight[level - 1] = path[level - 1] }
@@ -309,8 +264,6 @@ final class MenuModel: ObservableObject {
         withAnimation(Motion.easeOut) { path = Array(path.prefix(level)) }
         for l in highlight.keys where l > level { highlight[l] = nil }
     }
-
-    // MARK: Keyboard
 
     var keyLevel: Int { query.isEmpty ? min(path.count, highlight.keys.filter { highlight[$0] != nil }.max() ?? 0) : 0 }
 
@@ -339,7 +292,6 @@ final class MenuModel: ObservableObject {
         return true
     }
 
-    /// Runs the highlighted row, or the first search result.
     func runHighlighted() {
         let level = keyLevel
         if !query.isEmpty {
@@ -363,16 +315,11 @@ final class MenuModel: ObservableObject {
         }
     }
 
-    /// Re-reads live state while open, keeping what's highlighted and open.
     func refresh() {
         items = source()
     }
 }
 
-// MARK: - Controller
-
-/// Opens and closes the menu under the status item, like a native menu: on mouse down, closed by a
-/// click elsewhere, Esc, or picking something.
 final class StatusMenu: NSObject, NSWindowDelegate {
     static let shared = StatusMenu()
 
@@ -393,7 +340,6 @@ final class StatusMenu: NSObject, NSWindowDelegate {
         model.rebuild()
         model.close = { [weak self] in self?.close() }
 
-        // Room for the root column and two levels of submenus on whichever side has space.
         let b = bw.frame, v = screen.visibleFrame, m = Self.margin
         let subs = 2 * (Theme.submenuWidth + 48)
         let left = min(max(b.minX, v.minX + 8), v.maxX - Theme.menuWidth - 8)
@@ -431,19 +377,17 @@ final class StatusMenu: NSObject, NSWindowDelegate {
         })
     }
 
-    /// Live state changed (tiling, a window moved): refresh the rows if open.
     func refreshIfOpen() { if isOpen { model.refresh() } }
 
     private func makePanel() -> OuchPanel {
         let p = OuchPanel(role: .menu)
-        p.onClose = { [weak self] in self?.close() } // ⌘W; Esc and ⌘Q are the menu's own keys
+        p.onClose = { [weak self] in self?.close() }
         p.delegate = self
         return p
     }
 
     func windowDidResignKey(_ notification: Notification) { close() }
 
-    /// Clicks in other apps, and in our own windows outside the menu, close it; the status item toggles by itself.
     private func installMonitors() {
         dismiss.start(keeps: { [weak self] w in w === self?.panel || w === self?.button?.window },
                       key: { [weak self] e in
@@ -453,8 +397,6 @@ final class StatusMenu: NSObject, NSWindowDelegate {
                       close: { [weak self] in self?.close() })
     }
 
-    /// Menu keys: ↑↓ move, → opens, ← and Esc go back, ↩ runs; ⌘, ⌘/ ⌘Q work as shown (⌘Q quits, as the
-    /// Quit row says). Everything else types into the search field.
     private func key(_ e: NSEvent) -> Bool {
         let cmd = e.modifierFlags.contains(.command)
         switch (e.keyCode, cmd) {
@@ -474,8 +416,6 @@ final class StatusMenu: NSObject, NSWindowDelegate {
     }
 }
 
-// MARK: - Views
-
 private struct RowFrameKey: PreferenceKey {
     static var defaultValue: [String: CGRect] = [:]
     static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) { value.merge(nextValue()) { $1 } }
@@ -491,13 +431,11 @@ struct MenuRoot: View {
     let top: CGFloat
     let size: CGSize
     var rootWidth: CGFloat = Theme.menuWidth
-    /// Hangs the root column up from the bottom of the panel: a pop-up near the bottom of the screen.
     var fromBottom = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            // A click beside the columns closes the menu, like a click anywhere else.
             Color.clear.contentShape(Rectangle()).onTapGesture { model.close() }
             column(0, width: rootWidth)
                 .padding(.leading, rootX).padding(.top, fromBottom ? 0 : top).padding(.bottom, fromBottom ? top : 0)
@@ -572,7 +510,7 @@ private struct MenuColumn: View {
                 }
             } else {
                 let rows = model.column(level).filter { !$0.hidden }
-                if rows.count > 16 { // a long list, such as running apps, scrolls
+                if rows.count > 16 {
                     ScrollView { VStack(spacing: 0) { ForEach(rows) { i in row(i) } } }
                         .frame(maxHeight: 480).fixedSize(horizontal: false, vertical: true)
                 } else {
@@ -626,7 +564,6 @@ private struct MenuColumn: View {
     }
 }
 
-/// A dot in `accent`: a shape only, always beside a word that says what's waiting.
 struct NotificationDot: View {
     var body: some View {
         Circle().fill(Theme.accent).frame(width: 6, height: 6)
@@ -635,7 +572,6 @@ struct NotificationDot: View {
     }
 }
 
-/// The four square toggles at the top: Tiling, Float, Fullscreen, Retile.
 private struct EssentialsRow: View {
     @ObservedObject var model: MenuModel
     let enabled: Bool
@@ -664,7 +600,6 @@ private struct EssentialsRow: View {
         .opacity(enabled ? 1 : 0.45)
     }
 
-    /// Toggles change state right away, so the tile swaps at once; a second look catches anything that settles later.
     private func act(_ f: () -> Void) {
         f()
         model.refresh()
@@ -698,7 +633,6 @@ private struct MenuRowView: View {
                     .textStyle(.caption).foregroundStyle(muted).oneLine()
             } else {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    // The name wins over the value beside it: "Resume Tutorial…" stays whole, "Window mode" gives way.
                     Text(item.label).oneLine().layoutPriority(1)
                     if let crumb, !crumb.isEmpty {
                         Text(crumb).textStyle(.caption).foregroundStyle(muted).oneLine()
@@ -710,7 +644,6 @@ private struct MenuRowView: View {
             }
         } trailing: {
             if item.kind == .footer {
-                // The power symbol goes with Quit, not with the version number.
                 Image(systemName: "power").font(Theme.symbol(Theme.Icon.sm)).foregroundStyle(muted)
                 Text(item.label).font(Theme.body(12.5)).oneLine()
             }
@@ -746,7 +679,7 @@ private struct MenuRowView: View {
         case .radio:
             Circle().fill(Theme.accentInk).frame(width: 7, height: 7).opacity(item.checked ? 1 : 0)
         case .footer:
-            Color.clear // keeps the version in line with the labels above
+            Color.clear
         default:
             if let image = item.image {
                 Image(nsImage: image).resizable().interpolation(.high).frame(width: 16, height: 16)

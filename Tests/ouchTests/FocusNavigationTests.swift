@@ -1,11 +1,9 @@
-// Tests: where the direction keys move focus, on real layout frames.
 import CoreGraphics
 import Testing
 @testable import ouch
 
 typealias Item = FocusNavigation.Item
 
-/// Windows 1, 2, 3... tiled with `layout` on one display, with a 10 px gap as `rawSlots` gives it.
 private func tiled(_ layout: Layout, _ n: Int, screen: String = "A", in r: CGRect = CGRect(x: 0, y: 0, width: 1600, height: 1000),
                    first: CGWindowID = 1) -> [Item] {
     let frames = layout.frames(count: n, in: r.insetBy(dx: -5, dy: -5), ratio: 0.5, mainCount: 1)!
@@ -17,7 +15,6 @@ private func go(_ from: CGWindowID, _ dir: Direction, _ items: [Item], stamps: [
 }
 
 @Suite struct FocusNavigationTests {
-    // Tall, three windows: 1 is main on the left, 2 is top right, 3 is bottom right.
     let tall = tiled(.tall, 3)
 
     @Test func downAndUpMoveInsideTheStack() {
@@ -45,7 +42,6 @@ private func go(_ from: CGWindowID, _ dir: Direction, _ items: [Item], stamps: [
         for id: CGWindowID in [2, 3] {
             for dir in [Direction.up, .down] { #expect(go(id, dir, tall) != 1) }
         }
-        // Main is alone in its column: nothing to go to.
         #expect(go(1, .up, tall) == nil)
         #expect(go(1, .down, tall) == nil)
     }
@@ -56,9 +52,7 @@ private func go(_ from: CGWindowID, _ dir: Direction, _ items: [Item], stamps: [
     }
 
     @Test func rightFromMainReturnsToTheWindowYouCameFrom() {
-        // Focus went 2, then 3, then left to 1: right goes back to 3.
         #expect(go(1, .right, tall, stamps: [2: 1, 3: 2, 1: 3]) == 3)
-        // Focus went 3, then 2, then left to 1: right goes back to 2.
         #expect(go(1, .right, tall, stamps: [3: 1, 2: 2, 1: 3]) == 2)
     }
 
@@ -76,7 +70,7 @@ private func go(_ from: CGWindowID, _ dir: Direction, _ items: [Item], stamps: [
     }
 
     @Test func rightFromMainWithoutHistoryPicksTheNearestCentre() {
-        let four = tiled(.tall, 4) // stack: 2 top, 3 middle, 4 bottom; 3 lines up with main's centre
+        let four = tiled(.tall, 4)
         #expect(go(1, .right, four) == 3)
     }
 

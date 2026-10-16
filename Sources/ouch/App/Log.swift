@@ -1,20 +1,14 @@
-// App: plain-text log at ~/Library/Logs/ouch.log.
 import Foundation
 
-/// Plain-text log at ~/Library/Logs/ouch.log. `debug` lines only appear when launched with `--verbose`
-/// (or with the older `debug-logging = true` in the config file).
 enum Log {
     static let url = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/ouch.log")
     static var verbose = false
-    /// `open ouch.app --args --verbose`
     static let verboseLaunch = CommandLine.arguments.contains("--verbose")
 
-    /// Where this run's lines start; everything before it is from earlier runs.
     private static var launchOffset: UInt64 = 0
 
     private static let handle: FileHandle? = {
         let fm = FileManager.default
-        // A long log keeps its newest part, so a crash report still has the lines before the crash.
         if let size = (try? fm.attributesOfItem(atPath: url.path))?[.size] as? Int, size > 2_000_000,
            let data = fm.contents(atPath: url.path) {
             try? data.suffix(500_000).write(to: url)
@@ -25,7 +19,6 @@ enum Log {
         return h
     }()
 
-    /// The log as it was when this run started: the last lines are the previous run's.
     static func beforeLaunch() -> String {
         _ = handle
         guard let data = FileManager.default.contents(atPath: url.path) else { return "" }

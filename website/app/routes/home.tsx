@@ -12,7 +12,6 @@ export function meta() {
     { name: "description", content: description },
     { name: "theme-color", content: "#0a74ff" },
 
-    // Open Graph. Discord, Telegram, and Slack play og:video inline.
     { property: "og:type", content: "video.other" },
     { property: "og:site_name", content: "Ouch" },
     { property: "og:title", content: "Ouch" },
@@ -29,7 +28,6 @@ export function meta() {
     { property: "og:video:width", content: "1200" },
     { property: "og:video:height", content: "630" },
 
-    // X shows the static card. It does not play og:video.
     { name: "twitter:card", content: "summary_large_image" },
     { name: "twitter:title", content: "Ouch" },
     { name: "twitter:description", content: description },

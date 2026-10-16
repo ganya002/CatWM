@@ -1,16 +1,10 @@
-// Onboarding: the tour's practice windows, run as a separate process.
 import AppKit
 import SwiftUI
 
-/// The onboarding tour's practice windows, run as `ouch practice <parent pid> <titles>`. They live
-/// in a separate process because the window manager never tiles its own windows; this way the real
-/// window manager tiles, focuses and parks them like any other app's, and the user's apps stay put.
 enum PracticeDesk {
-    /// Five windows on the desk, so there's plenty to move around, and two on a second workspace.
     static let deskCount = 5
     static let otherCount = 2
 
-    /// A random cast of apps, desk first. Light and dark alternate so neighbours always stand apart.
     static func pickApps() -> [DemoApp] {
         var dark = DemoApp.all.filter(\.dark).shuffled(), light = DemoApp.all.filter { !$0.dark }.shuffled()
         if Bool.random() { swap(&dark, &light) }
@@ -43,7 +37,6 @@ private final class PracticeAppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Theme.registerFonts()
-        // Never outlive the tour, even if Ouch crashes or is killed.
         if parent <= 1 || kill(parent, 0) != 0 { exit(0) }
         let watch = DispatchSource.makeProcessSource(identifier: parent, eventMask: .exit, queue: .main)
         watch.setEventHandler { exit(0) }
@@ -56,8 +49,6 @@ private final class PracticeAppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(withTitle: "Practice Desk", action: nil, keyEquivalent: "").submenu = appMenu
         NSApp.mainMenu = menu
 
-        // The other workspace's windows open first and without focus: they get parked right away,
-        // and macOS must not hand them focus later (that would switch to their workspace).
         other.forEach { open($0, key: false) }
         for (i, app) in desk.enumerated() {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.25 + Double(i) * 0.12) { [weak self] in
@@ -73,7 +64,6 @@ private final class PracticeAppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 
     private func open(_ app: DemoApp, key: Bool) {
-        // At least 500 wide, so "float small windows" never applies to them.
         let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 640, height: 440),
                          styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
                          backing: .buffered, defer: false)
@@ -83,7 +73,6 @@ private final class PracticeAppDelegate: NSObject, NSApplicationDelegate {
         w.isReleasedWhenClosed = false
         w.appearance = NSAppearance(named: app.dark ? .darkAqua : .aqua)
         w.backgroundColor = NSColor(srgbRed: app.r, green: app.g, blue: app.b, alpha: 1)
-        // The window manager decides the size, so the hosting view mustn't impose one of its own.
         let host = NSHostingView(rootView: PracticeWindowView(app: app))
         host.sizingOptions = []
         w.contentView = host
@@ -97,7 +86,6 @@ private final class PracticeAppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
-/// A flat tone with the title beside the real traffic lights, so it's obvious which window moved where.
 private struct PracticeWindowView: View {
     let app: DemoApp
     @Environment(\.controlActiveState) private var active
@@ -107,12 +95,11 @@ private struct PracticeWindowView: View {
             .font(Theme.body(13, .medium))
             .foregroundStyle(app.dark ? Color.white.opacity(0.62) : Color.black.opacity(0.55))
             .lineLimit(1)
-            .padding(.leading, 78) // clear of the traffic lights
+            .padding(.leading, 78)
             .frame(height: 28)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(app.color)
             .ignoresSafeArea()
-            // The focused window wears a ring, so it's obvious where focus went.
             .overlay {
                 if active == .key {
                     RoundedRectangle(cornerRadius: 11, style: .continuous) // style-ok: follows the macOS window corner

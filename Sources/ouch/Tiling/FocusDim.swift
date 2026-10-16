@@ -1,15 +1,5 @@
-// Tiling: dims or blurs everything except the focused window.
 import AppKit
 
-/// Dims and/or blurs everything but the focused window, so it's the one thing that stands out.
-/// One click-through panel per display, ordered directly below the focused window: that window (and
-/// anything above it, like menus, the Dock and popovers) stays crisp, and every window behind it is
-/// darkened and blurred by the window server. Nothing follows the window around, so tiling animations,
-/// drags and resizes need no tracking. When focus moves, a second panel crossfades in under the new window.
-///
-/// The two effects are separate options: `dim-other-windows` with `dim-strength` (0-1), and
-/// `blur-other-windows` with `blur-radius` (points). Hyprland's `dim_inactive` and `dim_strength` work
-/// too. `toggledim` and `toggleblur` flip them.
 final class FocusDim {
     static let shared = FocusDim()
 
@@ -19,10 +9,8 @@ final class FocusDim {
     private var radius = 20
     var enabled: Bool { dims || blurs }
 
-    /// Two panels per display: the one showing, and one to crossfade in when focus moves.
     private struct Pair { var front: NSPanel; var spare: NSPanel }
     private var pairs: [CGDirectDisplayID: Pair] = [:]
-    /// Window numbers of every panel, so window-under-the-pointer lookups can see through them.
     private(set) var panelNumbers = Set<Int>()
     private var target: CGWindowID?
     private var generation = 0
@@ -31,8 +19,6 @@ final class FocusDim {
     private let fade = 0.2
     private var configured: (dim: Bool, blur: Bool)?
 
-    /// From the config, on launch and every reload. A `toggledim` or `toggleblur` lasts until that setting
-    /// itself changes.
     func configure(dim: Bool, strength: CGFloat, blur: Bool, radius: Int) {
         self.strength = strength
         self.radius = radius
@@ -40,13 +26,11 @@ final class FocusDim {
         configured = (dim, blur)
     }
 
-    /// `toggledim`: for this session only, like `toggletiling`.
     func toggleDim() {
         set(dim: !dims, blur: blurs)
         HUD.shared.show(dims ? "Dimming other windows" : "Dim off", on: NSScreen.main)
     }
 
-    /// `toggleblur`: for this session only.
     func toggleBlur() {
         set(dim: dims, blur: !blurs)
         HUD.shared.show(blurs ? "Blurring other windows" : "Blur off", on: NSScreen.main)
@@ -65,8 +49,6 @@ final class FocusDim {
         }
     }
 
-    /// Something about focus or the window stack may have changed. Coalesced to one look per turn,
-    /// plus a second shortly after, since macOS raises a newly activated app's windows a beat late.
     func update() {
         guard enabled, !pending else { return }
         pending = true
@@ -79,7 +61,6 @@ final class FocusDim {
 
     func owns(_ windowNumber: Int) -> Bool { panelNumbers.contains(windowNumber) }
 
-    // MARK: - Following focus
 
     private func observe() {
         guard !observing else { return }
@@ -93,11 +74,9 @@ final class FocusDim {
         NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
             self?.rebuild()
         }
-        // Our own windows (Settings, the tour) take focus without another app activating.
         NotificationCenter.default.addObserver(forName: NSWindow.didBecomeKeyNotification, object: nil, queue: .main) { [weak self] _ in
             self?.update()
         }
-        // A click raises a window even when focus stays in the same app.
         NSEvent.addGlobalMonitorForEvents(matching: .leftMouseUp) { [weak self] _ in self?.update() }
     }
 
@@ -107,7 +86,6 @@ final class FocusDim {
         layoutPanels()
         let level = NSWindow.Level(rawValue: layer)
         if id == target {
-            // Same window; just make sure nothing slipped in between it and the panels.
             for p in pairs.values { p.front.level = level; p.front.order(.below, relativeTo: Int(id)) }
             return
         }
@@ -149,8 +127,6 @@ final class FocusDim {
         }
     }
 
-    /// The focused window and its window-server layer, if it's one worth spotlighting: on screen,
-    /// at a normal-ish level, and big enough to be a real window (not our parked focus sink).
     private func focusedWindow() -> (CGWindowID, Int)? {
         guard let app = NSWorkspace.shared.frontmostApplication else { return nil }
         var id: CGWindowID?
@@ -160,7 +136,6 @@ final class FocusDim {
             if el.string(kAXRoleAttribute) == kAXSheetRole, let parent = el.element(kAXParentAttribute) { el = parent }
             id = el.windowID
         }
-        // AX can't always name it (a slow app, no permission yet): the app's frontmost window is.
         if id == nil { id = CGWindowInfo.onScreen().first { $0.pid == app.processIdentifier }?.id }
         guard let id, let info = (CGWindowListCopyWindowInfo(.optionIncludingWindow, id) as? [[String: Any]])?.first,
               info[kCGWindowIsOnscreen as String] as? Bool == true,
@@ -169,7 +144,6 @@ final class FocusDim {
               (info[kCGWindowAlpha as String] as? Double ?? 1) > 0.01 else { return nil }
         let layer = info[kCGWindowLayer as String] as? Int ?? 0
         guard (0..<Int(CGWindowLevelForKey(.mainMenuWindow))).contains(layer) else { return nil }
-        // Our parked windows sit far off screen; don't dim everything for one of those.
         guard NSScreen.screens.contains(where: { flipped($0.frame).intersects(bounds) }) else { return nil }
         return (id, layer)
     }
@@ -179,7 +153,6 @@ final class FocusDim {
         return CGRect(x: r.minX, y: h - r.maxY, width: r.width, height: r.height)
     }
 
-    // MARK: - Panels
 
     private func rebuild() {
         for p in pairs.values { p.front.orderOut(nil); p.spare.orderOut(nil) }
@@ -214,7 +187,6 @@ final class FocusDim {
         p.isReleasedWhenClosed = false
         p.hidesOnDeactivate = false
         p.animationBehavior = .none
-        // Hidden by Mission Control, present on every Space and beside fullscreen apps.
         p.collectionBehavior = [.canJoinAllSpaces, .transient, .ignoresCycle, .fullScreenAuxiliary]
         p.alphaValue = 0
         panelNumbers.insert(p.windowNumber)
@@ -224,11 +196,10 @@ final class FocusDim {
 
     private func style(_ p: NSPanel) {
         let amount = dims ? strength : 0, blur = blurs ? radius : 0
-        p.backgroundColor = NSColor.black.withAlphaComponent(max(amount, 0.01)) // never fully clear, or the blur has nothing to draw on
+        p.backgroundColor = NSColor.black.withAlphaComponent(max(amount, 0.01))
         if Blur.set(p.windowNumber, radius: blur) || blur == 0 {
             p.contentView = NSView()
         } else {
-            // No window-server blur on this macOS: the system material is the next best thing.
             let v = NSVisualEffectView()
             v.material = .fullScreenUI
             v.blendingMode = .behindWindow
@@ -244,7 +215,6 @@ final class FocusDim {
         }
     }
 
-    /// The window server's own background blur, the one behind menus and the Dock, at any radius.
     private enum Blur {
         private typealias ConnFn = @convention(c) () -> Int32
         private typealias RadiusFn = @convention(c) (Int32, UInt32, UInt32) -> Int32

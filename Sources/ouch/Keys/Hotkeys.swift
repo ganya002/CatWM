@@ -1,47 +1,26 @@
-// Keys: global key binds through a CGEventTap and modes (submaps). Caps Lock's part is in CapsLockChord.
 import AppKit
 
-/// Global keybinds via a CGEventTap. Carbon's RegisterEventHotKey can't be used: since macOS 15 it
-/// rejects Option-only and Option+Shift combos, which are exactly the Hyprland/Amethyst-style binds.
 final class Hotkeys {
     static let shared = Hotkeys()
-    /// Marks events we synthesize ourselves (e.g. Ctrl-N for spaces) so we never match them.
     static let syntheticMarker: Int64 = 0x4859_5052
 
     var handler: ((KeyBinding) -> Void)?
-    /// Posted on the main queue each time a bind fires, with the `KeyBinding` as `userInfo["bind"]`,
-    /// so open views (the shortcut map) can flash its key.
     static let didFire = Notification.Name("OuchHotkeyDidFire")
-    /// Set while the settings window records a shortcut, so the combo reaches it instead of firing.
     var paused = false
-    private var tables: [String: [UInt64: KeyBinding]] = [:] // submap → combo → bind ("" = global)
-    /// Active submap (mode); "" when none. Changed right inside the tap so the very next key
-    /// is already matched against the new mode.
+    private var tables: [String: [UInt64: KeyBinding]] = [:]
     private(set) var submap = ""
     var onSubmapChange: ((String) -> Void)?
-    /// For the keyboard help: every modifier change and `?` pressed in a mode. Fired binds post `didFire`.
     var onFlagsChanged: ((CGEventFlags) -> Void)?
     var onHelpKey: (() -> Void)?
-    /// Asked on a plain Return while set; true takes the key. The coach card never becomes key (focus
-    /// stays on the practice windows), so this is how Return reaches its button.
     var onReturn: (() -> Bool)?
-    /// Asked on Esc while set; true takes the key. The cursor quick-action menu closes on it and the mode stays.
     var onEscape: (() -> Bool)?
-    /// Asked on a key while a mode is on, before that mode's binds. True takes the key. The cursor menu
-    /// uses it so the shortcut drawn on a row runs that row.
     var onMenuKey: ((_ code: UInt16, _ flags: CGEventFlags, _ isRepeat: Bool) -> Bool)?
-    /// A modifier tapped on its own in a mode (see `trackModifierTap`). Called on the main queue.
     var onModifierTap: (() -> Void)?
-    /// The mode chord's modifiers (⌘ for ⌘⇪) while the keyboard help is up because they're held. Keys
-    /// pressed then are matched as if those modifiers were up, so the mode's keys work under the help
-    /// instead of reaching the app as ⌘ shortcuts.
     var heldChord: CGEventFlags = []
     private var tap: CFMachPort?
     private var swipeMonitor: Any?
-    private var scrollAccum: [Int: Double] = [:] // axis → distance since the last fire
+    private var scrollAccum: [Int: Double] = [:]
     private var lastScrollFire: [Int: TimeInterval] = [:]
-
-    // MARK: - Bindings
 
     func setBindings(_ list: [KeyBinding]) {
         tables = [:]
@@ -61,8 +40,6 @@ final class Hotkeys {
 
     enum Match { case bind(KeyBinding), swallow, pass }
 
-    // MARK: - Event tap
-
     @discardableResult
     func start() -> Bool {
         if tap != nil { return true }
@@ -78,15 +55,10 @@ final class Hotkeys {
         return true
     }
 
-    // MARK: - Swipes, lookup and firing
-
-    /// Trackpad swipes (`swipe_left` … `swipe_down`). Swipe events can't come through the tap, and a global
-    /// monitor can't swallow them, so macOS's own gesture for the same swipe still happens unless it's off.
     private func startSwipes() {
         guard swipeMonitor == nil else { return }
         swipeMonitor = NSEvent.addGlobalMonitorForEvents(matching: .swipe) { [weak self] e in
             guard let self, !paused else { return }
-            // Cocoa reports a swipe left as deltaX +1 and a swipe up as deltaY +1.
             let code: UInt16
             if e.deltaX != 0 { code = e.deltaX > 0 ? SpecialKey.swipeLeft : SpecialKey.swipeRight }
             else if e.deltaY != 0 { code = e.deltaY > 0 ? SpecialKey.swipeUp : SpecialKey.swipeDown }
@@ -101,8 +73,6 @@ final class Hotkeys {
         return (submap.isEmpty ? nil : tables[submap]?[k]) ?? tables[""]?[k]
     }
 
-    /// The raw Caps Lock listener's key-down (see CapsLockChord): fires a Caps Lock bind for `flags`.
-    /// Returns whether one fired.
     func fireCapsLock(_ flags: CGEventFlags) -> Bool {
         guard !paused, let b = lookup(CapsLockChord.keyCode, flags), repeatOK(b, nil) else { return false }
         fire(b)
@@ -114,15 +84,10 @@ final class Hotkeys {
         if b.dispatcher == "submap" {
             setSubmap(b.arg)
         } else {
-            // Return immediately so the tap never times out; do the (slow) AX work afterwards.
             DispatchQueue.main.async { [weak self] in self?.handler?(b) }
         }
     }
 
-    /// Scroll wheel binds (`mouse_up`, `mouse_down`, `mouse_left`, `mouse_right`). Only scrolls with a
-    /// matching bind are taken, so scrolling without those modifiers reaches the app as usual.
-    /// Returns true if the event was used. A notched wheel fires once per notch; a trackpad fires
-    /// once per `scrollStep` points, and its momentum tail is swallowed without firing.
     fileprivate func handleScroll(_ event: CGEvent) -> Bool {
         guard !paused, event.getIntegerValueField(.eventSourceUserData) != Self.syntheticMarker else { return false }
         let continuous = event.getIntegerValueField(.scrollWheelEventIsContinuous) != 0
@@ -131,13 +96,12 @@ final class Hotkeys {
         let axis = abs(dy) >= abs(dx) ? 1 : 2
         let delta = axis == 1 ? dy : dx
         guard delta != 0 else { return false }
-        // Positive vertical delta is a scroll up, positive horizontal a scroll left.
         let code = axis == 1 ? (delta > 0 ? SpecialKey.mouseUp : SpecialKey.mouseDown)
                              : (delta > 0 ? SpecialKey.mouseLeft : SpecialKey.mouseRight)
         guard let b = lookup(code, event.flags) else { return false }
         if event.getIntegerValueField(.scrollWheelEventMomentumPhase) != 0 { return true }
         if continuous {
-            if event.getIntegerValueField(.scrollWheelEventScrollPhase) == 1 { scrollAccum[axis] = 0 } // began
+            if event.getIntegerValueField(.scrollWheelEventScrollPhase) == 1 { scrollAccum[axis] = 0 }
             let acc = (scrollAccum[axis] ?? 0) * (delta > 0 ? 1 : -1) >= 0 ? (scrollAccum[axis] ?? 0) + delta : delta
             let now = ProcessInfo.processInfo.systemUptime
             guard abs(acc) >= Self.scrollStep, now - (lastScrollFire[axis] ?? 0) > 0.12 else { scrollAccum[axis] = acc; return true }
@@ -151,7 +115,6 @@ final class Hotkeys {
 
     var isActive: Bool { tap.map { CGEvent.tapIsEnabled(tap: $0) } ?? false }
 
-    /// After permission comes back the old tap stays dead, so build a new one.
     func restart() {
         if let tap {
             CGEvent.tapEnable(tap: tap, enable: true)
@@ -164,19 +127,12 @@ final class Hotkeys {
 
     fileprivate func reenable() { if let tap { CGEvent.tapEnable(tap: tap, enable: true) } }
 
-    // MARK: - Modifier tap
-
     private static let tapMods: CGEventFlags = [.maskCommand, .maskAlternate, .maskControl, .maskShift]
-    static let tapLimit = 0.35 // well under KeyHelp's 0.5s hold, so a tap never shows the help
-    private var modeChord: CGEventFlags = [] // modifiers held when the mode began (⌘ for ⌘⇪)
+    static let tapLimit = 0.35
+    private var modeChord: CGEventFlags = []
     private var lastMods: CGEventFlags = []
-    /// The modifier pressed alone in the mode, when, and the click count then. Cleared by anything else.
     fileprivate var tapDown: (flag: CGEventFlags, at: TimeInterval, clicks: UInt32)?
 
-    /// A tap is `$mod` or the mode's chord modifier going down with nothing else held, while the mode is
-    /// on, and up again within `tapLimit` with no key, click or other modifier between. The press must
-    /// start in the mode: the ⌘ still held from ⌘⇪ was down before, so letting it go is not a tap.
-    /// Only watches; the event always passes on.
     fileprivate func trackModifierTap(_ event: CGEvent) {
         let mods = event.flags.intersection(Self.tapMods)
         defer { lastMods = mods }
@@ -196,13 +152,10 @@ final class Hotkeys {
         }
     }
 
-    /// Mouse buttons pressed so far this session. The tap doesn't see clicks, so a change means one came between.
     private static func clicks() -> UInt32 {
         [CGEventType.leftMouseDown, .rightMouseDown, .otherMouseDown]
             .reduce(0) { $0 &+ CGEventSource.counterForEventType(.combinedSessionState, eventType: $1) }
     }
-
-    // MARK: - Matching
 
     func match(_ event: CGEvent) -> Match {
         guard !paused, event.getIntegerValueField(.eventSourceUserData) != Self.syntheticMarker else { return .pass }
@@ -217,8 +170,6 @@ final class Hotkeys {
             return .swallow
         }
         if !submap.isEmpty {
-            // The chord held for keyboard help is not part of a window-mode shortcut, so a row's key
-            // still matches while that chord is down.
             let flags = !heldChord.isEmpty && event.flags.contains(heldChord) ? event.flags.subtracting(heldChord) : event.flags
             let isRepeat = event.getIntegerValueField(.keyboardEventAutorepeat) != 0
             if let onMenuKey, onMenuKey(code, flags, isRepeat) { return .swallow }
@@ -229,14 +180,11 @@ final class Hotkeys {
                 DispatchQueue.main.async(execute: help)
                 return .swallow
             }
-            // Like vim's normal mode: stray keys do nothing instead of typing into the app,
-            // but ⌘/⌃ shortcuts (copy, paste…) still reach it.
             return flags.isDisjoint(with: [.maskCommand, .maskControl]) ? .swallow : .pass
         }
         return tables[""]?[k].map { repeatOK($0, event) ? .bind($0) : .swallow } ?? .pass
     }
 
-    /// What a key event types on the current layout, so `?` is found wherever the layout puts it.
     private static func typed(_ event: CGEvent) -> String {
         var length = 0
         var chars = [UniChar](repeating: 0, count: 4)
@@ -244,7 +192,6 @@ final class Hotkeys {
         return String(utf16CodeUnits: chars, count: length)
     }
 
-    /// Only binde-style binds fire on key autorepeat.
     private func repeatOK(_ b: KeyBinding, _ event: CGEvent?) -> Bool {
         b.repeats || (event?.getIntegerValueField(.keyboardEventAutorepeat) ?? 0) == 0
     }
@@ -254,11 +201,6 @@ final class Hotkeys {
         return mods.rawValue | UInt64(code)
     }
 
-    // MARK: - Posting keys
-
-    /// How synthetic shortcuts are posted. macOS only fires some system shortcuts (like switching
-    /// spaces) when the event looks like a real key press, so the default wraps the key in real
-    /// modifier key-downs and adds the Fn flag arrow keys carry. Selectable over IPC for diagnosis.
     enum PostStyle: Int { case plain = 0, arrowFlags = 1, physical = 2 }
     static var postStyle: PostStyle = .physical
 
@@ -273,7 +215,6 @@ final class Hotkeys {
             e.setIntegerValueField(.eventSourceUserData, value: syntheticMarker)
             e.post(tap: .cghidEventTap)
         }
-        // Modifier keys (left variants) to hold around the key, outermost first.
         let mods: [(CGEventFlags, UInt16)] = [(.maskControl, 59), (.maskAlternate, 58), (.maskShift, 56), (.maskCommand, 55)]
             .filter { flags.contains($0.0) }
         var held: CGEventFlags = []
@@ -287,8 +228,6 @@ final class Hotkeys {
         }
     }
 }
-
-// MARK: - Tap callback
 
 private func tapCallback(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent,
                          refcon: UnsafeMutableRawPointer?) -> Unmanaged<CGEvent>? {
@@ -306,7 +245,6 @@ private func tapCallback(proxy: CGEventTapProxy, type: CGEventType, event: CGEve
     }
     if type == .flagsChanged { Hotkeys.shared.trackModifierTap(event) } else { Hotkeys.shared.tapDown = nil }
     if type == .flagsChanged {
-        // Only Caps Lock can be bound as a key; every other modifier change passes untouched.
         guard event.getIntegerValueField(.keyboardEventKeycode) == Int64(CapsLockChord.keyCode) else { return Unmanaged.passUnretained(event) }
     }
     let lockNow = CapsLockChord.isLocked(event.flags)
@@ -317,7 +255,6 @@ private func tapCallback(proxy: CGEventTapProxy, type: CGEventType, event: CGEve
     let result = Hotkeys.shared.match(event)
     if type == .flagsChanged {
         guard case .bind = result else { return Unmanaged.passUnretained(event) }
-        // Undo the toggle this press caused.
         CapsLockChord.shared.slowPathFired(lockNow: lockNow)
     }
     switch result {

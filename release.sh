@@ -1,6 +1,4 @@
 #!/bin/sh
-# Builds, then signs, notarizes and publishes through Amore. One-time: amore login && amore setup build/ouch.app
-# Usage: ./release.sh "release notes" [extra amore flags, e.g. --channel beta | --critical | --phased-rollout | --draft]
 set -e
 cd "$(dirname "$0")"
 NOTES=

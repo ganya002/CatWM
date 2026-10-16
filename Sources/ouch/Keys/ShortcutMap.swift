@@ -1,10 +1,6 @@
-// Keys: the full-window Shortcut Map for viewing and editing binds per modifier combo.
 import AppKit
 import SwiftUI
 
-/// Full-window map of the shortcuts on a MacBook keyboard. Pick a modifier combo (or hold the keys
-/// down) and every bound key shows what it does with it, coloured by group; click a key to change or
-/// add its shortcut. Below, the same layer as a list.
 struct ShortcutMap: View {
     @ObservedObject var doc: ConfigDocument
     @ObservedObject var ui: SettingsUI
@@ -18,7 +14,7 @@ struct ShortcutMap: View {
             VStack(alignment: .leading, spacing: 22) {
                 header(all)
                 VStack(alignment: .leading, spacing: 14) {
-                    keyboard(layer).zIndex(1) // the key editor hangs over the legend and list
+                    keyboard(layer).zIndex(1)
                     legend(all)
                 }
                 .frame(maxWidth: 940)
@@ -40,7 +36,6 @@ struct ShortcutMap: View {
         }
     }
 
-    /// Breadcrumb and title like every pane, Done on the right; below, the modifier picker, the set and the busiest combos.
     private func header(_ all: [ConfigDocument.KeyAction]) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             OPageTitle(crumbs: ["Settings", "Shortcuts", "Map"], title: "Shortcut Map") {
@@ -49,7 +44,7 @@ struct ShortcutMap: View {
                                selection: $model.mode)
                 }
                 OButton("Done", variant: .primary, shortcut: ["⎋"]) { close() }
-                    .keyboardShortcut(model.selected == nil ? .cancelAction : nil) // ⎋ cancels the key editor first
+                    .keyboardShortcut(model.selected == nil ? .cancelAction : nil)
             }
             HStack(spacing: 14) {
                 modifierToggles
@@ -60,7 +55,6 @@ struct ShortcutMap: View {
         }
     }
 
-    /// ⌃ ⌥ ⇧ ⌘ as one track of toggles.
     private var modifierToggles: some View {
         OSegmented(title: "Modifiers", options: ShortcutMapModel.modifiers.map { OSegmentOption(value: $0.flag.rawValue, label: $0.name, keys: $0.glyph) },
                    isOn: { model.flags.contains(NSEvent.ModifierFlags(rawValue: $0)) },
@@ -68,7 +62,6 @@ struct ShortcutMap: View {
             .animation(Motion.spring, value: model.flags.rawValue)
     }
 
-    /// Jumps to a row in the Shortcuts pane and lights it up.
     private func reveal(_ row: BindRow) {
         model.selected = nil
         ui.bindMode = row.submap
@@ -84,7 +77,6 @@ struct ShortcutMap: View {
         withAnimation(Motion.snap) { ui.showMap = false }
     }
 
-    /// Shortcuts to the modifier combos that have shortcuts, busiest first.
     private func combos(_ all: [ConfigDocument.KeyAction]) -> some View {
         let counts = Dictionary(grouping: all, by: { $0.flags.rawValue }).mapValues(\.count)
         let list = counts.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
@@ -120,13 +112,9 @@ struct ShortcutMap: View {
         .animation(Motion.fade, value: model.flags.rawValue)
     }
 
-    // MARK: Keyboard
-
-    /// The layer written on the keys, with the selected key's editor and the hovered key's tooltip on top.
     private func keyboard(_ layer: [ConfigDocument.KeyAction]) -> some View {
         let one = KeyHintKeyboard.size(scale: 1)
         let codes = Set(layer.map(\.code))
-        // Held or picked modifiers wear a white ring, and so do the keys of the list row under the pointer.
         var hot = Set(KeyHintKeyboard.keys.filter { !$0.modifier.isEmpty && model.flags.contains($0.modifier) }.compactMap(\.code))
         if let id = model.hotRow { hot.formUnion(layer.filter { $0.row.id == id }.map(\.code)) }
         let hints = layer.map { KeyHint($0) }
@@ -140,7 +128,6 @@ struct ShortcutMap: View {
                         if k.modifier.isEmpty, let code = k.code { model.hover(code, inside) }
                     }
                 if let code = model.selected, let k = KeyHintKeyboard.key(for: code) {
-                    // A click anywhere else on the keyboard closes the editor, like a popover.
                     Color.clear.contentShape(Rectangle())
                         .onTapGesture { withAnimation(Motion.fade) { model.selected = nil } }
                     selection(k, code: code, scale: scale, size: g.size, frame: g.frame(in: .global))
@@ -160,8 +147,6 @@ struct ShortcutMap: View {
         model.selected = model.selected == code ? nil : code
     }
 
-    /// A focus ring around the selected key, and its editor below it or above it, whichever has room
-    /// in the window (pinned inside the window when neither does), nudged in from the keyboard's edges.
     @ViewBuilder
     private func selection(_ k: KeyHintKeyboard.Key, code: UInt16, scale: CGFloat, size: CGSize, frame: CGRect) -> some View {
         let r = KeyHintKeyboard.rect(of: k, scale: scale)
@@ -169,7 +154,6 @@ struct ShortcutMap: View {
         let h = model.editorHeight, edge: CGFloat = 12
         let roomBelow = windowHeight - edge - (frame.minY + r.maxY + 8)
         let roomAbove = frame.minY + r.minY - 8 - edge
-        // Top of the editor in keyboard space.
         let top: CGFloat = h <= roomBelow ? r.maxY + 8
             : h <= roomAbove ? r.minY - 8 - h
             : max(edge, windowHeight - edge - h) - frame.minY
@@ -194,8 +178,6 @@ struct ShortcutMap: View {
             .transition(.opacity)
     }
 
-    /// What the hovered key does and how to press it, over the key. Nudged in from the window's edges,
-    /// with the caret still on the key.
     private func tooltip(_ k: KeyHintKeyboard.Key, layer: [ConfigDocument.KeyAction], scale: CGFloat, width: CGFloat) -> some View {
         let r = KeyHintKeyboard.rect(of: k, scale: scale)
         let action = layer.first { $0.code == k.code }
@@ -224,7 +206,6 @@ struct ShortcutMap: View {
         return "No shortcut. Click to add one."
     }
 
-    /// The keys that enter the mode on show, e.g. ⌘⇪, so tooltips read "⌘⇪ then L".
     private var modeEntry: [String]? {
         guard !model.mode.isEmpty, let a = doc.keyActions(in: "").first(where: {
             $0.row.dispatcher == "submap" && $0.arg.lowercased() == model.mode.lowercased()
@@ -232,9 +213,6 @@ struct ShortcutMap: View {
         return ConfigDocument.modifierCaps(a.flags) + [ConfigDocument.capLabel(a.key)]
     }
 
-    // MARK: Legend and list
-
-    /// The colour groups in this set on one line, and how to use the map.
     private func legend(_ all: [ConfigDocument.KeyAction]) -> some View {
         let present = Set(all.map { KeyHint($0).group })
         return HStack(spacing: 16) {
@@ -246,7 +224,6 @@ struct ShortcutMap: View {
                 .fixedSize()
             }
             Spacer(minLength: 12)
-            // Whole or shorter, never cut off mid-hint beside a long legend.
             ViewThatFits(in: .horizontal) {
                 Text("Hold ⌃ ⌥ ⇧ ⌘ to switch layers, click a key to edit").fixedSize()
                 Text("Click a key to edit").fixedSize()
@@ -258,7 +235,6 @@ struct ShortcutMap: View {
         .frame(height: 20)
     }
 
-    /// One bind row in the list; a range row's keys stay together.
     private struct Entry: Identifiable {
         let row: BindRow
         let codes: [UInt16]
@@ -266,7 +242,6 @@ struct ShortcutMap: View {
         var id: UUID { row.id }
     }
 
-    /// Every shortcut in the layer by group, in keyboard order, so nothing hides behind a key you can't see.
     private func list(_ layer: [ConfigDocument.KeyAction]) -> some View {
         let order = Dictionary(KeyHintKeyboard.keys.enumerated().compactMap { i, k in k.code.map { ($0, i) } }, uniquingKeysWith: { a, _ in a })
         let rank = { (c: UInt16) in (order[c] ?? 999, c) }
@@ -301,10 +276,9 @@ struct ShortcutMap: View {
             }
         }
         .frame(maxWidth: 940).frame(maxWidth: .infinity)
-        .transaction { $0.animation = nil } // swap layers at once; fading rows overlapped the empty message
+        .transaction { $0.animation = nil }
     }
 
-    /// Label on the left, its keys on the right. Hovering lights the keys; clicking opens the first one.
     private func row(_ e: Entry) -> some View {
         Button {
             if let first = e.codes.first, KeyHintKeyboard.key(for: first) != nil {
@@ -329,23 +303,16 @@ struct ShortcutMap: View {
 
 final class ShortcutMapModel: ObservableObject {
     @Published var mode = ""
-    /// Modifiers chosen by clicking.
     @Published var picked: NSEvent.ModifierFlags = []
-    /// Modifiers physically held down; they win while held.
     @Published var held: NSEvent.ModifierFlags = []
-    /// The key under the pointer, and the one whose tooltip shows (after `OTooltip.delay`).
     @Published var hovered: UInt16?
     @Published var tip: UInt16?
     @Published var tipWidth: CGFloat = 0
-    /// The key editor's measured height, to place it where it fits in the window.
     @Published var editorHeight: CGFloat = 480
     @Published var selected: UInt16? {
-        // Modifier changes are ignored while the editor is open, so catch up with them when it closes.
         didSet { if selected == nil, oldValue != nil { held = NSEvent.modifierFlags.intersection(Self.watched) } }
     }
-    /// The key flashing because its shortcut was just pressed.
     @Published var pressed: UInt16?
-    /// The list row under the pointer; its keys light up on the keyboard.
     @Published var hotRow: UUID?
     private var monitor: Any?
     private var fireObserver: NSObjectProtocol?
@@ -354,11 +321,9 @@ final class ShortcutMapModel: ObservableObject {
 
     var flags: NSEvent.ModifierFlags { held.isEmpty ? picked : held }
 
-    /// ⌃ ⌥ ⇧ ⌘ in the order the toggles show them.
     static let modifiers: [(flag: NSEvent.ModifierFlags, glyph: String, name: String)] =
         [(.control, "⌃", "Control"), (.option, "⌥", "Option"), (.shift, "⇧", "Shift"), (.command, "⌘", "Command")]
 
-    /// The combo with the most shortcuts, which is where the map opens.
     func busiest(all: [ConfigDocument.KeyAction]) -> NSEvent.ModifierFlags {
         let counts = Dictionary(grouping: all, by: { $0.flags.rawValue }).mapValues(\.count)
         return counts.max { $0.value != $1.value ? $0.value < $1.value : $0.key > $1.key }.map { NSEvent.ModifierFlags(rawValue: $0.key) } ?? []
@@ -370,7 +335,6 @@ final class ShortcutMapModel: ObservableObject {
         withAnimation(Motion.fade) { picked.formSymmetricDifference(f) }
     }
 
-    /// Tooltips wait `OTooltip.delay` on the first key; once one shows it follows the pointer from key to key.
     func hover(_ code: UInt16, _ inside: Bool) {
         tipTimer?.cancel()
         if inside {
@@ -384,7 +348,6 @@ final class ShortcutMapModel: ObservableObject {
             DispatchQueue.main.asyncAfter(deadline: .now() + OTooltip.delay, execute: work)
         } else if hovered == code {
             hovered = nil
-            // A beat before hiding, so sliding onto the next key keeps the tip up.
             let work = DispatchWorkItem { [weak self] in
                 guard let self, self.hovered == nil else { return }
                 withAnimation(Motion.fade) { self.tip = nil }
@@ -394,8 +357,6 @@ final class ShortcutMapModel: ObservableObject {
         }
     }
 
-    /// Flashes a key whose shortcut was pressed, if it's on the layer showing. `submap` is nil for a key
-    /// that reached the window, which belongs to whichever mode is on show.
     private func flash(_ code: UInt16, flags f: NSEvent.ModifierFlags, submap: String?) {
         guard f == flags, submap.map({ $0 == mode }) ?? true else { return }
         flashTimer?.cancel()
@@ -407,8 +368,6 @@ final class ShortcutMapModel: ObservableObject {
 
     private static let watched: NSEvent.ModifierFlags = [.command, .option, .control, .shift]
 
-    /// Follows held modifiers, and flashes keys as their shortcuts are pressed: ones the window manager
-    /// takes arrive through `Hotkeys.didFire`, the rest as key presses in this window.
     func startWatching() {
         guard monitor == nil else { return }
         monitor = NSEvent.addLocalMonitorForEvents(matching: [.flagsChanged, .keyDown]) { [weak self] e in
@@ -416,7 +375,7 @@ final class ShortcutMapModel: ObservableObject {
             let f = e.modifierFlags.intersection(Self.watched)
             if e.type == .keyDown {
                 if self.selected == nil, !e.isARepeat { self.flash(e.keyCode, flags: f, submap: nil) }
-            } else if f != self.held, self.selected == nil { // the key editor has its own modifier toggles
+            } else if f != self.held, self.selected == nil {
                 withAnimation(Motion.fade) { self.held = f }
             }
             return e
@@ -440,9 +399,6 @@ final class ShortcutMapModel: ObservableObject {
     }
 }
 
-// MARK: - Key editor
-
-/// The action menu's categories: one level of nesting over the catalog.
 private enum MenuCategory: String, CaseIterable, Identifiable {
     case focus = "Focus", move = "Move", workspace = "Workspace", layout = "Layout", window = "Window", mode = "Mode", app = "App"
     var id: Self { self }
@@ -472,16 +428,13 @@ private enum MenuCategory: String, CaseIterable, Identifiable {
     }
 }
 
-/// The edit in progress. Nothing reaches the config until Save.
 private final class KeyDraft: ObservableObject {
     @Published var dispatcher: String
     @Published var args: String
     @Published var flags: NSEvent.ModifierFlags
     @Published var mode: String
     @Published var search = ""
-    /// The category whose submenu is out.
     @Published var open: MenuCategory?
-    /// The bind being edited (nil for a new one), and whether it's one key of a range.
     let row: BindRow?
     let isRange: Bool
 
@@ -502,9 +455,6 @@ private struct CategoryAnchor: PreferenceKey {
     }
 }
 
-/// Create, change or remove the shortcut on one key: a md Surface with the key itself and its chord
-/// on top, the action as a menu nested by category (with search across all of them), compact
-/// controls for the action's argument, the modifiers and the set, then Remove, Cancel and Save.
 private struct KeyEditor: View {
     static let width: CGFloat = 340
     private static let flyoutWidth: CGFloat = 268
@@ -513,7 +463,6 @@ private struct KeyEditor: View {
     @ObservedObject var model: ShortcutMapModel
     let key: KeyHintKeyboard.Key
     let code: UInt16
-    /// Submenus open to the left when there's no room on the right.
     let flyoutLeading: Bool
     let reveal: (BindRow) -> Void
     @StateObject private var draft: KeyDraft
@@ -580,9 +529,6 @@ private struct KeyEditor: View {
         .padding(.horizontal, 8).padding(.vertical, 10)
     }
 
-    // MARK: State
-
-    /// Mode actions for every set in the config, in place of the catalog's single Enter Window Mode.
     private var catalog: [Action] {
         var modes = doc.submaps.filter { !$0.isEmpty }
         if !modes.contains(where: { $0.lowercased() == "window" }) { modes.insert("window", at: 0) }
@@ -591,7 +537,6 @@ private struct KeyEditor: View {
         return Actions.all.filter { $0.dispatcher != "submap" } + enter + leave
     }
 
-    /// The chosen action, if it's one the menu offers.
     private var action: Action? {
         guard !draft.dispatcher.isEmpty else { return nil }
         if draft.dispatcher == "submap" {
@@ -607,11 +552,9 @@ private struct KeyEditor: View {
         return "\(draft.dispatcher) \(draft.args)".trimmingCharacters(in: .whitespaces)
     }
 
-    /// The bind as it would be saved.
     private var candidate: BindRow? {
         guard let name = ConfigDocument.keyName(for: code), !draft.dispatcher.isEmpty, !draft.isRange else { return nil }
         var r = draft.row ?? BindRow(mods: "", key: name, dispatcher: "", args: "")
-        // Untouched modifiers keep how they were written ($mod stays $mod).
         if draft.row == nil || draft.flags != model.flags { r.mods = doc.modsString(for: draft.flags) }
         r.dispatcher = draft.dispatcher
         r.args = draft.args
@@ -628,9 +571,6 @@ private struct KeyEditor: View {
 
     private var canSave: Bool { candidate != nil && issue?.severity != .error && changed }
 
-    // MARK: Head
-
-    /// The key as it is on the keyboard (wearing the new action), and how to press it.
     private var head: some View {
         let capScale = min(1, 96 / key.frame.width)
         let preview = draft.dispatcher.isEmpty ? nil : KeyHint(code: code, dispatcher: draft.dispatcher, arg: draft.args, title: title)
@@ -655,15 +595,12 @@ private struct KeyEditor: View {
         .animation(Motion.fade, value: title)
     }
 
-    /// The keys that enter a mode, e.g. ⌘⇪, so the chord reads "⌘⇪ then L".
     private func modeEntry(_ mode: String) -> [String]? {
         guard !mode.isEmpty, let a = doc.keyActions(in: "").first(where: {
             $0.row.dispatcher == "submap" && $0.arg.lowercased() == mode.lowercased()
         }) else { return nil }
         return ConfigDocument.modifierCaps(a.flags) + [ConfigDocument.capLabel(a.key)]
     }
-
-    // MARK: Menu
 
     @ViewBuilder private var menu: some View {
         let query = draft.search.trimmingCharacters(in: .whitespaces)
@@ -690,7 +627,6 @@ private struct KeyEditor: View {
         .padding(.vertical, 4)
     }
 
-    /// Every word of the query in the title (or the category), best eight.
     private func results(_ query: String) -> [Action] {
         let words = query.lowercased().split(separator: " ")
         return Array(catalog.filter { a in
@@ -708,7 +644,6 @@ private struct KeyEditor: View {
         Image(systemName: name).font(Theme.symbol()).foregroundStyle(Theme.inkMuted)
     }
 
-    /// A category, with the chosen action on its right when it's in there. Hover or click opens its submenu.
     private func categoryRow(_ c: MenuCategory) -> some View {
         let current = action.map(MenuCategory.init) == c
         return OMenuRow(open: draft.open == c, action: { draft.open = draft.open == c ? nil : c }) {
@@ -738,8 +673,6 @@ private struct KeyEditor: View {
         }
     }
 
-    /// One category's actions; numbered families (workspaces, layouts) are one row each, with the
-    /// number picked inline afterwards.
     private func flyout(_ c: MenuCategory) -> some View {
         VStack(spacing: 0) {
             ForEach(Actions.menuEntries(catalog.filter { MenuCategory($0) == c })) { entry in
@@ -784,17 +717,13 @@ private struct KeyEditor: View {
         if a.dispatcher != "exec" { draft.args = a.args } else if !wasExec { draft.args = "" }
         draft.open = nil
         draft.search = ""
-        // The click on a menu row drops focus; without this typing lands in the sidebar's search.
         if a.dispatcher != "exec" { searching = true }
     }
-
-    // MARK: Argument and options
 
     private var hasArgument: Bool {
         draft.dispatcher == "exec" || action?.group != nil || (action == nil && !draft.dispatcher.isEmpty)
     }
 
-    /// The command to run, the number in a family, or the raw dispatcher of a bind the menu doesn't know.
     @ViewBuilder private var argument: some View {
         HStack(spacing: 10) {
             if draft.dispatcher == "exec" {
@@ -841,7 +770,6 @@ private struct KeyEditor: View {
         .onHover { if $0 { draft.open = nil } }
     }
 
-    /// ⌃ ⌥ ⇧ ⌘ for this shortcut, as one track of toggles.
     private var modifierToggles: some View {
         OSegmented(title: "Modifiers", options: ShortcutMapModel.modifiers.map {
             OSegmentOption(value: $0.flag.rawValue, label: "", keys: $0.glyph, help: $0.name)
@@ -849,7 +777,6 @@ private struct KeyEditor: View {
            toggle: { draft.flags.formSymmetricDifference(NSEvent.ModifierFlags(rawValue: $0)) })
     }
 
-    /// What the key does with other modifiers in this set; a click shows that layer.
     @ViewBuilder private var others: some View {
         let list = doc.keyActions(in: model.mode).filter { $0.code == code && $0.flags != model.flags }
             .sorted { $0.flags.rawValue < $1.flags.rawValue }
@@ -875,8 +802,6 @@ private struct KeyEditor: View {
             .padding(.bottom, 4)
         }
     }
-
-    // MARK: Actions
 
     private var actions: some View {
         HStack(spacing: 6) {
@@ -906,7 +831,6 @@ private struct KeyEditor: View {
         close()
     }
 
-    /// Writes the bind, then shows the layer and set it landed in.
     private func save() {
         guard canSave, let r = candidate else { return }
         if let i = doc.binds.firstIndex(where: { $0.id == r.id }) { doc.binds[i] = r } else { doc.binds.append(r) }
@@ -914,7 +838,7 @@ private struct KeyEditor: View {
         close()
         if mode != model.mode {
             model.mode = mode
-            DispatchQueue.main.async { model.held = []; model.picked = flags } // after the set change picks its busiest layer
+            DispatchQueue.main.async { model.held = []; model.picked = flags }
         } else if flags != model.flags {
             model.held = []
             withAnimation(Motion.fade) { model.picked = flags }

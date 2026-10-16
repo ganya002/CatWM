@@ -1,9 +1,5 @@
-// Tiling: freezes WindowServer updates during a native-Space import.
 import AppKit
 
-/// Keeps the last composed frame visible during a native-Space import. WindowServer
-/// membership and AX writes still proceed; their intermediate states are presented together.
-/// Each batch has an independent watchdog so an unresponsive app cannot hold the display.
 final class WindowServerUpdates {
     final class Lease {
         private let lock = NSLock()
@@ -41,8 +37,6 @@ final class WindowServerUpdates {
     private var generation = 0
     private var leases = 0
 
-    // Injectable operations let the lifecycle probe run without touching WindowServer.
-    // An import measured 44–61 ms for the Space move alone. The watchdog leaves room for a slow move.
     init(maximumHold: Double = 0.3, disable: @escaping () -> Bool, enable: @escaping () -> Void) {
         self.maximumHold = maximumHold; self.disable = disable; self.enable = enable
     }
@@ -53,7 +47,6 @@ final class WindowServerUpdates {
             guard disable() else { lock.unlock(); return nil }
             generation += 1
             let batch = generation
-            // Off the main queue: even a hung AX call cannot prevent the release.
             DispatchQueue.global(qos: .userInteractive).asyncAfter(deadline: .now() + maximumHold) { [self] in
                 finish(batch, force: true)
             }

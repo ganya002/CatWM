@@ -1,16 +1,12 @@
-// Settings: the Windows pane (floating, focus and window behavior options).
 import AppKit
 import SwiftUI
 
-// MARK: - Windows
 
-/// One action the pointer menu can run, and the dispatcher whose window-mode shortcut it shows.
 private struct CursorShortcutSpec: Identifiable {
     let id: String
     let title: String
     let dispatcher: String
     let args: String
-    /// Follows whichever bind sends a window to the next workspace, rather than one fixed dispatcher.
     var nextWorkspace = false
 }
 
@@ -85,7 +81,6 @@ struct WindowsPane: View {
                     OMenuPicker(title: label, options: SortStrategy.allCases.map { ($0, $0.title) }, selection: $doc.config.sortStrategy)
                 }
                 .disabled(!doc.config.virtualWorkspaces)
-                // One option, two rows: the switch turns the tip on at the default count, the slider sets the count.
                 let nudge = ConfigOption.at(\Config.sortNudge)
                 OSwitchRow(nudge.ui.label, description: nudge.ui.help,
                            isOn: Binding(get: { doc.config.sortNudge > 0 }, set: { doc.config.sortNudge = $0 ? Int(nudge.resetValue) : 0 }))
@@ -126,12 +121,10 @@ struct WindowsPane: View {
         }
     }
 
-    /// The window mode the pointer menu reads its shortcuts from, or "" when there is none.
     private var windowMode: String {
         doc.binds.first { $0.submap.isEmpty && $0.dispatcher == "submap" && !["", "reset"].contains($0.args.lowercased()) }?.args ?? ""
     }
 
-    /// The pointer menu's actions, in menu order. Send to Next Workspace is only there with Ouch workspaces.
     private var pointerShortcuts: [CursorShortcutSpec] {
         Self.pointerShortcutList.filter { $0.id != "workspace" || doc.config.virtualWorkspaces }
     }
@@ -148,7 +141,6 @@ struct WindowsPane: View {
         CursorShortcutSpec(id: "close", title: "Close", dispatcher: "killactive", args: ""),
     ]
 
-    /// The window-mode key already bound to this action. `keyActions` has split range binds, so one key shows.
     private func shortcut(for spec: CursorShortcutSpec) -> ConfigDocument.KeyAction? {
         doc.keyActions(in: windowMode).first {
             $0.code < 0x1000 && (spec.nextWorkspace
@@ -175,9 +167,6 @@ struct WindowsPane: View {
         }
     }
 
-    /// A bind `keyActions` cannot show because its key is empty or unknown. Add resumes that row
-    /// instead of appending another one. A scroll or swipe bind is a real shortcut this list leaves
-    /// out, so it is left alone and a new row is recorded.
     private func unfinishedShortcut(_ spec: CursorShortcutSpec) -> BindRow? {
         doc.binds.first { row in
             guard row.submap == windowMode else { return false }

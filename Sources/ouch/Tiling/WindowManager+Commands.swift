@@ -1,8 +1,6 @@
-// Tiling: status, IPC and the dispatch of keyboard commands (focus, swap, ratio, layout, monitor).
 import AppKit
 
 extension WindowManager {
-    // MARK: - Status & IPC
 
     struct Status {
         var trusted: Bool
@@ -48,13 +46,11 @@ extension WindowManager {
         Log.info("ipc: \(command)")
         switch parts.first {
         case "dispatch" where parts.count >= 2:
-            // exec is refused here: any process, sandboxed or not, can post this notification.
             guard parts[1].lowercased() != "exec" else { Log.info("ipc: exec is only allowed from keybinds"); return }
             dispatch(parts[1].lowercased(), parts.count > 2 ? parts[2] : "")
         case "dump": dumpState()
         case "grabtest": grabTest()
         case "poststyle" where parts.count >= 2:
-            // Diagnostics: `ouch poststyle 0|1|2` picks how synthetic shortcuts are sent.
             if let n = Int(parts[1]), let style = Hotkeys.PostStyle(rawValue: n) { Hotkeys.postStyle = style }
             Log.info("ipc: post style is now \(Hotkeys.postStyle)")
         case "reload": reload()
@@ -85,8 +81,6 @@ extension WindowManager {
         }
         lines.forEach { Log.info($0) }
     }
-
-    // MARK: - Commands
 
     func swapOrder(_ a: CGWindowID, _ b: CGWindowID) {
         guard let i = order.firstIndex(of: a), let j = order.firstIndex(of: b) else { return }
@@ -160,7 +154,6 @@ extension WindowManager {
         }
     }
 
-    /// Windows on the focused screen in tiling order, plus the focused window and its screen.
     private func context() -> (w: Window?, s: Screen, st: ScreenState, ids: [CGWindowID])? {
         guard let s = currentScreen() else { return nil }
         return (focusedWindow(), s, state(for: s), tiled(on: s))
@@ -171,10 +164,9 @@ extension WindowManager {
             if let c = context(), let first = c.ids.first.flatMap({ windows[$0] }) { focus(first) }
             return
         }
-        let candidates = order.filter(visible.contains).compactMap { windows[$0] } // tiling order breaks ties
+        let candidates = order.filter(visible.contains).compactMap { windows[$0] }
         let screens = Screen.all()
         let home = screen(of: w, in: screens)
-        // A zoomed window covers everything else: there's no geometry to navigate, so cycle.
         if let home, state(for: home).zoomed == w.id { cycleFocus(d == .left || d == .up ? -1 : 1); return }
         let to = FocusNavigation.target(from: navItem(w, in: screens), d,
                                         among: candidates.map { navItem($0, in: screens) }, stamps: focusStamps)
@@ -186,12 +178,12 @@ extension WindowManager {
         let candidates = order.filter(visible.contains).compactMap { windows[$0] }.filter { !$0.isFloating }
         if let n = neighbor(of: w, d, among: candidates) {
             if let a = screen(of: w), let b = screen(of: n), a.uuid != b.uuid {
-                model.assign(w.id, to: shown[b.uuid]) // across monitors Hyprland moves without swapping
+                model.assign(w.id, to: shown[b.uuid])
             } else {
                 swapOrder(w.id, n.id)
             }
         } else if let src = screen(of: w), let dst = screen(from: src, spec: arg(d), in: Screen.all()) {
-            model.assign(w.id, to: shown[dst.uuid]) // nothing that way on this screen: hop to the next monitor
+            model.assign(w.id, to: shown[dst.uuid])
         } else { return }
         refresh()
         focus(w)
@@ -229,11 +221,10 @@ extension WindowManager {
     private func changeMainCount(_ delta: Int) {
         guard let c = context() else { return }
         c.st.mainCount = max(1, min(10, c.st.mainCount + delta))
-        corrections = [:] // new slots: a window that refused its old one gets new tries, as with setLayout
+        corrections = [:]
         refresh()
     }
 
-    /// "+0.05", "-0.05", "0.05" (relative) or "exact 0.6".
     private func adjustRatio(_ arg: String) {
         guard let c = context() else { return }
         let parts = arg.lowercased().split(separator: " ")
@@ -245,15 +236,12 @@ extension WindowManager {
             ratio += delta
         }
         ratio = min(0.9, max(0.1, ratio))
-        // A window we already know won't shrink: say so and keep the ratio, so the presses that
-        // did nothing don't have to be undone before the other direction works again.
         if let stubborn = windowRefusingRatio(ratio, from: c.st.ratio, ids: c.ids, on: c.s, c.st) {
             warnTooSmall(stubborn, on: c.s)
             return
         }
         c.st.ratio = ratio
         corrections = [:]
-        // Otherwise a window may only turn out to have a minimum once it's been asked to shrink.
         ratioChange = (c.s.uuid, Date() + (config.animate ? config.animationDuration : 0) + 0.6)
         refresh()
     }
@@ -270,17 +258,13 @@ extension WindowManager {
         refresh()
     }
 
-    /// Hyprland's `fullscreen`: the window covers the whole tiling area until toggled again.
     private func toggleZoom() {
         guard let c = context(), let w = c.w, c.ids.contains(w.id) else { return }
         c.st.zoomed = c.st.zoomed == w.id ? nil : w.id
         refresh()
-        focus(w, warp: false) // the same window keeps focus: the pointer stays
+        focus(w, warp: false)
     }
 
-    /// macOS's own Full Screen, as the green button does it: the window gets a Space of its own and leaves the
-    /// tiling until it comes back. A window already in Full Screen is not tiled, so ask macOS which one is
-    /// focused rather than relying on `windows`.
     private func toggleNativeFullscreen() {
         guard let app = NSWorkspace.shared.frontmostApplication,
               let el = focusedWindow()?.element
@@ -290,7 +274,6 @@ extension WindowManager {
         if el.isSettable("AXFullScreen") {
             done = el.set("AXFullScreen", on ? kCFBooleanFalse : kCFBooleanTrue)
         } else if let button = el.element("AXFullScreenButton") ?? el.element(kAXZoomButtonAttribute) {
-            // Apps that don't expose the attribute still have the button; pressing it enters or leaves Full Screen.
             done = AXUIElementPerformAction(button, kAXPressAction as CFString) == .success
         } else {
             done = false
@@ -298,7 +281,6 @@ extension WindowManager {
         Log.info("native fullscreen \(on ? "off" : "on") for \(el.windowID.map(String.init) ?? "?") \(app.bundleIdentifier ?? ""): \(done ? "ok" : "refused")")
         guard done else { return }
         if let id = el.windowID, !on { for s in Screen.all() where state(for: s).zoomed == id { state(for: s).zoomed = nil } }
-        // The Full Screen transition takes a moment; the other tiles close the gap (or make room) once it's over.
         scheduleRefresh(after: 0.8)
     }
 
@@ -319,7 +301,6 @@ extension WindowManager {
     private func focusMonitor(_ spec: String) {
         let screens = Screen.all()
         guard let src = currentScreen(), let dst = screen(from: src, spec: spec, in: screens) else { return }
-        // Prefer the topmost managed window on that screen, else its main window.
         let p = CGWindowInfo.onScreen().first { info in
             guard visible.contains(info.id), let w = windows[info.id] else { return false }
             return screen(of: w, in: screens)?.uuid == dst.uuid
