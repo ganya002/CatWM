@@ -45,28 +45,31 @@ private struct OButtonBody: View {
             .contentShape(Capsule())
             .scaleEffect(configuration.isPressed ? 0.95 : 1)
             .animation(Motion.spring, value: configuration.isPressed)
-            .animation(.easeOut(duration: Theme.fast), value: hover.on)
+            .animation(.easeOut(duration: Theme.fast), value: lit)
             .opacity(enabled ? 1 : 0.45)
             .onHover { hover.on = $0 }
     }
+
+    /// Hover lights only a button that can be pressed.
+    private var lit: Bool { hover.on && enabled }
 
     private var ink: Color {
         switch style.variant {
         case .primary: Theme.onAccent
         case .secondary: Theme.ink
-        case .ghost: hover.on ? Theme.ink : Theme.inkMuted
+        case .ghost: lit ? Theme.ink : Theme.inkMuted
         case .danger, .ghostDanger: Theme.danger
         }
     }
 
     private var fill: Color {
         switch style.variant {
-        case .primary: hover.on ? Theme.accentHover : Theme.accent
+        case .primary: lit ? Theme.accentHover : Theme.accent
         // A translucent well, not `surface-sunken`: on a raised surface or glass that reads as a black hole.
-        case .secondary: hover.on ? Theme.wellHover : Theme.well
-        case .ghost: hover.on ? Theme.hover : .clear
+        case .secondary: lit ? Theme.wellHover : Theme.well
+        case .ghost: lit ? Theme.hover : .clear
         case .danger: Theme.dangerSoft
-        case .ghostDanger: hover.on ? Theme.dangerSoft : .clear
+        case .ghostDanger: lit ? Theme.dangerSoft : .clear
         }
     }
 }
@@ -848,6 +851,7 @@ struct EssentialTile: View {
     var rotates = false
     let action: () -> Void
     @StateObject private var model = Model()
+    @Environment(\.isEnabled) private var enabled
 
     final class Model: ObservableObject {
         @Published var hover = false
@@ -855,7 +859,7 @@ struct EssentialTile: View {
     }
 
     var body: some View {
-        let on = isOn == true
+        let on = isOn == true, lit = model.hover && enabled
         Button {
             model.count += 1
             action()
@@ -870,11 +874,11 @@ struct EssentialTile: View {
                 .frame(height: 18)
                 Text(title).font(Theme.body(11.5, on ? .medium : .regular)).oneLine().minimumScaleFactor(0.85)
             }
-            .foregroundStyle(on ? Theme.onAccent : model.hover ? Theme.ink : Theme.inkMuted)
+            .foregroundStyle(on ? Theme.onAccent : lit ? Theme.ink : Theme.inkMuted)
             .padding(.horizontal, 4)
             .frame(maxWidth: .infinity).frame(height: 54)
             .background(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
-                .fill(on ? Theme.accent : model.hover ? Theme.wellHover : Theme.well))
+                .fill(on ? Theme.accent : lit ? Theme.wellHover : Theme.well))
             .contentShape(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous))
         }
         .buttonStyle(PressScale())

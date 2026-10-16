@@ -283,9 +283,10 @@ struct OMenuPicker<T: Hashable>: View {
     let options: [(value: T, label: String)]
     @Binding var selection: T
     @StateObject private var hover = Flag()
+    @Environment(\.isEnabled) private var enabled
 
     var body: some View {
-        let options = options, binding = $selection
+        let options = options, binding = $selection, lit = hover.on && enabled
         OMenuButton(items: {
             options.enumerated().map { n, o in
                 MenuItem(id: "\(n)", kind: .radio, label: o.label, checked: o.value == binding.wrappedValue,
@@ -298,12 +299,12 @@ struct OMenuPicker<T: Hashable>: View {
             }
             .foregroundStyle(Theme.ink)
             .padding(.horizontal, 12).frame(height: Theme.controlHeight)
-            .background(Capsule().fill(hover.on ? Theme.wellHover : Theme.well))
+            .background(Capsule().fill(lit ? Theme.wellHover : Theme.well))
             .contentShape(Capsule())
         }
         .fixedSize()
         .onHover { hover.on = $0 }
-        .animation(.easeOut(duration: Theme.fast), value: hover.on)
+        .animation(.easeOut(duration: Theme.fast), value: lit)
         .accessibilityLabel(title)
         .accessibilityValue(options.first { $0.value == selection }?.label ?? "")
     }

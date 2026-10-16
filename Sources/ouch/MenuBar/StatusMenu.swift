@@ -109,7 +109,11 @@ final class MenuModel: ObservableObject {
     var source: () -> [MenuItem] = MenuModel.build
 
     private var openWork: DispatchWorkItem?
+    /// The submenu row `openWork` opens.
+    private var opening: String?
     private var trimWork: DispatchWorkItem?
+    /// The level `trimWork` trims to.
+    private var trimLevel = 0
 
     // MARK: Building
 
@@ -274,18 +278,28 @@ final class MenuModel: ObservableObject {
                 withAnimation(Motion.easeOut) { self.path = Array(self.path.prefix(level)) + [item.id] }
             }
             openWork = work
+            opening = item.id
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: work)
         } else if open != nil {
             // A grace period, so a diagonal move toward the open submenu doesn't close it.
             let work = DispatchWorkItem { [weak self] in self?.trim(to: level) }
             trimWork = work
+            trimLevel = level
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.18, execute: work)
         }
     }
 
-    /// The pointer reached a submenu: keep it, and its parent row lit.
+    /// The pointer left a row: it goes dark, unless its submenu is open, and its submenu no longer opens.
+    func unhover(_ item: MenuItem, level: Int) {
+        if opening == item.id { openWork?.cancel(); opening = nil }
+        let open = path.count > level ? path[level] : nil
+        if highlight[level] == item.id, open != item.id { highlight[level] = nil }
+    }
+
+    /// The pointer reached a submenu: keep it, and its parent row lit. Coming back into the column
+    /// that asked for the trim doesn't stop it.
     func enterColumn(_ level: Int) {
-        trimWork?.cancel()
+        if level > trimLevel { trimWork?.cancel() }
         if level > 0, level <= path.count { highlight[level - 1] = path[level - 1] }
     }
 
@@ -748,7 +762,7 @@ private struct MenuRowView: View {
         .buttonStyle(.plain)
         .disabled(!item.enabled)
         .opacity(item.enabled ? 1 : 0.45)
-        .onHover { if $0 { model.hover(item, level: level) } }
+        .onHover { if $0 { model.hover(item, level: level) } else { model.unhover(item, level: level) } }
         .background(GeometryReader { g in
             Color.clear.preference(key: RowFrameKey.self, value: item.kind == .sub ? [item.id: g.frame(in: .named("menu"))] : [:])
         })
