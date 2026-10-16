@@ -291,17 +291,18 @@ final class CoachModel: ObservableObject {
     @Published var hidden = false
     @Published var warning: String?
     @Published var button: String?
-    @Published var final = false
+    @Published var summary: Coach.Summary?
+    var final: Bool { summary != nil }
     @Published var canHead = true
     @Published var headLabel = "Skip tour"
     @Published var headSymbol: String?
-    @Published var rows: [(caps: [String], label: String)] = []
     @Published var progress: Double = 0
     @Published var caret: Caret = .none
     var tryKeys: () -> Void = {}
     var next: () -> Void = {}
     var headAction: () -> Void = {}
     var reveal: () -> Void = {}
+    var tutorial: () -> Void = {}
 }
 
 /// One step of a lesson: a plain raised Surface `lg`, pointing at the real target.
@@ -313,10 +314,18 @@ struct CoachCardView: View {
     static let inset = EdgeInsets(top: 32, leading: 52, bottom: 68, trailing: 52)
 
     var body: some View {
+        if let summary = model.summary {
+            FinishCardView(model: model, summary: summary).padding(Self.inset)
+        } else {
+            step
+        }
+    }
+
+    private var step: some View {
         VStack(alignment: .leading, spacing: 0) {
             // head: lead symbol, Skip or Pause
             HStack(spacing: 8) {
-                Image(systemName: model.final ? "checkmark.circle.fill" : model.recall ? "brain" : "keyboard")
+                Image(systemName: model.recall ? "brain" : "keyboard")
                     .font(.system(size: 13, weight: .medium))
                     .contentTransition(.symbolEffect(.replace))
                 Spacer(minLength: 8)
@@ -343,7 +352,6 @@ struct CoachCardView: View {
                 .background(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(Theme.well))
                 .padding(.top, 14)
             }
-            if model.final { summary.padding(.top, 14) }
             if let button = model.button {
                 HStack {
                     Spacer()
@@ -439,35 +447,155 @@ struct CoachCardView: View {
         }
     }
 
-    private var summary: some View {
-        Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 7) {
-            ForEach(Array(model.rows.enumerated()), id: \.offset) { _, row in
-                if row.caps.isEmpty { // a section heading
-                    Text(row.label).kicker(Theme.inkMuted)
-                        .padding(.top, 6)
-                        .gridCellColumns(2)
-                } else {
-                    GridRow {
-                        HStack(spacing: 2) {
-                            ForEach(Array(row.caps.enumerated()), id: \.offset) { _, c in
-                                Text(c).font(Theme.keys(11.5, .medium)).oneLine()
-                                    .padding(.horizontal, 5).frame(minWidth: 20, minHeight: 20)
-                                    .background(RoundedRectangle(cornerRadius: Theme.Radius.xs).fill(Theme.well))
-                            }
-                        }
-                        Text(row.label).font(Theme.body(12.5)).oneLine()
-                    }
-                }
-            }
-        }
-    }
-
     private var caret: Caret {
         switch model.caret {
         case .none: .none
         case .up(let x): .top(x)
         case .down: .bottom
         }
+    }
+}
+
+// MARK: - Finish card
+
+/// The last step of a lesson: a cheat sheet of the keys it taught, at the centre of the screen. The
+/// mode chord sits on top, the rest in up to two columns of label rows with their keys on the right.
+struct FinishCardView: View {
+    @ObservedObject var model: CoachModel
+    let summary: Coach.Summary
+    static let width: CGFloat = 540
+    private static let pad = EdgeInsets(top: 26, leading: 28, bottom: 0, trailing: 28)
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: Density.xl.radius, style: .continuous)
+        VStack(alignment: .leading, spacing: 0) {
+            title
+            if !model.text.isEmpty {
+                Text(model.text).font(Theme.body()).foregroundStyle(Theme.inkMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 4)
+            }
+            if !summary.modeCaps.isEmpty { mode.padding(.top, 14) }
+            columns.padding(.top, 16)
+            footer.padding(.top, 22).padding(.bottom, 18)
+        }
+        .padding(Self.pad)
+        .frame(width: Self.width, alignment: .leading)
+        .overlay(alignment: .bottom) { Rectangle().fill(Theme.accent).frame(height: 3) } // the full progress bar
+        .clipShape(shape)
+        .foregroundStyle(Theme.ink)
+        .background(shape.fill(Theme.surfaceRaised).elevation(.float, in: shape))
+    }
+
+    /// Display type; a word in *stars* is set at 500.
+    private var title: Text {
+        let parts = model.title.split(separator: "*", omittingEmptySubsequences: false)
+        return parts.enumerated().reduce(Text("")) { text, part in
+            text + Text(part.element).font(Theme.body(34, part.offset.isMultiple(of: 2) ? .light : .medium))
+        }
+        .tracking(-0.68)
+    }
+
+    /// The mode chord on mid-size caps, its name and how to leave, above a hairline.
+    private var mode: some View {
+        HStack(spacing: 10) {
+            HStack(spacing: 4) {
+                ForEach(Array(summary.modeCaps.enumerated()), id: \.offset) { _, k in ModeCap(key: k) }
+            }
+            .fixedSize()
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(summary.modeName).font(Theme.body(13.5, .medium)).oneLine().fixedSize()
+                (Text("Press it first. ") + Text("Esc").font(Theme.keys(12, .medium)) + Text(" or a click leaves it."))
+                    .font(Theme.body(12)).foregroundStyle(Theme.inkMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .overlay(alignment: .bottom) { Rectangle().fill(Theme.hairline).frame(height: 1) }
+    }
+
+    private var columns: some View {
+        let count = summary.groups.map(\.column).max() ?? 1
+        return HStack(alignment: .top, spacing: 28) {
+            ForEach(1...max(1, count), id: \.self) { col in
+                VStack(alignment: .leading, spacing: 14) {
+                    ForEach(Array(summary.groups.enumerated()).filter { $0.element.column == col }, id: \.offset) { _, g in
+                        group(g)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
+
+    private func group(_ g: Coach.Summary.Group) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(g.title).font(Theme.body(12, .medium)).tracking(0.24).foregroundStyle(Theme.inkMuted).oneLine()
+                .padding(.bottom, 4)
+            ForEach(Array(g.rows.enumerated()), id: \.offset) { i, row in
+                HStack(spacing: 10) {
+                    Text(row.label).font(Theme.body()).oneLine()
+                    Spacer(minLength: 8)
+                    Kbd(keys: row.caps).fixedSize()
+                }
+                .frame(minHeight: 30)
+                .overlay(alignment: .top) { if i > 0 { Rectangle().fill(Theme.hairline).frame(height: 1) } }
+            }
+        }
+    }
+
+    /// The help hint and the buttons on one line, or the hint above the buttons when both don't fit.
+    private var footer: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) {
+                hint
+                Spacer(minLength: 8)
+                buttons
+            }
+            VStack(alignment: .trailing, spacing: 12) {
+                hint.frame(maxWidth: .infinity, alignment: .leading)
+                buttons
+            }
+        }
+    }
+
+    @ViewBuilder private var hint: some View {
+        if let key = summary.helpKey {
+            HStack(spacing: 4) {
+                Kbd(keys: [key])
+                Text("in \(summary.modeName.lowercased()) shows every key on the keyboard")
+                    .font(Theme.body(12)).foregroundStyle(Theme.inkFaint).oneLine()
+            }
+            .fixedSize()
+        }
+    }
+
+    private var buttons: some View {
+        HStack(spacing: 8) {
+            if summary.tutorial { OButton("Start the tutorial", variant: .ghost, action: model.tutorial) }
+            OButton(model.button ?? "Finish", variant: .primary, shortcut: ["↩"], action: model.next)
+                .keyboardShortcut(.defaultAction)
+        }
+        .fixedSize()
+    }
+}
+
+/// A 28pt keycap for the mode chord: between the small hint caps and the 40pt tour caps.
+private struct ModeCap: View {
+    let key: String
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
+        Text(key)
+            .font(Theme.keys(key.count > 2 ? 11.5 : 13, .medium)).oneLine().fixedSize()
+            .padding(.horizontal, 8)
+            .frame(minWidth: 28, minHeight: 28)
+            .background {
+                shape.fill(Theme.surface)
+                    .overlay(alignment: .bottom) { shape.fill(Theme.surfaceSunken).frame(height: 2).mask(shape) }
+                    .elevation(.sm, in: shape)
+            }
     }
 }
 

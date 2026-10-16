@@ -480,33 +480,45 @@ enum Steps {
         }
     }
 
-    static func summary(_ c: Coach, title: String) -> PlannedStep {
+    /// The last card: every key the lesson taught, in the user's own binds. Groups with no binds drop out.
+    static func summary(_ c: Coach, title: String, tutorial: Bool = false) -> PlannedStep {
         let b = c.book
-        var rows: [(caps: [String], label: String)] = []
-        var more: [(caps: [String], label: String)] = []
         func cap(_ k: KeyBinding?) -> [String] { k.map { KeyWords.caps($0, long: false) } ?? [] }
-        if b.enter != nil { rows.append((b.enterCaps(long: false), "\(b.mode.capitalized) mode")) }
+        var inMode: [(caps: [String], label: String)] = []
         let dirs = b.directions.compactMap { b.find(["movefocus"], $0) }
-        if dirs.count == 4 { rows.append(([dirs.map { KeyWords.keyLabel($0.keyCode, long: false) }.joined(separator: " ")], "Move focus")) }
+        if dirs.count == 4 { inMode.append((dirs.map { KeyWords.keyLabel($0.keyCode, long: false) }, "Move focus")) }
         let moves = b.directions.compactMap { b.find(["movewindow", "swapwindow"], $0) }
         if moves.count == 4 {
-            rows.append((KeyWords.modLabels(moves[0].mods, long: false) + [moves.map { KeyWords.keyLabel($0.keyCode, long: false) }.joined(separator: " ")],
-                         "Move the window"))
+            inMode.append((KeyWords.modLabels(moves[0].mods, long: false) + moves.map { KeyWords.keyLabel($0.keyCode, long: false) },
+                           "Move the window"))
         }
-        if let s = b.find(["layoutmsg"], "swapwithmaster") { rows.append((cap(s), "Swap with the main pane")) }
-        if let (g, s) = b.resize { rows.append((cap(s) + cap(g), "Shrink / grow")) }
-        if let n = b.find(["cyclelayout"], "next") { rows.append((cap(n), "Next layout")) }
-        if let w = b.find(["workspace"], "1") { rows.append((KeyWords.modLabels(w.mods, long: false) + ["1–0"], "Switch workspace")) }
-        if b.enter != nil, c.wm.config.keyboardHelp { rows.append(([c.wm.config.keyboardHelpKey], "Keyboard help")) }
+        if let s = b.find(["layoutmsg"], "swapwithmaster") { inMode.append((cap(s), "Swap with the main pane")) }
+        if let (g, s) = b.resize { inMode.append((cap(s) + cap(g), "Shrink / grow")) }
+        if let n = b.find(["cyclelayout"], "next") { inMode.append((cap(n), "Next layout")) }
+        if let w = b.find(["workspace"], "1") { inMode.append((KeyWords.modLabels(w.mods, long: false) + ["1–0"], "Switch workspace")) }
+        if b.enter != nil, c.wm.config.keyboardHelp { inMode.append(([c.wm.config.keyboardHelpKey], "Keyboard help")) }
+        var more: [(caps: [String], label: String)] = []
         if let f = b.find(["fullscreen"]) { more.append((cap(f), "Zoom")) }
         if let f = b.find(["nativefullscreen"]) { more.append((cap(f), "macOS full screen")) }
         if let f = b.find(["togglefloating"]) { more.append((cap(f), "Float or tile")) }
-        if let s = b.find(["sort"], global: true) { more.append((cap(s), "Sort windows")) }
-        if let g = b.find(["workspace"], "1", global: true) { more.append((KeyWords.modLabels(g.mods, long: false) + ["1–0"], "Switch from anywhere")) }
-        return PlannedStep { c in
+        var anywhere: [(caps: [String], label: String)] = []
+        if let s = b.find(["sort"], global: true) { anywhere.append((cap(s), "Sort windows")) }
+        if let g = b.find(["workspace"], "1", global: true) { anywhere.append((KeyWords.modLabels(g.mods, long: false) + ["1–0"], "Switch workspace")) }
+
+        var summary = Coach.Summary(tutorial: tutorial)
+        if b.enter != nil {
+            summary.modeCaps = b.enterCaps(long: false)
+            summary.modeName = "\(b.mode.capitalized) mode"
+            if c.wm.config.keyboardHelp { summary.helpKey = c.wm.config.keyboardHelpKey }
+        }
+        let modeTitle = b.mode.isEmpty ? "Keys" : "In \(b.mode) mode"
+        summary.groups = [.init(title: modeTitle, column: 1, rows: inMode),
+                          .init(title: "More", column: 2, rows: more),
+                          .init(title: "From anywhere", column: 2, rows: anywhere)].filter { !$0.rows.isEmpty }
+        return PlannedStep { _ in
             Step(title: title,
-                 text: "",
-                 button: "Finish", count: 0, rows: rows + (more.isEmpty ? [] : [([], "More")] + more), final: true)
+                 text: "Your own windows are back where you left them.",
+                 button: "Finish", count: 0, summary: summary)
         }
     }
 }
@@ -524,7 +536,7 @@ final class TourLesson: Lesson {
         plan = [Steps.modeOn(c), Steps.help(c), Steps.focus(c), Steps.move(c), Steps.main(c), Steps.resize(c),
                 Steps.zoom(c), Steps.float(c), Steps.layouts(c), Steps.visit(c), Steps.send(c),
                 Steps.modeOff(c), Steps.global(c), Steps.sortIntro(c)].compactMap { $0 }
-        plan.append(Steps.summary(c, title: "You learned the basics!"))
+        plan.append(Steps.summary(c, title: "You learned the *basics*", tutorial: true))
     }
 
     func step(_ i: Int, in coach: Coach) -> Coach.Step { plan[i].build(coach) }
@@ -590,7 +602,7 @@ final class TutorialLesson: Lesson {
     func ended(_ how: Coach.Ending, at index: Int) {
         let d = UserDefaults.standard
         switch how {
-        case .finished:
+        case .finished, .tutorial:
             Self.forget()
             d.set(true, forKey: Self.doneKey)
         case .paused, .skipped:
