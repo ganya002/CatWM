@@ -1,0 +1,39 @@
+<!-- @dsCard height=288 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Cover</title>
+<style>
+  html, body { margin: 0; background: var(--bg); }
+  .cover { position: relative; width: 960px; height: 288px; background: var(--bg); overflow: hidden; }
+  svg { position: absolute; inset: 0; }
+  .tile { rx: var(--radius-lg); }
+  .b-accent { fill: var(--accent); } .b-tint { fill: var(--tint); } .b-muted { fill: var(--ink-muted); } .b-ink { fill: var(--ink); }
+  .dot { fill: var(--bg); }
+  .name { position: absolute; left: 40px; bottom: 64px; margin: 0; font: 300 120px/0.92 var(--font-sans); letter-spacing: -0.04em; color: var(--ink); }
+  .tag { position: absolute; left: 44px; bottom: 32px; max-width: 440px; margin: 0; font: 400 14px/20px var(--font-sans); color: var(--ink-muted); }
+</style></head>
+<body>
+<div class="cover">
+  <svg viewBox="0 0 960 288" width="960" height="288" aria-hidden="true">
+        <rect class="tile b-accent" x="496" y="16" width="216" height="256"/>
+    <rect class="tile b-tint" x="720" y="16" width="224" height="124"/>
+    <rect class="tile b-muted" x="720" y="148" width="108" height="124"/>
+    <rect class="tile b-ink" x="836" y="148" width="108" height="124"/>
+    <circle class="dot" cx="512" cy="32" r="3.5"/>
+    <circle class="dot" cx="524" cy="32" r="3.5"/>
+    <circle class="dot" cx="536" cy="32" r="3.5"/>
+    <circle class="dot" cx="736" cy="32" r="3.5"/>
+    <circle class="dot" cx="748" cy="32" r="3.5"/>
+    <circle class="dot" cx="760" cy="32" r="3.5"/>
+    <circle class="dot" cx="736" cy="164" r="3.5"/>
+    <circle class="dot" cx="748" cy="164" r="3.5"/>
+    <circle class="dot" cx="760" cy="164" r="3.5"/>
+    <circle class="dot" cx="852" cy="164" r="3.5"/>
+    <circle class="dot" cx="864" cy="164" r="3.5"/>
+    <circle class="dot" cx="876" cy="164" r="3.5"/>
+  </svg>
+  <h1 class="name">Ouch</h1>
+  <p class="tag">Keyboard-first tiling for macOS. Quiet until you reach for it.</p>
+</div>
+</body>
+</html>

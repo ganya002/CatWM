@@ -1,0 +1,28 @@
+<!-- @dsCard group="Guidance" height=330 subtitle="A tour step. Press L." -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>CoachMark — preview</title>
+<style>html,body{margin:0;background:var(--bg)} #root{padding:24px;min-height:100vh;box-sizing:border-box}</style></head>
+<body>
+<div id="root" class="o-root o-ground"></div>
+<script>
+var O = window.Ouch, h = React.createElement, F = React.Fragment;
+function mount(el) { ReactDOM.createRoot(document.getElementById('root')).render(el); }
+function Eyebrow(p) { return h('div', { className: 'o-eyebrow' }, h('span', { className: 'o-eyebrow__n' }, p.n), h('span', { className: 'o-eyebrow__t' }, p.t)); }
+function Step() {
+  var s = React.useState({ down: false, done: false });
+  React.useEffect(function () {
+    function d(e) { if (e.key.toLowerCase() === 'l') s[1]({ down: true, done: true }); }
+    function u() { s[1](function (v) { return { down: false, done: v.done }; }); }
+    window.addEventListener('keydown', d); window.addEventListener('keyup', u);
+    return function () { window.removeEventListener('keydown', d); window.removeEventListener('keyup', u); };
+  }, []);
+  return h(O.CoachMark, { caret: 'top', caretAt: 40, step: 3, total: 6, onSkip: function () {},
+    title: h(F, null, 'Focus ', h('em', null, 'right')), body: 'L moves focus one window to the right.',
+    keys: ['L'], pressed: s[0].down, done: s[0].done, doneText: 'Focus moved',
+    onBack: function () {}, onNext: s[0].done ? function () { s[1]({ down: false, done: false }); } : null });
+}
+mount(h('div', { style: { paddingTop: 8 } }, h(Step)));
+</script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+<!-- @dsCard group="Primitives" height=130 subtitle="Press H" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Kbd — preview</title>
+<style>html,body{margin:0;background:var(--bg)} #root{padding:24px;min-height:100vh;box-sizing:border-box}</style></head>
+<body>
+<div id="root" class="o-root o-ground"></div>
+<script>
+var O = window.Ouch, h = React.createElement, F = React.Fragment;
+function mount(el) { ReactDOM.createRoot(document.getElementById('root')).render(el); }
+function Eyebrow(p) { return h('div', { className: 'o-eyebrow' }, h('span', { className: 'o-eyebrow__n' }, p.n), h('span', { className: 'o-eyebrow__t' }, p.t)); }
+function Live() {
+  var s = React.useState(false);
+  React.useEffect(function () {
+    function d(e) { if (e.key.toLowerCase() === 'h') s[1](true); }
+    function u() { s[1](false); }
+    window.addEventListener('keydown', d); window.addEventListener('keyup', u);
+    return function () { window.removeEventListener('keydown', d); window.removeEventListener('keyup', u); };
+  }, []);
+  return h(O.Kbd, { keys: ['H'], size: 'lg', pressed: s[0] });
+}
+mount(h('div', { style: { display: 'flex', gap: 28, alignItems: 'center', flexWrap: 'wrap' } },
+  h(Live), h(O.Kbd, { keys: ['cmd', 'caps'], size: 'lg' }),
+  h(O.Kbd, { keys: ['cmd', 'k'] }), h(O.Kbd, { keys: ['opt', 'shift', 'H'] }), h(O.Kbd, { keys: ['cmd', 'caps'], then: [['N']] })));
+</script>
+</body>
+</html>

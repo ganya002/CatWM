@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ouch design system</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font: var(--text-body); }
+  header { display: flex; align-items: center; gap: 16px; padding: 20px 32px; position: sticky; top: 0; background: var(--bg); z-index: 1; border-bottom: 1px solid var(--hairline); }
+  h1 { margin: 0; font: var(--text-title); flex: 1; }
+  select { font: var(--text-body); color: var(--ink); background: var(--surface-sunken); border: 1px solid var(--border-control); border-radius: var(--radius-md); height: var(--size-control); padding: 0 8px; }
+  main { padding: 24px 32px 64px; display: grid; gap: 32px; }
+  h2 { margin: 0 0 12px; font: var(--text-label); color: var(--ink-muted); }
+  .grid { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+  figure { margin: 0; background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden; }
+  figcaption { display: flex; justify-content: space-between; gap: 12px; padding: 8px 12px; border-bottom: 1px solid var(--hairline); font: var(--text-label); }
+  figcaption span { font: var(--text-caption); color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  iframe { display: block; border: 0; width: 100%; }
+  .cover iframe { width: 960px; max-width: 100%; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Ouch design system</h1>
+  <label>Theme <select id="theme"></select></label>
+</header>
+<main id="main"></main>
+<script>
+const REACT = "https://unpkg.com/react@18.3.1/umd/react.production.min.js";
+const REACT_DOM = "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js";
+const abs = (p) => new URL(p, location.href).href;
+const frames = [];
+
+function inject(html, theme) {
+  const head = `<link rel="stylesheet" href="${abs("tokens.css")}"><link rel="stylesheet" href="${abs("components/bundle.css")}">` +
+    `<script src="${REACT}"><\/script><script src="${REACT_DOM}"><\/script><script src="${abs("components/bundle.js")}"><\/script>`;
+  return html.replace("<html>", `<html data-theme="${theme}">`).replace("</head>", head + "</head>");
+}
+
+async function render(theme) {
+  await Promise.all(frames.map(async (f) => {
+    f.el.srcdoc = inject(f.html, theme);
+  }));
+}
+
+async function main() {
+  const index = await (await fetch("components/index.json")).json();
+  const select = document.getElementById("theme");
+  index.themes.forEach((t) => select.add(new Option(t, t)));
+  const groups = {};
+  for (const card of index.cards) (groups[card.group || "Cover"] ||= []).push(card);
+  const main = document.getElementById("main");
+  const order = ["Cover", ...Object.keys(groups).filter((g) => g !== "Cover")];
+  for (const name of order) {
+    const section = document.createElement("section");
+    if (name !== "Cover") section.innerHTML = `<h2>${name}</h2>`;
+    const grid = document.createElement("div");
+    grid.className = "grid" + (name === "Cover" ? " cover" : "");
+    for (const card of groups[name]) {
+      const html = await (await fetch(`components/${card.name}/preview.html`)).text();
+      const fig = document.createElement("figure");
+      if (card.width) fig.style.width = card.width + "px";
+      else if (name !== "Cover") fig.style.width = "460px";
+      fig.innerHTML = `<figcaption>${card.name}<span>${card.subtitle}</span></figcaption>`;
+      const el = document.createElement("iframe");
+      el.style.height = card.height + "px";
+      el.title = card.name;
+      fig.append(el);
+      grid.append(fig);
+      frames.push({ el, html });
+    }
+    section.append(grid);
+    main.append(section);
+  }
+  select.addEventListener("change", () => render(select.value));
+  render(select.value);
+}
+main();
+</script>
+</body>
+</html>

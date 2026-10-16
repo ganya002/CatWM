@@ -1,0 +1,15 @@
+<!-- @dsCard group="Tiling" height=190 subtitle="Hover a layout" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>LayoutPicker — preview</title>
+<style>html,body{margin:0;background:var(--bg)} #root{padding:24px;min-height:100vh;box-sizing:border-box}</style></head>
+<body>
+<div id="root" class="o-root o-ground"></div>
+<script>
+var O = window.Ouch, h = React.createElement, F = React.Fragment;
+function mount(el) { ReactDOM.createRoot(document.getElementById('root')).render(el); }
+function Eyebrow(p) { return h('div', { className: 'o-eyebrow' }, h('span', { className: 'o-eyebrow__n' }, p.n), h('span', { className: 'o-eyebrow__t' }, p.t)); }
+mount(h('div', { style: { width: 300 } }, h(O.LayoutPicker, { columns: 5, thumb: 44 })));
+</script>
+</body>
+</html>

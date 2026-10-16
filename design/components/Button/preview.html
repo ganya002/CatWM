@@ -1,0 +1,24 @@
+<!-- @dsCard group="Primitives" height=120 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Button — preview</title>
+<style>html,body{margin:0;background:var(--bg)} #root{padding:24px;min-height:100vh;box-sizing:border-box}</style></head>
+<body>
+<div id="root" class="o-root o-ground"></div>
+<script>
+var O = window.Ouch, h = React.createElement, F = React.Fragment;
+function mount(el) { ReactDOM.createRoot(document.getElementById('root')).render(el); }
+function Eyebrow(p) { return h('div', { className: 'o-eyebrow' }, h('span', { className: 'o-eyebrow__n' }, p.n), h('span', { className: 'o-eyebrow__t' }, p.t)); }
+function Upd() { var s = React.useState(0); return h(O.Button, { variant: 'secondary', icon: 'arrow.down.circle', iconEffect: s[0] ? 'bounce' : null, iconTrigger: s[0], onClick: function () { s[1](s[0] + 1); } }, 'Check for Updates'); }
+mount(h('div', { style: { display: 'grid', gap: 14 } },
+  h('div', { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' } },
+    h(O.Button, { variant: 'primary', size: 'lg', shortcut: ['return'] }, 'Take the tour'),
+    h(O.Button, { variant: 'secondary' }, 'Open Config'), h(Upd),
+    h(O.Button, { variant: 'ghost' }, 'Skip'),
+    h(O.Button, { variant: 'danger', icon: 'arrow.uturn.backward' }, 'Reset Shortcuts'),
+    h(O.Button, { variant: 'secondary', icon: 'ellipsis', label: 'More' })),
+  h('div', { style: { display: 'flex', gap: 8, alignItems: 'center' } },
+    h(O.Button, { variant: 'primary', size: 'sm' }, 'Next'), h(O.Button, { variant: 'ghost', size: 'sm' }, 'Back'), h(O.Button, { variant: 'secondary', disabled: true }, 'Disabled'))));
+</script>
+</body>
+</html>

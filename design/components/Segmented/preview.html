@@ -1,0 +1,17 @@
+<!-- @dsCard group="Controls" height=72 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Segmented — preview</title>
+<style>html,body{margin:0;background:var(--bg)} #root{padding:24px;min-height:100vh;box-sizing:border-box}</style></head>
+<body>
+<div id="root" class="o-root o-ground"></div>
+<script>
+var O = window.Ouch, h = React.createElement, F = React.Fragment;
+function mount(el) { ReactDOM.createRoot(document.getElementById('root')).render(el); }
+function Eyebrow(p) { return h('div', { className: 'o-eyebrow' }, h('span', { className: 'o-eyebrow__n' }, p.n), h('span', { className: 'o-eyebrow__t' }, p.t)); }
+mount(h('div', { style: { display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' } },
+  h(O.Segmented, { label: 'Curve', options: ['Ease Out', 'Spring', 'Bounce', 'Linear'], defaultValue: 'Spring' }),
+  h(O.Segmented, { label: 'Modifier', options: [{ value: 'opt', label: 'Option', symbol: 'option' }, { value: 'cmd', label: 'Command', symbol: 'command' }] })));
+</script>
+</body>
+</html>
