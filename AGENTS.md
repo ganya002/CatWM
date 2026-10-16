@@ -4,6 +4,8 @@ Building the project
 ./build.sh 
 ```
 
+For fast rebuilds while you work, use `./build.sh --dev` (debug build, a few seconds per rebuild). Do not ship a `--dev` build.
+
 # Verifying
 
 ### Requires visual verification
