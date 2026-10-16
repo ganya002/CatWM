@@ -28,8 +28,7 @@ struct FeedbackSheet: View {
     }
 
     private var disclosure: String {
-        let crash = feedback.crash != nil ? ", the crash report" : ""
-        return "This includes your description, Ouch's recent logs, your config\(crash) and your Mac's setup. "
+        "This includes your description, Ouch's recent logs, your config and your Mac's setup. "
             + "We use these to fix problems and improve Ouch."
     }
 

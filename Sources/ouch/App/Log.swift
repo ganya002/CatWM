@@ -9,16 +9,28 @@ enum Log {
     /// `open ouch.app --args --verbose`
     static let verboseLaunch = CommandLine.arguments.contains("--verbose")
 
+    /// Where this run's lines start; everything before it is from earlier runs.
+    private static var launchOffset: UInt64 = 0
+
     private static let handle: FileHandle? = {
         let fm = FileManager.default
-        if let size = (try? fm.attributesOfItem(atPath: url.path))?[.size] as? Int, size > 2_000_000 {
-            try? fm.removeItem(at: url)
+        // A long log keeps its newest part, so a crash report still has the lines before the crash.
+        if let size = (try? fm.attributesOfItem(atPath: url.path))?[.size] as? Int, size > 2_000_000,
+           let data = fm.contents(atPath: url.path) {
+            try? data.suffix(500_000).write(to: url)
         }
         if !fm.fileExists(atPath: url.path) { fm.createFile(atPath: url.path, contents: nil) }
         let h = try? FileHandle(forWritingTo: url)
-        _ = try? h?.seekToEnd()
+        launchOffset = (try? h?.seekToEnd()) ?? 0
         return h
     }()
+
+    /// The log as it was when this run started: the last lines are the previous run's.
+    static func beforeLaunch() -> String {
+        _ = handle
+        guard let data = FileManager.default.contents(atPath: url.path) else { return "" }
+        return String(decoding: data.prefix(Int(launchOffset)), as: UTF8.self)
+    }
 
     private static let time: DateFormatter = {
         let f = DateFormatter()

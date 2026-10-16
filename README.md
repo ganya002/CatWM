@@ -48,7 +48,7 @@ Set `LINEAR_TEAM_ID` in `wrangler.toml` to the team's UUID, and put the worker's
 
 The relay files one Linear issue per fingerprint (`[perf:<id>]` in the title) and adds a comment for each repeat, up to 10. Its API key needs the read and create comment scopes besides create issues. Set `LINEAR_PERF_LABEL_ID` to label the issues.
 
-If Ouch crashes, a small watchdog reopens it once macOS has written the crash report. Nothing pops up: the menu bar icon, Settings… and the feedback button in Settings get a yellow dot, and Send feedback then sends the crash report with the description. `open build/ouch.app --args --crash-report` marks the newest crash report as waiting.
+If Ouch crashes, a small watchdog reopens it once macOS has written the crash report. Nothing pops up: Ouch sends the crash report, the log up to the crash, the config and the Mac's setup to the relay on its own. If the send fails, it tries again on the next launch. `open build/ouch.app --args --crash-report` sends the newest crash report, to test the upload.
 
 ## Releasing with Amore
 

@@ -448,19 +448,10 @@ struct AdvancedSection<Content: View>: View {
 }
 
 
-/// Send Feedback at the foot of the sidebar, with the crash dot while a crash report is waiting.
+/// Send Feedback at the foot of the sidebar.
 private struct FeedbackButton: View {
-    @StateObject private var crashed = Flag()
-
     var body: some View {
-        OIconButton(symbol: "ladybug", label: crashed.on ? "Send feedback: Ouch crashed" : "Send feedback") { Feedback.shared.open() }
-            .overlay(alignment: .topTrailing) {
-                if crashed.on { NotificationDot().offset(x: -6, y: 6).allowsHitTesting(false) }
-            }
+        OIconButton(symbol: "ladybug", label: "Send feedback") { Feedback.shared.open() }
             .frame(width: 30) // the share button above is 30 wide: centred under it
-            .onAppear { crashed.on = CrashWatch.pending != nil }
-            .onReceive(NotificationCenter.default.publisher(for: .crashPendingChanged)) { _ in
-                crashed.on = CrashWatch.pending != nil
-            }
     }
 }

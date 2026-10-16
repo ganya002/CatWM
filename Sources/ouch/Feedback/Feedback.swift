@@ -3,7 +3,7 @@ import AppKit
 import SwiftUI
 
 // Feedback is a description the user writes in Settings. It goes to the report relay with Ouch's
-// recent log, the config, the Mac's setup and (after a crash) the macOS crash report.
+// recent log, the config and the Mac's setup. Crashes go the same way on their own (see CrashWatch).
 
 final class Feedback: ObservableObject {
     static let shared = Feedback()
@@ -13,14 +13,11 @@ final class Feedback: ObservableObject {
     @Published var sending = false
     /// The last send didn't go through; the button offers to try again.
     @Published var failed = false
-    /// The crash report that goes with this feedback, taken from CrashWatch when the sheet opens.
-    @Published private(set) var crash: URL?
 
     var canSend: Bool { !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !sending }
 
-    /// Opens the sheet. A waiting crash report goes with it; an unsent draft stays.
+    /// Opens the sheet. An unsent draft stays.
     func open() {
-        if let pending = CrashWatch.take() { crash = pending }
         failed = false
         isOpen = true
     }
@@ -31,12 +28,14 @@ final class Feedback: ObservableObject {
         guard canSend, let endpoint = Self.endpoint else { return }
         sending = true
         failed = false
-        Self.post(text: text, crash: crash, to: endpoint) { [weak self] ok in
+        let body = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let title = body.split(separator: "\n").first.map(String.init) ?? ""
+        let log = (try? String(contentsOf: Log.url, encoding: .utf8)) ?? ""
+        Self.post(title: title, body: body, log: log, crash: nil, to: endpoint) { [weak self] ok in
             guard let self else { return }
             sending = false
             guard ok else { return failed = true }
             text = ""
-            crash = nil
             isOpen = false
             HUD.shared.show("Feedback sent", on: nil)
         }
@@ -50,14 +49,19 @@ final class Feedback: ObservableObject {
         return v.flatMap(URL.init(string:))
     }
 
-    private static func post(text: String, crash: URL?, to url: URL, done: @escaping (Bool) -> Void) {
-        let body = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        let summary = crash.flatMap(CrashSummary.init)
-        let first = body.split(separator: "\n").first.map(String.init) ?? ""
-        let title = String((summary.map { "Crash: \($0.headline)" } ?? first).prefix(110))
+    /// A crash report from the last run, with the log as it was when that run ended.
+    static func sendCrash(_ crash: URL, done: @escaping (Bool) -> Void) {
+        guard let endpoint else { return done(false) }
+        let summary = CrashSummary(crash)
+        let title = "Crash: " + (summary?.headline ?? crash.lastPathComponent)
+        let body = "Ouch crashed\(summary.map { " at \($0.time)" } ?? ""). Sent on its own after the restart."
+        post(title: title, body: body, log: Log.beforeLaunch(), crash: crash, to: endpoint, done: done)
+    }
 
-        var files: [(String, String)] = [("environment.md", environment(crash: summary))]
-        if let log = try? String(contentsOf: Log.url, encoding: .utf8) {
+    private static func post(title: String, body: String, log: String, crash: URL?, to url: URL, done: @escaping (Bool) -> Void) {
+        let title = String(title.prefix(110))
+        var files: [(String, String)] = [("environment.md", environment(crash: crash.flatMap(CrashSummary.init)))]
+        if !log.isEmpty {
             files.append(("ouch.log", log.split(separator: "\n", omittingEmptySubsequences: false).suffix(1500).joined(separator: "\n")))
         }
         if let conf = try? String(contentsOf: Config.url, encoding: .utf8) { files.append(("ouch.conf", conf)) }
@@ -89,7 +93,7 @@ final class Feedback: ObservableObject {
             let id = reply.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }?["id"] as? String
             DispatchQueue.main.async {
                 if status == 200 {
-                    Log.info("feedback: filed as \(id ?? "?")")
+                    Log.info("feedback: \(crash != nil ? "crash " : "")filed as \(id ?? "?")")
                     done(true)
                 } else {
                     Log.info("feedback: not sent (\(status) \(error?.localizedDescription ?? ""))")
@@ -183,14 +187,9 @@ struct CrashSummary {
     }
 }
 
-extension Notification.Name {
-    /// A crash report is waiting, or was just taken: the menu bar icon, menu and Settings redraw their dot.
-    static let crashPendingChanged = Notification.Name("ouch.crashPendingChanged")
-}
-
 /// Notices when Ouch crashed. A marker file lives while Ouch runs and is removed on every clean exit;
-/// a small watchdog process brings Ouch back after a crash. Nothing pops up: the menu bar icon,
-/// Settings… and the feedback button in Settings get a dot until the user opens Send Feedback.
+/// a small watchdog process brings Ouch back after a crash. Nothing pops up: the crash report and the
+/// log up to the crash go to the report relay on their own.
 enum CrashWatch {
     private static let support = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent("Library/Application Support/Ouch")
@@ -199,18 +198,10 @@ enum CrashWatch {
     private static let seenKey = "lastCrashReportSeen"
     private static let pendingKey = "pendingCrashReport"
 
-    /// The crash report waiting to be looked at; kept across launches until it's opened.
-    static var pending: URL? {
+    /// A crash report not sent yet; kept across launches until the relay takes it.
+    private static var pending: URL? {
         guard let path = UserDefaults.standard.string(forKey: pendingKey), FileManager.default.fileExists(atPath: path) else { return nil }
         return URL(fileURLWithPath: path)
-    }
-
-    /// The waiting crash report, which is no longer waiting after this.
-    static func take() -> URL? {
-        guard let crash = pending else { return nil }
-        UserDefaults.standard.removeObject(forKey: pendingKey)
-        NotificationCenter.default.post(name: .crashPendingChanged, object: nil)
-        return crash
     }
 
     static func start() {
@@ -225,9 +216,9 @@ enum CrashWatch {
         let defaults = UserDefaults.standard
         if defaults.object(forKey: seenKey) == nil { defaults.set(Date(), forKey: seenKey) } // don't offer old crashes
         if CommandLine.arguments.contains("--crash-report"), let latest = newestReport(after: .distantPast) {
-            return offer(latest) // for working on the crash dot
+            return found(latest) // sends the newest crash report, to test the upload
         }
-        guard let previous else { return }
+        guard let previous else { return pending.map(send) ?? () } // an earlier send that didn't go through
         Log.info("crash watch: the last run didn't exit cleanly")
         let since = max(previous, defaults.object(forKey: seenKey) as? Date ?? previous)
         // macOS writes the report a few seconds after the crash, and the watchdog can relaunch us sooner.
@@ -238,16 +229,22 @@ enum CrashWatch {
     static func cleanExit() { try? FileManager.default.removeItem(at: marker) }
 
     private static func poll(after date: Date, attempts: Int) {
-        if let report = newestReport(after: date) { return offer(report) }
+        if let report = newestReport(after: date) { return found(report) }
         guard attempts > 0 else { return Log.info("crash watch: no crash report (force quit or killed?)") }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) { poll(after: date, attempts: attempts - 1) }
     }
 
-    private static func offer(_ report: URL) {
+    private static func found(_ report: URL) {
         UserDefaults.standard.set(Date(), forKey: seenKey)
         UserDefaults.standard.set(report.path, forKey: pendingKey)
         Log.info("crash watch: found \(report.lastPathComponent)")
-        NotificationCenter.default.post(name: .crashPendingChanged, object: nil)
+        send(report)
+    }
+
+    private static func send(_ report: URL) {
+        Feedback.sendCrash(report) { ok in
+            if ok { UserDefaults.standard.removeObject(forKey: pendingKey) }
+        }
     }
 
     private static func newestReport(after date: Date) -> URL? {

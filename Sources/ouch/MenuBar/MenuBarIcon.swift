@@ -10,8 +10,7 @@ enum MenuBarIcon {
     private static let iconSize: CGFloat = 16
     private static var iconCache: [pid_t: NSImage] = [:]
 
-    /// `dot`: a crash report is waiting (see CrashWatch); a spark-yellow dot on the layout drawing.
-    static func image(mode: String, workspace: String?, layout: Layout, pids: [pid_t], dot: Bool = false) -> NSImage {
+    static func image(mode: String, workspace: String?, layout: Layout, pids: [pid_t]) -> NSImage {
         let wsText = workspace.map { NSAttributedString(string: $0, attributes: [
             .font: NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .bold), .foregroundColor: NSColor.labelColor,
         ]) }
@@ -29,7 +28,6 @@ enum MenuBarIcon {
         parts.append((glyphSize.width, shown.isEmpty ? 0 : 5, { x in
             let r = CGRect(x: x, y: (height - glyphSize.height) / 2, width: glyphSize.width, height: glyphSize.height)
             drawLayout(layout, color: mode.isEmpty ? .labelColor : .systemBlue, in: r)
-            if dot { drawDot(at: CGPoint(x: r.maxX - 1, y: r.maxY - 1)) }
         }))
         for (i, pid) in shown.enumerated() {
             let icon = self.icon(for: pid)
@@ -52,18 +50,8 @@ enum MenuBarIcon {
             return true
         }
         image.accessibilityDescription = (workspace.map { "Workspace \($0), " } ?? "") + layout.title
-            + (mode.isEmpty ? "" : ", \(mode) mode") + (dot ? ", crash report waiting" : "")
+            + (mode.isEmpty ? "" : ", \(mode) mode")
         return image
-    }
-
-    /// A notification dot centred on `p`, with a clear ring so it reads on any menu bar.
-    static func drawDot(at p: CGPoint) {
-        let r: CGFloat = 3
-        NSGraphicsContext.current?.cgContext.setBlendMode(.clear)
-        NSBezierPath(ovalIn: CGRect(x: p.x - r - 1.5, y: p.y - r - 1.5, width: (r + 1.5) * 2, height: (r + 1.5) * 2)).fill()
-        NSGraphicsContext.current?.cgContext.setBlendMode(.normal)
-        NSColor(srgbRed: 1, green: 0.8, blue: 0, alpha: 1).setFill() // the logo's spark yellow, accent-2
-        NSBezierPath(ovalIn: CGRect(x: p.x - r, y: p.y - r, width: r * 2, height: r * 2)).fill()
     }
 
     /// Icons of apps that quit are dropped so the cache doesn't grow forever.

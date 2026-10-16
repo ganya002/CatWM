@@ -190,9 +190,8 @@ final class MenuModel: ObservableObject {
 
         out.append(.sep("s2"))
 
-        // A waiting crash report: Send Feedback in Settings takes it.
         out.append(MenuItem(id: "settings", label: "Settings…", symbol: "gearshape", shortcut: ["⌘", ","], keywords: "preferences options",
-                            rotates: true, dot: CrashWatch.pending != nil, action: { SettingsWindow.shared.show(pane: nil) }))
+                            rotates: true, action: { SettingsWindow.shared.show(pane: nil) }))
         let paused = TutorialLesson.paused
         out.append(MenuItem(id: "tutorial", label: paused == nil ? "Keyboard Tutorial…" : "Resume Tutorial…", symbol: "graduationcap",
                             value: paused?.name, enabled: trusted, keywords: "learn practice drill keys lessons onboarding help",

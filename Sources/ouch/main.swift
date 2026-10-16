@@ -22,10 +22,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         NSApp.mainMenu = makeMainMenu()
         Updater.shared.start()
-        NotificationCenter.default.addObserver(forName: .crashPendingChanged, object: nil, queue: .main) { [weak self] _ in
-            self?.updateIcon()
-            StatusMenu.shared.refreshIfOpen()
-        }
         CrashWatch.start()
         PerfMonitor.start()
         WindowManager.shared.onChange = { [weak self] in
@@ -142,7 +138,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         MenuBarIcon.pruneIcons(keeping: Set(state.pids))
         button.image = MenuBarIcon.image(mode: Hotkeys.shared.submap, workspace: state.workspace, layout: state.layout,
-                                         pids: state.pids, dot: CrashWatch.pending != nil)
+                                         pids: state.pids)
     }
 
     /// Only shown while the settings window is active; without an Edit menu, ⌘C/⌘V/⌘Z don't work in text fields.
