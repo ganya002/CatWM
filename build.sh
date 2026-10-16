@@ -1,14 +1,18 @@
 #!/bin/sh
 # Builds ouch.app into ./build. Run it, then grant Accessibility when prompted.
+# Usage: ./build.sh [--dev]   (--dev makes an unoptimized debug build: a few seconds per rebuild,
+# not about a minute. Do not ship it; release.sh and install.sh use the default release build.)
 set -e
 cd "$(dirname "$0")"
-swift build -c release
+CONFIG=release
+if [ "$1" = "--dev" ]; then CONFIG=debug; fi
+swift build -c "$CONFIG"
 pkill -x ouch 2>/dev/null || true  # `open` would just re-activate an old running copy
 pkill -x Hyprthyst 2>/dev/null || true # the app's old name; two tilers would fight over the same windows
 APP=build/ouch.app
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Frameworks" "$APP/Contents/Resources"
-cp .build/release/ouch "$APP/Contents/MacOS/"
+cp ".build/$CONFIG/ouch" "$APP/Contents/MacOS/"
 # SwiftPM records the deployment target (14.0) as the SDK version, so macOS would treat the app as
 # pre-26 and keep the old look for its sidebar, toolbar and controls. Stamp the real SDK in.
 xcrun vtool -set-build-version macos 14.0 "$(xcrun --show-sdk-version)" -replace \
