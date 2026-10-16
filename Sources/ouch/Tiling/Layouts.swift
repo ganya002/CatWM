@@ -1,7 +1,5 @@
-// Tiling: the layout algorithms (Amethyst layouts) that compute window frames.
 import CoreGraphics
 
-/// Amethyst's layouts. Frames are computed in top-left-origin coordinates; `nil` means "don't touch".
 enum Layout: String, CaseIterable {
     case tall, tallRight = "tall-right", wide, middleWide = "middle-wide", fullscreen, column, row, floating, bsp
     case threeColumnLeft = "3column-left", threeColumnMiddle = "3column-middle", threeColumnRight = "3column-right"
@@ -29,7 +27,6 @@ enum Layout: String, CaseIterable {
         }
     }
 
-    /// For tight spots like the cycle chips, where the full name would truncate.
     var shortTitle: String {
         switch self {
         case .bsp: "BSP"
@@ -97,8 +94,6 @@ enum Layout: String, CaseIterable {
         }
     }
 
-    /// Which axis the main/secondary boundary lies on, used for mouse-resizing. `fromStart` is
-    /// true when the main pane sits at the left/top.
     var ratioAxis: (horizontal: Bool, fromStart: Bool)? {
         switch self {
         case .tall, .widescreenTall, .twoPane, .threeColumnLeft, .bsp: (true, true)
@@ -121,14 +116,9 @@ private func rows(_ r: CGRect, _ n: Int) -> [CGRect] {
     return (0..<n).map { CGRect(x: r.minX, y: r.minY + CGFloat($0) * h, width: r.width, height: h) }
 }
 
-/// Windows with a minimum size larger than their slot would overlap their neighbours. Within each
-/// stack (windows sharing a column or a row), give those windows their minimum and split the rest
-/// of the stack evenly between the others. Stacks that can't fit everyone are left alone.
 func fitMinimums(_ frames: [CGRect], mins: [CGSize?], gap: CGFloat) -> [CGRect] {
     guard mins.contains(where: { $0 != nil }) else { return frames }
-    // A bad frame is better left as is. Keys stay Doubles: Int(_:) traps on NaN and infinity.
     guard frames.allSatisfy({ [$0.minX, $0.minY, $0.width, $0.height].allSatisfy { $0.isFinite && abs($0) < 1e9 } }) else { return frames }
-    // `+ 0` turns -0.0 into 0.0, so the keys match as the Int keys they replace did.
     func key(_ v: CGFloat) -> String { "\(v.rounded() + 0)" }
     var out = frames
     for vertical in [true, false] {
@@ -139,13 +129,12 @@ func fitMinimums(_ frames: [CGRect], mins: [CGSize?], gap: CGFloat) -> [CGRect] 
         for idx in groups.values where idx.count > 1 {
             let sorted = idx.sorted { vertical ? out[$0].minY < out[$1].minY : out[$0].minX < out[$1].minX }
             let starts = sorted.map { vertical ? out[$0].minY : out[$0].minX }
-            guard Set(starts.map { $0.rounded() }).count == starts.count else { continue } // stacked on top of each other
+            guard Set(starts.map { $0.rounded() }).count == starts.count else { continue }
             let sizes = sorted.map { vertical ? out[$0].height : out[$0].width }
             let need = sorted.map { i -> CGFloat in vertical ? (mins[i]?.height ?? 0) : (mins[i]?.width ?? 0) }
             guard zip(need, sizes).contains(where: { $0 > $1 + 1 }) else { continue }
             let total = sizes.reduce(0, +)
             guard need.reduce(0, +) <= total else { continue }
-            // Water-filling: anyone whose minimum beats the even share is pinned to it.
             var pinned = Set<Int>()
             var share: CGFloat = 0
             while true {

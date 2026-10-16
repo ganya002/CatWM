@@ -1,4 +1,3 @@
-// Compile as main.swift alongside WindowServerUpdates.swift. No WindowServer calls are made.
 import AppKit
 final class Calls {
     let lock = NSLock()
@@ -17,7 +16,7 @@ precondition(calls.counts == [1, 0], "Overlapping import must keep the batch ali
 second.finish()
 precondition(calls.counts == [1, 1], "Last lease must release exactly once")
 let timedOut = batches.begin()!
-usleep(80_000) // main thread intentionally cannot service a timer
+usleep(80_000)
 precondition(calls.counts == [2, 2], "Watchdog must release without the main run loop")
 let next = batches.begin()!
 timedOut.finish()

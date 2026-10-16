@@ -1,18 +1,12 @@
-// App: detects slow animations and main-thread hangs, and reports them through the report relay.
 import AppKit
 import CryptoKit
 import QuartzCore
 
-/// Watches Ouch's own frame pacing while it animates (other apps' windows and its own panels), the AX
-/// cost per app, and main-thread hangs. Every event goes to the log. With `perf-reports = true` the
-/// repeat offenders also go to the relay's `/perf` route, which files or updates one Linear issue per
-/// fingerprint. The payload holds numbers and bundle IDs only: no window titles, paths or names.
 enum PerfMonitor {
-    /// A slow app seen during a window move.
     struct SlowApp {
         let bundle: String
         let stepMs: Double
-        let skipped: Double // share of frames dropped because the app was still busy
+        let skipped: Double
     }
 
     fileprivate struct Event {
@@ -23,10 +17,9 @@ enum PerfMonitor {
         var tags: Set<String> = []
     }
 
-    // MARK: Thresholds
 
-    private static let settle = 30.0 // seconds after launch before anything counts
-    private static let skipFirstRuns = 2 // cold caches
+    private static let settle = 30.0
+    private static let skipFirstRuns = 2
     private static let hangLine = 0.25, severeHang = 1.0
     private static let slowAppStepMs = 24.0, slowAppSkipped = 0.5
     private static let eventsNeeded = 5, severeEventsNeeded = 2
@@ -41,9 +34,7 @@ enum PerfMonitor {
 
     static var enabled: Bool { WindowManager.shared.config.perfReports }
 
-    // MARK: Entry points
 
-    /// Starts the frame clock for one animation. Call `end` when it is over.
     static func begin(_ kind: String) -> FrameRun? {
         guard !asleep, let screen = NSScreen.main else { return nil }
         let run = FrameRun(kind: kind, screen: screen)
@@ -51,7 +42,6 @@ enum PerfMonitor {
         return run
     }
 
-    /// Measures a SwiftUI or layer animation that has no completion handler.
     static func track(_ kind: String, for seconds: Double) {
         guard let run = begin(kind) else { return }
         DispatchQueue.main.asyncAfter(deadline: .now() + seconds + 0.05) { run.end() }
@@ -63,7 +53,6 @@ enum PerfMonitor {
                               (NSWorkspace.sessionDidResignActiveNotification, true), (NSWorkspace.sessionDidBecomeActiveNotification, false)] {
             center.addObserver(forName: name, object: nil, queue: .main) { _ in asleep = value }
         }
-        // The run loop is busy from `afterWaiting` to `beforeWaiting`; a long stretch is a hang.
         let activities = CFRunLoopActivity([.afterWaiting, .beforeWaiting]).rawValue
         let observer = CFRunLoopObserverCreateWithHandler(nil, activities, true, 0) { _, activity in
             let now = CACurrentMediaTime()
@@ -76,7 +65,6 @@ enum PerfMonitor {
         CFRunLoopAddObserver(CFRunLoopGetMain(), observer, .commonModes)
     }
 
-    // MARK: Verdicts
 
     fileprivate static func finish(_ run: FrameRun, apps: [SlowApp]) {
         active.removeAll { $0 === run }
@@ -112,7 +100,6 @@ enum PerfMonitor {
         let text = String(format: "perf: %@ frames %d p95 %.1fms slow %.0f%% hang %.0fms app %@ tags %@", event.kind, event.frames,
                           event.p95Ms, event.slowShare * 100, event.hangMs, event.app?.bundle ?? "-", event.tags.sorted().joined(separator: ","))
         Log.info(text)
-        // A hot or loaded machine is slow for reasons that are not Ouch's. Keep the log line, skip the report.
         guard enabled, event.tags.isDisjoint(with: ["thermal", "lowpower", "load"]),
               CACurrentMediaTime() - launched > settle, let endpoint = endpoint else { return }
         let fp = fingerprint(event)
@@ -146,9 +133,7 @@ enum PerfMonitor {
         }
     }
 
-    // MARK: Upload
 
-    /// The relay's `/perf` route, next to `/report`.
     private static var endpoint: URL? {
         guard let s = Bundle.main.object(forInfoDictionaryKey: "OuchReportURL") as? String, s.hasSuffix("/report") else { return nil }
         return URL(string: String(s.dropLast("report".count)) + "perf")
@@ -201,10 +186,7 @@ enum PerfMonitor {
     }()
 }
 
-// MARK: - Frame run
 
-/// The frame clock for one animation. A display link on the screen counts how late each frame comes;
-/// a frame that takes more than 1.5 display periods is slow.
 final class FrameRun: NSObject {
     struct Stats { let frames: Int; let duration, period, p95, slowShare: Double }
 
@@ -233,7 +215,7 @@ final class FrameRun: NSObject {
         defer { last = l.timestamp }
         guard last > 0 else { return }
         let dt = l.timestamp - last
-        if dt > 0.5 { tags.insert("gap") } else { gaps.append(dt) } // a sleep or a hang, judged on its own
+        if dt > 0.5 { tags.insert("gap") } else { gaps.append(dt) }
     }
 
     var stats: Stats? {
@@ -244,7 +226,6 @@ final class FrameRun: NSObject {
                      slowShare: Double(gaps.filter { $0 > period * 1.5 }.count) / Double(gaps.count))
     }
 
-    /// Stops the clock and judges the run. `apps` is the AX cost per app, for window moves.
     func end(apps: [PerfMonitor.SlowApp] = []) {
         guard !ended else { return }
         ended = true

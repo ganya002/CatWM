@@ -6,7 +6,6 @@ export default defineConfig({
     compatibility_date: "2026-02-24",
     routes: [{ pattern: "ouch.perwko.com", custom_domain: true }],
     workers_dev: false,
-    // Void checks each new version at its preview URL before it takes traffic.
     preview_urls: true,
   },
 });

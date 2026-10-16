@@ -1,9 +1,7 @@
-// Tiling: saves/loads workspaces, shows a workspace, moves windows between workspaces, Dock pulls.
 import AppKit
 
 extension WindowManager {
 
-    // MARK: - Saving and loading workspaces
 
     func loadWorkspaces() {
         guard config.virtualWorkspaces else { return }
@@ -21,7 +19,6 @@ extension WindowManager {
         for (k, v) in d.dictionary(forKey: "ws.floating") as? [String: Bool] ?? [:] {
             if let id = CGWindowID(k) { savedFloating[id] = v }
         }
-        // "layout ratio mainCount" per workspace, so a restart (or an update) keeps each one's arrangement.
         for (ws, v) in d.dictionary(forKey: "ws.layouts") as? [String: String] ?? [:] where isVirtual(ws) {
             let parts = v.split(separator: " ").map(String.init)
             guard let layout = parts.first.flatMap(Layout.init(rawValue:)) else { continue }
@@ -60,10 +57,7 @@ extension WindowManager {
         d.set(layouts, forKey: "ws.layouts")
     }
 
-    // MARK: - Showing a workspace
 
-    /// Hyprland's `workspace`: shows it on its display (a new one opens on the focused display)
-    /// and focuses the window you last used there.
     func showWorkspace(_ ws: String, focusing preferred: Window? = nil, focus takesFocus: Bool = true, attempts: Int = 3) {
         let screens = Screen.all()
         guard let here = currentScreen() ?? screens.first else { return }
@@ -73,14 +67,12 @@ extension WindowManager {
         monitorOf[ws] = monitor.uuid
         virtualShown[monitor.uuid] = ws
         autoSwitchAfter = Date().addingTimeInterval(0.6)
-        // Away from the home Space, a workspace can't be shown without going there; a quiet show just records it.
         if !takesFocus, !isOnHomeSpace(monitor) { return }
-        // On another macOS Space? Go to the home Space first, then show the workspace there.
         if !isOnHomeSpace(monitor), let home = homeSpace[monitor.uuid], let info = Spaces.list(display: monitor.uuid),
            let index = info.ids.firstIndex(of: home), let desktop = info.desktops.firstIndex(of: index) {
             guard attempts > 0 else { Log.info("workspaces: couldn't reach the home Space for \(ws)"); return }
             stageHomeSpace(ws, replacing: leaving, on: monitor, home: home)
-            CGWarpMouseCursorPosition(monitor.center) // space switching acts on the display under the pointer
+            CGWarpMouseCursorPosition(monitor.center)
             guard let steps = goToSpace(desktop + 1) else { Log.info("workspaces: can't switch Spaces for \(ws)"); return }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5 + 0.15 * Double(steps)) { [weak self] in
                 self?.showWorkspace(ws, focusing: preferred, attempts: attempts - 1)
@@ -91,7 +83,6 @@ extension WindowManager {
         let changed = previous != ws
         shown[monitor.uuid] = ws
         Log.debug("workspaces: showing \(ws) on \(monitor.ns.localizedName)")
-        // Quiet shows (a sort, restoring a layout) snap; a switch the user asked for slides.
         if changed, takesFocus, let previous { beginSlide(from: previous, to: ws, on: monitor) }
         refresh()
         if changed, !quietWorkspaceHUD, config.enablesLayoutHUD, config.enablesLayoutHUDOnSpaceChange {
@@ -112,9 +103,6 @@ extension WindowManager {
         onChange?()
     }
 
-    /// Before going back to the home Space from another macOS Space, sets the home Space up to show `ws`
-    /// while it is still out of sight: the workspace that was showing there parks, and `ws` takes its tiles.
-    /// Otherwise the Space slide shows the old workspace first, and only then swaps to `ws`.
     private func stageHomeSpace(_ ws: String, replacing old: String?, on s: Screen, home: UInt64) {
         guard config.virtualWorkspaces, isVirtual(ws) else { return }
         let screens = Screen.all()
@@ -122,7 +110,6 @@ extension WindowManager {
         if let old, old != ws, isVirtual(old) {
             for id in order where workspaceOf[id] == old && onHome(id) { park(id, screens: screens) }
         }
-        // The windows a refresh would find there: not minimized, and their app not hidden.
         let arriving = order.filter { id in
             guard workspaceOf[id] == ws, let w = windows[id], !w.isNativeFullscreen, onHome(id),
                   w.element.bool(kAXMinimizedAttribute) != true,
@@ -145,15 +132,12 @@ extension WindowManager {
         Log.debug("workspaces: staged \(ws) on the home Space (\(arriving.count) windows, parked \(old ?? "none"))")
     }
 
-    // MARK: - Moving windows between workspaces
 
-    /// Hyprland's `movetoworkspace` (follow) and `movetoworkspacesilent`.
     func moveFocusedWindow(to ws: String, follow: Bool) {
         guard let w = focusedWindow(), workspaceOf[w.id] != ws else { return }
         moveWindow(w, toWorkspace: ws, follow: follow)
     }
 
-    /// Move the real window first; only commit Ouch's assignment after WindowServer confirms it.
     private func moveWindow(_ w: Window, toWorkspace ws: String, follow: Bool) {
         let screens = Screen.all()
         guard config.virtualWorkspaces, isVirtual(ws), !workspaceMoves.contains(w.id),
@@ -168,16 +152,12 @@ extension WindowManager {
         let known = windows[w.id] != nil, from = workspaceOf[w.id], frame = w.frame
         workspaceMoves.insert(w.id)
         autoSwitchAfter = Date().addingTimeInterval(0.7)
-        // Put the window in its tile while it is still on its old Desktop, out of sight. It then
-        // arrives in its tile, instead of at its old frame on top of the other tiles. The other
-        // tiles keep their frames for now, and make room with the usual animation once it is here.
         if !known { windows[w.id] = w; order.append(w.id) }
         workspaceOf[w.id] = ws
         monitorOf[ws] = monitor.uuid
         snapNextPlacement.insert(w.id)
         refresh(instant: true, placing: [w.id])
         animator.afterPendingWrites { [weak self] in
-            // Hold the display through the Space move only, so the animation after it is not frozen.
             let displayBatch = WindowServerUpdates.shared.begin()
             let moveStarted = Date()
             func release() {
@@ -222,7 +202,7 @@ extension WindowManager {
         } else {
             autoSwitchAfter = Date().addingTimeInterval(0.6)
             refresh()
-            guard isShown(from) else { return } // importing a background window keeps the current focus
+            guard isShown(from) else { return }
             if let next = order.first(where: { workspaceOf[$0] == from && visible.contains($0) }).flatMap({ windows[$0] }) {
                 focus(next)
             } else {
@@ -231,11 +211,7 @@ extension WindowManager {
         }
     }
 
-    // MARK: - Windows on other desktops and Dock pulls
 
-    /// Menu candidates from every Desktop. Discovery never activates the app or raises its windows.
-    /// The window server names the candidate windows first, so only their apps get AX queries.
-    /// An overall deadline keeps one slow app from stalling the menu.
     func windowsOnOtherDesktops() -> [Window] {
         guard config.virtualWorkspaces, isStarted, Spaces.canMoveWindows,
               let s = currentScreen(), isOnHomeSpace(s) else { return [] }
@@ -246,7 +222,6 @@ extension WindowManager {
             return info.desktops.map { info.ids[$0] }
         })
         let homes = Set(homeSpace.values)
-        // Windows on another Desktop are off screen; the window list still has them with their pid.
         var offDesktop: [pid_t: Set<CGWindowID>] = [:]
         let list = CGWindowListCopyWindowInfo([.optionAll, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
         for d in list where (d[kCGWindowLayer as String] as? Int) == 0 && (d[kCGWindowIsOnscreen as String] as? Bool) != true {
@@ -263,8 +238,6 @@ extension WindowManager {
             guard Date() < deadline else { break }
             let element = AXUIElementCreateApplication(app.processIdentifier)
             AXUIElementSetMessagingTimeout(element, 0.1)
-            // Some apps omit inactive-Desktop windows from AXWindows. Keep using the AX
-            // handles Ouch discovered earlier while those Desktops were visible.
             let known = windows.values.filter { $0.pid == app.processIdentifier && ids.contains($0.id) }.map(\.element)
             let candidates = (known.count < ids.count ? element.elements(kAXWindowsAttribute) : []) + known
             var seen: Set<CGWindowID> = []
@@ -282,17 +255,13 @@ extension WindowManager {
         return result.sorted { ($0.bundleID ?? "", $0.id) < ($1.bundleID ?? "", $1.id) }
     }
 
-    /// Pull an inactive Desktop's window into the workspace showing here, keeping this Desktop active.
     func bringWindowHere(_ w: Window) {
         guard let s = currentScreen(), isOnHomeSpace(s), let ws = virtualShown[s.uuid] else { return }
         moveWindow(w, toWorkspace: ws, follow: false)
     }
 
-    /// Capture the destination before the Dock gets a chance to activate another Desktop.
-    /// Only intercept an app's ordinary click when its preferred window is on a native Desktop.
     func prepareDockPull(at point: CGPoint) -> (() -> Void)? {
         let deadline = Date().addingTimeInterval(0.15)
-        // Most clicks are nowhere near the Dock: let them through before any screen, Space or AX query.
         guard isStarted, config.virtualWorkspaces, !sortSession, dockArea.contains(point), Spaces.canMoveWindows,
               let display = Screen.all().first(where: { $0.frame.contains(point) }),
               isOnHomeSpace(display), let ws = virtualShown[display.uuid],
@@ -310,7 +279,6 @@ extension WindowManager {
               }), app.processIdentifier != getpid(), !app.isHidden else { return nil }
         let appElement = AXUIElementCreateApplication(app.processIdentifier)
         AXUIElementSetMessagingTimeout(appElement, 0.03)
-        // The focused/main window wins over other windows of the same app, just like the Dock.
         let candidates = [appElement.element(kAXFocusedWindowAttribute), appElement.element(kAXMainWindowAttribute)].compactMap { $0 }
             + focusOrder.compactMap { windows[$0] }.filter { $0.pid == app.processIdentifier }.map(\.element)
             + appElement.elements(kAXWindowsAttribute)
@@ -320,12 +288,10 @@ extension WindowManager {
         })
         var seen: Set<CGWindowID> = []
         for el in candidates {
-            guard Date() < deadline else { return nil } // never stall the mouse tap on an unresponsive app
+            guard Date() < deadline else { return nil }
             AXUIElementSetMessagingTimeout(el, 0.03)
             guard let id = el.windowID, seen.insert(id).inserted else { continue }
             guard el.string(kAXSubroleAttribute) == kAXStandardWindowSubrole else { continue }
-            // If the window the Dock would select is already on an Ouch home Desktop,
-            // minimized, sticky, or fullscreen, let the Dock handle it normally.
             let membership = Spaces.of(window: id)
             guard membership.count == 1, let source = membership.first,
                   desktops.contains(source), !homeSpace.values.contains(source),
@@ -344,14 +310,10 @@ extension WindowManager {
         return nil
     }
 
-    // MARK: - Following focus
 
-    /// If the focused window lives on a hidden workspace (⌘-Tab, Dock, a link opening a window),
-    /// switch to it. Also remembers each workspace's last focused window.
     func followFocus() {
         guard isStarted, let w = reportedFocusedWindow() else { return }
         if let p = pendingFocus {
-            // Until macOS catches up with a focus we asked for, its reports are stale.
             guard p.id == w.id else { return }
             pendingFocus = nil
         }
@@ -363,11 +325,8 @@ extension WindowManager {
         guard config.virtualWorkspaces, let ws = workspaceOf[w.id], isVirtual(ws) else { return }
         if isShown(ws) { lastFocused[ws] = w.id; return }
         guard Date() > autoSwitchAfter else { return }
-        // Only a window we actually parked means "go to its workspace". One you can already see
-        // (e.g. on another macOS Desktop, not yet re-filed) just needs a refresh.
         guard isParked(w.frame, Screen.all()) else { scheduleRefresh(); return }
         if config.stayOnWorkspaceAfterClose, Date().timeIntervalSince(lastClose) < 1.0 {
-            // A window just closed and macOS handed focus to one on another workspace: stay put.
             Log.debug("workspaces: ignoring focus on \(ws) right after a close")
             refocusCurrentWorkspace()
             return
@@ -376,7 +335,6 @@ extension WindowManager {
         showWorkspace(ws, focusing: w)
     }
 
-    /// Focuses the last-used window on the workspace showing on the current display, or parks focus.
     private func refocusCurrentWorkspace() {
         guard let s = currentScreen(), let cur = virtualShown[s.uuid] else { return parkFocus() }
         let candidates = [lastFocused[cur]].compactMap { $0 } + order
@@ -387,8 +345,6 @@ extension WindowManager {
         }
     }
 
-    /// With nothing to focus, take keyboard focus ourselves so typing doesn't land in a window
-    /// that's parked off-screen.
     private func parkFocus() {
         let sink = focusSink ?? {
             let w = FocusSinkWindow(contentRect: NSRect(x: 0, y: 0, width: 1, height: 1),

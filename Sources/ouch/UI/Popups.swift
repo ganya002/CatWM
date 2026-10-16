@@ -1,13 +1,8 @@
-// UI: pop-up menus, popovers and tooltips drawn on the glass Surface.
 import AppKit
 import SwiftUI
 
-// Pop-up menus, popovers and tooltips everywhere in the app draw like the menu under the menu bar item:
-// the same glass Surface, rows and keyboard, never the system's NSMenu, NSPopover or help tags.
 
-// MARK: - Anchor
 
-/// Finds where a SwiftUI view sits on screen, for hanging a pop-up off it.
 final class ScreenAnchor: ObservableObject {
     weak var view: NSView?
 
@@ -23,16 +18,11 @@ private struct AnchorReader: NSViewRepresentable {
     func updateNSView(_ nsView: NSView, context: Context) { anchor.view = nsView }
 }
 
-/// Takes no clicks, so it can sit behind a control.
 private class PassThroughView: NSView {
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
 }
 
-// MARK: - Pop-up panel
 
-/// Shows pop-ups in borderless panels hung off a control: a menu or a small popover. One opened from inside
-/// another stacks on it and leaves it open. Each closes on a click elsewhere, Esc, or a pick, and hands the
-/// keyboard back to the window it came from.
 final class Popup: NSObject, NSWindowDelegate {
     static let shared = Popup()
 
@@ -44,17 +34,13 @@ final class Popup: NSObject, NSWindowDelegate {
         let keys: (NSEvent) -> Bool
     }
 
-    /// Open pop-ups, the innermost last.
     private var stack: [Entry] = []
     private var monitors: [Any] = []
-    /// Room around the surface for its shadow.
     private static let margin: CGFloat = 26
 
     var isOpen: Bool { !stack.isEmpty }
-    /// Counts pop-ups shown, so a popover only closes the pop-up it opened.
     private(set) var generation = 0
 
-    /// A menu of `items` under (or, without room, over) `anchor`, its leading edge on the control's.
     func menu(_ items: @escaping () -> [MenuItem], from anchor: NSRect, minWidth: CGFloat = 0, onClose: (() -> Void)? = nil) {
         let model = MenuModel()
         model.searchable = false
@@ -82,7 +68,6 @@ final class Popup: NSObject, NSWindowDelegate {
         DispatchQueue.main.async { withAnimation(Motion.easeOut) { model.appeared = true } }
     }
 
-    /// Any content on a `md` glass Surface under `anchor`, e.g. a list with its own colours.
     func popover<Content: View>(from anchor: NSRect, onClose: (() -> Void)? = nil, @ViewBuilder content: () -> Content) {
         let host = NSHostingView(rootView: content().surface(.md, glass: true).padding(Self.margin)
             .font(Theme.body()).foregroundStyle(Theme.ink).tint(Theme.accent))
@@ -96,11 +81,9 @@ final class Popup: NSObject, NSWindowDelegate {
     }
 
     private func show(_ view: AnyView, frame: NSRect, onClose: (() -> Void)?, keys: @escaping (NSEvent) -> Bool) {
-        // Opened from inside a pop-up, it stacks on it; from anywhere else it replaces what is open.
         let key = NSApp.keyWindow
         if !stack.contains(where: { $0.panel === key }) { closeAll() }
         generation += 1
-        // A fresh panel each time: the last one may still be fading out.
         let p = makePanel()
         stack.append(Entry(panel: p, generation: generation, parent: key, onClose: onClose, keys: keys))
         p.contentView = NSHostingView(rootView: view)
@@ -109,17 +92,14 @@ final class Popup: NSObject, NSWindowDelegate {
         installMonitors()
     }
 
-    /// Closes the pop-up shown as `generation`, and any opened from it, if it is still open.
     func close(generation g: Int) {
         if let i = stack.firstIndex(where: { $0.generation == g }) { close(from: i) }
     }
 
-    /// Closes the innermost pop-up.
     func close() { if !stack.isEmpty { close(from: stack.count - 1) } }
 
     func closeAll() { close(from: 0) }
 
-    /// Closes the pop-up at `index` and everything above it, innermost first.
     private func close(from index: Int) {
         while stack.count > index {
             var entry = stack.removeLast()
@@ -133,7 +113,6 @@ final class Popup: NSObject, NSWindowDelegate {
                 panel.orderOut(nil)
                 panel.contentView = nil
             })
-            // Hand the keyboard to what it came from; a pop-up still open keeps it for itself.
             if let parent = entry.parent, parent.isVisible { parent.makeKey() }
             done?()
         }
@@ -145,7 +124,7 @@ final class Popup: NSObject, NSWindowDelegate {
         p.level = .popUpMenu
         p.isOpaque = false
         p.backgroundColor = .clear
-        p.hasShadow = false // drawn by the surfaces
+        p.hasShadow = false
         p.isReleasedWhenClosed = false
         p.hidesOnDeactivate = false
         p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle, .transient]
@@ -156,8 +135,6 @@ final class Popup: NSObject, NSWindowDelegate {
     func windowDidResignKey(_ notification: Notification) {
         guard let resigned = notification.object as? NSWindow,
               stack.contains(where: { $0.panel === resigned }) else { return }
-        // The keyboard moving between pop-ups (into a child, or back to its parent) is no reason to close.
-        // A sheet or alert opened from the pop-up takes it for good; the pop-up has done its job.
         DispatchQueue.main.async { [weak self] in
             guard let self, let i = self.stack.firstIndex(where: { $0.panel === resigned }) else { return }
             if self.stack.contains(where: { $0.panel.isKeyWindow }) { return }
@@ -173,16 +150,15 @@ final class Popup: NSObject, NSWindowDelegate {
         if let m = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown], handler: { [weak self] e in
             guard let self else { return e }
             if let i = self.stack.firstIndex(where: { $0.panel === e.window }) {
-                // A click in a pop-up closes only those opened from it.
                 if i < self.stack.count - 1 { self.close(from: i + 1) }
                 return e
             }
             self.closeAll()
-            return nil // the click only closes, like a native menu
+            return nil
         }) { monitors.append(m) }
         if let m = NSEvent.addLocalMonitorForEvents(matching: .keyDown, handler: { [weak self] e in
             guard let self, let top = self.stack.last, top.panel.isKeyWindow else { return e }
-            if e.keyCode == 53 { if !top.keys(e) { self.close() }; return nil } // keys(e) once: Esc steps back a level
+            if e.keyCode == 53 { if !top.keys(e) { self.close() }; return nil }
             return top.keys(e) ? nil : e
         }) { monitors.append(m) }
     }
@@ -192,7 +168,6 @@ final class Popup: NSObject, NSWindowDelegate {
         monitors = []
     }
 
-    /// ↑↓ move, → opens, ← goes back, ↩ picks, Esc goes back then closes.
     private static func menuKey(_ e: NSEvent, _ model: MenuModel) -> Bool {
         switch e.keyCode {
         case 126: model.move(-1)
@@ -208,7 +183,6 @@ final class Popup: NSObject, NSWindowDelegate {
 }
 
 extension MenuItem {
-    /// A root column wide enough for its longest row, between 180 and 360.
     static func fitWidth(_ items: [MenuItem]) -> CGFloat {
         let font = Theme.nsBody(13.5)
         let keyFont = NSFont.systemFont(ofSize: 13)
@@ -220,19 +194,14 @@ extension MenuItem {
             if i.kind == .sub { w += 18 }
             widest = max(widest, w)
         }
-        // Row padding 10 each side, the lead slot 16 and its gap 10, the surface's 6 each side, and room
-        // for key glyphs (⌥ ⌘), which fall back to a wider face than the one measured.
         return min(max(widest * 1.1 + 20 + 26 + 12 + 20, 180), 380)
     }
 }
 
-// MARK: - Menu button
 
-/// A control that opens a pop-up menu of `items` on click. Its label is styled by the caller.
 struct OMenuButton<Label: View>: View {
     let items: () -> [MenuItem]
     var minWidth: CGFloat = 0
-    /// The label takes this style; plain by default.
     var style: OButtonStyle? = nil
     @ViewBuilder var label: Label
     @StateObject private var anchor = ScreenAnchor()
@@ -258,7 +227,6 @@ struct OMenuButton<Label: View>: View {
     }
 }
 
-/// A row in a popover list, lit on hover like a menu row; for rows that carry their own colours.
 struct MenuRowStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View { MenuRowBody(configuration: configuration) }
 }
@@ -276,9 +244,7 @@ private struct MenuRowBody: View {
     }
 }
 
-/// A pill that shows the current choice and pops up the options as radio rows.
 struct OMenuPicker<T: Hashable>: View {
-    /// Spoken by VoiceOver; not shown.
     let title: String
     let options: [(value: T, label: String)]
     @Binding var selection: T
@@ -310,7 +276,6 @@ struct OMenuPicker<T: Hashable>: View {
     }
 }
 
-// MARK: - Popover
 
 private final class PopoverState: ObservableObject { var generation = -1 }
 
@@ -329,7 +294,6 @@ private struct PopoverModifier<PopContent: View>: ViewModifier {
                     Popup.shared.popover(from: r, onClose: { binding.wrappedValue = false }, content: content)
                     state.generation = Popup.shared.generation
                 } else if !now {
-                    // Not a menu opened from inside the popover since.
                     Popup.shared.close(generation: state.generation)
                 }
             }
@@ -337,16 +301,12 @@ private struct PopoverModifier<PopContent: View>: ViewModifier {
 }
 
 extension View {
-    /// Opens `content` on a glass Surface under this view while `isPresented` holds.
     func oPopover<C: View>(isPresented: Binding<Bool>, @ViewBuilder content: @escaping () -> C) -> some View {
         modifier(PopoverModifier(isPresented: isPresented, content: content))
     }
 }
 
-// MARK: - Tooltip
 
-/// Shows `OTooltip` over the view the pointer rests on. After one shows, the next one along shows at
-/// once, like the system's help tags.
 final class Tooltip {
     static let shared = Tooltip()
 
@@ -355,8 +315,6 @@ final class Tooltip {
     private var work: DispatchWorkItem?
     private var lastHidden = Date.distantPast
     private var monitor: Any?
-    /// Checks the pointer is still over the view: a window can close or move under a resting pointer
-    /// without a mouse-exited event.
     private var watch: Timer?
     private static let margin: CGFloat = 30
 
@@ -398,18 +356,14 @@ final class Tooltip {
         let measure = NSHostingView(rootView: OTooltip(text: text, chords: chords, caret: .none))
         let tip = measure.fittingSize
         let x = min(max(r.midX - tip.width / 2, v.minX + 6), v.maxX - tip.width - 6)
-        // The caret reaches about 11pt past the pill, so leave room for it before the view.
         let gap: CGFloat = 14
         let above = r.maxY + gap + tip.height < v.maxY - 4
         let y = above ? r.maxY + gap : r.minY - gap - tip.height
-        // The caret points at the middle of the view, wherever the tip had to shift to stay on screen.
         let caretX = min(max(r.midX - x, 14), tip.width - 14)
         let caret: Caret = above ? .bottomAt(caretX - tip.width / 2) : .top(caretX)
 
         let p = panel ?? makePanel()
         panel = p
-        // The frame is set here alone: a hosting view left to size its window would resize it on layout
-        // and slide the pill down over the view.
         let frame = NSRect(x: x - m, y: y - m, width: tip.width + 2 * m, height: tip.height + 2 * m)
         let host = NSHostingView(rootView: OTooltip(text: text, chords: chords, caret: caret).padding(m))
         host.sizingOptions = []
@@ -434,7 +388,7 @@ final class Tooltip {
 
     private func makePanel() -> NSPanel {
         let p = NSPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        p.level = NSWindow.Level(rawValue: NSWindow.Level.popUpMenu.rawValue + 1) // over the menus too
+        p.level = NSWindow.Level(rawValue: NSWindow.Level.popUpMenu.rawValue + 1)
         p.isOpaque = false
         p.backgroundColor = .clear
         p.hasShadow = false
@@ -446,7 +400,6 @@ final class Tooltip {
     }
 }
 
-/// Watches the pointer over the view it sits behind; never takes a click.
 private final class TooltipTrackingView: PassThroughView {
     var text = ""
     var chords: [[String]] = []
@@ -482,8 +435,6 @@ private struct TooltipReader: NSViewRepresentable {
 }
 
 extension View {
-    /// Ouch's tooltip: an inverted pill over the view after a short rest, with optional keys, e.g.
-    /// `.tooltip("Retile windows", keys: ["⌥", "R"])`. An empty text shows nothing.
     func tooltip(_ text: String, keys: [String] = []) -> some View {
         background(TooltipReader(text: text, chords: keys.isEmpty ? [] : [keys]))
     }

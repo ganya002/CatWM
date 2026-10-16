@@ -1,26 +1,19 @@
-// Overlays: the layout-name HUD shown on layout changes.
 import AppKit
 import SwiftUI
 
-/// Amethyst-style layout name overlay. Layout changes also show the layout, which morphs into the
-/// next one when you cycle quickly.
 final class HUD {
     static let shared = HUD()
     private var panel: NSPanel?
     private var host: NSHostingView<HUDView>?
     private let model = HUDModel()
     private var hideWork: DispatchWorkItem?
-    /// Room around the card for its shadow; the panel is click-through.
     private static let margin: CGFloat = 30
-    /// Something already in the middle of the screen (the tour's card): the HUD shows below it, or
-    /// above when there's no room, instead of on top of it.
     var avoid: NSRect?
 
     func show(_ text: String, layout: Layout? = nil, on screen: NSScreen?) {
         show(text, layout: layout, warning: false, on: screen)
     }
 
-    /// A smaller card with a warning sign, for things that didn't work out (e.g. a window that won't shrink).
     func warn(_ text: String, on screen: NSScreen?) {
         show(text, layout: nil, warning: true, on: screen)
     }
@@ -33,7 +26,6 @@ final class HUD {
         model.text = text
         model.layout = layout
         model.warning = warning
-        // A fresh appearance pops in; updates while it's up just morph in place.
         if !wasVisible { model.pops += 1; PerfMonitor.track("ui:hud", for: 0.5) }
         let host = host ?? NSHostingView(rootView: HUDView(model: model, margin: Self.margin))
         if self.host == nil { self.host = host; p.contentView = host }
@@ -41,7 +33,6 @@ final class HUD {
         let size = host.fittingSize
         var frame = CGRect(x: screen.frame.midX - size.width / 2, y: screen.frame.midY - size.height / 2,
                            width: size.width, height: size.height)
-        // The margin is transparent, so only the card itself has to clear the other thing.
         if let avoid, frame.insetBy(dx: Self.margin, dy: Self.margin).intersects(avoid) {
             let below = avoid.minY - frame.height + Self.margin - 12
             frame.origin.y = below >= screen.visibleFrame.minY ? below : avoid.maxY - Self.margin + 12
@@ -56,7 +47,6 @@ final class HUD {
                 ctx.duration = 0.25
                 p?.animator().alphaValue = 0
             }, completionHandler: {
-                // Off screen, not just clear: a new `show` sets the alpha back first, so this leaves it be.
                 if let p, p.alphaValue == 0 { p.orderOut(nil) }
             })
         }
@@ -69,7 +59,7 @@ final class HUD {
         p.level = .statusBar
         p.isOpaque = false
         p.backgroundColor = .clear
-        p.hasShadow = false // drawn by SwiftUI, so it follows the pop
+        p.hasShadow = false
         p.ignoresMouseEvents = true
         p.collectionBehavior = [.canJoinAllSpaces, .transient, .ignoresCycle]
         return p
@@ -83,15 +73,13 @@ final class HUDModel: ObservableObject {
     @Published var pops = 0
 }
 
-/// Confirms a keyboard action in the middle of the screen: a glass Surface with the layout and its
-/// name, or a pill with a wiggling warning when something refused. Never interactive.
 struct HUDView: View {
     @ObservedObject var model: HUDModel
     let margin: CGFloat
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        let reduceMotion = reduceMotion // read here; the animator closure can't touch the environment
+        let reduceMotion = reduceMotion
         Group {
             if model.warning {
                 HStack(spacing: 8) {

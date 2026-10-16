@@ -1,11 +1,7 @@
-// Settings: the General pane (status hero, start at login, updates).
 import AppKit
 import SwiftUI
 
-// The five Settings panes. Each shows what most people need up front and keeps the rest in its own
-// collapsed Advanced section; hidden settings keep working and the search still finds them.
 
-// MARK: - General
 
 struct GeneralPane: View {
     @ObservedObject var doc: ConfigDocument
@@ -103,8 +99,6 @@ struct GeneralPane: View {
     }
 }
 
-/// Whether Ouch is working, straight on the pane: icon, a title, one line of detail, and the way to
-/// fix it when it isn't. One layout for every state, so the icon stays put (and can bump) on a grant.
 private struct StatusHero: View {
     @ObservedObject var ui: SettingsUI
 

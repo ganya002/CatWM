@@ -1,4 +1,3 @@
-// Feedback: the Send Feedback sheet, centred on the Settings window.
 import SwiftUI
 
 struct FeedbackSheet: View {

@@ -1,16 +1,10 @@
-// MenuBar: the onboarding hint that hangs under the menu bar item.
 import AppKit
 import SwiftUI
 
-/// A small hint that hangs under Ouch's menu bar item for the whole onboarding, suggesting it lives
-/// near the right end of the menu bar. On a notched display, items that don't fit left of the
-/// clock vanish behind the notch, and the ones furthest left go first. It follows the item while
-/// the user drags it and turns into a quiet check once the spot is good, then fades. Clicks pass through.
 final class MenuBarTip {
     static let shared = MenuBarTip()
 
     weak var statusButton: NSStatusBarButton?
-    /// The tour's own card points at the menu bar on some steps; the tip steps aside for those.
     var suppressed = false { didSet { if suppressed != oldValue { update() } } }
 
     private var panel: OverlayPanel?
@@ -18,8 +12,6 @@ final class MenuBarTip {
     private let model = MenuBarTipModel()
     private var timer: Timer?
     private var shown = false
-    /// When the item reached a good spot. The check shows for a moment and then gets out of the way,
-    /// instead of sitting over the practice windows for the whole tour.
     private var goodSince: Date?
 
     func show() {
@@ -32,9 +24,8 @@ final class MenuBarTip {
             panel = p
             host = h
         }
-        // Often enough to keep up with the item while it's being dragged.
         timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in self?.update() }
-        timer?.tolerance = 0.05 // coalesces with other wakeups
+        timer?.tolerance = 0.05
         update()
     }
 
@@ -53,10 +44,10 @@ final class MenuBarTip {
         let settled = goodSince.map { Date().timeIntervalSince($0) > 3 } ?? false
         guard let screen, !suppressed, !settled, timer != nil else { return setVisible(false) }
         let size = host.fittingSize
-        let top = screen.visibleFrame.maxY - 4 + (MenuBarTipView.inset.top - 10) // keeps the card where it was
+        let top = screen.visibleFrame.maxY - 4 + (MenuBarTipView.inset.top - 10)
         var x = (anchor?.midX ?? screen.frame.maxX - 40) - size.width / 2
         x = min(max(x, screen.frame.minX + 8), screen.frame.maxX - size.width - 8)
-        let caret = anchor.map { min(max($0.midX - x, 30), size.width - 30) } // clear of the rounded corners
+        let caret = anchor.map { min(max($0.midX - x, 30), size.width - 30) }
         if model.caret != caret { model.caret = caret }
         let frame = NSRect(x: x, y: top - size.height, width: size.width, height: size.height).integral
         if panel.frame != frame {
@@ -82,8 +73,6 @@ final class MenuBarTip {
         }
     }
 
-    /// Where the item is and whether that's a good spot. A hidden item has no anchor; the tip then
-    /// sits at the right end of the menu bar of the screen with the pointer.
     private func locate() -> (MenuBarTipModel.State, NSRect?, NSScreen?) {
         let focused = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main
         guard let w = statusButton?.window, w.occlusionState.contains(.visible),
@@ -91,8 +80,6 @@ final class MenuBarTip {
         else { return (.hidden, nil, focused) }
         let f = w.frame
         let state = state(for: f, on: itemScreen)
-        // On multi-display setups, keep the tip on the focused display even while the status item
-        // reports geometry from another display's menu bar.
         if let focused, focused != itemScreen {
             return (state, nil, focused)
         }
@@ -101,8 +88,7 @@ final class MenuBarTip {
 
     private func state(for frame: NSRect, on screen: NSScreen) -> MenuBarTipModel.State {
         if let left = screen.auxiliaryTopLeftArea, let right = screen.auxiliaryTopRightArea {
-            if frame.maxX > left.maxX && frame.minX < right.minX { return .hidden } // under the notch
-            // Left of the notch, or the first in line to be pushed under it when more items appear.
+            if frame.maxX > left.maxX && frame.minX < right.minX { return .hidden }
             return frame.minX >= right.minX + right.width * 0.25 ? .good : .move
         }
         return frame.midX > screen.frame.midX ? .good : .move
@@ -112,5 +98,5 @@ final class MenuBarTip {
 final class MenuBarTipModel: ObservableObject {
     enum State { case move, good, hidden }
     @Published var state = State.move
-    @Published var caret: CGFloat? // x of the caret in the tip, nil when there's nothing to point at
+    @Published var caret: CGFloat?
 }

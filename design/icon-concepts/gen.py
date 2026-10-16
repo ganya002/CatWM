@@ -11,9 +11,7 @@ gs, cmap = font.getGlyphSet(), font.getBestCmap()
 hmtx = font["hmtx"]
 
 
-def text(s, cx, cy, cap, sx=1.0, track=0):
-    """Outline `s`, centred on (cx, cy) by ink bounds, cap height `cap` px. sx squashes horizontally."""
-    k = cap / CAP
+def text(s, cx, cy, cap, sx=1.0, track=0):    k = cap / CAP
     names = [cmap[ord(c)] for c in s]
     bp = BoundsPen(gs)
     x = 0
@@ -67,9 +65,8 @@ TRAFFIC = ["#ff5f57", "#febc2e", "#28c840"]
 INK = "#18181b"
 
 
-def svg(body, note):
+def svg(body):
     return f"""<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-<!-- Ouch app icon: {note}. Lettering is Chillax Bold (ITF Free Font License), outlined to paths. -->
 <defs>{DEFS}</defs>
 {body}
 </svg>"""
@@ -86,7 +83,6 @@ def burst(cx, cy, rays, color="#ffcc00", w=12):
 
 concepts = {}
 
-# A — Snap: a true tiled layout (equal gaps) with the Ouch window slamming in at an angle.
 concepts["a-snap"] = svg(
     squircle("bg")
     + win(220, 220, 280, 584, "blue", "#0b52bd", ["#fff"] * 3)
@@ -97,20 +93,16 @@ concepts["a-snap"] = svg(
     + '<g transform="rotate(-9 512 512)">'
     + win(340, 398, 344, 236, shadow=True, dots=TRAFFIC)
     + f'<path d="{text("Ouch", 512, 528, 78)}" fill="{INK}"/></g>',
-    "concept A, Snap",
 )
 
-# B — Master tile: light squircle, the wordmark lives in the blue master window of a real tiled layout.
 concepts["b-master"] = svg(
     squircle("bglight")
     + win(196, 196, 404, 632, "blue", "#0b52bd", TRAFFIC, r=34)
     + win(624, 196, 204, 304, "graphite", "#111114", ["#6b6b72"] * 3, r=34)
     + win(624, 524, 204, 304, "graphite", "#111114", ["#6b6b72"] * 3, r=34)
     + f'<path d="{text("Ouch", 398, 520, 86, sx=0.92)}" fill="#fff"/>',
-    "concept B, Master tile",
 )
 
-# C — Monogram: one bold Chillax "O"; its counter is a tiny tiled desktop.
 o = text("O", 512, 512, 480)
 concepts["c-monogram"] = svg(
     squircle("bgblue")
@@ -119,10 +111,8 @@ concepts["c-monogram"] = svg(
     + '<rect x="452" y="452" width="56" height="120" rx="12" fill="url(#blue)"/>'
     + '<rect x="516" y="452" width="56" height="56" rx="12" fill="#2a2a2e"/>'
     + '<rect x="516" y="516" width="56" height="56" rx="12" fill="#2a2a2e"/>',
-    "concept C, Monogram",
 )
 
-# D — Squish: the Ouch window gets pinched between two tiles closing in; lettering squashed to match.
 concepts["d-squish"] = svg(
     squircle("bg")
     + win(150, 250, 300, 524, "blue", "#0b52bd", ["#fff"] * 3).replace('fill="#fff"/>', 'fill="#fff" fill-opacity=".45"/>')
@@ -131,7 +121,6 @@ concepts["d-squish"] = svg(
     + f'<path d="{text("Ouch", 512, 530, 120, sx=0.26)}" fill="{INK}"/>'
     + burst(512, 312, [(-90, 18, 60), (-130, 22, 58), (-50, 22, 58)], "#ffcc00", 11)
     + burst(512, 716, [(90, 18, 60), (130, 22, 58), (50, 22, 58)], "#ffcc00", 11),
-    "concept D, Squish",
 )
 
 out = sys.argv[1]

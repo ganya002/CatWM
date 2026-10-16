@@ -1,18 +1,12 @@
-// Onboarding: first-run flow (intro, welcome card, keyboard tour) and its overlay panels.
 import AppKit
 import SwiftUI
 
-/// First-run onboarding: an intro played across the screen, a welcome card for permissions and the
-/// choice between Vim and WASD keys, then a keyboard tour on practice windows. Everything is
-/// separate borderless panels over the desktop and real windows tiled by the real window manager;
-/// there is no onboarding window. The longer keyboard tutorial runs on the same coach.
 final class Onboarding {
     static let shared = Onboarding()
     private static let doneKey = "didOnboard"
 
     static var isDone: Bool { UserDefaults.standard.bool(forKey: doneKey) }
 
-    /// The menu bar item, so the tour can point at it.
     weak var statusButton: NSStatusBarButton? {
         didSet { MenuBarTip.shared.statusButton = statusButton }
     }
@@ -23,12 +17,10 @@ final class Onboarding {
     private var coach: Coach?
     private var openedLoginItems = false
     private var offering = false
-    /// Set while the first-run flow runs (rather than a tour or tutorial from the menu).
     private var firstRun = false
 
     var isRunning: Bool { intro != nil || welcome != nil || coach != nil || offering }
 
-    /// Fresh installs see it, and so does anyone who hasn't granted Accessibility yet. Once per Mac.
     static func shouldShow(firstRun: Bool, trusted: Bool) -> Bool {
         !isDone && (firstRun || !trusted)
     }
@@ -38,7 +30,6 @@ final class Onboarding {
         firstRun = true
         let screen = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main ?? NSScreen.screens[0]
         let card = makeWelcome(on: screen)
-        // Reduce Motion: no light show, just the card.
         guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return showWelcome() }
         let m = WelcomeView.margin
         let intro = Intro(screen: screen, landing: card.frame.insetBy(dx: m, dy: m)) { [weak self] in
@@ -49,7 +40,6 @@ final class Onboarding {
         intro.run()
     }
 
-    /// `ouch intro [arrangement id]`: just the opening and its music, for working on them. Lands mid-screen.
     func playIntro(_ arrangement: IntroScore.Arrangement = .standard) {
         guard !isRunning else { return }
         let screen = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main ?? NSScreen.screens[0]
@@ -60,7 +50,6 @@ final class Onboarding {
         intro.run()
     }
 
-    // MARK: Welcome card
 
     private func makeWelcome(on screen: NSScreen) -> OverlayPanel {
         welcomeModel.page = .permissions
@@ -69,12 +58,11 @@ final class Onboarding {
         welcomeModel.allowInputMonitoring = { Permissions.requestInputMonitoring() }
         welcomeModel.allowLogin = { [weak self] in
             LoginItem.set(true)
-            if !LoginItem.isEnabled { // needs approval in System Settings
+            if !LoginItem.isEnabled {
                 self?.openedLoginItems = true
                 LoginItem.openSettings()
             }
         }
-        // Settings and macOS's alert close after a grant; then the card should be in front again.
         PermissionGuide.shared.onGranted = { [weak self] in self?.welcome?.makeKeyAndOrderFront(nil) }
         welcomeModel.skip = { [weak self] in self?.hideWelcome { self?.finish() } }
         welcomeModel.next = { [weak self] in
@@ -84,7 +72,6 @@ final class Onboarding {
         welcomeModel.start = { [weak self] in
             guard let self else { return }
             guard AXIsProcessTrusted() else { welcomeModel.page = .permissions; return }
-            // The tour reads the keys from the config, so they're switched before it starts.
             if let style = welcomeModel.style, style != KeyStyle.current,
                let config = SettingsWindow.shared.library.config(id: style.configID) {
                 SettingsWindow.shared.library.select(config)
@@ -95,7 +82,6 @@ final class Onboarding {
         let host = FirstClickHostingView(rootView: WelcomeView(model: welcomeModel))
         let size = host.fittingSize
         let v = screen.visibleFrame
-        // Normal level: System Settings and the permission guide open on top of it.
         let p = OverlayPanel(frame: NSRect(x: v.midX - size.width / 2, y: v.midY - size.height / 2 - 12,
                                            width: size.width, height: size.height),
                              level: .normal, clickThrough: false, keyable: true)
@@ -111,7 +97,6 @@ final class Onboarding {
         let im = Permissions.inputMonitoringGranted
         if welcomeModel.inputMonitoring != im { welcomeModel.inputMonitoring = im }
         if welcomeModel.login != login { welcomeModel.login = login }
-        // Approved in the Login Items list we opened: close it again, like the Accessibility flow does.
         if login, openedLoginItems {
             openedLoginItems = false
             if ax { Permissions.closeSettingsWindows() }
@@ -126,18 +111,18 @@ final class Onboarding {
         p.alphaValue = 0
         p.setFrame(end.offsetBy(dx: 0, dy: -14), display: false)
         p.orderFrontRegardless()
-        p.makeKey() // Return reaches the card's default button
+        p.makeKey()
         p.invalidateShadow()
         animate(0.5) {
             p.animator().alphaValue = 1
             p.animator().setFrame(end, display: true)
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in self?.welcomeModel.landed = true }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in // after the card lands
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
             if self?.isRunning == true { MenuBarTip.shared.show() }
         }
         poll = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in self?.refreshWelcome() }
-        poll?.tolerance = 0.1 // coalesces with other wakeups
+        poll?.tolerance = 0.1
     }
 
     private func hideWelcome(then: @escaping () -> Void) {
@@ -152,9 +137,7 @@ final class Onboarding {
         }
     }
 
-    // MARK: Lessons
 
-    /// The keyboard tour on its own (also from the menu bar).
     func startTour() {
         let lesson = TourLesson()
         run(lesson) { [weak self] how in
@@ -168,7 +151,6 @@ final class Onboarding {
         }
     }
 
-    /// The long, pausable tutorial from the menu bar. Picks up at the chapter it was paused in.
     func startTutorial(fromStart: Bool = false) {
         if fromStart { TutorialLesson.forget() }
         run(TutorialLesson()) { how in
@@ -184,7 +166,6 @@ final class Onboarding {
         }
     }
 
-    /// Waits for the window manager, which starts a moment after Accessibility is granted.
     private func run(_ lesson: Lesson, attempts: Int = 20, then: @escaping (Coach.Ending) -> Void) {
         guard coach == nil, intro == nil, welcome == nil else { return }
         guard WindowManager.shared.isStarted, Hotkeys.shared.isActive else {
@@ -193,7 +174,6 @@ final class Onboarding {
             } else {
                 HUD.shared.show("Ouch needs Accessibility first", on: nil)
                 MenuBarTip.shared.hide()
-                // Trusted, so the next launch won't offer the tour again: count it as done, or Tips never show.
                 if firstRun, AXIsProcessTrusted() { UserDefaults.standard.set(true, forKey: Self.doneKey) }
                 firstRun = false
             }
@@ -210,7 +190,6 @@ final class Onboarding {
         if firstRun { MenuBarTip.shared.show() }
     }
 
-    /// When the tour hands the user's windows back crowded onto one workspace, offers to sort them.
     private func offerSort(then: @escaping () -> Void) {
         let wm = WindowManager.shared
         guard wm.config.sortNudge > 0, let hit = wm.shownWorkspaces().first, hit.count > wm.config.sortNudge else { return then() }
@@ -234,12 +213,7 @@ final class Onboarding {
     }
 }
 
-// MARK: - Overlay plumbing
 
-/// Borderless, transparent panel for the onboarding overlays. Most never become key, so keyboard
-/// focus stays with the practice windows; `keyable` ones (cards that ask for an answer) take it so
-/// Return reaches their default button, without activating the app. `clickThrough` lets the mouse
-/// reach what's beneath.
 final class OverlayPanel: NSPanel {
     private let keyable: Bool
 
@@ -259,7 +233,6 @@ final class OverlayPanel: NSPanel {
     override var canBecomeMain: Bool { false }
 }
 
-/// Our app is never active during onboarding, so controls must take the very first click.
 final class FirstClickHostingView<Content: View>: NSHostingView<Content> {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }
@@ -282,15 +255,9 @@ private extension NSWindow.Level {
 }
 
 
-// MARK: - Intro
 
-/// The opening, played over the whole screen to its own music (`IntroScore`). It dims to graphite,
-/// then five windows open one at a time and tile like the real layouts, each snap on a piano note
-/// (the main one in the icon's electric blue). The wordmark lands, the windows re-tile under a falling
-/// run, then pull into one stack, hold for a beat of silence, and burst into the welcome card on one
-/// full chord with a ring of light. Each tile is its own window. Click anywhere to skip.
 private final class Intro {
-    static let margin: CGFloat = 60 // room around each tile for its squish and shadow
+    static let margin: CGFloat = 60
     static let count = 5
 
     private let screen: NSScreen
@@ -324,7 +291,6 @@ private final class Intro {
         fx.orderFrontRegardless()
         score.play()
         typealias B = IntroScore.Beat
-        // The motion starts a little before each beat, so it lands on the note.
         fadeIn()
         for (i, t) in B.arrive.enumerated() { later(t - 0.12) { [weak self] in self?.arrive(i + 1) } }
         later(B.word - 0.25) { [weak self] in self?.showWord() }
@@ -339,7 +305,6 @@ private final class Intro {
         DispatchQueue.main.asyncAfter(deadline: .now() + seconds, execute: w)
     }
 
-    /// Straight to the welcome card, quietly: no hit.
     private func skip() {
         guard !done else { return }
         pending.forEach { $0.cancel() }
@@ -359,10 +324,9 @@ private final class Intro {
         animate(seconds, curve: CAMediaTimingFunction(name: .easeOut), changes: { panels.forEach { $0.animator().alphaValue = 0 } }) {
             panels.forEach { $0.orderOut(nil) }
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) { [fx] in fx?.orderOut(nil) } // after the ring
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) { [fx] in fx?.orderOut(nil) }
     }
 
-    // MARK: Building
 
     private func build() {
         let f = screen.frame
@@ -376,7 +340,6 @@ private final class Intro {
         blur.state = .active
         blur.appearance = NSAppearance(named: .darkAqua)
         root.addSubview(blur)
-        // Graphite from the icon, a little lighter in the middle so the tiles read as lit from the front.
         let shade = CAGradientLayer()
         shade.type = .radial
         shade.colors = [Intro.graphite.withAlphaComponent(0.3).cgColor, Intro.graphite.withAlphaComponent(0.62).cgColor]
@@ -413,14 +376,12 @@ private final class Intro {
         word.contentView = NSHostingView(rootView: WordmarkView(model: wordModel, size: size))
         word.alphaValue = 0
 
-        // The hit's ring and flash, on top of everything and outliving the backdrop's fade.
         fx = OverlayPanel(frame: f, level: .above(.statusBar, 4), clickThrough: true)
         fx.contentView = ImpactView(frame: NSRect(origin: .zero, size: f.size))
     }
 
     static let graphite = NSColor(srgbRed: 0x1B / 255, green: 0x1B / 255, blue: 0x1E / 255, alpha: 1)
 
-    // MARK: Motion
 
     private func tile(_ i: Int) -> TileView? { tiles.indices.contains(i) ? tiles[i].contentView as? TileView : nil }
 
@@ -436,12 +397,10 @@ private final class Intro {
         if delay > 0 { later(delay, run) } else { run() }
     }
 
-    /// Tall or BSP (dwindle) frames for `n` tiles with gaps, like the real layouts.
     private func layout(bsp: Bool, _ n: Int = Intro.count) -> [NSRect] {
         let f = screen.frame.insetBy(dx: 28, dy: 28)
         let gap: CGFloat = 18
         var out: [NSRect] = []
-        // Work top-down, then flip into AppKit coordinates.
         var r = CGRect(x: 0, y: 0, width: f.width + gap, height: f.height + gap)
         if bsp || n == 1 {
             for i in 0..<(n - 1) {
@@ -472,7 +431,6 @@ private final class Intro {
         }
     }
 
-    /// Window `n` opens in the middle of its slot, and the ones already there make room.
     private func arrive(_ n: Int) {
         let frames = layout(bsp: true, n)
         for i in 0..<(n - 1) {
@@ -486,7 +444,6 @@ private final class Intro {
     }
 
     private func showWord() {
-        // Low enough that the tagline reads over the blue main tile.
         for i in tiles.indices { animate(0.5) { tiles[i].animator().alphaValue = i == 0 ? 0.4 : 0.3 } }
         wordModel.landed = true
         animate(1.1) {
@@ -502,7 +459,6 @@ private final class Intro {
         }
     }
 
-    /// One window per note of the falling run.
     private func retile() {
         wordModel.subtitle = true
         let step = IntroScore.Beat.step
@@ -512,8 +468,6 @@ private final class Intro {
         }
     }
 
-    /// The windows pull into one small, bright stack in the middle of the card, the main one on
-    /// top, and hold still through the beat of silence.
     private func gather() {
         hideWord()
         let span = IntroScore.Beat.impact - 0.25 - IntroScore.Beat.gather
@@ -526,12 +480,9 @@ private final class Intro {
             move(i, to: r, alpha: i == 0 ? 1 : 0.85, duration: span, delay: Double(Self.count - 1 - i) * 0.04, curve: pull)
             tiles[i].order(.above, relativeTo: i == Self.count - 1 ? 0 : tiles[i + 1].windowNumber)
         }
-        // Wound up: everything leans in for the silence.
         later(span) { [weak self] in self?.tiles.indices.forEach { self?.tile($0)?.brace() } }
     }
 
-    /// The hit: the stack bursts out to the card's edges and fades as the card takes its place, with
-    /// a flash and a ring of light rolling out across the screen.
     private func impact() {
         guard !done else { return }
         pending.forEach { $0.cancel() }
@@ -546,7 +497,6 @@ private final class Intro {
     }
 }
 
-/// Full-screen backdrop that reports a click anywhere.
 private final class ClickView: NSView {
     var onClick: (() -> Void)?
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
@@ -554,8 +504,6 @@ private final class ClickView: NSView {
     override func hitTest(_ point: NSPoint) -> NSView? { frame.contains(point) ? self : nil }
 }
 
-/// The final hit's light: a quick flash over the screen and two rings in the icon's blue rolling out
-/// past its edges.
 private final class ImpactView: NSView {
     override init(frame: NSRect) {
         super.init(frame: frame)
@@ -612,8 +560,6 @@ private final class ImpactView: NSView {
     }
 }
 
-/// One tile of the intro: a translucent window with three dots, drawn inside its panel with some
-/// margin for its squish and shadow. The main tile is filled with the icon's electric blue.
 private final class TileView: NSView {
     private let card = CALayer()
     private let sheen = CAGradientLayer()
@@ -635,7 +581,6 @@ private final class TileView: NSView {
         card.shadowOpacity = main ? 0.35 : 0.25
         card.shadowRadius = 24
         card.shadowOffset = CGSize(width: 0, height: -16)
-        // A soft light across the top, like glass catching it.
         sheen.colors = [NSColor(white: 1, alpha: main ? 0.22 : 0.12).cgColor, NSColor(white: 1, alpha: 0).cgColor]
         sheen.startPoint = CGPoint(x: 0.5, y: 1)
         sheen.endPoint = CGPoint(x: 0.5, y: 0.55)
@@ -669,7 +614,6 @@ private final class TileView: NSView {
         CATransaction.commit()
     }
 
-    /// A quick squash and stretch, like a window hitting the edge of its slot.
     func squish() {
         for (key, values) in [("transform.scale.x", [1, 1.035, 0.99, 1]), ("transform.scale.y", [1, 0.955, 1.01, 1])] {
             let a = CAKeyframeAnimation(keyPath: key)
@@ -682,7 +626,6 @@ private final class TileView: NSView {
         }
     }
 
-    /// Compressed and glowing through the silence before the hit.
     func brace() {
         let shrink = CABasicAnimation(keyPath: "transform.scale")
         shrink.toValue = 0.92

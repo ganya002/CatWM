@@ -1,24 +1,15 @@
-// Keys: trackpad gesture binds as the keyboard help draws them.
 import AppKit
 import SwiftUI
 
-/// One trackpad bind as the keyboard help draws it: how many fingers, which way they move, and the
-/// workspaces it goes between.
 struct GestureBind: Identifiable {
     let mods: NSEvent.ModifierFlags
     let fingers: Int
-    /// The way the fingers move, y down.
     let direction: CGVector
-    /// "two fingers up"
     let phrase: String
-    /// "Next workspace"
     let title: String
-    /// Workspace numbers to slide across the pad, when the bind changes workspace.
     let from: String?, to: String?
     let id: String
 
-    /// Scroll binds use two fingers, swipes three. Scrolling follows the system's direction setting:
-    /// with natural scrolling (the default) a scroll down is fingers moving up.
     init?(_ b: KeyBinding, current: Int) {
         let natural = UserDefaults.standard.object(forKey: "com.apple.swipescrolldirection") as? Bool ?? true
         let flip: CGFloat = natural ? 1 : -1
@@ -56,20 +47,15 @@ struct GestureBind: Identifiable {
     }
 }
 
-/// A trackpad looping its gesture binds: one hand of fingertips with a palm glow under it, a light
-/// streak behind it, a ripple where it lands and lifts, and the workspace numbers sliding faintly
-/// across the surface. 2.4 s per loop, the next bind each time round.
 struct GesturePad: View {
     let gestures: [GestureBind]
     static let width: CGFloat = 264
     static let height: CGFloat = 172
     private static let loop = 2.4
-    /// One clock for every pad, so redrawing the help (⇧ changes the layer) doesn't restart the loop.
     private static let epoch = Date()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        // Under Reduce Motion the pad shows each bind as a still, mid-gesture, and steps between them.
         Group {
             if reduceMotion {
                 TimelineView(.periodic(from: Self.epoch, by: Self.loop)) { ctx in frame(ctx.date, still: true) }
@@ -91,14 +77,12 @@ struct GesturePad: View {
         }
     }
 
-    // MARK: Timing
 
-    /// The loop as fractions: land, travel, lift.
     private struct Pose {
-        var progress: Double // 0...1 along the path, eased
-        var presence: Double // fingers' opacity
-        var down: Double? // touch-down ripple, 0...1
-        var lift: Double? // lift ripple, 0...1
+        var progress: Double
+        var presence: Double
+        var down: Double?
+        var lift: Double?
     }
 
     private func pose(_ f: Double) -> Pose {
@@ -110,7 +94,6 @@ struct GesturePad: View {
                     lift: f >= liftAt && f < liftAt + 0.28 ? span(liftAt, liftAt + 0.28) : nil)
     }
 
-    /// cubic-bezier(.5, 0, .2, 1), solved for x by bisection.
     static func ease(_ x: Double) -> Double {
         let (x1, y1, x2, y2) = (0.5, 0.0, 0.2, 1.0)
         func bez(_ t: Double, _ a: Double, _ b: Double) -> Double { 3 * a * t * (1 - t) * (1 - t) + 3 * b * t * t * (1 - t) + t * t * t }
@@ -122,7 +105,6 @@ struct GesturePad: View {
         return bez(t, y1, y2)
     }
 
-    // MARK: Drawing
 
     private func surface(_ g: GestureBind, _ f: Double) -> some View {
         let w = Self.width, h = Self.height
@@ -140,7 +122,6 @@ struct GesturePad: View {
             shape.fill(Theme.well)
             shape.strokeBorder(Theme.hairline, lineWidth: 1)
 
-            // Workspace numbers sliding across in the fingers' direction, faintly.
             if let a = g.from, let b = g.to {
                 Group {
                     Text(a).offset(x: d.dx * slide * p.progress, y: d.dy * slide * p.progress)
@@ -151,14 +132,12 @@ struct GesturePad: View {
                 .font(Theme.display(64)).monospacedDigit()
             }
 
-            // One streak behind the whole hand, from where it landed.
             Path { path in path.move(to: from); path.addLine(to: hand) }
                 .stroke(LinearGradient(colors: [Theme.ink.opacity(0), Theme.ink.opacity(0.16)],
                                        startPoint: unit(from, w, h), endPoint: unit(hand, w, h)),
                         style: StrokeStyle(lineWidth: g.fingers == 3 ? 46 : 34, lineCap: .round))
                 .opacity(p.presence)
 
-            // The palm: a soft glow under and behind the fingertips, moving with them.
             Ellipse()
                 .fill(RadialGradient(colors: [Theme.accent.opacity(0.32), Theme.accent.opacity(0)], center: .center,
                                      startRadius: 0, endRadius: 62))
@@ -186,7 +165,6 @@ struct GesturePad: View {
         .clipShape(shape)
     }
 
-    /// Fingertips pressed together as one hand: two about 32pt apart, three in a slight arc.
     private func tips(_ n: Int) -> [CGPoint] {
         n == 3 ? [CGPoint(x: -28, y: 4), CGPoint(x: 0, y: -3), CGPoint(x: 28, y: 4)]
             : [CGPoint(x: -16, y: 0), CGPoint(x: 16, y: 0)]
@@ -199,7 +177,6 @@ struct GesturePad: View {
 
     private func unit(_ p: CGPoint, _ w: CGFloat, _ h: CGFloat) -> UnitPoint { UnitPoint(x: p.x / w, y: p.y / h) }
 
-    /// ⌥ Kbd, "two fingers up", "Next workspace".
     private func caption(_ g: GestureBind) -> some View {
         HStack(spacing: 6) {
             if !g.mods.isEmpty { Kbd(keys: ConfigDocument.modifierCaps(g.mods)) }

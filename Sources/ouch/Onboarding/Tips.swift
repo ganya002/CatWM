@@ -1,13 +1,6 @@
-// Onboarding: one-time tips after onboarding (in Settings, under the menu bar item, above the mode bar).
 import AppKit
 import SwiftUI
 
-/// Small tips that turn up once, where they're useful, after onboarding: in Settings beside the pane
-/// they're about, under the menu bar item, or above the mode bar. Each is a Surface `md` with a
-/// breathing lightbulb, a close button and "No more tips". Never more than one at a time, never
-/// during a lesson, and each is shown only once. They're rare on purpose: none until Ouch has been
-/// used on a week of different days, then at most one every five days, and each waits until what
-/// it's about has come up a few times.
 final class Tips: ObservableObject {
     static let shared = Tips()
 
@@ -16,10 +9,8 @@ final class Tips: ObservableObject {
         let id: String
         let title: String
         var body: String?
-        /// Keys to show, each chord after the first read as "then".
         var chords: [[String]] = []
         let place: Place
-        /// A primary button that does something, e.g. "Start tutorial"; otherwise "Got it".
         var action: (label: String, run: () -> Void)?
 
         static func == (a: Tip, b: Tip) -> Bool { a.id == b.id }
@@ -27,7 +18,6 @@ final class Tips: ObservableObject {
 
     enum Known: String { case tutorial, keyHelp }
 
-    /// The tip showing inside Settings, if any.
     @Published private(set) var settings: Tip?
     private var global: Tip?
     private var panel: OverlayPanel?
@@ -35,11 +25,8 @@ final class Tips: ObservableObject {
     private var pendingWork: DispatchWorkItem?
     private var modeEntries = 0
 
-    /// Pacing. A day counts when Ouch runs on it.
     static let minDaysUsed = 7
     static let cooldown: TimeInterval = 5 * 24 * 3600
-    /// How often a pane must be opened, a menu command clicked, or window mode entered (this run)
-    /// before its tip, and how long the pane must stay open first.
     static let paneOpens = 5, menuClicks = 8, modeEntriesNeeded = 15
     static let paneDelay: TimeInterval = 8
 
@@ -68,7 +55,6 @@ final class Tips: ObservableObject {
 
     func markSeen(_ k: Known) { markSeen(k.rawValue) }
 
-    /// Notes today as a day of use, and counts them.
     private var daysUsed: Int {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"
@@ -81,7 +67,6 @@ final class Tips: ObservableObject {
         Date().timeIntervalSince1970 - defaults.double(forKey: Self.lastKey) >= Self.cooldown
     }
 
-    /// At launch: counts the day, and once Ouch has been used for a while, points at the tutorial.
     func launched() {
         _ = daysUsed
         DispatchQueue.main.asyncAfter(deadline: .now() + 90) { [weak self] in
@@ -94,9 +79,7 @@ final class Tips: ObservableObject {
             && !SortPanel.shared.isOpen
     }
 
-    // MARK: Triggers
 
-    /// Shows one of the fixed tips (the tutorial pointer after onboarding).
     func show(_ k: Known) {
         switch k {
         case .tutorial:
@@ -114,7 +97,6 @@ final class Tips: ObservableObject {
         }
     }
 
-    /// Window mode turned on or off. After a few entries without ever opening the keyboard help, suggest it.
     func modeChanged(_ name: String) {
         pendingWork?.cancel()
         if name.isEmpty {
@@ -128,7 +110,6 @@ final class Tips: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2, execute: work)
     }
 
-    /// A menu command with a shortcut was clicked. The third time, show its key.
     func clicked(id: String, label: String, shortcut: [String]) {
         guard !shortcut.isEmpty, enabled, Onboarding.isDone else { return }
         var counts = defaults.dictionary(forKey: Self.clicksKey) as? [String: Int] ?? [:]
@@ -136,18 +117,16 @@ final class Tips: ObservableObject {
         defaults.set(counts, forKey: Self.clicksKey)
         let tipID = "clicked.\(id)"
         guard counts[id, default: 0] >= Self.menuClicks, canShow(tipID) else { return }
-        // Window-mode keys are plain letters (maybe with ⇧); those need the mode chord first.
         let keys = ShortcutIndex()
         let global = shortcut.contains { ["⌘", "⌥", "⌃"].contains($0) }
         let chords = global || keys.modeChord.isEmpty ? [shortcut] : [keys.modeChord, shortcut]
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in // after the menu has closed
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
             guard let self, canShow(tipID) else { return }
             present(Tip(id: tipID, title: "\(label) has a key", body: "Faster than the menu.",
                         chords: chords, place: .menuBar))
         }
     }
 
-    /// A Settings pane came into view.
     func paneShown(_ pane: Pane) {
         if let s = settings, s.place != .settings("pane.\(pane.rawValue)") { dismissSettings() }
         let keys = ShortcutIndex()
@@ -185,20 +164,18 @@ final class Tips: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + Self.paneDelay, execute: work)
     }
 
-    /// Settings closed.
     func settingsClosed() {
         pendingWork?.cancel()
         dismissSettings()
     }
 
-    // MARK: Showing
 
     private func present(_ tip: Tip) {
         switch tip.place {
         case .settings:
             withAnimation(Motion.easeOut) { settings = tip }
         case .menuBar, .modeBar:
-            guard showPanel(tip) else { return } // nowhere to show it: keep the tip and today's slot
+            guard showPanel(tip) else { return }
         }
         markSeen(tip.id)
         defaults.set(Date().timeIntervalSince1970, forKey: Self.lastKey)
@@ -270,14 +247,11 @@ final class Tips: ObservableObject {
     }
 }
 
-// MARK: - View
 
-/// One tip: Surface `md` with a breathing lightbulb, a title, a line or two, its keys, and actions.
 struct TipView: View {
     let tip: Tips.Tip
     var inset = EdgeInsets()
     var caret: Caret = .none
-    /// Room in a panel for the caret and the popover shadow.
     static let panelInset = EdgeInsets(top: 18, leading: 32, bottom: 44, trailing: 32)
 
     var body: some View {
@@ -304,7 +278,7 @@ struct TipView: View {
             }
             HStack(spacing: 4) {
                 OButton("No more tips", variant: .ghost, size: .sm) { Tips.shared.noMore() }
-                    .padding(.leading, -11) // the label lines up with the text above
+                    .padding(.leading, -11)
                 Spacer(minLength: 8)
                 if let action = tip.action {
                     OButton(action.label, variant: .primary) {
@@ -326,9 +300,7 @@ struct TipView: View {
     }
 }
 
-// MARK: - Anchors in Settings
 
-/// Settings views mark what a tip can point at; the root view places the tip beside it.
 struct TipAnchorKey: PreferenceKey {
     static let defaultValue: [String: Anchor<CGRect>] = [:]
     static func reduce(value: inout [String: Anchor<CGRect>], nextValue: () -> [String: Anchor<CGRect>]) {
@@ -342,7 +314,6 @@ extension View {
     }
 }
 
-/// Draws the Settings tip to the right of its anchor, the caret pointing back at it.
 struct SettingsTipLayer: View {
     @ObservedObject var tips = Tips.shared
     let anchors: [String: Anchor<CGRect>]
@@ -352,12 +323,10 @@ struct SettingsTipLayer: View {
             if let tip = tips.settings, case .settings(let id) = tip.place, let a = anchors[id] {
                 let r = g[a]
                 if r.midY < g.size.height * 0.6 {
-                    // The caret sits level with the title row, so that row lines up with the anchor.
                     TipView(tip: tip, caret: .leading(20))
                         .offset(x: r.maxX + 14, y: r.midY - 20)
                         .transition(.opacity.combined(with: .offset(x: -6)))
                 } else {
-                    // Low in the window: grow upwards from the anchor so the tip stays inside.
                     TipView(tip: tip, caret: .leadingBottom(24))
                         .frame(height: r.midY + 24, alignment: .bottom)
                         .offset(x: r.maxX + 14)

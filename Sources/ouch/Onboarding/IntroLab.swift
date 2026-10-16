@@ -1,9 +1,6 @@
-// Onboarding: `ouch introlab`, a window to audition the intro music arrangements.
 import AppKit
 import SwiftUI
 
-/// `ouch introlab`: a small window for auditioning the intro's arrangements. Each row plays the
-/// music on its own, or the whole intro with it.
 final class IntroLab {
     static let shared = IntroLab()
     private var window: NSPanel?
@@ -35,7 +32,6 @@ final class IntroLabModel: ObservableObject {
         s.play()
         score = s
         playing = a.id
-        // The piece and its tail are about nine seconds.
         DispatchQueue.main.asyncAfter(deadline: .now() + 9) { [weak self, weak s] in
             if let self, self.score === s { self.score = nil; self.playing = nil }
         }

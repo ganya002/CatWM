@@ -1,11 +1,7 @@
-// Tiling: moves windows to another macOS Space through SkyLight.
 import AppKit
 import MachO
 import ObjectiveC
 
-/// Ouch's in-process binding to WindowServer's asynchronous move operation.
-/// Symbol lookup follows the technique in WhichSpace (MIT; see ThirdPartyNotices.txt).
-/// No helper library or external window manager is needed.
 enum NativeSpaceMove {
     private typealias Perform = @convention(c) (UnsafeMutableRawPointer) -> Int64
     private typealias Allocate = @convention(c) (AnyClass, Selector) -> UnsafeMutableRawPointer?
@@ -39,11 +35,9 @@ enum NativeSpaceMove {
 
     static var isAvailable: Bool { binding != nil }
 
-    /// The request is asynchronous. The caller must verify actual Space membership.
     static func move(window: CGWindowID, to space: UInt64) -> Bool {
         guard let binding, let allocated = binding.allocate(binding.type, allocate) else { return false }
         let windows = [NSNumber(value: window)] as CFArray
-        // An initializer that returns nil has already released its receiver.
         guard let operation = binding.initialize(allocated, initializer, windows, space) else { return false }
         defer { binding.release(operation, release) }
         _ = binding.perform(operation)
@@ -62,8 +56,6 @@ enum NativeSpaceMove {
         return overflow ? nil : value
     }
 
-    /// The dispatcher has internal linkage. Read its address from SkyLight's loaded
-    /// Mach-O symbol table, rejecting tables outside the image's __LINKEDIT segment.
     private static func localSymbol(_ name: String) -> UnsafeMutableRawPointer? {
         for i in 0..<_dyld_image_count() {
             guard let path = _dyld_get_image_name(i), String(cString: path).hasSuffix("/SkyLight"),

@@ -1,11 +1,5 @@
-// Overlays: keeps the plain arrow pointer while a mode (submap) is on.
 import AppKit
 
-/// While a mode is on, the pointer is always the arrow, so an I-beam, a resize arrow or a link hand from
-/// the app below doesn't suggest that the mouse acts on the app. Clicks still go through to the apps, so
-/// no panel can own the pointer: ouch sets the arrow from the background (`SetsCursorInBackground` on
-/// its WindowServer connection) and sets it again at 120 Hz, since the app below sets its own shape on
-/// each mouse move. When the mode ends, a synthetic move lets that app set its shape again.
 final class ModeCursor {
     static let shared = ModeCursor()
 

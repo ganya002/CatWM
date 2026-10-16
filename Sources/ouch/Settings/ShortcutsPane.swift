@@ -1,10 +1,7 @@
-// Settings: the Shortcuts pane (action catalog, bind rows, shortcut recorder).
 import AppKit
 import SwiftUI
 
-// MARK: - Shortcuts
 
-/// The action catalog as menu items: a submenu per category, numbered families folded into their own submenu.
 enum ActionMenuItems {
     static func items(current: Action? = nil, pick: @escaping (Action) -> Void) -> [MenuItem] {
         func row(_ a: Action, _ title: String) -> MenuItem {
@@ -43,7 +40,6 @@ struct ShortcutsPane: View {
         return options
     }
 
-    /// How to open keyboard help, from the shortcut that enters window mode right now.
     private var keyboardHelpHint: String {
         let enter = doc.binds.first { $0.submap.isEmpty && $0.dispatcher == "submap" && $0.args.lowercased() != "reset" }
         guard let enter, let flags = ConfigDocument.flags(doc.resolvedMods(enter.mods)) else { return "Press \(doc.config.keyboardHelpKey) in window mode" }
@@ -125,7 +121,6 @@ struct ShortcutsPane: View {
             return ActionMenuItems.items { a in add(a.dispatcher, a.args) } + [
                 MenuItem(id: "ranges", kind: .sub, label: "Ranges", symbol: "ellipsis.rectangle", width: MenuItem.fitWidth(ranges), children: ranges),
                 .sep("s"),
-                // Matches no preset, so the raw editor shows.
                 MenuItem(id: "custom", label: "Custom Dispatcher…", symbol: "terminal", action: { add("layoutmsg", "") }),
             ]
         }) {
@@ -147,7 +142,6 @@ struct ShortcutsPane: View {
     }
 }
 
-// MARK: - Bind rows
 
 private struct BindRowView: View {
     @ObservedObject var doc: ConfigDocument
@@ -167,7 +161,6 @@ private struct BindRowView: View {
             let issue = doc.issue(row)
             let isRange = BindRange.isRange(row.key)
             let summary = isRange ? Actions.rangeSummary(row) : nil
-            // Range rows read like any other row; their keys and values open on demand (or when they're broken).
             let editorOpen = isRange && (ui.expanded.contains(rowID) || summary == nil || issue?.severity == .error)
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 12) {
@@ -218,7 +211,6 @@ private struct BindRowView: View {
         }
     }
 
-    /// Dispatcher, keys and values of a range row, with what each key ends up doing.
     private func rangeEditor(_ i: Int, _ row: BindRow, valid: Bool) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
@@ -255,7 +247,6 @@ private struct BindRowView: View {
         .accessibilityLabel(open ? "Hide keys and values" : "Edit keys and values")
     }
 
-    /// "H → Focus Left · J → Focus Down · …", or the raw values when they aren't catalog actions.
     private func rangePreview(_ row: BindRow) -> String {
         guard case .success(let pairs) = BindRange.pairs(key: row.key, dispatcher: row.dispatcher, arg: row.args) else { return "" }
         let mods = ConfigDocument.flags(doc.resolvedMods(row.mods)).map { ConfigDocument.modifierCaps($0).joined() } ?? ""
@@ -290,9 +281,7 @@ private struct BindRowView: View {
     }
 }
 
-// MARK: - Recorder
 
-/// Click to record a shortcut: keycaps on a sunken well, an `accent` outline while listening.
 private struct Recorder: View {
     @ObservedObject var doc: ConfigDocument
     @ObservedObject var ui: SettingsUI
@@ -314,7 +303,6 @@ private struct Recorder: View {
                 } else if row.key.isEmpty {
                     Text("Click to record").font(Theme.body(12.5)).foregroundStyle(Theme.inkFaint).oneLine()
                 } else {
-                    // Freshly recorded keys drop in with a little bump.
                     Kbd(keys: doc.prettyShortcut(row)).squish(on: row.mods + row.key, anchor: .center)
                 }
             }

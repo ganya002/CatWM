@@ -1,5 +1,3 @@
-// Compile alongside Sources/ouch/Tiling/DockWindowPull.swift as main.swift.
-// No event tap is installed; replayed events are captured rather than posted to the desktop.
 import AppKit
 let clicks = DockWindowPull()
 var actions = 0
@@ -44,7 +42,6 @@ precondition(!clicks.handle(.leftMouseDown, event(.leftMouseDown)))
 precondition(!clicks.handle(.leftMouseUp, event(.leftMouseUp)))
 drain()
 precondition(actions == 1)
-// Dock-area gate: an auto-hidden bottom Dock on a laptop, plus a second display to the right.
 let laptop = (frame: CGRect(x: 0, y: 0, width: 1710, height: 1112), visible: CGRect(x: 0, y: 38, width: 1710, height: 1074))
 let side = (frame: CGRect(x: 1710, y: 0, width: 2560, height: 1440), visible: CGRect(x: 1710, y: 25, width: 2560, height: 1300))
 let bottom = DockArea.bands(screens: [laptop, side], edge: "bottom", depth: 98)

@@ -1,15 +1,9 @@
-// Onboarding: lesson scripts (the tour and the tutorial) and their step builders.
 import AppKit
 
-// The coach's scripts: the short tour that ends onboarding, and the longer tutorial that drills the
-// keys until they stick. Both are built from the same step builders, which read the user's own binds
-// and leave a step out when nothing is bound for it.
 
-// MARK: - The user's binds
 
 struct BindBook {
     let binds: [KeyBinding]
-    /// The global bind that enters window mode, and the mode's name ("" without one).
     let enter: KeyBinding?
     let mode: String
 
@@ -19,7 +13,6 @@ struct BindBook {
         mode = enter?.arg ?? ""
     }
 
-    /// A bind in window mode, or a global one with `global`.
     func find(_ dispatchers: [String], _ arg: String? = nil, global: Bool = false) -> KeyBinding? {
         let submap = global ? "" : mode
         return binds.first { b in
@@ -33,13 +26,10 @@ struct BindBook {
 
     func enterCaps(long: Bool) -> [String] { enter.map { KeyWords.caps($0, long: long) } ?? [] }
 
-    /// W moves focus up: the WASD set.
     var wasd: Bool { find(["movefocus"], "u")?.keyCode == 13 }
 
-    /// Directions in the order their keys sit: H J K L, or W A S D.
     var directions: [String] { wasd ? ["u", "l", "d", "r"] : ["l", "d", "u", "r"] }
 
-    /// Grow and shrink binds for the main pane.
     var resize: (grow: KeyBinding, shrink: KeyBinding)? {
         let ratio = binds.filter { $0.submap == mode }.compactMap { b in KeyWords.ratioDirection(b.dispatcher, b.arg).map { (b, $0) } }
         guard let g = ratio.first(where: { $0.1 })?.0, let s = ratio.first(where: { !$0.1 })?.0 else { return nil }
@@ -47,14 +37,11 @@ struct BindBook {
     }
 }
 
-// MARK: - Shared steps
 
-/// One planned step: how to build it when it starts.
 struct PlannedStep {
     let build: (Coach) -> Coach.Step
 }
 
-/// Step builders shared by the tour and the tutorial. Each returns nil when the binds it needs are missing.
 enum Steps {
     typealias Step = Coach.Step
 
@@ -79,11 +66,9 @@ enum Steps {
         let name = b.mode.lowercased()
         return PlannedStep { _ in
             Step(title: "Leave \(name) mode",
-                 // The mode shows as a glow around the screen; there's no bar to point at.
                  text: recall ? "From memory." : (keys.isEmpty ? "Click anywhere. The edge glow fades."
                     : "Press \(KeyWords.list(keys, or: true)) or click anywhere. The edge glow fades."),
                  target: .mode, caps: keys, recall: recall, accept: { e in
-                     // Also when it's already off: a click turns it off without a mode event reaching us.
                      if case .mode(let n) = e, n.isEmpty { return "" }
                      if case .tick = e, Hotkeys.shared.submap.isEmpty { return "" }
                      return nil
@@ -91,7 +76,6 @@ enum Steps {
         }
     }
 
-    /// `?` opens the keyboard help in the mode, and again closes it.
     static func help(_ c: Coach) -> PlannedStep? {
         guard c.wm.config.keyboardHelp, !c.book.mode.isEmpty else { return nil }
         let key = c.wm.config.keyboardHelpKey
@@ -177,7 +161,7 @@ enum Steps {
         guard let add = c.book.find(["layoutmsg"], "addmaster"), let remove = c.book.find(["layoutmsg"], "removemaster") else { return nil }
         return PlannedStep { c in
             var adding = true
-            var seen: Set<String> = [] // each action counts once, so the step needs both
+            var seen: Set<String> = []
             return Step(title: "More main windows",
                         text: "\(KeyWords.keyWord(add)) adds a window to the main pane, \(KeyWords.keyWord(remove)) takes one out. Try both.",
                         target: .window, caps: KeyWords.caps(add, long: false) + [KeyWords.keyLabel(remove.keyCode, long: false)],
@@ -254,7 +238,7 @@ enum Steps {
     static func layouts(_ c: Coach) -> PlannedStep? {
         guard let next = c.book.find(["cyclelayout"], "next") else { return nil }
         let prev = c.book.find(["cyclelayout"], "prev")
-        let keys = [next, prev].compactMap { $0 }.map { KeyWords.caps($0, long: false).joined() } // WASD: R and ⇧R
+        let keys = [next, prev].compactMap { $0 }.map { KeyWords.caps($0, long: false).joined() }
         return PlannedStep { c in
             Step(title: "Change layout",
                  text: "",
@@ -292,7 +276,6 @@ enum Steps {
         }
     }
 
-    /// WASD's Q and E: the workspace before and after.
     static func neighbours(_ c: Coach) -> PlannedStep? {
         guard let next = c.book.find(["workspace"], "e+1"), let prev = c.book.find(["workspace"], "e-1"), c.desk != nil else { return nil }
         let keys = [prev, next].map { KeyWords.keyLabel($0.keyCode, long: false) }
@@ -350,7 +333,6 @@ enum Steps {
         }
     }
 
-    /// Points at the menu bar: Sort Windows, without opening it on the practice desk.
     static func sortIntro(_ c: Coach) -> PlannedStep? {
         guard c.wm.config.virtualWorkspaces, let sort = c.book.find(["sort"], global: true) ?? c.book.find(["sort"]) else { return nil }
         return PlannedStep { _ in
@@ -358,7 +340,6 @@ enum Steps {
         }
     }
 
-    /// Opens Sort Windows for real, then closes it with esc, which changes nothing.
     static func sortTry(_ c: Coach) -> [PlannedStep] {
         guard c.wm.config.virtualWorkspaces, let sort = c.book.find(["sort"], global: true) else { return [] }
         let open = PlannedStep { c in
@@ -382,9 +363,7 @@ enum Steps {
         return [open, close]
     }
 
-    // MARK: Recall drills
 
-    /// "Focus Notes": pick a window that isn't focused, and wait until it is. Keys stay hidden at first.
     static func focusDrill(_ c: Coach) -> PlannedStep? {
         guard focus(c) != nil else { return nil }
         let b = c.book
@@ -400,7 +379,6 @@ enum Steps {
         }
     }
 
-    /// "Put Mail in the main pane".
     static func mainDrill(_ c: Coach) -> PlannedStep? {
         guard let swap = c.book.find(["layoutmsg"], "swapwithmaster"), focus(c) != nil else { return nil }
         return PlannedStep { c in
@@ -415,13 +393,12 @@ enum Steps {
         }
     }
 
-    /// "Switch to Wide": cycle until the named layout is up.
     static func layoutDrill(_ c: Coach) -> PlannedStep? {
         guard let next = c.book.find(["cyclelayout"], "next") else { return nil }
         let options = c.wm.config.layouts.filter { ![.fullscreen, .floating].contains($0) }
         guard options.count > 1 else { return nil }
         let prev = c.book.find(["cyclelayout"], "prev")
-        let keys = [next, prev].compactMap { $0 }.map { KeyWords.caps($0, long: false).joined() } // WASD: R and ⇧R
+        let keys = [next, prev].compactMap { $0 }.map { KeyWords.caps($0, long: false).joined() }
         return PlannedStep { c in
             let now = c.wm.menuBarState()?.layout
             let target = options.filter { $0 != now }.randomElement() ?? options[0]
@@ -434,7 +411,6 @@ enum Steps {
         }
     }
 
-    /// "Go to workspace 7 and back" style: visit the other desk.
     static func workspaceDrill(_ c: Coach) -> PlannedStep? {
         guard let desk = c.desk, let other = c.other, c.book.find(["workspace"], other) != nil,
               let back = c.book.find(["workspace"], desk) else { return nil }
@@ -465,7 +441,6 @@ enum Steps {
         }
     }
 
-    // MARK: Bookends
 
     static func intro(_ c: Coach, title: String, button: String) -> PlannedStep {
         PlannedStep { c in
@@ -480,7 +455,6 @@ enum Steps {
         }
     }
 
-    /// The last card: every key the lesson taught, in the user's own binds. Groups with no binds drop out.
     static func summary(_ c: Coach, title: String, tutorial: Bool = false) -> PlannedStep {
         let b = c.book
         func cap(_ k: KeyBinding?) -> [String] { k.map { KeyWords.caps($0, long: false) } ?? [] }
@@ -523,9 +497,7 @@ enum Steps {
     }
 }
 
-// MARK: - The onboarding tour
 
-/// The tour at the end of onboarding: every main key once, on the practice desk, in about three minutes.
 final class TourLesson: Lesson {
     private var plan: [PlannedStep] = []
     let pausable = false
@@ -544,10 +516,7 @@ final class TourLesson: Lesson {
     func ended(_ how: Coach.Ending, at index: Int) {}
 }
 
-// MARK: - The tutorial
 
-/// The long tutorial: chapters that each teach a few keys and then drill them from memory. It can be
-/// paused at any step; it comes back at the start of that chapter.
 final class TutorialLesson: Lesson {
     struct Chapter {
         let id: String
@@ -564,7 +533,6 @@ final class TutorialLesson: Lesson {
     let pausable = true
     var count: Int { plan.count }
 
-    /// Where a paused tutorial picks up, if it was paused.
     static var paused: (id: String, name: String)? {
         guard let s = UserDefaults.standard.string(forKey: savedKey) else { return nil }
         let parts = s.split(separator: "|", maxSplits: 1).map(String.init)
@@ -612,7 +580,6 @@ final class TutorialLesson: Lesson {
     }
 }
 
-// MARK: - Keycap labels and words
 
 enum KeyWords {
     static func same(_ a: String, _ b: String) -> Bool {
@@ -621,7 +588,6 @@ enum KeyWords {
         return la == lb || (lb == "prev" && la.hasPrefix("prev"))
     }
 
-    /// l, d, u or r for any spelling of a direction.
     static func dirToken(_ a: String) -> String? {
         switch Direction(a) {
         case .left: "l"
@@ -636,7 +602,6 @@ enum KeyWords {
         ["l": "left", "r": "right", "u": "up", "d": "down"][t] ?? t
     }
 
-    /// For resize binds (`splitratio +0.05`, `layoutmsg mfact -0.05`): true if it grows the main pane.
     static func ratioDirection(_ dispatcher: String, _ arg: String) -> Bool? {
         var a = arg.lowercased().trimmingCharacters(in: .whitespaces)
         if dispatcher == "layoutmsg" {
@@ -649,7 +614,6 @@ enum KeyWords {
         return !a.hasPrefix("-")
     }
 
-    /// A shortcut as words for a sentence: "Shift-Period" rather than "⇧ .".
     static func keyWord(_ b: KeyBinding) -> String {
         let key: String
         switch b.keyCode {
@@ -707,15 +671,13 @@ enum KeyWords {
         }
     }
 
-    /// "Five" rather than "5", for the start of a sentence.
     static func count(_ n: Int) -> String {
         let f = NumberFormatter()
         f.numberStyle = .spellOut
-        f.locale = Locale(identifier: "en_US") // the lessons are in English
+        f.locale = Locale(identifier: "en_US")
         return (f.string(from: n as NSNumber) ?? String(n)).capitalized
     }
 
-    /// "H, J, K and L"
     static func list(_ items: [String], or: Bool = false) -> String {
         guard items.count > 1 else { return items.first ?? "" }
         return items.dropLast().joined(separator: ", ") + (or ? " or " : " and ") + items.last!

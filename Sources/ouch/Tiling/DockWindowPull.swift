@@ -1,8 +1,5 @@
-// Tiling: holds a Dock click to bring its window to the current workspace first.
 import AppKit
 
-/// Holds a plain Dock click long enough to bring its window here before macOS activates it.
-/// A drag or long press is handed back to the Dock with the original mouse-down event.
 final class DockWindowPull {
     var prepare: ((CGPoint) -> (() -> Void)?)?
     var post: (CGEvent) -> Void = { $0.post(tap: .cgSessionEventTap) }
@@ -34,7 +31,6 @@ final class DockWindowPull {
         return true
     }
 
-    /// Returns true only when Ouch consumes this event. Kept separate for the standalone probe.
     func handle(_ type: CGEventType, _ event: CGEvent) -> Bool {
         guard event.getIntegerValueField(.eventSourceUserData) != Self.replayMarker else { return false }
         switch type {
@@ -87,9 +83,6 @@ final class DockWindowPull {
     }
 }
 
-/// The screen edges where the Dock can take a click, so other clicks skip the Accessibility hit test.
-/// Each band covers the Dock's whole edge on every display, sized for magnification. It does not
-/// depend on whether an auto-hidden Dock shows now. Refreshes happen off the mouse tap path.
 final class DockArea {
     private var bands: [CGRect]?
     private var refreshed = Date.distantPast
@@ -101,11 +94,10 @@ final class DockArea {
                                                object: nil, queue: .main) { [weak self] _ in self?.refresh() }
     }
 
-    /// Cheap enough for every mouse-down: no Accessibility, no Dock preference read once warmed.
     func contains(_ point: CGPoint) -> Bool {
         guard let bands else { refresh(); return self.bands?.contains { $0.contains(point) } ?? true }
         if Date().timeIntervalSince(refreshed) > Self.maxAge, !refreshQueued {
-            refreshQueued = true // a Dock size or edge change with auto-hide sends no screen notification
+            refreshQueued = true
             DispatchQueue.main.async { [weak self] in self?.refresh() }
         }
         return bands.contains { $0.contains(point) }
@@ -128,8 +120,6 @@ final class DockArea {
                            depth: min(max(icon, 16), 512) + 48)
     }
 
-    /// Screen rects are in top-left-origin Quartz coordinates, like mouse event locations.
-    /// A reserved Dock gap wider than `depth` wins. Each band reaches 1 pt past the edge.
     static func bands(screens: [(frame: CGRect, visible: CGRect)], edge: String, depth: CGFloat) -> [CGRect] {
         screens.map { f, v in
             switch edge {

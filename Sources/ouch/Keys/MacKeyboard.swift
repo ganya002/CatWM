@@ -1,21 +1,12 @@
-// Keys: this Mac's keyboard model, finish, physical layout and input-source legends.
 import AppKit
 import Carbon
 import IOKit
 import IOKit.ps
 
-/// The keyboard KeyHintKeyboard draws: this Mac's keycaps and finish (from its model, and its housing
-/// colour when the IORegistry has one), its physical layout (ANSI, ISO or JIS) and the legends of the
-/// input source in use. Follows input source and Light/Dark changes. `keyboard-finish` in the config
-/// picks another finish or family.
-///
-/// Geometry is in the points of the Mac Keyboard design artifact: a 1u key on a 64pt pitch, 58pt wide
-/// with a 6pt gap, 56pt tall, rows 62pt apart. KeyHintKeyboard scales it.
 final class MacKeyboard: ObservableObject {
     static let shared = MacKeyboard()
 
     enum Family: String, CaseIterable {
-        /// MacBook Pro, MacBook Air, MacBook Neo, and the Magic Keyboard of the desktops.
         case pro, air, neo, mk
 
         var slug: String {
@@ -34,7 +25,6 @@ final class MacKeyboard: ObservableObject {
     @Published private(set) var shape: Shape = .ansi
     @Published private(set) var keys: [KeyHintKeyboard.Key] = []
 
-    /// `auto`, a finish (`macbook-air-midnight`) or a family (`macbook-pro`). Set from the config.
     var setting = "auto" {
         didSet { if setting != oldValue { refresh() } }
     }
@@ -48,7 +38,6 @@ final class MacKeyboard: ObservableObject {
         DistributedNotificationCenter.default().addObserver(
             forName: Notification.Name(kTISNotifySelectedKeyboardInputSourceChanged as String), object: nil, queue: .main
         ) { [weak self] _ in self?.refresh() }
-        // Another keyboard (an ISO one plugged in) shows up as a new keyboard type on the next key press.
         NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
             self?.refresh()
         }
@@ -57,7 +46,6 @@ final class MacKeyboard: ObservableObject {
         }
     }
 
-    /// Reads the model, finish, layout and legends again; publishes only what changed.
     func refresh() {
         let dark = NSApp.map { Theme.isDark($0.effectiveAppearance) } ?? false
         let f = Self.resolve(setting, dark: dark)
@@ -73,11 +61,7 @@ final class MacKeyboard: ObservableObject {
         keys = Self.build(shape: s, light: f.lightKeys, english: english, legends: typed.legends, koreanCaps: typed.koreanCaps)
     }
 
-    // MARK: Model and finish
 
-    /// What this Mac is: the product name on Apple silicon ("MacBook Air (13-inch, M4, 2025)"), the
-    /// model identifier on Intel ("MacBookPro16,1"). A laptop we can't name gets the Air; a desktop the
-    /// Magic Keyboard.
     static let detectedFamily: Family = {
         let name = ((productName() ?? "") + " " + (sysctl("hw.model") ?? "")).lowercased()
         if name.contains("macbook pro") || name.contains("macbookpro") { return .pro }
@@ -89,8 +73,6 @@ final class MacKeyboard: ObservableObject {
         return hasBattery() ? .air : .mk
     }()
 
-    /// The finish for a config value. `auto` uses this Mac's family and its housing colour when the
-    /// IORegistry names one, otherwise a finish that suits Light or Dark Mode.
     static func resolve(_ setting: String, dark: Bool) -> Finish {
         let v = slug(setting)
         if let f = Finish.all.first(where: { $0.slug == v }) { return f }
@@ -99,7 +81,6 @@ final class MacKeyboard: ObservableObject {
         return Finish.automatic(family, dark: dark)
     }
 
-    /// Whether `keyboard-finish` understands the value.
     static func isValid(_ setting: String) -> Bool {
         let v = slug(setting)
         return v == "auto" || familyFor(v) != nil || Finish.all.contains { $0.slug == v }
@@ -153,7 +134,6 @@ final class MacKeyboard: ObservableObject {
         }
     }
 
-    /// The housing colour, if the IORegistry exposes one: a name ("blue") or an RGB triple.
     static let housingColor: String? = {
         for path in ["IODeviceTree:/product", "IODeviceTree:/"] {
             for key in ["housing-color", "device-color", "enclosure-color", "DeviceEnclosureColor"] {
@@ -171,7 +151,6 @@ final class MacKeyboard: ObservableObject {
         return nil
     }()
 
-    /// The family's finish closest to the housing colour: by name, or the nearest deck colour.
     private static func housingFinish(_ family: Family) -> Finish? {
         guard let colour = housingColor?.lowercased() else { return nil }
         let options = Finish.all.filter { $0.family == family }
@@ -188,7 +167,6 @@ final class MacKeyboard: ObservableObject {
         return options.min { distance($0.deck.0, v) < distance($1.deck.0, v) }
     }
 
-    // MARK: Layout and legends
 
     private static func physicalShape() -> Shape {
         switch Int(KBGetLayoutType(Int16(LMGetKbdType()))) {
@@ -204,19 +182,16 @@ final class MacKeyboard: ObservableObject {
         return Unmanaged<CFString>.fromOpaque(ptr).takeUnretainedValue() as String
     }
 
-    /// US English layouts: the only ones whose keyboards print words (tab, shift, command) on the keys.
     private static let englishSources: Set<String> = [
         "com.apple.keylayout.US", "com.apple.keylayout.ABC", "com.apple.keylayout.USExtended",
         "com.apple.keylayout.Dvorak", "com.apple.keylayout.DVORAK-QWERTYCMD", "com.apple.keylayout.Colemak",
     ]
 
-    /// The letter keys, by key code.
     private static let letters: [UInt16: String] = [
         12: "Q", 13: "W", 14: "E", 15: "R", 17: "T", 16: "Y", 32: "U", 34: "I", 31: "O", 35: "P",
         0: "A", 1: "S", 2: "D", 3: "F", 5: "G", 4: "H", 38: "J", 40: "K", 37: "L",
         6: "Z", 7: "X", 8: "C", 9: "V", 11: "B", 45: "N", 46: "M",
     ]
-    /// The other typing keys on a US keyboard: base and shifted. 10 is the ISO key left of 1.
     private static let usSymbols: [UInt16: (String, String)] = [
         50: ("`", "~"), 18: ("1", "!"), 19: ("2", "@"), 20: ("3", "#"), 21: ("4", "$"), 23: ("5", "%"), 22: ("6", "^"),
         26: ("7", "&"), 28: ("8", "*"), 25: ("9", "("), 29: ("0", ")"), 27: ("-", "_"), 24: ("=", "+"),
@@ -230,10 +205,6 @@ final class MacKeyboard: ObservableObject {
         return v < 0x250 || (0x1E00...0x1EFF).contains(v)
     }
 
-    /// What the typing keys say on the current input source: a letter, or the shifted symbol over the
-    /// base one. Some Latin layouts also print an Option symbol on letter keys. A non-Latin layout
-    /// (Russian, Greek) keeps the Latin legends on the left and adds its own on the right, as those
-    /// keyboards are printed.
     static func typingLegends() -> (legends: [UInt16: KeyHintKeyboard.Legend], koreanCaps: Bool) {
         let codes = Array(letters.keys) + Array(usSymbols.keys)
         var native: [UInt16: (base: String, shifted: String?, option: String?)] = [:]
@@ -271,8 +242,6 @@ final class MacKeyboard: ObservableObject {
         return .init(t: base.uppercased())
     }
 
-    /// Option characters Apple prints on letter keys (€ on E, @ on L for German, Spanish, Italian…).
-    /// Others, like US ∂ or ƒ, are typeable but not printed.
     private static let printedOption: Set<String> = ["€", "@"]
 
     private static func quad(code: UInt16, us: (base: String, shifted: String?), native n: (base: String, shifted: String?, option: String?)) -> KeyHintKeyboard.Legend {
@@ -288,16 +257,13 @@ final class MacKeyboard: ObservableObject {
         return l
     }
 
-    // MARK: Keys
 
     static let pitch: CGFloat = 64, rowPitch: CGFloat = 62, gap: CGFloat = 6, keyHeight: CGFloat = 56
-    /// The key area: 14.5u by six rows.
     static let area = CGSize(width: 14.5 * pitch - gap, height: 5 * rowPitch + keyHeight)
 
     private typealias Key = KeyHintKeyboard.Key
     private typealias Item = (code: UInt16?, u: CGFloat, kind: Key.Kind)
 
-    /// Every key, left to right and top to bottom, so a left modifier comes before its right twin.
     static func build(shape: Shape, light: Bool, english: Bool, legends: [UInt16: KeyHintKeyboard.Legend], koreanCaps: Bool = false) -> [KeyHintKeyboard.Key] {
         let U = pitch, V = rowPitch, KH = keyHeight
         func kw(_ u: CGFloat) -> CGFloat { u * U - gap }
@@ -310,7 +276,6 @@ final class MacKeyboard: ObservableObject {
             }
             return x
         }
-        // Light keycaps (Neo, Magic Keyboard) never print words on these; US dark ones do.
         let words = english && !light
         func word(_ code: UInt16, _ u: CGFloat, _ trailing: Bool, _ w: String, _ symbol: String, caps: Bool = false) -> Item {
             (code, u, .word(words ? w : symbol, symbol: !words, trailing: trailing, caps: caps))
@@ -319,7 +284,6 @@ final class MacKeyboard: ObservableObject {
             koreanCaps ? (57, u, .word("한/A", symbol: false, trailing: false, caps: true)) : word(57, u, false, "caps lock", "⇪", caps: true)
         }
         func mod(_ code: UInt16, _ u: CGFloat, _ symbol: String, _ w: String, left: Bool) -> Item {
-            // Dark keyboards print the symbol in the outer top corner, light ones in the inner one.
             (code, u, .modifier(symbol, word: english ? w : nil, symbolTrailing: left != light))
         }
         func chars(_ codes: [UInt16]) -> [Item] { codes.map { ($0, 1, .typing(legends[$0] ?? .init(t: ""))) } }
@@ -344,7 +308,6 @@ final class MacKeyboard: ObservableObject {
             row(3, [caps(1.5)] + chars([0, 1, 2, 3, 5, 4, 38, 40, 37, 41, 39, 42]))
             row(4, [word(56, 1.25, false, "shift", "⇧")] + chars([50, 6, 7, 8, 9, 11, 45, 46, 43, 47, 44]) + [word(60, 2.25, true, "shift", "⇧")])
         case .jis:
-            // JIS keyboards print the same Latin and kana legends whatever the input source.
             func j(_ code: UInt16, _ t: String, _ b: String, _ kana: String, _ small: String = "", u: CGFloat = 1) -> Item {
                 (code, u, .jis(.init(t: t, b: b, c: kana, d: small)))
             }
@@ -375,7 +338,6 @@ final class MacKeyboard: ObservableObject {
             : row(5, [(nil, 1, .fn(light ? .neo : .standard)), mod(59, 1, "⌃", "control", left: true), mod(58, 1, "⌥", "option", left: true),
                       mod(55, 1.25, "⌘", "command", left: true), (49, 5, .space),
                       mod(54, 1.25, "⌘", "command", left: false), mod(61, 1, "⌥", "option", left: false)])
-        // The inverted T: half-height keys, up and down sharing one slot.
         let ah = (KH - 4) / 2, y5 = 5 * V
         let arrows: [(code: UInt16, dx: CGFloat, top: Bool, dir: Key.Direction)] = [(123, 0, false, .left), (126, 1, true, .up),
                                                                                   (125, 1, false, .down), (124, 2, false, .right)]
@@ -398,16 +360,12 @@ final class MacKeyboard: ObservableObject {
     }
 }
 
-// MARK: - Finishes
 
 extension MacKeyboard {
-    /// A model in one colour: the deck the keys sit in, its edge highlight and, for light keycaps, the
-    /// key face and legend colours.
     struct Finish: Equatable {
         let name: String
         let family: Family
         let dark: Bool
-        /// Top and bottom of the deck's gradient.
         let deck: (UInt32, UInt32)
         let edge: UInt32
         let edgeAlpha: CGFloat
@@ -415,9 +373,7 @@ extension MacKeyboard {
         var keyLegend: UInt32? = nil
 
         var lightKeys: Bool { keyFace != nil }
-        /// "Space Black" from "MacBook Pro · Space Black".
         var colour: String { name.components(separatedBy: " · ").last ?? name }
-        /// `macbook-pro-space-black`, as written in the config.
         var slug: String { MacKeyboard.slug(name) }
 
         static func == (a: Finish, b: Finish) -> Bool { a.name == b.name }
@@ -453,7 +409,6 @@ extension MacKeyboard {
                    keyFace: 0xF6F7F9, keyLegend: 0x4A4A4C),
         ]
 
-        /// Without a known housing colour: the dark finish in Dark Mode, silver in Light Mode.
         static func automatic(_ family: Family, dark: Bool) -> Finish {
             let name: String
             switch family {

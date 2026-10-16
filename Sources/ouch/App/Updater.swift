@@ -1,10 +1,6 @@
-// App: in-app updates through Sparkle.
 import Foundation
 import Sparkle
 
-/// In-app updates through Sparkle, with releases hosted by Amore (https://amore.computer).
-/// Inert until Info.plist has the SUFeedURL and SUPublicEDKey that `amore setup` prints, so a
-/// fresh checkout never shows Sparkle's "feed missing" alert.
 final class Updater: NSObject, SPUUpdaterDelegate, ObservableObject {
     static let shared = Updater()
 
@@ -12,7 +8,6 @@ final class Updater: NSObject, SPUUpdaterDelegate, ObservableObject {
 
     private var controller: SPUStandardUpdaterController?
 
-    /// False until the feed and key are filled in.
     let isConfigured: Bool = {
         let info = Bundle.main.infoDictionary ?? [:]
         let url = info["SUFeedURL"] as? String ?? ""
@@ -47,14 +42,11 @@ final class Updater: NSObject, SPUUpdaterDelegate, ObservableObject {
         set { objectWillChange.send(); controller?.updater.automaticallyDownloadsUpdates = newValue }
     }
 
-    /// Opt in to releases published to Amore's "beta" channel (`amore release --channel beta`).
-    /// Builds made by beta.sh start opted in, so early-access users keep getting betas.
     var receivesBeta: Bool {
         get { UserDefaults.standard.bool(forKey: Self.betaKey) }
         set { objectWillChange.send(); UserDefaults.standard.set(newValue, forKey: Self.betaKey) }
     }
 
-    // MARK: SPUUpdaterDelegate
 
     func allowedChannels(for updater: SPUUpdater) -> Set<String> {
         receivesBeta ? ["beta"] : []

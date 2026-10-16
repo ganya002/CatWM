@@ -1,4 +1,3 @@
-// Config: the editable config document behind Settings (bind/var rows, action catalog, save).
 import AppKit
 import Carbon
 import Combine
@@ -10,8 +9,8 @@ struct BindRow: Identifiable, Equatable {
     var key: String
     var dispatcher: String
     var args: String
-    var submap = "" // "" = global; otherwise the mode this bind belongs to
-    var kind = "bind" // bind, binde, bindl…
+    var submap = ""
+    var kind = "bind"
 }
 
 struct VarRow: Equatable {
@@ -19,7 +18,6 @@ struct VarRow: Equatable {
     var value: String
 }
 
-// MARK: - Human-readable actions for keybinds
 
 enum ActionCategory: String, CaseIterable, Identifiable {
     case focus = "Focus", move = "Move Windows", layout = "Layout", window = "Window", displays = "Displays"
@@ -46,7 +44,6 @@ struct Action: Identifiable {
     let dispatcher: String
     let args: String
     let symbol: String
-    /// Numbered families (workspaces, layouts) share a submenu in the action menus; `short` is the item's name there.
     var group: String? = nil
     var short: String? = nil
     var id: String { "\(dispatcher) \(args)" }
@@ -125,7 +122,6 @@ enum Actions {
         return list.isEmpty ? nil : (c, list)
     }
 
-    /// A category's actions as menu entries, each numbered family folded into one submenu where it first appears.
     enum MenuEntry: Identifiable {
         case action(Action), group(String, [Action])
         var id: String {
@@ -149,7 +145,6 @@ enum Actions {
         s.lowercased().split(separator: " ").joined(separator: " ")
     }
 
-    /// The catalog entry a bind corresponds to, accepting Hyprland's aliases.
     static func match(_ r: BindRow) -> Action? {
         var d = r.dispatcher.lowercased(), x = norm(r.args)
         if d == "exec" { return all.first { $0.dispatcher == "exec" } }
@@ -175,7 +170,6 @@ enum Actions {
         return all.first { $0.dispatcher == d && norm($0.args) == x }
     }
 
-    /// Title for a range bind, e.g. "Switch to Space 1…10" or "Focus Left, Down, Up, Right".
     static func rangeSummary(_ r: BindRow) -> (title: String, category: ActionCategory, symbol: String)? {
         guard case .success(let pairs) = BindRange.pairs(key: r.key, dispatcher: r.dispatcher, arg: r.args), pairs.count > 1
         else { return nil }
@@ -193,18 +187,13 @@ enum Actions {
         return ("\(r.dispatcher) \(r.args)", first.category, first.symbol)
     }
 
-    /// Dispatchers the window manager understands, for the custom editor.
     static let dispatchers = ["movefocus", "movewindow", "swapwindow", "cyclenext", "swapnext", "layoutmsg", "splitratio",
                               "togglefloating", "fullscreen", "nativefullscreen", "killactive", "exec", "focusmonitor", "movewindowtomonitor",
                               "workspace", "movetoworkspace", "movetoworkspacesilent", "cyclelayout", "layout", "setlayout",
                               "toggletiling", "toggledim", "toggleblur", "retile", "reevaluate", "reload", "exit", "submap", "sethomespace", "sort", "sort-undo"]
 }
 
-// MARK: - Document
 
-/// Editable view of the config file used by the settings window. Typed options live in `config`;
-/// variables and binds are kept raw so `$mod` references survive a round trip. Changes save
-/// themselves shortly after you stop editing.
 final class ConfigDocument: ObservableObject {
     @Published var config = Config()
     @Published var vars: [VarRow] = []
@@ -212,9 +201,9 @@ final class ConfigDocument: ObservableObject {
     @Published private(set) var fileErrors: [String] = []
     @Published private(set) var saveError: String?
     private var savedText = ""
-    private var openedText = "" // state when the window was opened, for "Undo All Changes"
-    private var extraLines: [String] = [] // lines we don't understand, written back untouched
-    private var unreadable = false // the config file exists but can't be read: never overwrite it
+    private var openedText = ""
+    private var extraLines: [String] = []
+    private var unreadable = false
     private var autosave: AnyCancellable?
 
     static let modifierChoices: [(value: String, label: String)] = [
@@ -223,7 +212,6 @@ final class ConfigDocument: ObservableObject {
         ("SUPER CTRL", "⌃⌘ Control + Command"), 
     ]
 
-    /// A throwaway document over some config text: used to normalise and compare config payloads. Never saves.
     init(text: String) { apply(text: text) }
 
     init() {
@@ -237,7 +225,6 @@ final class ConfigDocument: ObservableObject {
     var isDirty: Bool { serialize() != savedText }
     var hasChangesSinceOpen: Bool { serialize() != openedText }
 
-    /// Called when the window opens: pick up hand edits and remember where we started.
     func beginSession() {
         if !isDirty { load() }
         openedText = serialize()
@@ -250,7 +237,6 @@ final class ConfigDocument: ObservableObject {
         modValue = mod
     }
 
-    /// Replaces whole `$mod` tokens (space/_/+ separated), leaving `$mod2` and friends alone.
     private static func replacingModToken(_ mods: String, with name: String) -> String {
         var out = "", tok = ""
         func flush() { out += tok == "$mod" ? name : tok; tok = "" }
@@ -259,7 +245,6 @@ final class ConfigDocument: ObservableObject {
         return out
     }
 
-    /// The variables and binds as config text: a keyboard config's payload.
     func keyboardText() -> String {
         let all = serialize().components(separatedBy: "\n")
         let lines = vars.map { "\($0.name) = \($0.value.replacingOccurrences(of: "#", with: "##"))" } + [""]
@@ -267,7 +252,6 @@ final class ConfigDocument: ObservableObject {
         return lines.joined(separator: "\n") + "\n"
     }
 
-    /// The animation options as config text: an animation config's payload.
     func animationText() -> String {
         let c = config
         return [
@@ -279,14 +263,12 @@ final class ConfigDocument: ObservableObject {
         ].joined(separator: "\n")
     }
 
-    /// Swaps in a keyboard config's variables and binds, keeping every other setting.
     func applyKeyboard(_ text: String) {
         let other = ConfigDocument(text: text)
         vars = other.vars
         binds = other.binds
     }
 
-    /// Swaps in an animation config's options, keeping every other setting.
     func applyAnimation(_ text: String) {
         let c = Config.parse(text)
         config.animate = c.animate
@@ -295,10 +277,8 @@ final class ConfigDocument: ObservableObject {
         config.animationBounce = c.animationBounce
     }
 
-    /// Replaces everything with a full config's text.
     func applyFull(_ text: String) { apply(text: text) }
 
-    /// Writes the variables and binds to keybinds-backup-<date>.conf next to the config.
     func backUpShortcuts() -> URL? {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd-HHmm"
@@ -306,9 +286,7 @@ final class ConfigDocument: ObservableObject {
         return (try? ("# Ouch keybind backup, \(Date())\n" + keyboardText()).write(to: url, atomically: true, encoding: .utf8)) != nil ? url : nil
     }
 
-    // MARK: Main modifier variable
 
-    /// The variable binds use as their modifier ($mod, or Hyprland's $mainMod).
     var modVarName: String { vars.first { $0.name.lowercased().contains("mod") }?.name ?? "$mod" }
 
     var modValue: String {
@@ -319,7 +297,6 @@ final class ConfigDocument: ObservableObject {
         }
     }
 
-    // MARK: Load / save
 
     func load() {
         let text = try? String(contentsOf: Config.url, encoding: .utf8)
@@ -336,7 +313,7 @@ final class ConfigDocument: ObservableObject {
         var newVars: [VarRow] = [], newBinds: [BindRow] = [], extra: [String] = []
         var resolved: [(String, String)] = []
         var submap = ""
-        var blocks: [String] = [] // same block tracking as Config.parse
+        var blocks: [String] = []
 
         for raw in text.components(separatedBy: .newlines) {
             var line = stripComment(raw)
@@ -371,7 +348,7 @@ final class ConfigDocument: ObservableObject {
                 var probe = Config()
                 var v = value
                 for (k, val) in resolved.sorted(by: { $0.0.count > $1.0.count }) { v = v.replacingOccurrences(of: k, with: val) }
-                if probe.apply((blocks + [key]).joined(separator: ":"), v) != nil { extra.append(raw) } // unknown, or a bad value: keep the user's line
+                if probe.apply((blocks + [key]).joined(separator: ":"), v) != nil { extra.append(raw) }
             }
         }
         if !newVars.contains(where: { $0.name.lowercased().contains("mod") }) {
@@ -406,7 +383,6 @@ final class ConfigDocument: ObservableObject {
         return true
     }
 
-    /// `includeKeyboard`/`includeAnimation` off leaves those parts out, to compare "everything else" on its own.
     func serialize(includeKeyboard: Bool = true, includeAnimation: Bool = true) -> String {
         let c = config
         func b(_ v: Bool) -> String { v ? "true" : "false" }
@@ -441,7 +417,6 @@ final class ConfigDocument: ObservableObject {
             "mouse-resizes-windows = \(b(c.mouseResizesWindows))",
             "new-windows-to-main = \(b(c.newWindowsToMain))",
             "float-small-windows = \(b(c.floatSmallWindows))",
-            // Below 1% the percent form would read back as a fraction, so write the fraction itself.
             "window-resize-step = \(c.windowResizeStep >= 0.01 ? n(c.windowResizeStep * 100) : n(c.windowResizeStep))",
             "enables-layout-hud = \(b(c.enablesLayoutHUD))",
             "enables-layout-hud-on-space-change = \(b(c.enablesLayoutHUDOnSpaceChange))",
@@ -505,7 +480,6 @@ final class ConfigDocument: ObservableObject {
         return out.joined(separator: "\n") + "\n"
     }
 
-    // MARK: Keybind helpers
 
     func resolvedMods(_ mods: String) -> String {
         var s = mods
@@ -527,7 +501,6 @@ final class ConfigDocument: ObservableObject {
         return f
     }
 
-    /// Mods string for a recorded combo, written as `$mod …` when it includes the main modifier.
     func modsString(for f: NSEvent.ModifierFlags) -> String {
         var rest = f
         var parts: [String] = []
@@ -548,7 +521,6 @@ final class ConfigDocument: ObservableObject {
 
     struct Combo: Hashable { let code: UInt16; let flags: UInt }
 
-    /// Every key combo a row binds (several for a range row), or nil if it doesn't parse.
     func combos(_ row: BindRow) -> [Combo]? {
         guard let f = Self.flags(resolvedMods(row.mods)),
               case .success(let pairs) = BindRange.pairs(key: row.key, dispatcher: row.dispatcher, arg: row.args) else { return nil }
@@ -584,7 +556,6 @@ final class ConfigDocument: ObservableObject {
         if row.dispatcher == "exec" && row.args.trimmingCharacters(in: .whitespaces).isEmpty {
             return (.error, "Enter the command to run")
         }
-        // ⌥ alone (or with ⇧) types symbols on many layouts, e.g. ⌥8 is “[” on Norwegian and Swedish.
         if row.submap.isEmpty, f.contains(.option), f.isDisjoint(with: [.command, .control]) {
             let typed = mine.compactMap { c in Self.typedCharacter(keyCode: c.code, flags: f).map { (c, $0) } }
             if let first = typed.first {
@@ -600,7 +571,6 @@ final class ConfigDocument: ObservableObject {
         return nil
     }
 
-    /// What a key types with these modifiers on the current keyboard layout, if it's a visible character.
     static func typedCharacter(keyCode: UInt16, flags: NSEvent.ModifierFlags) -> String? {
         guard let source = TISCopyCurrentKeyboardLayoutInputSource()?.takeRetainedValue(),
               let ptr = TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData) else { return nil }
@@ -622,7 +592,6 @@ final class ConfigDocument: ObservableObject {
         return visible && !s.trimmingCharacters(in: .whitespaces).isEmpty ? s : nil
     }
 
-    /// Modes in the order they first appear, global ("") first.
     var submaps: [String] {
         var seen = [""]
         for b in binds where !seen.contains(b.submap) { seen.append(b.submap) }
@@ -643,7 +612,6 @@ final class ConfigDocument: ObservableObject {
         10: "section", 93: "yen", 94: "underscore_jis", 102: "eisu", 104: "kana",
     ]
 
-    /// Keycaps for display, e.g. ["⌥", "⇧", "H"]. A short `h|j|k|l` list gets a cap per key.
     func prettyShortcut(_ row: BindRow) -> [String] {
         guard let f = Self.flags(resolvedMods(row.mods)) else { return [row.mods, row.key] }
         var caps = Self.modifierCaps(f)
@@ -660,7 +628,6 @@ final class ConfigDocument: ObservableObject {
         return caps
     }
 
-    /// ⌃⌥⇧⌘, in the order macOS menus use.
     static func modifierCaps(_ f: NSEvent.ModifierFlags) -> [String] {
         var caps: [String] = []
         if f.contains(.control) { caps.append("⌃") }
@@ -681,17 +648,13 @@ final class ConfigDocument: ObservableObject {
         "swipe_left": "Swipe ←", "swipe_right": "Swipe →", "swipe_up": "Swipe ↑", "swipe_down": "Swipe ↓",
     ]
 
-    /// How one key name is printed on a keycap.
     static func capLabel(_ key: String) -> String { keySymbols[key.lowercased()] ?? key.uppercased() }
 
-    // MARK: Shortcut map
 
-    /// One key combo and what it does, with range binds split into their keys.
     struct KeyAction: Identifiable {
         let code: UInt16
         let key: String
         let flags: NSEvent.ModifierFlags
-        /// This key's own argument (one of a range row's).
         let arg: String
         let title: String
         let symbol: String
@@ -701,7 +664,6 @@ final class ConfigDocument: ObservableObject {
         var id: String { "\(row.id) \(code)" }
     }
 
-    /// Every combo bound in a mode ("" = global). Rows that don't parse are left out.
     func keyActions(in submap: String) -> [KeyAction] {
         var out: [KeyAction] = []
         for row in binds where row.submap == submap {

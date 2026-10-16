@@ -1,38 +1,25 @@
-// Overlays: the window-mode dot beside the pointer and the quick-action menu a modifier tap opens there.
 import AppKit
 import SwiftUI
 
-/// While a mode is on, a small dot follows the pointer so you can tell where the mouse's window actions go.
-/// Tapping `$mod` (or the mode chord's modifier, ⌘ for ⌘⇪) opens a menu there with actions for the window
-/// under the pointer; a second tap, Esc or a click outside closes it (a click outside also leaves the mode,
-/// like any click). A small click-through panel with the mark follows the pointer; the menu has a panel of its own, which
-/// takes clicks only while it is open. Neither becomes key, so focus stays with the app. `cursor-actions = false` turns it off.
 final class CursorActions {
     static let shared = CursorActions()
 
     private let model = CursorActionsModel()
-    /// The mark beside the pointer. Never resized, so it can't be caught half-way by the menu opening.
     private var dotPanel: NSPanel?
-    /// The menu, placed and shown only while it is open or playing out.
     private var menuPanel: NSPanel?
-    /// Mouse moves, seen as they happen, so the mark moves with the pointer and not after it.
     private var moveTap: CFMachPort?
     private var moveSource: CFRunLoopSource?
     private var lastFollow = CGPoint(x: -1, y: -1)
     private var shown = false
-    /// The menu panel is placed but the view has not been told to open yet.
     private var opening = false
-    /// Keeps the menu panel up until the view has played the menu out.
     private var closeWork: DispatchWorkItem?
     private static let dotSize = CursorActionsView.markSize
 
     private var enabled: Bool { WindowManager.shared.config.cursorActions }
     var isMenuOpen: Bool { model.open }
 
-    /// Hooks into the key tap. Called once when the window manager starts.
     func install() {
         Hotkeys.shared.onModifierTap = { [weak self] in self?.tapped() }
-        // Asked inside the tap, so it only reads; the menu closes a turn later.
         Hotkeys.shared.onEscape = { [weak self] in
             guard let self, model.open else { return false }
             DispatchQueue.main.async { [weak self] in self?.dismissMenu() }
@@ -44,15 +31,12 @@ final class CursorActions {
         }
     }
 
-    // MARK: Triggers
 
-    /// A mode began or ended. The mark shows for the whole mode; a menu from before never carries over.
     func modeChanged(_ name: String) {
         dismissMenu()
         if name.isEmpty || !enabled { hide() } else { show() }
     }
 
-    /// The mode's modifier was tapped: open the menu for the window under the pointer, or close it.
     func tapped() {
         guard enabled, !Hotkeys.shared.submap.isEmpty else { return }
         if model.open || opening { dismissMenu(); return }
@@ -73,7 +57,6 @@ final class CursorActions {
         menu.ignoresMouseEvents = false
         menu.orderFrontRegardless()
         fadeDot(out: true)
-        // A turn later: the view first lays out closed in its panel, so the entrance has a start to grow from.
         opening = true
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
@@ -99,11 +82,10 @@ final class CursorActions {
         menuPanel?.orderOut(nil)
         menuPanel?.ignoresMouseEvents = true
         guard shown else { return }
-        placeDot(at: NSEvent.mouseLocation) // the pointer may have left while the menu was up
+        placeDot(at: NSEvent.mouseLocation)
         fadeDot(out: false)
     }
 
-    // MARK: Panels
 
     private func show() {
         guard !shown else { return }
@@ -125,7 +107,6 @@ final class CursorActions {
         dotPanel?.orderOut(nil)
     }
 
-    /// The mark leaves as the menu unfolds from its place, and comes back once the menu is gone.
     private func fadeDot(out: Bool) {
         guard let dot = dotPanel else { return }
         NSAnimationContext.runAnimationGroup { ctx in
@@ -134,8 +115,6 @@ final class CursorActions {
         }
     }
 
-    /// A listen-only tap for mouse moves and drags. A global monitor gets them a frame or two late and in
-    /// bursts, and a timer reads the pointer up to a tick late; the tap sees each move as it happens.
     private func startMoveTap() {
         guard moveTap == nil else { return }
         let mask = [CGEventType.mouseMoved, .leftMouseDragged, .rightMouseDragged, .otherMouseDragged]
@@ -160,8 +139,6 @@ final class CursorActions {
         if let t = moveTap { CGEvent.tapEnable(tap: t, enable: true) }
     }
 
-    /// The mark stays where the menu opened while the menu is up. `cgPoint` is global, y down from the top
-    /// of the main display, as an event has it.
     fileprivate func follow(cgPoint: CGPoint) {
         guard shown, !model.open, !opening, menuPanel?.isVisible != true else { return }
         let p = CGPoint(x: cgPoint.x, y: (NSScreen.screens.first?.frame.height ?? 0) - cgPoint.y)
@@ -170,16 +147,12 @@ final class CursorActions {
         placeDot(at: p)
     }
 
-    /// The mark's panel is centred on the spot `markOffset` right of the pointer's hot spot (`point`, global, y up).
     private func placeDot(at point: CGPoint) {
         let side = Self.dotSize
         let o = CursorActionsView.markOffset
         dotPanel?.setFrameOrigin(CGPoint(x: (point.x + o.width - side / 2).rounded(), y: (point.y - o.height - side / 2).rounded()))
     }
 
-    /// The menu's panel fits the menu and its shadow margin, sits just below and right of the pointer, and
-    /// flips to the other side of it near a screen edge, so no empty panel is left to catch clicks. Tells the
-    /// view where the pointer is in the panel (y down).
     private func place(menu panel: NSPanel, at point: CGPoint) {
         let m = CursorActionsView.margin, gap: CGFloat = 10
         let size = CursorActionsView.menuSize(for: model.actions)
@@ -195,7 +168,6 @@ final class CursorActions {
         model.anchor = CGPoint(x: point.x - frame.minX, y: frame.maxY - point.y)
     }
 
-    /// The key cap symbol for `$mod`: the first of ⌘ ⌥ ⌃ ⇧ it holds.
     private static func glyph(of flags: CGEventFlags) -> String {
         if flags.contains(.maskCommand) { return "⌘" }
         if flags.contains(.maskAlternate) { return "⌥" }
@@ -216,7 +188,7 @@ final class CursorActions {
     private func makeMenuPanel() -> NSPanel {
         let p = Self.makePanel()
         let host = FirstClickHost(rootView: CursorActionsView(model: model))
-        host.sizingOptions = [] // only `place` sizes the panel
+        host.sizingOptions = []
         p.contentView = host
         return p
     }
@@ -226,7 +198,7 @@ final class CursorActions {
         p.level = .screenSaver
         p.isOpaque = false
         p.backgroundColor = .clear
-        p.hasShadow = false // drawn by SwiftUI
+        p.hasShadow = false
         p.hidesOnDeactivate = false
         p.becomesKeyOnlyIfNeeded = true
         p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
@@ -245,7 +217,6 @@ private func cursorMoveCallback(proxy: CGEventTapProxy, type: CGEventType, event
     return Unmanaged.passUnretained(event)
 }
 
-/// The panel is never key, so its first click must already press the menu's buttons.
 private final class FirstClickHost<Content: View>: NSHostingView<Content> {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }

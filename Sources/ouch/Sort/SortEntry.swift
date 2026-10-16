@@ -1,14 +1,8 @@
-// Sort: ways into Sort Windows (crowded-workspace tip, the offer at the end of the tour).
 import AppKit
 import SwiftUI
 
-// Ways into Sort Windows besides the menu and the bind: a tip under the menu bar icon when a workspace
-// is packed, and the card that closes the keyboard tour.
 
-// MARK: - Crowded tip
 
-/// "Workspace 1 is packed": a Surface `md` hanging under the menu bar icon, at most once a day per
-/// workspace, never while the tour runs.
 final class SortNudge {
     static let shared = SortNudge()
     private static let key = "sort.nudged"
@@ -24,7 +18,6 @@ final class SortNudge {
         return f.string(from: Date())
     }
 
-    /// Counts as shown for today, so the tour's own offer isn't followed by this one.
     func markOffered(_ workspace: String) {
         var days = UserDefaults.standard.dictionary(forKey: Self.key) as? [String: String] ?? [:]
         days[workspace] = Self.today()
@@ -49,7 +42,7 @@ final class SortNudge {
         model.never = { [weak self] in
             self?.dismiss()
             Config.write(option: "sort-nudge", "0")
-            SettingsWindow.shared.doc.load() // an open Settings window must not write the old value back
+            SettingsWindow.shared.doc.load()
             wm.reload(showHUD: false)
         }
         let host = FirstClickHostingView(rootView: SortNudgeView(model: model))
@@ -66,7 +59,7 @@ final class SortNudge {
         p.contentView = host
         p.alphaValue = 0
         p.orderFrontRegardless()
-        p.makeKey() // Return sorts
+        p.makeKey()
         animate(0.35) { p.animator().alphaValue = 1 }
         panel = p
         let work = DispatchWorkItem { [weak self] in self?.dismiss() }
@@ -130,9 +123,7 @@ private struct SortNudgeView: View {
     }
 }
 
-// MARK: - After the tour
 
-/// The tour's closing card: the user's windows came back crowded onto one workspace, sort them?
 final class SortOffer {
     static let shared = SortOffer()
     private var panel: OverlayPanel?
@@ -146,9 +137,8 @@ final class SortOffer {
         var host = FirstClickHostingView(rootView: view)
         let size = host.fittingSize
         let v = screen.visibleFrame
-        // Hangs under the menu bar icon like the tour's own cards do.
         var x = v.midX - size.width / 2, y = v.maxY - size.height - 16
-        var caret: CGFloat = SortOfferView.width / 2 // the card is centred when there's no icon to hang under
+        var caret: CGFloat = SortOfferView.width / 2
         if let b = button?.window?.frame {
             let card = SortOfferView.width
             let left = min(max(b.midX - card + 60, v.minX + 16), v.maxX - card - 16)
@@ -165,7 +155,6 @@ final class SortOffer {
         p.orderFrontRegardless()
         animate(0.35) { p.animator().alphaValue = 1 }
         panel = p
-        // Left alone, it counts as "Keep as is".
         let work = DispatchWorkItem { [weak self] in self?.end(false) }
         timeout = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 20, execute: work)

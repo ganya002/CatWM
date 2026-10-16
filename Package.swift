@@ -12,7 +12,6 @@ let package = Package(
             name: "ouch",
             dependencies: [.product(name: "Sparkle", package: "Sparkle")],
             path: "Sources/ouch",
-            // build.sh puts Sparkle.framework in Contents/Frameworks.
             linkerSettings: [.unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"])]
         )
     ]

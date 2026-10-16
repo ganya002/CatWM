@@ -1,9 +1,6 @@
-// Compile with NativeSpaceMove.swift and WindowServerUpdates.swift; see design/native-space-import.md.
-// Only disposable child-process windows are moved. No Desktop is activated.
 import AppKit
 
 #if OUCH_ARRIVAL_PROBE
-// AX.swift's unrelated pointer hit-testing references this overlay. The probe creates no overlay.
 final class FocusDim {
     static let shared = FocusDim()
     func owns(_ id: Int) -> Bool { false }
@@ -69,7 +66,6 @@ if CommandLine.arguments.dropFirst().first == "--child" {
     moveOwned(cid, [NSNumber(value: id)] as CFArray, source)
     guard wait(until: { membership(id) == [source] }) else { exit(1) }
     print(id); fflush(stdout)
-    // Safety net if the parent exits unexpectedly.
     DispatchQueue.main.asyncAfter(deadline: .now() + 10) { app.terminate(nil) }
     app.run()
     exit(0)
@@ -104,7 +100,6 @@ for attempt in 1...5 {
     displayBatch?.finish()
     times.append(elapsed)
     guard activeSpaces() == initial else { fatalError("The active Desktop changed") }
-    // Also verify a silent send to an inactive Desktop.
     guard move(window: id, to: other.uint64Value), wait(until: { membership(id) == [other.uint64Value] }), activeSpaces() == initial else {
         fatalError("Silent send failed")
     }

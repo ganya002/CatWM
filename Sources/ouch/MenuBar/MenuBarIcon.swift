@@ -1,8 +1,5 @@
-// MenuBar: draws the menu bar item's picture (workspace number and layout).
 import AppKit
 
-/// The menu bar item's picture: the focused display's workspace number, a small drawing of its
-/// layout, and the icons of the apps on it. While a mode (submap) is on, the layout turns blue.
 enum MenuBarIcon {
     static let maxApps = 6
     private static let height: CGFloat = 18
@@ -20,7 +17,6 @@ enum MenuBarIcon {
             .font: NSFont.systemFont(ofSize: 10, weight: .medium), .foregroundColor: NSColor.secondaryLabelColor,
         ]) : nil
 
-        // Lay out left to right; widths are known up front so the image can be sized.
         var parts: [(width: CGFloat, gapAfter: CGFloat, draw: (CGFloat) -> Void)] = []
         if let wsText {
             parts.append((ceil(wsText.size().width), 4, { x in draw(wsText, at: x) }))
@@ -54,7 +50,6 @@ enum MenuBarIcon {
         return image
     }
 
-    /// Icons of apps that quit are dropped so the cache doesn't grow forever.
     static func pruneIcons(keeping pids: Set<pid_t>) {
         iconCache = iconCache.filter { pids.contains($0.key) || NSRunningApplication(processIdentifier: $0.key) != nil }
     }
@@ -71,9 +66,6 @@ enum MenuBarIcon {
         text.draw(at: CGPoint(x: x, y: (height - size.height) / 2))
     }
 
-    /// How many panes (and main panes) each layout's drawing has: enough for its shape to show
-    /// (a third column, a stack beside the main pane), so every layout looks different. Widescreen
-    /// Tall only differs from Tall with several main windows, so it's drawn with two.
     private static func panes(_ layout: Layout) -> (count: Int, main: Int) {
         switch layout {
         case .fullscreen, .floating: (1, 1)
@@ -85,8 +77,6 @@ enum MenuBarIcon {
         }
     }
 
-    /// An outlined screen with the layout's panes inside; the main pane is solid and a little wider
-    /// than the rest, so mirrored layouts (Tall / Tall Right) tell apart.
     private static func drawLayout(_ layout: Layout, color: NSColor, in r: CGRect) {
         let outline = NSBezierPath(roundedRect: r.insetBy(dx: 0.5, dy: 0.5), xRadius: 2.5, yRadius: 2.5)
         outline.lineWidth = 1
@@ -95,13 +85,11 @@ enum MenuBarIcon {
 
         let inner = r.insetBy(dx: 2, dy: 2)
         let gap: CGFloat = 1
-        // Layout frames are top-left origin; flip them into this bottom-left image.
         let (count, mains) = panes(layout)
         let frames = layout.frames(count: count, in: CGRect(origin: .zero, size: inner.size).insetBy(dx: -gap / 2, dy: -gap / 2),
                                    ratio: 0.55, mainCount: mains)?
             .map { f in CGRect(x: inner.minX + f.minX, y: inner.maxY - f.maxY, width: f.width, height: f.height).insetBy(dx: gap / 2, dy: gap / 2) }
         guard let frames else {
-            // Floating: two overlapping windows.
             let a = CGRect(x: inner.minX, y: inner.midY - 1, width: inner.width * 0.6, height: inner.height / 2 + 1)
             let b = CGRect(x: inner.maxX - inner.width * 0.6, y: inner.minY, width: inner.width * 0.6, height: inner.height / 2 + 1)
             color.withAlphaComponent(0.45).setFill()

@@ -1,9 +1,6 @@
-// Feedback: the Send Feedback sheet's model, the crash watch and the upload to the report relay.
 import AppKit
 import SwiftUI
 
-// Feedback is a description the user writes in Settings. It goes to the report relay with Ouch's
-// recent log, the config and the Mac's setup. Crashes go the same way on their own (see CrashWatch).
 
 final class Feedback: ObservableObject {
     static let shared = Feedback()
@@ -11,12 +8,10 @@ final class Feedback: ObservableObject {
     @Published var isOpen = false
     @Published var text = ""
     @Published var sending = false
-    /// The last send didn't go through; the button offers to try again.
     @Published var failed = false
 
     var canSend: Bool { !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !sending }
 
-    /// Opens the sheet. An unsent draft stays.
     func open() {
         failed = false
         isOpen = true
@@ -41,15 +36,12 @@ final class Feedback: ObservableObject {
         }
     }
 
-    // MARK: Upload
 
-    /// The report relay (`OuchReportURL` in Info.plist, see report-relay/) files it as a Linear issue.
     static var endpoint: URL? {
         let v = (Bundle.main.object(forInfoDictionaryKey: "OuchReportURL") as? String)?.trimmingCharacters(in: .whitespaces)
         return v.flatMap(URL.init(string:))
     }
 
-    /// A crash report from the last run, with the log as it was when that run ended.
     static func sendCrash(_ crash: URL, done: @escaping (Bool) -> Void) {
         guard let endpoint else { return done(false) }
         let summary = CrashSummary(crash)
@@ -78,7 +70,6 @@ final class Feedback: ObservableObject {
             part("Content-Disposition: form-data; name=\"\(name)\"", value)
         }
         for (name, content) in files {
-            // The relay keeps only the last 40k characters of a file; sending more can push the body past its 4 MB cap.
             let text = redact(content)
             part("Content-Disposition: form-data; name=\"file\"; filename=\"\(name)\"\r\nContent-Type: text/plain",
                  text.count > 40000 ? "…\n" + text.suffix(40000) : text)
@@ -108,7 +99,6 @@ final class Feedback: ObservableObject {
         return "\(info["CFBundleShortVersionString"] as? String ?? "?") (\(info["CFBundleVersion"] as? String ?? "?"))"
     }
 
-    /// The home folder's path names the user; `~` says the same thing.
     private static func redact(_ s: String) -> String {
         s.replacingOccurrences(of: FileManager.default.homeDirectoryForCurrentUser.path, with: "~")
     }
@@ -154,9 +144,7 @@ final class Feedback: ObservableObject {
     }
 }
 
-// MARK: - Crash reports
 
-/// The gist of a macOS crash report (.ips): the exception and the first frame in Ouch's own code.
 struct CrashSummary {
     let exception: String
     let frame: String?
@@ -165,7 +153,6 @@ struct CrashSummary {
     var headline: String { [exception, frame].compactMap { $0 }.joined(separator: " in ") }
     var time: String { DateFormatter.localizedString(from: date, dateStyle: .none, timeStyle: .short) }
 
-    /// An .ips file is a one-line JSON header followed by the JSON report.
     init?(_ url: URL) {
         guard let text = try? String(contentsOf: url, encoding: .utf8),
               let newline = text.firstIndex(of: "\n"),
@@ -187,9 +174,6 @@ struct CrashSummary {
     }
 }
 
-/// Notices when Ouch crashed. A marker file lives while Ouch runs and is removed on every clean exit;
-/// a small watchdog process brings Ouch back after a crash. Nothing pops up: the crash report and the
-/// log up to the crash go to the report relay on their own.
 enum CrashWatch {
     private static let support = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent("Library/Application Support/Ouch")
@@ -198,7 +182,6 @@ enum CrashWatch {
     private static let seenKey = "lastCrashReportSeen"
     private static let pendingKey = "pendingCrashReport"
 
-    /// A crash report not sent yet; kept across launches until the relay takes it.
     private static var pending: URL? {
         guard let path = UserDefaults.standard.string(forKey: pendingKey), FileManager.default.fileExists(atPath: path) else { return nil }
         return URL(fileURLWithPath: path)
@@ -207,25 +190,22 @@ enum CrashWatch {
     static func start() {
         let fm = FileManager.default
         try? fm.createDirectory(at: support, withIntermediateDirectories: true)
-        // Still there from the last run: it didn't exit cleanly. Its date is when that run started.
         let previous = (try? fm.attributesOfItem(atPath: marker.path))?[.modificationDate] as? Date
         try? fm.removeItem(at: marker)
         fm.createFile(atPath: marker.path, contents: Data("\(getpid())".utf8))
         startWatchdog()
 
         let defaults = UserDefaults.standard
-        if defaults.object(forKey: seenKey) == nil { defaults.set(Date(), forKey: seenKey) } // don't offer old crashes
+        if defaults.object(forKey: seenKey) == nil { defaults.set(Date(), forKey: seenKey) }
         if CommandLine.arguments.contains("--crash-report"), let latest = newestReport(after: .distantPast) {
-            return found(latest) // sends the newest crash report, to test the upload
+            return found(latest)
         }
-        guard let previous else { return pending.map(send) ?? () } // an earlier send that didn't go through
+        guard let previous else { return pending.map(send) ?? () }
         Log.info("crash watch: the last run didn't exit cleanly")
         let since = max(previous, defaults.object(forKey: seenKey) as? Date ?? previous)
-        // macOS writes the report a few seconds after the crash, and the watchdog can relaunch us sooner.
         poll(after: since, attempts: 12)
     }
 
-    /// Call on every clean exit, or the watchdog takes it for a crash.
     static func cleanExit() { try? FileManager.default.removeItem(at: marker) }
 
     private static func poll(after date: Date, attempts: Int) {
@@ -259,9 +239,6 @@ enum CrashWatch {
             .max { $0.1 < $1.1 }?.0
     }
 
-    /// A shell loop that waits for Ouch to exit. If the marker still names this run and macOS wrote a
-    /// crash report (that can take half a minute), it opens Ouch again. A force quit leaves no report, so Ouch stays closed then, and a
-    /// crash in the first 20 seconds isn't retried, so a crash on launch can't loop.
     private static func startWatchdog() {
         let app = Bundle.main.bundleURL
         guard app.pathExtension == "app" else { return }

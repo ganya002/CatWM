@@ -1,8 +1,6 @@
-// Settings: the Windows pane (floating, focus and window behavior options).
 import AppKit
 import SwiftUI
 
-// MARK: - Windows
 
 struct WindowsPane: View {
     @ObservedObject var doc: ConfigDocument

@@ -1,17 +1,13 @@
-// Settings: the search index of every setting and the anchors that scroll to one.
 import AppKit
 import SwiftUI
 
-// MARK: - Search index
 
-/// One setting the search can find, hidden ones included.
 struct SettingEntry: Identifiable {
     let id: String
     let title: String
     let pane: Pane
     var advanced = false
     var keywords = ""
-    /// For shortcut results: the row to reveal.
     var bind: BindRow? = nil
 }
 
@@ -84,7 +80,6 @@ enum SettingsIndex {
                      keywords: "keyboard model colour color auto macbook air pro neo magic"),
     ]
 
-    /// Settings, then shortcuts, whose words all appear in the query's order-free word list.
     static func search(_ query: String, doc: ConfigDocument) -> [SettingEntry] {
         let words = query.lowercased().split(separator: " ").map(String.init)
         guard !words.isEmpty else { return [] }
@@ -98,7 +93,6 @@ enum SettingsIndex {
 }
 
 extension View {
-    /// Marks a setting the search can open: the scroll target, lit up when it was just opened.
     func setting(_ id: String, _ ui: SettingsUI) -> some View {
         modifier(SettingAnchor(id: id, ui: ui))
     }

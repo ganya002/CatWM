@@ -17,7 +17,7 @@ def wordmark(color,px=12,sub=3):
                 for sy in range(n):
                     for sx in range(n):
                         yy=Y+sy*sub
-                        d=1.0-max(0,(yy/H-0.35))/0.65*0.85  # density fades downward
+                        d=1.0-max(0,(yy/H-0.35))/0.65*0.85
                         gx=(X//sub+sx)%4; gy=(yy//sub)%4
                         if (B[gy][gx]+0.5)/16 < d:
                             out.append(f'<rect x="{X+sx*sub}" y="{yy}" width="{sub}" height="{sub}"/>')

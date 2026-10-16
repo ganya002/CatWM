@@ -1,37 +1,16 @@
-// Keys: the drawn Mac keyboard with binds written on its keys (used by Shortcut Map and Key Help).
 import AppKit
 import Carbon
 import SwiftUI
 
-// This Mac's keyboard, drawn like the real thing (see `MacKeyboard`: model, finish, ANSI/ISO/JIS and the
-// legends of the input source in use), with one layer of binds written on its keys, coloured by group.
-// The Shortcut Map and the keyboard help overlay both use it.
-//
-//     KeyHintKeyboard(binds: [KeyHint], style: .labels, pressed: UInt16?, hot: Set<UInt16>, scale: 1)
-//         .onKeyTap { key in … }                  optional; keys become buttons
-//         .onKeyHover { key, inside in … }        optional
-//
-// - `binds`: one layer (one mode, one set of modifiers). `KeyHint(_:)` builds them from a
-//   `ConfigDocument.KeyAction` or a running `KeyBinding`.
-// - `style`: `.labels` writes the action on the cap, `.lit` only colours bound keys, `.constellation`
-//   hides unbound keys and the deck.
-// - `pressed`: a key filled with its group colour. `hot`: keys with a ring that never recede; pass
-//   held modifiers here (modifier keys carry their key codes, e.g. 55 for ⌘).
-// - `scale`: 1 draws the key well 940pt wide, a 1u key 58pt. `size(scale:)` is the view's size,
-//   `rect(of:scale:)` a key's frame inside it, for popovers and tooltips placed over a key, and
-//   `keycap(_:hint:scale:)` one key on its own.
 
-/// What a key does on the current layer.
 struct KeyHint: Identifiable, Equatable {
     let code: UInt16
     let dispatcher: String
     let arg: String
-    /// Full description, e.g. "Focus Right".
     let title: String
     var id: UInt16 { code }
 
     var group: KeyGroup { KeyGroup(dispatcher: dispatcher, arg: arg) }
-    /// Short text for the keycap: an arrow, a workspace number or a word or two.
     var label: String { Self.label(dispatcher: dispatcher, arg: arg) }
 
     init(code: UInt16, dispatcher: String, arg: String, title: String) {
@@ -50,7 +29,6 @@ struct KeyHint: Identifiable, Equatable {
         self.init(code: b.keyCode, dispatcher: b.dispatcher, arg: b.arg, title: title)
     }
 
-    /// Hyprland's aliases folded into the dispatchers below.
     fileprivate static func normalized(_ dispatcher: String, _ arg: String) -> (d: String, a: String) {
         var d = dispatcher.lowercased(), a = arg.trimmingCharacters(in: .whitespaces).lowercased()
         if d == "swapwindow" { d = "movewindow" }
@@ -113,7 +91,6 @@ struct KeyHint: Identifiable, Equatable {
         case "sethomespace": return "Home"
         case "submap": return a == "reset" ? "Exit" : a.capitalized
         default:
-            // Something we don't know: the dispatcher without its verb prefix, cut short.
             var name = Substring(d)
             for prefix in ["toggle", "move", "focus", "set"] where name.hasPrefix(prefix) && name.count > prefix.count {
                 name = name.dropFirst(prefix.count)
@@ -124,7 +101,6 @@ struct KeyHint: Identifiable, Equatable {
     }
 }
 
-/// The colour groups on the keyboard, in legend order.
 enum KeyGroup: CaseIterable, Identifiable {
     case navigation, spaces, layout, window, leave
     var id: Self { self }
@@ -161,7 +137,6 @@ enum KeyGroup: CaseIterable, Identifiable {
         }
     }
 
-    /// The colour on the keycaps, which keep their own light or dark whatever the appearance.
     func color(onDarkKeys dark: Bool) -> Color {
         switch self {
         case .navigation: Theme.fixed(\.accent, dark: dark)
@@ -173,7 +148,6 @@ enum KeyGroup: CaseIterable, Identifiable {
     }
 }
 
-// MARK: - Keyboard
 
 struct KeyHintKeyboard: View {
     enum Style { case labels, lit, constellation }
@@ -196,9 +170,7 @@ struct KeyHintKeyboard: View {
         self.scale = scale
     }
 
-    /// Makes the keys buttons.
     func onKeyTap(_ action: @escaping (Key) -> Void) -> Self { var c = self; c.tap = action; return c }
-    /// Called with `true` as the pointer enters a key and `false` as it leaves.
     func onKeyHover(_ action: @escaping (Key, Bool) -> Void) -> Self { var c = self; c.hover = action; return c }
 
     var body: some View {
@@ -220,16 +192,13 @@ struct KeyHintKeyboard: View {
         .frame(width: size.width, height: size.height, alignment: .topLeading)
     }
 
-    /// One key on its own, as it looks on the keyboard: for the head of a popover about that key.
     static func keycap(_ k: Key, hint: KeyHint?, scale: CGFloat) -> some View {
         HintKeyCap(key: k, finish: MacKeyboard.shared.finish, scale: scale, style: .labels, hint: hint,
                    pressed: false, hot: false, tap: nil, hover: nil, fades: false)
             .frame(width: k.frame.width * scale, height: k.frame.height * scale)
     }
 
-    // MARK: Geometry
 
-    /// The well's padding around the keys, and the well itself, in points at scale 1.
     private static let inset = CGPoint(x: 9, y: 10)
     private static let well = CGSize(width: MacKeyboard.area.width + 18, height: MacKeyboard.area.height + 13)
 
@@ -237,51 +206,40 @@ struct KeyHintKeyboard: View {
         CGSize(width: well.width * scale, height: well.height * scale)
     }
 
-    /// A key's cap inside the view. The ISO return key's is the box around its L.
     static func rect(of k: Key, scale: CGFloat) -> CGRect {
         CGRect(x: (inset.x + k.frame.minX) * scale, y: (inset.y + k.frame.minY) * scale,
                width: k.frame.width * scale, height: k.frame.height * scale)
     }
 
-    /// The corner radius of a full-size key.
     static func cornerRadius(scale: CGFloat) -> CGFloat { 6 * scale }
 
-    /// Legends of a typing key: a letter (`t`), a shifted symbol over its base (`t` over `b`), or four
-    /// corners (`t` `d` over `b` `c`) where two scripts share the key.
     struct Legend: Equatable {
         enum Kind { case char, charOption, dual, quad, quadLarge }
         var t = "", b = "", c = "", d = ""
         var kind: Kind = .char
     }
 
-    /// One key; frames are in points at scale 1, from the top-left of the key area.
     struct Key: Identifiable {
         enum Direction { case left, up, down, right }
         enum FnStyle { case standard, neo, jis }
         enum Kind {
             case typing(Legend)
-            /// esc, tab, return…: a word, or a symbol where the keyboard prints one.
             case word(String, symbol: Bool, trailing: Bool, caps: Bool)
-            /// ⌃ ⌥ ⌘ with their name on US keyboards.
             case modifier(String, word: String?, symbolTrailing: Bool)
             case function(Int)
             case fn(FnStyle)
             case arrow(Direction)
             case space, touchID
-            /// JIS: a symbol over a digit or symbol with kana, and a letter with kana.
             case jis(Legend), jisLetter(Legend)
             case jisCenter(String)
             case jisCaps
         }
-        /// The ISO and JIS return key: wide on top, narrower below `joint`.
         struct LShape { let top: CGFloat, bottom: CGFloat, joint: CGFloat }
 
         let code: UInt16?
         let frame: CGRect
         let kind: Kind
-        /// Set on ⌃ ⌥ ⇧ ⌘.
         var modifier: NSEvent.ModifierFlags = []
-        /// F and J.
         var home = false
         var lShape: LShape?
         var id: String { "\(frame.minX),\(frame.minY)" }
@@ -289,12 +247,9 @@ struct KeyHintKeyboard: View {
 
     static var keys: [Key] { MacKeyboard.shared.keys }
 
-    /// The key with this code; for modifiers, the left one.
     static func key(for code: UInt16) -> Key? { keys.first { $0.code == code } }
 
-    // MARK: Legends
 
-    /// A key's name as printed in hints and tooltips, e.g. "Å", "F5", "⇥", "⌘".
     static func legend(_ k: Key) -> String {
         let named = k.code.flatMap { ConfigDocument.keyName(for: $0) }.map(ConfigDocument.capLabel)
         switch k.kind {
@@ -314,9 +269,7 @@ struct KeyHintKeyboard: View {
     }
 }
 
-// MARK: - Well
 
-/// The recess the keys sit in: near-black on a MacBook Pro, the deck itself elsewhere.
 private struct KeyWell: View {
     let finish: MacKeyboard.Finish
     let scale: CGFloat
@@ -341,7 +294,6 @@ private struct KeyWell: View {
                 .background(shape.fill(edge).offset(y: s))
                 .background(shape.fill(Color.black.opacity(f.dark ? 0.18 : 0.05)).offset(y: -s))
         case .mk:
-            // A Magic Keyboard is all deck: draw its aluminium 6pt past the keys.
             let shape = RoundedRectangle(cornerRadius: 18 * s, style: .circular)
             shape.fill(deck)
                 .overlay(shape.strokeBorder(edge, lineWidth: s))
@@ -352,7 +304,6 @@ private struct KeyWell: View {
     }
 }
 
-/// An inset shadow: the outline, blurred and offset, seen from inside the shape.
 private struct InnerShadow<S: Shape>: View {
     let shape: S
     let color: Color
@@ -368,8 +319,6 @@ private struct InnerShadow<S: Shape>: View {
     }
 }
 
-/// A hard inset edge, like CSS `inset 0 dy 0`: the rounded rect minus itself moved by `dy`. Fill it
-/// with `eoFill` and clip it to the rect.
 private struct InsetBand: Shape {
     let radius: CGFloat
     let dy: CGFloat
@@ -381,7 +330,6 @@ private struct InsetBand: Shape {
     }
 }
 
-/// The ISO return key's outline, `inset` in from its box.
 private struct LKeyShape: Shape {
     let l: KeyHintKeyboard.Key.LShape
     let scale: CGFloat
@@ -405,7 +353,6 @@ private struct LKeyShape: Shape {
         return p.offsetBy(dx: rect.minX, dy: rect.minY)
     }
 
-    /// The highlight along the top and the lip along the bottom.
     static func edges(_ l: KeyHintKeyboard.Key.LShape, scale s: CGFloat, size: CGSize) -> (top: Path, bottom: Path) {
         let w = size.width, h = size.height
         let xT = w - l.top * s + 0.6 * s, xB = w - l.bottom * s + 0.6 * s, rt = w - 0.6 * s
@@ -416,11 +363,7 @@ private struct LKeyShape: Shape {
     }
 }
 
-// MARK: - Keycap
 
-/// One key as Apple makes it, with the hint layer on top: on the layer's binds the action in its
-/// group's colour with the key's own legend small in the corner and a thin ring; without a bind it
-/// recedes so the binds stand out.
 private struct HintKeyCap: View {
     let key: KeyHintKeyboard.Key
     let finish: MacKeyboard.Finish
@@ -442,9 +385,7 @@ private struct HintKeyCap: View {
     private var isArrow: Bool { if case .arrow = key.kind { true } else { false } }
     private var radius: CGFloat { (isArrow ? 5 : 6) * scale }
 
-    /// The action's group colour, readable on these keycaps.
     private var groupColor: Color { hint?.group.color(onDarkKeys: !light) ?? legendColor }
-    /// What the keycaps are printed in.
     private var legendColor: Color { light ? Theme.rgb(finish.keyLegend ?? 0x4A4A4C) : Theme.rgb(0xD6D6DB, 0.9) }
     private var pressedInk: Color { light ? .white : Theme.rgb(0x0B0B0D) }
     private var filled: Bool { pressed && hint != nil }
@@ -499,7 +440,6 @@ private struct HintKeyCap: View {
         return "\(name): \(hint.title)"
     }
 
-    /// A thin ring: the group's colour on a bind, the legend colour on a held modifier.
     private var ringColor: Color? {
         if filled { return nil }
         if hot { return light ? legendColor.opacity(0.85) : Theme.rgb(0xF5F5F7, 0.85) }
@@ -514,7 +454,6 @@ private struct HintKeyCap: View {
         }
     }
 
-    // MARK: The cap
 
     @ViewBuilder private var cap: some View {
         if let l = key.lShape { isoCap(l) } else { roundCap }
@@ -560,15 +499,12 @@ private struct HintKeyCap: View {
         .frame(width: w, height: h)
     }
 
-    /// The key face: flat on light keycaps, a soft radial glow from below on dark ones. `ellipse` is the
-    /// gradient's radii and `center` its centre, as fractions of the key.
     @ViewBuilder private func faceFill(ellipse: CGSize, center: CGPoint) -> some View {
         if light {
             Theme.rgb(finish.keyFace ?? 0xF6F7F9)
         } else {
             let stops: [Gradient.Stop] = [.init(color: Theme.rgb(0x333436), location: 0), .init(color: Theme.rgb(0x28282A), location: 0.45),
                                           .init(color: Theme.rgb(0x1F1F21), location: 0.75), .init(color: Theme.rgb(0x1B1B1D), location: 1)]
-            // Past the ellipse the gradient keeps its last colour, as CSS and SVG gradients do.
             Theme.rgb(0x1B1B1D).overlay(alignment: .topLeading) {
                 EllipticalGradient(stops: stops, center: .center, startRadiusFraction: 0, endRadiusFraction: 0.5)
                     .frame(width: w * ellipse.width * 2, height: h * ellipse.height * 2)
@@ -577,15 +513,11 @@ private struct HintKeyCap: View {
         }
     }
 
-    // MARK: Legends
 
     private enum HPos { case left(CGFloat), right(CGFloat), center }
     private enum VPos { case top(CGFloat), bottom(CGFloat), middle(CGFloat) }
 
-    /// Text placed as the artifact's CSS places it: `left`/`right`/`top`/`bottom` in points from the
-    /// cap's edges, `middle` as the offset of the text's top from the cap's vertical centre.
     private func text(_ s: String, _ size: CGFloat, _ x: HPos, _ y: VPos, tracking: CGFloat = 0, font: Font? = nil) -> some View {
-        // SF's line box is about 1.19 em; CSS here uses 1 em, so edges sit about 0.1 em further in.
         let k = scale, lead = 0.0965 * size
         return Text(s).font(font ?? .system(size: size * k)).tracking(tracking * size * k).oneLine().fixedSize()
             .padding(.leading, { if case .left(let v) = x { v * k } else { 0 } }())
@@ -619,7 +551,6 @@ private struct HintKeyCap: View {
         return Alignment(horizontal: hz, vertical: vt)
     }
 
-    /// Small marks in the plastic: home bumps, the caps lock light.
     private func mark(_ width: CGFloat, _ height: CGFloat, color: Color, x: CGFloat?, y: CGFloat?, bottom: CGFloat? = nil) -> some View {
         let k = scale
         return RoundedRectangle(cornerRadius: min(width, height) / 2 * k)
@@ -632,7 +563,6 @@ private struct HintKeyCap: View {
     private var homeColor: Color { light ? legendColor.opacity(0.5) : Theme.rgb(0xE0E0E4, 0.55) }
     private var capsDotColor: Color { light ? Color.black.opacity(0.35) : Theme.rgb(0x58585B) }
 
-    /// The key as Apple prints it.
     @ViewBuilder private var plain: some View {
         switch key.kind {
         case .typing(let l):
@@ -704,7 +634,6 @@ private struct HintKeyCap: View {
         }
     }
 
-    /// The sensor: a dark glass disc with a hairline ring, or a ring in the key's colour on light keys.
     private var touchID: some View {
         let k = scale
         return ZStack {
@@ -723,7 +652,6 @@ private struct HintKeyCap: View {
         .frame(width: w, height: h)
     }
 
-    /// The action centred, in its group colour, with the key's own legend small in the corner.
     private func labelled(_ hint: KeyHint) -> some View {
         let k = scale
         let label = hint.label
@@ -731,7 +659,6 @@ private struct HintKeyCap: View {
         let glyph = label.count <= 2
         let numeric = Int(label) != nil
         let ink = filled ? pressedInk : groupColor
-        // On the ISO return key, the label sits in the wide top part.
         let box = key.lShape.map { CGSize(width: $0.top * k, height: $0.joint * k) } ?? CGSize(width: w, height: h)
         return ZStack(alignment: .topLeading) {
             if full {
@@ -759,7 +686,6 @@ private struct HintKeyCap: View {
         .frame(width: w, height: h, alignment: .topTrailing)
     }
 
-    /// The legend that moves to the corner when a label takes the middle.
     @ViewBuilder private var cornerLegend: some View {
         let color = filled ? pressedInk : legendColor.opacity(0.55)
         switch key.kind {
@@ -797,9 +723,7 @@ private struct HintKeyCap: View {
     }
 }
 
-// MARK: - Icons
 
-/// The F-row, globe and arrow icons, as 24pt SVG paths: function keys and the globe stroked, arrows filled.
 private enum Icons {
     static let function = [
         "M9.5 12a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0 -5 0M12 5.5v1M12 17.5v1M5.5 12h1M17.5 12h1M7.4 7.4l.7.7M15.9 15.9l.7.7M7.4 16.6l.7-.7M15.9 8.1l.7-.7",
@@ -815,7 +739,6 @@ private enum Icons {
         "M3 9.5h3l4.5-4v13L6 14.5H3zM14.5 9.5a3.5 3.5 0 0 1 0 5",
         "M1.5 9.5h3l4.5-4v13l-4.5-4h-3zM12.5 9.5a3.5 3.5 0 0 1 0 5M15.5 7a7 7 0 0 1 0 10M18.5 4.5a10.5 10.5 0 0 1 0 15",
     ]
-    /// Light keycaps cross out the mute speaker.
     static let muteCross = "M15 9.5l5 5M20 9.5l-5 5"
     static let globe = "M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0M3 12h18M12 3c2.6 2.5 3.8 5.6 3.8 9s-1.2 6.5-3.8 9c-2.6-2.5-3.8-5.6-3.8-9s1.2-6.5 3.8-9z"
 
@@ -829,8 +752,6 @@ private enum Icons {
     }
 }
 
-/// An SVG path on a 24pt grid, scaled to the frame. Understands the commands the icons use: M L H V C S
-/// A Z, absolute and relative.
 private struct IconPath: Shape {
     let d: String
 
@@ -879,7 +800,7 @@ private struct IconPath: Shape {
             if (0x41...0x5A).contains(c) || (0x61...0x7A).contains(c) {
                 cmd = c
                 i += 1
-                if c == 0x5A || c == 0x7A { // Z
+                if c == 0x5A || c == 0x7A {
                     p.closeSubpath()
                     cur = start
                     previous = c
@@ -889,37 +810,37 @@ private struct IconPath: Shape {
             let rel = cmd >= 0x61
             func pt(_ x: CGFloat, _ y: CGFloat) -> CGPoint { rel ? CGPoint(x: cur.x + x, y: cur.y + y) : CGPoint(x: x, y: y) }
             let before = i
-            switch cmd | 0x20 { // lowercased
-            case 0x6D: // m
+            switch cmd | 0x20 {
+            case 0x6D:
                 guard let x = number(), let y = number() else { break }
                 cur = pt(x, y); start = cur
                 p.move(to: cur)
-                cmd = rel ? 0x6C : 0x4C // further pairs are lines
-            case 0x6C: // l
+                cmd = rel ? 0x6C : 0x4C
+            case 0x6C:
                 guard let x = number(), let y = number() else { break }
                 cur = pt(x, y)
                 p.addLine(to: cur)
-            case 0x68: // h
+            case 0x68:
                 guard let x = number() else { break }
                 cur = CGPoint(x: rel ? cur.x + x : x, y: cur.y)
                 p.addLine(to: cur)
-            case 0x76: // v
+            case 0x76:
                 guard let y = number() else { break }
                 cur = CGPoint(x: cur.x, y: rel ? cur.y + y : y)
                 p.addLine(to: cur)
-            case 0x63: // c
+            case 0x63:
                 guard let x1 = number(), let y1 = number(), let x2 = number(), let y2 = number(), let x = number(), let y = number() else { break }
                 let c1 = pt(x1, y1), c2 = pt(x2, y2), end = pt(x, y)
                 p.addCurve(to: end, control1: c1, control2: c2)
                 control = c2; cur = end
-            case 0x73: // s
+            case 0x73:
                 guard let x2 = number(), let y2 = number(), let x = number(), let y = number() else { break }
                 let smooth = [0x63, 0x73].contains(previous | 0x20)
                 let c1 = smooth ? CGPoint(x: 2 * cur.x - control.x, y: 2 * cur.y - control.y) : cur
                 let c2 = pt(x2, y2), end = pt(x, y)
                 p.addCurve(to: end, control1: c1, control2: c2)
                 control = c2; cur = end
-            case 0x61: // a
+            case 0x61:
                 guard let r = number(), number() != nil, number() != nil, let large = flag(), let sweep = flag(),
                       let x = number(), let y = number() else { break }
                 let end = pt(x, y)
@@ -929,12 +850,11 @@ private struct IconPath: Shape {
                 break
             }
             previous = cmd
-            if i == before { i += 1 } // nothing parsed: skip the character rather than loop
+            if i == before { i += 1 }
         }
         return p
     }
 
-    /// A circular SVG arc as Béziers, from the endpoint form.
     private static func addArc(_ p: inout Path, from a: CGPoint, to b: CGPoint, radius: CGFloat, large: Bool, sweep: Bool) {
         guard radius > 0, a != b else { p.addLine(to: b); return }
         let hx = (a.x - b.x) / 2, hy = (a.y - b.y) / 2

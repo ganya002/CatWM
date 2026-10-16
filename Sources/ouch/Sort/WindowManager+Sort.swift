@@ -1,10 +1,7 @@
-// Sort: the window manager side of Sort Windows (snapshot, live apply, finish, undo, close).
 import AppKit
 
 extension WindowManager {
-    // MARK: - Sort
 
-    /// Everything a sort can change, as it was when the panel opened, for Revert and the toast's Undo.
     struct SortSnapshot {
         var workspaceOf: [CGWindowID: String]
         var order: [CGWindowID]
@@ -15,12 +12,9 @@ extension WindowManager {
         var focused: CGWindowID?
     }
 
-    // MARK: - Sort session
 
-    /// The toast went away: the last sort can no longer be undone.
     func dropSortSnapshot() { sortSnapshot = nil }
 
-    /// Every display with its tiled windows and workspaces, left to right, for the Sort panel.
     func sortDisplays() -> [SortDisplay] {
         guard config.virtualWorkspaces, isStarted else { return [] }
         let screens = Screen.all()
@@ -67,8 +61,6 @@ extension WindowManager {
         return words.isEmpty ? s.ns.localizedName : words.joined(separator: " ")
     }
 
-    /// The panel opened: remember how everything is now (for Revert and Undo), and from here on keep
-    /// focus and workspace switching out of the way until `finishSort`, `revertSort` or `endSort`.
     func beginSort() {
         var layouts: [String: (layout: Layout, ratio: CGFloat, mainCount: Int)] = [:]
         for (name, st) in states { layouts[name] = (st.layout, st.ratio, st.mainCount) }
@@ -77,24 +69,17 @@ extension WindowManager {
         sortSession = true
     }
 
-    /// Windows that still exist, so the panel can drop rows for ones that closed.
     func liveWindowIDs() -> Set<CGWindowID> { Set(windows.keys) }
 
-    /// Applies edited plans to the real windows right away: workspaces, order, layouts and names. Nothing
-    /// takes focus, no workspace is switched (unless the one a display shows went away, then its first
-    /// one with windows is shown) and windows in Close are hidden.
     func liveSort(_ plans: [SortApply]) {
         guard config.virtualWorkspaces, isStarted, sortSession else { return }
         let planned = plans.flatMap { $0.lanes.flatMap(\.ids) }.filter { windows[$0] != nil }
         let moving = Set(planned)
         let kept = Set(plans.flatMap { $0.lanes.map(\.name) })
-        // Workspaces a plan let go of. One another display has taken over since is not ours to clear.
         var gone: [String: Set<String>] = [:]
         for p in plans {
             gone[p.display] = Set(p.dropped.filter { !kept.contains($0) && (monitorOf[$0] == nil || monitorOf[$0] == p.display) })
         }
-        // The workspace each display shows afterwards, and what to do with windows outside the plan (floating,
-        // hidden apps, opened while the panel was up) that sat on a workspace that goes away.
         var landing: [String: String] = [:]
         for p in plans {
             let names = Set(p.lanes.map(\.name))
@@ -115,7 +100,6 @@ extension WindowManager {
                 for id in lane.ids where windows[id] != nil { workspaceOf[id] = lane.name }
             }
             for name in gone[p.display] ?? [] { labels[name] = nil }
-            // Windows in Close disappear from the screen right away; the usual parking hides them.
             let hidden = Self.pendingPrefix + p.display
             monitorOf[hidden] = p.display
             for id in p.close where windows[id] != nil { workspaceOf[id] = hidden }
@@ -129,12 +113,7 @@ extension WindowManager {
         refresh()
     }
 
-    // MARK: - Finishing and closing
 
-    /// The panel is done and the changes stay. Windows in `ids` are closed while still hidden; one that
-    /// stays open (a save sheet) is then brought onto its display's shown workspace and tried again. `goTo`
-    /// shows that workspace and focuses its main window; `focus` goes back to the window that had focus
-    /// when the panel opened.
     func finishSort(closing ids: [CGWindowID], goTo: String?, focus: Bool) {
         sortSession = false
         guard config.virtualWorkspaces, isStarted else { return releasePending() }
@@ -150,16 +129,12 @@ extension WindowManager {
             let candidates = [sortSnapshot?.focused].compactMap { $0 } + order
             if let id = candidates.first(where: { visible.contains($0) && !closing.contains($0) }), let w = windows[id] { self.focus(w) }
         }
-        // Marked windows stay hidden and are closed there. Only one that is still open afterwards (an app
-        // asking to save) is brought onto the shown workspace, so its sheet can be answered.
         closingNow.formUnion(closing)
         closingApps.formUnion(closing.compactMap { windows[$0]?.pid })
         releasePending()
         if !closing.isEmpty { closeMarked(closing, attempt: 0) }
     }
 
-    /// Presses the close buttons of windows marked in the Sort panel, then checks they went and tries
-    /// again (with the app's Close Window menu item for a window that has focus) if some did not.
     private func closeMarked(_ ids: [CGWindowID], attempt: Int) {
         var pressed: [CGWindowID] = []
         for id in ids {
@@ -173,8 +148,6 @@ extension WindowManager {
         }
         guard !pressed.isEmpty else { return stopClosing(ids) }
         if attempt >= 2 {
-            // Last soft try done. Whatever is still open ignored the close (kitty asking "really close?"):
-            // force it, unless it shows a save sheet, which is left for the user to answer.
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
                 guard let self else { return }
                 self.forceClose(pressed.filter { self.windows[$0]?.isValid == true })
@@ -186,23 +159,17 @@ extension WindowManager {
             guard let self else { return }
             var left = pressed.filter { self.windows[$0]?.isValid == true }
             Log.info("sort: \(pressed.count - left.count) of \(pressed.count) closed after try \(attempt + 1)")
-            // Still open without a sheet: the app asks inside the window (kitty's "really close?"), and nobody
-            // can answer that while it is hidden. Force it now, so it never comes back on screen.
             let forced = self.forceClose(left.filter { self.windows[$0].map { !Self.hasSheet($0) } ?? false })
             left.removeAll { forced.contains($0) }
             if !forced.isEmpty {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in self?.stopClosing(Array(forced)) }
             }
-            // Still open: most likely waiting on a save sheet. Show it, then try again once it has settled.
             stopClosing(ids.filter { !forced.contains($0) })
             guard !left.isEmpty else { return }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in self?.closeMarked(left, attempt: attempt + 1) }
         }
     }
 
-    /// Force quits the app of each window that is still open, unless the app has other windows (they would be
-    /// lost too) or the window has a sheet up (unsaved work).
-    /// Says which windows it forced.
     @discardableResult
     private func forceClose(_ ids: [CGWindowID]) -> Set<CGWindowID> {
         var forced: Set<CGWindowID> = []
@@ -220,21 +187,16 @@ extension WindowManager {
         return forced
     }
 
-    /// The window shows a sheet (a save dialog, most likely), which the user must answer.
     private static func hasSheet(_ w: Window) -> Bool {
         w.element.elements(kAXChildrenAttribute).contains { $0.string(kAXRoleAttribute) == kAXSheetRole }
     }
 
-    /// Windows `closeMarked` no longer keeps hidden: whichever are still open come back on screen.
     private func stopClosing(_ ids: [CGWindowID]) {
         closingNow.subtract(ids)
         releasePending(Set(ids))
         quitWindowless()
     }
 
-    /// Apps whose windows the sort closed and that kept running without any (kitty, by default, stays in the
-    /// Dock with no window): quit them, and force quit those that don't go. Finder and apps without a Dock
-    /// icon are left alone; an app with a window anywhere (another space, minimized, a sheet) too.
     private func quitWindowless() {
         for pid in closingApps {
             guard let app = NSRunningApplication(processIdentifier: pid), !app.isTerminated else { closingApps.remove(pid); continue }
@@ -253,9 +215,7 @@ extension WindowManager {
         }
     }
 
-    // MARK: - Revert and undo
 
-    /// The panel was dismissed without keeping anything: put everything back, focus and shown workspaces untouched.
     func revertSort() {
         sortSession = false
         if let u = sortSnapshot { restoreSort(u) }
@@ -263,8 +223,6 @@ extension WindowManager {
         releasePending()
     }
 
-    /// Nothing may stay hidden on a workspace that is never shown: windows waiting there (only `ids`, else
-    /// all but those being closed right now) go to the workspace their display shows.
     private func releasePending(_ ids: Set<CGWindowID>? = nil) {
         let waiting = workspaceOf.filter { isPending($0.value) && (ids?.contains($0.key) ?? !closingNow.contains($0.key)) }
         let screens = Screen.all()
@@ -279,13 +237,11 @@ extension WindowManager {
         refresh()
     }
 
-    /// The panel went away without a say in the matter (the workspace mode changed under it).
     func endSort() {
         sortSession = false
         releasePending()
     }
 
-    /// Puts everything back as it was when the panel opened (the toast's Undo). Closed windows stay closed.
     @discardableResult
     func undoSort() -> Bool {
         guard config.virtualWorkspaces, !sortSession, let u = sortSnapshot else { return false }
@@ -294,7 +250,6 @@ extension WindowManager {
         return true
     }
 
-    /// Windows being closed keep their place (hidden) so they never flash back on screen.
     private func restoreSort(_ u: SortSnapshot) {
         for (id, ws) in u.workspaceOf where windows[id] != nil && !closingNow.contains(id) { workspaceOf[id] = ws }
         let known = Set(u.order)
@@ -313,13 +268,11 @@ extension WindowManager {
         refresh()
     }
 
-    // MARK: - Crowding
 
     private func tiledCount(in ws: String) -> Int {
         order.reduce(0) { n, id in n + (present.contains(id) && workspaceOf[id] == ws && windows[id]?.isFloating == false ? 1 : 0) }
     }
 
-    /// The workspace a display shows and how many tiled windows it holds; the focused display first.
     func shownWorkspaces() -> [(workspace: String, count: Int, screen: NSScreen)] {
         guard config.virtualWorkspaces, isStarted else { return [] }
         let screens = Screen.all()
@@ -330,7 +283,6 @@ extension WindowManager {
         }
     }
 
-    /// Watches for a shown workspace growing past `sort-nudge`, and offers to sort once it has stayed that way.
     func watchCrowding(_ screens: [Screen]) {
         guard config.virtualWorkspaces, tilingEnabled, config.sortNudge > 0,
               screens.contains(where: { s in shown[s.uuid].map { isVirtual($0) && tiledCount(in: $0) > config.sortNudge } ?? false })

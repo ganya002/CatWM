@@ -1,8 +1,5 @@
-// UI: the small "shipped with Amore" credit.
 import SwiftUI
 
-/// Tiny "shipped with" credit. Hover brightens it, swells the heart and draws an underline under
-/// "Amore"; a click dips the whole line and pops the heart.
 struct AmoreCredit: View {
     @StateObject private var hover = Flag()
     @StateObject private var model = Model()

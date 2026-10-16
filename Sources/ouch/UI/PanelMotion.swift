@@ -1,25 +1,13 @@
-// UI: entrance and exit animations for the Sort panel and Keyboard Help.
 import AppKit
 import SwiftUI
 
-/// How the Sort panel and Keyboard Help come and go: `panel-animation` in the config, in Settings under
-/// Motion › Advanced. `ouch panelfx <style>` previews one, `ouch panelfx all` plays them in turn.
-/// Under Reduce Motion every style is a plain fade.
 enum PanelMotion: String, CaseIterable {
-    /// Rises a little from where it sits and settles.
     case rise
-    /// Springs up from its bottom edge with a slight squish, like the icon's tiles.
     case pop
-    /// Comes into focus: blurred and a touch large, then sharp.
     case focus
-    /// Snaps into place like a window being tiled, on the config's own curve, duration and bounce;
-    /// Sort's lanes start stacked and spread out like a retile, the keys spread from the middle.
     case tile
-    /// Like window mode's `draw` effect: an accent line with a bright head traces the outline from top
-    /// centre both ways, the glass fills in behind it, then the line fades.
     case draw
 
-    /// The configured style, or the one a preview is playing.
     static var current: PanelMotion { preview ?? WindowManager.shared.config.panelAnimation }
     static var preview: PanelMotion?
 
@@ -33,7 +21,6 @@ enum PanelMotion: String, CaseIterable {
         }
     }
 
-    /// How long to keep the window up after hiding, so the way out can play.
     var outDuration: Double { self == .focus ? 0.22 : self == .pop ? 0.2 : 0.18 }
 
     func animation(in shown: Bool) -> Animation {
@@ -44,20 +31,17 @@ enum PanelMotion: String, CaseIterable {
         case .rise: return .spring(response: 0.38, dampingFraction: 0.86)
         case .pop: return .spring(response: 0.42, dampingFraction: 0.58)
         case .focus: return .timingCurve(0.16, 1, 0.3, 1, duration: 0.42)
-        case .tile: return .linear(duration: Self.tileDuration) // the curve itself is applied in TileProgress
+        case .tile: return .linear(duration: Self.tileDuration)
         case .draw: return .linear(duration: 0.45)
         }
     }
 
-    /// Windows move in `animation-duration` (0.18s by default); a panel is bigger, so a bit longer.
     static var tileDuration: Double { max(0.3, WindowManager.shared.config.animationDuration * 1.7) }
 }
 
-/// The panel surface coming and going. Anchored at the bottom: both panels sit low on the screen.
 struct PanelEntrance: ViewModifier {
     let shown: Bool
     let style: PanelMotion
-    /// The surface's corner radius, for `.draw`'s outline.
     var radius: CGFloat = Theme.Radius.xl
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -87,7 +71,6 @@ struct PanelEntrance: ViewModifier {
     private var scale: (x: CGFloat, y: CGFloat) {
         switch style {
         case .rise: (0.985, 0.985)
-        // Pop squishes: shorter than it is narrow, so the spring stretches it up past full height.
         case .pop: (0.82, 0.7)
         case .focus: (1.04, 1.04)
         case .tile, .draw: (1, 1)
@@ -95,8 +78,6 @@ struct PanelEntrance: ViewModifier {
     }
 }
 
-/// A piece of content that travels in `.tile`: a Sort lane, a key. `spread` is where it starts,
-/// relative to where it ends.
 struct TileItem: ViewModifier {
     let shown: Bool
     let style: PanelMotion
@@ -123,12 +104,9 @@ extension View {
     }
 }
 
-/// `.tile`: time runs linearly and the window animation curve maps it to distance, so the panel moves
-/// exactly like a window with the config's curve and bounce (overshoot and springs included).
 private struct TileProgress: ViewModifier, Animatable {
     var t: Double
     let shown: Bool
-    /// The surface grows from a small slot; content items travel by `spread`.
     let surface: Bool
     var spread: CGSize = .zero
 
@@ -139,7 +117,6 @@ private struct TileProgress: ViewModifier, Animatable {
 
     func body(content: Content) -> some View {
         let c = WindowManager.shared.config
-        // On the way out it simply shrinks back, no bounce.
         let e = CGFloat(shown ? c.animationCurve.progress(t, bounce: c.animationBounce) : t)
         if surface {
             content
@@ -151,7 +128,6 @@ private struct TileProgress: ViewModifier, Animatable {
     }
 }
 
-/// `.draw`: window mode's border effect, around the panel.
 private struct DrawEntrance: ViewModifier {
     let shown: Bool
     let radius: CGFloat
@@ -197,7 +173,6 @@ private struct DrawEntrance: ViewModifier {
     }
 }
 
-/// The right half of a rounded rectangle, from top centre round to bottom centre; mirrored for the left.
 private struct OutlineHalf: Shape {
     let radius: CGFloat
     func path(in rect: CGRect) -> Path {
@@ -211,7 +186,6 @@ private struct OutlineHalf: Shape {
     }
 }
 
-/// In `.tile` the keys of a KeyHintKeyboard spread from the middle; this carries whether they have arrived.
 private struct KeyTileKey: EnvironmentKey { static let defaultValue: Bool? = nil }
 
 extension EnvironmentValues {
@@ -221,8 +195,6 @@ extension EnvironmentValues {
     }
 }
 
-/// `ouch panelfx <style>` or `ouch panelfx all`: plays the Sort panel then Keyboard Help in each style.
-/// Settings' preview plays just Keyboard Help (`keyboardOnly`), which doesn't take the keyboard.
 enum PanelMotionDemo {
     private static var work: [DispatchWorkItem] = []
 

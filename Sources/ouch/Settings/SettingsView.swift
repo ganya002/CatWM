@@ -1,8 +1,6 @@
-// Settings: root view, sidebar, pane host, search results, status pill and Advanced section.
 import AppKit
 import SwiftUI
 
-// MARK: - Root
 
 struct SettingsView: View {
     @ObservedObject var doc: ConfigDocument
@@ -23,7 +21,6 @@ struct SettingsView: View {
         .background(Theme.wash.ignoresSafeArea())
         .overlayPreferenceValue(TipAnchorKey.self) { SettingsTipLayer(anchors: $0) }
         .onChange(of: ui.pane) { _, p in Tips.shared.paneShown(p) }
-        // Applying a config, undo or reset can leave unequal paddings; the single slider would flatten them.
         .onChange(of: [doc.config.paddingTop, doc.config.paddingBottom, doc.config.paddingLeft, doc.config.paddingRight]) { _, p in
             if Set(p).count > 1 { ui.linkedPadding = false }
         }
@@ -32,7 +29,6 @@ struct SettingsView: View {
         .foregroundStyle(Theme.ink)
         .tint(Theme.accent)
         .background {
-            // ⌘K focuses the settings search.
             Button("") { searchFocused = true }.keyboardShortcut("k").hidden()
         }
         .sheet(item: $library.sheet) { ConfigSheetView(sheet: $0, library: library) }
@@ -46,7 +42,6 @@ struct SettingsView: View {
     }
 }
 
-// MARK: - Sidebar
 
 private struct Sidebar: View {
     @ObservedObject var doc: ConfigDocument
@@ -103,7 +98,6 @@ private struct Sidebar: View {
     }
 }
 
-/// A sidebar item straight on the wash; the selected one is a `surface` pill.
 private struct SideItem: View {
     enum Badge { case attention, count(Int) }
     let pane: Pane
@@ -160,7 +154,6 @@ private struct SideItem: View {
     }
 }
 
-/// The logo. It tips like the window on the icon when hovered, and takes a bump when clicked.
 private struct Wordmark: View {
     private final class Model: ObservableObject {
         @Published var hover = false
@@ -180,7 +173,6 @@ private struct Wordmark: View {
     }
 }
 
-// MARK: - Pane host
 
 private struct PaneHost: View {
     @ObservedObject var doc: ConfigDocument
@@ -223,7 +215,6 @@ private struct PaneHost: View {
             .scrollIndicators(.automatic)
             .onChange(of: ui.highlight) { _, id in
                 guard let id else { return }
-                // After the Advanced section has had a moment to open.
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
                     withAnimation(Motion.easeOut) { proxy.scrollTo(id, anchor: .center) }
                 }
@@ -242,7 +233,6 @@ private struct PaneHost: View {
         }
     }
 
-    /// Breadcrumb, the 40pt light title, and the pane's config selector.
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
@@ -263,7 +253,6 @@ private struct PaneHost: View {
     }
 }
 
-// MARK: - Search results
 
 private struct SearchResults: View {
     @ObservedObject var doc: ConfigDocument
@@ -274,7 +263,6 @@ private struct SearchResults: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 VStack(alignment: .leading, spacing: 6) {
-                    // The same breadcrumb as the panes, so the title doesn't jump when results replace a pane.
                     HStack(spacing: 6) {
                         Text("Settings")
                         Image(systemName: "chevron.right").font(.system(size: 9, weight: .semibold))
@@ -333,10 +321,7 @@ private struct ResultRow: View {
     }
 }
 
-// MARK: - Status
 
-/// A small glass capsule over the bottom of the pane: a brief "Saved" when a change lands, problems
-/// while there are any, and "Undo All Changes" once something changed since the window opened.
 private struct StatusPill: View {
     @ObservedObject var doc: ConfigDocument
     @StateObject private var model = Model()
@@ -356,7 +341,6 @@ private struct StatusPill: View {
 
     private enum Message: Equatable { case error(String), problems(Int), skipped(Int), saved }
 
-    /// What to say, most urgent first. Saving itself takes a few milliseconds, so it isn't announced.
     private var message: Message? {
         if let err = doc.saveError { return .error(err) }
         if doc.problemCount > 0 { return .problems(doc.problemCount) }
@@ -410,9 +394,7 @@ private struct StatusPill: View {
     }
 }
 
-// MARK: - Advanced
 
-/// The collapsed section at the bottom of a pane, holding what it doesn't need to show up front.
 struct AdvancedSection<Content: View>: View {
     let pane: Pane
     @ObservedObject var ui: SettingsUI
@@ -448,10 +430,9 @@ struct AdvancedSection<Content: View>: View {
 }
 
 
-/// Send Feedback at the foot of the sidebar.
 private struct FeedbackButton: View {
     var body: some View {
         OIconButton(symbol: "ladybug", label: "Send feedback") { Feedback.shared.open() }
-            .frame(width: 30) // the share button above is 30 wide: centred under it
+            .frame(width: 30)
     }
 }

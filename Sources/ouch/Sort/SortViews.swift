@@ -1,13 +1,8 @@
-// Sort: the Sort panel's SwiftUI views (columns, rows, drag, header, footer).
 import AppKit
 import SwiftUI
 
-// The Sort panel's views: a Surface `lg` on glass with the header, a row of workspace columns, the Close
-// column pinned at the right, and the footer. Rows are menu rows; dragging is done by hand so the dragged
-// row can follow the pointer with a popover shadow and nothing else.
 
 private extension View {
-    /// Reports this view's frame in the panel's coordinate space, for hit-testing drops.
     func zone(_ z: SortZone) -> some View {
         background(GeometryReader { g in
             Color.clear.preference(key: SortZoneKey.self, value: [z: g.frame(in: .named("sort"))])
@@ -22,11 +17,9 @@ private struct SortZoneKey: PreferenceKey {
     static func reduce(value: inout [SortZone: CGRect], nextValue: () -> [SortZone: CGRect]) { value.merge(nextValue()) { $1 } }
 }
 
-/// Places a drag ghost under the pointer but keeps it inside the panel window, which would clip it.
 private struct KeepInside: SwiftUI.Layout {
-    /// Where the ghost's top-left corner wants to be, in the panel's coordinate space.
     let origin: CGPoint
-    private let margin: CGFloat = 8 // keeps the popover shadow inside too
+    private let margin: CGFloat = 8
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: SwiftUI.LayoutSubviews, cache: inout ()) -> CGSize { proposal.replacingUnspecifiedDimensions() }
 
@@ -42,21 +35,16 @@ private struct KeepInside: SwiftUI.Layout {
 private enum SortMetrics {
     static let lane: CGFloat = 176
     static let rowHeight = Theme.rowHeight
-    /// What a workspace column has between its header and its list (thumbnail, layout pill, gaps) that the
-    /// Close column gives to its list instead, so it lists that many more windows.
     static let closeExtra = (lane - 16) * 10 / 16 + 8 + 24 + 8
 }
 
 struct SortView: View {
     @ObservedObject var model: SortModel
-    /// Width of the surface, padding included.
     let width: CGFloat
-    /// Transparent room around the surface for its float shadow, which would be clipped at the panel edge.
     static let inset = EdgeInsets(top: 24, leading: 48, bottom: 64, trailing: 48)
 
     var body: some View {
         let plan = model.plan
-        // The Close column has room for a few more rows than the others, so it only adds height past that.
         let closeRows = Int(ceil(CGFloat(plan.close.count + plan.closedLanes.count) - SortMetrics.closeExtra / SortMetrics.rowHeight))
         let rows = min(model.maxRows, max(1, ([closeRows] + plan.lanes.map(\.ids.count)).max() ?? 1))
         VStack(alignment: .leading, spacing: 0) {
@@ -82,7 +70,6 @@ struct SortView: View {
         .tint(Theme.accent)
     }
 
-    // MARK: Header
 
     private func header(_ plan: SortPlan) -> some View {
         let n = plan.items.count
@@ -98,7 +85,6 @@ struct SortView: View {
         .padding(.bottom, 4)
     }
 
-    // MARK: Lanes
 
     private func row(_ plan: SortPlan, rows: Int) -> some View {
         ScrollViewReader { proxy in
@@ -132,8 +118,6 @@ struct SortView: View {
         }
     }
 
-    /// The windows that close when the panel is done: a header, then a list that takes the room a workspace
-    /// column gives its thumbnail, so more of them fit. The whole column tints red only while a window or workspace is dragged over it.
     private func closeLane(_ plan: SortPlan, rows: Int) -> some View {
         let over = model.over == .close
         let n = plan.close.count
@@ -155,7 +139,6 @@ struct SortView: View {
         .padding(.leading, 4).padding(.trailing, 8)
     }
 
-    // MARK: Footer
 
     private func footer(_ plan: SortPlan) -> some View {
         HStack(spacing: 8) {
@@ -181,7 +164,6 @@ struct SortView: View {
         .padding(.top, 4)
     }
 
-    // MARK: Drag
 
     @ViewBuilder private var columnGhost: some View {
         if let d = model.columnDrag {
@@ -215,9 +197,7 @@ struct SortView: View {
     }
 }
 
-// MARK: - Header controls
 
-/// A segmented control like `OSegmented`, with room for nothing being selected.
 private struct SortStrategies: View {
     let selection: SortStrategy?
     let pick: (SortStrategy) -> Void
@@ -246,7 +226,6 @@ private struct SortStrategies: View {
     }
 }
 
-/// Which display is being sorted. A window dropped on one moves to the workspace that display is showing.
 private struct SortDisplays: View {
     @ObservedObject var model: SortModel
     @Namespace private var thumb
@@ -300,10 +279,7 @@ private struct SortScreenGlyph: View {
     }
 }
 
-// MARK: - Lanes
 
-/// The state of typing over a workspace number, in an object rather than @State (the Command Line Tools ship
-/// without SwiftUI's macro plugin).
 private final class NumberEdit: ObservableObject {
     @Published var on = false
     @Published var draft = ""
@@ -319,16 +295,12 @@ private struct SortLaneView: View {
     @StateObject private var number = NumberEdit()
     @FocusState private var numberFocus: Bool
 
-    /// Dragging the number, the count or the thumbnail carries the whole workspace: to Close, onto another
-    /// workspace to merge the two, or to the edge of one to move it there.
     private var carry: some Gesture {
         DragGesture(minimumDistance: 4, coordinateSpace: .named("sort"))
             .onChanged { model.columnDragChanged(lane, $0) }
             .onEnded { _ in model.columnDragEnded() }
     }
 
-    /// The workspace number. Dragging carries the workspace and a double-click goes to it; a single click
-    /// (the double-click gets its chance first) types a new number, which `commitNumber` applies.
     @ViewBuilder private func numberView(filled: Bool) -> some View {
         if number.on {
             TextField("", text: $number.draft)
@@ -412,14 +384,12 @@ private struct SortLaneView: View {
     }
 }
 
-/// Where a carried workspace would go: a bar in the gap before (or after) a column.
 private func slotBar(_ on: Bool) -> some View {
     Capsule().fill(Theme.accent).frame(width: 3).padding(.vertical, 6).opacity(on ? 1 : 0).allowsHitTesting(false)
 }
 
 private struct SortRemoveButton: View {
     let label: String
-    /// The × that removes or closes; `false` is the plain affordance that brings something back.
     var removes = true
     let action: () -> Void
     @StateObject private var hover = Flag()
@@ -441,8 +411,6 @@ private struct SortRemoveButton: View {
     }
 }
 
-/// The column after the last workspace: same size, an empty preview, and the layout new ones start with.
-/// It is as tall as the workspace columns beside it, and all of it takes a dropped window or workspace.
 private struct SortAddLane: View {
     @ObservedObject var model: SortModel
     let plan: SortPlan
@@ -496,7 +464,6 @@ private struct SortAddLane: View {
     }
 }
 
-/// Click for the next layout, right-click for the previous one.
 private struct SortLayoutPill: View {
     let layout: Layout
     let next: () -> Void
@@ -525,7 +492,6 @@ private struct SortLayoutPill: View {
     }
 }
 
-/// A layout drawn small, in the current text colour.
 private struct SortLayoutGlyph: View {
     let layout: Layout
 
@@ -547,7 +513,6 @@ private struct SortLayoutGlyph: View {
     }
 }
 
-/// The workspace as it will tile, drawn with the real layout maths. The window under the pointer is yellow.
 private struct SortThumb: View {
     let layout: Layout
     let ids: [CGWindowID]
@@ -583,7 +548,7 @@ private struct SortThumb: View {
         let k = size.width / 140
         let inset = 4 * k, gap = 3 * k
         let r = CGRect(x: inset, y: inset, width: size.width - 2 * inset, height: size.height - 2 * inset)
-        if layout == .fullscreen { // stacked, each a step down and to the right
+        if layout == .fullscreen {
             let step = 4 * k, shrink = CGFloat(min(n - 1, 6)) * step
             return (0..<n).map { CGRect(x: r.minX + CGFloat(min($0, 6)) * step, y: r.minY + CGFloat(min($0, 6)) * step,
                                         width: r.width - shrink, height: r.height - shrink) }
@@ -596,7 +561,6 @@ private struct SortThumb: View {
     }
 }
 
-// MARK: - Window rows
 
 private struct SortList: View {
     @ObservedObject var model: SortModel
@@ -625,7 +589,6 @@ private struct SortList: View {
     }
 }
 
-/// Icon, title and the app's name; the same in the list and under the pointer while dragging.
 private struct SortRowFace: View {
     let item: SortItem
     let closing: Bool
@@ -642,7 +605,6 @@ private struct SortRowFace: View {
             }
             .frame(width: 20, height: 20)
             (Text(item.title).foregroundColor(closing ? Theme.inkMuted : Theme.ink)
-                // The app's name only when the title doesn't already say it ("Claude  Claude").
                 + Text(item.title.localizedCaseInsensitiveContains(item.app) ? "" : "  " + item.app)
                     .font(Theme.body(12)).foregroundColor(Theme.inkFaint))
                 .strikethrough(closing, color: Theme.danger)
@@ -657,7 +619,6 @@ private struct SortRow: View {
     @ObservedObject var model: SortModel
     let item: SortItem
     let closing: Bool
-    /// Windows of a closed workspace sit under its header.
     var indented = false
 
     var body: some View {
@@ -669,7 +630,6 @@ private struct SortRow: View {
             .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
                 .fill(closing ? (pointed ? Theme.hover : .clear) : lit ? Theme.accentSoft : .clear))
             .overlay(alignment: .trailing) {
-                // × sends the window to Close; in Close the same spot brings it back.
                 if pointed && model.drag == nil {
                     SortRemoveButton(label: closing ? "Bring back" : "Close window", removes: !closing) {
                         if closing { model.restore(item.id) } else { model.markClosing(item.id) }
@@ -694,7 +654,6 @@ private struct SortRow: View {
     }
 }
 
-/// The Close column's rows: closed workspaces as groups (a header, then their windows), then loose windows.
 private struct SortCloseList: View {
     @ObservedObject var model: SortModel
     let plan: SortPlan
@@ -722,7 +681,6 @@ private struct SortCloseList: View {
     }
 }
 
-/// A closed workspace in the Close column: its number or name, how many windows, click to bring it back.
 private struct SortClosedHeader: View {
     @ObservedObject var model: SortModel
     let group: SortClosedLane
@@ -755,7 +713,6 @@ private struct SortClosedHeader: View {
     }
 }
 
-/// Catches only right clicks, leaving every other event to the view below.
 private struct SortRightClick: NSViewRepresentable {
     let action: () -> Void
 
@@ -776,10 +733,7 @@ private struct SortRightClick: NSViewRepresentable {
     }
 }
 
-// MARK: - Scroll access
 
-/// Finds the scroll view around the row of workspaces, so the drag can scroll it near the edges and the
-/// fade at its right end can tell whether there is more.
 private struct SortScrollAccessor: NSViewRepresentable {
     let model: SortModel
 
