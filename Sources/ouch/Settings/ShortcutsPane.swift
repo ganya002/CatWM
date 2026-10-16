@@ -84,14 +84,10 @@ struct ShortcutsPane: View {
             .setting("shortcuts.list", ui)
 
             OGroup("Keyboard") {
-                OSwitchRow("Show keyboard help",
-                           description: keyboardHelpHint,
-                           isOn: $doc.config.keyboardHelp)
-                    .setting("shortcuts.keyboardHelp", ui)
-                ORow("Keyboard finish", description: "Used by keyboard help and Shortcut Map") {
-                    OMenuPicker(title: "Keyboard finish", options: keyboardFinishOptions, selection: $doc.config.keyboardFinish)
+                OptionSwitch(\.keyboardHelp, doc: doc, ui: ui, description: keyboardHelpHint)
+                OptionRow(\Config.keyboardFinish, ui: ui) { label in
+                    OMenuPicker(title: label, options: keyboardFinishOptions, selection: $doc.config.keyboardFinish)
                 }
-                .setting("shortcuts.keyboardFinish", ui)
             }
 
             ForEach(sections, id: \.0) { cat, rows in

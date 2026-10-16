@@ -76,13 +76,11 @@ struct LayoutPane: View {
                 GapsPreview(config: c, layout: c.layouts.first { ![.floating, .fullscreen].contains($0) } ?? .tall)
                     .frame(height: 170)
                     .padding(.vertical, 12)
-                OSwitchRow("Gaps between windows", isOn: $doc.config.windowMargins).setting("layout.gaps", ui)
-                ORow("Gap size") { points($doc.config.windowMarginSize, "Gap size") }
+                OptionSwitch(\.windowMargins, doc: doc, ui: ui)
+                OptionSlider(\.windowMarginSize, doc: doc, ui: ui, width: 180, format: { "\(Int($0)) pt" })
                     .disabled(!c.windowMargins)
-                    .setting("layout.gapSize", ui)
-                OSwitchRow("Smart gaps", description: "No gaps when a window is alone", isOn: $doc.config.smartWindowMargins)
+                OptionSwitch(\.smartWindowMargins, doc: doc, ui: ui)
                     .disabled(!c.windowMargins)
-                    .setting("layout.smartGaps", ui)
                 if ui.linkedPadding {
                     ORow("Screen padding", description: "Space between windows and the screen edges") { points(allPadding, "Screen padding") }
                         .setting("layout.padding", ui)
@@ -92,24 +90,15 @@ struct LayoutPane: View {
                     ORow("Left padding") { points($doc.config.paddingLeft, "Left padding") }
                     ORow("Right padding") { points($doc.config.paddingRight, "Right padding") }
                 }
-                OSwitchRow("No padding on the built-in display", isOn: $doc.config.disablePaddingOnBuiltinDisplay)
-                    .setting("layout.builtin", ui)
+                OptionSwitch(\.disablePaddingOnBuiltinDisplay, doc: doc, ui: ui)
             }
 
             OGroup("Main pane") {
-                ORow("Main pane resize step", description: "How much the split moves each time") {
-                    OSlider(value: Binding(get: { Double(doc.config.windowResizeStep * 100) },
-                                           set: { doc.config.windowResizeStep = CGFloat($0.rounded()) / 100 }),
-                            range: 1...25, step: 1, ticks: [5], resetValue: 5, width: 160, label: "Main pane resize step",
-                            format: { "\(Int($0))%" })
-                }
-                .setting("layout.resizeStep", ui)
+                OptionSlider(\.windowResizeStep, doc: doc, ui: ui, format: { "\(Int($0))%" })
             }
 
             OGroup("Feedback") {
-                OSwitchRow("Show layout name on change", description: "A short card in the middle of the screen",
-                           isOn: $doc.config.enablesLayoutHUD)
-                    .setting("layout.hud", ui)
+                OptionSwitch(\.enablesLayoutHUD, doc: doc, ui: ui)
             }
 
             AdvancedSection(pane: .layout, ui: ui) {
@@ -119,13 +108,11 @@ struct LayoutPane: View {
                         if on { allPadding.wrappedValue = c.paddingTop }
                     }))
                     .setting("layout.linked", ui)
-                    OSwitchRow("Ignore menu bar when tiling", description: "Use this if you hide the menu bar", isOn: $doc.config.ignoreMenuBar)
-                        .setting("layout.menuBar", ui)
+                    OptionSwitch(\.ignoreMenuBar, doc: doc, ui: ui)
                 }
                 OGroup("Feedback") {
-                    OSwitchRow("Also when switching spaces", isOn: $doc.config.enablesLayoutHUDOnSpaceChange)
+                    OptionSwitch(\.enablesLayoutHUDOnSpaceChange, doc: doc, ui: ui)
                         .disabled(!c.enablesLayoutHUD)
-                        .setting("layout.hudSpaces", ui)
                 }
             }
         }

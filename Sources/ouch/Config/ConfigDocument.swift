@@ -284,14 +284,7 @@ final class ConfigDocument: ObservableObject {
 
     /// The animation options as config text: an animation config's payload.
     func animationText() -> String {
-        let c = config
-        return [
-            "animate = \(c.animate ? "true" : "false")",
-            "animation-duration = \(String(format: "%g", (c.animationDuration * 1000).rounded() / 1000))",
-            "animation-curve = \(c.animationCurve.name)",
-            "animation-bounce = \(String(format: "%g", (c.animationBounce * 100).rounded() / 100))",
-            "",
-        ].joined(separator: "\n")
+        (Options.all.filter { $0.group == .animation }.map { "\($0.key) = \($0.text(config))" } + [""]).joined(separator: "\n")
     }
 
     /// Swaps in a keyboard config's variables and binds, keeping every other setting.
@@ -304,10 +297,7 @@ final class ConfigDocument: ObservableObject {
     /// Swaps in an animation config's options, keeping every other setting.
     func applyAnimation(_ text: String) {
         let c = Config.parse(text)
-        config.animate = c.animate
-        config.animationDuration = c.animationDuration
-        config.animationCurve = c.animationCurve
-        config.animationBounce = c.animationBounce
+        for o in Options.all where o.group == .animation { o.copy(&config, c) }
     }
 
     /// Replaces everything with a full config's text.
@@ -383,6 +373,8 @@ final class ConfigDocument: ObservableObject {
                     extra.append(raw)
                 }
             } else {
+                // A line the parser reads is dropped here: `serialize` writes its value back from `Options`
+                // (or as layouts, floating and the four paddings for the shorthands).
                 var probe = Config()
                 var v = value
                 for (k, val) in resolved.sorted(by: { $0.0.count > $1.0.count }) { v = v.replacingOccurrences(of: k, with: val) }
@@ -423,9 +415,6 @@ final class ConfigDocument: ObservableObject {
 
     /// `includeKeyboard`/`includeAnimation` off leaves those parts out, to compare "everything else" on its own.
     func serialize(includeKeyboard: Bool = true, includeAnimation: Bool = true) -> String {
-        let c = config
-        func b(_ v: Bool) -> String { v ? "true" : "false" }
-        func n(_ v: CGFloat) -> String { String(format: "%g", Double(v)) }
         func esc(_ s: String) -> String { s.replacingOccurrences(of: "#", with: "##") }
         var out = [
             "# Ouch config. Written by the Settings window; editing by hand is fine too.",
@@ -433,74 +422,7 @@ final class ConfigDocument: ObservableObject {
             "",
         ]
         if includeKeyboard { out += vars.map { "\($0.name) = \(esc($0.value))" } }
-        out += [
-            "",
-            "# tall, tall-right, wide, middle-wide, fullscreen, column, row, floating, bsp, 3column-left,",
-            "# 3column-middle, 3column-right, two-pane, two-pane-right, widescreen-tall, widescreen-tall-right",
-            "layouts = " + c.layouts.map(\.rawValue).joined(separator: ", "),
-            "",
-            "window-margins = \(b(c.windowMargins))",
-            "window-margin-size = \(n(c.windowMarginSize))",
-            "smart-window-margins = \(b(c.smartWindowMargins))",
-            "screen-padding-left = \(n(c.paddingLeft))",
-            "screen-padding-right = \(n(c.paddingRight))",
-            "screen-padding-top = \(n(c.paddingTop))",
-            "screen-padding-bottom = \(n(c.paddingBottom))",
-            "disable-padding-on-builtin-display = \(b(c.disablePaddingOnBuiltinDisplay))",
-            "ignore-menu-bar = \(b(c.ignoreMenuBar))",
-            "",
-            "mouse-follows-focus = \(b(c.mouseFollowsFocus))",
-            "focus-follows-mouse = \(b(c.focusFollowsMouse))",
-            "focus-follows-mouse-in-mode-only = \(b(c.focusFollowsMouseInModeOnly))",
-            "mouse-swaps-windows = \(b(c.mouseSwapsWindows))",
-            "mouse-resizes-windows = \(b(c.mouseResizesWindows))",
-            "new-windows-to-main = \(b(c.newWindowsToMain))",
-            "float-small-windows = \(b(c.floatSmallWindows))",
-            // Below 1% the percent form would read back as a fraction, so write the fraction itself.
-            "window-resize-step = \(c.windowResizeStep >= 0.01 ? n(c.windowResizeStep * 100) : n(c.windowResizeStep))",
-            "enables-layout-hud = \(b(c.enablesLayoutHUD))",
-            "enables-layout-hud-on-space-change = \(b(c.enablesLayoutHUDOnSpaceChange))",
-            "# Make the focused window stand out: darken the others (strength 0-1) and/or blur them (points)",
-            "dim-other-windows = \(b(c.dimOtherWindows))",
-            "dim-strength = \(n(c.dimStrength))",
-            "blur-other-windows = \(b(c.blurOtherWindows))",
-            "blur-radius = \(n(c.blurRadius))",
-            "sort-strategy = \(c.sortStrategy.rawValue)",
-            "sort-nudge = \(c.sortNudge)",
-            "",
-            "floating = " + c.floating.joined(separator: ", "),
-            "floating-is-blacklist = \(b(c.floatingIsBlacklist))",
-            "",
-        ]
-        if includeAnimation {
-            out += [
-                "animate = \(b(c.animate))",
-                "animation-duration = \(String(format: "%g", (c.animationDuration * 1000).rounded() / 1000))",
-                "# ease-out, ease-in-out, linear, spring, bounce, overshoot or cubic-bezier(x1, y1, x2, y2)",
-                "animation-curve = \(c.animationCurve.name)",
-                "animation-bounce = \(String(format: "%g", (c.animationBounce * 100).rounded() / 100))",
-                "",
-            ]
-        }
-        out += [
-            "debug-logging = \(b(c.debugLogging))",
-            "# Send repeated animation slowdowns and hangs (numbers and app IDs only) to the developers",
-            "perf-reports = \(b(c.perfReports))",
-            "virtual-workspaces = \(b(c.virtualWorkspaces))",
-            "stay-on-workspace-after-close = \(b(c.stayOnWorkspaceAfterClose))",
-            "# On-screen keyboard help: keep holding the window-mode chord's modifier, or press ? in the mode",
-            "keyboard-help = \(b(c.keyboardHelp))",
-            "keyboard-help-key = \(esc(c.keyboardHelpKey))",
-            "# In window mode: a dot beside the pointer, and a tap of the mode's modifier opens window actions there",
-            "cursor-actions = \(b(c.cursorActions))",
-            "# The keyboard drawn there and in Settings: auto (this Mac), a model (macbook-pro, macbook-air,",
-            "# macbook-neo, magic-keyboard) or a finish such as macbook-air-midnight or imac-blue",
-            "keyboard-finish = \(c.keyboardFinish)",
-            "# The screen-edge effect while window mode is on: draw, ripple, corners or none",
-            "mode-effect = \(c.modeEffect.rawValue)",
-            "# How Sort Windows and keyboard help come and go: rise, pop, focus, tile or draw",
-            "panel-animation = \(c.panelAnimation.rawValue)",
-        ]
+        out += [""] + Options.lines(config, includeAnimation: includeAnimation)
         out += [
             "",
             "# bind = MODS, key, dispatcher, args. Binds inside `submap = name` … `submap = reset` only work in",

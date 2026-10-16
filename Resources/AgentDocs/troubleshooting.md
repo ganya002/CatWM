@@ -25,4 +25,4 @@
 
 Menu bar → **Settings…** (⌘,): General (permissions, login item, updates, beta channel), Layout, Windows, Motion, Shortcuts. ⌘K searches every setting including Advanced sections. **Undo All Changes** reverts to the state when the window opened.
 
-Updates ship via Sparkle/Amore. Menu bar → Help → Check for Updates…. The beta channel is under Settings → General → Advanced.
+Updates ship via Sparkle/Amore. Menu bar → Help → Check for Updates…. The beta channel is Settings → General → Updates → **Include beta releases**.

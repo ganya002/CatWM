@@ -67,7 +67,7 @@ struct Config {
     var sortNudge = 5
     /// The grouping the Sort panel opens with.
     var sortStrategy: SortStrategy = .task
-    /// Screen-edge effect while a mode is on: draw, ripple, corners or none. Config file only for now.
+    /// Screen-edge effect while a mode is on: draw, ripple, corners or none.
     var modeEffect: ModeFX.Style = .draw
     /// Darken every window but the focused one, by `dimStrength` (0...1).
     var dimOtherWindows = false
@@ -172,16 +172,16 @@ struct Config {
         return c
     }
 
+    /// Sets one option. Scalar options come from `Options.all`; only lists, binds and shorthands that set
+    /// several options are read here.
     mutating func apply(_ rawKey: String, _ v: String) -> String? {
         var key = rawKey.lowercased().replacingOccurrences(of: "-", with: "_")
         let fullKey = key
         if let colon = key.lastIndex(of: ":") { key = String(key[key.index(after: colon)...]) } // general:gaps_in
-        let num = Double(v).flatMap { $0.isFinite ? CGFloat($0) : nil } // "nan" and "inf" parse as Doubles but poison every frame computed from them
-        var readBool = false // a typo such as `ture` is an error, not a silent false
-        var bool: Bool { readBool = true; return ["true", "yes", "on", "1"].contains(v.lowercased()) }
         func needNum(_ set: (CGFloat) -> Void) -> String? {
-            guard let num else { return "`\(rawKey)` needs a number" }
-            set(num); return nil
+            // "nan" and "inf" parse as Doubles but poison every frame computed from them
+            guard let num = Double(v), num.isFinite else { return "`\(rawKey)` needs a number" }
+            set(CGFloat(num)); return nil
         }
 
         switch key {
@@ -194,84 +194,23 @@ struct Config {
                 if !list.contains(l) { list.append(l) } // a layout appears once in the cycle
             }
             if !list.isEmpty { layouts = list }
-        case "window_margins": windowMargins = bool
-        case "window_margin_size": return needNum { windowMarginSize = $0 }
-        case "gaps_in": return needNum { windowMarginSize = $0 * 2 } // Hyprland: per-window inner gap
-        case "smart_window_margins", "smart_gaps": smartWindowMargins = bool
-        case "screen_padding_left": return needNum { paddingLeft = $0 }
-        case "screen_padding_right": return needNum { paddingRight = $0 }
-        case "screen_padding_top": return needNum { paddingTop = $0 }
-        case "screen_padding_bottom": return needNum { paddingBottom = $0 }
-        case "screen_padding", "gaps_out":
-            return needNum { paddingLeft = $0; paddingRight = $0; paddingTop = $0; paddingBottom = $0 }
-        case "mouse_follows_focus": mouseFollowsFocus = bool
-        case "focus_follows_mouse", "follow_mouse": focusFollowsMouse = bool
-        case "focus_follows_mouse_in_mode_only": focusFollowsMouseInModeOnly = bool
-        case "mouse_swaps_windows": mouseSwapsWindows = bool
-        case "mouse_resizes_windows": mouseResizesWindows = bool
         case "floating":
             var ids: [String] = []
             for id in v.split(separator: ",").map({ $0.trimmingCharacters(in: .whitespaces) }) where !id.isEmpty && !ids.contains(id) {
                 ids.append(id)
             }
             floating = ids
-        case "floating_is_blacklist": floatingIsBlacklist = bool
-        case "float_small_windows": floatSmallWindows = bool
-        case "new_windows_to_main", "new_is_master": newWindowsToMain = bool
-        case "enables_layout_hud": enablesLayoutHUD = bool
-        case "enables_layout_hud_on_space_change": enablesLayoutHUDOnSpaceChange = bool
-        case "ignore_menu_bar": ignoreMenuBar = bool
-        case "disable_padding_on_builtin_display": disablePaddingOnBuiltinDisplay = bool
-        case "window_resize_step": return needNum { windowResizeStep = $0 >= 1 ? $0 / 100 : $0 }
-        case "animate", "animations": animate = bool
+        case "gaps_in": return needNum { windowMarginSize = $0 * 2 } // Hyprland: per-window inner gap
+        case "screen_padding", "gaps_out":
+            return needNum { paddingLeft = $0; paddingRight = $0; paddingTop = $0; paddingBottom = $0 }
         case "enabled": // only `animations { enabled }` is ours; `blur { enabled }` etc. are other blocks' options
             guard fullKey == "animations:enabled" else { return "unknown option `\(rawKey)`" }
-            animate = bool
-        case "animation_duration": return needNum { animationDuration = Double($0) > 5 ? Double($0) / 1000 : Double($0) }
-        case "animation_curve":
-            guard let curve = AnimationCurve(v) else {
-                return "unknown animation curve `\(v)` (ease-out, ease-in-out, linear, spring, bounce, overshoot or cubic-bezier(x1, y1, x2, y2))"
-            }
-            animationCurve = curve
-        case "animation_bounce": return needNum { animationBounce = min(1, max(0, Double($0) > 1 ? Double($0) / 100 : Double($0))) }
-        case "debug_logging": debugLogging = bool
-        case "perf_reports": perfReports = bool
-        case "virtual_workspaces": virtualWorkspaces = bool
-        case "stay_on_workspace_after_close": stayOnWorkspaceAfterClose = bool
-        case "sort_nudge": return needNum { sortNudge = $0.isFinite ? Int(min(max($0, 0), 100)) : 5 }
-        case "sort_strategy":
-            guard let s = SortStrategy(rawValue: v.lowercased()) else {
-                return "unknown sort strategy `\(v)` (\(SortStrategy.allCases.map(\.rawValue).joined(separator: ", ")))"
-            }
-            sortStrategy = s
-        case "keyboard_help": keyboardHelp = bool
-        case "keyboard_help_key":
-            guard v.count == 1 else { return "keyboard-help-key must be a single character, such as ?" }
-            keyboardHelpKey = v
-        case "cursor_actions": cursorActions = bool
-        case "keyboard_finish":
-            guard MacKeyboard.isValid(v) else {
-                return "unknown keyboard finish `\(v)` (auto, macbook-pro, macbook-air, macbook-neo, magic-keyboard, or a finish like macbook-pro-space-black)"
-            }
-            keyboardFinish = MacKeyboard.slug(v)
-        case "dim_other_windows", "dim_inactive": dimOtherWindows = bool
-        case "dim_strength": return needNum { dimStrength = min(1, max(0, $0 > 1 ? $0 / 100 : $0)) }
-        case "blur_other_windows": blurOtherWindows = bool
-        case "blur_radius": return needNum { blurRadius = min(100, max(1, $0.rounded())) }
-        case "mode_effect":
-            guard let s = ModeFX.Style(rawValue: v.lowercased()) else {
-                return "unknown mode effect `\(v)` (\(ModeFX.Style.allCases.map(\.rawValue).joined(separator: ", ")))"
-            }
-            modeEffect = s
-        case "panel_animation":
-            guard let s = PanelMotion(rawValue: v.lowercased()) else {
-                return "unknown panel animation `\(v)` (\(PanelMotion.allCases.map(\.rawValue).joined(separator: ", ")))"
-            }
-            panelAnimation = s
-        default: return "unknown option `\(rawKey)`"
-        }
-        if readBool, !["true", "yes", "on", "1", "false", "no", "off", "0"].contains(v.lowercased()) {
-            return "`\(rawKey)` needs true or false"
+            let (on, error) = ConfigOption.readBool(v, rawKey)
+            animate = on
+            return error
+        default:
+            guard let option = ConfigOption.named(key) else { return "unknown option `\(rawKey)`" }
+            return option.read(&self, v, rawKey)
         }
         return nil
     }
@@ -401,80 +340,22 @@ let keyCodes: [String: UInt16] = [
     "swipe_up": SpecialKey.swipeUp, "swipe_down": SpecialKey.swipeDown,
 ]
 
-let defaultText = """
+/// The config a first run writes: every option at its default (from `Options`), a few apps that float, and the binds.
+let defaultText: String = {
+    var c = Config()
+    c.floating = ["com.apple.systempreferences", "com.apple.SystemSettings", "com.apple.calculator"]
+    return """
 # Ouch config: Amethyst's options with Hyprland-style syntax.
 # Edit, then reload from the menu bar or with $mod SHIFT, R.
 
 # SUPER = Command, ALT = Option. Option is the default so app shortcuts (Cmd-Q, Cmd-C...) keep working.
 $mod = ALT
 
-# ---- layouts --------------------------------------------------------------
-# tall, tall-right, wide, middle-wide, fullscreen, column, row, floating, bsp,
-# 3column-left, 3column-middle, 3column-right, two-pane, two-pane-right,
-# widescreen-tall, widescreen-tall-right
-layouts = tall, wide, fullscreen, bsp, column
 
-# ---- gaps (Hyprland names also work: gaps_in = per-window gap, gaps_out = screen padding)
-window-margins = true
-window-margin-size = 10
-smart-window-margins = false
-screen-padding-left = 10
-screen-padding-right = 10
-screen-padding-top = 10
-screen-padding-bottom = 10
-disable-padding-on-builtin-display = false
-ignore-menu-bar = false
+""" + Options.lines(c).joined(separator: "\n") + "\n\n" + defaultBinds
+}()
 
-# ---- behaviour -------------------------------------------------------------
-mouse-follows-focus = false
-focus-follows-mouse = false
-# With focus-follows-mouse on: hovering focuses a window only while window mode is on.
-focus-follows-mouse-in-mode-only = false
-mouse-swaps-windows = true
-mouse-resizes-windows = true
-new-windows-to-main = false
-float-small-windows = true
-window-resize-step = 5
-enables-layout-hud = true
-enables-layout-hud-on-space-change = true
-# Keyboard help: keep holding Cmd after Cmd+Caps Lock (or press ? in window mode) to see
-# every window-mode key on an on-screen keyboard.
-keyboard-help = true
-keyboard-help-key = ?
-# Cursor quick actions: in window mode a dot follows the pointer; tap Cmd (or $mod) to open actions
-# for the window under it.
-cursor-actions = true
-# Make the focused window stand out: darken the others (strength 0-1) and/or blur them (radius in points).
-dim-other-windows = false
-dim-strength = 0.3
-blur-other-windows = false
-blur-radius = 20
-# The keyboard drawn there and in Settings: auto follows this Mac (model, colour, layout). Or pick one,
-# e.g. macbook-pro-space-black, macbook-pro-silver, macbook-air-midnight, macbook-air-starlight,
-# macbook-air-sky-blue, macbook-air-silver, macbook-neo-silver, macbook-neo-blush, macbook-neo-citrus,
-# macbook-neo-indigo, imac-silver, imac-blue, imac-purple, imac-pink, imac-orange, imac-yellow, imac-green.
-keyboard-finish = auto
-
-# Sort Windows (the bind below): the grouping it opens with (task, app, focus or none), and how many
-# windows one workspace holds before Ouch offers to sort them (0 turns the offer off).
-sort-strategy = task
-sort-nudge = 5
-
-# Bundle IDs to float (wildcards like com.adobe.* work). Set floating-is-blacklist = false
-# to make this a list of the ONLY apps that get tiled.
-floating = com.apple.systempreferences, com.apple.SystemSettings, com.apple.calculator
-floating-is-blacklist = true
-
-# ---- animation -------------------------------------------------------------
-# These also set how windows slide when you switch workspaces.
-# animation-curve: ease-out, ease-in-out, linear, spring, bounce, overshoot,
-# or cubic-bezier(x1, y1, x2, y2) like CSS (y past 0...1 overshoots).
-# animation-bounce (0-1) sets how lively spring, bounce and overshoot are.
-animate = true
-animation-duration = 0.18
-animation-curve = ease-out
-animation-bounce = 0.5
-
+private let defaultBinds = """
 # ---- keybinds: bind = MODS, key, dispatcher, args -------------------------
 # Global binds work everywhere. Everything else lives in "window mode" (a Hyprland submap):
 # press Cmd+Caps Lock, then single keys, vim style. Esc / i / Return or a mouse click leaves it.
