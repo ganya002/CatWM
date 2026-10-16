@@ -473,6 +473,8 @@ final class ConfigDocument: ObservableObject {
             "# On-screen keyboard help: keep holding the window-mode chord's modifier, or press ? in the mode",
             "keyboard-help = \(b(c.keyboardHelp))",
             "keyboard-help-key = \(esc(c.keyboardHelpKey))",
+            "# In window mode: a dot beside the pointer, and a tap of the mode's modifier opens window actions there",
+            "cursor-actions = \(b(c.cursorActions))",
             "# The keyboard drawn there and in Settings: auto (this Mac), a model (macbook-pro, macbook-air,",
             "# macbook-neo, magic-keyboard) or a finish such as macbook-air-midnight or imac-blue",
             "keyboard-finish = \(c.keyboardFinish)",

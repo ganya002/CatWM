@@ -27,6 +27,10 @@ final class Hotkeys {
     /// Asked on a plain Return while set; true takes the key. The coach card never becomes key (focus
     /// stays on the practice windows), so this is how Return reaches its button.
     var onReturn: (() -> Bool)?
+    /// Asked on Esc while set; true takes the key. The cursor quick-action menu closes on it and the mode stays.
+    var onEscape: (() -> Bool)?
+    /// A modifier tapped on its own in a mode (see `trackModifierTap`). Called on the main queue.
+    var onModifierTap: (() -> Void)?
     /// The mode chord's modifiers (⌘ for ⌘⇪) while the keyboard help is up because they're held. Keys
     /// pressed then are matched as if those modifiers were up, so the mode's keys work under the help
     /// instead of reaching the app as ⌘ shortcuts.
@@ -53,6 +57,8 @@ final class Hotkeys {
         let n = name.lowercased() == "reset" ? "" : name
         guard n != submap else { return }
         submap = n
+        modeChord = n.isEmpty ? [] : CGEventSource.flagsState(.combinedSessionState).intersection(Self.tapMods).subtracting(.maskShift)
+        tapDown = nil
         DispatchQueue.main.async { [weak self] in self?.onSubmapChange?(n) }
     }
 
@@ -311,6 +317,44 @@ final class Hotkeys {
         IOHIDSetModifierLockState(conn, Int32(kIOHIDCapsLockState), on)
     }
 
+    // MARK: - Modifier tap
+
+    private static let tapMods: CGEventFlags = [.maskCommand, .maskAlternate, .maskControl, .maskShift]
+    static let tapLimit = 0.35 // well under KeyHelp's 0.5s hold, so a tap never shows the help
+    private var modeChord: CGEventFlags = [] // modifiers held when the mode began (⌘ for ⌘⇪)
+    private var lastMods: CGEventFlags = []
+    /// The modifier pressed alone in the mode, when, and the click count then. Cleared by anything else.
+    fileprivate var tapDown: (flag: CGEventFlags, at: TimeInterval, clicks: UInt32)?
+
+    /// A tap is `$mod` or the mode's chord modifier going down with nothing else held, while the mode is
+    /// on, and up again within `tapLimit` with no key, click or other modifier between. The press must
+    /// start in the mode: the ⌘ still held from ⌘⇪ was down before, so letting it go is not a tap.
+    /// Only watches; the event always passes on.
+    fileprivate func trackModifierTap(_ event: CGEvent) {
+        let mods = event.flags.intersection(Self.tapMods)
+        defer { lastMods = mods }
+        guard onModifierTap != nil, !paused, !submap.isEmpty,
+              event.getIntegerValueField(.keyboardEventKeycode) != 57,
+              event.getIntegerValueField(.eventSourceUserData) != Self.syntheticMarker else { tapDown = nil; return }
+        if let down = tapDown {
+            tapDown = nil
+            if mods.isEmpty, ProcessInfo.processInfo.systemUptime - down.at < Self.tapLimit, Self.clicks() == down.clicks {
+                DispatchQueue.main.async { [weak self] in self?.onModifierTap?() }
+            }
+            return
+        }
+        let allowed = WindowManager.shared.config.mainMod.union(modeChord)
+        if lastMods.isEmpty, mods.rawValue.nonzeroBitCount == 1, allowed.contains(mods) {
+            tapDown = (mods, ProcessInfo.processInfo.systemUptime, Self.clicks())
+        }
+    }
+
+    /// Mouse buttons pressed so far this session. The tap doesn't see clicks, so a change means one came between.
+    private static func clicks() -> UInt32 {
+        [CGEventType.leftMouseDown, .rightMouseDown, .otherMouseDown]
+            .reduce(0) { $0 &+ CGEventSource.counterForEventType(.combinedSessionState, eventType: $1) }
+    }
+
     // MARK: - Matching
 
     func match(_ event: CGEvent) -> Match {
@@ -320,6 +364,9 @@ final class Hotkeys {
         if code == 36 || code == 76, let onReturn,
            event.flags.isDisjoint(with: [.maskCommand, .maskControl, .maskAlternate, .maskShift]),
            event.getIntegerValueField(.keyboardEventAutorepeat) == 0, onReturn() {
+            return .swallow
+        }
+        if code == 53, let onEscape, event.getIntegerValueField(.keyboardEventAutorepeat) == 0, onEscape() {
             return .swallow
         }
         if !submap.isEmpty {
@@ -406,6 +453,7 @@ private func tapCallback(proxy: CGEventTapProxy, type: CGEventType, event: CGEve
         let flags = event.flags
         DispatchQueue.main.async { f(flags) }
     }
+    if type == .flagsChanged { Hotkeys.shared.trackModifierTap(event) } else { Hotkeys.shared.tapDown = nil }
     if type == .flagsChanged {
         // Only Caps Lock can be bound as a key; every other modifier change passes untouched.
         guard event.getIntegerValueField(.keyboardEventKeycode) == 57 else { return Unmanaged.passUnretained(event) }

@@ -168,6 +168,7 @@ final class WindowManager {
             Log.debug("mode: \(name.isEmpty ? "reset" : name)")
             ModeFX.shared.setActive(!name.isEmpty)
             KeyHelp.shared.modeChanged(name)
+            CursorActions.shared.modeChanged(name)
             Tips.shared.modeChanged(name)
             self?.onChange?()
             self?.onModeChange?(name)
@@ -183,6 +184,7 @@ final class WindowManager {
         MacKeyboard.shared.setting = config.keyboardFinish
         Hotkeys.shared.handler = { [weak self] b in self?.dispatch(b.dispatcher, b.arg) }
         KeyHelp.shared.install()
+        CursorActions.shared.install()
         if !Hotkeys.shared.start() {
             Log.info("start: could not create the keyboard event tap")
             HUD.shared.show("Keybinds unavailable: grant Accessibility", on: nil)
