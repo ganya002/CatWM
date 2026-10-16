@@ -9,6 +9,14 @@ An Amethyst-style tiling window manager for macOS with Hyprland-style keybinds a
 open build/ouch.app
 ```
 
+To install a beta build to `/Applications/Ouch.app` and open it, run `./install.sh`. Add `--stable` to skip the beta channel marker.
+
+Testers install with one command. The script is [site/install.sh](site/install.sh). Host it at `https://ouch.perwko.com/install.sh`. Without a flag it installs the latest stable release. With `--beta` it installs the latest beta:
+
+```sh
+curl -fsSL https://ouch.perwko.com/install.sh | sh -s -- --beta
+```
+
 On first launch, a short intro plays, then a welcome card asks for **Accessibility** (System Settings → Privacy & Security), lets you pick **Vim** (H J K L) or **WASD** keys, and starts a keyboard tour. The tour opens practice windows on a free workspace and tiles them for real; your own windows wait on their workspace until it ends. `open build/ouch.app --args --onboarding` plays it again.
 
 The menu bar has two lessons on the same practice windows:
