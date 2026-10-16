@@ -29,6 +29,9 @@ final class Hotkeys {
     var onReturn: (() -> Bool)?
     /// Asked on Esc while set; true takes the key. The cursor quick-action menu closes on it and the mode stays.
     var onEscape: (() -> Bool)?
+    /// Asked on a key while a mode is on, before that mode's binds. True takes the key. The cursor menu
+    /// uses it so the shortcut drawn on a row runs that row, and arrows and Return move through the menu.
+    var onMenuKey: ((_ code: UInt16, _ flags: CGEventFlags, _ isRepeat: Bool) -> Bool)?
     /// A modifier tapped on its own in a mode (see `trackModifierTap`). Called on the main queue.
     var onModifierTap: (() -> Void)?
     /// The mode chord's modifiers (⌘ for ⌘⇪) while the keyboard help is up because they're held. Keys
@@ -370,8 +373,12 @@ final class Hotkeys {
             return .swallow
         }
         if !submap.isEmpty {
-            if let b = lookup(code, event.flags) { return repeatOK(b, event) ? .bind(b) : .swallow }
+            // The chord held for keyboard help is not part of a window-mode shortcut, so a row's key
+            // still matches while that chord is down.
             let flags = !heldChord.isEmpty && event.flags.contains(heldChord) ? event.flags.subtracting(heldChord) : event.flags
+            let isRepeat = event.getIntegerValueField(.keyboardEventAutorepeat) != 0
+            if let onMenuKey, onMenuKey(code, flags, isRepeat) { return .swallow }
+            if let b = lookup(code, event.flags) { return repeatOK(b, event) ? .bind(b) : .swallow }
             if flags != event.flags, let b = lookup(code, flags) { return repeatOK(b, event) ? .bind(b) : .swallow }
             if let help = onHelpKey, flags.isDisjoint(with: [.maskCommand, .maskControl]),
                event.getIntegerValueField(.keyboardEventAutorepeat) == 0, Self.typed(event) == WindowManager.shared.config.keyboardHelpKey {

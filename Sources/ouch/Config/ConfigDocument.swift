@@ -84,6 +84,7 @@ enum Actions {
         add("Toggle Fullscreen", .window, "fullscreen", "", "arrow.up.left.and.arrow.down.right")
         add("Toggle macOS Full Screen", .window, "nativefullscreen", "", "arrow.up.left.and.down.right.and.arrow.up.right.and.down.left")
         add("Close Window", .window, "killactive", "", "xmark.square")
+        add("Minimize Window", .window, "minimize", "", "minus.square")
         add("Sort Windows", .window, "sort", "", "square.grid.3x1.below.line.grid.1x2")
         add("Undo Last Sort", .window, "sort-undo", "", "arrow.uturn.backward")
         add("Focus Next Display", .displays, "focusmonitor", "+1", "display")
@@ -175,6 +176,20 @@ enum Actions {
         return all.first { $0.dispatcher == d && norm($0.args) == x }
     }
 
+    /// True when both binds are the same catalog action, or the same dispatcher and arguments.
+    static func same(_ d1: String, _ a1: String, _ d2: String, _ a2: String) -> Bool {
+        let m1 = match(BindRow(mods: "", key: "", dispatcher: d1, args: a1))
+        let m2 = match(BindRow(mods: "", key: "", dispatcher: d2, args: a2))
+        if let m1, let m2 { return m1.dispatcher == m2.dispatcher && m1.args == m2.args }
+        return d1.lowercased() == d2.lowercased() && a1.lowercased() == a2.lowercased()
+    }
+
+    /// A "send to the next workspace" bind: relative +1, in any of the spellings the config accepts.
+    static func isNextWorkspace(_ dispatcher: String, _ args: String) -> Bool {
+        ["movetoworkspace", "movetoworkspacesilent"].contains(dispatcher.lowercased())
+            && ["e+1", "+1", "r+1", "m+1"].contains(args.lowercased())
+    }
+
     /// Title for a range bind, e.g. "Switch to Space 1…10" or "Focus Left, Down, Up, Right".
     static func rangeSummary(_ r: BindRow) -> (title: String, category: ActionCategory, symbol: String)? {
         guard case .success(let pairs) = BindRange.pairs(key: r.key, dispatcher: r.dispatcher, arg: r.args), pairs.count > 1
@@ -195,7 +210,7 @@ enum Actions {
 
     /// Dispatchers the window manager understands, for the custom editor.
     static let dispatchers = ["movefocus", "movewindow", "swapwindow", "cyclenext", "swapnext", "layoutmsg", "splitratio",
-                              "togglefloating", "fullscreen", "nativefullscreen", "killactive", "exec", "focusmonitor", "movewindowtomonitor",
+                              "togglefloating", "fullscreen", "nativefullscreen", "killactive", "minimize", "exec", "focusmonitor", "movewindowtomonitor",
                               "workspace", "movetoworkspace", "movetoworkspacesilent", "cyclelayout", "layout", "setlayout",
                               "toggletiling", "toggledim", "toggleblur", "retile", "reevaluate", "reload", "exit", "submap", "sethomespace", "sort", "sort-undo"]
 }

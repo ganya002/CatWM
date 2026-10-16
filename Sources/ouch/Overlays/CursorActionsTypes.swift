@@ -6,7 +6,9 @@ struct QuickAction: Identifiable {
     let id: String            // stable name, e.g. "float"
     let title: String
     let symbol: String        // SF Symbol name
-    var key: String = ""      // window-mode key shown as a hint, e.g. "F"; empty for none
+    var keys: [String] = []   // window-mode shortcut as keycaps, e.g. ["⇧", "F"]; empty for none
+    var keyCode: UInt16?      // that shortcut's key, so a press runs this row while the menu is open
+    var keyMods: CGEventFlags = []
     var isOn = false          // the state is on now (e.g. the window floats)
     var destructive = false   // drawn in the warning colour (close)
     let run: () -> Void

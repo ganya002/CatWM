@@ -108,6 +108,7 @@ extension WindowManager {
         case "fullscreen": toggleZoom()
         case "nativefullscreen": toggleNativeFullscreen()
         case "killactive": lastClose = Date(); focusedWindow()?.close()
+        case "minimize": focusedWindow()?.element.set(kAXMinimizedAttribute, kCFBooleanTrue)
         case "exec": exec(arg)
         case "focusmonitor": focusMonitor(arg)
         case "movewindowtomonitor": moveToMonitor(arg)
