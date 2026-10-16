@@ -13,7 +13,7 @@ struct CursorActionsView: View {
     /// The mark's centre from the pointer's hot spot: just right of the arrow, which runs about 12 by 18pt.
     static let markOffset = CGSize(width: 22, height: 9)
     /// The mark's panel: the disc and room for its shadow.
-    static let markSize: CGFloat = 32
+    static let markSize: CGFloat = 56
     private static let headHeight: CGFloat = 26
     /// Surface `md` padding (4) plus the 2pt inset between the panel and its rows.
     private static let inset: CGFloat = 6
@@ -145,15 +145,17 @@ private struct ActionRow: View {
     }
 }
 
-/// The mark right of the pointer while window mode is on: a small raised disc with an accent ellipsis,
-/// the one accent in view, hinting that a tap of the modifier opens the menu. It stays still.
+/// The mark right of the pointer while window mode is on: a small raised disc with the modifier's glyph in
+/// the accent, the one accent in view, hinting that a tap of that modifier opens the menu. It stays still.
 struct CursorMarkView: View {
+    @ObservedObject var model: CursorActionsModel
+
     var body: some View {
         let disc = Circle()
         disc.fill(Theme.surfaceRaised)
-            .frame(width: 20, height: 20)
+            .frame(width: 22, height: 22)
             .elevation(.popover, in: disc)
-            .overlay(Image(systemName: "ellipsis").font(.system(size: 11, weight: .bold)).foregroundStyle(Theme.accent))
+            .overlay(Text(model.modGlyph).font(Theme.keys(12, .bold)).foregroundStyle(Theme.accent))
             .frame(width: CursorActionsView.markSize, height: CursorActionsView.markSize)
             .allowsHitTesting(false)
             .accessibilityHidden(true)

@@ -17,7 +17,8 @@ final class CursorActionsModel: ObservableObject {
     @Published var title = ""                 // name of the window under the cursor
     @Published var actions: [QuickAction] = []
     @Published var hovered: String?           // id of the action under the pointer
-    @Published var open = false               // false: only the small indicator is drawn
+    @Published var modGlyph = "⌥"             // the modifier whose tap opens the menu, drawn in the mark
+    @Published var open = false              // false: only the small indicator is drawn
     /// Pointer position in the panel, so the view can lay out around it. Panel space, y down.
     @Published var anchor = CGPoint.zero
     /// Called by the view when the user picks an action. `CursorActions` closes the menu and runs it.
