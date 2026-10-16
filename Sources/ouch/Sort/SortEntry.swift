@@ -199,15 +199,15 @@ private struct SortOfferView: View {
             Text("Your workspace is crowded").font(Theme.body(22))
                 .tracking(-0.2).fixedSize(horizontal: false, vertical: true).padding(.top, 12).padding(.bottom, 4)
             HStack(spacing: 4) {
-                OButton("Sort my windows", variant: .primary, shortcut: ["↩"], onAccent: true) { choose(true) }
+                OButton("Sort my windows", variant: .primary, shortcut: ["↩"]) { choose(true) }
                     .keyboardShortcut(.defaultAction)
-                OButton("Keep as is", variant: .ghost, onAccent: true) { choose(false) }
+                OButton("Keep as is", variant: .ghost) { choose(false) }
             }
             .padding(.top, 20)
-            Capsule().fill(Theme.onAccent).frame(height: 3).padding(.top, 14)
+            Capsule().fill(Theme.accent).frame(height: 3).padding(.top, 14)
         }
         .frame(width: Self.width - 40)
-        .surface(.lg, tone: .accent, caret: .top(caret))
+        .surface(.lg, caret: .top(caret))
         .padding(Self.inset)
         .fixedSize()
     }

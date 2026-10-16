@@ -640,10 +640,10 @@ private struct MenuColumn: View {
     }
 }
 
-/// `accent-2`, the logo's spark yellow: a shape only, always beside a word that says what's waiting.
+/// A dot in `accent`: a shape only, always beside a word that says what's waiting.
 struct NotificationDot: View {
     var body: some View {
-        Circle().fill(Theme.accent2).frame(width: 6, height: 6)
+        Circle().fill(Theme.accent).frame(width: 6, height: 6)
             .overlay(Circle().strokeBorder(Theme.surfaceRaised, lineWidth: 1).padding(-1))
             .accessibilityHidden(true)
     }
@@ -696,8 +696,8 @@ private struct MenuRowView: View {
     var body: some View {
         let hi = model.highlight[level] == item.id
         let open = model.path.count > level && model.path[level] == item.id
-        let fg: Color = hi ? (item.danger ? Theme.danger : Theme.onAccent) : item.danger ? Theme.danger : Theme.ink
-        let muted: Color = hi && !item.danger ? Theme.onAccent : Theme.inkMuted
+        let fg: Color = item.danger ? Theme.danger : Theme.ink
+        let muted: Color = Theme.inkMuted
         Button {
             if item.kind == .sub {
                 withAnimation(Motion.easeOut) { model.path = Array(model.path.prefix(level)) + [item.id] }
@@ -731,9 +731,9 @@ private struct MenuRowView: View {
                 }
                 if let n = item.badge {
                     Text("\(n)").font(Theme.body(12, .medium)).monospacedDigit()
-                        .foregroundStyle(hi ? Theme.onAccent : Theme.accentInk)
+                        .foregroundStyle(Theme.accentInk)
                         .padding(.horizontal, 7).frame(height: 18)
-                        .background(Capsule().fill(hi ? .clear : Theme.accentSoft))
+                        .background(Capsule().fill(Theme.accentSoft))
                 }
                 if item.kind == .sub && crumb == nil {
                     Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold)).foregroundStyle(muted)
@@ -745,7 +745,7 @@ private struct MenuRowView: View {
             .padding(.horizontal, 10)
             .frame(height: Theme.rowHeight)
             .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
-                .fill(hi ? (item.danger ? Theme.dangerSoft : Theme.accent) : open ? Theme.wellHover : .clear))
+                .fill(hi ? (item.danger ? Theme.dangerSoft : Theme.hover) : open ? Theme.wellHover : .clear))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -763,11 +763,11 @@ private struct MenuRowView: View {
         switch item.kind {
         case .check:
             Image(systemName: "checkmark").font(.system(size: 11, weight: .bold))
-                .foregroundStyle(hi ? Theme.onAccent : Theme.accentInk)
+                .foregroundStyle(Theme.accentInk)
                 .opacity(item.checked ? 1 : 0)
                 .drawOnEffect(isActive: item.checked)
         case .radio:
-            Circle().fill(hi ? Theme.onAccent : Theme.accentInk).frame(width: 7, height: 7).opacity(item.checked ? 1 : 0)
+            Circle().fill(Theme.accentInk).frame(width: 7, height: 7).opacity(item.checked ? 1 : 0)
         case .footer:
             Color.clear // keeps the version in line with the labels above
         default:

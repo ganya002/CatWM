@@ -154,8 +154,8 @@ enum KeyGroup: CaseIterable, Identifiable {
     var color: Color {
         switch self {
         case .navigation: Theme.accent
-        case .spaces: Theme.accent2Ink
-        case .layout: Theme.sky
+        case .spaces: Theme.accentInk
+        case .layout: Theme.inkMuted
         case .window: Theme.ink
         case .leave: Theme.inkFaint
         }
@@ -165,8 +165,8 @@ enum KeyGroup: CaseIterable, Identifiable {
     func color(onDarkKeys dark: Bool) -> Color {
         switch self {
         case .navigation: Theme.fixed(\.accent, dark: dark)
-        case .spaces: Theme.fixed(\.accent2Ink, dark: dark)
-        case .layout: Theme.fixed(\.sky, dark: dark)
+        case .spaces: Theme.fixed(\.accentInk, dark: dark)
+        case .layout: Theme.fixed(\.inkMuted, dark: dark)
         case .window: Theme.fixed(\.ink, dark: dark)
         case .leave: Theme.fixed(\.inkFaint, dark: dark)
         }

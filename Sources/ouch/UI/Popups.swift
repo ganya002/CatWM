@@ -220,9 +220,9 @@ extension MenuItem {
             if i.kind == .sub { w += 18 }
             widest = max(widest, w)
         }
-        // Row padding 10 each side, the lead slot 16 and its gap 10, the surface's 4 each side, and room
+        // Row padding 10 each side, the lead slot 16 and its gap 10, the surface's 6 each side, and room
         // for key glyphs (⌥ ⌘), which fall back to a wider face than the one measured.
-        return min(max(widest * 1.1 + 20 + 26 + 8 + 20, 180), 380)
+        return min(max(widest * 1.1 + 20 + 26 + 12 + 20, 180), 380)
     }
 }
 

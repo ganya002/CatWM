@@ -91,7 +91,7 @@ private struct ConfigList: View {
             }
             .buttonStyle(MenuRowStyle())
         }
-        .frame(width: Theme.menuWidth - 8) // the Surface adds 4 each side
+        .frame(width: Theme.menuWidth - 12) // the Surface adds 6 each side
         .foregroundStyle(Theme.ink)
     }
 
