@@ -13,6 +13,8 @@ private extension View {
             Color.clear.preference(key: SortZoneKey.self, value: [z: g.frame(in: .named("sort"))])
         })
     }
+
+    func keepInside(_ origin: CGPoint) -> some View { KeepInside(origin: origin) { self } }
 }
 
 private struct SortZoneKey: PreferenceKey {
@@ -20,9 +22,29 @@ private struct SortZoneKey: PreferenceKey {
     static func reduce(value: inout [SortZone: CGRect], nextValue: () -> [SortZone: CGRect]) { value.merge(nextValue()) { $1 } }
 }
 
+/// Places a drag ghost under the pointer but keeps it inside the panel window, which would clip it.
+private struct KeepInside: SwiftUI.Layout {
+    /// Where the ghost's top-left corner wants to be, in the panel's coordinate space.
+    let origin: CGPoint
+    private let margin: CGFloat = 8 // keeps the popover shadow inside too
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: SwiftUI.LayoutSubviews, cache: inout ()) -> CGSize { proposal.replacingUnspecifiedDimensions() }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: SwiftUI.LayoutSubviews, cache: inout ()) {
+        guard let ghost = subviews.first else { return }
+        let size = ghost.sizeThatFits(.unspecified)
+        let x = max(margin, min(origin.x, bounds.width - size.width - margin))
+        let y = max(margin, min(origin.y, bounds.height - size.height - margin))
+        ghost.place(at: CGPoint(x: bounds.minX + x, y: bounds.minY + y), anchor: .topLeading, proposal: .unspecified)
+    }
+}
+
 private enum SortMetrics {
     static let lane: CGFloat = 176
     static let rowHeight = Theme.rowHeight
+    /// What a workspace column has between its header and its list (thumbnail, layout pill, gaps) that the
+    /// Close column gives to its list instead, so it lists that many more windows.
+    static let closeExtra = (lane - 16) * 10 / 16 + 8 + 24 + 8
 }
 
 struct SortView: View {
@@ -34,7 +56,9 @@ struct SortView: View {
 
     var body: some View {
         let plan = model.plan
-        let rows = min(model.maxRows, max(1, ([plan.close.count + plan.closedLanes.count] + plan.lanes.map(\.ids.count)).max() ?? 1))
+        // The Close column has room for a few more rows than the others, so it only adds height past that.
+        let closeRows = Int(ceil(CGFloat(plan.close.count + plan.closedLanes.count) - SortMetrics.closeExtra / SortMetrics.rowHeight))
+        let rows = min(model.maxRows, max(1, ([closeRows] + plan.lanes.map(\.ids.count)).max() ?? 1))
         VStack(alignment: .leading, spacing: 0) {
             header(plan)
             HStack(alignment: .top, spacing: 4) {
@@ -85,7 +109,7 @@ struct SortView: View {
                             .tileItem(model.shown, style: model.motion,
                                       spread: CGSize(width: -CGFloat(i) * (SortMetrics.lane + 4), height: 0))
                     }
-                    SortAddLane(model: model, plan: plan)
+                    SortAddLane(model: model, plan: plan, rows: rows)
                         .tileItem(model.shown, style: model.motion,
                                   spread: CGSize(width: -CGFloat(plan.lanes.count) * (SortMetrics.lane + 4), height: 0))
                 }
@@ -108,12 +132,12 @@ struct SortView: View {
         }
     }
 
-    /// Shaped like a workspace column so its rows line up: header, a drop box where the thumbnail sits,
-    /// an empty slot for the layout pill, then the windows that close when the panel is done.
+    /// The windows that close when the panel is done: a header, then a list that takes the room a workspace
+    /// column gives its thumbnail, so more of them fit. The whole column tints red only while a window or workspace is dragged over it.
     private func closeLane(_ plan: SortPlan, rows: Int) -> some View {
         let over = model.over == .close
         let n = plan.close.count
-        let box = RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
         return VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(Image(systemName: "xmark")).font(Theme.display(22)).foregroundStyle(Theme.danger).fixedSize()
@@ -121,23 +145,12 @@ struct SortView: View {
                 Text(n > 0 ? "\(n)" : "").font(Theme.body(12)).monospacedDigit().foregroundStyle(Theme.inkFaint).fixedSize()
             }
             .padding(.horizontal, 4)
-            ZStack {
-                box.fill(over || n > 0 ? Theme.dangerSoft : .clear)
-                if !(over || n > 0) {
-                    box.strokeBorder(Theme.borderControl, style: StrokeStyle(lineWidth: 1, dash: [3, 3])).opacity(0.5)
-                }
-                Image(systemName: "xmark.circle").font(.system(size: 20, weight: .regular))
-                    .foregroundStyle(over || n > 0 ? Theme.danger : Theme.inkFaint)
-            }
-            .aspectRatio(16 / 10, contentMode: .fit)
-            .padding(.horizontal, 4)
-            .animation(.easeOut(duration: Theme.medium), value: over)
-            Color.clear.frame(height: 24)
             SortCloseList(model: model, plan: plan, rows: rows)
         }
         .padding(.vertical, 8).padding(.horizontal, 4)
         .frame(width: SortMetrics.lane, alignment: .topLeading)
-        .overlay(alignment: .leading) { Rectangle().fill(Theme.hairline).frame(width: 1).padding(.vertical, 6).offset(x: -4) }
+        .background(shape.fill(over ? Theme.dangerSoft : .clear))
+        .animation(.easeOut(duration: Theme.medium), value: over)
         .zone(.close)
         .padding(.leading, 4).padding(.trailing, 8)
     }
@@ -184,7 +197,7 @@ struct SortView: View {
             .padding(.vertical, 8).padding(.horizontal, 4)
             .frame(width: SortMetrics.lane, alignment: .topLeading)
             .background(shape.fill(Theme.surfaceRaised).elevation(.popover, in: shape))
-            .offset(x: d.location.x - d.grab.width, y: d.location.y - d.grab.height)
+            .keepInside(CGPoint(x: d.location.x - d.grab.width, y: d.location.y - d.grab.height))
             .allowsHitTesting(false)
         }
     }
@@ -196,7 +209,7 @@ struct SortView: View {
                 .frame(width: 168, height: SortMetrics.rowHeight)
                 .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous).fill(Theme.surfaceRaised)
                     .elevation(.popover, in: RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)))
-                .offset(x: d.location.x - d.grab.width, y: d.location.y - d.grab.height)
+                .keepInside(CGPoint(x: d.location.x - d.grab.width, y: d.location.y - d.grab.height))
                 .allowsHitTesting(false)
         }
     }
@@ -289,6 +302,13 @@ private struct SortScreenGlyph: View {
 
 // MARK: - Lanes
 
+/// The state of typing over a workspace number, in an object rather than @State (the Command Line Tools ship
+/// without SwiftUI's macro plugin).
+private final class NumberEdit: ObservableObject {
+    @Published var on = false
+    @Published var draft = ""
+}
+
 private struct SortLaneView: View {
     @ObservedObject var model: SortModel
     let index: Int
@@ -296,6 +316,8 @@ private struct SortLaneView: View {
     let rows: Int
     @StateObject private var hover = Flag()
     @FocusState private var editing: Bool
+    @StateObject private var number = NumberEdit()
+    @FocusState private var numberFocus: Bool
 
     /// Dragging the number, the count or the thumbnail carries the whole workspace: to Close, onto another
     /// workspace to merge the two, or to the edge of one to move it there.
@@ -305,16 +327,49 @@ private struct SortLaneView: View {
             .onEnded { _ in model.columnDragEnded() }
     }
 
+    /// The workspace number. Dragging carries the workspace and a double-click goes to it; a single click
+    /// (the double-click gets its chance first) types a new number, which `commitNumber` applies.
+    @ViewBuilder private func numberView(filled: Bool) -> some View {
+        if number.on {
+            TextField("", text: $number.draft)
+                .textFieldStyle(.plain).font(Theme.display(22)).monospacedDigit().tracking(-0.4)
+                .foregroundStyle(Theme.accentInk)
+                .frame(width: 32)
+                .focused($numberFocus)
+                .onChange(of: number.draft) { _, v in
+                    let digits = String(v.filter { $0.isASCII && $0.isNumber }.prefix(2))
+                    if digits != v { number.draft = digits }
+                }
+                .onSubmit { numberFocus = false }
+                .onChange(of: numberFocus) { _, on in if !on { commitNumber() } }
+                .accessibilityLabel("Number for workspace \(lane.ws)")
+        } else {
+            Text(lane.ws).font(Theme.display(22)).monospacedDigit().tracking(-0.4)
+                .foregroundStyle(filled ? Theme.accentInk : Theme.inkFaint).fixedSize()
+                .contentShape(Rectangle())
+                .onTapGesture(count: 2) { model.finish(lane.ws) }
+                .onTapGesture {
+                    number.draft = lane.ws
+                    number.on = true
+                    DispatchQueue.main.async { numberFocus = true }
+                }
+                .gesture(carry)
+                .tooltip("Click to change the number, double-click to go to workspace \(lane.ws)")
+        }
+    }
+
+    private func commitNumber() {
+        guard number.on else { return }
+        number.on = false
+        withAnimation(Motion.spring) { model.renumber(lane.id, to: number.draft) }
+    }
+
     var body: some View {
         let over = model.over == .lane(lane.id)
         let n = lane.ids.count
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(lane.ws).font(Theme.display(22)).monospacedDigit().tracking(-0.4)
-                    .foregroundStyle(n > 0 ? Theme.accentInk : Theme.inkFaint).fixedSize()
-                    .contentShape(Rectangle())
-                    .onTapGesture(count: 2) { model.finish(lane.ws) }
-                    .gesture(carry)
+                numberView(filled: n > 0)
                 TextField("", text: Binding(get: { lane.name }, set: { model.rename(lane.id, $0) }),
                           prompt: Text("Workspace \(lane.ws)").foregroundStyle(Theme.inkFaint))
                     .textFieldStyle(.plain).font(Theme.heading()).foregroundStyle(editing ? Theme.accentInk : Theme.ink)
@@ -387,15 +442,19 @@ private struct SortRemoveButton: View {
 }
 
 /// The column after the last workspace: same size, an empty preview, and the layout new ones start with.
+/// It is as tall as the workspace columns beside it, and all of it takes a dropped window or workspace.
 private struct SortAddLane: View {
     @ObservedObject var model: SortModel
     let plan: SortPlan
+    let rows: Int
     @StateObject private var hover = Flag()
 
     var body: some View {
         let next = model.nextName
         let full = next == nil
-        let over = model.over == .add || (hover.on && !full)
+        let drop = model.over == .add
+        let over = drop || (hover.on && !full)
+        let box = RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
         VStack(alignment: .leading, spacing: 8) {
             Button { withAnimation(Motion.easeOut) { _ = model.addLane(focus: true) } } label: {
                 VStack(alignment: .leading, spacing: 8) {
@@ -406,10 +465,15 @@ private struct SortAddLane: View {
                     }
                     .foregroundStyle(hover.on && !full ? Theme.ink : Theme.inkMuted)
                     .padding(.horizontal, 4)
-                    RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
-                        .strokeBorder(over ? Theme.accent : Theme.borderControl, style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
-                        .opacity(over ? 1 : 0.6)
-                        .aspectRatio(16 / 10, contentMode: .fit)
+                    ZStack {
+                        box.fill(drop ? Theme.accentSoft : .clear)
+                        box.strokeBorder(over ? Theme.accent : Theme.borderControl, style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                            .opacity(over ? 1 : 0.6)
+                        if drop {
+                            Image(systemName: "plus").font(.system(size: 20, weight: .regular)).foregroundStyle(Theme.accentInk)
+                        }
+                    }
+                    .aspectRatio(16 / 10, contentMode: .fit)
                         .padding(.horizontal, 4)
                 }
                 .contentShape(Rectangle())
@@ -420,10 +484,12 @@ private struct SortAddLane: View {
             .accessibilityLabel("Add workspace \(next ?? "")")
             SortLayoutPill(layout: model.nextLayout, next: { model.cycleNextLayout() }, previous: { model.cycleNextLayout(by: -1) })
                 .padding(.leading, 4)
+            Color.clear.frame(height: CGFloat(rows) * SortMetrics.rowHeight)
         }
         .padding(.vertical, 8).padding(.horizontal, 4)
         .frame(width: SortMetrics.lane, alignment: .topLeading)
         .background(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous).fill(over ? Theme.accentSoft : .clear))
+        .overlay { if drop { RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous).strokeBorder(Theme.accent, lineWidth: 1.5) } }
         .opacity(full ? 0.45 : 1)
         .animation(.easeOut(duration: Theme.medium), value: over)
         .zone(.add)
@@ -637,7 +703,7 @@ private struct SortCloseList: View {
     var body: some View {
         let grouped = Set(plan.closedLanes.flatMap(\.ids))
         ScrollViewReader { proxy in
-            ScrollView(.vertical, showsIndicators: plan.close.count + plan.closedLanes.count > model.maxRows) {
+            ScrollView(.vertical, showsIndicators: plan.close.count + plan.closedLanes.count > rows + Int(SortMetrics.closeExtra / SortMetrics.rowHeight)) {
                 VStack(spacing: 0) {
                     ForEach(plan.closedLanes) { g in
                         SortClosedHeader(model: model, group: g)
@@ -648,7 +714,7 @@ private struct SortCloseList: View {
                     }
                 }
             }
-            .frame(height: CGFloat(rows) * SortMetrics.rowHeight)
+            .frame(height: CGFloat(rows) * SortMetrics.rowHeight + SortMetrics.closeExtra)
             .onChange(of: model.reveal) { _, r in
                 if plan.close.contains(r.id) || grouped.contains(r.id) { withAnimation(Motion.easeOut) { proxy.scrollTo(r.id) } }
             }

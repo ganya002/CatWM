@@ -191,6 +191,27 @@ final class SortModel: ObservableObject {
         }
     }
 
+    /// Changes a workspace's number to what was typed, when that number is free: no other display or open plan
+    /// uses it and the lane here that holds it, if any, is empty and has no name.
+    func renumber(_ lane: UUID, to text: String) {
+        let p = plan
+        let t = text.trimmingCharacters(in: .whitespaces)
+        guard let i = p.lanes.firstIndex(where: { $0.id == lane }), !t.isEmpty, t != p.lanes[i].ws else { return }
+        guard t.allSatisfy(\.isASCII), let n = Int(t), (1...SortPlan.maxLanes).contains(n) else {
+            notice = SortNotice(text: "Workspace numbers run from 1 to \(SortPlan.maxLanes).", undo: nil)
+            return
+        }
+        let ws = String(n)
+        if p.taken.contains(ws) || reserved().contains(ws) {
+            notice = SortNotice(text: "Workspace \(ws) is on another display.", undo: nil)
+        } else if let held = p.lanes.first(where: { $0.ws == ws }), !held.ids.isEmpty || !held.name.trimmingCharacters(in: .whitespaces).isEmpty {
+            notice = SortNotice(text: "Workspace \(ws) is in use. Move its windows away first.", undo: nil)
+        } else {
+            edit { $0.renumberLane(i, to: ws) }
+            reveal = SortReveal(id: 0, lane: lane, token: reveal.token + 1)
+        }
+    }
+
     /// Plans edited since they were last applied, the display being sorted last.
     func pendingApplies() -> [SortApply] {
         let others = displays.map(\.id).filter { $0 != current }.compactMap { plans[$0] }.filter(\.pending)
@@ -503,13 +524,20 @@ final class SortModel: ObservableObject {
             drag = SortDrag(item: item, closing: plan.isClosing(item.id), location: v.location,
                             grab: CGSize(width: v.startLocation.x - origin.x, height: v.startLocation.y - origin.y))
             hover = item.id
-            edgeTimer = Timer.scheduledTimer(withTimeInterval: 1 / 60, repeats: true) { [weak self] _ in self?.edgeScroll() }
+            startEdgeTimer()
         }
         drag?.location = v.location
         let zone = zone(at: v.location)
         let source = plan.lane(of: item.id).map { SortZone.lane(plan.lanes[$0].id) } ?? (plan.isClosing(item.id) ? .close : nil)
-        let next = zone == source ? nil : zone
+        let next = zone == source || (zone == .add && nextName == nil) ? nil : zone // no room, no new workspace
         if over != next { over = next }
+    }
+
+    /// In the common modes, so the row keeps scrolling while the pointer is held still in the zone.
+    private func startEdgeTimer() {
+        let t = Timer(timeInterval: 1 / 60, repeats: true) { [weak self] _ in self?.edgeScroll() }
+        RunLoop.main.add(t, forMode: .common)
+        edgeTimer = t
     }
 
     func dragEnded() {
@@ -537,7 +565,7 @@ final class SortModel: ObservableObject {
             let g = plan.geometry[lane.ws]
             columnDrag = SortColumnDrag(lane: lane, ratio: g?.ratio ?? 0.5, mainCount: g?.mainCount ?? 1, location: v.location,
                                         grab: CGSize(width: v.startLocation.x - origin.x, height: v.startLocation.y - origin.y))
-            edgeTimer = Timer.scheduledTimer(withTimeInterval: 1 / 60, repeats: true) { [weak self] _ in self?.edgeScroll() }
+            startEdgeTimer()
         }
         columnDrag?.location = v.location
         let t = columnTarget(lane.id, at: v.location)
@@ -583,21 +611,23 @@ final class SortModel: ObservableObject {
     }
 
     /// What is under a point, display chips first, then Close, the new-workspace column and the lanes.
+    /// The new-workspace column counts only where the row shows it, not where it is scrolled out of view.
     private func zone(at p: CGPoint) -> SortZone? {
         for (z, f) in zones { if case .display = z, f.contains(p) { return z } }
         if let f = zones[.close], f.contains(p) { return .close }
-        if let f = zones[.add], f.contains(p) { return .add }
         guard let s = zones[.scroller], s.contains(p) else { return nil }
+        if let f = zones[.add], f.contains(p) { return .add }
         for (z, f) in zones { if case .lane = z, f.minX <= p.x, p.x < f.maxX { return z } }
         return nil
     }
 
-    /// Dragging near either end of the row scrolls it.
+    /// Dragging near either end of the row scrolls it, faster the deeper the pointer is in the zone. Past the left
+    /// end the row keeps scrolling at full speed; the right end is bounded by the Close column.
     private func edgeScroll() {
-        guard let d = drag?.location ?? columnDrag?.location, let s = zones[.scroller], d.y > s.minY - 20, d.y < s.maxY + 20 else { return }
-        let edge: CGFloat = 40
-        if d.x > s.maxX - edge, d.x < s.maxX + edge { scrollRow(by: 9) }
-        else if d.x < s.minX + edge, d.x > s.minX - edge { scrollRow(by: -9) }
+        guard let d = drag?.location ?? columnDrag?.location, let s = zones[.scroller], d.y > s.minY - 40, d.y < s.maxY + 40 else { return }
+        let edge: CGFloat = 56, top: CGFloat = 14
+        if d.x > s.maxX - edge, d.x <= s.maxX { scrollRow(by: 2 + top * (d.x - (s.maxX - edge)) / edge) }
+        else if d.x < s.minX + edge { scrollRow(by: -(2 + top * min(1, (s.minX + edge - d.x) / edge))) }
     }
 
     // MARK: The row of lanes
