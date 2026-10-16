@@ -43,7 +43,7 @@ Labels, captions, buttons, keys and menu rows never wrap. They are one line and 
 
 - The grid is 4 pt: `Theme.Space` 2, 4, 8, 12, 16, 24, 32.
 - Radii nest. The panel radius equals the row radius plus the panel padding: `Radius.lg` 12 = `Radius.sm` 6 + 6 menu padding. Rows sit concentric inside menus.
-- Rows are 30 pt (`Theme.rowHeight`). Controls are 28 pt (26 small, 36 large). Small keycaps are 20 pt. Tour keycaps are 40 pt. Menus are 272 pt wide, submenus 232 pt, the command menu 360 pt.
+- Rows are 30 pt (`Theme.rowHeight`). Controls are 28 pt (26 small, 36 large). Small keycaps are 20 pt, medium 30 pt, tour keycaps 40 pt. Menus are 272 pt wide, submenus 232 pt, the command menu 360 pt.
 
 ## Surface
 
@@ -96,7 +96,7 @@ Each entry gives the design intent. The Swift type is in brackets.
 
 **Row and Group** [`ORow`, `OGroup`, `OSectionHeader`, `OPageTitle`]. A row has an optional symbol, a label, a description and a control on the right. A group is an open list with hairlines between rows and no box. Labels are sentence case and name the effect ("Focus follows mouse"). Put units and current values in the description, not the label.
 
-**Kbd** [`Kbd`]. Keycaps for a shortcut, a chord or a sequence. Small keycaps (20 pt) go in tooltips, labels and buttons. Menu rows use plain `kbd` text. Large keycaps (40 pt) go only in coach marks, where the real key press sinks them 2 pt. Order modifiers the macOS way: control, option, shift, command, then the key.
+**Kbd** [`Kbd`]. Keycaps for a shortcut, a chord or a sequence. Small keycaps (20 pt) go in tooltips, labels and buttons. Menu rows use plain `kbd` text. Medium keycaps (30 pt, raised) go in onboarding key pickers and summaries. Large keycaps (40 pt) go only in coach marks, where the real key press fills them with `accent` and sinks them 2 pt. Order modifiers the macOS way: control, option, shift, command, then the key.
 
 **Tooltip** [`OTooltip`, `Tooltip`]. The smallest surface (`xs`). One short phrase in sentence case, with no full stop. Never a button inside. Every icon-only button gets one. A shortcut is one chord at most. It points at its target with a small caret.
 
