@@ -117,8 +117,8 @@ final class CursorActions {
     }
 
     private func activateHighlighted() {
-        let action = model.actions.first { $0.id == model.hovered } ?? model.actions.first
-        if let action { model.onPick?(action) }
+        guard let action = model.actions.first(where: { $0.id == model.hovered }) else { return }
+        model.onPick?(action)
     }
 
     func dismissMenu() {
