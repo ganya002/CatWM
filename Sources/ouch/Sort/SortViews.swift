@@ -42,6 +42,9 @@ private struct KeepInside: SwiftUI.Layout {
 private enum SortMetrics {
     static let lane: CGFloat = 176
     static let rowHeight = Theme.rowHeight
+    /// What a workspace column has between its header and its list (thumbnail, layout pill, gaps) that the
+    /// Close column gives to its list instead, so it lists that many more windows.
+    static let closeExtra = (lane - 16) * 10 / 16 + 8 + 24 + 8
 }
 
 struct SortView: View {
@@ -53,7 +56,9 @@ struct SortView: View {
 
     var body: some View {
         let plan = model.plan
-        let rows = min(model.maxRows, max(1, ([plan.close.count + plan.closedLanes.count] + plan.lanes.map(\.ids.count)).max() ?? 1))
+        // The Close column has room for a few more rows than the others, so it only adds height past that.
+        let closeRows = Int(ceil(CGFloat(plan.close.count + plan.closedLanes.count) - SortMetrics.closeExtra / SortMetrics.rowHeight))
+        let rows = min(model.maxRows, max(1, ([closeRows] + plan.lanes.map(\.ids.count)).max() ?? 1))
         VStack(alignment: .leading, spacing: 0) {
             header(plan)
             HStack(alignment: .top, spacing: 4) {
@@ -127,12 +132,12 @@ struct SortView: View {
         }
     }
 
-    /// Shaped like a workspace column so its rows line up: header, a drop box where the thumbnail sits,
-    /// an empty slot for the layout pill, then the windows that close when the panel is done.
+    /// The windows that close when the panel is done: a header, then a list that takes the room a workspace
+    /// column gives its thumbnail, so more of them fit. The whole column tints red only while a window or workspace is dragged over it.
     private func closeLane(_ plan: SortPlan, rows: Int) -> some View {
         let over = model.over == .close
         let n = plan.close.count
-        let box = RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
         return VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(Image(systemName: "xmark")).font(Theme.display(22)).foregroundStyle(Theme.danger).fixedSize()
@@ -140,23 +145,12 @@ struct SortView: View {
                 Text(n > 0 ? "\(n)" : "").font(Theme.body(12)).monospacedDigit().foregroundStyle(Theme.inkFaint).fixedSize()
             }
             .padding(.horizontal, 4)
-            ZStack {
-                box.fill(over || n > 0 ? Theme.dangerSoft : .clear)
-                if !(over || n > 0) {
-                    box.strokeBorder(Theme.borderControl, style: StrokeStyle(lineWidth: 1, dash: [3, 3])).opacity(0.5)
-                }
-                Image(systemName: "xmark.circle").font(.system(size: 20, weight: .regular))
-                    .foregroundStyle(over || n > 0 ? Theme.danger : Theme.inkFaint)
-            }
-            .aspectRatio(16 / 10, contentMode: .fit)
-            .padding(.horizontal, 4)
-            .animation(.easeOut(duration: Theme.medium), value: over)
-            Color.clear.frame(height: 24)
             SortCloseList(model: model, plan: plan, rows: rows)
         }
         .padding(.vertical, 8).padding(.horizontal, 4)
         .frame(width: SortMetrics.lane, alignment: .topLeading)
-        .overlay(alignment: .leading) { Rectangle().fill(Theme.hairline).frame(width: 1).padding(.vertical, 6).offset(x: -4) }
+        .background(shape.fill(over ? Theme.dangerSoft : .clear))
+        .animation(.easeOut(duration: Theme.medium), value: over)
         .zone(.close)
         .padding(.leading, 4).padding(.trailing, 8)
     }
@@ -709,7 +703,7 @@ private struct SortCloseList: View {
     var body: some View {
         let grouped = Set(plan.closedLanes.flatMap(\.ids))
         ScrollViewReader { proxy in
-            ScrollView(.vertical, showsIndicators: plan.close.count + plan.closedLanes.count > model.maxRows) {
+            ScrollView(.vertical, showsIndicators: plan.close.count + plan.closedLanes.count > rows + Int(SortMetrics.closeExtra / SortMetrics.rowHeight)) {
                 VStack(spacing: 0) {
                     ForEach(plan.closedLanes) { g in
                         SortClosedHeader(model: model, group: g)
@@ -720,7 +714,7 @@ private struct SortCloseList: View {
                     }
                 }
             }
-            .frame(height: CGFloat(rows) * SortMetrics.rowHeight)
+            .frame(height: CGFloat(rows) * SortMetrics.rowHeight + SortMetrics.closeExtra)
             .onChange(of: model.reveal) { _, r in
                 if plan.close.contains(r.id) || grouped.contains(r.id) { withAnimation(Motion.easeOut) { proxy.scrollTo(r.id) } }
             }
