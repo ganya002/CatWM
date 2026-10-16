@@ -192,6 +192,9 @@ final class Window {
 
     init(id: CGWindowID, element: AXUIElement, pid: pid_t, bundleID: String?) {
         self.id = id; self.element = element; self.pid = pid; self.bundleID = bundleID
+        // A hung app would hold its write queue for the default six seconds. Half a second is long enough
+        // for a slow one; `verify` corrects a frame that was dropped.
+        AXUIElementSetMessagingTimeout(element, 0.5)
     }
 
     var frame: CGRect { element.frame }

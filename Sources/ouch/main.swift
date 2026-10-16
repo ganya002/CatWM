@@ -22,11 +22,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         NSApp.mainMenu = makeMainMenu()
         Updater.shared.start()
-        NotificationCenter.default.addObserver(forName: .crashPendingChanged, object: nil, queue: .main) { [weak self] _ in
-            self?.updateIcon()
-            StatusMenu.shared.refreshIfOpen()
-        }
         CrashWatch.start()
+        PerfMonitor.start()
         WindowManager.shared.onChange = { [weak self] in
             self?.updateIcon()
             StatusMenu.shared.refreshIfOpen()
@@ -126,11 +123,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         CrashWatch.cleanExit()
     }
 
-    /// `ouch://report?id=…`: an agent hands back a finished bug report.
-    func application(_ application: NSApplication, open urls: [URL]) {
-        for url in urls where url.scheme == "ouch" { BugReportPanel.shared.handle(url) }
-    }
-
     /// Menu bar indicator: the focused display's workspace, a drawing of its layout, and the
     /// apps on it.
     private func updateIcon() {
@@ -146,7 +138,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         MenuBarIcon.pruneIcons(keeping: Set(state.pids))
         button.image = MenuBarIcon.image(mode: Hotkeys.shared.submap, workspace: state.workspace, layout: state.layout,
-                                         pids: state.pids, dot: CrashWatch.pending != nil)
+                                         pids: state.pids)
     }
 
     /// Only shown while the settings window is active; without an Edit menu, ⌘C/⌘V/⌘Z don't work in text fields.

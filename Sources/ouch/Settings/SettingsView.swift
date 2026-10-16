@@ -8,6 +8,7 @@ struct SettingsView: View {
     @ObservedObject var doc: ConfigDocument
     @ObservedObject var ui: SettingsUI
     @ObservedObject private var library = SettingsWindow.shared.library
+    @ObservedObject private var feedback = Feedback.shared
     @FocusState private var searchFocused: Bool
 
     var body: some View {
@@ -18,6 +19,7 @@ struct SettingsView: View {
                 .pane()
                 .padding(.vertical, 8).padding(.trailing, 8)
         }
+        .sheet(isPresented: $feedback.isOpen) { FeedbackSheet(feedback: feedback) }
         .background(Theme.wash.ignoresSafeArea())
         .overlayPreferenceValue(TipAnchorKey.self) { SettingsTipLayer(anchors: $0) }
         .onChange(of: ui.pane) { _, p in Tips.shared.paneShown(p) }
@@ -84,7 +86,7 @@ private struct Sidebar: View {
                     Wordmark()
                     Text(version).font(Theme.body(11.5)).foregroundStyle(Theme.inkMuted).oneLine()
                     Spacer(minLength: 0)
-                    BugReportButton()
+                    FeedbackButton()
                 }
                 .padding(.leading, 10).padding(.top, 6)
             }
@@ -446,19 +448,10 @@ struct AdvancedSection<Content: View>: View {
 }
 
 
-/// Report a Bug… at the foot of the sidebar, with the crash dot while a crash report is waiting.
-private struct BugReportButton: View {
-    @StateObject private var crashed = Flag()
-
+/// Send Feedback at the foot of the sidebar.
+private struct FeedbackButton: View {
     var body: some View {
-        OIconButton(symbol: "ladybug", label: crashed.on ? "Report a bug: Ouch crashed" : "Report a bug") { CrashWatch.openReport() }
-            .overlay(alignment: .topTrailing) {
-                if crashed.on { NotificationDot().offset(x: -6, y: 6).allowsHitTesting(false) }
-            }
+        OIconButton(symbol: "ladybug", label: "Send feedback") { Feedback.shared.open() }
             .frame(width: 30) // the share button above is 30 wide: centred under it
-            .onAppear { crashed.on = CrashWatch.pending != nil }
-            .onReceive(NotificationCenter.default.publisher(for: .crashPendingChanged)) { _ in
-                crashed.on = CrashWatch.pending != nil
-            }
     }
 }

@@ -16,17 +16,7 @@
     <key>SUFeedURL</key><string>https://api.amore.computer/v1/apps/local.ouch/appcast.xml</string>
     <key>SUPublicEDKey</key><string>OEHHPP5gzJfph4/A3l7EpY7xTnvwUe1QRzHnpJHP8dY=</string>
     <key>SUEnableAutomaticChecks</key><true/>
-    <!-- The report relay (report-relay/): files reports in Linear on its own. Takes priority over the email. -->
+    <!-- The report relay (report-relay/): files feedback in Linear. -->
     <key>OuchReportURL</key><string>https://ouch-report-relay.nox-heights.workers.dev/report</string>
-    <!-- Bug reports are emailed here. Linear: Settings → Teams → General → Create by email, then paste the address. -->
-    <key>OuchReportEmail</key><string>ouchreports-22573d396926@intake.linear.app</string>
-    <!-- ouch://report?id=… lets an agent hand a finished bug report back to the app. -->
-    <key>CFBundleURLTypes</key>
-    <array>
-        <dict>
-            <key>CFBundleURLName</key><string>local.ouch.report</string>
-            <key>CFBundleURLSchemes</key><array><string>ouch</string></array>
-        </dict>
-    </array>
 </dict>
 </plist>

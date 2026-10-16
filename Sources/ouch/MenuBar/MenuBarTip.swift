@@ -34,6 +34,7 @@ final class MenuBarTip {
         }
         // Often enough to keep up with the item while it's being dragged.
         timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in self?.update() }
+        timer?.tolerance = 0.05 // coalesces with other wakeups
         update()
     }
 

@@ -32,6 +32,7 @@ final class Animator {
     private var writers: [pid_t: AXWriter] = [:]
     private var timer: Timer?
     private var timing = Timing()
+    private var frameRun: FrameRun?
     /// Called when a window turns out to be bigger than its slot even after retrying.
     var onMinimumSize: ((CGWindowID, CGSize) -> Void)?
 
@@ -80,6 +81,7 @@ final class Animator {
             let t = Timer(timeInterval: 1.0 / 120.0, repeats: true) { [weak self] _ in self?.tick() }
             RunLoop.main.add(t, forMode: .common)
             timer = t
+            frameRun = PerfMonitor.begin("window-move")
             tick()
         }
     }
@@ -116,9 +118,19 @@ final class Animator {
         timing.ticks.add(CACurrentMediaTime() - now)
         if items.isEmpty {
             timer?.invalidate(); timer = nil
-            timing.log(Array(writers.values))
+            let stats = writers.map { ($0.key, $0.value.takeStats()) }
+            frameRun?.end(apps: stats.compactMap(Self.slowApp))
+            frameRun = nil
+            timing.log(stats)
             timing = Timing()
         }
+    }
+
+    /// An app whose AX calls were slow this run, for the performance report.
+    private static func slowApp(_ pid: pid_t, _ s: AXWriter.Stats) -> PerfMonitor.SlowApp? {
+        guard s.position.count > 0, let bundle = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier else { return nil }
+        let step = (s.size.count > 0 ? s.size.total / Double(s.size.count) : 0) + s.position.total / Double(s.position.count)
+        return .init(bundle: bundle, stepMs: step * 1000, skipped: Double(s.skipped) / Double(s.skipped + s.position.count))
     }
 
     private func land(_ m: Move) {
@@ -174,7 +186,7 @@ final class Animator {
 /// then holds up only its own windows, never the main thread or other apps. Frames coalesce: while the
 /// app is still busy, a newer frame for a window replaces the one waiting, so a slow app skips frames
 /// instead of falling behind.
-private final class AXWriter {
+fileprivate final class AXWriter {
     private enum Op { case step(CGRect), land(CGRect, done: () -> Void) }
     private struct Pending { let window: Window; let op: Op; let epoch: Int }
     struct Stats { var size = Stat(), position = Stat(), land = Stat(), skipped = 0 }
@@ -189,6 +201,7 @@ private final class AXWriter {
     private var stats = Stats()
     // Only used on `queue`: windows we turned enhanced UI off for.
     private var animating: Set<CGWindowID> = []
+    private var lastSize: [CGWindowID: CGSize] = [:] // the size last written to each window this run
 
     init(pid: pid_t) {
         self.pid = pid
@@ -240,9 +253,16 @@ private final class AXWriter {
         if animating.insert(w.id).inserted { EnhancedUI.suspend(pid) }
         switch p.op {
         case let .step(f):
-            let s = measure { w.setSize(f.size) }, o = measure { w.setPosition(f.origin) }
-            lock.withLock { stats.size.add(s); stats.position.add(o) }
+            // A slide keeps the size, so only the first step (or a real resize) pays for a size call.
+            var s = 0.0
+            if lastSize[w.id] != f.size {
+                s = measure { w.setSize(f.size) }
+                lastSize[w.id] = f.size
+            }
+            let o = measure { w.setPosition(f.origin) }
+            lock.withLock { if s > 0 { stats.size.add(s) }; stats.position.add(o) }
         case let .land(f, done):
+            lastSize[w.id] = nil
             let t = measure { w.setFrame(f) }
             animating.remove(w.id)
             EnhancedUI.resume(pid)
@@ -252,7 +272,7 @@ private final class AXWriter {
     }
 }
 
-private struct Stat {
+fileprivate struct Stat {
     var count = 0, total = 0.0, max = 0.0
     mutating func add(_ seconds: Double) { count += 1; total += seconds; max = Swift.max(max, seconds) }
     var text: String { count == 0 ? "-" : String(format: "avg %.2fms max %.2fms ×%d", total / Double(count) * 1000, max * 1000, count) }
@@ -280,8 +300,8 @@ private extension Animator {
             lastTick = now
         }
 
-        func log(_ writers: [AXWriter]) {
-            let apps = writers.map { ($0.pid, $0.takeStats()) }.filter { $0.1.size.count + $0.1.land.count > 0 }
+        func log(_ writers: [(pid_t, AXWriter.Stats)]) {
+            let apps = writers.filter { $0.1.size.count + $0.1.position.count + $0.1.land.count > 0 }
             guard Log.verbose, ticks.count > 0 else { return }
             Log.debug(String(format: "animate: %d ticks in %.0fms (timer 8.33ms) | tick %@ | gap %@",
                              ticks.count, (CACurrentMediaTime() - (firstTick ?? 0)) * 1000, ticks.text, gaps.text))

@@ -162,6 +162,7 @@ final class SettingsUI: ObservableObject {
         refreshStatus()
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in self?.refreshStatus() }
+        timer?.tolerance = 0.2 // coalesces with other wakeups
     }
 
     func endSession() {

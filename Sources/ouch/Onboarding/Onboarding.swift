@@ -137,6 +137,7 @@ final class Onboarding {
             if self?.isRunning == true { MenuBarTip.shared.show() }
         }
         poll = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in self?.refreshWelcome() }
+        poll?.tolerance = 0.1 // coalesces with other wakeups
     }
 
     private func hideWelcome(then: @escaping () -> Void) {
@@ -259,8 +260,9 @@ final class FirstClickHostingView<Content: View>: NSHostingView<Content> {
 
 let easeOutBack = CAMediaTimingFunction(controlPoints: 0.2, 0.9, 0.2, 1)
 
-func animate(_ duration: Double, curve: CAMediaTimingFunction = easeOutBack, changes: () -> Void,
-             completion: (() -> Void)? = nil) {
+func animate(_ duration: Double, curve: CAMediaTimingFunction = easeOutBack, label: String = #fileID,
+             changes: () -> Void, completion: (() -> Void)? = nil) {
+    PerfMonitor.track("ui:" + label, for: duration)
     NSAnimationContext.runAnimationGroup({ ctx in
         ctx.duration = duration
         ctx.timingFunction = curve
