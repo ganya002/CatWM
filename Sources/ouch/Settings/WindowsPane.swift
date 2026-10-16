@@ -204,13 +204,18 @@ struct WindowsPane: View {
         }
     }
 
-    /// A bind `keyActions` cannot show, usually because its key is still empty. Add resumes that row
-    /// instead of appending another one.
+    /// A bind `keyActions` cannot show because its key is empty or unknown. Add resumes that row
+    /// instead of appending another one. A scroll or swipe bind is a real shortcut this list leaves
+    /// out, so it is left alone and a new row is recorded.
     private func unfinishedShortcut(_ spec: CursorShortcutSpec) -> BindRow? {
-        doc.binds.first {
-            $0.submap == windowMode && (spec.nextWorkspace
-                ? Actions.isNextWorkspace($0.dispatcher, $0.args)
-                : Actions.same($0.dispatcher, $0.args, spec.dispatcher, spec.args))
+        doc.binds.first { row in
+            guard row.submap == windowMode else { return false }
+            let matches = spec.nextWorkspace
+                ? Actions.isNextWorkspace(row.dispatcher, row.args)
+                : Actions.same(row.dispatcher, row.args, spec.dispatcher, spec.args)
+            guard matches else { return false }
+            guard case .success(let pairs) = BindRange.pairs(key: row.key, dispatcher: row.dispatcher, arg: row.args) else { return true }
+            return !pairs.contains { keyCodes[$0.key.lowercased()] != nil }
         }
     }
 
