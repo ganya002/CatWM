@@ -11,7 +11,7 @@ open build/ouch.app
 
 To install a beta build to `/Applications/Ouch.app` and open it, run `./install.sh`. Add `--stable` to skip the beta channel marker.
 
-Testers install with one command. The script is [site/install.sh](site/install.sh). Host it at `https://ouch.perwko.com/install.sh`. Without a flag it installs the latest stable release. With `--beta` it installs the latest beta:
+Testers install with one command. The script is [website/public/install.sh](website/public/install.sh). The website serves it at `https://ouch.perwko.com/install.sh`. Without a flag it installs the latest stable release. With `--beta` it installs the latest beta:
 
 ```sh
 curl -fsSL https://ouch.perwko.com/install.sh | sh -s -- --beta
