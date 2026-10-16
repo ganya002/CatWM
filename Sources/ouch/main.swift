@@ -27,6 +27,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             StatusMenu.shared.refreshIfOpen()
         }
         CrashWatch.start()
+        PerfMonitor.start()
         WindowManager.shared.onChange = { [weak self] in
             self?.updateIcon()
             StatusMenu.shared.refreshIfOpen()

@@ -3,10 +3,11 @@ main = "worker.js"
 compatibility_date = "2025-09-01"
 
 [vars]
-# The Linear team reports go to: OUCRP. Linear's API wants its UUID, not the prefix
+# The Linear team reports go to: OUC. Linear's API wants its UUID, not the prefix
 # (Linear → the team's settings → ⌘K → "Copy model UUID").
-LINEAR_TEAM_KEY = "OUCRP"
-LINEAR_TEAM_ID = "8185c425-4169-4fa1-b6bc-ded5aeaadbfd"
+LINEAR_TEAM_ID = "0f09b661-fafb-4a98-9b48-ba50b258a118"
+# The "perf-auto" label, put on issues the performance monitor files by itself.
+LINEAR_PERF_LABEL_ID = "80f409e0-f882-4573-ac76-5c94b035341c"
 
 # Five reports a minute per IP is plenty for real users.
 [[ratelimits]]

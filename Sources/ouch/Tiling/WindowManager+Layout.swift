@@ -142,6 +142,8 @@ extension WindowManager {
                     }
                     continue
                 }
+                // Already heading there: asking again would restart the curve at full speed.
+                if animator.isMoving(id, to: target) { continue }
                 if animator.isBusy(id) { moves.append(.init(window: w, to: target, bounds: s.visible)); continue }
                 // Don't fight an app that keeps refusing the same frame (minimum size etc.).
                 var c = corrections[id] ?? (target, 0)

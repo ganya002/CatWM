@@ -59,6 +59,7 @@ final class PermissionGuide {
         if isShowing { update(snap) }
         follow?.invalidate()
         follow = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [weak self] _ in self?.tick() }
+        follow?.tolerance = 0.04 // coalesces with other wakeups
     }
 
     /// Hides the panel; a pending grant is still watched (see `granted()`).
@@ -90,6 +91,7 @@ final class PermissionGuide {
                 model.granted = false
                 layout(animated: true)
                 follow = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [weak self] _ in self?.tick() }
+                follow?.tolerance = 0.04 // coalesces with other wakeups
                 return
             }
             stop()

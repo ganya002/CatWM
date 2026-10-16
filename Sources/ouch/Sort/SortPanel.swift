@@ -105,6 +105,7 @@ final class SortPanel: NSObject, NSWindowDelegate {
         p.makeFirstResponder(nil)
         fit() // the content may have changed size before the panel could follow it
         // A turn later, so the view sees `shown` change and plays its entrance.
+        PerfMonitor.track("ui:sort-panel", for: 0.5)
         DispatchQueue.main.async { [weak self] in self?.model.shown = true }
     }
 
@@ -144,7 +145,7 @@ final class SortPanel: NSObject, NSWindowDelegate {
         guard size.height > 0 else { return }
         let f = placed(size)
         guard f != panel.frame else { return }
-        panel.setFrame(f, display: true)
+        panel.setFrame(f, display: false) // SwiftUI redraws on its own; a forced draw mid-entrance costs a frame
     }
 
     // MARK: Closing

@@ -55,6 +55,8 @@ struct Config {
     /// How lively spring, bounce and overshoot curves are, 0...1.
     var animationBounce: Double = 0.5
     var debugLogging = false
+    /// Sends repeated animation slowdowns and hangs (numbers and app IDs only) to the developers' issue tracker.
+    var perfReports = false
     /// Ouch's own workspaces (instant, per monitor, like Hyprland) instead of macOS Spaces.
     var virtualWorkspaces = true
     /// Closing a window keeps you on the current workspace instead of jumping to wherever macOS refocuses.
@@ -230,6 +232,7 @@ struct Config {
             animationCurve = curve
         case "animation_bounce": return needNum { animationBounce = min(1, max(0, Double($0) > 1 ? Double($0) / 100 : Double($0))) }
         case "debug_logging": debugLogging = bool
+        case "perf_reports": perfReports = bool
         case "virtual_workspaces": virtualWorkspaces = bool
         case "stay_on_workspace_after_close": stayOnWorkspaceAfterClose = bool
         case "sort_nudge": return needNum { sortNudge = $0.isFinite ? Int(min(max($0, 0), 100)) : 5 }

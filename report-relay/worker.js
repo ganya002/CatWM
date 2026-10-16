@@ -3,7 +3,10 @@
 // the files go into the issue itself as collapsible sections instead of uploads.
 //
 // POST /report, multipart form: title, body, version, and up to 6 `file` parts.
-// Secrets/vars: LINEAR_API_KEY (secret), LINEAR_TEAM_ID (the team's UUID), optional LINEAR_LABEL_ID.
+// POST /perf, JSON: an automatic slow-animation or hang report. One open issue per fingerprint; a repeat
+// adds a comment instead (the first 10, then it only counts). Needs the key to read issues and create comments.
+// Secrets/vars: LINEAR_API_KEY (secret), LINEAR_TEAM_ID (the team's UUID), optional LINEAR_LABEL_ID,
+// optional LINEAR_PERF_LABEL_ID (label for perf issues).
 
 const MAX_BYTES = 4 * 1024 * 1024
 const MAX_FILES = 6
@@ -13,13 +16,14 @@ const MAX_FILE_CHARS = 40000
 export default {
   async fetch(req, env) {
     const url = new URL(req.url)
-    if (req.method !== "POST" || url.pathname !== "/report") return json({ error: "not found" }, 404)
+    if (req.method !== "POST" || !["/report", "/perf"].includes(url.pathname)) return json({ error: "not found" }, 404)
 
     // Ouch sends a handful of reports at most; anything faster is someone poking at the endpoint.
     if (env.LIMITER) {
       const { success } = await env.LIMITER.limit({ key: req.headers.get("cf-connecting-ip") ?? "unknown" })
       if (!success) return json({ error: "too many reports" }, 429)
     }
+    if (url.pathname === "/perf") return perf(req, env)
     // Without a length (a chunked body) the size can't be checked before formData() buffers it all.
     const length = req.headers.get("content-length")
     if (length === null) return json({ error: "length required" }, 411)
@@ -51,6 +55,62 @@ export default {
       return json({ error: "couldn't file the report" }, 502)
     }
   },
+}
+
+const MAX_COMMENTS = 10
+const num = (v, max) => (typeof v === "number" && Number.isFinite(v) ? Math.min(Math.max(v, 0), max) : 0)
+const word = (v, n) => clip(String(v ?? "").replace(/[^\w.:\-]/g, ""), n)
+
+async function perf(req, env) {
+  const length = req.headers.get("content-length")
+  if (length === null) return json({ error: "length required" }, 411)
+  if (Number(length) > 8192) return json({ error: "too large" }, 413)
+  let p
+  try {
+    p = await req.json()
+  } catch {
+    return json({ error: "bad json" }, 400)
+  }
+  // Every field is checked and rebuilt: nothing from the request goes into Linear as it came.
+  const fp = word(p.fingerprint, 8)
+  const kind = word(p.kind, 60)
+  if (!/^[0-9a-f]{8}$/.test(fp) || !kind) return json({ error: "bad report" }, 400)
+  const app = p.app && typeof p.app === "object" ? word(p.app.bundle, 120) : ""
+  const tags = Array.isArray(p.tags) ? p.tags.slice(0, 6).map((t) => word(t, 20)).join(", ") : ""
+  const line = [
+    `Ouch ${word(p.version, 20)}`, `macOS ${word(p.os, 10)}`, word(p.hardware, 30), `${num(p.hz, 500)} Hz`,
+    `${num(p.displays, 20)} display(s)`, `curve ${word(p.curve, 60)} ${num(p.durationMs, 5000)}ms`,
+    p.hangMs > 0 ? `hang ${num(p.hangMs, 600000)}ms` : `p95 ${num(p.p95Ms, 100000)}ms, ${Math.round(num(p.slowShare, 1) * 100)}% slow frames over ${num(p.frames, 100000)}`,
+    app ? `app ${app}: ${num(p.app.stepMs, 100000)}ms per AX step, ${Math.round(num(p.app.skipped, 1) * 100)}% skipped` : "",
+    tags ? `tags ${tags}` : "",
+    `events ${num(p.count, 1000)}`,
+  ].filter(Boolean).join(" · ")
+  const title = `[perf:${fp}] ${kind}${app ? ` with ${app}` : ""} on macOS ${word(p.os, 10)}`
+
+  try {
+    const found = await linear(
+      env,
+      `query($team: ID!, $t: String!) { issues(first: 1, filter: { team: { id: { eq: $team } }, title: { contains: $t },
+         state: { type: { nin: ["completed", "canceled"] } } }) { nodes { id identifier comments(first: ${MAX_COMMENTS + 1}) { nodes { id } } } } }`,
+      { team: env.LINEAR_TEAM_ID, t: `[perf:${fp}]` },
+    )
+    const issue = found.issues.nodes[0]
+    if (issue) {
+      if (issue.comments.nodes.length <= MAX_COMMENTS) {
+        await linear(env, `mutation($i: CommentCreateInput!) { commentCreate(input: $i) { success } }`, { i: { issueId: issue.id, body: `+1 · ${line}` } })
+      }
+      return json({ id: issue.identifier, duplicate: true })
+    }
+    const input = { teamId: env.LINEAR_TEAM_ID, title, description: `Filed automatically by Ouch.\n\n${line}` }
+    const labels = [env.LINEAR_LABEL_ID, env.LINEAR_PERF_LABEL_ID].filter(Boolean)
+    if (labels.length) input.labelIds = labels
+    const r = await linear(env, `mutation($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { identifier } } }`, { input })
+    if (!r.issueCreate?.success) throw new Error("issueCreate failed")
+    return json({ id: r.issueCreate.issue.identifier })
+  } catch (e) {
+    console.error(e)
+    return json({ error: "couldn't file the report" }, 502)
+  }
 }
 
 // A file as a collapsed block in the issue: Linear's `+++ title` … `+++` syntax.

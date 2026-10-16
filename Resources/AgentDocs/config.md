@@ -36,6 +36,7 @@ Booleans accept `true yes on 1`; anything else is false.
 | `virtual-workspaces` | bool | true: Ouch workspaces. false: macOS Spaces. See [workspaces.md](workspaces.md) |
 | `stay-on-workspace-after-close` | bool | default true |
 | `debug-logging` | bool | verbose log; prefer `--verbose` |
+| `perf-reports` | bool | default false. Sends repeated slow animations and hangs (numbers and app bundle IDs only) to the developers |
 | `keyboard-help` | bool | |
 | `keyboard-help-key` | one character | `?`; toggles the keyboard help in window mode |
 | `keyboard-finish` | `auto`, `macbook-pro`, `macbook-air`, `macbook-neo`, `magic-keyboard`, or a finish such as `macbook-pro-space-black` | look of the Shortcut Map keyboard |

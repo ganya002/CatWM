@@ -468,6 +468,8 @@ final class ConfigDocument: ObservableObject {
         }
         out += [
             "debug-logging = \(b(c.debugLogging))",
+            "# Send repeated animation slowdowns and hangs (numbers and app IDs only) to the developers",
+            "perf-reports = \(b(c.perfReports))",
             "virtual-workspaces = \(b(c.virtualWorkspaces))",
             "stay-on-workspace-after-close = \(b(c.stayOnWorkspaceAfterClose))",
             "# On-screen keyboard help: keep holding the window-mode chord's modifier, or press ? in the mode",

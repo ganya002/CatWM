@@ -34,7 +34,7 @@ final class HUD {
         model.layout = layout
         model.warning = warning
         // A fresh appearance pops in; updates while it's up just morph in place.
-        if !wasVisible { model.pops += 1 }
+        if !wasVisible { model.pops += 1; PerfMonitor.track("ui:hud", for: 0.5) }
         let host = host ?? NSHostingView(rootView: HUDView(model: model, margin: Self.margin))
         if self.host == nil { self.host = host; p.contentView = host }
         host.layoutSubtreeIfNeeded()
@@ -52,10 +52,13 @@ final class HUD {
 
         hideWork?.cancel()
         let work = DispatchWorkItem { [weak p] in
-            NSAnimationContext.runAnimationGroup { ctx in
+            NSAnimationContext.runAnimationGroup({ ctx in
                 ctx.duration = 0.25
                 p?.animator().alphaValue = 0
-            }
+            }, completionHandler: {
+                // Off screen, not just clear: a new `show` sets the alpha back first, so this leaves it be.
+                if let p, p.alphaValue == 0 { p.orderOut(nil) }
+            })
         }
         hideWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + (warning ? 1.6 : layout == nil ? 0.8 : 1), execute: work)
