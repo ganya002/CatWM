@@ -68,7 +68,7 @@ final class Animator {
             } else if let landed = landing.removeValue(forKey: id) {
                 from = m.from ?? landed.move.to // its last frame may not have reached the app yet
             } else {
-                from = m.from ?? m.window.frame
+                from = m.from ?? m.window.cachedFrame // no AX read on the main thread
             }
             if duration < 0.01 || from.isNull || from.approxEqual(m.to, tolerance: 2) {
                 items[id] = nil

@@ -9,7 +9,7 @@ extension WindowManager {
         guard app.activationPolicy == .regular, pid != getpid(), observers[pid] == nil else { return }
         var obs: AXObserver?
         guard AXObserverCreate(pid, axCallback, &obs) == .success, let obs else { return }
-        let el = AXUIElementCreateApplication(pid)
+        let el = axApp(pid)
         var ok = false
         for n in [kAXWindowCreatedNotification, kAXFocusedWindowChangedNotification,
                   kAXApplicationHiddenNotification, kAXApplicationShownNotification] {
@@ -128,8 +128,8 @@ extension WindowManager {
 
     /// Utility windows that share an app with tiled ones, recognised by title: a browser's
     /// Picture in Picture player, an app's own Settings window, Finder's Get Info panels and sign-in popups.
-    private func isUtilityWindow(_ w: Window) -> Bool {
-        guard let title = w.element.string(kAXTitleAttribute), !title.isEmpty else { return false }
+    private func isUtilityWindow(_ w: Window, title: String?) -> Bool {
+        guard let title, !title.isEmpty else { return false }
         if title == "Picture in Picture" || title == "Picture-in-Picture" { return true }
         if w.bundleID == "com.apple.finder" { return title.hasSuffix(" Info") }
         if let re = Self.signInTitle, re.firstMatch(in: title, range: NSRange(title.startIndex..., in: title)) != nil { return true }
@@ -140,8 +140,8 @@ extension WindowManager {
 
     /// A mounted .dmg opens as a Finder window titled with its volume name ("drag to Applications").
     /// Disk images mount as ejectable volumes, so a Finder window named after one floats.
-    private func isMountedImageWindow(_ w: Window) -> Bool {
-        guard let title = w.element.string(kAXTitleAttribute), !title.isEmpty else { return false }
+    private func isMountedImageWindow(title: String?) -> Bool {
+        guard let title, !title.isEmpty else { return false }
         let keys: [URLResourceKey] = [.volumeNameKey, .volumeIsEjectableKey, .volumeIsInternalKey]
         let volumes = FileManager.default.mountedVolumeURLs(includingResourceValuesForKeys: keys, options: [.skipHiddenVolumes]) ?? []
         return volumes.contains { url in
@@ -150,7 +150,8 @@ extension WindowManager {
         }
     }
 
-    func shouldFloat(_ w: Window) -> Bool {
+    /// `title` and `resizable` are what a scan read off the main thread; when nil they are read here.
+    func shouldFloat(_ w: Window, title known: String?? = nil, resizable: Bool? = nil) -> Bool {
         if let p = practice, w.pid == p.pid { return false } // same bundle as us, but these are meant to tile
         // Our own windows (Settings, guides) always float, even when another copy of Ouch
         // (a dev build, or the old Hyprthyst) is the one tiling.
@@ -158,8 +159,9 @@ extension WindowManager {
             return true
         }
         if let b = w.bundleID, Self.alwaysFloatingApps.contains(b) { return true }
-        if w.bundleID == "com.apple.finder", isMountedImageWindow(w) { return true }
-        if isUtilityWindow(w) { return true }
+        let title = known ?? w.element.string(kAXTitleAttribute)
+        if w.bundleID == "com.apple.finder", isMountedImageWindow(title: title) { return true }
+        if isUtilityWindow(w, title: title) { return true }
         if let b = w.bundleID {
             let listed = config.floating.contains { pattern in
                 pattern.hasSuffix("*") ? b.hasPrefix(String(pattern.dropLast())) : b == pattern
@@ -168,7 +170,7 @@ extension WindowManager {
         } else if !config.floatingIsBlacklist {
             return true
         }
-        if !w.element.isSettable(kAXSizeAttribute) { return true } // fixed-size windows can't tile
+        if !(resizable ?? w.element.isSettable(kAXSizeAttribute)) { return true } // fixed-size windows can't tile
         let f = w.naturalFrame
         if config.floatSmallWindows, !f.isNull, f.width < 500, f.height < 500 { return true }
         return false

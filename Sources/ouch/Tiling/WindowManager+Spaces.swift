@@ -233,7 +233,7 @@ extension WindowManager {
                 x += 22
             }
         }
-        let app = AXUIElementCreateApplication(w.pid)
+        let app = axApp(w.pid)
         let blocked: Set<String> = [kAXButtonRole, kAXRadioButtonRole, kAXCheckBoxRole, kAXTextFieldRole, kAXTextAreaRole,
                                     kAXPopUpButtonRole, kAXMenuButtonRole, kAXComboBoxRole, kAXSliderRole, "AXLink",
                                     kAXIncrementorRole, "AXTab", kAXImageRole, kAXScrollAreaRole, "AXWebArea",

@@ -13,16 +13,35 @@ extension WindowManager {
         let deadline = DispatchTime.now() + delay
         if refreshWork != nil, refreshDeadline <= deadline { return }
         refreshWork?.cancel()
-        let work = DispatchWorkItem { [weak self] in self?.refresh() }
+        let work = DispatchWorkItem { [weak self] in self?.scanAndRefresh() }
         refreshWork = work
         refreshDeadline = deadline
         DispatchQueue.main.asyncAfter(deadline: deadline, execute: work)
     }
 
+    /// Reads every app's windows off the main thread (see `WindowScanner`), then refreshes with them.
+    private func scanAndRefresh() {
+        refreshWork = nil
+        guard isStarted else { return }
+        let pidsOnScreen = Set(CGWindowInfo.onScreen().map(\.pid))
+        var known: [pid_t: [CGWindowID: Window]] = [:]
+        for w in windows.values { known[w.pid, default: [:]][w.id] = w }
+        var jobs: [WindowScanner.Job] = []
+        for app in NSWorkspace.shared.runningApplications where app.processIdentifier != getpid() {
+            let pid = app.processIdentifier
+            let list = app.activationPolicy == .regular && !app.isHidden && pidsOnScreen.contains(pid)
+            guard list || known[pid] != nil else { continue }
+            jobs.append(.init(pid: pid, listWindows: list, known: known[pid] ?? [:]))
+        }
+        scanner.scan(jobs, done: { [weak self] in self?.refresh() }, late: { [weak self] in self?.refresh() })
+    }
+
+    /// Discovers and prunes windows with the last scan's results, then lays out. It makes no AX reads
+    /// on the main thread: frames come from `Window.cachedFrame`. `scheduleRefresh` scans again first.
     /// `placing` limits the frame writes to those windows; the rest keep their frames until the next refresh.
     func refresh(instant instantLayout: Bool = false, placing only: Set<CGWindowID>? = nil) {
-        refreshWork?.cancel(); refreshWork = nil
         guard isStarted else { return }
+        if scanner.lastScan == 0 { scheduleRefresh(after: 0) } // nothing scanned yet
         let screens = Screen.all()
         guard !screens.isEmpty else { return }
 
@@ -40,26 +59,27 @@ extension WindowManager {
         }
         var present = Set<CGWindowID>()
         var fresh: [Window] = []
+        var titles: [CGWindowID: String?] = [:] // of the fresh windows, as the scan read them
 
         for app in NSWorkspace.shared.runningApplications
         where app.activationPolicy == .regular && !app.isHidden && app.processIdentifier != getpid() {
             observe(app)
             let pid = app.processIdentifier
-            guard pidsOnScreen.contains(pid) else { continue }
-            for el in AXUIElementCreateApplication(pid).elements(kAXWindowsAttribute) {
+            guard pidsOnScreen.contains(pid), let scan = scanner.results[pid] else { continue }
+            for id in scan.listed {
                 // A bridged move can become discoverable before its completion commits the
                 // destination workspace. Do not tile that intermediate state as a new arrival.
-                guard let id = el.windowID, !workspaceMoves.contains(id),
-                      onScreenIDs.contains(id), !onOtherSpace(id) else { continue }
-                if let w = windows[id] {
-                    if !w.isNativeFullscreen { present.insert(id) }
+                guard !workspaceMoves.contains(id), onScreenIDs.contains(id), !onOtherSpace(id) else { continue }
+                if windows[id] != nil {
+                    if !scan.fullscreen.contains(id) { present.insert(id) }
                     continue
                 }
-                guard el.string(kAXSubroleAttribute) == kAXStandardWindowSubrole,
-                      el.bool(kAXMinimizedAttribute) != true, el.bool("AXFullScreen") != true else { continue }
-                let w = Window(id: id, element: el, pid: pid, bundleID: app.bundleIdentifier)
-                w.naturalFrame = el.frame
-                w.autoFloating = shouldFloat(w)
+                guard let found = scan.found[id] else { continue }
+                let w = Window(id: id, element: found.element, pid: pid, bundleID: app.bundleIdentifier)
+                w.remember(found.frame)
+                w.naturalFrame = found.frame
+                w.autoFloating = shouldFloat(w, title: found.title, resizable: found.resizable)
+                titles[id] = found.title
                 windows[id] = w
                 watch(w)
                 fresh.append(w)
@@ -77,20 +97,20 @@ extension WindowManager {
                 if let saved = savedWorkspaceOf[w.id] { workspaceOf[w.id] = saved }
                 if let float = savedFloating[w.id] { w.userFloating = float }
             }
-            if let p = practice, w.pid == p.pid, let ws = w.element.string(kAXTitleAttribute).flatMap({ p.workspaces[$0] }) {
+            if let p = practice, w.pid == p.pid, let ws = titles[w.id].flatMap({ $0 }).flatMap({ p.workspaces[$0] }) {
                 workspaceOf[w.id] = ws
                 if monitorOf[ws] == nil, let here = currentScreen() { monitorOf[ws] = here.uuid }
             }
         }
         if config.newWindowsToMain && !firstRun { order.insert(contentsOf: arrivals.map(\.id), at: 0) } else { order.append(contentsOf: arrivals.map(\.id)) }
         for w in fresh {
-            Log.debug("new window \(w.id) \(w.bundleID ?? "pid \(w.pid)") floating=\(w.isFloating) frame=\(w.frame)")
+            Log.debug("new window \(w.id) \(w.bundleID ?? "pid \(w.pid)") floating=\(w.isFloating) frame=\(w.cachedFrame)")
         }
         if !fresh.isEmpty { scheduleRefresh(after: 0.4) } // second pass for apps that reposition after opening
 
         // 2. Prune closed windows; keep ones that are merely on another space, minimized or hidden.
         for (id, w) in windows where !present.contains(id) {
-            if NSRunningApplication(processIdentifier: w.pid) == nil || !w.isValid { forget(id) }
+            if NSRunningApplication(processIdentifier: w.pid) == nil || scanner.results[w.pid]?.gone.contains(id) == true { forget(id) }
         }
         self.present = present
         syncWorkspaces(screens: screens, present: present)
@@ -128,7 +148,7 @@ extension WindowManager {
                 if let only, !only.contains(id) { continue }
                 guard let w = windows[id] else { continue }
                 let snap = snapNextPlacement.remove(id) != nil
-                let current = w.frame
+                let current = w.cachedFrame
                 if current.isNull || current.approxEqual(target) { corrections[id] = nil; continue }
                 if snap {
                     instant.append(.init(window: w, to: target, bounds: s.visible))
@@ -170,7 +190,7 @@ extension WindowManager {
         guard isShown(ws), pendingFocus == nil else { return }
         // A dialog or other window we don't manage took focus: leave it be.
         if let app = NSWorkspace.shared.frontmostApplication,
-           let id = AXUIElementCreateApplication(app.processIdentifier).element(kAXFocusedWindowAttribute)?.windowID,
+           let id = axApp(app.processIdentifier).element(kAXFocusedWindowAttribute)?.windowID,
            windows[id] == nil { return }
         let here = visible.filter { workspaceOf[$0] == ws }
         guard let id = here.max(by: { (focusStamps[$0] ?? 0) < (focusStamps[$1] ?? 0) }), focusStamps[id] != nil,
@@ -277,7 +297,7 @@ extension WindowManager {
     /// The focused window as macOS reports it, which lags behind `focus(_:)`.
     func reportedFocusedWindow() -> Window? {
         guard let app = NSWorkspace.shared.frontmostApplication,
-              let el = AXUIElementCreateApplication(app.processIdentifier).element(kAXFocusedWindowAttribute),
+              let el = axApp(app.processIdentifier).element(kAXFocusedWindowAttribute),
               let id = el.windowID else { return nil }
         return windows[id]
     }

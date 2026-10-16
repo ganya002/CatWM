@@ -33,7 +33,7 @@ extension WindowManager {
 
     func park(_ id: CGWindowID, screens: [Screen]) {
         guard let w = windows[id], isVirtual(workspaceOf[id]) else { return }
-        let f = w.frame
+        let f = w.cachedFrame
         guard !f.isNull, !isParked(f, screens) else { return }
         if let slide, slide.outgoing.contains(id) {
             // Slides off the edge. `beginSlide` moves it into the corner once the slide is done.
@@ -58,7 +58,7 @@ extension WindowManager {
         animator.cancel(id)
         animator.quiet(id)
         EnhancedUI.suspend(w.pid)
-        w.setPosition(parkingSpot(size: w.frame.size, on: s, screens))
+        w.setPosition(parkingSpot(size: w.cachedFrame.size, on: s, screens))
         EnhancedUI.resume(w.pid)
     }
 
@@ -73,7 +73,7 @@ extension WindowManager {
 
     func unpark(floating id: CGWindowID, screens: [Screen]) {
         guard let w = windows[id] else { return }
-        let f = w.frame
+        let f = w.cachedFrame
         guard isParked(f, screens) else { floatFrames[id] = nil; return }
         let s = screen(of: w, in: screens) ?? screens[0]
         var r = floatFrames.removeValue(forKey: id) ?? targets[id]

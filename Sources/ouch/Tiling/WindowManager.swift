@@ -112,6 +112,7 @@ final class WindowManager {
     var pendingSpace: (display: String, index: Int, until: Date)?
     var spaceGeneration = 0
     let animator = Animator()
+    let scanner = WindowScanner()
     private let dockWindowPull = DockWindowPull()
     let dockArea = DockArea()
 
