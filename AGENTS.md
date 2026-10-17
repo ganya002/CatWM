@@ -1,6 +1,6 @@
 # Comments
 
-Comments are unallowed. `Tools/check-style.sh` fails on them. `swift test`, `./build.sh`, and the `lint` GitHub Actions workflow run that check.
+Comments are unallowed. `Tools/check-style.sh` fails on them. The pre-commit hook, `swift test`, `./build.sh`, and the `lint` GitHub Actions workflow run that check. `./build.sh` installs the hook into this clone.
 
 `Package.swift` keeps its `// swift-tools-version:` line. Swift Package Manager requires that line. The only other comment is `// style-ok: <reason>` at the end of a line that the check already flags. The reason is two words or more, and it covers that line only.
 

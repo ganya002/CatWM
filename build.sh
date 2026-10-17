@@ -1,6 +1,7 @@
 #!/bin/sh
 set -e
 cd "$(dirname "$0")"
+Tools/install-hooks.sh
 Tools/check-style.sh
 CONFIG=release
 if [ "$1" = "--dev" ]; then CONFIG=debug; fi
