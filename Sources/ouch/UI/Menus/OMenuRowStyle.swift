@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 
 struct OMenuRowStyle: ButtonStyle {
+    static let inset: CGFloat = 10
     var highlighted: Bool? = nil
     var open = false
     var danger = false

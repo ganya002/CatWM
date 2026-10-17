@@ -96,10 +96,17 @@ struct DesignGalleryView: View {
                 TemplateRow(name: "Research", summary: "6 windows · 2 displays", busy: true, open: {}, rename: {}, update: {}, delete: {})
             }
             TemplateSaveRow(name: $m.text, save: {}, cancel: {})
-            ActionRow(action: QuickAction(id: "template.gallery", title: "Writing", symbol: "rectangle.3.group",
-                                         keys: ["1"], remove: {}) {},
-                      hovered: true, shown: true, index: 0, remove: {}, pick: {}, hover: { _ in })
-                .frame(width: Theme.submenuWidth)
+            VStack(spacing: 0) {
+                ActionRow(action: QuickAction(id: "template.save.gallery", title: "Save workspace…", symbol: "plus", keys: ["S"]) {},
+                          hovered: false, shown: true, index: 0, pick: {}, hover: { _ in })
+                ActionRow(action: QuickAction(id: "template.gallery", title: "Writing", symbol: "rectangle.3.group",
+                                             keys: ["1"], remove: {}) {},
+                          hovered: false, shown: true, index: 1, remove: {}, pick: {}, hover: { _ in })
+                ActionRow(action: QuickAction(id: "template.gallery.hover", title: "Research", symbol: "rectangle.3.group",
+                                             keys: ["2"], remove: {}) {},
+                          hovered: true, shown: true, index: 2, remove: {}, pick: {}, hover: { _ in })
+            }
+            .frame(width: Theme.submenuWidth)
         }
     }
 

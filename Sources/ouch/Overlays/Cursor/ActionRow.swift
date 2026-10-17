@@ -23,12 +23,9 @@ struct ActionRow: View {
             if action.isOn {
                 Image(systemName: "checkmark").font(Theme.symbol(Theme.Icon.sm, .bold)).foregroundStyle(Theme.accentInk)
             }
-            if action.remove != nil {
+            if !action.keys.isEmpty {
                 Kbd(keys: action.keys).fixedSize()
-                    .opacity(hovered ? 0 : 1)
-                    .frame(width: Theme.controlHeight)
-            } else if !action.keys.isEmpty {
-                Kbd(keys: action.keys).fixedSize()
+                    .opacity(hovered && remove != nil ? 0 : 1)
             }
         }
         .accessibilityLabel(action.title)
@@ -40,8 +37,8 @@ struct ActionRow: View {
         }
         .overlay(alignment: .trailing) {
             if hovered, let remove {
-                OIconButton(symbol: "xmark", label: "Delete \(action.title)", variant: .ghostDanger, action: remove)
-                    .padding(.trailing, Theme.Space.sm)
+                RemoveButton(help: "Delete \(action.title)", variant: .close, action: remove)
+                    .padding(.trailing, OMenuRowStyle.inset)
             }
         }
         .animation(Motion.fade, value: hovered)
