@@ -40,7 +40,7 @@ enum GalleryAppearance: String, CaseIterable {
     }
 }
 
-private struct ColorToken: Identifiable {
+struct ColorToken: Identifiable {
     let name: String
     let path: KeyPath<Palette, Palette.Pair>
     var id: String { name }
@@ -71,6 +71,21 @@ final class GalleryModel: ObservableObject {
     @Published var text = ""
     @Published var layout: Layout? = .tall
     @Published var workspace: String? = "2"
+    @Published var search = ""
+    @Published var popover = false
+    @Published var moved = false
+    @Published var essentialOn = true
+}
+
+private struct GallerySearch: View {
+    @Binding var text: String
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        OSearchField(placeholder: "Search settings", text: $text, shortcut: ["⌘", "K"], focus: $focused)
+            .background(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous).fill(Theme.surface.opacity(0.6)))
+            .frame(width: 320)
+    }
 }
 
 struct DesignGalleryView: View {
@@ -87,11 +102,15 @@ struct DesignGalleryView: View {
                 buttons
                 controls
                 rows
+                moreControls
                 keys
                 surfaces
+                carets
+                panes
                 menus
                 tiling
                 status
+                motion
             }
             .padding(Theme.Space.page)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -181,7 +200,7 @@ struct DesignGalleryView: View {
                 }
             }
             HStack(spacing: Theme.Space.xl) {
-                ForEach([("sm", Elevation.sm), ("popover", .popover), ("float", .float)], id: \.0) { name, e in
+                ForEach([("sm", Elevation.sm), ("knob", .knob), ("popover", .popover), ("float", .float)], id: \.0) { name, e in
                     let shape = RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
                     Text(name).font(Theme.body(12.5, .medium)).foregroundStyle(Theme.ink)
                         .frame(width: 110, height: 64)
@@ -190,6 +209,23 @@ struct DesignGalleryView: View {
                 }
             }
             .padding(.vertical, Theme.Space.md)
+            HStack(spacing: Theme.Space.xl) {
+                ForEach([("well", Theme.well), ("wellHover", Theme.wellHover), ("thumbMain", Theme.thumbMain)], id: \.0) { name, color in
+                    VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                        RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous).fill(color).frame(width: 80, height: 28)
+                        Text(name).font(Theme.body(12.5, .medium)).foregroundStyle(Theme.ink)
+                    }
+                }
+            }
+            HStack(alignment: .bottom, spacing: Theme.Space.lg) {
+                ForEach([("xs", Theme.Icon.xs), ("sm", Theme.Icon.sm), ("md", Theme.Icon.md), ("lg", Theme.Icon.lg), ("xl", Theme.Icon.xl)],
+                        id: \.0) { name, size in
+                    VStack(spacing: Theme.Space.xs) {
+                        Image(systemName: "gearshape").font(Theme.symbol(size)).foregroundStyle(Theme.ink)
+                        Text("icon \(name)").textStyle(.caption).foregroundStyle(Theme.inkMuted)
+                    }
+                }
+            }
         }
     }
 
@@ -270,6 +306,45 @@ struct DesignGalleryView: View {
         }
     }
 
+    private var moreControls: some View {
+        block("More controls") {
+            OPageTitle(crumbs: ["Settings", "Layout"], title: "Gaps & padding") {
+                OButton("Reset", size: .sm) {}
+            }
+            .frame(maxWidth: 560)
+            GallerySearch(text: $m.search)
+            HStack(spacing: Theme.Space.xl) {
+                OKnob()
+                OKnob(color: Theme.accent)
+                OSegmentTrack(title: "Filter") {
+                    OSegment(label: "All", count: 12, on: true) {}
+                    OSegment(label: "Floating", count: 3, on: false) {}
+                    OSegment(label: "Needs review", on: false, hot: true) {}
+                }
+            }
+            HStack(spacing: Theme.Space.xl) {
+                RemoveButton(help: "Remove row", variant: .row) {}
+                RemoveButton(help: "Close", variant: .close) {}
+                RemoveButton(help: "Restore", variant: .restore) {}
+                RemoveButton(help: "Remove badge", variant: .badge) {}
+                Button {} label: { Text("Press scale").padding(Theme.Space.md).background(Capsule().fill(Theme.well)) }
+                    .buttonStyle(PressScale())
+            }
+            HStack(alignment: .top, spacing: Theme.Space.sm) {
+                EssentialTile(title: "Tiling", label: "Tiling", symbol: "rectangle.split.3x1", offSymbol: "rectangle.on.rectangle",
+                              isOn: m.essentialOn, shortcut: ["⌥", "T"]) { m.essentialOn.toggle() }
+                EssentialTile(title: "Float", label: "Float window", symbol: "macwindow.on.rectangle", offSymbol: "macwindow",
+                              isOn: false, shortcut: ["⌥", "F"]) {}
+                EssentialTile(title: "Retile", label: "Retile windows", symbol: "arrow.triangle.2.circlepath",
+                              shortcut: ["⌥", "Z"], rotates: true) {}
+            }
+            VStack(alignment: .leading, spacing: Theme.Space.md) {
+                OStep(n: 1, text: "Press **H** to focus the window on the left.")
+                OStep(n: 2, text: "Press **L** to focus the window on the right.")
+            }
+        }
+    }
+
     private var keys: some View {
         block("Keycaps and tooltips") {
             HStack(alignment: .center, spacing: Theme.Space.xl) {
@@ -278,6 +353,8 @@ struct DesignGalleryView: View {
                 Kbd(keys: ["H", "J", "K", "L"], size: .medium)
                 Kbd(keys: ["H"], size: .large)
                 Kbd(keys: ["L"], size: .large, pressed: true)
+                Kbd(keys: ["H"], size: .medium, onAccent: true)
+                    .padding(Theme.Space.sm).background(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(Theme.accent))
             }
             HStack(alignment: .top, spacing: Theme.Space.xl) {
                 OTooltip(text: "Retile", chords: [["Z"]], caret: .none).fixedSize()
@@ -326,6 +403,49 @@ struct DesignGalleryView: View {
         }
     }
 
+    private var carets: some View {
+        block("Surface carets") {
+            HStack(alignment: .top, spacing: Theme.Space.xxl) {
+                caretDemo("top(40)", .top(40))
+                caretDemo("bottom", .bottom)
+                caretDemo("bottomAt(24)", .bottomAt(24))
+                caretDemo("leading(20)", .leading(20))
+                caretDemo("leadingBottom(24)", .leadingBottom(24))
+            }
+            .padding(Theme.Space.lg)
+        }
+    }
+
+    private func caretDemo(_ name: String, _ caret: Caret) -> some View {
+        Text(name).font(Theme.body(12.5)).foregroundStyle(Theme.ink).frame(width: 124, height: 40).surface(.md, caret: caret)
+    }
+
+    private var panes: some View {
+        block("Pane, wash and glass") {
+            ZStack {
+                RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous).fill(Theme.wash)
+                Text("Content pane on the wash").font(Theme.body()).foregroundStyle(Theme.ink)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Theme.surface)
+                    .pane()
+                    .padding(Theme.Space.sm)
+            }
+            .frame(width: 420, height: 120)
+            ZStack {
+                LinearGradient(colors: [Theme.accent, Theme.success], startPoint: .leading, endPoint: .trailing)
+                Text("Floating glass").font(Theme.body(13.5, .medium)).foregroundStyle(Theme.ink)
+                    .padding(.horizontal, Theme.Space.xl).padding(.vertical, Theme.Space.md)
+                    .floatingGlass(Capsule())
+            }
+            .frame(width: 420, height: 90)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous))
+            OButton("Open a popover", icon: "rectangle.on.rectangle") { m.popover.toggle() }
+                .oPopover(isPresented: $m.popover) {
+                    Text("Popover content").font(Theme.body()).foregroundStyle(Theme.ink).padding(Theme.Space.md)
+                }
+        }
+    }
+
     private var menus: some View {
         block("Menu rows") {
             VStack(spacing: 0) {
@@ -356,6 +476,14 @@ struct DesignGalleryView: View {
             WorkspaceStrip(names: (1...9).map(String.init), current: m.workspace, occupied: ["1", "2", "3", "5"]) { m.workspace = $0 }
             LayoutPicker(layouts: Layout.allCases, selection: m.layout, columns: 5) { m.layout = $0 }
                 .frame(width: 320)
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 72), spacing: Theme.Space.md)], alignment: .leading, spacing: Theme.Space.md) {
+                ForEach(Layout.allCases, id: \.self) { l in
+                    VStack(spacing: Theme.Space.xs) {
+                        LayoutThumbnail(layout: l, selected: l == m.layout).frame(width: 64, height: 40)
+                        Text(l.shortTitle).textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine()
+                    }
+                }
+            }
         }
     }
 
@@ -366,6 +494,23 @@ struct DesignGalleryView: View {
                 OStatus(kind: .warning, text: "Safari won't shrink further")
                 OStatus(kind: .danger, text: "Failed")
                 OStatus(kind: .info, text: "Applies to new windows")
+            }
+        }
+    }
+    private var motion: some View {
+        block("Motion") {
+            HStack(spacing: Theme.Space.xl) {
+                ForEach([("easeOut", Motion.easeOut), ("spring", Motion.spring), ("snap", Motion.snap), ("pop", Motion.pop)], id: \.0) { name, animation in
+                    VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(Theme.well).frame(width: 96, height: 20)
+                            Circle().fill(Theme.accent).frame(width: 16, height: 16).offset(x: m.moved ? 78 : 2)
+                                .animation(animation, value: m.moved)
+                        }
+                        Text(name).textStyle(.caption).foregroundStyle(Theme.inkMuted)
+                    }
+                }
+                OButton("Play") { m.moved.toggle() }
             }
         }
     }
