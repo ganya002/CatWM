@@ -140,7 +140,7 @@ struct DesignGalleryView: View {
     }
 
     private var colours: some View {
-        block("Colour") {
+        block("Colour (hex: light / dark)") {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: Theme.Space.md)], alignment: .leading,
                       spacing: Theme.Space.md) {
                 ForEach(ColorToken.all) { token in
@@ -330,7 +330,7 @@ struct DesignGalleryView: View {
                 Button {} label: { Text("Press scale").padding(Theme.Space.md).background(Capsule().fill(Theme.well)) }
                     .buttonStyle(PressScale())
             }
-            HStack(alignment: .top, spacing: Theme.Space.sm) {
+            HStack(alignment: .top, spacing: Theme.Space.xs) {
                 EssentialTile(title: "Tiling", label: "Tiling", symbol: "rectangle.split.3x1", offSymbol: "rectangle.on.rectangle",
                               isOn: m.essentialOn, shortcut: ["⌥", "T"]) { m.essentialOn.toggle() }
                 EssentialTile(title: "Float", label: "Float window", symbol: "macwindow.on.rectangle", offSymbol: "macwindow",
@@ -338,6 +338,7 @@ struct DesignGalleryView: View {
                 EssentialTile(title: "Retile", label: "Retile windows", symbol: "arrow.triangle.2.circlepath",
                               shortcut: ["⌥", "Z"], rotates: true) {}
             }
+            .frame(width: Theme.menuWidth)
             VStack(alignment: .leading, spacing: Theme.Space.md) {
                 OStep(n: 1, text: "Press **H** to focus the window on the left.")
                 OStep(n: 2, text: "Press **L** to focus the window on the right.")
@@ -396,7 +397,7 @@ struct DesignGalleryView: View {
                     Text("Ouch arranges your windows as you open them.").font(Theme.body()).foregroundStyle(Theme.inkMuted)
                     OButton("Continue", variant: .primary, size: .lg, shortcut: ["↩"]) {}
                 }
-                .frame(width: 320, alignment: .leading)
+                .frame(width: 420, alignment: .leading)
                 .surface(.xl)
             }
             .padding(.top, Theme.Space.md)
@@ -476,7 +477,7 @@ struct DesignGalleryView: View {
             WorkspaceStrip(names: (1...9).map(String.init), current: m.workspace, occupied: ["1", "2", "3", "5"]) { m.workspace = $0 }
             LayoutPicker(layouts: Layout.allCases, selection: m.layout, columns: 5) { m.layout = $0 }
                 .frame(width: 320)
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 72), spacing: Theme.Space.md)], alignment: .leading, spacing: Theme.Space.md) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 112), spacing: Theme.Space.md)], alignment: .leading, spacing: Theme.Space.md) {
                 ForEach(Layout.allCases, id: \.self) { l in
                     VStack(spacing: Theme.Space.xs) {
                         LayoutThumbnail(layout: l, selected: l == m.layout).frame(width: 64, height: 40)
