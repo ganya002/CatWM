@@ -14,6 +14,7 @@ final class CursorActions {
     var shown = false
     var opening = false
     var closeWork: DispatchWorkItem?
+    var screenshotTask: Task<Void, Never>?
     static let dotSize = CursorActionsView.markSize
 
     var enabled: Bool { WindowManager.shared.config.cursorActions }

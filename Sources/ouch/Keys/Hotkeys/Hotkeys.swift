@@ -8,6 +8,7 @@ final class Hotkeys {
     var handler: ((KeyBinding) -> Void)?
     static let didFire = Notification.Name("OuchHotkeyDidFire")
     var paused = false
+    var textInputActive = false
     var tables: [String: [UInt64: KeyBinding]] = [:]
     var submap = ""
     var onSubmapChange: ((String) -> Void)?

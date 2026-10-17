@@ -5,15 +5,7 @@ struct TemplatesPane: View {
     @ObservedObject private var library = TemplateLibrary.shared
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 30) {
-            OGroup {
-                ORow("Save workspace template") {
-                    OButton("Save…", icon: "plus", size: .sm) { library.beginSave() }
-                }
-                .disabled(!ui.status.trusted || library.restoring)
-            }
-            .setting("templates.save", ui)
-
+        VStack(alignment: .leading, spacing: Theme.Space.xl) {
             if let error = library.error { OStatus(kind: .danger, text: error) }
             if library.restoring {
                 ORow("Opening template", description: library.status) {
@@ -23,15 +15,20 @@ struct TemplatesPane: View {
 
             OGroup("Saved templates") {
                 if library.templates.isEmpty {
-                    ORow("No templates yet", description: "Arrange your windows, then save your workspace.") { EmptyView() }
+                    ORow("No templates yet", description: "In window mode, open cursor actions and choose Save workspace.") { EmptyView() }
                 }
                 ForEach(library.templates) { template in
-                    TemplateRow(name: template.name, summary: template.summary, busy: library.restoring,
+                    TemplateRow(name: template.name, summary: template.summary, screenshot: template.screenshot,
+                                busy: library.restoring || library.updating,
+                                enlarge: { library.preview = template },
                                 open: { library.restore(template) }, rename: { library.draft = template },
                                 update: { library.update(template) }, delete: { library.delete(template) })
                 }
             }
             .setting("templates.saved", ui)
+        }
+        .sheet(item: $library.preview) { template in
+            TemplatePreviewSheet(template: template) { library.preview = nil }
         }
     }
 }

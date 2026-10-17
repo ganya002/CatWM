@@ -20,7 +20,8 @@ import Testing
     }
 
     @Test func roundTripKeepsLayoutAndWindowState() throws {
-        let original = template()
+        var original = template()
+        original.screenshot = Data([1, 2, 3, 4])
         let decoded = try JSONDecoder().decode(WorkspaceTemplate.self, from: JSONEncoder().encode(original))
         #expect(decoded.id == original.id)
         #expect(decoded.displays[0].ratio == 0.65)
@@ -30,6 +31,35 @@ import Testing
         #expect(decoded.windows[0].minimized)
         #expect(decoded.windows[0].zoomed)
         #expect(!decoded.windows[0].floating)
+        #expect(decoded.screenshot == original.screenshot)
+    }
+
+    @Test func templatesWithoutScreenshotsStillLoad() throws {
+        let data = try JSONEncoder().encode(template())
+        let object = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        #expect(object["screenshot"] == nil)
+        let decoded = try JSONDecoder().decode(WorkspaceTemplate.self, from: data)
+        #expect(decoded.screenshot == nil)
+        #expect(decoded.name == "Writing")
+    }
+
+    @Test func textEntryPassesKeysThroughWindowMode() throws {
+        let hotkeys = Hotkeys()
+        hotkeys.submap = "window"
+        hotkeys.textInputActive = true
+        for code: UInt16 in [1, 18, 36, 53, 123, 124] {
+            let event = try #require(CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: true))
+            guard case .pass = hotkeys.match(event) else {
+                Issue.record("Template naming intercepted key \(code)")
+                continue
+            }
+        }
+        hotkeys.textInputActive = false
+        let event = try #require(CGEvent(keyboardEventSource: nil, virtualKey: 1, keyDown: true))
+        guard case .swallow = hotkeys.match(event) else {
+            Issue.record("Window mode did not resume after naming")
+            return
+        }
     }
 
     @Test func exactDisplaysKeepTheirAssignmentsAfterReordering() {

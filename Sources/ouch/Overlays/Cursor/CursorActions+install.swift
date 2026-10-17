@@ -13,9 +13,12 @@ extension CursorActions {
             self?.menuKey(code, flags, isRepeat) ?? false
         }
         model.onPick = { [weak self] action in
+            if action.id == "template.save" { self?.beginTemplateSave(); return }
             self?.dismissMenu()
             DispatchQueue.main.async { action.run() }
         }
+        model.onSave = { [weak self] in self?.saveTemplate() }
+        model.onCancelSave = { [weak self] in self?.cancelTemplateSave() }
     }
 
     func modeChanged(_ name: String) {
@@ -41,7 +44,7 @@ extension CursorActions {
         menuPanel = menu
         place(menu: menu, at: point)
         menu.ignoresMouseEvents = false
-        menu.orderFrontRegardless()
+        menu.makeKeyAndOrderFront(nil)
         fadeDot(out: true)
         opening = true
         DispatchQueue.main.async { [weak self] in
@@ -79,6 +82,7 @@ extension CursorActions {
 
     func dismissMenu() {
         guard model.open || opening else { return }
+        resetTemplateSave()
         opening = false
         model.open = false
         model.hovered = nil

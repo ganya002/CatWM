@@ -7,6 +7,7 @@ struct WorkspaceTemplate: Codable, Identifiable {
     var tilingEnabled: Bool
     var displays: [Display]
     var windows: [SavedWindow]
+    var screenshot: Data?
 
     struct Display: Codable, Identifiable {
         var id: String

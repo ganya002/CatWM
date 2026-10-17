@@ -7,9 +7,11 @@ final class TemplateLibrary: ObservableObject {
 
     @Published private(set) var templates: [WorkspaceTemplate] = []
     @Published var draft: WorkspaceTemplate?
+    @Published var preview: WorkspaceTemplate?
     @Published var error: String?
     @Published var status: String?
     @Published private(set) var restoring = false
+    @Published private(set) var updating = false
     private let url: URL
     private var readProblem: String?
     private var restoreTask: Task<Void, Never>?
@@ -36,15 +38,6 @@ final class TemplateLibrary: ObservableObject {
         }
     }
 
-    func beginSave() {
-        do {
-            draft = try WindowManager.shared.captureTemplate()
-            error = nil
-        } catch {
-            self.error = error.localizedDescription
-        }
-    }
-
     func nameProblem(_ name: String, id: UUID) -> String? {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty { return "Enter a template name." }
@@ -65,12 +58,20 @@ final class TemplateLibrary: ObservableObject {
     }
 
     func update(_ template: WorkspaceTemplate) {
+        guard !updating, !restoring else { return }
         do {
             var copy = try WindowManager.shared.captureTemplate()
             copy.id = template.id
             copy.name = template.name
             copy.createdAt = template.createdAt
-            if save(copy) { status = "Updated \(copy.name)." }
+            updating = true
+            Task { @MainActor in
+                defer { updating = false }
+                copy.screenshot = await TemplateScreenshot.capture()
+                if save(copy) {
+                    status = copy.screenshot == nil ? "Updated \(copy.name) without a screenshot. Allow screen recording, then update the template to add one." : "Updated \(copy.name)."
+                }
+            }
         } catch {
             self.error = error.localizedDescription
         }
@@ -96,7 +97,7 @@ final class TemplateLibrary: ObservableObject {
     }
 
     func restore(_ template: WorkspaceTemplate) {
-        guard !restoring else { return }
+        guard !restoring, !updating else { return }
         restoring = true
         error = nil
         status = "Opening \(template.name)…"

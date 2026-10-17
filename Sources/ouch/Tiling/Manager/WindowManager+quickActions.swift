@@ -5,11 +5,10 @@ extension WindowManager {
         guard isStarted else { return nil }
         let library = TemplateLibrary.shared
         var actions: [QuickAction] = []
-        if !library.restoring {
+        if !library.restoring, !library.updating {
             actions.append(QuickAction(id: "template.save", title: "Save workspace…", symbol: "plus",
                                        keys: ["S"], keyCode: keyCodes["s"]) {
-                library.beginSave()
-                SettingsWindow.shared.show(pane: .templates)
+                CursorActions.shared.beginTemplateSave()
             })
             for (index, template) in library.templates.enumerated() {
                 let key = index < 9 ? String(index + 1) : nil
@@ -18,7 +17,7 @@ extension WindowManager {
                     library.restore(template)
                 })
             }
-        } else {
+        } else if library.restoring {
             actions.append(QuickAction(id: "template.stop", title: "Stop opening template", symbol: "stop") { library.cancelRestore() })
         }
         actions.append(QuickAction(id: "template.manage", title: "Manage templates", symbol: "gearshape",
