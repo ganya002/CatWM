@@ -16,9 +16,11 @@ final class WindowScanner {
     }
 
     struct AppScan {
+        var readAt = Date()
         var listed: [CGWindowID] = []
         var found: [CGWindowID: Found] = [:]
         var fullscreen: Set<CGWindowID> = []
+        var minimized: Set<CGWindowID> = []
         var gone: Set<CGWindowID> = []
     }
 
@@ -75,6 +77,7 @@ final class WindowScanner {
                 s.listed.append(id)
                 if let w = job.known[id] {
                     if w.isNativeFullscreen { s.fullscreen.insert(id) }
+                    if w.element.bool(kAXMinimizedAttribute) == true { s.minimized.insert(id) }
                     _ = w.frame
                     continue
                 }

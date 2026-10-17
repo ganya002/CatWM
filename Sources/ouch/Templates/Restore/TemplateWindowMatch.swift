@@ -1,10 +1,22 @@
 import AppKit
 
-struct TemplateWindowMatch {
-    var window: Window
+struct TemplateWindowCandidate: Equatable {
+    var windowID: CGWindowID
+    var bundleID: String
     var title: String
     var document: String?
     var launchDate: Date?
+    var allowsGenericFallback: Bool
+    var newlyOpened = false
+}
+
+struct TemplateWindowMatch {
+    var window: Window
+    var bundleID: String
+    var title: String
+    var document: String?
+    var launchDate: Date?
+    var allowsGenericFallback: Bool
 
     static func document(_ element: AXUIElement) -> String? {
         guard let raw = element.string(kAXDocumentAttribute), let url = URL(string: raw),
@@ -23,20 +35,40 @@ struct TemplateWindowMatch {
         return saved.document == nil ? 0 : nil
     }
 
-    static func read(bundleID: String, manager: WindowManager) -> [TemplateWindowMatch] {
-        let screens = Screen.all()
-        let spaces = Set(screens.map { Spaces.current(display: $0.uuid) })
-        return NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).flatMap { app in
-            axApp(app.processIdentifier).elements(kAXWindowsAttribute).compactMap { element in
-                guard element.string(kAXSubroleAttribute) == kAXStandardWindowSubrole, let id = element.windowID else { return nil }
-                let ownSpaces = Spaces.of(window: id)
-                let fullscreen = element.bool("AXFullScreen") == true
-                if !fullscreen, !ownSpaces.isEmpty && spaces.isDisjoint(with: ownSpaces) { return nil }
-                if !fullscreen, let ws = manager.workspaceOf[id], !manager.isShown(ws) { return nil }
-                let window = manager.windows[id] ?? Window(id: id, element: element, pid: app.processIdentifier, bundleID: bundleID)
-                return TemplateWindowMatch(window: window, title: element.string(kAXTitleAttribute) ?? "",
-                                           document: document(element), launchDate: app.launchDate)
-            }
-        }.sorted { $0.window.id < $1.window.id }
+    static func allowsGenericFallback(offSpace: Bool, hiddenWorkspace: Bool) -> Bool {
+        !offSpace && !hiddenWorkspace
     }
+
+    static func assign(_ saved: [WorkspaceTemplate.SavedWindow], candidates: [TemplateWindowCandidate]) -> [UUID: CGWindowID] {
+        let ordered = candidates.sorted { $0.windowID < $1.windowID }
+        var used = Set<CGWindowID>()
+        var result: [UUID: CGWindowID] = [:]
+        for score in stride(from: 3, through: 0, by: -1) {
+            for window in saved where result[window.id] == nil {
+                guard let candidate = ordered.first(where: { candidate in
+                    guard !used.contains(candidate.windowID), candidate.bundleID == window.bundleID else { return false }
+                    guard Self.score(window, title: candidate.title, document: candidate.document,
+                                     windowID: candidate.windowID, launchDate: candidate.launchDate) == score else { return false }
+                    if score == 0 {
+                        guard candidate.allowsGenericFallback else { return false }
+                        if !candidate.newlyOpened, !candidate.title.isEmpty, candidate.title != window.title { return false }
+                    }
+                    return true
+                }) else { continue }
+                result[window.id] = candidate.windowID
+                used.insert(candidate.windowID)
+            }
+        }
+        return result
+    }
+
+    static func retainUnscanned(_ previous: [UUID: CGWindowID], assigned: [UUID: CGWindowID],
+                                scanned: Set<CGWindowID>, invalidated: Set<CGWindowID> = []) -> [UUID: CGWindowID] {
+        var next = assigned
+        for (savedID, windowID) in previous where next[savedID] == nil && !scanned.contains(windowID) && !invalidated.contains(windowID) {
+            next[savedID] = windowID
+        }
+        return next
+    }
+
 }

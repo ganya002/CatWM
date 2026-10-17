@@ -15,6 +15,15 @@ final class TemplateLibrary: ObservableObject {
     private let url: URL
     private var readProblem: String?
     private var restoreTask: Task<Void, Never>?
+    private var generations: [UUID: Int] = [:]
+    private var workspaceGenerations: [UUID: Int] = [:]
+    private var updateToken = 0
+    var captureWorkspace: () async throws -> WorkspaceTemplate = {
+        try await WindowManager.shared.captureTemplate()
+    }
+    var captureScreenshot: () async -> Data? = {
+        await TemplateScreenshot.capture()
+    }
 
     struct Stored: Codable {
         var version = 1
@@ -52,33 +61,79 @@ final class TemplateLibrary: ObservableObject {
         guard nameProblem(template.name, id: template.id) == nil else { return false }
         var copy = template
         copy.name = copy.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if copy.screenshot == nil { copy.screenshot = templates.first(where: { $0.id == copy.id })?.screenshot }
         var updated = templates.filter { $0.id != copy.id }
         updated.append(copy)
-        return persist(updated.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending })
+        guard persist(updated.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }) else { return false }
+        generations[copy.id, default: 0] += 1
+        workspaceGenerations[copy.id, default: 0] += 1
+        return true
     }
 
-    func update(_ template: WorkspaceTemplate) {
-        guard !updating, !restoring else { return }
-        do {
-            var copy = try WindowManager.shared.captureTemplate()
-            copy.id = template.id
-            copy.name = template.name
-            copy.createdAt = template.createdAt
-            updating = true
-            Task { @MainActor in
-                defer { updating = false }
-                copy.screenshot = await TemplateScreenshot.capture()
-                if save(copy) {
-                    status = copy.screenshot == nil ? "Updated \(copy.name) without a screenshot. Allow screen recording, then update the template to add one." : "Updated \(copy.name)."
-                }
+    func generation(of id: UUID) -> Int { generations[id] ?? 0 }
+
+    @discardableResult
+    func attachScreenshot(_ data: Data, to id: UUID, generation expected: Int) -> Bool {
+        guard !data.isEmpty, generations[id] == expected, let index = templates.firstIndex(where: { $0.id == id }) else { return false }
+        var updated = templates
+        updated[index].screenshot = data
+        guard persist(updated) else { return false }
+        generations[id] = expected + 1
+        return true
+    }
+
+    @discardableResult
+    func update(_ template: WorkspaceTemplate) -> Task<Void, Never> {
+        guard !updating, !restoring else { return Task {} }
+        updateToken += 1
+        let token = updateToken
+        updating = true
+        let id = template.id
+        let baseline = workspaceGenerations[id] ?? 0
+        return Task { @MainActor in
+            func endSnapshot() {
+                if updateToken == token { updating = false }
             }
-        } catch {
-            self.error = error.localizedDescription
+            do {
+                var copy = try await captureWorkspace()
+                guard !Task.isCancelled, updateToken == token else { endSnapshot(); return }
+                guard workspaceGenerations[id, default: 0] == baseline, let current = templates.first(where: { $0.id == id }) else {
+                    endSnapshot()
+                    return
+                }
+                copy.id = id
+                copy.name = current.name
+                copy.createdAt = current.createdAt
+                copy.screenshot = current.screenshot
+                guard save(copy) else { endSnapshot(); return }
+                let expected = generation(of: id)
+                let savedName = current.name
+                endSnapshot()
+                status = "Updated \(savedName)."
+                let screenshot = await captureScreenshot()
+                guard !Task.isCancelled else { return }
+                if let screenshot, !screenshot.isEmpty, attachScreenshot(screenshot, to: id, generation: expected) {
+                    status = "Updated \(templates.first(where: { $0.id == id })?.name ?? savedName)."
+                    return
+                }
+                guard generation(of: id) == expected, let current = templates.first(where: { $0.id == id }) else { return }
+                if current.screenshot == nil {
+                    status = "Updated \(current.name) without a screenshot. Allow screen recording, then update the template to add one."
+                }
+            } catch is CancellationError {
+                endSnapshot()
+            } catch {
+                self.error = error.localizedDescription
+                endSnapshot()
+            }
         }
     }
 
     func delete(_ template: WorkspaceTemplate) {
-        if persist(templates.filter { $0.id != template.id }) { status = "Deleted \(template.name)." }
+        guard persist(templates.filter { $0.id != template.id }) else { return }
+        generations[template.id, default: 0] += 1
+        workspaceGenerations[template.id, default: 0] += 1
+        status = "Deleted \(template.name)."
     }
 
     private func persist(_ updated: [WorkspaceTemplate]) -> Bool {

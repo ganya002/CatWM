@@ -18,6 +18,7 @@ extension CursorActions {
             DispatchQueue.main.async { action.run() }
         }
         model.onSave = { [weak self] in self?.saveTemplate() }
+        model.onDelete = { [weak self] in self?.deleteTemplate($0) }
         model.onCancelSave = { [weak self] in self?.cancelTemplateSave() }
     }
 

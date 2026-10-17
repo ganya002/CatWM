@@ -1,57 +1,103 @@
 import AppKit
 
 extension WindowManager {
-    enum TemplateError: LocalizedError {
-        case notReady, empty
+    enum TemplateError: LocalizedError, Equatable {
+        case notReady, empty, incomplete, busy
         var errorDescription: String? {
             switch self {
             case .notReady: "Grant Accessibility access before you save or open a template."
             case .empty: "Open a window in this workspace before you save a template."
+            case .incomplete: "Ouch could not read every window in time, so this template was not saved."
+            case .busy: "Ouch is still reading another workspace, so this template was not saved."
             }
         }
     }
 
-    func captureTemplate() throws -> WorkspaceTemplate {
+    @MainActor
+    func captureTemplate() async throws -> WorkspaceTemplate {
+        try Task.checkCancellation()
+        let request = try makeRequest()
+        let stop = TemplateStopFlag()
+        let outcome = await withTaskCancellationHandler {
+            await TemplateWindowCapture.slot.run(within: TemplateWindowCapture.backstop) {
+                let apps = request.apps
+                let pid = request.frontmostPID
+                let budget = TemplateWindowCapture.budget
+                return await Task.detached(priority: .userInitiated) {
+                    TemplateAXCapture.collect(apps: apps, frontmostPID: pid, budget: budget, stop: { stop.isStopped })
+                }.value
+            }
+        } onCancel: {
+            stop.stop()
+        }
+        try Task.checkCancellation()
+        switch outcome {
+        case .cancelled:
+            throw CancellationError()
+        case .timedOut:
+            throw TemplateError.incomplete
+        case .busy:
+            throw TemplateError.busy
+        case .finished(let batch):
+            guard batch.complete else { throw TemplateError.incomplete }
+            return try finish(batch, facts: request.facts)
+        }
+    }
+
+    private func makeRequest() throws -> TemplateCaptureRequest {
         guard isStarted else { throw TemplateError.notReady }
         let screens = Screen.all()
         guard !screens.isEmpty else { throw TemplateError.notReady }
         let mainID = NSScreen.screens.first?.displayID
-        let displays = screens.map { screen in
+        var displays: [WorkspaceTemplate.Display] = []
+        var zoomed: [String: CGWindowID] = [:]
+        for screen in screens {
             let state = state(for: screen)
-            return WorkspaceTemplate.Display(id: screen.uuid, name: screen.ns.localizedName, frame: screen.frame,
-                                             visible: screen.visible, isMain: screen.id == mainID,
-                                             layout: state.layout.rawValue, ratio: state.ratio, mainCount: state.mainCount)
+            displays.append(.init(id: screen.uuid, name: screen.ns.localizedName, frame: screen.frame, visible: screen.visible,
+                                  isMain: screen.id == mainID, layout: state.layout.rawValue, ratio: state.ratio, mainCount: state.mainCount))
+            if let id = state.zoomed { zoomed[screen.uuid] = id }
         }
-        let focused = NSWorkspace.shared.frontmostApplication.flatMap {
-            axApp($0.processIdentifier).element(kAXFocusedWindowAttribute)?.windowID
-        } ?? model.mostRecent(of: visible)
-        let currentSpaces = Set(screens.map { Spaces.current(display: $0.uuid) })
-        var captured: [WorkspaceTemplate.SavedWindow] = []
-        for app in NSWorkspace.shared.runningApplications
-        where app.activationPolicy == .regular && app.processIdentifier != getpid() {
-            guard let bundle = app.bundleIdentifier else { continue }
-            for element in axApp(app.processIdentifier).elements(kAXWindowsAttribute) {
-                guard element.string(kAXSubroleAttribute) == kAXStandardWindowSubrole, let id = element.windowID else { continue }
-                let fullscreen = element.bool("AXFullScreen") == true
-                if let ws = workspaceOf[id], !isShown(ws), !fullscreen { continue }
-                let spaces = Spaces.of(window: id)
-                if !spaces.isEmpty && currentSpaces.isDisjoint(with: spaces) { continue }
-                let window = windows[id] ?? Window(id: id, element: element, pid: app.processIdentifier, bundleID: bundle)
-                if windows[id] == nil { window.autoFloating = shouldFloat(window, title: element.string(kAXTitleAttribute), resizable: element.isSettable(kAXSizeAttribute)) }
-                let frame = fullscreen && !window.naturalFrame.isNull ? window.naturalFrame : window.frame
-                guard !frame.isNull, !frame.isEmpty, let screen = screen(of: window, in: screens) else { continue }
-                let state = state(for: screen)
-                captured.append(.init(bundleID: bundle, appName: app.localizedName ?? bundle,
-                                      title: element.string(kAXTitleAttribute) ?? "",
-                                      document: TemplateWindowMatch.document(element), display: screen.uuid, frame: frame,
-                                      floating: window.isFloating, minimized: element.bool(kAXMinimizedAttribute) == true,
-                                      fullscreen: window.isNativeFullscreen, zoomed: state.zoomed == id,
-                                      focused: focused == id, windowID: id, launchDate: app.launchDate))
+        var knownFloating: [CGWindowID: Bool] = [:]
+        var naturalFrames: [CGWindowID: CGRect] = [:]
+        for (id, window) in windows {
+            knownFloating[id] = window.isFloating
+            if !window.naturalFrame.isNull { naturalFrames[id] = window.naturalFrame }
+        }
+        let displayIDs = Set(displays.map(\.id))
+        var hidden: Set<CGWindowID> = []
+        var monitors: [CGWindowID: String] = [:]
+        for (id, workspace) in workspaceOf {
+            if !isShown(workspace) { hidden.insert(id) }
+            if let monitor = monitorOf[workspace], displayIDs.contains(monitor) { monitors[id] = monitor }
+        }
+        let facts = TemplateCaptureFacts(tilingEnabled: tilingEnabled, displays: displays, zoomed: zoomed, order: order,
+                                         currentSpaces: Set(screens.map { Spaces.current(display: $0.uuid) }),
+                                         hiddenWorkspaceWindows: hidden, monitorForTiled: monitors,
+                                         virtualWorkspaces: config.virtualWorkspaces, knownFloating: knownFloating,
+                                         naturalFrames: naturalFrames, fallbackFocus: model.mostRecent(of: visible))
+        let apps = NSWorkspace.shared.runningApplications.compactMap { app -> TemplateAppSnapshot? in
+            guard app.activationPolicy == .regular, app.processIdentifier != getpid(), let bundleID = app.bundleIdentifier else { return nil }
+            return TemplateAppSnapshot(pid: app.processIdentifier, bundleID: bundleID, name: app.localizedName ?? bundleID, launchDate: app.launchDate)
+        }
+        return TemplateCaptureRequest(facts: facts, apps: apps, frontmostPID: NSWorkspace.shared.frontmostApplication?.processIdentifier)
+    }
+
+    private func finish(_ batch: TemplateWindowBatch, facts: TemplateCaptureFacts) throws -> WorkspaceTemplate {
+        var batch = batch
+        for index in batch.windows.indices {
+            let id = batch.windows[index].windowID
+            batch.windows[index].spaces = Spaces.of(window: id)
+            if facts.knownFloating[id] == nil {
+                batch.windows[index].floatingOverride = floatingDecision(batch.windows[index])
             }
         }
-        let positions = Dictionary(order.enumerated().map { ($1, $0) }, uniquingKeysWith: { a, _ in a })
-        captured.sort { (positions[$0.windowID] ?? Int.max, $0.windowID) < (positions[$1.windowID] ?? Int.max, $1.windowID) }
-        guard !captured.isEmpty else { throw TemplateError.empty }
-        return WorkspaceTemplate(name: "", tilingEnabled: tilingEnabled, displays: displays, windows: captured)
+        return try TemplateCaptureAssembler.make(facts: facts, batch: batch)
+    }
+
+    private func floatingDecision(_ window: TemplateObservedWindow) -> Bool {
+        let title: String? = window.title
+        let created = Window(id: window.windowID, element: AXUIElementCreateApplication(window.pid), pid: window.pid, bundleID: window.bundleID)
+        created.naturalFrame = window.frame
+        return shouldFloat(created, title: title, resizable: window.resizable)
     }
 }

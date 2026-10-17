@@ -13,7 +13,8 @@ extension WindowManager {
             for (index, template) in library.templates.enumerated() {
                 let key = index < 9 ? String(index + 1) : nil
                 actions.append(QuickAction(id: "template.\(template.id)", title: template.name, symbol: "rectangle.3.group",
-                                           keys: key.map { [$0] } ?? [], keyCode: key.flatMap { keyCodes[$0] }) {
+                                           keys: key.map { [$0] } ?? [], keyCode: key.flatMap { keyCodes[$0] },
+                                           remove: { library.delete(template) }) {
                     library.restore(template)
                 })
             }

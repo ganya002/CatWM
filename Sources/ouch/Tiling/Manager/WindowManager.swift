@@ -6,7 +6,17 @@ final class WindowManager {
 
     var config = Config.load()
     var tilingEnabled = true
-    var restoringTemplate = false
+    var restoringTemplate = false {
+        didSet {
+            if restoringTemplate {
+                refreshWork?.cancel()
+                refreshWork = nil
+                refreshDeadline = .distantFuture
+                for id in windows.keys { animator.cancel(id) }
+            }
+        }
+    }
+    var templateHiddenWindows: [CGWindowID: Date] = [:]
     var onChange: (() -> Void)?
     var onDispatch: ((_ dispatcher: String, _ arg: String, _ inMode: Bool) -> Void)?
     var onModeChange: ((String) -> Void)?

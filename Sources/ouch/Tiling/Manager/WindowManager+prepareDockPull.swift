@@ -52,7 +52,7 @@ extension WindowManager {
     }
 
     func followFocus() {
-        guard isStarted, let w = reportedFocusedWindow() else { return }
+        guard isStarted, !restoringTemplate, let w = reportedFocusedWindow() else { return }
         if let p = pendingFocus {
             guard p.id == w.id else { return }
             pendingFocus = nil

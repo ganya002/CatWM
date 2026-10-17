@@ -66,7 +66,8 @@ struct CursorActionsView: View {
                             Rectangle().fill(Theme.hairline).frame(height: 1)
                                 .padding(.vertical, Theme.Space.xs).padding(.horizontal, Theme.Space.xs)
                         }
-                        ActionRow(action: action, hovered: model.hovered == action.id, shown: model.open, index: min(i, 8)) {
+                        ActionRow(action: action, hovered: model.hovered == action.id, shown: model.open, index: min(i, 8),
+                                  remove: action.remove == nil ? nil : { model.onDelete?(action) }) {
                             model.onPick?(action)
                         } hover: { inside in
                             if inside { model.hovered = action.id } else if model.hovered == action.id { model.hovered = nil }
@@ -83,7 +84,7 @@ struct CursorActionsView: View {
 
     private var editor: some View {
         VStack(alignment: .leading, spacing: Theme.Space.sm) {
-            TemplateSaveRow(name: $model.templateName, busy: model.capturing, problem: model.nameProblem,
+            TemplateSaveRow(name: $model.templateName, busy: !model.snapshotReady, problem: model.nameProblem,
                             save: { model.onSave?() }, cancel: { model.onCancelSave?() })
             Text(editorHint).textStyle(.caption).foregroundStyle(Theme.inkMuted)
                 .lineLimit(2).frame(maxWidth: .infinity, alignment: .leading)
@@ -95,8 +96,8 @@ struct CursorActionsView: View {
     private var editorHint: String {
         if let error = model.saveError { return error }
         if !model.templateName.isEmpty, let problem = model.nameProblem { return problem }
-        if model.capturing { return "Capturing screenshot…" }
-        if model.templateDraft?.screenshot == nil { return "No screenshot. Allow screen recording to capture previews." }
+        if !model.snapshotReady { return "Reading windows…" }
+        if !model.capturing, model.templateDraft?.screenshot == nil { return "No screenshot. Allow screen recording to capture previews." }
         return "Return to save · Esc to cancel"
     }
 }

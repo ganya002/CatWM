@@ -9,9 +9,14 @@ final class CursorActionsModel: ObservableObject {
     @Published var anchor = CGPoint.zero
     @Published var templateDraft: WorkspaceTemplate?
     @Published var templateName = ""
+    @Published var snapshotReady = false
     @Published var capturing = false
     @Published var saveError: String?
+    var previewJob: TemplatePreviewJob?
+    var snapshotTask: Task<Void, Never>?
+    var templateSaveGeneration = 0
     var onPick: ((QuickAction) -> Void)?
+    var onDelete: ((QuickAction) -> Void)?
     var onSave: (() -> Void)?
     var onCancelSave: (() -> Void)?
 
