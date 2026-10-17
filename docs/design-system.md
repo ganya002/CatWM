@@ -15,7 +15,7 @@ open build/ouch.app --args --gallery
 
 The Appearance control at the top switches between system, light and dark. When you add or change a component, add or change its example in `DesignGallery.swift`. To get a picture without a window, run the test with `OUCH_GALLERY_PNG=/path/to/gallery.png swift test`.
 
-A change to a token or a component rule is not finished until `Theme.swift`, `Components.swift`, the gallery and this file agree with it.
+A change to a token or a component rule is not finished until `Theme.swift`, the matching file in `UI/Components/`, the gallery and this file agree with it.
 
 ## Principles
 

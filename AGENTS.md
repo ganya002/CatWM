@@ -33,14 +33,14 @@ The app source is in `Sources/ouch/`. Each folder has one job:
 - `Settings/`: the Settings window and its panes.
 - `Sort/`: the Sort Windows panel and its model.
 - `Tiling/`: the window manager, the layouts, workspaces and the Accessibility wrappers.
-- `UI/`: the design system: tokens (`Theme.swift`), controls (`Components.swift`), menus and tooltips (`Popups.swift`), and the Design Gallery (`DesignGallery.swift`, debug builds only).
+- `UI/`: the design system: tokens (`Theme.swift`), controls (`Components/`), menus and tooltips (`Popups.swift`), and the Design Gallery (`DesignGallery.swift`, debug builds only).
 - `main.swift`: the entry point and the app delegate.
 
 # UI rules
 
 - Read `docs/design-system.md` before you build or change UI. It says how each component must look and when to use it. To see the components, open the Design Gallery: `./build.sh --dev`, then `open build/ouch.app --args --gallery`. When you add or change a component, update its example in `UI/DesignGallery.swift`.
 - Use the tokens in `UI/Theme.swift` for colour, type, symbol size, radius, spacing, shadow and motion. Do not type a raw value when a token exists.
-- Use the components in `UI/Components.swift` and `UI/Popups.swift`. Do not make a local copy of a control. If a control cannot do what you need, extend it.
+- Use the components in `UI/Components/` and `UI/Popups.swift`. Do not make a local copy of a control. If a control cannot do what you need, extend it. Each control is its own file under `Controls/`, `Rows/`, `Keys/`, or `Picker/`.
 - For a new window or panel, use `OuchPanel` (`UI/OuchPanel.swift`).
 - Run `Tools/check-style.sh` before you commit. It must pass. For a value that is a deliberate one-off (a hardware colour, the intro timing), add `// style-ok: <reason>` to the line.
 

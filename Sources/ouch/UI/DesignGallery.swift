@@ -116,6 +116,7 @@ struct DesignGalleryView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .background(Theme.bg)
+        .accessibilityHidden(true)
         .onChange(of: m.appearance) { _, new in setAppearance(new.appearance) }
     }
 
