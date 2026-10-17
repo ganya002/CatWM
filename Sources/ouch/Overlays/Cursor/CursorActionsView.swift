@@ -99,20 +99,8 @@ struct CursorActionsView: View {
                     RowHoverAnchor().frame(maxWidth: .infinity).frame(height: 0)
                 }
                 .onChange(of: model.open) { _, open in
-                    model.trackPointer = false
-                    model.hoverArm += 1
-                    guard open else { return }
-                    let arm = model.hoverArm
-                    let armTracking = {
-                        guard model.open, model.hoverArm == arm else { return }
-                        model.trackPointer = true
-                        CursorActions.shared.armPointerTracking()
-                    }
-                    if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
-                        armTracking()
-                        return
-                    }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + Theme.linger, execute: armTracking)
+                    model.trackPointer = open
+                    if open { CursorActions.shared.armPointerTracking() }
                 }
             }
             .onChange(of: model.keyboardHover) { _, id in

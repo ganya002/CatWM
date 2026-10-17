@@ -1,4 +1,5 @@
 import AppKit
+import QuartzCore
 import SwiftUI
 
 extension CursorActions {
@@ -8,16 +9,24 @@ extension CursorActions {
             queuePointerNote()
             return
         }
-        let p = CGPoint(x: cgPoint.x, y: (NSScreen.screens.first?.frame.height ?? 0) - cgPoint.y)
+        let raw = CGEvent(source: nil)?.location ?? cgPoint
+        let p = CGPoint(x: raw.x, y: (NSScreen.screens.first?.frame.height ?? 0) - raw.y)
         guard p != lastFollow else { return }
         lastFollow = p
         placeDot(at: p)
     }
 
     func placeDot(at point: CGPoint) {
+        guard let panel = dotPanel else { return }
         let side = Self.dotSize
         let o = CursorActionsView.markOffset
-        dotPanel?.setFrameOrigin(CGPoint(x: (point.x + o.width - side / 2).rounded(), y: (point.y - o.height - side / 2).rounded()))
+        let origin = CGPoint(x: (point.x + o.width - side / 2).rounded(), y: (point.y - o.height - side / 2).rounded())
+        guard panel.frame.origin != origin else { return }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        panel.setFrameOrigin(origin)
+        CATransaction.commit()
+        CATransaction.flush()
     }
 
     func place(menu panel: NSPanel, at point: CGPoint) {

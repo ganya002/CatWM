@@ -40,7 +40,6 @@ struct ActionRow: View {
                     .padding(.trailing, OMenuRowStyle.inset)
             }
         }
-        .animation(Motion.fade, value: hovered)
         .opacity(shown || reduceMotion ? 1 : 0)
         .offset(y: shown || reduceMotion ? 0 : -5)
         .animation(shown ? .timingCurve(0.2, 0.8, 0.2, 1, duration: 0.24).delay(0.06 + 0.022 * Double(index))
