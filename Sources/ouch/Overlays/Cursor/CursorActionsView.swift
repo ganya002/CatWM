@@ -75,23 +75,14 @@ struct CursorActionsView: View {
                 }
                 .overlay {
                     PointerRowHover(enabled: model.trackPointer) { point in
-                        guard let point, let next = rowID(at: point.y) else { return }
-                        if model.hovered != next { model.hovered = next }
+                        guard let point, let next = rowID(at: point.y), model.hovered != next else { return }
+                        var transaction = Transaction()
+                        transaction.disablesAnimations = true
+                        withTransaction(transaction) { model.hovered = next }
                     }
                 }
                 .onChange(of: model.open) { _, open in
-                    model.trackPointer = false
-                    model.hoverArm += 1
-                    guard open else { return }
-                    let arm = model.hoverArm
-                    if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
-                        model.trackPointer = true
-                        return
-                    }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + Theme.linger) {
-                        guard model.open, model.hoverArm == arm else { return }
-                        model.trackPointer = true
-                    }
+                    model.trackPointer = open
                 }
             }
             .onChange(of: model.keyboardHover) { _, id in
@@ -183,7 +174,7 @@ private final class RowHoverView: PassThroughView {
     }
 
     private func sample() {
-        guard let window else { return }
+        guard enabled, let window else { return }
         let local = convert(window.convertPoint(fromScreen: NSEvent.mouseLocation), from: nil)
         guard bounds.contains(local) else { return }
         move?(local)
