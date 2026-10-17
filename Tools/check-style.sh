@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-allow='^Sources/ouch/(UI/|Keys/KeyHintKeyboard\.swift|Keys/MacKeyboard\.swift)'
+allow='^Sources/ouch/(UI/|Keys/Keyboard/)'
 
 patterns=(
     '\.system\(size:'
