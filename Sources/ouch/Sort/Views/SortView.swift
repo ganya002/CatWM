@@ -4,7 +4,7 @@ import SwiftUI
 struct SortView: View {
     @ObservedObject var model: SortModel
     let width: CGFloat
-    static let inset = EdgeInsets(top: 24, leading: 48, bottom: 64, trailing: 48)
+    static var inset: EdgeInsets { EdgeInsets(all: Elevation.float.room) }
 
     var body: some View {
         let plan = model.plan

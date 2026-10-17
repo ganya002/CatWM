@@ -4,7 +4,7 @@ import SwiftUI
 struct CoachCardView: View {
     @ObservedObject var model: CoachModel
     static let width: CGFloat = 344
-    static let inset = EdgeInsets(top: 32, leading: 52, bottom: 68, trailing: 52)
+    static var inset: EdgeInsets { EdgeInsets(all: Elevation.float.room) }
 
     var body: some View {
         if let summary = model.summary {

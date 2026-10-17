@@ -3,7 +3,7 @@ import SwiftUI
 
 struct SortNudgeView: View {
     @ObservedObject var model: SortNudgeModel
-    static let inset = EdgeInsets(top: 18, leading: 32, bottom: 44, trailing: 32)
+    static var inset: EdgeInsets { EdgeInsets(all: Elevation.popover.room) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {

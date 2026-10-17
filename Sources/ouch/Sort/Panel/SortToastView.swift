@@ -5,7 +5,7 @@ struct SortToastView: View {
     let text: String
     let keys: [String]
     let undo: () -> Void
-    static let inset = EdgeInsets(top: 20, leading: 40, bottom: 56, trailing: 40)
+    static var inset: EdgeInsets { EdgeInsets(all: Elevation.float.room) }
 
     var body: some View {
         HStack(spacing: 12) {

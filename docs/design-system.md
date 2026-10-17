@@ -23,7 +23,7 @@ A change to a token or a component rule is not finished until `Sources/ouch/UI/T
 2. **One floating surface.** Menus, tooltips, tips, coach marks, the HUD and the welcome card are one component: `.surface(_ density:)`, at five densities. A new floating thing gets a density, never a new look.
 3. **Two levels, then search.** Menus nest one level, two at most. Deeper items go behind the search field at the top of every menu.
 4. **No boxes around content.** Content sits on the ground. Hairlines separate rows. Only floating things (menus, tips, tour cards, HUD) and the one content pane get a surface. They get depth from the `popover` and `float` elevations, not from borders.
-5. **Chrome is a wash.** Window chrome and sidebars sit on `Theme.wash`: `wash1`, then `bg` at 55%, then `wash2`. Items sit on it as pills. The content is one floating rounded pane (`.pane()`, `surface`, radius 14) inset 8 from the window edge.
+5. **Chrome is a wash.** Window chrome and sidebars sit on `Theme.wash`: `wash1`, then `bg` at 55%, then `wash2`. Items sit on it as pills. The content is one floating rounded pane (`.pane()`, `surface`, radius 14), inset by the popover shadow room on the top, bottom and trailing sides so the shadow fades out on the wash.
 6. **Quiet type, one face.** Chillax everywhere. Weight 400 for text, 500 for emphasis, 300 for large display. Nothing bolder, except the wordmark.
 7. **Symbols move with meaning.** An SF Symbol effect always reports something: an action landed, a thing refused, the app is busy, a tip is waiting. Never decoration.
 

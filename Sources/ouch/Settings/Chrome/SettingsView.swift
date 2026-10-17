@@ -14,7 +14,8 @@ struct SettingsView: View {
                 .frame(width: 228)
             PaneHost(doc: doc, ui: ui)
                 .pane()
-                .padding(.vertical, 8).padding(.trailing, 8)
+                .padding(EdgeInsets(top: Elevation.popover.room, leading: 0,
+                                    bottom: Elevation.popover.room, trailing: Elevation.popover.room))
         }
         .sheet(isPresented: $feedback.isOpen) { FeedbackSheet(feedback: feedback) }
         .background(Theme.wash.ignoresSafeArea())
