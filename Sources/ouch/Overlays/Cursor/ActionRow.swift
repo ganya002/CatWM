@@ -9,7 +9,6 @@ struct ActionRow: View {
     var remove: (() -> Void)? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let pick: () -> Void
-    let hover: (Bool) -> Void
 
     var body: some View {
         OMenuRow(highlighted: hovered, danger: action.destructive, action: pick) {
@@ -46,6 +45,5 @@ struct ActionRow: View {
         .offset(y: shown || reduceMotion ? 0 : -5)
         .animation(shown ? .timingCurve(0.2, 0.8, 0.2, 1, duration: 0.24).delay(0.06 + 0.022 * Double(index))
                          : .easeIn(duration: 0.08), value: shown) // style-ok: staggered entrance, timed to the surface
-        .onHover(perform: hover)
     }
 }
