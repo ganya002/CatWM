@@ -50,7 +50,8 @@ struct KeyHint: Identifiable, Equatable {
 
     static func label(dispatcher: String, arg: String) -> String {
         let (d, a) = normalized(dispatcher, arg)
-        let arrows = ["l": "←", "r": "→", "u": "↑", "d": "↓", "left": "←", "right": "→", "up": "↑", "down": "↓"]
+        if let hint = PointerActions.hint(d) { return hint }
+        let arrows = Direction.hintArrows
         let back = a.hasPrefix("prev") || a.hasPrefix("-") || a.hasPrefix("e-")
         func screen(_ s: String) -> String {
             if let arrow = arrows[s] { return "Screen \(arrow)" }
@@ -77,16 +78,9 @@ struct KeyHint: Identifiable, Equatable {
             case "removemaster": return "Mains −"
             default: return "Layout"
             }
-        case "fullscreen": return "Full"
-        case "nativefullscreen": return "Max"
-        case "togglefloating": return "Float"
         case "retile", "reevaluate": return "Retile"
         case "toggletiling": return "Tiling"
-        case "toggledim": return "Dim"
-        case "toggleblur": return "Blur"
         case "reload": return "Reload"
-        case "killactive": return "Close"
-        case "minimize": return "Min"
         case "exec": return "Run"
         case "exit": return "Quit"
         case "sethomespace": return "Home"

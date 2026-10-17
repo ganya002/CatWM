@@ -17,3 +17,15 @@ struct OIconButton: View {
         .accessibilityLabel(label)
     }
 }
+
+#if DEBUG
+extension GalleryContent {
+    @ViewBuilder var iconButtonExamples: some View {
+        HStack(spacing: Theme.Space.md) {
+            OIconButton(symbol: "gearshape", label: "Settings") {}
+            OIconButton(symbol: "arrow.triangle.2.circlepath", label: "Retile", size: .regular, variant: .secondary) {}
+            OIconButton(symbol: "trash", label: "Remove", variant: .ghostDanger) {}
+        }
+    }
+}
+#endif

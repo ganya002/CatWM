@@ -50,3 +50,26 @@ struct Kbd: View {
         }
     }
 }
+
+#if DEBUG
+extension GalleryExamples {
+    static let keys = GalleryExample(order: 7) { AnyView(GalleryContent(m: $0).keys) }
+}
+
+extension GalleryContent {
+    @ViewBuilder var keys: some View {
+        block("Keycaps and tooltips") {
+            HStack(alignment: .center, spacing: Theme.Space.xl) {
+                Kbd(keys: ["⌘", "K"])
+                Kbd(keys: ["⌥", "⇧", "H"])
+                Kbd(keys: ["H", "J", "K", "L"], size: .medium)
+                Kbd(keys: ["H"], size: .large)
+                Kbd(keys: ["L"], size: .large, pressed: true)
+                Kbd(keys: ["H"], size: .medium, onAccent: true)
+                    .padding(Theme.Space.sm).background(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(Theme.accent))
+            }
+            tooltipExamples
+        }
+    }
+}
+#endif

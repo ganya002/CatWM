@@ -8,6 +8,10 @@ struct ConfigOption {
     var note: String? = nil
     var valid: ClosedRange<Double>? = nil
     var setting: SettingInfo? = nil
+    var valueDescription = "value"
+    var documentation = ""
+    var choices: [(String, String)] = []
+    var setNumber: ((inout Config, Double) -> Void)? = nil
     let path: PartialKeyPath<Config>
     let read: (inout Config, _ value: String, _ rawKey: String) -> String?
     let text: (Config) -> String
@@ -16,6 +20,7 @@ struct ConfigOption {
 
     init<V>(_ key: String, _ path: WritableKeyPath<Config, V>, read: @escaping (String, _ rawKey: String) -> (V?, String?),
             text: @escaping (V) -> String, number: @escaping (V) -> Double = { _ in 0 }) {
+        self.valueDescription = V.self == Bool.self ? "bool" : "value"
         self.key = key
         self.path = path
         self.read = { c, v, raw in
@@ -31,14 +36,23 @@ struct ConfigOption {
     var names: [String] { [key] + aliases }
     var defaultText: String { text(Config()) }
 
+    func documented(_ value: String?, _ notes: String) -> Self {
+        var o = self
+        if let value { o.valueDescription = value }
+        o.documentation = notes
+        return o
+    }
+
     func aliases(_ a: String...) -> Self { var o = self; o.aliases = a; return o }
     func section(_ s: String) -> Self { var o = self; o.section = s; return o }
     func note(_ s: String) -> Self { var o = self; o.note = s; return o }
     func animation() -> Self { var o = self; o.group = .animation; return o }
     func setting(_ pane: Pane, _ id: String, _ label: String, help: String? = nil, keywords: String = "", advanced: Bool = false,
-                 range: ClosedRange<Double>? = nil, scale: Double = 1) -> Self {
+                 range: ClosedRange<Double>? = nil, scale: Double = 1, section: String? = nil, order: Int = 0,
+                 enabled: @escaping (Config) -> Bool = { _ in true }, unit: String = " pt", width: CGFloat = 160) -> Self {
         var o = self
-        o.setting = SettingInfo(pane: pane, id: id, label: label, help: help, keywords: keywords, advanced: advanced, range: range, scale: scale)
+        o.setting = SettingInfo(pane: pane, id: id, label: label, help: help, keywords: keywords, advanced: advanced, range: range, scale: scale,
+                                section: section ?? pane.defaultSection, order: order, enabled: enabled, unit: unit, width: width)
         return o
     }
 
@@ -62,6 +76,8 @@ struct ConfigOption {
             if let valid { x = min(valid.upperBound, max(valid.lowerBound, x)) }
             return (make(x), nil)
         }, text: text, number: number)
+        o.setNumber = { $0[keyPath: path] = make($1) }
+        o.valueDescription = "number"
         o.valid = valid
         return o
     }
@@ -73,12 +89,15 @@ struct ConfigOption {
 
     static func choice<V: RawRepresentable & CaseIterable>(_ key: String, _ path: WritableKeyPath<Config, V>, noun: String) -> Self
     where V.RawValue == String {
-        Self(key, path, read: { v, _ in
+        var o = Self(key, path, read: { v, _ in
             guard let x = V(rawValue: v.lowercased()) else {
                 return (nil, "unknown \(noun) `\(v)` (\(V.allCases.map(\.rawValue).joined(separator: ", ")))")
             }
             return (x, nil)
         }, text: { $0.rawValue })
+        o.choices = V.allCases.map { ($0.rawValue, $0.rawValue) }
+        o.valueDescription = V.allCases.map { "`\($0.rawValue)`" }.joined(separator: " ")
+        return o
     }
 
     private static let byName: [String: ConfigOption] = {

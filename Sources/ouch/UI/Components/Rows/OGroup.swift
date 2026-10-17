@@ -37,3 +37,21 @@ struct OGroup<Content: View>: View {
         }
     }
 }
+
+#if DEBUG
+extension GalleryExamples {
+    static let rows = GalleryExample(order: 5) { AnyView(GalleryContent(m: $0).rows) }
+}
+
+extension GalleryContent {
+    @ViewBuilder var rows: some View {
+        block("Rows and groups") {
+            OGroup("Behavior", footer: "Applies to new windows only.") {
+                switchRowExamples
+                rowExamples
+            }
+            .frame(maxWidth: 560)
+        }
+    }
+}
+#endif

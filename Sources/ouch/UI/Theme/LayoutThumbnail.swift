@@ -36,3 +36,18 @@ struct LayoutThumbnail: View {
                 CGRect(x: size.width * 0.38, y: size.height * 0.34, width: size.width * 0.56, height: size.height * 0.56)]
     }
 }
+
+#if DEBUG
+extension GalleryContent {
+    @ViewBuilder var thumbnailExamples: some View {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 112), spacing: Theme.Space.md)], alignment: .leading, spacing: Theme.Space.md) {
+                ForEach(Layout.allCases, id: \.self) { l in
+                    VStack(spacing: Theme.Space.xs) {
+                        LayoutThumbnail(layout: l, selected: l == m.layout).frame(width: 64, height: 40)
+                        Text(l.shortTitle).textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine()
+                    }
+                }
+            }
+    }
+}
+#endif

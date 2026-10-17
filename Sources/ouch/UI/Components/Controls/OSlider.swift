@@ -98,3 +98,28 @@ struct OSlider: View {
         .animation(Motion.fade, value: s.hovering)
     }
 }
+
+#if DEBUG
+extension GalleryExamples {
+    static let controls = GalleryExample(order: 4) { AnyView(GalleryContent(m: $0).controls) }
+}
+
+extension GalleryContent {
+    @ViewBuilder var controls: some View {
+        block("Controls") {
+            HStack(spacing: Theme.Space.xl) {
+                switchExamples
+                segmentExamples
+            }
+            VStack(alignment: .leading, spacing: Theme.Space.lg) {
+                OSlider(value: $m.gap, range: 0...40, step: 1, ticks: [8, 16, 24, 32], resetValue: 12, width: 260,
+                        label: "Window gap", format: { "\(Int($0)) px" })
+                OSlider(value: $m.ratio, range: 20...80, step: 1, ticks: [50], resetValue: 50, width: 260,
+                        label: "Split ratio", format: { "\(Int($0)) / \(100 - Int($0))" })
+                barSliderExample
+            }
+            textFieldExamples
+        }
+    }
+}
+#endif

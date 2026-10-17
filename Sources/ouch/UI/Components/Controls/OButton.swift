@@ -28,3 +28,34 @@ struct OButton: View {
         .buttonStyle(OButtonStyle(variant: variant, size: size))
     }
 }
+
+#if DEBUG
+extension GalleryExamples {
+    static let buttons = GalleryExample(order: 3) { AnyView(GalleryContent(m: $0).buttons) }
+}
+
+extension GalleryContent {
+    @ViewBuilder var buttons: some View {
+        block("Buttons") {
+            let variants: [(String, ButtonVariant)] = [("Primary", .primary), ("Secondary", .secondary), ("Ghost", .ghost),
+                                                      ("Danger", .danger), ("Ghost danger", .ghostDanger)]
+            ForEach([ButtonSize.lg, .regular, .sm], id: \.self) { size in
+                VStack(alignment: .leading, spacing: Theme.Space.sm) {
+                    HStack(spacing: Theme.Space.md) {
+                        ForEach(variants, id: \.0) { name, variant in
+                            OButton(name, variant: variant, size: size) {}
+                        }
+                    }
+                    HStack(spacing: Theme.Space.md) {
+                        OButton("With icon", icon: "arrow.triangle.2.circlepath", size: size) {}
+                        OButton("Continue", variant: .primary, size: size, shortcut: ["↩"]) {}
+                        OButton("Disabled", size: size) {}.disabled(true)
+                    }
+                }
+                .fixedSize()
+            }
+            iconButtonExamples
+        }
+    }
+}
+#endif

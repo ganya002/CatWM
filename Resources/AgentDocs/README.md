@@ -17,7 +17,6 @@ Read in this order:
 
 - These docs ship inside the app at `Ouch.app/Contents/Resources/AgentDocs/`. `ouch docs` prints that folder.
 - The app binary is also the CLI: `Ouch.app/Contents/MacOS/ouch <command>`. A build from this repo lives at `build/ouch.app`.
-- The CLI only talks to an **already running** app. It posts a distributed notification and exits 0, so a successful exit does not mean the command worked. Check `~/Library/Logs/ouch.log`.
 - Config file: `~/.config/ouch/ouch.conf` (created on first run). Saved config presets: `~/.config/ouch/configs.json` (managed by the Settings window; don't hand-edit).
 - The Settings window rewrites `ouch.conf`. Comments and layout may change after the user edits settings in the UI.
 - Ouch needs the **Accessibility** permission. Without it nothing is tiled and no keybinds work.

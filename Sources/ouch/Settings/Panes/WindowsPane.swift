@@ -19,22 +19,8 @@ struct WindowsPane: View {
     }
 
     var pointerShortcuts: [CursorShortcutSpec] {
-        Self.pointerShortcutList.filter { $0.id != "workspace" || doc.config.virtualWorkspaces }
+        PointerActions.all.filter { $0.id != "workspace" || doc.config.virtualWorkspaces }
     }
-
-    static let pointerShortcutList: [CursorShortcutSpec] = [
-        CursorShortcutSpec(id: "float", title: "Float or tile", dispatcher: "togglefloating", args: ""),
-        CursorShortcutSpec(id: "zoom", title: "Zoom", dispatcher: "fullscreen", args: ""),
-        CursorShortcutSpec(id: "native", title: "Native Full Screen", dispatcher: "nativefullscreen", args: ""),
-        CursorShortcutSpec(id: "main", title: "Make Main", dispatcher: "layoutmsg", args: "swapwithmaster"),
-        CursorShortcutSpec(id: "layout", title: "Next Layout", dispatcher: "cyclelayout", args: "next"),
-        CursorShortcutSpec(id: "display", title: "Send to Next Display", dispatcher: "movewindowtomonitor", args: "+1"),
-        CursorShortcutSpec(id: "workspace", title: "Send to Next Workspace", dispatcher: "movetoworkspacesilent", args: "+1", nextWorkspace: true),
-        CursorShortcutSpec(id: "dim", title: "Dim Other Windows", dispatcher: "toggledim", args: ""),
-        CursorShortcutSpec(id: "blur", title: "Blur Other Windows", dispatcher: "toggleblur", args: ""),
-        CursorShortcutSpec(id: "minimize", title: "Minimize", dispatcher: "minimize", args: ""),
-        CursorShortcutSpec(id: "close", title: "Close", dispatcher: "killactive", args: ""),
-    ]
 
     var addMenu: some View {
         let doc = doc, apps = runningApps
@@ -53,4 +39,10 @@ struct WindowsPane: View {
         .fixedSize()
     }
 
+}
+
+extension WindowsPane {
+    static let searchSortCrowded = SettingEntry(id: "windows.sortCrowded", title: "Crowded from", pane: .windows, keywords: "sort windows workspace count tip")
+    static let searchBundleID = SettingEntry(id: "windows.bundleID", title: "Add app by bundle ID", pane: .windows, advanced: true, keywords: "floating wildcard identifier")
+    static let searchHome = SettingEntry(id: "windows.home", title: "Home Desktop", pane: .windows, advanced: true, keywords: "spaces desktop workspaces live")
 }

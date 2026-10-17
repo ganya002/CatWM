@@ -49,3 +49,19 @@ struct EssentialTile: View {
         .accessibilityAddTraits(isOn == nil ? [] : on ? [.isToggle, .isSelected] : .isToggle)
     }
 }
+
+#if DEBUG
+extension GalleryContent {
+    @ViewBuilder var essentialExamples: some View {
+        HStack(alignment: .top, spacing: Theme.Space.xs) {
+            EssentialTile(title: "Tiling", label: "Tiling", symbol: "rectangle.split.3x1", offSymbol: "rectangle.on.rectangle",
+                          isOn: m.essentialOn, shortcut: ["⌥", "T"]) { m.essentialOn.toggle() }
+            EssentialTile(title: "Float", label: "Float window", symbol: "macwindow.on.rectangle", offSymbol: "macwindow",
+                          isOn: false, shortcut: ["⌥", "F"]) {}
+            EssentialTile(title: "Retile", label: "Retile windows", symbol: "arrow.triangle.2.circlepath",
+                          shortcut: ["⌥", "Z"], rotates: true) {}
+        }
+        .frame(width: Theme.menuWidth)
+    }
+}
+#endif

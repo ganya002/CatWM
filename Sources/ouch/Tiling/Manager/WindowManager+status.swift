@@ -78,6 +78,10 @@ extension WindowManager {
         let arg = rawArg.trimmingCharacters(in: .whitespaces)
         let inMode = !Hotkeys.shared.submap.isEmpty
         defer { onDispatch?(dispatcher, arg, inMode) }
+        if let feature = FocusDim.features.first(where: { $0.pointer.dispatcher == dispatcher }) {
+            feature.run()
+            return
+        }
         switch dispatcher {
         case "movefocus": if let d = Direction(arg) { moveFocus(d) }
         case "movewindow":
@@ -106,17 +110,15 @@ extension WindowManager {
         case "cyclelayout": cycleLayout(arg.lowercased().hasPrefix("prev") ? -1 : 1)
         case "layout", "setlayout": if let l = Layout(rawValue: arg.lowercased()), let s = currentScreen() { setLayout(l, on: s) }
         case "toggletiling": toggleTiling()
-        case "toggledim": FocusDim.shared.toggleDim()
-        case "toggleblur": FocusDim.shared.toggleBlur()
+        case "retile", "reevaluate": corrections = [:]; refresh()
+        case "reload": reload()
+        case "exit": NSApp.terminate(nil)
         case "submap": Hotkeys.shared.setSubmap(arg)
         case "sethomespace": makeCurrentSpaceHome()
         case "sort":
             if config.virtualWorkspaces { SortPanel.shared.toggle() }
             else { HUD.shared.show("Sorting needs Ouch workspaces", on: currentScreen()?.ns) }
         case "sort-undo": SortPanel.shared.undoApplied()
-        case "retile", "reevaluate": corrections = [:]; refresh()
-        case "reload": reload()
-        case "exit": NSApp.terminate(nil)
         default: NSLog("Ouch: unknown dispatcher %@", dispatcher)
         }
     }

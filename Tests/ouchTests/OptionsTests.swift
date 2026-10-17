@@ -69,10 +69,31 @@ private func values(_ c: Config) -> [String: String] {
     }
 }
 
-@Test func changedTextChangesEveryOption() {
+@Test func changedTextExercisesItsDeclaredOptions() {
     let c = Config.parse(changed), d = Config()
-    for o in Options.all {
+    let options = changed.components(separatedBy: "\n").compactMap { line -> ConfigOption? in
+        guard let key = line.split(separator: "=", maxSplits: 1).first else { return nil }
+        return ConfigOption.named(key.trimmingCharacters(in: .whitespaces))
+    }
+    for o in options {
         #expect(o.text(c) != o.text(d), "\(o.key) kept its default")
+    }
+}
+
+@Test func everyOptionReadsAnAlternateValue() {
+    for option in Options.all {
+        let candidates = option.choices.map(\.0) + ["true", "false", "1", "2", "0", "0.5", "x", "linear", "macbook-air"]
+        let alternate = candidates.first { value in
+            var config = Config()
+            return option.read(&config, value, option.key) == nil && option.text(config) != option.defaultText
+        }
+        #expect(alternate != nil, "No alternate value exercises \(option.key)")
+        guard let alternate else { continue }
+        let config = Config.parse("\(option.key) = \(alternate)")
+        #expect(config.errors.isEmpty)
+        #expect(option.text(config) != option.defaultText)
+        let again = Config.parse(ConfigDocument(text: "\(option.key) = \(alternate)").serialize())
+        #expect(option.text(again) == option.text(config))
     }
 }
 

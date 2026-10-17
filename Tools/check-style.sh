@@ -3,6 +3,8 @@ import os
 import re
 import sys
 
+sys.dont_write_bytecode = True
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 STYLE_ALLOW = re.compile(
@@ -23,7 +25,7 @@ OK = re.compile(r"^// style-ok: (\S.*\S)$")
 
 def swift_files():
     yield "Package.swift"
-    for base in ("Sources", "Tests", "Tools"):
+    for base in ("Sources", "Tests", "Tools", "Plugins"):
         for dirpath, dirnames, names in os.walk(os.path.join(ROOT, base)):
             dirnames[:] = [d for d in dirnames if d not in (".build", "node_modules")]
             for name in names:
@@ -76,9 +78,65 @@ def banned(path, code):
     return hits
 
 
+def catalog_violations(path, source):
+    if not path.startswith("Sources/ouch/"):
+        return []
+    failures = []
+
+    def reject(pattern, reason):
+        for match in re.finditer(pattern, source, re.M):
+            number = source.count("\n", 0, match.start()) + 1
+            failures.append((path, number, reason, source.splitlines()[number - 1].strip()))
+
+    renderer = "Sources/ouch/Settings/Rows/OptionRows.swift"
+    pointer = "Sources/ouch/Settings/Panes/CursorShortcutSpec.swift"
+    feature = "Sources/ouch/Tiling/Focus/FocusDim.swift"
+    quick = "Sources/ouch/Tiling/Manager/WindowManager+quickActions.swift"
+    if path != renderer:
+        reject(r"\bOption(?:Switch|Slider|Row)(?:<[^>]+>)?\s*(?:\(|\.init\s*\()",
+               "catalog: construct option rows only in OptionRows, which reads Options.all")
+    if path not in (pointer, feature):
+        reject(r"\bCursorShortcutSpec\s*(?:\(|\.init\s*\()", "catalog: declare pointer actions only in PointerActions or the effect descriptor")
+        reject(r"\[CursorShortcutSpec\]\s*=\s*\[", "catalog: a second pointer action array is not allowed")
+    if path != quick:
+        reject(r"\bQuickAction\s*(?:\(|\.init\s*\()", "catalog: build quick actions only by walking PointerActions.all")
+    reject(r"\[(?:QuickAction|KeyHint)\]\s*=\s*\[\s*[^]\s]", "catalog: a hand-written quick action or key hint table is not allowed")
+    if path == quick:
+        reject(r'\baction\(\s*"', "catalog: quick action literals belong in PointerActions")
+    if path == "Sources/ouch/Keys/Keyboard/KeyHint.swift":
+        reject(r'"(?:togglefloating|fullscreen|nativefullscreen|toggledim|toggleblur|killactive|minimize)"',
+               "catalog: pointer key hints belong in the action descriptor")
+    if path not in (pointer, feature, "Sources/ouch/Keys/Map/KeyEditor.swift", "Sources/ouch/Config/Document/Actions.swift"):
+        reject(r'\bAction\s*\(\s*title:\s*"', "catalog: action declarations belong in Actions or PointerActions")
+    reject(r"\[(?:GalleryExample|ColorToken|SettingEntry|OptionPlacement)\]\s*=\s*\[", "catalog: the build generates gallery, palette, and custom search registries")
+    if path != pointer:
+        reject(r'PointerActions\.named\(\s*"', "catalog: walk PointerActions.all instead of listing action identities")
+    reject(r"static let dispatchers(?:\s*:\s*\[String\])?\s*=\s*\[", "catalog: dispatcher names come from the dispatch implementation")
+    if "/UI/Gallery/" in path:
+        reject(r"\bGalleryExample\s*\(", "catalog: register the gallery example in its control file")
+        reject(r'\bblock\(\s*"', "catalog: put gallery content in the control file")
+    if path.endswith("/DesignGalleryView+block.swift"):
+        reject(r"\b(?!(?:ScrollView|VStack|ForEach)\b)[A-Z]\w*\s*\(",
+               "catalog: the gallery body can only render the discovered registry")
+    if "DesignGalleryView" in path:
+        reject(r"\bvar\s+(?!(?:body|header|m)\b)\w+\s*:", "catalog: the gallery view must walk GalleryExamples.all")
+    if path == "Sources/ouch/Config/Document/Actions.swift":
+        reject(r'\badd\([^\n]*"(?:togglefloating|fullscreen|nativefullscreen|killactive|minimize|toggledim|toggleblur)"',
+               "catalog: read pointer commands from PointerActions")
+    reject(r'\("[^"\n]+", Theme\.(?:Radius|Space|Icon)\.', "catalog: gallery metrics come from the Theme declarations")
+    reject(r'ForEach\(\s*\[\("sm", Elevation', "catalog: elevations come from Elevation.allCases")
+    reject(r'for \(dir, name, arrow\) in \[', "catalog: direction actions come from Direction.allCases")
+    reject(r'(?:let|var) arrows\s*=\s*\[', "catalog: direction hints come from Direction.hintArrows")
+    if path == "Sources/ouch/Config/Options/Options.swift":
+        reject(r'"# tall,', "catalog: layout names come from Layout.allCases")
+    return failures
+
+
 def main():
     failures = []
     for path in sorted(swift_files()):
+        with open(os.path.join(ROOT, path), encoding="utf-8") as handle:
+            failures.extend(catalog_violations(path, handle.read()))
         in_multi = False
         in_block = False
         with open(os.path.join(ROOT, path), encoding="utf-8") as handle:
@@ -115,6 +173,32 @@ def main():
                 failures.append((path, number, why, line.strip()))
             if in_multi:
                 failures.append((path, number, "unclosed string", ""))
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("catalog_generator", os.path.join(ROOT, "Tools/generate-catalogs.py"))
+    generator = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(generator)
+    try:
+        digest_path = os.path.join(ROOT, "Resources/AgentDocs/config.catalog.sha256")
+        if not os.path.exists(digest_path) or open(digest_path, encoding="utf-8").read() != generator.config_doc_digest():
+            failures.append(("Resources/AgentDocs/config.md", 1, "catalog: config docs are stale. Run swift run ouch --write-config-docs", ""))
+        generator.gallery_examples()
+        option_sources = [os.path.join(ROOT, "Sources/ouch/Config/Options/Options.swift"), os.path.join(ROOT, "Sources/ouch/Tiling/Focus/FocusDim.swift")]
+        keys = set()
+        for source_path in option_sources:
+            source = open(source_path, encoding="utf-8").read()
+            keys.update(re.findall(r'(?:\.(?:bool|points|number|choice)|ConfigOption)\(\s*"([^"]+)"', source))
+            keys.update(re.findall(r'\.aliases\(\s*"([^"]+)"', source))
+        template = open(os.path.join(ROOT, "Resources/AgentDocs/config.template.md"), encoding="utf-8").read()
+        for marker in ("{{options}}", "{{layouts}}", "{{default-layouts}}"):
+            if template.count(marker) != 1:
+                failures.append(("Resources/AgentDocs/config.template.md", 1,
+                                 "catalog: keep one generated " + marker + " placeholder", ""))
+        for match in re.finditer(r'^\| `([^`]+)`', template, re.M):
+            if match[1] in keys:
+                failures.append(("Resources/AgentDocs/config.template.md", template.count("\n", 0, match.start()) + 1,
+                                 "catalog: option table rows come from Options.all", match[0]))
+    except ValueError as error:
+        failures.append(("Tools/generate-catalogs.py", 1, str(error), ""))
     if failures:
         for path, number, why, text in failures:
             print(f"{path}:{number}: {why}")

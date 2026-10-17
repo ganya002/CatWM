@@ -9,4 +9,21 @@ struct SettingInfo {
     var advanced = false
     var range: ClosedRange<Double>? = nil
     var scale: Double = 1
+    var section = ""
+    var order = 0
+    var enabled: (Config) -> Bool = { _ in true }
+    var unit = " pt"
+    var width: CGFloat = 160
+}
+
+extension Pane {
+    var defaultSection: String {
+        switch self {
+        case .general: "General"
+        case .layout: "Gaps"
+        case .windows: "Focus"
+        case .motion: "Feel"
+        case .shortcuts: "Keyboard"
+        }
+    }
 }

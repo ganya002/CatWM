@@ -25,3 +25,16 @@ struct OTooltip: View {
         .accessibilityElement(children: .combine)
     }
 }
+
+#if DEBUG
+extension GalleryContent {
+    @ViewBuilder var tooltipExamples: some View {
+        HStack(alignment: .top, spacing: Theme.Space.xl) {
+            OTooltip(text: "Retile", chords: [["Z"]], caret: .none).fixedSize()
+            OTooltip(text: "Settings", chords: [["⌘", ","]], caret: .none).fixedSize()
+            OTooltip(text: "Swap with main", caret: .none).fixedSize()
+            OIconButton(symbol: "gearshape", label: "Hover for a tooltip") {}
+        }
+    }
+}
+#endif

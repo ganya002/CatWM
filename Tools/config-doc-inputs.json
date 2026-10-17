@@ -1,0 +1,13 @@
+{
+  "directories": [
+    "Sources/ouch/Config/Options",
+    "Sources/ouch/Config/Model"
+  ],
+  "files": [
+    "Sources/ouch/Tiling/Focus/FocusDim.swift",
+    "Sources/ouch/Tiling/Layout/Layout.swift",
+    "Resources/AgentDocs/config.template.md",
+    "Resources/AgentDocs/config.md",
+    "Tools/config-doc-inputs.json"
+  ]
+}

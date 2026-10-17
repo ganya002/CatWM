@@ -22,29 +22,17 @@ extension WindowManager {
             }
         }
 
-        var out = [action("float", w.isFloating ? "Tile" : "Float", "macwindow.on.rectangle", "togglefloating", isOn: w.isFloating)]
-        if isTiled {
-            out.append(action("zoom", "Zoom", "arrow.up.left.and.arrow.down.right", "fullscreen", isOn: st?.zoomed == id))
+        let context = CursorShortcutSpec.Context(floating: w.isFloating, tiled: isTiled, zoomed: st?.zoomed == id,
+                                                 nativeFullscreen: w.isNativeFullscreen,
+                                                 canMakeMain: isTiled && ids.count > 1 && ids.first != id && st?.layout.hasMainPane == true,
+                                                 multipleLayouts: config.layouts.count > 1, multipleDisplays: screens.count > 1,
+                                                 virtualWorkspace: config.virtualWorkspaces && isVirtual(workspaceOf[id]))
+        let out = PointerActions.all.filter { $0.available(context) }.map { spec in
+            let (dispatcher, arg) = spec.nextWorkspace ? nextWorkspaceDispatch(mode: mode) : (spec.dispatcher, spec.args)
+            let title = spec.id == "float" && w.isFloating ? "Tile" : spec.menuTitle
+            return action(spec.menuID, title, spec.action.symbol, dispatcher, arg,
+                          isOn: spec.selected(context), destructive: spec.destructive)
         }
-        out.append(action("nativefullscreen", "Native Full Screen", "arrow.up.left.and.down.right.and.arrow.up.right.and.down.left",
-                          "nativefullscreen", isOn: w.isNativeFullscreen))
-        if isTiled, let st, ids.count > 1, ids.first != id, st.layout.hasMainPane {
-            out.append(action("main", "Make Main", "star.square", "layoutmsg", "swapwithmaster"))
-        }
-        if config.layouts.count > 1 {
-            out.append(action("layout", "Next Layout", "rectangle.2.swap", "cyclelayout", "next"))
-        }
-        if screens.count > 1 {
-            out.append(action("display", "Send to Next Display", "rectangle.portrait.and.arrow.right", "movewindowtomonitor", "+1"))
-        }
-        if config.virtualWorkspaces, isVirtual(workspaceOf[id]) {
-            let (d, a) = nextWorkspaceDispatch(mode: mode)
-            out.append(action("workspace", "Send to Next Workspace", "arrow.right.square", d, a))
-        }
-        out.append(action("dim", "Dim Other Windows", "circle.lefthalf.filled", "toggledim", isOn: FocusDim.shared.dims))
-        out.append(action("blur", "Blur Other Windows", "drop.halffull", "toggleblur", isOn: FocusDim.shared.blurs))
-        out.append(action("minimize", "Minimize", "minus.square", "minimize"))
-        out.append(action("close", "Close", "xmark.square", "killactive", destructive: true))
         return (quickActionTitle(w), out)
     }
 

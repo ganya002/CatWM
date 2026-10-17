@@ -65,3 +65,13 @@ struct OBarSlider: View {
         .allowsHitTesting(false)
     }
 }
+
+#if DEBUG
+extension GalleryContent {
+    @ViewBuilder var barSliderExample: some View {
+        OBarSlider(value: $m.speed, range: 0...1, step: 0.01, label: "Speed", symbol: "wand.and.stars",
+                   format: { "\(Int($0 * 100))%" })
+            .frame(width: 320)
+    }
+}
+#endif
