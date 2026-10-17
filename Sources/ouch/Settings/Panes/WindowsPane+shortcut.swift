@@ -5,28 +5,19 @@ extension WindowsPane {
     @ViewBuilder var body: some View {
         VStack(alignment: .leading, spacing: 30) {
             OGroup("Focus") {
-                OptionSwitch(\.focusFollowsMouse, doc: doc, ui: ui)
-                OptionSwitch(\.focusFollowsMouseInModeOnly, doc: doc, ui: ui)
-                    .disabled(!doc.config.focusFollowsMouse)
-                OptionSwitch(\.mouseFollowsFocus, doc: doc, ui: ui)
-                OptionSwitch(\.dimOtherWindows, doc: doc, ui: ui)
-                OptionSlider(\.dimStrength, doc: doc, ui: ui, format: { "\(Int($0))%" })
-                    .disabled(!doc.config.dimOtherWindows)
-                OptionSwitch(\.blurOtherWindows, doc: doc, ui: ui)
-                OptionSlider(\.blurRadius, doc: doc, ui: ui, format: { "\(Int($0)) pt" })
-                    .disabled(!doc.config.blurOtherWindows)
+                OptionRows(pane: .windows, section: "Focus", doc: doc, ui: ui)
             }
 
             OGroup("Mouse") {
-                OptionSwitch(\.mouseSwapsWindows, doc: doc, ui: ui)
-                OptionSwitch(\.mouseResizesWindows, doc: doc, ui: ui)
+                OptionRows(pane: .windows, section: "Mouse", doc: doc, ui: ui)
+            }
+
+            OGroup("Pointer menu") {
+                OptionRows(pane: .windows, section: "Pointer menu", doc: doc, ui: ui)
             }
 
             OGroup("Floating") {
-                OptionRow(\Config.floatingIsBlacklist, ui: ui,
-                          description: doc.config.floatingIsBlacklist ? "Float; everything else tiles" : "Are the only ones that tile") { label in
-                    OSegmented(title: label, options: [(true, "Float"), (false, "Tile")], selection: $doc.config.floatingIsBlacklist)
-                }
+                OptionRows(pane: .windows, section: "Floating", doc: doc, ui: ui)
                 if doc.config.floating.isEmpty {
                     ORow("No apps yet", description: "Add one that's running, or by bundle ID under Advanced") { addMenu }
                 } else {
@@ -49,47 +40,31 @@ extension WindowsPane {
             }
 
             OGroup("Workspaces") {
-                OptionSwitch(\.virtualWorkspaces, doc: doc, ui: ui)
-                OptionRow(\Config.sortStrategy, ui: ui) { label in
-                    OMenuPicker(title: label, options: SortStrategy.allCases.map { ($0, $0.title) }, selection: $doc.config.sortStrategy)
-                }
-                .disabled(!doc.config.virtualWorkspaces)
-                let nudge = ConfigOption.at(\Config.sortNudge)
-                OSwitchRow(nudge.ui.label, description: nudge.ui.help,
-                           isOn: Binding(get: { doc.config.sortNudge > 0 }, set: { doc.config.sortNudge = $0 ? Int(nudge.resetValue) : 0 }))
-                    .disabled(!doc.config.virtualWorkspaces)
-                    .setting(nudge.ui.id, ui)
-                ORow("Crowded from", description: "Windows on one workspace") {
-                    OSlider(value: Binding(get: { Double(doc.config.sortNudge) },
-                                           set: { doc.config.sortNudge = Int($0.rounded()) }),
-                            range: nudge.sliderRange(holding: Double(doc.config.sortNudge)), step: 1, ticks: [nudge.resetValue],
-                            resetValue: nudge.resetValue, width: 160, label: "Crowded from", format: { "\(Int($0)) windows" })
-                }
-                .disabled(!doc.config.virtualWorkspaces || doc.config.sortNudge == 0)
-                .setting("windows.sortCrowded", ui)
+                OptionRows(pane: .windows, section: "Workspaces", doc: doc, ui: ui)
             }
+
+            AdditionalOptionGroups(pane: .windows, doc: doc, ui: ui)
 
             AdvancedSection(pane: .windows, ui: ui) {
                 OGroup("Windows") {
-                    OptionSwitch(\.newWindowsToMain, doc: doc, ui: ui)
-                    OptionSwitch(\.floatSmallWindows, doc: doc, ui: ui)
-                    ORow("Add app by bundle ID", description: "Wildcards like com.adobe.* work too") {
+                    OptionRows(pane: .windows, section: "Windows", advanced: true, doc: doc, ui: ui)
+                    ORow(WindowsPane.searchBundleID.title, description: "Wildcards like com.adobe.* work too") {
                         OTextField(placeholder: "com.example.app", text: $ui.newID, mono: true, onSubmit: add).frame(width: 190)
                         OButton("Add", size: .sm, action: add)
                             .disabled(ui.newID.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
-                    .setting("windows.bundleID", ui)
+                    .setting(WindowsPane.searchBundleID.id, ui)
                 }
                 OGroup("Workspaces") {
-                    OptionSwitch(\.stayOnWorkspaceAfterClose, doc: doc, ui: ui)
-                        .disabled(!doc.config.virtualWorkspaces)
-                    ORow("Home Desktop", description: WindowManager.shared.homeSpaceSummary.isEmpty ? "The Desktop you're on when Ouch starts"
+                    OptionRows(pane: .windows, section: "Workspaces", advanced: true, doc: doc, ui: ui)
+                    ORow(WindowsPane.searchHome.title, description: WindowManager.shared.homeSpaceSummary.isEmpty ? "The Desktop you're on when Ouch starts"
                         : "Workspaces live on \(WindowManager.shared.homeSpaceSummary)") {
                         OButton("Use This Desktop", size: .sm) { WindowManager.shared.makeCurrentSpaceHome() }
                     }
                     .disabled(!doc.config.virtualWorkspaces)
-                    .setting("windows.home", ui)
+                    .setting(WindowsPane.searchHome.id, ui)
                 }
+                AdditionalOptionGroups(pane: .windows, advanced: true, doc: doc, ui: ui)
             }
         }
     }

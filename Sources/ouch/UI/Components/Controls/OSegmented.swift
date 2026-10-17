@@ -46,3 +46,11 @@ struct OSegmented<T: Hashable>: View {
         }
     }
 }
+
+#if DEBUG
+extension GalleryContent {
+    @ViewBuilder var segmentExamples: some View {
+        OSegmented(title: "Curve", options: ["Ease", "Spring", "Off"].map { ($0, $0) }, selection: $m.segment)
+    }
+}
+#endif

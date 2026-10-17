@@ -25,10 +25,12 @@ struct TemplatesPane: View {
                                 update: { library.update(template) }, delete: { library.delete(template) })
                 }
             }
-            .setting("templates.saved", ui)
+            .setting(Self.searchSaved.id, ui)
         }
         .sheet(item: $library.preview) { template in
             TemplatePreviewSheet(template: template) { library.preview = nil }
         }
     }
+
+    static let searchSaved = SettingEntry(id: "templates.saved", title: "Saved workspace templates", pane: .templates, keywords: "open restore rename delete displays quick actions")
 }

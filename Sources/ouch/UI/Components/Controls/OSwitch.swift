@@ -51,3 +51,13 @@ struct OSwitch: View {
         .accessibilityAction { isOn.toggle() }
     }
 }
+
+#if DEBUG
+extension GalleryContent {
+    @ViewBuilder var switchExamples: some View {
+        OSwitch(isOn: $m.on, label: "Tiling")
+        OSwitch(isOn: $m.off, label: "Focus follows mouse")
+        OSwitch(isOn: $m.on, label: "Disabled").disabled(true)
+    }
+}
+#endif

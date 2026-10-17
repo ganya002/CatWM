@@ -6,27 +6,6 @@ struct ShortcutsPane: View {
     @ObservedObject var doc: ConfigDocument
     @ObservedObject var ui: SettingsUI
 
-    private var keyboardFinishOptions: [(value: String, label: String)] {
-        var options = [
-            (value: "auto", label: "Auto (this Mac)"),
-            (value: "macbook-pro", label: "MacBook Pro (family)"),
-            (value: "macbook-air", label: "MacBook Air (family)"),
-            (value: "macbook-neo", label: "MacBook Neo (family)"),
-            (value: "magic-keyboard", label: "Magic Keyboard (family)"),
-        ] + FinishID.allCases.map { (value: MacKeyboard.slug($0.name), label: $0.name) }
-        if !options.contains(where: { $0.value == doc.config.keyboardFinish }) {
-            options.append((value: doc.config.keyboardFinish, label: doc.config.keyboardFinish))
-        }
-        return options
-    }
-
-    private var keyboardHelpHint: String {
-        let enter = doc.binds.first { $0.submap.isEmpty && $0.dispatcher == "submap" && $0.args.lowercased() != "reset" }
-        guard let enter, let flags = ConfigDocument.flags(doc.resolvedMods(enter.mods)) else { return "Press \(doc.config.keyboardHelpKey) in window mode" }
-        let hold = ConfigDocument.modifierCaps(flags.subtracting(.shift)).joined()
-        return hold.isEmpty ? "Press \(doc.config.keyboardHelpKey) in window mode" : "Hold \(hold) after \(doc.prettyShortcut(enter).joined()), or press \(doc.config.keyboardHelpKey) in window mode"
-    }
-
     private func category(_ r: BindRow) -> ActionCategory {
         Actions.match(r)?.category ?? Actions.rangeSummary(r)?.category ?? .custom
     }
@@ -54,14 +33,18 @@ struct ShortcutsPane: View {
                 OIconButton(symbol: "keyboard", label: "Shortcut map", variant: .secondary) {
                     withAnimation(Motion.snap) { ui.showMap = true }
                 }
-                .setting("shortcuts.map", ui)
+                .setting(ShortcutsPane.searchMap.id, ui)
             }
-            .setting("shortcuts.list", ui)
+            .setting(ShortcutsPane.searchList.id, ui)
 
             OGroup("Keyboard") {
-                OptionSwitch(\.keyboardHelp, doc: doc, ui: ui, description: keyboardHelpHint)
-                OptionRow(\Config.keyboardFinish, ui: ui) { label in
-                    OMenuPicker(title: label, options: keyboardFinishOptions, selection: $doc.config.keyboardFinish)
+                OptionRows(pane: .shortcuts, section: "Keyboard", doc: doc, ui: ui)
+            }
+
+            AdditionalOptionGroups(pane: .shortcuts, doc: doc, ui: ui)
+            if !OptionRows.additionalSections(pane: .shortcuts, advanced: true).isEmpty {
+                AdvancedSection(pane: .shortcuts, ui: ui) {
+                    AdditionalOptionGroups(pane: .shortcuts, advanced: true, doc: doc, ui: ui)
                 }
             }
 
@@ -116,4 +99,9 @@ struct ShortcutsPane: View {
         ui.shortcutFilter = ""
         DispatchQueue.main.async { ui.recording = row.id }
     }
+}
+
+extension ShortcutsPane {
+    static let searchList = SettingEntry(id: "shortcuts.list", title: "Keyboard shortcuts", pane: .shortcuts, keywords: "keybinds hotkeys bind")
+    static let searchMap = SettingEntry(id: "shortcuts.map", title: "Shortcut map", pane: .shortcuts, keywords: "keyboard overview")
 }

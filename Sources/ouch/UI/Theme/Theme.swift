@@ -137,3 +137,30 @@ enum Theme {
 
     static let fast = 0.12, medium = 0.18, slow = 0.28, linger = 0.45
 }
+
+#if DEBUG
+extension GalleryExamples {
+    static let colours = GalleryExample(order: 0) { AnyView(GalleryContent(m: $0).colours) }
+}
+
+extension GalleryContent {
+    @ViewBuilder var colours: some View {
+        block("Colour (hex: light / dark)") {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: Theme.Space.md)], alignment: .leading,
+                      spacing: Theme.Space.md) {
+                ForEach(ColorToken.all) { token in
+                    VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                        RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
+                            .fill(Color(nsColor: Theme.ns(token.path)))
+                            .frame(height: 36)
+                            .overlay(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
+                                .strokeBorder(Theme.hairline, lineWidth: 1))
+                        Text(token.name).font(Theme.body(12.5, .medium)).foregroundStyle(Theme.ink)
+                        Text(hex(token.path)).font(Theme.mono(11, .regular)).foregroundStyle(Theme.inkMuted)
+                    }
+                }
+            }
+        }
+    }
+}
+#endif

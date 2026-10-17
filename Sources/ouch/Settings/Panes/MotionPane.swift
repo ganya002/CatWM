@@ -50,7 +50,7 @@ struct MotionPane: View {
                 }
                 .padding(.vertical, 10)
             }
-            .setting("motion.style", ui)
+            .setting(MotionPane.searchStyle.id, ui)
 
             OGroup("Preview") {
                 preview
@@ -60,83 +60,22 @@ struct MotionPane: View {
                     OButton("Play", icon: "play.fill", size: .sm, action: play)
                 }
             }
-            .setting("motion.preview", ui)
+            .setting(MotionPane.searchPreview.id, ui)
 
             OGroup("Feel") {
-                OptionSwitch(\.animate, doc: doc, ui: ui)
-                let duration = ConfigOption.at(\Config.animationDuration).ui
-                OBarSlider(value: Binding(get: { c.animationDuration }, set: { doc.config.animationDuration = ($0 * 100).rounded() / 100 }),
-                           range: duration.range ?? 0...1, step: 0.01, label: duration.label, symbol: "timer",
-                           format: { "\(Int(($0 * 1000).rounded())) ms" }, onCommit: play)
-                    .padding(.vertical, 12)
-                    .disabled(!c.animate)
-                    .setting(duration.id, ui)
+                OptionRows(pane: .motion, section: "Feel", doc: doc, ui: ui, onCommit: play)
             }
+
+            AdditionalOptionGroups(pane: .motion, doc: doc, ui: ui, onCommit: play)
 
             AdvancedSection(pane: .motion, ui: ui) {
                 OGroup("Curve") {
-                    OptionRow(\Config.animationCurve, ui: ui) { label in
-                        OMenuPicker(title: label,
-                                    options: AnimationCurve.named.map { ($0.name, $0.title) } + [("bezier", AnimationCurve.bezier(0, 0, 0, 0).title)],
-                                    selection: Binding(get: { c.animationCurve.isBezier ? "bezier" : c.animationCurve.name }, set: { name in
-                                        if name == "bezier" {
-                                            if !c.animationCurve.isBezier { doc.config.animationCurve = .bezier(0.34, 1.56, 0.64, 1) }
-                                        } else if let curve = AnimationCurve(name) {
-                                            doc.config.animationCurve = curve
-                                        }
-                                        play()
-                                    }))
-                    }
-                    .disabled(!c.animate)
-                    if case let .bezier(x1, y1, x2, y2) = c.animationCurve {
-                        ORow("Control points", description: "x1, y1, x2, y2 as in CSS; y past 1 overshoots") {
-                            OTextField(placeholder: "0.34, 1.56, 0.64, 1", text: $ui.bezierText, mono: true, onSubmit: play)
-                                .frame(width: 170)
-                                .onAppear { ui.bezierText = Self.points(x1, y1, x2, y2) }
-                                .onChange(of: c.animationCurve) { _, new in
-                                    if case let .bezier(a, b, c, d) = new, AnimationCurve(ui.bezierText) != new { ui.bezierText = Self.points(a, b, c, d) }
-                                }
-                                .onChange(of: ui.bezierText) { _, text in
-                                    if let curve = AnimationCurve(text), curve.isBezier { doc.config.animationCurve = curve }
-                                }
-                        }
-                        .disabled(!c.animate)
-                        .setting("motion.bezier", ui)
-                    }
-                    let bounce = ConfigOption.at(\Config.animationBounce).ui
-                    OBarSlider(value: Binding(get: { c.animationBounce }, set: { doc.config.animationBounce = ($0 * 100).rounded() / 100 }),
-                               range: bounce.range ?? 0...1, step: 0.01, label: bounce.label, symbol: "sparkles",
-                               format: { "\(Int(($0 * 100).rounded()))%" }, onCommit: play)
-                        .padding(.vertical, 12)
-                        .disabled(!c.animate || !c.animationCurve.usesBounce)
-                        .tooltip(bounce.help ?? "")
-                        .setting(bounce.id, ui)
+                    OptionRows(pane: .motion, section: "Curve", advanced: true, doc: doc, ui: ui, onCommit: play)
                 }
                 OGroup("Panels and window mode") {
-                    OptionRow(\Config.panelAnimation, ui: ui) { label in
-                        HStack(spacing: 8) {
-                            OMenuPicker(title: label, options: PanelMotion.allCases.map { ($0.rawValue, $0.title) },
-                                        selection: Binding(get: { c.panelAnimation.rawValue }, set: { raw in
-                                            guard let m = PanelMotion(rawValue: raw) else { return }
-                                            doc.config.panelAnimation = m
-                                            PanelMotionDemo.play([m], keyboardOnly: true)
-                                        }))
-                            OButton("Play", icon: "play.fill", size: .sm) { PanelMotionDemo.play([c.panelAnimation], keyboardOnly: true) }
-                        }
-                    }
-                    OptionRow(\Config.modeEffect, ui: ui) { label in
-                        HStack(spacing: 8) {
-                            OMenuPicker(title: label, options: ModeFX.Style.allCases.map { ($0.rawValue, $0.title) },
-                                        selection: Binding(get: { c.modeEffect.rawValue }, set: { raw in
-                                            guard let s = ModeFX.Style(rawValue: raw) else { return }
-                                            doc.config.modeEffect = s
-                                            ModeFX.shared.command([s.rawValue])
-                                        }))
-                            OButton("Play", icon: "play.fill", size: .sm) { ModeFX.shared.command([c.modeEffect.rawValue]) }
-                                .disabled(c.modeEffect == .none)
-                        }
-                    }
+                    OptionRows(pane: .motion, section: "Panels and window mode", advanced: true, doc: doc, ui: ui)
                 }
+                AdditionalOptionGroups(pane: .motion, advanced: true, doc: doc, ui: ui, onCommit: play)
             }
         }
     }
@@ -168,4 +107,10 @@ struct MotionPane: View {
             ui.previewFlipped.toggle()
         }
     }
+}
+
+extension MotionPane {
+    static let searchStyle = SettingEntry(id: "motion.style", title: "Animation style", pane: .motion, keywords: "preset snappy smooth springy bouncy")
+    static let searchPreview = SettingEntry(id: "motion.preview", title: "Animation preview", pane: .motion, keywords: "play")
+    static let searchBezier = SettingEntry(id: "motion.bezier", title: "Bezier control points", pane: .motion, advanced: true, keywords: "cubic custom curve")
 }

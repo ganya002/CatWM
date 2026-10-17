@@ -43,3 +43,14 @@ struct RemoveButton: View {
         .accessibilityLabel(help)
     }
 }
+
+#if DEBUG
+extension GalleryContent {
+    @ViewBuilder var removeExamples: some View {
+        RemoveButton(help: "Remove row", variant: .row) {}
+        RemoveButton(help: "Close", variant: .close) {}
+        RemoveButton(help: "Restore", variant: .restore) {}
+        RemoveButton(help: "Remove badge", variant: .badge) {}
+    }
+}
+#endif

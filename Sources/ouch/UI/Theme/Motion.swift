@@ -21,3 +21,29 @@ enum Motion {
         static let fade = CAMediaTimingFunction(name: .easeOut)
     }
 }
+
+#if DEBUG
+extension GalleryExamples {
+    static let motion = GalleryExample(order: 14) { AnyView(GalleryContent(m: $0).motion) }
+}
+
+extension GalleryContent {
+    @ViewBuilder var motion: some View {
+        block("Motion") {
+            HStack(spacing: Theme.Space.xl) {
+                ForEach([("easeOut", Motion.easeOut), ("spring", Motion.spring), ("snap", Motion.snap), ("pop", Motion.pop)], id: \.0) { name, animation in
+                    VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(Theme.well).frame(width: 96, height: 20)
+                            Circle().fill(Theme.accent).frame(width: 16, height: 16).offset(x: m.moved ? 78 : 2)
+                                .animation(animation, value: m.moved)
+                        }
+                        Text(name).textStyle(.caption).foregroundStyle(Theme.inkMuted)
+                    }
+                }
+                OButton("Play") { m.moved.toggle() }
+            }
+        }
+    }
+}
+#endif

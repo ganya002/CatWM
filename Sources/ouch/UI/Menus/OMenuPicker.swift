@@ -32,3 +32,11 @@ struct OMenuPicker<T: Hashable>: View {
         .accessibilityValue(options.first { $0.value == selection }?.label ?? "")
     }
 }
+
+#if DEBUG
+extension GalleryContent {
+    @ViewBuilder var menuPickerExample: some View {
+        OMenuPicker(title: "Curve", options: ["Ease", "Spring", "Off"].map { ($0, $0) }, selection: $m.segment)
+    }
+}
+#endif

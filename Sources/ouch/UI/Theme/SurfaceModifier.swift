@@ -51,3 +51,49 @@ struct SurfaceModifier: ViewModifier {
         }
     }
 }
+
+#if DEBUG
+extension GalleryExamples {
+    static let surfaces = GalleryExample(order: 8) { AnyView(GalleryContent(m: $0).surfaces) }
+}
+
+extension GalleryContent {
+    @ViewBuilder var surfaces: some View {
+        block("Surfaces") {
+            HStack(alignment: .top, spacing: Theme.Space.xl) {
+                Text("Retile").font(Theme.body(12.5)).surface(.xs)
+                VStack(alignment: .leading, spacing: 2) {
+                    Label("Config reloaded", systemImage: "checkmark.circle.fill").font(Theme.body(13.5, .medium))
+                    Text("3 binds changed").textStyle(.caption).foregroundStyle(Theme.inkMuted)
+                }
+                .surface(.sm)
+                VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                    Text("Tip").kicker()
+                    Text("Hold ⌥ and drag anywhere in a window to move it.").font(Theme.body()).frame(width: 220, alignment: .leading)
+                }
+                .padding(Theme.Space.sm)
+                .surface(.md)
+            }
+            HStack(alignment: .top, spacing: Theme.Space.xl) {
+                VStack(alignment: .leading, spacing: Theme.Space.sm) {
+                    Text("Step 2 of 6").kicker()
+                    Text("Move focus").textStyle(.title)
+                    Text("Use H J K L to jump between windows.").font(Theme.body()).foregroundStyle(Theme.inkMuted)
+                    Kbd(keys: ["H"], size: .large)
+                }
+                .frame(width: 304, alignment: .leading)
+                .surface(.lg, caret: .top(40))
+                VStack(alignment: .leading, spacing: Theme.Space.md) {
+                    Text("Welcome").kicker()
+                    Text("Tile without thinking").font(Theme.display(34))
+                    Text("Ouch arranges your windows as you open them.").font(Theme.body()).foregroundStyle(Theme.inkMuted)
+                    OButton("Continue", variant: .primary, size: .lg, shortcut: ["↩"]) {}
+                }
+                .frame(width: 420, alignment: .leading)
+                .surface(.xl)
+            }
+            .padding(.top, Theme.Space.md)
+        }
+    }
+}
+#endif
