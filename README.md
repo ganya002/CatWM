@@ -155,7 +155,7 @@ On the Ouch home Desktop, **Bring Window Here** in the menu bar lists standard, 
 
 A plain click on a running app in the **Dock** also brings its preferred window from a native Desktop into the Ouch workspace on the Dock's display and focuses it. Ouch handles that click before the Dock can switch Desktops. Apps already on an Ouch home Desktop, minimized/fullscreen windows, hidden apps, modified clicks, dragging and long presses keep the Dock's usual behavior.
 
-This uses an undocumented bridged WindowServer operation adapted from [WhichSpace](https://github.com/gechr/WhichSpace). Tested on macOS 27.0.1 with SIP enabled: five imports took 5–7 ms, with no active Desktop change. Older macOS builds may refuse it; Ouch verifies actual Space membership before committing an assignment and reports failure without switching Desktops. See [the investigation and standalone probe](design/native-space-import.md).
+This uses an undocumented bridged WindowServer operation adapted from [WhichSpace](https://github.com/gechr/WhichSpace). Tested on macOS 27.0.1 with SIP enabled: five imports took 5–7 ms, with no active Desktop change. Older macOS builds may refuse it; Ouch verifies actual Space membership before committing an assignment and reports failure without switching Desktops. See [the investigation and standalone probe](docs/native-space-import.md).
 
 ### Dispatchers
 

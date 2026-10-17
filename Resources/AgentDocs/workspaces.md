@@ -19,7 +19,7 @@ A plain Dock click on a running app also imports and focuses its preferred nativ
 
 `movetoworkspace` / `movetoworkspacesilent` also accept a focused window on a native Desktop. The silent command leaves that Desktop active. The following command goes to the destination home Desktop once.
 
-The direct import uses a private bridged operation, verified on macOS 27.0.1 with SIP enabled. If macOS refuses it, the assignment is not changed and a HUD reports failure. Ouch does not fall back to visiting the source Desktop. See `design/native-space-import.md` in the source repository for the standalone GUI-session probe.
+The direct import uses a private bridged operation, verified on macOS 27.0.1 with SIP enabled. If macOS refuses it, the assignment is not changed and a HUD reports failure. Ouch does not fall back to visiting the source Desktop. See `docs/native-space-import.md` in the source repository for the standalone GUI-session probe.
 
 ## Tiling behaviour worth knowing
 

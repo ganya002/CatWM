@@ -1,0 +1,33 @@
+import AppKit
+import SwiftUI
+
+struct OStatus: View {
+    enum Kind { case success, warning, danger, info }
+    let kind: Kind
+    let text: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: symbol).font(Theme.symbol(Theme.Icon.sm, .semibold))
+            Text(text).font(Theme.body(12.5, .medium)).oneLine()
+        }
+        .foregroundStyle(color)
+    }
+
+    private var symbol: String {
+        switch kind {
+        case .success: "checkmark.circle.fill"
+        case .warning: "exclamationmark.triangle.fill"
+        case .danger: "xmark.octagon.fill"
+        case .info: "info.circle.fill"
+        }
+    }
+    private var color: Color {
+        switch kind {
+        case .success: Theme.success
+        case .warning: Theme.warning
+        case .danger: Theme.danger
+        case .info: Theme.accentInk
+        }
+    }
+}
