@@ -1,8 +1,6 @@
 import AppKit
 import SwiftUI
 
-enum KbdSize { case small, medium, large }
-
 struct Kbd: View {
     let keys: [String]
     var size: KbdSize = .small

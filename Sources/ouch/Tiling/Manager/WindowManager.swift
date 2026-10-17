@@ -1,0 +1,92 @@
+import AppKit
+
+final class WindowManager {
+
+    static let shared = WindowManager()
+
+    var config = Config.load()
+    var tilingEnabled = true
+    var onChange: (() -> Void)?
+    var onDispatch: ((_ dispatcher: String, _ arg: String, _ inMode: Bool) -> Void)?
+    var onModeChange: ((String) -> Void)?
+    var practice: (pid: pid_t, workspaces: [String: String])?
+
+    var windows: [CGWindowID: Window] = [:]
+    var model = WorkspaceModel()
+    var workspaceOf: [CGWindowID: String] { model.workspaceOf }
+    var order: [CGWindowID] { get { model.order } set { model.order = newValue } _modify { yield &model.order } }
+    var monitorOf: [String: String] { get { model.monitorOf } set { model.monitorOf = newValue } _modify { yield &model.monitorOf } }
+    var shown: [String: String] { get { model.shown } set { model.shown = newValue } _modify { yield &model.shown } }
+    var virtualShown: [String: String] {
+        get { model.virtualShown } set { model.virtualShown = newValue } _modify { yield &model.virtualShown }
+    }
+    var states: [String: ScreenState] { get { model.states } set { model.states = newValue } _modify { yield &model.states } }
+    var lastFocused: [String: CGWindowID] {
+        get { model.lastFocused } set { model.lastFocused = newValue } _modify { yield &model.lastFocused }
+    }
+    var focusStamps: [CGWindowID: Int] { model.focusStamps }
+    var focusClock: Int { model.focusClock }
+    var focusOrder: [CGWindowID] { model.focusOrder }
+    var homeSpace: [String: UInt64] = [:]
+    var displayOf: [CGWindowID: String] = [:]
+    var workspaceMoves: Set<CGWindowID> = []
+    var snapNextPlacement: Set<CGWindowID> = []
+    var present: Set<CGWindowID> = []
+    var pendingFocus: (id: CGWindowID, until: Date)?
+    var refocusAfterClose: String?
+    var lastClose = Date.distantPast
+    var floatFrames: [CGWindowID: CGRect] = [:]
+    var savedWorkspaceOf: [CGWindowID: String] = [:]
+    var savedOwnerOf: [CGWindowID: String] = [:]
+    var savedFloating: [CGWindowID: Bool] = [:]
+    var previousWorkspace: [String: String] = [:]
+    var labels: [String: String] = [:]
+    var sortSnapshot: SortSnapshot?
+    var closingNow: Set<CGWindowID> = []
+    var closingApps: Set<pid_t> = []
+    var sortSession = false
+    var quietWorkspaceHUD = false
+    struct Slide {
+        let monitor: String
+        let to: String
+        let outgoing: Set<CGWindowID>
+        let forward: Bool
+        let until: CFTimeInterval
+    }
+    var slide: Slide?
+    var crowdWork: DispatchWorkItem?
+    var autoSwitchAfter = Date.distantPast
+    var lastSavedWorkspaces = ""
+    var focusSink: NSWindow?
+    var visible: Set<CGWindowID> = []
+    var targets: [CGWindowID: CGRect] = [:]
+    var observers: [pid_t: AXObserver] = [:]
+    var corrections: [CGWindowID: (target: CGRect, count: Int)] = [:]
+    var drags: [CGWindowID: Bool] = [:]
+    var refreshWork: DispatchWorkItem?
+    var ffmWork: DispatchWorkItem?
+    var minSizes: [CGWindowID: CGSize] = [:]
+    var ratioChange: (screen: String, until: Date)?
+    var refreshDeadline = DispatchTime.distantFuture
+    var isStarted = false
+    var ignoreMouseUntil = Date.distantPast
+    var movingToSpace = false
+    var pendingSpace: (display: String, index: Int, until: Date)?
+    var spaceGeneration = 0
+    let animator = Animator()
+    let scanner = WindowScanner()
+    let dockWindowPull = DockWindowPull()
+    let dockArea = DockArea()
+
+    var currentLayoutTitle: String {
+        guard let s = currentScreen() else { return "" }
+        return state(for: s).layout.title
+    }
+
+    lazy var grabHints: [String: (fromLeft: CGPoint, fromRight: CGPoint)] = {
+        let saved = UserDefaults.standard.dictionary(forKey: "grabHints") as? [String: [Double]] ?? [:]
+        return saved.compactMapValues { v in
+            v.count == 4 ? (CGPoint(x: v[0], y: v[1]), CGPoint(x: v[2], y: v[3])) : nil
+        }
+    }()
+}

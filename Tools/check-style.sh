@@ -6,7 +6,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 STYLE_ALLOW = re.compile(
-    r"^Sources/ouch/(UI/|Keys/KeyHintKeyboard\.swift|Keys/MacKeyboard\.swift)"
+    r"^Sources/ouch/(UI/|Keys/Keyboard/)"
 )
 STYLE = re.compile(
     r"\.system\(size:"
