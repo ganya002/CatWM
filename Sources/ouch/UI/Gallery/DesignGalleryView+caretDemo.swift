@@ -94,9 +94,9 @@ extension DesignGalleryView {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Theme.surface)
                     .pane()
-                    .padding(Theme.Space.sm)
+                    .padding(Elevation.popover.room)
             }
-            .frame(width: 420, height: 120)
+            .frame(width: 420, height: 180)
             ZStack {
                 LinearGradient(colors: [Theme.accent, Theme.success], startPoint: .leading, endPoint: .trailing)
                 Text("Floating glass").font(Theme.body(13.5, .medium)).foregroundStyle(Theme.ink)

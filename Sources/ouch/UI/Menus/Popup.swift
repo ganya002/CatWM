@@ -14,7 +14,7 @@ final class Popup: NSObject, NSWindowDelegate {
 
     private var stack: [Entry] = []
     private let dismiss = DismissMonitor()
-    private static let margin: CGFloat = 26
+    private static var margin: CGFloat { Elevation.popover.room }
 
     var isOpen: Bool { !stack.isEmpty }
     private(set) var generation = 0
@@ -36,9 +36,9 @@ final class Popup: NSObject, NSWindowDelegate {
         let height = min(fromBottom ? above : below, 820)
         let x = model.opensLeft ? left - subs - m : left - m
         let frame = fromBottom
-            ? NSRect(x: x, y: anchor.maxY + 4 - m / 4, width: width + subs + 2 * m, height: height)
-            : NSRect(x: x, y: anchor.minY - 4 + m / 4 - height, width: width + subs + 2 * m, height: height)
-        let view = MenuRoot(model: model, rootX: model.opensLeft ? subs + m : m, top: m / 4, size: frame.size,
+            ? NSRect(x: x, y: anchor.maxY + 4 - m, width: width + subs + 2 * m, height: height)
+            : NSRect(x: x, y: anchor.minY - 4 + m - height, width: width + subs + 2 * m, height: height)
+        let view = MenuRoot(model: model, rootX: model.opensLeft ? subs + m : m, top: m, size: frame.size,
                             rootWidth: width, fromBottom: fromBottom)
         let g = generation + 1
         model.close = { [weak self] in self?.close(generation: g) }

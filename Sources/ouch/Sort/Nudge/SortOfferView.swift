@@ -5,7 +5,7 @@ struct SortOfferView: View {
     let caret: CGFloat
     let choose: (Bool) -> Void
     static let width: CGFloat = 344
-    static let inset = EdgeInsets(top: 32, leading: 52, bottom: 68, trailing: 52)
+    static var inset: EdgeInsets { EdgeInsets(all: Elevation.float.room) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {

@@ -10,7 +10,7 @@ final class Tooltip {
     private var lastHidden = Date.distantPast
     private var monitor: Any?
     private var watch: Timer?
-    private static let margin: CGFloat = 30
+    private static var margin: CGFloat { Elevation.popover.room }
 
     func hover(_ view: NSView, text: String, chords: [[String]]) {
         guard !text.isEmpty else { return }

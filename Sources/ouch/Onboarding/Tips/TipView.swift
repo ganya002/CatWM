@@ -5,7 +5,7 @@ struct TipView: View {
     let tip: Tips.Tip
     var inset = EdgeInsets()
     var caret: Caret = .none
-    static let panelInset = EdgeInsets(top: 18, leading: 32, bottom: 44, trailing: 32)
+    static var panelInset: EdgeInsets { EdgeInsets(all: Elevation.popover.room) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
