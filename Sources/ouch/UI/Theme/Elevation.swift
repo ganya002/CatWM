@@ -60,9 +60,9 @@ extension GalleryContent {
                         .frame(width: 110, height: 64)
                         .background(shape.fill(Theme.surfaceRaised))
                         .elevation(e, in: shape)
+                        .padding(e.room)
                 }
             }
-            .padding(.vertical, Theme.Space.md)
             HStack(spacing: Theme.Space.xl) {
                 ForEach([("well", Theme.well), ("wellHover", Theme.wellHover), ("thumbMain", Theme.thumbMain)], id: \.0) { name, color in
                     VStack(alignment: .leading, spacing: Theme.Space.xs) {

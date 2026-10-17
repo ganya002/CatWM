@@ -49,8 +49,12 @@ final class FocusDim {
     static func quickActions() -> [QuickAction] {
         features.compactMap { feature in
             guard let menu = feature.menu else { return nil }
+            let dispatcher = feature.pointer.dispatcher
+            let args = feature.pointer.args
             return QuickAction(id: "focus.\(feature.pointer.id)", title: menu.title, symbol: feature.pointer.action.symbol,
-                               keys: [menu.key.uppercased()], keyCode: keyCodes[menu.key], isOn: menu.on()) { feature.run() }
+                               keys: [menu.key.uppercased()], keyCode: keyCodes[menu.key], isOn: menu.on()) {
+                WindowManager.shared.dispatch(dispatcher, args)
+            }
         }
     }
 
