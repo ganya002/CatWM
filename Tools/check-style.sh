@@ -102,7 +102,9 @@ def catalog_violations(path, source):
     if path not in (pointer, feature):
         reject(r"\bCursorShortcutSpec\s*(?:\(|\.init\s*\()", "catalog: declare pointer actions only in PointerActions or the effect descriptor")
         reject(r"\[CursorShortcutSpec\]\s*=\s*\[", "catalog: a second pointer action array is not allowed")
-    if path not in action_owners and "GalleryExample(" not in source:
+    gallery_registration = re.compile(r"static\s+let\s+\w+\s*=\s*GalleryExample\(\s*order:\s*\d+\s*\)")
+    registered_example = path.startswith("Sources/ouch/UI/") and "/Gallery/" not in path and gallery_registration.search(source)
+    if path not in action_owners and not registered_example:
         reject(r"\bQuickAction\s*(?:\(|\.init\s*\()", "catalog: declare quick actions on the feature or its gallery example")
     reject(r"\[(?:QuickAction|KeyHint)\]\s*=\s*\[\s*[^]\s]", "catalog: a hand-written quick action or key hint table is not allowed")
     if path == quick:
