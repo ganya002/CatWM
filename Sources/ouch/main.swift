@@ -36,6 +36,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Permission.accessibility.request()
         }
         Tips.shared.launched()
+        #if DEBUG
+        if CommandLine.arguments.contains("--gallery") { DesignGallery.shared.open() }
+        #endif
         updateIcon()
         watcher.subscribe { [weak self] granted, changed in self?.permissionsChecked(granted, changed) }
     }
