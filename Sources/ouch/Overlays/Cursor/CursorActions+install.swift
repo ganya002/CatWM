@@ -43,6 +43,7 @@ extension CursorActions {
         model.hovered = nil
         model.keyboardHover = nil
         model.trackPointer = false
+        resetPointerTracking()
         let menu = menuPanel ?? makeMenuPanel()
         menuPanel = menu
         place(menu: menu, at: point)
@@ -92,6 +93,7 @@ extension CursorActions {
         model.hovered = nil
         model.keyboardHover = nil
         model.trackPointer = false
+        resetPointerTracking()
         menuPanel?.ignoresMouseEvents = true
         let work = DispatchWorkItem { [weak self] in self?.closeMenuPanel() }
         closeWork = work
