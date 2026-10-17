@@ -12,9 +12,12 @@ final class DesignGallery: NSObject {
                              styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
             w.title = "Ouch Design Gallery"
             w.isReleasedWhenClosed = false
-            w.contentViewController = NSHostingController(rootView: DesignGalleryView { [weak w] appearance in
+            let host = NSHostingController(rootView: DesignGalleryView { [weak w] appearance in
                 w?.appearance = appearance
             })
+            host.sizingOptions = []
+            w.contentViewController = host
+            w.setContentSize(NSSize(width: 920, height: 780))
             w.contentMinSize = NSSize(width: 640, height: 480)
             w.center()
             window = w
