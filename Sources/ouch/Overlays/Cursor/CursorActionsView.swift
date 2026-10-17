@@ -4,9 +4,9 @@ import SwiftUI
 struct CursorActionsView: View {
     @ObservedObject var model: CursorActionsModel
 
-    static let margin: CGFloat = 28
+    static var margin: CGFloat { Elevation.popover.room }
     static let markOffset = CGSize(width: 22, height: 9)
-    static let markSize: CGFloat = 56
+    static var markSize: CGFloat { 22 + Elevation.popover.room * 2 }
     private static let headHeight: CGFloat = 26
     private static let inset: CGFloat = 6
 

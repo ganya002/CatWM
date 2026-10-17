@@ -14,15 +14,9 @@ extension View {
             case .float: return NSColor.black.withAlphaComponent(dark ? 0.75 : 0.35)
             }
         })
-        let (radius, y): (CGFloat, CGFloat) = switch e {
-        case .sm: (1, 1)
-        case .knob: (2, 0)
-        case .popover: (13, 10)
-        case .float: (22, 18)
-        }
         return self
             .overlay(shape.stroke(ring, lineWidth: e == .popover || e == .float ? 1 : 0))
-            .shadow(color: drop, radius: radius, y: y)
+            .shadow(color: drop, radius: e.radius, y: e.y)
     }
 
     func legible(strong: Bool = false) -> some View {
