@@ -15,7 +15,7 @@ A helper process created a disposable window and moved its own window to an inac
 | `SLSAddWindowsToSpaces` (remove source only if add succeeds) | Membership unchanged |
 | `SLSBridgedMoveWindowsToManagedSpaceOperation` through the asynchronous bridged dispatcher | Membership moved to the target; active Desktop unchanged |
 
-The working implementation comes from [WhichSpace's bridge](https://github.com/gechr/WhichSpace/blob/main/WhichSpace/Classes/WindowSpaceMove.c). `Sources/ouch/Tiling/NativeSpaceMove.swift` implements the binding and symbol lookup directly in Ouch. There is no separate module, helper library, or external window-manager dependency. Sparkle remains the sole package dependency. The technique's MIT attribution is retained in the app's Resources. The dispatcher has internal linkage: the resolver checks `dlsym`, then walks SkyLight's loaded Mach-O symbol table with bounds checks. A missing class, initializer, or dispatcher returns unavailable.
+The working implementation comes from [WhichSpace's bridge](https://github.com/gechr/WhichSpace/blob/main/WhichSpace/Classes/WindowSpaceMove.c). `Sources/ouch/Tiling/Spaces/NativeSpaceMove.swift` implements the binding and symbol lookup directly in Ouch. There is no separate module, helper library, or external window-manager dependency. Sparkle remains the sole package dependency. The technique's MIT attribution is retained in the app's Resources. The dispatcher has internal linkage: the resolver checks `dlsym`, then walks SkyLight's loaded Mach-O symbol table with bounds checks. A missing class, initializer, or dispatcher returns unavailable.
 
 Five fresh child windows were imported and silently sent back, checking actual Space membership and active Desktops after each operation. All ten moves passed. Import verification took 7, 5, 6, 7, and 5 ms (median 6 ms). These measure WindowServer membership confirmation, not screen refresh or an application's Accessibility response time.
 
@@ -42,7 +42,7 @@ Requires two normal macOS Desktops and a logged-in GUI session. It creates only 
 mkdir -p /tmp/ouch-space-check
 cp Tools/SpaceMoveProbe.swift /tmp/ouch-space-check/main.swift
 swiftc -module-cache-path /tmp/ouch-space-check/modules \
-  Sources/ouch/Tiling/NativeSpaceMove.swift Sources/ouch/Tiling/WindowServerUpdates.swift \
+  Sources/ouch/Tiling/Spaces/NativeSpaceMove.swift Sources/ouch/Tiling/Spaces/WindowServerUpdates.swift \
   /tmp/ouch-space-check/main.swift \
   -o /tmp/ouch-space-check/probe
 /tmp/ouch-space-check/probe
@@ -52,7 +52,7 @@ The probe fails if an import or silent send does not change membership, or if th
 
 Run `/tmp/ouch-space-check/probe --batch-updates` to require display-update batching during imports. This passed five imports and five silent sends with no recording active, at a 6 ms median import. It verifies API availability, membership and Desktop stability; it cannot prove the physical panel does not flash. That needs a check in the running Ouch app without screen recording.
 
-`Tools/WindowServerUpdatesProbe.swift`, compiled as `main.swift` alongside `Sources/ouch/Tiling/WindowServerUpdates.swift`, checks release after overlapping leases, duplicate finish calls, timeout with the main thread blocked, stale leases from an earlier batch, dropped leases, and API failure. Its injected operations do not modify the display.
+`Tools/WindowServerUpdatesProbe.swift`, compiled as `main.swift` alongside `Sources/ouch/Tiling/Spaces/WindowServerUpdates.swift`, checks release after overlapping leases, duplicate finish calls, timeout with the main thread blocked, stale leases from an earlier batch, dropped leases, and API failure. Its injected operations do not modify the display.
 
 ## Check screen visibility after import
 
@@ -65,8 +65,8 @@ Compile the probe with the actual `Spaces.move` wrapper to check visibility at c
 ```sh
 cp Tools/SpaceMoveProbe.swift /tmp/ouch-space-check/main.swift
 swiftc -D OUCH_ARRIVAL_PROBE -module-cache-path /tmp/ouch-space-check/modules \
-  Sources/ouch/Tiling/NativeSpaceMove.swift Sources/ouch/Tiling/WindowServerUpdates.swift \
-  Sources/ouch/Tiling/AX.swift /tmp/ouch-space-check/main.swift \
+  Sources/ouch/Tiling/Spaces/NativeSpaceMove.swift Sources/ouch/Tiling/Spaces/WindowServerUpdates.swift \
+  Sources/ouch/Tiling/Access/symbol.swift Sources/ouch/Tiling/Access/Spaces.swift /tmp/ouch-space-check/main.swift \
   -o /tmp/ouch-space-check/arrival-probe
 /tmp/ouch-space-check/arrival-probe --batch-updates
 ```
@@ -75,13 +75,13 @@ This mode checks that completion occurs after screen visibility. It also checks 
 
 ## Check Dock click handling
 
-`Tools/DockClickProbe.swift` checks click consumption, modifier passthrough, drag replay ordering, long presses, outside releases, unrelated clicks and the Dock edge bands that gate the Accessibility hit test. It installs no event tap and captures replay events instead of posting them. Compile it as `main.swift` alongside `Sources/ouch/Tiling/DockWindowPull.swift`:
+`Tools/DockClickProbe.swift` checks click consumption, modifier passthrough, drag replay ordering, long presses, outside releases, unrelated clicks and the Dock edge bands that gate the Accessibility hit test. It installs no event tap and captures replay events instead of posting them. Compile it as `main.swift` alongside `Sources/ouch/Tiling/Input/DockWindowPull.swift`:
 
 ```sh
 mkdir -p /tmp/ouch-dock-check
 cp Tools/DockClickProbe.swift /tmp/ouch-dock-check/main.swift
 swiftc -module-cache-path /tmp/ouch-dock-check/modules \
-  Sources/ouch/Tiling/DockWindowPull.swift /tmp/ouch-dock-check/main.swift \
+  Sources/ouch/Tiling/Input/DockWindowPull.swift /tmp/ouch-dock-check/main.swift \
   -o /tmp/ouch-dock-check/probe
 /tmp/ouch-dock-check/probe
 ```

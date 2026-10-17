@@ -1,0 +1,26 @@
+import AppKit
+import SwiftUI
+
+struct WordmarkView: View {
+    @ObservedObject var model: WordmarkModel
+    let size: CGFloat
+
+    var body: some View {
+        VStack(spacing: 14) {
+            Text("Ouch").font(Theme.wordmark(size)).foregroundStyle(.white)
+                .legible()
+                .squish(on: model.landed, delay: 0.3)
+            tagline(max(16, min(22, size / 6)))
+                .foregroundStyle(Color.white.opacity(0.92))
+                .legible(strong: true)
+                .opacity(model.subtitle ? 1 : 0)
+                .animation(.easeOut(duration: 0.9), value: model.subtitle) // style-ok: the intro's timing, set to the music
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func tagline(_ pt: CGFloat) -> Text {
+        Text("Hyprland").font(Theme.body(pt, .medium)).foregroundColor(hyprlandBlue)
+            + Text("-style tiling for macOS.").font(Theme.body(pt, .light))
+    }
+}

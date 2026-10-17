@@ -46,7 +46,7 @@ Set `LINEAR_TEAM_ID` in `wrangler.toml` to the team's UUID, and put the worker's
 
 ## Performance reports
 
-`PerfMonitor` (`Sources/ouch/App/PerfMonitor.swift`) times Ouch's frames while it moves other apps' windows and plays its own panels, the AX cost per app, and main-thread hangs over 250 ms. Every slowdown goes to `ouch.log` as a `perf:` line. With `perf-reports = true` in the config (off by default), a slowdown seen 5 times (a hang over 1 s: twice) is sent to the relay's `/perf` route. The payload holds numbers, the Ouch and macOS version, the Mac model and the slow app's bundle ID. It holds no window titles, paths or names. Runs on a hot, low-power or loaded Mac are logged but never sent. Each fingerprint is sent once per 7 days, at most once a day and 5 a week.
+`PerfMonitor` (`Sources/ouch/App/Perf/PerfMonitor.swift`) times Ouch's frames while it moves other apps' windows and plays its own panels, the AX cost per app, and main-thread hangs over 250 ms. Every slowdown goes to `ouch.log` as a `perf:` line. With `perf-reports = true` in the config (off by default), a slowdown seen 5 times (a hang over 1 s: twice) is sent to the relay's `/perf` route. The payload holds numbers, the Ouch and macOS version, the Mac model and the slow app's bundle ID. It holds no window titles, paths or names. Runs on a hot, low-power or loaded Mac are logged but never sent. Each fingerprint is sent once per 7 days, at most once a day and 5 a week.
 
 The relay files one Linear issue per fingerprint (`[perf:<id>]` in the title) and adds a comment for each repeat, up to 10. Its API key needs the read and create comment scopes besides create issues. Set `LINEAR_PERF_LABEL_ID` to label the issues.
 

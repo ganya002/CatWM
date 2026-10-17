@@ -6,16 +6,16 @@ Source: the Ouch design system artifact, https://claude.ai/artifact/GY1GAH7xBUwA
 
 ## Visual reference and editing
 
-The Design Gallery is the visual reference. It draws every token and component with the real Swift code, so it cannot differ from the app. It is in debug builds only (`Sources/ouch/UI/DesignGallery.swift`). Build and open it:
+The Design Gallery is the visual reference. It draws every token and component with the real Swift code, so it cannot differ from the app. It is in debug builds only (`Sources/ouch/UI/Gallery/`). Build and open it:
 
 ```text
 ./build.sh --dev
 open build/ouch.app --args --gallery
 ```
 
-The Appearance control at the top switches between system, light and dark. When you add or change a component, add or change its example in `DesignGallery.swift`. To get a picture without a window, run the test with `OUCH_GALLERY_PNG=/path/to/gallery.png swift test`.
+The Appearance control at the top switches between system, light and dark. When you add or change a component, add or change its example in `Sources/ouch/UI/Gallery/`. To get a picture without a window, run the test with `OUCH_GALLERY_PNG=/path/to/gallery.png swift test`.
 
-A change to a token or a component rule is not finished until `Theme.swift`, the matching file in `UI/Components/`, the gallery and this file agree with it.
+A change to a token or a component rule is not finished until `Sources/ouch/UI/Theme/`, the matching file in `UI/Components/`, the gallery and this file agree with it.
 
 ## Principles
 

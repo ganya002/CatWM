@@ -1,0 +1,142 @@
+import AppKit
+import SwiftUI
+
+final class KeyHelp {
+    static let shared = KeyHelp()
+
+    private let model = KeyHelpModel()
+    private var panel: OuchPanel?
+    private var host: NSHostingView<KeyHelpView>?
+    private var holdWork: DispatchWorkItem?
+    private var orderOutWork: DispatchWorkItem?
+    private var flashWork: DispatchWorkItem?
+    private var dismissMonitor: Any?
+    private var chordMods: NSEvent.ModifierFlags = []
+    private static let margin: CGFloat = 40
+    private static let bottomGap: CGFloat = 16
+    private static let holdDelay = 0.5
+
+    private var enabled: Bool { WindowManager.shared.config.keyboardHelp }
+    var isVisible: Bool { model.shown }
+
+    func install() {
+        Hotkeys.shared.onFlagsChanged = { [weak self] f in self?.flagsChanged(Self.mods(f)) }
+        NotificationCenter.default.addObserver(forName: Hotkeys.didFire, object: nil, queue: .main) { [weak self] n in
+            if let b = n.userInfo?["bind"] as? KeyBinding { self?.fired(b) }
+        }
+        Hotkeys.shared.onHelpKey = { [weak self] in self?.toggle() }
+    }
+
+    func modeChanged(_ name: String) {
+        holdWork?.cancel()
+        guard !name.isEmpty else {
+            if model.shown && model.reason != .menu { hide() }
+            return
+        }
+        if model.shown {
+            show(mode: name, reason: .toggle)
+            return
+        }
+        guard enabled else { return }
+        chordMods = Self.mods(CGEventSource.flagsState(.combinedSessionState)).subtracting(.shift)
+        guard !chordMods.isEmpty else { return }
+        let work = DispatchWorkItem { [weak self] in
+            guard let self, Hotkeys.shared.submap == name,
+                  Self.mods(CGEventSource.flagsState(.combinedSessionState)).isSuperset(of: chordMods) else { return }
+            show(mode: name, reason: .hold)
+        }
+        holdWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.holdDelay, execute: work)
+    }
+
+    func toggle() {
+        let mode = Hotkeys.shared.submap
+        if model.shown { hide(); return }
+        guard enabled, !mode.isEmpty else { return }
+        holdWork?.cancel()
+        show(mode: mode, reason: .toggle)
+    }
+
+    func showFromMenu(preferredMode: String? = nil) {
+        holdWork?.cancel()
+        let active = Hotkeys.shared.submap
+        let mode = active.isEmpty ? (preferredMode ?? "") : active
+        show(mode: mode, reason: .menu)
+    }
+
+    private func flagsChanged(_ f: NSEvent.ModifierFlags) {
+        if holdWork != nil, !f.isSuperset(of: chordMods) { holdWork?.cancel(); holdWork = nil }
+        guard model.shown else { return }
+        if model.reason == .hold, !f.isSuperset(of: chordMods) { hide(); return }
+        if model.held != f { model.held = f }
+    }
+
+    private func fired(_ b: KeyBinding) {
+        guard model.shown, b.submap == model.mode, b.keyCode < 0x1000 else { return }
+        flashWork?.cancel()
+        withAnimation(.easeOut(duration: Theme.fast)) { model.pressed = b.keyCode }
+        let work = DispatchWorkItem { [weak self] in withAnimation(.easeOut(duration: Theme.slow)) { self?.model.pressed = nil } }
+        flashWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.22, execute: work)
+    }
+
+    private func show(mode: String, reason: KeyHelpModel.Reason) {
+        orderOutWork?.cancel()
+        let screen = WindowManager.shared.focusedScreen ?? OuchPanel.pointerScreen()
+        let wasShown = model.shown
+        Tips.shared.markSeen(.keyHelp)
+        model.load(mode: mode, binds: WindowManager.shared.config.bindings, chord: chordMods, reason: reason,
+                   room: screen.visibleFrame.width - Self.margin * 2 - 48)
+        model.held = Self.mods(CGEventSource.flagsState(.combinedSessionState))
+
+        let p = panel ?? makePanel()
+        panel = p
+        if !wasShown {
+            model.motion = PanelMotion.current
+            let h = NSHostingView(rootView: KeyHelpView(model: model, margin: Self.margin))
+            h.sizingOptions = [.intrinsicContentSize]
+            host = h
+            p.contentView = h
+        }
+        guard let host else { return }
+        host.layoutSubtreeIfNeeded()
+        p.place(size: host.fittingSize, on: screen, anchor: .bottom(Self.bottomGap - Self.margin), inset: EdgeInsets(all: Self.margin))
+        p.orderFrontRegardless()
+        if !wasShown { DispatchQueue.main.async { [weak self] in self?.model.shown = true } }
+
+        setDismissMonitor(reason == .menu)
+        Hotkeys.shared.heldChord = reason == .hold ? CGEventFlags(rawValue: UInt64(chordMods.rawValue)) : []
+    }
+
+    func hide() {
+        holdWork?.cancel()
+        setDismissMonitor(false)
+        Hotkeys.shared.heldChord = []
+        guard model.shown else { return }
+        model.shown = false
+        let work = DispatchWorkItem { [weak self] in
+            self?.panel?.orderOut(nil)
+            self?.panel?.contentView = nil
+            self?.host = nil
+        }
+        orderOutWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + max(Theme.medium, model.motion.outDuration) + 0.05, execute: work)
+    }
+
+    private func setDismissMonitor(_ on: Bool) {
+        if let m = dismissMonitor { NSEvent.removeMonitor(m); dismissMonitor = nil }
+        guard on else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+            guard let self, model.shown, model.reason == .menu, dismissMonitor == nil else { return }
+            dismissMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .keyDown]) { [weak self] _ in
+                self?.hide()
+            }
+        }
+    }
+
+    private func makePanel() -> OuchPanel { OuchPanel(role: .hud) }
+
+    static func mods(_ f: CGEventFlags) -> NSEvent.ModifierFlags {
+        NSEvent.ModifierFlags(rawValue: UInt(f.rawValue)).intersection([.command, .option, .control, .shift])
+    }
+}

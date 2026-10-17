@@ -1,0 +1,120 @@
+import AppKit
+import Combine
+import SwiftUI
+import UniformTypeIdentifiers
+
+extension ConfigLibrary {
+    static func makeBuiltIns() -> [SavedConfig] {
+        func normalised(_ text: String) -> ConfigDocument { ConfigDocument(text: text) }
+        let def = normalised(defaultText), wasd = normalised(wasdText)
+        func make(_ id: String, _ kind: ConfigKind, _ name: String, _ text: String, kb: String? = nil, an: String? = nil) -> SavedConfig {
+            SavedConfig(id: builtInPrefix + id, kind: kind, name: name, symbol: nil, colorHex: nil, text: text, keyboardID: kb, animationID: an)
+        }
+        return [
+            make("keyboard.default", .keyboard, "Vim", def.keyboardText()),
+            make("keyboard.wasd", .keyboard, "WASD", wasd.keyboardText()),
+            make("animation.default", .animation, "Default", def.animationText()),
+            make("full.default", .full, "Default", def.serialize(), kb: builtInPrefix + "keyboard.default", an: builtInPrefix + "animation.default"),
+        ]
+    }
+
+    func configs(_ kind: ConfigKind) -> [SavedConfig] {
+        builtIns.filter { $0.kind == kind } + custom.filter { $0.kind == kind }
+    }
+    func config(id: String?) -> SavedConfig? {
+        guard let id else { return nil }
+        return builtIns.first { $0.id == id } ?? custom.first { $0.id == id }
+    }
+    func current(_ kind: ConfigKind) -> SavedConfig {
+        config(id: active[kind]) ?? configs(kind)[0]
+    }
+    func isActive(_ c: SavedConfig) -> Bool { active[c.kind] == c.id }
+
+    func load() {
+        if let data = try? Data(contentsOf: Self.url), let stored = try? JSONDecoder().decode(Stored.self, from: data) {
+            custom = stored.custom
+            for (k, v) in stored.active { if let kind = ConfigKind(rawValue: k) { active[kind] = v } }
+        } else {
+            if FileManager.default.fileExists(atPath: Self.url.path) {
+                let bak = Self.url.appendingPathExtension("bak")
+                try? FileManager.default.removeItem(at: bak)
+                try? FileManager.default.moveItem(at: Self.url, to: bak)
+            }
+            adoptCurrentSettings()
+        }
+        for kind in ConfigKind.allCases where config(id: active[kind]) == nil { active[kind] = configs(kind)[0].id }
+    }
+
+    func save() {
+        let stored = Stored(custom: custom, active: Dictionary(uniqueKeysWithValues: active.map { ($0.key.rawValue, $0.value) }))
+        guard let data = try? JSONEncoder().encode(stored) else { return }
+        try? FileManager.default.createDirectory(at: Self.url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? data.write(to: Self.url, options: .atomic)
+    }
+
+    func adoptCurrentSettings() {
+        for kind in ConfigKind.allCases {
+            let text = extract(kind)
+            if let match = builtIns.first(where: { $0.kind == kind && $0.text == text }) {
+                active[kind] = match.id
+            } else {
+                let mine = SavedConfig(id: UUID().uuidString, kind: kind, name: "My config", symbol: nil, colorHex: nil, text: text)
+                custom.append(mine)
+                active[kind] = mine.id
+            }
+        }
+        refreshLinks()
+        save()
+    }
+
+    func extract(_ kind: ConfigKind) -> String {
+        switch kind {
+        case .keyboard: doc.keyboardText()
+        case .animation: doc.animationText()
+        case .full: doc.serialize()
+        }
+    }
+
+    func otherSettings(_ text: String) -> String {
+        ConfigDocument(text: text).serialize(includeKeyboard: false, includeAnimation: false)
+    }
+
+    func refreshLinks() {
+        guard let i = custom.firstIndex(where: { $0.id == active[.full] }) else { return }
+        custom[i].keyboardID = active[.keyboard]
+        custom[i].animationID = active[.animation]
+    }
+
+    func reconcile() {
+        guard !applying else { return }
+        var violated: [ConfigKind] = []
+        var changed = false
+        for kind in ConfigKind.allCases {
+            let current = current(kind)
+            let text = extract(kind)
+            if current.isBuiltIn {
+                let matches = kind == .full ? otherSettings(text) == otherSettings(current.text) : text == current.text
+                if !matches { violated.append(kind) }
+            } else if let i = custom.firstIndex(where: { $0.id == current.id }), custom[i].text != text {
+                custom[i].text = text
+                changed = true
+            }
+        }
+        let before = custom
+        refreshLinks()
+        if changed || before != custom { save() }
+        if !violated.isEmpty { createFromEdit(kinds: violated, name: Self.editCopyName, symbol: nil, colorHex: nil) }
+    }
+
+    func apply(_ c: SavedConfig) {
+        applying = true
+        switch c.kind {
+        case .keyboard: doc.applyKeyboard(c.text)
+        case .animation: doc.applyAnimation(c.text)
+        case .full: doc.applyFull(c.text)
+        }
+        doc.save()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in self?.applying = false }
+    }
+
+}
