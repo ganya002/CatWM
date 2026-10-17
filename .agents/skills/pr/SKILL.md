@@ -5,31 +5,38 @@ description: Create a pr
 
 ## Merge conflicts
 
-Before you create the pull request, merge the base branch into your branch. Resolve all merge conflicts yourself. Keep the intent of both sides, remove the conflict markers, and run the project checks.
-## Title
+Before creating pull request, merge base branch into your branch. Resolve merge conflicts yourself. Keep intent of both sides and run the project checks.
 
-Use the PR title standard of the project. Look for it in `CONTRIBUTING.md`, the PR template, and `CLAUDE.md` or `AGENTS.md`.
+## Text
 
-If the project has no standard, use this fallback:
-
-- Write one imperative sentence, for example "Add workspace switch animation".
-- Use sentence case. Do not put a period at the end.
-- Keep the title at 72 characters or fewer.
-- Do not use prefixes such as `feat:` or `[WIP]`.
+Use project's standard from `CONTRIBUTING.md`, the PR template, or `CLAUDE.md` / `AGENTS.md`. Otherwise write one imperative sentence in sentence case
+Example: "Add workspace switch animation".
 
 ## Description
 
-Create a pull request with this description structure, in order:
+In order:
 
-1. Explain the problem in 1–3 sentences.
-2. For UI changes, include before/after screenshots or videos in a two-column Markdown table labeled Before and After.
-3. List the changes as an unordered list.
-4. Explain in sentences how the changes were verified. State any verification not performed.
+1. The problem, in 1–3 sentences. No heading.
+2. For a UI change, a Before/After table directly under the problem, with no heading. One image or video goes alone, without the table. Skip this when there is no media.
+3. `## Changes`, as an unordered list.
+4. `## Verification`, in sentences, including any verification not performed.
 
-Put each section after the problem and the media under a `##` heading, for example `## Changes` and `## Verification`. Do not put a heading above the problem or the media.
+Upload images and videos with `gh` `--attach`. Do not commit them. Put the local paths in the table and pass those same paths to `--attach`, so `gh` rewrites them in place.
 
-<!--
-Media rules for step 2:
-- If you have no image or video, do not include step 2.
-- If you have only one image or video, add it alone. Do not use the table.
--->
+```markdown
+The form accepts a blank password.
+
+| Before                  | After                 |
+| ----------------------- | --------------------- |
+| ![Before](./before.png) | ![After](./after.png) |
+```
+
+```shell
+gh pr create --body-file pr.md --attach ./before.png --attach ./after.png
+```
+
+`gh pr edit` without `--body` appends the file. Pass the full body when the image belongs in the table.
+
+## Until merged
+
+Watch the pull request. Resolve conflicts and fix failing checks or review issues until it is merged.
