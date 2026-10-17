@@ -19,6 +19,28 @@ struct CursorActionsView: View {
         return CGSize(width: Theme.submenuWidth, height: 2 * inset + headHeight + rows)
     }
 
+    static func contentHeight(for actions: [QuickAction]) -> CGFloat {
+        CGFloat(actions.count) * Theme.rowHeight + (dividerIndex(actions) == nil ? 0 : divider)
+    }
+
+    static func rowID(at y: CGFloat, actions: [QuickAction]) -> String? {
+        guard y >= 0 else { return nil }
+        let row = Theme.rowHeight
+        let split = dividerIndex(actions)
+        var top: CGFloat = 0
+        for (index, action) in actions.enumerated() {
+            if index == split { top += divider }
+            if y < top + row { return action.id }
+            top += row
+        }
+        return nil
+    }
+
+    static func rowUnderPointer(x: CGFloat, y: CGFloat, width: CGFloat, actions: [QuickAction], visible: Range<CGFloat>) -> String? {
+        guard x >= 0, x <= width, visible.contains(y) else { return nil }
+        return rowID(at: y, actions: actions)
+    }
+
     private static let divider: CGFloat = 9
 
     private static func dividerIndex(_ actions: [QuickAction]) -> Int? {
@@ -73,14 +95,12 @@ struct CursorActionsView: View {
                         .id(action.id)
                     }
                 }
-                .overlay {
-                    PointerRowHover(enabled: model.trackPointer) { point in
-                        guard let point, let next = rowID(at: point.y), model.hovered != next else { return }
-                        model.hovered = next
-                    }
+                .background(alignment: .topLeading) {
+                    RowHoverAnchor().frame(maxWidth: .infinity).frame(height: 0)
                 }
                 .onChange(of: model.open) { _, open in
                     model.trackPointer = open
+                    if open { CursorActions.shared.armPointerTracking() }
                 }
             }
             .onChange(of: model.keyboardHover) { _, id in
@@ -100,19 +120,6 @@ struct CursorActionsView: View {
         .frame(height: Theme.controlHeight + Theme.Space.xxl * 2, alignment: .top)
     }
 
-    private func rowID(at y: CGFloat) -> String? {
-        guard y >= 0 else { return nil }
-        let row = Theme.rowHeight
-        let split = Self.dividerIndex(model.actions)
-        var top: CGFloat = 0
-        for (index, action) in model.actions.enumerated() {
-            if index == split { top += Self.divider }
-            if y < top + row { return action.id }
-            top += row
-        }
-        return nil
-    }
-
     private var editorHint: String {
         if let error = model.saveError { return error }
         if !model.templateName.isEmpty, let problem = model.nameProblem { return problem }
@@ -122,59 +129,19 @@ struct CursorActionsView: View {
     }
 }
 
-private struct PointerRowHover: NSViewRepresentable {
-    let enabled: Bool
-    let move: (CGPoint?) -> Void
-
-    func makeNSView(context: Context) -> RowHoverView {
-        let view = RowHoverView()
-        view.move = move
-        return view
-    }
+private struct RowHoverAnchor: NSViewRepresentable {
+    func makeNSView(context: Context) -> RowHoverView { RowHoverView() }
 
     func updateNSView(_ view: RowHoverView, context: Context) {
-        view.move = move
-        view.enabled = enabled
+        CursorActions.shared.rowHover = view
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView: RowHoverView, context: Context) -> CGSize? {
+        proposal.replacingUnspecifiedDimensions(by: CGSize(width: Theme.submenuWidth, height: 0))
     }
 }
 
 private final class RowHoverView: PassThroughView {
-    var move: ((CGPoint?) -> Void)?
-    var enabled = false {
-        didSet {
-            guard enabled != oldValue else { return }
-            updateTrackingAreas()
-            if enabled { sample() }
-        }
-    }
-
     override var isFlipped: Bool { true }
-
-    override func updateTrackingAreas() {
-        super.updateTrackingAreas()
-        for area in trackingAreas { removeTrackingArea(area) }
-        guard enabled else { return }
-        addTrackingArea(NSTrackingArea(rect: bounds, options: [.mouseMoved, .mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self))
-    }
-
-    override func viewDidMoveToWindow() {
-        super.viewDidMoveToWindow()
-        window?.acceptsMouseMovedEvents = true
-        if enabled { sample() }
-    }
-
-    override func mouseEntered(with event: NSEvent) { report(event) }
-    override func mouseMoved(with event: NSEvent) { report(event) }
-    override func mouseExited(with event: NSEvent) { move?(nil) }
-
-    private func report(_ event: NSEvent) {
-        move?(convert(event.locationInWindow, from: nil))
-    }
-
-    private func sample() {
-        guard enabled, let window else { return }
-        let local = convert(window.convertPoint(fromScreen: NSEvent.mouseLocation), from: nil)
-        guard bounds.contains(local) else { return }
-        move?(local)
-    }
+    override var intrinsicContentSize: NSSize { NSSize(width: NSView.noIntrinsicMetric, height: NSView.noIntrinsicMetric) }
 }
