@@ -89,6 +89,30 @@ import Testing
         manager.onDispatch = nil
     }
 
+    @Test @MainActor func aFocusedElementWithoutAWindowIDDoesNotRetry() async throws {
+        let manager = manager()
+        let reads = Counter()
+        manager.focusReader = FocusReader { _ in
+            _ = reads.next()
+            return FocusReader.resolve(AXUIElementCreateApplication(-1))
+        }
+        var dispatched = 0
+        manager.onDispatch = { _, _, _ in dispatched += 1 }
+        await withCheckedContinuation { continuation in
+            manager.onChange = { continuation.resume() }
+            manager.dispatch("minimize", "")
+        }
+        manager.onChange = nil
+        #expect(manager.reportedFocus?.pid == -1)
+        #expect(manager.reportedFocus?.id == nil)
+        #expect(manager.focusCommands.isEmpty)
+        #expect(dispatched == 1)
+        try await Task.sleep(for: .milliseconds(250))
+        #expect(reads.value == 1)
+        manager.isStarted = false
+        manager.onDispatch = nil
+    }
+
     @Test @MainActor func aCommandDoesNotFollowTheUserToAnotherApp() async {
         let manager = manager()
         var active: pid_t = -1

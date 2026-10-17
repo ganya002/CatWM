@@ -25,12 +25,15 @@ final class FocusReader {
         if result == .noValue || result == .attributeUnsupported { return .focused(nil) }
         guard result == .success else { return .unavailable }
         guard let value, CFGetTypeID(value) == AXUIElementGetTypeID() else { return .focused(nil) }
-        var element = value as! AXUIElement
+        return resolve(value as! AXUIElement)
+    }
+
+    static func resolve(_ focusedElement: AXUIElement) -> Result {
+        var element = focusedElement
         if element.string(kAXRoleAttribute) == kAXSheetRole {
-            guard let parent = element.element(kAXParentAttribute) else { return .unavailable }
+            guard let parent = element.element(kAXParentAttribute) else { return .focused(nil) }
             element = parent
         }
-        guard let id = element.windowID else { return .unavailable }
-        return .focused(id)
+        return .focused(element.windowID)
     }
 }
