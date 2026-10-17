@@ -69,15 +69,30 @@ struct CursorActionsView: View {
                         ActionRow(action: action, hovered: model.hovered == action.id, shown: model.open, index: min(i, 8),
                                   remove: action.remove == nil ? nil : { model.onDelete?(action) }) {
                             model.onPick?(action)
-                        } hover: { inside in
-                            if inside { model.hovered = action.id } else if model.hovered == action.id { model.hovered = nil }
                         }
                         .id(action.id)
                     }
                 }
+                .overlay {
+                    PointerRowHover(enabled: model.trackPointer) { point in
+                        let next = point.flatMap { rowID(at: $0.y) }
+                        if model.hovered != next { model.hovered = next }
+                    }
+                }
+                .onChange(of: model.open) { _, open in
+                    model.trackPointer = false
+                    guard open else { return }
+                    if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+                        model.trackPointer = true
+                        return
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + Theme.linger) {
+                        if model.open { model.trackPointer = true }
+                    }
+                }
             }
-            .onChange(of: model.hovered) { _, id in
-                if let id { proxy.scrollTo(id) }
+            .onChange(of: model.keyboardHover) { _, id in
+                if model.actions.count > 9, let id { proxy.scrollTo(id) }
             }
         }
     }
@@ -93,11 +108,80 @@ struct CursorActionsView: View {
         .frame(height: Theme.controlHeight + Theme.Space.xxl * 2, alignment: .top)
     }
 
+    private func rowID(at y: CGFloat) -> String? {
+        guard y >= 0 else { return nil }
+        let row = Theme.rowHeight
+        let split = Self.dividerIndex(model.actions)
+        var top: CGFloat = 0
+        for (index, action) in model.actions.enumerated() {
+            if index == split { top += Self.divider }
+            if y < top + row { return action.id }
+            top += row
+        }
+        return nil
+    }
+
     private var editorHint: String {
         if let error = model.saveError { return error }
         if !model.templateName.isEmpty, let problem = model.nameProblem { return problem }
         if !model.snapshotReady { return "Reading windows…" }
         if !model.capturing, model.templateDraft?.screenshot == nil { return "No screenshot. Allow screen recording to capture previews." }
         return "Return to save · Esc to cancel"
+    }
+}
+
+private struct PointerRowHover: NSViewRepresentable {
+    let enabled: Bool
+    let move: (CGPoint?) -> Void
+
+    func makeNSView(context: Context) -> RowHoverView {
+        let view = RowHoverView()
+        view.move = move
+        return view
+    }
+
+    func updateNSView(_ view: RowHoverView, context: Context) {
+        view.move = move
+        view.enabled = enabled
+    }
+}
+
+private final class RowHoverView: PassThroughView {
+    var move: ((CGPoint?) -> Void)?
+    var enabled = false {
+        didSet {
+            guard enabled != oldValue else { return }
+            updateTrackingAreas()
+            if enabled { sample() }
+        }
+    }
+
+    override var isFlipped: Bool { true }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        for area in trackingAreas { removeTrackingArea(area) }
+        guard enabled else { return }
+        addTrackingArea(NSTrackingArea(rect: bounds, options: [.mouseMoved, .mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self))
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        window?.acceptsMouseMovedEvents = true
+        if enabled { sample() }
+    }
+
+    override func mouseEntered(with event: NSEvent) { report(event) }
+    override func mouseMoved(with event: NSEvent) { report(event) }
+    override func mouseExited(with event: NSEvent) { move?(nil) }
+
+    private func report(_ event: NSEvent) {
+        move?(convert(event.locationInWindow, from: nil))
+    }
+
+    private func sample() {
+        guard let window else { return }
+        let local = convert(window.convertPoint(fromScreen: NSEvent.mouseLocation), from: nil)
+        move?(bounds.contains(local) ? local : nil)
     }
 }

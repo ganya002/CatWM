@@ -4,6 +4,8 @@ final class CursorActionsModel: ObservableObject {
     @Published var title = ""
     @Published var actions: [QuickAction] = []
     @Published var hovered: String?
+    @Published var keyboardHover: String?
+    @Published var trackPointer = false
     @Published var modGlyph = "⌥"
     @Published var open = false
     @Published var anchor = CGPoint.zero

@@ -64,11 +64,11 @@ extension GalleryContent {
             TemplateSaveRow(name: $m.text, save: {}, cancel: {})
             VStack(spacing: 0) {
                 ActionRow(action: QuickAction(id: "template.save.gallery", title: "Save workspace…", symbol: "plus", keys: ["S"]) {},
-                          hovered: false, shown: true, index: 0, pick: {}, hover: { _ in })
+                          hovered: false, shown: true, index: 0, pick: {})
                 ActionRow(action: QuickAction(id: "template.gallery", title: "Writing", symbol: "rectangle.3.group", keys: ["1"], remove: {}) {},
-                          hovered: false, shown: true, index: 1, remove: {}, pick: {}, hover: { _ in })
+                          hovered: false, shown: true, index: 1, remove: {}, pick: {})
                 ActionRow(action: QuickAction(id: "template.gallery.hover", title: "Research", symbol: "rectangle.3.group", keys: ["2"], remove: {}) {},
-                          hovered: true, shown: true, index: 2, remove: {}, pick: {}, hover: { _ in })
+                          hovered: true, shown: true, index: 2, remove: {}, pick: {})
             }
             .frame(width: Theme.submenuWidth)
         }

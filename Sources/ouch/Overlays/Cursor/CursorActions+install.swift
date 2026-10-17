@@ -41,6 +41,8 @@ extension CursorActions {
         model.title = found.title
         model.actions = found.actions
         model.hovered = nil
+        model.keyboardHover = nil
+        model.trackPointer = false
         let menu = menuPanel ?? makeMenuPanel()
         menuPanel = menu
         place(menu: menu, at: point)
@@ -66,6 +68,7 @@ extension CursorActions {
                 DispatchQueue.main.async { [weak self] in
                     guard let self, model.actions.indices.contains(next) else { return }
                     model.hovered = model.actions[next].id
+                    model.keyboardHover = model.actions[next].id
                 }
             }
             return true
@@ -87,6 +90,8 @@ extension CursorActions {
         opening = false
         model.open = false
         model.hovered = nil
+        model.keyboardHover = nil
+        model.trackPointer = false
         menuPanel?.ignoresMouseEvents = true
         let work = DispatchWorkItem { [weak self] in self?.closeMenuPanel() }
         closeWork = work
