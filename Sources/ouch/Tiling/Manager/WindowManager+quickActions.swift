@@ -20,6 +20,14 @@ extension WindowManager {
         } else if library.restoring {
             actions.append(QuickAction(id: "template.stop", title: "Stop opening template", symbol: "stop") { library.cancelRestore() })
         }
+        actions.append(QuickAction(id: "focus.dim", title: "Dim other windows", symbol: "circle.lefthalf.filled",
+                                   keys: ["D"], keyCode: keyCodes["d"], isOn: FocusDim.shared.dims) {
+            self.dispatch("toggledim", "")
+        })
+        actions.append(QuickAction(id: "focus.blur", title: "Blur other windows", symbol: "drop.halffull",
+                                   keys: ["B"], keyCode: keyCodes["b"], isOn: FocusDim.shared.blurs) {
+            self.dispatch("toggleblur", "")
+        })
         actions.append(QuickAction(id: "template.manage", title: "Manage templates", symbol: "gearshape",
                                    keys: [","], keyCode: keyCodes["comma"]) { SettingsWindow.shared.show(pane: .templates) })
         return ("Workspace templates", actions)

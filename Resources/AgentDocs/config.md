@@ -96,4 +96,6 @@ Settings → **Templates** lists saved workspaces with large screenshot previews
 
 In window mode, tap the mode modifier to open quick actions at the pointer. Press **S** to show a name field beside Save. Type the name and press Return to save without opening Settings. Escape cancels naming and returns to the action list. Press **1–9** to open a saved template, or **comma** to manage templates. Arrow keys and Return select an action. These actions also work over empty desktop space.
 
+Quick actions also retain the focus controls: **D** toggles Dim other windows, and **B** toggles Blur other windows.
+
 Restore reuses matching windows in the current workspace, opens missing apps or supplied documents, and requests new windows from apps that support them. Missing displays use available displays. Frames scale to fit. Existing extra windows stay open. Tabs, unsaved work, and other internal app state are not saved. Ouch reports windows that it cannot open or position.
