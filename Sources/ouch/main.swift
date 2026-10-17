@@ -29,9 +29,11 @@ for sig in [SIGTERM, SIGINT, SIGHUP] {
     signal(sig, SIG_IGN)
     let source = DispatchSource.makeSignalSource(signal: sig, queue: .main)
     source.setEventHandler {
-        WindowManager.shared.restoreHiddenWindows()
-        CrashWatch.cleanExit()
-        exit(0)
+        WindowManager.shared.isStarted = false
+        WindowManager.shared.restoreHiddenWindows {
+            CrashWatch.cleanExit()
+            exit(0)
+        }
     }
     source.resume()
     signalSources.append(source)

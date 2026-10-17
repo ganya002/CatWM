@@ -75,6 +75,8 @@ extension WindowManager {
     }
 
     func dispatch(_ dispatcher: String, _ rawArg: String) {
+        let timing = TilingTiming("command \(dispatcher)", windows: windows.count)
+        defer { timing.finish() }
         let arg = rawArg.trimmingCharacters(in: .whitespaces)
         let inMode = !Hotkeys.shared.submap.isEmpty
         defer { onDispatch?(dispatcher, arg, inMode) }

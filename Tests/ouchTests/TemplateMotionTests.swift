@@ -12,6 +12,13 @@ import Testing
         }
     }
 
+    @Test @MainActor func aShutdownBarrierDoesNotRequireTheMainQueue() {
+        let animator = Animator()
+        let completed = DispatchSemaphore(value: 0)
+        animator.afterPendingWrites(pids: nil, completionQueue: .global(qos: .userInitiated)) { completed.signal() }
+        #expect(completed.wait(timeout: .now() + 2) == .success)
+    }
+
     @Test func cancellingAQueuedVerificationPreventsItsWrite() async {
         let writer = AXWriter(pid: getpid())
         let release = DispatchSemaphore(value: 0)

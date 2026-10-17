@@ -27,7 +27,7 @@ extension WindowManager {
 
     func park(_ id: CGWindowID, screens: [Screen]) {
         guard let w = windows[id], isVirtual(workspaceOf[id]) else { return }
-        let f = w.cachedFrame
+        let f = animator.destination(id) ?? w.cachedFrame
         guard !f.isNull, !isParked(f, screens) else { return }
         if let slide, slide.outgoing.contains(id) {
             let s = workspaceOf[id].flatMap { monitorOf[$0] }.flatMap { u in screens.first { $0.uuid == u } } ?? screens[0]
@@ -46,11 +46,10 @@ extension WindowManager {
     private func cornerPark(_ id: CGWindowID, screens: [Screen]) {
         guard let w = windows[id] else { return }
         let s = workspaceOf[id].flatMap { monitorOf[$0] }.flatMap { u in screens.first { $0.uuid == u } } ?? screens[0]
-        animator.cancel(id)
-        animator.quiet(id)
-        EnhancedUI.suspend(w.pid)
-        w.setPosition(parkingSpot(size: w.cachedFrame.size, on: s, screens))
-        EnhancedUI.resume(w.pid)
+        let size = (animator.destination(id) ?? w.cachedFrame).size
+        let frame = CGRect(origin: parkingSpot(size: size, on: s, screens), size: size)
+        guard !animator.isMoving(id, to: frame) else { return }
+        animator.position(w, at: frame)
     }
 
     func floatsFreely(_ id: CGWindowID) -> Bool {
@@ -62,7 +61,7 @@ extension WindowManager {
 
     func unpark(floating id: CGWindowID, screens: [Screen]) {
         guard let w = windows[id] else { return }
-        let f = w.cachedFrame
+        let f = animator.destination(id) ?? w.cachedFrame
         guard isParked(f, screens) else { floatFrames[id] = nil; return }
         let s = screen(of: w, in: screens) ?? screens[0]
         var r = floatFrames.removeValue(forKey: id) ?? targets[id]
@@ -75,9 +74,7 @@ extension WindowManager {
                              duration: config.animationDuration, curve: config.animationCurve, bounce: config.animationBounce)
             return
         }
-        EnhancedUI.suspend(w.pid)
-        w.setFrame(r)
-        EnhancedUI.resume(w.pid)
+        animator.animate([.init(window: w, to: r, bounds: s.visible)], duration: 0)
     }
 
     func beginSlide(from previous: String, to ws: String, on s: Screen) {
@@ -103,13 +100,17 @@ extension WindowManager {
         return CGRect(x: x, y: target.minY, width: target.width, height: target.height)
     }
 
-    func restoreHiddenWindows() {
-        guard config.virtualWorkspaces || !shown.isEmpty else { return }
+    func restoreHiddenWindows(completion: (() -> Void)? = nil) {
+        let deliver = {
+            if let completion { RunLoop.main.perform(inModes: [.common, .modalPanel]) { completion() } }
+        }
+        guard config.virtualWorkspaces || !shown.isEmpty else { deliver(); return }
         let screens = Screen.all()
-        guard !screens.isEmpty else { return }
+        guard !screens.isEmpty else { deliver(); return }
         saveWorkspaces()
         for (id, w) in windows {
-            let f = w.frame
+            let f = animator.destination(id) ?? w.cachedFrame
+            animator.cancel(id)
             guard isParked(f, screens) else { continue }
             let s = screen(of: w, in: screens) ?? screens[0]
             var r = floatFrames[id] ?? targets[id]
@@ -118,10 +119,24 @@ extension WindowManager {
             r.size.height = min(r.height, s.visible.height)
             r.origin.x = max(s.visible.minX, min(r.origin.x, s.visible.maxX - r.width))
             r.origin.y = max(s.visible.minY, min(r.origin.y, s.visible.maxY - r.height))
-            EnhancedUI.suspend(w.pid)
-            w.setFrame(r)
-            EnhancedUI.resume(w.pid)
+            animator.animate([.init(window: w, to: r, bounds: s.visible)], duration: 0)
         }
-        Log.info("workspaces: put parked windows back on screen")
+        Log.info("workspaces: queued parked windows for restoration")
+        if completion != nil {
+            let lock = NSLock()
+            var finished = false
+            let finish = {
+                let first = lock.withLock {
+                    guard !finished else { return false }
+                    finished = true
+                    return true
+                }
+                guard first else { return }
+                deliver()
+            }
+            let queue = DispatchQueue.global(qos: .userInitiated)
+            animator.afterPendingWrites(pids: nil, completionQueue: queue, finish)
+            queue.asyncAfter(deadline: .now() + 2, execute: finish)
+        }
     }
 }

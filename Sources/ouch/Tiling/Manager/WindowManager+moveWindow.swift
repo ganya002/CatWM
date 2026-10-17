@@ -110,11 +110,17 @@ extension WindowManager {
                       el.string(kAXSubroleAttribute) == kAXStandardWindowSubrole,
                       el.bool(kAXMinimizedAttribute) != true, el.bool("AXFullScreen") != true else { continue }
                 let w = windows[id] ?? Window(id: id, element: el, pid: app.processIdentifier, bundleID: app.bundleIdentifier)
-                if w.naturalFrame.isNull { w.naturalFrame = w.frame; w.autoFloating = shouldFloat(w) }
+                if w.naturalFrame.isNull { readDirectActionFacts(w); w.autoFloating = shouldFloat(w) }
                 result.append(w)
             }
         }
         return result.sorted { ($0.bundleID ?? "", $0.id) < ($1.bundleID ?? "", $1.id) }
+    }
+
+    func readDirectActionFacts(_ w: Window) {
+        w.naturalFrame = w.frame
+        w.title = w.element.string(kAXTitleAttribute)
+        w.resizable = w.element.isSettable(kAXSizeAttribute)
     }
 
     func bringWindowHere(_ w: Window) {

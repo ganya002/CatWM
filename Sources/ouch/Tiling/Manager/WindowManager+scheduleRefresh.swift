@@ -14,11 +14,19 @@ extension WindowManager {
     func scanAndRefresh() {
         refreshWork = nil
         guard isStarted else { return }
-        let pidsOnScreen = Set(CGWindowInfo.onScreen().map(\.pid))
+        scanner.observeDesktop(known: Set(windows.keys)) { [weak self] in self?.scanAppsAndRefresh() }
+    }
+
+    private func scanAppsAndRefresh() {
+        guard isStarted else { return }
+        let pidsOnScreen = Set(scanner.desktop.windows.map(\.pid))
         var known: [pid_t: [CGWindowID: Window]] = [:]
         for w in windows.values { known[w.pid, default: [:]][w.id] = w }
         var jobs: [WindowScanner.Job] = []
-        for app in NSWorkspace.shared.runningApplications where app.processIdentifier != getpid() {
+        let applications = NSWorkspace.shared.runningApplications.filter { $0.processIdentifier != getpid() }
+        observedApps = applications.filter { $0.activationPolicy == .regular && !$0.isHidden }.map { ($0.processIdentifier, $0.bundleIdentifier) }
+        for app in applications {
+            observe(app)
             let pid = app.processIdentifier
             let list = app.activationPolicy == .regular && !app.isHidden && pidsOnScreen.contains(pid)
             guard list || known[pid] != nil else { continue }

@@ -113,9 +113,8 @@ extension FocusDim {
         var id: CGWindowID?
         if app.processIdentifier == getpid() {
             if let n = NSApp.keyWindow?.windowNumber, n > 0, !owns(n) { id = CGWindowID(n) }
-        } else if var el = axApp(app.processIdentifier).element(kAXFocusedWindowAttribute) {
-            if el.string(kAXRoleAttribute) == kAXSheetRole, let parent = el.element(kAXParentAttribute) { el = parent }
-            id = el.windowID
+        } else if let report = WindowManager.shared.reportedFocus, report.pid == app.processIdentifier {
+            id = report.id
         }
         if id == nil { id = CGWindowInfo.onScreen().first { $0.pid == app.processIdentifier }?.id }
         guard let id, let info = (CGWindowListCopyWindowInfo(.optionIncludingWindow, id) as? [[String: Any]])?.first,

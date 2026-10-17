@@ -42,13 +42,6 @@ extension WindowManager {
         return (workspace, state(for: s).layout, pids)
     }
 
-    private func firstFreeWorkspace() -> String {
-        let used = Set(workspaceOf.values).union(virtualShown.values).filter(isVirtual)
-        var n = 1
-        while used.contains(String(n)) { n += 1 }
-        return String(n)
-    }
-
     func resolveWorkspace(_ raw: String) -> String? {
         let a = raw.trimmingCharacters(in: .whitespaces)
         let lower = a.lowercased()
@@ -77,58 +70,24 @@ extension WindowManager {
     static let pendingPrefix = "sort-close:"
     func isPending(_ ws: String?) -> Bool { ws?.hasPrefix(Self.pendingPrefix) == true }
 
-    func syncWorkspaces(screens: [Screen], present: Set<CGWindowID>) {
-        let uuids = Set(screens.map(\.uuid))
-        for u in shown.keys where !uuids.contains(u) { shown[u] = nil }
-        for u in virtualShown.keys where !uuids.contains(u) { virtualShown[u] = nil }
-        if config.virtualWorkspaces {
-            for (ws, m) in monitorOf where isVirtual(ws) && !uuids.contains(m) { monitorOf[ws] = screens[0].uuid }
-        }
-        var onHome = Set<String>()
-        for s in screens {
-            let space = Spaces.current(display: s.uuid)
-            if config.virtualWorkspaces {
-                if let home = homeSpace[s.uuid], let ids = Spaces.list(display: s.uuid)?.ids, !ids.isEmpty, !ids.contains(home) {
-                    homeSpace[s.uuid] = nil
-                }
-                if homeSpace[s.uuid] == nil { homeSpace[s.uuid] = space }
-            }
-            if config.virtualWorkspaces && space == homeSpace[s.uuid] {
-                if virtualShown[s.uuid] == nil {
-                    let own = monitorOf.filter { $0.value == s.uuid && isVirtual($0.key) && !isPending($0.key) && !virtualShown.values.contains($0.key) }
-                        .map(\.key).sorted(by: workspaceSort).first
-                    virtualShown[s.uuid] = own ?? firstFreeWorkspace()
-                }
-                model.show(virtualShown[s.uuid], on: s.uuid)
-                onHome.insert(s.uuid)
-            } else {
-                model.show(Self.spaceWorkspace(display: s.uuid, space: space), on: s.uuid)
-            }
-            monitorOf[shown[s.uuid]!] = s.uuid
-        }
+    @discardableResult
+    func syncWorkspaces(screens: [Screen], present: Set<CGWindowID>) -> WorkspaceReconciliation {
+        let timing = TilingTiming("reconcile", windows: present.count)
+        defer { timing.finish() }
         let held = movingToSpace || NSEvent.pressedMouseButtons & 1 != 0
-        for id in present where !held && !workspaceMoves.contains(id) && !animator.isBusy(id) {
-            guard let w = windows[id], let ws = workspaceOf[id], isShown(ws) else { continue }
-            let f = w.frame
-            guard !f.isNull, !isParked(f, screens), let now = screen(containing: f, in: screens)?.uuid else { continue }
-            defer { displayOf[id] = now }
-            guard let was = displayOf[id], was != now, uuids.contains(was),
-                  let m = monitorOf[ws], m != now, let dest = shown[now] else { continue }
-            Log.info("workspaces: window \(id) moved from \(was) to \(now) outside Ouch; it joins \(dest)")
-            model.assign(id, to: dest)
-        }
-        for id in present where !isShown(workspaceOf[id]) {
-            let ws = workspaceOf[id]
-            if isVirtual(ws), let m = ws.flatMap({ monitorOf[$0] }), onHome.contains(m) { continue }
-            guard let w = windows[id] else { continue }
-            let s = screen(containing: w.frame, in: screens) ?? screens[0]
-            model.assign(id, to: shown[s.uuid])
-        }
-        for id in present where workspaceOf[id] == nil {
-            guard let w = windows[id] else { continue }
-            let s = screen(containing: w.frame, in: screens) ?? screens[0]
-            model.assign(id, to: shown[s.uuid])
-        }
+        let observation = WorkspaceObservation(
+            displays: screens.map {
+                .init(id: $0.uuid, frame: $0.frame, space: Spaces.current(display: $0.uuid),
+                      spaces: Set(Spaces.list(display: $0.uuid)?.ids ?? []))
+            },
+            frames: windows.mapValues(\.cachedFrame), present: present,
+            held: held ? present : workspaceMoves.union(present.filter { animator.isBusy($0) }))
+        let plan = WorkspaceReconciliation.reconcile(observation, model: model, virtual: config.virtualWorkspaces,
+                                                     homeSpace: homeSpace, displayOf: displayOf)
+        model = plan.model
+        homeSpace = plan.homeSpace
+        displayOf = plan.displayOf
+        return plan
     }
 
     func makeCurrentSpaceHome() {

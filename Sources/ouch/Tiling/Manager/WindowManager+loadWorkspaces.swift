@@ -56,6 +56,8 @@ extension WindowManager {
     }
 
     func showWorkspace(_ ws: String, focusing preferred: Window? = nil, focus takesFocus: Bool = true, attempts: Int = 3) {
+        let timing = TilingTiming("workspace", windows: windows.count)
+        defer { timing.finish() }
         let screens = Screen.all()
         guard let here = currentScreen() ?? screens.first else { return }
         let monitor = monitorOf[ws].flatMap { u in screens.first { $0.uuid == u } } ?? here
@@ -82,9 +84,16 @@ extension WindowManager {
         Log.debug("workspaces: showing \(ws) on \(monitor.ns.localizedName)")
         if changed, takesFocus, let previous { beginSlide(from: previous, to: ws, on: monitor) }
         refresh()
+        timing.checkpoint("refresh")
         if changed, !quietWorkspaceHUD, config.enablesLayoutHUD, config.enablesLayoutHUDOnSpaceChange {
-            HUD.shared.show(labels[ws].map { "\(ws) · \($0)" } ?? ws, layout: state(workspace: ws).layout, on: monitor.ns)
+            let text = labels[ws].map { "\(ws) · \($0)" } ?? ws
+            let layout = state(workspace: ws).layout
+            DispatchQueue.main.async { [weak self] in
+                guard self?.shown[monitor.uuid] == ws else { return }
+                HUD.shared.show(text, layout: layout, on: monitor.ns)
+            }
         }
+        timing.checkpoint("hud")
         guard takesFocus else {
             onChange?()
             return
@@ -97,19 +106,23 @@ extension WindowManager {
             if config.mouseFollowsFocus { CGWarpMouseCursorPosition(monitor.center) }
             CursorRefresh.soon()
         }
+        timing.checkpoint("focus")
         onChange?()
+        timing.checkpoint("notify")
     }
 
     func stageHomeSpace(_ ws: String, replacing old: String?, on s: Screen, home: UInt64) {
         guard config.virtualWorkspaces, isVirtual(ws) else { return }
+        let timing = TilingTiming("stage-home", windows: windows.count)
+        defer { timing.finish() }
         let screens = Screen.all()
-        func onHome(_ id: CGWindowID) -> Bool { Spaces.of(window: id).contains(home) }
+        func onHome(_ id: CGWindowID) -> Bool { scanner.desktop.spaces[id]?.contains(home) == true }
         if let old, old != ws, isVirtual(old) {
             for id in order where workspaceOf[id] == old && onHome(id) { park(id, screens: screens) }
         }
         let arriving = order.filter { id in
-            guard workspaceOf[id] == ws, let w = windows[id], !w.isNativeFullscreen, onHome(id),
-                  w.element.bool(kAXMinimizedAttribute) != true,
+            guard workspaceOf[id] == ws, let w = windows[id], !w.fullscreen, onHome(id),
+                  !w.minimized,
                   NSRunningApplication(processIdentifier: w.pid)?.isHidden != true else { return false }
             return true
         }
@@ -121,7 +134,7 @@ extension WindowManager {
         for id in ids {
             guard let w = windows[id], let target = slots[id] else { continue }
             targets[id] = target
-            if !w.frame.approxEqual(target) { moves.append(.init(window: w, to: target, bounds: s.visible)) }
+            if !(animator.destination(id) ?? w.cachedFrame).approxEqual(target) { moves.append(.init(window: w, to: target, bounds: s.visible)) }
         }
         animator.animate(moves, duration: 0)
         Log.debug("workspaces: staged \(ws) on the home Space (\(arriving.count) windows, parked \(old ?? "none"))")

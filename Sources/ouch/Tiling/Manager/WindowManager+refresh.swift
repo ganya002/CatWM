@@ -3,31 +3,37 @@ import AppKit
 extension WindowManager {
     func refresh(instant instantLayout: Bool = false, placing only: Set<CGWindowID>? = nil) {
         guard isStarted else { return }
+        let timing = TilingTiming("refresh", windows: windows.count)
+        defer { timing.finish() }
         if scanner.lastScan == 0 { scheduleRefresh(after: 0) }
         let screens = Screen.all()
         guard !screens.isEmpty else { return }
 
-        let onScreen = CGWindowInfo.onScreen()
+        let onScreen = scanner.desktop.windows
         let onScreenIDs = Set(onScreen.map(\.id))
         let pidsOnScreen = Set(onScreen.map(\.pid))
         let firstRun = windows.isEmpty
         let currentSpaces = Set(screens.map { Spaces.current(display: $0.uuid) })
         func onOtherSpace(_ id: CGWindowID) -> Bool {
-            let spaces = Spaces.of(window: id)
+            let spaces = scanner.desktop.spaces[id] ?? []
             return !spaces.isEmpty && currentSpaces.isDisjoint(with: spaces)
+        }
+        for scan in scanner.results.values {
+            for (id, found) in scan.found {
+                if let w = windows[id] { accept(found, from: scan, for: w) }
+            }
         }
         var present = Set<CGWindowID>()
         var fresh: [Window] = []
         var titles: [CGWindowID: String?] = [:]
 
-        for app in NSWorkspace.shared.runningApplications
-        where app.activationPolicy == .regular && !app.isHidden && app.processIdentifier != getpid() {
-            observe(app)
-            let pid = app.processIdentifier
+        for app in observedApps {
+            let pid = app.pid
             guard pidsOnScreen.contains(pid), let scan = scanner.results[pid] else { continue }
             for id in scan.listed {
                 guard !workspaceMoves.contains(id), onScreenIDs.contains(id), !onOtherSpace(id) else { continue }
-                if windows[id] != nil {
+                if let w = windows[id] {
+                    if let found = scan.found[id] { accept(found, from: scan, for: w) }
                     if let since = templateHiddenWindows[id] {
                         let release = TemplatePlacementPlan.releaseHeldWindow(
                             scanStarted: scan.readAt, heldSince: since, minimized: scan.minimized.contains(id),
@@ -41,9 +47,9 @@ extension WindowManager {
                     present.insert(id)
                     continue
                 }
-                guard let found = scan.found[id] else { continue }
-                let w = Window(id: id, element: found.element, pid: pid, bundleID: app.bundleIdentifier)
-                w.remember(found.frame)
+                guard let found = scan.found[id], !found.frame.isNull else { continue }
+                let w = Window(id: id, element: found.element, pid: pid, bundleID: app.bundleID)
+                accept(found, from: scan, for: w)
                 w.naturalFrame = found.frame
                 w.autoFloating = shouldFloat(w, title: found.title, resizable: found.resizable)
                 titles[id] = found.title
@@ -53,6 +59,7 @@ extension WindowManager {
                 present.insert(id)
             }
         }
+        timing.checkpoint("observe")
         present.formUnion(workspaceMoves.filter { windows[$0] != nil })
 
         let z = Dictionary(onScreen.enumerated().map { ($1.id, $0) }, uniquingKeysWith: { a, _ in a })
@@ -77,15 +84,16 @@ extension WindowManager {
             if NSRunningApplication(processIdentifier: w.pid) == nil || scanner.results[w.pid]?.gone.contains(id) == true { forget(id) }
         }
         self.present = present
-        syncWorkspaces(screens: screens, present: present)
-        visible = present.filter { isShown(workspaceOf[$0]) }
+        let plan = syncWorkspaces(screens: screens, present: present)
+        visible = plan.visible
         guard !restoringTemplate else { onChange?(); return }
         if config.virtualWorkspaces {
-            for id in present where !visible.contains(id) { park(id, screens: screens) }
+            for id in plan.park { park(id, screens: screens) }
             for id in visible where floatsFreely(id) { unpark(floating: id, screens: screens) }
             saveWorkspaces()
         }
 
+        timing.checkpoint("workspaces")
         watchCrowding(screens)
         if let ws = refocusAfterClose {
             refocusAfterClose = nil
@@ -108,7 +116,7 @@ extension WindowManager {
                 if let only, !only.contains(id) { continue }
                 guard let w = windows[id] else { continue }
                 let snap = snapNextPlacement.remove(id) != nil
-                let current = w.cachedFrame
+                let current = animator.destination(id) ?? w.cachedFrame
                 if current.isNull || current.approxEqual(target) { corrections[id] = nil; continue }
                 if snap {
                     instant.append(.init(window: w, to: target, bounds: s.visible))
@@ -137,14 +145,26 @@ extension WindowManager {
         let animated = !instantLayout && config.animate && moves.count <= Self.maxAnimatedMoves
         animator.animate(moves, duration: animated ? config.animationDuration : 0,
                          curve: config.animationCurve, bounce: config.animationBounce)
+        timing.checkpoint("apply")
         onChange?()
+        timing.checkpoint("notify")
+    }
+
+    func accept(_ found: WindowScanner.Found, from scan: WindowScanner.AppScan, for w: Window) {
+        guard scan.readAt > w.observedAt else { return }
+        w.observedAt = scan.readAt
+        w.minimized = scan.minimized.contains(w.id)
+        w.fullscreen = scan.fullscreen.contains(w.id)
+        w.remember(found.frame, ifRevision: found.frameRevision ?? w.frameRevision, readAt: scan.readAt)
+        w.title = found.title
+        w.resizable = found.resizable
     }
 
     func refocusRecent(on ws: String) {
         guard isShown(ws), pendingFocus == nil else { return }
-        if let app = NSWorkspace.shared.frontmostApplication,
-           let id = axApp(app.processIdentifier).element(kAXFocusedWindowAttribute)?.windowID,
-           windows[id] == nil { return }
+        guard let app = NSWorkspace.shared.frontmostApplication,
+              let report = reportedFocus, report.pid == app.processIdentifier else { return }
+        if let id = report.id, windows[id] == nil { return }
         let here = visible.filter { workspaceOf[$0] == ws }
         guard let id = model.mostRecent(of: here), reportedFocusedWindow()?.id != id, let w = windows[id] else { return }
         Log.debug("focus: window closed; back to \(id)")
