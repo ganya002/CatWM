@@ -30,6 +30,8 @@ struct WindowsPane: View {
         CursorShortcutSpec(id: "layout", title: "Next Layout", dispatcher: "cyclelayout", args: "next"),
         CursorShortcutSpec(id: "display", title: "Send to Next Display", dispatcher: "movewindowtomonitor", args: "+1"),
         CursorShortcutSpec(id: "workspace", title: "Send to Next Workspace", dispatcher: "movetoworkspacesilent", args: "+1", nextWorkspace: true),
+        CursorShortcutSpec(id: "dim", title: "Dim Other Windows", dispatcher: "toggledim", args: ""),
+        CursorShortcutSpec(id: "blur", title: "Blur Other Windows", dispatcher: "toggleblur", args: ""),
         CursorShortcutSpec(id: "minimize", title: "Minimize", dispatcher: "minimize", args: ""),
         CursorShortcutSpec(id: "close", title: "Close", dispatcher: "killactive", args: ""),
     ]

@@ -41,6 +41,8 @@ extension WindowManager {
             let (d, a) = nextWorkspaceDispatch(mode: mode)
             out.append(action("workspace", "Send to Next Workspace", "arrow.right.square", d, a))
         }
+        out.append(action("dim", "Dim Other Windows", "circle.lefthalf.filled", "toggledim", isOn: FocusDim.shared.dims))
+        out.append(action("blur", "Blur Other Windows", "drop.halffull", "toggleblur", isOn: FocusDim.shared.blurs))
         out.append(action("minimize", "Minimize", "minus.square", "minimize"))
         out.append(action("close", "Close", "xmark.square", "killactive", destructive: true))
         return (quickActionTitle(w), out)
