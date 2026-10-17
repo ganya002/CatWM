@@ -76,9 +76,7 @@ struct CursorActionsView: View {
                 .overlay {
                     PointerRowHover(enabled: model.trackPointer) { point in
                         guard let point, let next = rowID(at: point.y), model.hovered != next else { return }
-                        var transaction = Transaction()
-                        transaction.disablesAnimations = true
-                        withTransaction(transaction) { model.hovered = next }
+                        model.hovered = next
                     }
                 }
                 .onChange(of: model.open) { _, open in
