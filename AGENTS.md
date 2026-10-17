@@ -1,8 +1,8 @@
 # Comments
 
-Comments are unallowed. Do not add comments.
+Comments are unallowed. `Tools/check-style.sh` fails on them. `swift test`, `./build.sh`, and the `lint` GitHub Actions workflow run that check.
 
-`Package.swift` keeps its `// swift-tools-version:` line. Swift Package Manager requires that line.
+`Package.swift` keeps its `// swift-tools-version:` line. Swift Package Manager requires that line. The only other comment is `// style-ok: <reason>` at the end of a line that the check already flags. The reason is two words or more, and it covers that line only.
 
 Building the project
 
@@ -42,7 +42,7 @@ The app source is in `Sources/ouch/`. Each folder has one job:
 - Use the tokens in `UI/Theme.swift` for colour, type, symbol size, radius, spacing, shadow and motion. Do not type a raw value when a token exists.
 - Use the components in `UI/Components/` and `UI/Popups.swift`. Do not make a local copy of a control. If a control cannot do what you need, extend it. Each control is its own file under `Controls/`, `Rows/`, `Keys/`, or `Picker/`.
 - For a new window or panel, use `OuchPanel` (`UI/OuchPanel.swift`).
-- Run `Tools/check-style.sh` before you commit. It must pass. For a value that is a deliberate one-off (a hardware colour, the intro timing), add `// style-ok: <reason>` to the line.
+- `Tools/check-style.sh` must pass. It rejects hard-coded styles (use a `Theme` token) and `NSPanel` (use `OuchPanel`). A deliberate one-off (a hardware colour, the intro timing, a panel that is not `OuchPanel`) ends with `// style-ok: <reason>` on that line.
 
 # Add a setting
 

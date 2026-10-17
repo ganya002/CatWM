@@ -8,7 +8,7 @@ final class IntroLab {
 
     func open() {
         if window == nil {
-            let p = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 520, height: 640),
+            let p = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 520, height: 640), // style-ok: debug intro lab window
                             styleMask: [.titled, .closable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
             p.title = "Intro Lab"
             p.isReleasedWhenClosed = false

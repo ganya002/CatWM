@@ -187,7 +187,7 @@ final class PermissionGuide {
     }
 
     private func makePanel() -> NSPanel {
-        let p = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 300, height: 10),
+        let p = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 300, height: 10), // style-ok: titled glass permission guide
                         styleMask: [.titled, .fullSizeContentView, .nonactivatingPanel, .utilityWindow],
                         backing: .buffered, defer: false)
         p.clearTitlebar(hiding: [.closeButton, .miniaturizeButton, .zoomButton])
