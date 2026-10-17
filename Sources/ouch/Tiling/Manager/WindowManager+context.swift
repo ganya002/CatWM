@@ -99,7 +99,7 @@ extension WindowManager {
         if w.isFloating {
             targets[w.id] = nil
         } else {
-            if let s = screen(containing: w.frame) { model.assign(w.id, to: shown[s.uuid]) }
+            if let s = screen(containing: w.cachedFrame) { model.assign(w.id, to: shown[s.uuid]) }
             corrections[w.id] = nil
         }
         refresh()

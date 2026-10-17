@@ -2,6 +2,7 @@ import AppKit
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
+    private var statusUpdatePending = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         closePreviousInstances()
@@ -19,8 +20,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         CrashWatch.start()
         PerfMonitor.start()
         WindowManager.shared.onChange = { [weak self] in
-            self?.updateIcon()
-            StatusMenu.shared.refreshIfOpen()
+            self?.scheduleStatusUpdate()
         }
         let firstRun = UserDefaults.standard.object(forKey: "didSetUpLaunchAtLogin") == nil
         LoginItem.enableOnFirstLaunch()
@@ -100,9 +100,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return false
     }
 
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        WindowManager.shared.isStarted = false
+        WindowManager.shared.restoreHiddenWindows {
+            sender.reply(toApplicationShouldTerminate: true)
+        }
+        return .terminateLater
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
-        WindowManager.shared.restoreHiddenWindows()
         CrashWatch.cleanExit()
+    }
+
+    private func scheduleStatusUpdate() {
+        guard !statusUpdatePending else { return }
+        statusUpdatePending = true
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.statusUpdatePending = false
+            self.updateIcon()
+            StatusMenu.shared.refreshIfOpen()
+        }
     }
 
     private func updateIcon() {

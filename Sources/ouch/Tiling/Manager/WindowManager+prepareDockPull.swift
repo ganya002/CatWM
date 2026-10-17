@@ -42,8 +42,8 @@ extension WindowManager {
             return { [weak self] in
                 guard let self, config.virtualWorkspaces, virtualShown[display.uuid] == ws,
                       isOnHomeSpace(display), w.isValid else { return }
-                if w.naturalFrame.isNull { w.naturalFrame = w.frame; w.autoFloating = shouldFloat(w) }
-                pendingFocus = nil
+                if w.naturalFrame.isNull { readDirectActionFacts(w); w.autoFloating = shouldFloat(w) }
+                cancelFocusRequest()
                 Hotkeys.shared.setSubmap("")
                 moveWindow(w, toWorkspace: ws, follow: true)
             }
@@ -55,14 +55,14 @@ extension WindowManager {
         guard isStarted, !restoringTemplate, let w = reportedFocusedWindow() else { return }
         if let p = pendingFocus {
             guard p.id == w.id else { return }
-            pendingFocus = nil
+            if p.executed { pendingFocus = nil }
         }
         noteFocus(w.id)
         guard !sortSession else { return }
         guard config.virtualWorkspaces, let ws = workspaceOf[w.id], isVirtual(ws) else { return }
         if isShown(ws) { lastFocused[ws] = w.id; return }
         guard Date() > autoSwitchAfter else { return }
-        guard isParked(w.frame, Screen.all()) else { scheduleRefresh(); return }
+        guard isParked(w.cachedFrame, Screen.all()) else { scheduleRefresh(); return }
         if config.stayOnWorkspaceAfterClose, Date().timeIntervalSince(lastClose) < 1.0 {
             Log.debug("workspaces: ignoring focus on \(ws) right after a close")
             refocusCurrentWorkspace()
@@ -82,8 +82,9 @@ extension WindowManager {
         }
     }
 
-    func parkFocus() {
-        let sink = focusSink ?? {
+    func prepareFocusSink() {
+        guard focusSink == nil else { return }
+        focusSink = {
             let w = FocusSinkWindow(contentRect: NSRect(x: 0, y: 0, width: 1, height: 1),
                                     styleMask: [.borderless], backing: .buffered, defer: false)
             w.isOpaque = false
@@ -91,14 +92,21 @@ extension WindowManager {
             w.alphaValue = 0.01
             w.ignoresMouseEvents = true
             w.collectionBehavior = [.canJoinAllSpaces, .ignoresCycle, .stationary]
-            focusSink = w
             return w
         }()
+    }
+
+    func parkFocus() {
+        cancelFocusRequest()
+        prepareFocusSink()
+        guard let sink = focusSink else { return }
+        if sink.isKeyWindow, NSWorkspace.shared.frontmostApplication?.processIdentifier == getpid() {
+            animator.focusSink(CGWindowID(sink.windowNumber))
+            return
+        }
         if let primary = NSScreen.screens.first { sink.setFrameOrigin(NSPoint(x: 0, y: primary.frame.maxY - 1)) }
         sink.orderFrontRegardless()
         sink.makeKey()
-        if !WindowServerFocus.focus(pid: getpid(), window: CGWindowID(sink.windowNumber)) {
-            NSApp.activate(ignoringOtherApps: true)
-        }
+        animator.focusSink(CGWindowID(sink.windowNumber))
     }
 }

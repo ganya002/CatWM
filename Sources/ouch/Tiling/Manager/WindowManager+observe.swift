@@ -5,25 +5,39 @@ extension WindowManager {
     func observe(_ app: NSRunningApplication) {
         let pid = app.processIdentifier
         guard app.activationPolicy == .regular, pid != getpid(), observers[pid] == nil else { return }
-        var obs: AXObserver?
-        guard AXObserverCreate(pid, axCallback, &obs) == .success, let obs else { return }
-        let el = axApp(pid)
-        var ok = false
-        for n in [kAXWindowCreatedNotification, kAXFocusedWindowChangedNotification,
-                  kAXApplicationHiddenNotification, kAXApplicationShownNotification] {
-            if AXObserverAddNotification(obs, el, n as CFString, nil) == .success { ok = true }
+        guard observing[pid] == nil else { return }
+        let token = UUID()
+        observing[pid] = token
+        scanner.run(pid) { [weak self] in
+            var observer: AXObserver?
+            let created = AXObserverCreate(pid, axCallback, &observer) == .success
+            var ok = false
+            if created, let observer {
+                let element = axApp(pid)
+                for name in [kAXWindowCreatedNotification, kAXFocusedWindowChangedNotification,
+                             kAXApplicationHiddenNotification, kAXApplicationShownNotification] {
+                    if AXObserverAddNotification(observer, element, name as CFString, nil) == .success { ok = true }
+                }
+            }
+            let registered = ok ? observer : nil
+            DispatchQueue.main.async {
+                guard let self, self.observing[pid] == token else { return }
+                self.observing[pid] = nil
+                guard let registered, NSRunningApplication(processIdentifier: pid) != nil else { return }
+                CFRunLoopAddSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(registered), .defaultMode)
+                self.observers[pid] = registered
+                self.windows.values.filter { $0.pid == pid }.forEach(self.watch)
+            }
         }
-        guard ok else { return }
-        CFRunLoopAddSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(obs), .defaultMode)
-        observers[pid] = obs
-        windows.values.filter { $0.pid == pid }.forEach(watch)
     }
 
     func watch(_ w: Window) {
         guard let obs = observers[w.pid] else { return }
-        for n in [kAXUIElementDestroyedNotification, kAXWindowMiniaturizedNotification,
-                  kAXWindowDeminiaturizedNotification, kAXWindowMovedNotification, kAXWindowResizedNotification] {
-            AXObserverAddNotification(obs, w.element, n as CFString, nil)
+        scanner.run(w.pid) {
+            for n in [kAXUIElementDestroyedNotification, kAXWindowMiniaturizedNotification,
+                      kAXWindowDeminiaturizedNotification, kAXWindowMovedNotification, kAXWindowResizedNotification] {
+                AXObserverAddNotification(obs, w.element, n as CFString, nil)
+            }
         }
     }
 
@@ -31,20 +45,21 @@ extension WindowManager {
         switch notification {
         case kAXUIElementDestroyedNotification:
             lastClose = Date()
+            requestFocusObservation()
             scheduleRefresh()
             FocusDim.shared.update()
         case kAXWindowMovedNotification, kAXWindowResizedNotification:
-            guard let w = windows.values.first(where: { CFEqual($0.element, element) }) ?? element.windowID.flatMap({ windows[$0] }),
+            guard let w = windows.values.first(where: { CFEqual($0.element, element) }),
                   !animator.isBusy(w.id), !movingToSpace else { return }
             let id = w.id
+            observeFrame(w)
             if NSEvent.pressedMouseButtons & 1 != 0 {
                 drags[id] = (drags[id] ?? false) || notification == kAXWindowResizedNotification
             } else if !w.isFloating {
                 scheduleRefresh(after: 0.25)
             }
         case kAXFocusedWindowChangedNotification:
-            if let id = element.windowID, windows[id] == nil { scheduleRefresh(after: 0.1) }
-            followFocus()
+            observeFocus(element)
             FocusDim.shared.update()
             onChange?()
         case kAXWindowCreatedNotification:
@@ -75,8 +90,14 @@ extension WindowManager {
         animator.cancel(id)
         templateHiddenWindows[id] = nil
         if !restoringTemplate, focusClock > 0, focusStamps[id] == focusClock { refocusAfterClose = workspaceOf[id] }
-        if pendingFocus?.id == id { pendingFocus = nil }
+        if pendingFocus?.id == id { cancelFocusRequest() }
+        if reportedFocus?.id == id {
+            reportedFocus = nil
+            focusObservation += 1
+        }
         windows[id] = nil
+        frameReads[id] = nil
+        dirtyFrames.remove(id)
         snapNextPlacement.remove(id)
         model.forget(id)
         floatFrames[id] = nil; targets[id] = nil; minSizes[id] = nil; corrections[id] = nil; drags[id] = nil
@@ -141,7 +162,7 @@ extension WindowManager {
             return true
         }
         if let b = w.bundleID, Self.alwaysFloatingApps.contains(b) { return true }
-        let title = known ?? w.element.string(kAXTitleAttribute)
+        let title = known ?? w.title
         if w.bundleID == "com.apple.finder", isMountedImageWindow(title: title) { return true }
         if isUtilityWindow(w, title: title) { return true }
         if let b = w.bundleID {
@@ -152,7 +173,7 @@ extension WindowManager {
         } else if !config.floatingIsBlacklist {
             return true
         }
-        if !(resizable ?? w.element.isSettable(kAXSizeAttribute)) { return true }
+        if !(resizable ?? w.resizable) { return true }
         let f = w.naturalFrame
         if config.floatSmallWindows, !f.isNull, f.width < 500, f.height < 500 { return true }
         return false

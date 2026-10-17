@@ -25,14 +25,57 @@ final class Animator {
     private var writers: [pid_t: AXWriter] = [:]
     private var owners: [CGWindowID: pid_t] = [:]
     private var epochs: [CGWindowID: Int] = [:]
+    private let focusLock = NSLock()
+    private var focusGeneration = 0
+    private var focusQueues: [pid_t: DispatchQueue] = [:]
+    private let makeWriter: (pid_t) -> AXWriter
+    private let applyFocus: (Window, () -> Bool) -> Void
     private var timer: Timer?
     private var timing = Timing()
     private var frameRun: FrameRun?
     var onMinimumSize: ((CGWindowID, CGSize) -> Void)?
 
+    init(makeWriter: @escaping (pid_t) -> AXWriter = AXWriter.init,
+         applyFocus: @escaping (Window, () -> Bool) -> Void = { $0.focus(ifCurrent: $1) }) {
+        self.makeWriter = makeWriter
+        self.applyFocus = applyFocus
+    }
+
+    func cancelFocus() { focusLock.withLock { focusGeneration += 1 } }
+
+    func focus(_ w: Window, done: @escaping () -> Void = {}) {
+        let generation = focusLock.withLock { focusGeneration += 1; return focusGeneration }
+        if focusQueues[w.pid] == nil { focusQueues[w.pid] = DispatchQueue(label: "ouch.focus-write.\(w.pid)", qos: .userInteractive) }
+        focusQueues[w.pid]!.async { [weak self] in
+            guard let self else { return }
+            let isCurrent = { self.focusLock.withLock { self.focusGeneration == generation } }
+            guard isCurrent() else { return }
+            self.applyFocus(w, isCurrent)
+            DispatchQueue.main.async {
+                guard isCurrent() else { return }
+                done()
+            }
+        }
+    }
+
+    func focusSink(_ window: CGWindowID) {
+        let generation = focusLock.withLock { focusGeneration += 1; return focusGeneration }
+        DispatchQueue.global(qos: .userInteractive).async { [weak self] in
+            guard let self, self.focusLock.withLock({ self.focusGeneration == generation }) else { return }
+            if !WindowServerFocus.focus(pid: getpid(), window: window) {
+                DispatchQueue.main.async {
+                    guard self.focusLock.withLock({ self.focusGeneration == generation }) else { return }
+                    NSApp.activate(ignoringOtherApps: true)
+                }
+            }
+        }
+    }
+
     func isBusy(_ id: CGWindowID) -> Bool {
         items[id] != nil || landing[id] != nil || (quietUntil[id] ?? 0) > CACurrentMediaTime()
     }
+
+    func destination(_ id: CGWindowID) -> CGRect? { items[id]?.move.to ?? landing[id]?.move.to }
 
     func isMoving(_ id: CGWindowID, to frame: CGRect) -> Bool {
         (items[id]?.move.to ?? landing[id]?.move.to) == frame
@@ -79,9 +122,23 @@ final class Animator {
         }
     }
 
+    func position(_ w: Window, at frame: CGRect) {
+        cancel(w.id)
+        owners[w.id] = w.pid
+        landings += 1
+        let number = landings
+        landing[w.id] = (.init(window: w, to: frame, bounds: frame), number)
+        quiet(w.id)
+        writer(w.pid).position(w, at: frame.origin) { [weak self] _ in
+            guard let self, self.landing[w.id]?.number == number else { return }
+            self.landing[w.id] = nil
+            self.quiet(w.id)
+        }
+    }
+
     private func writer(_ pid: pid_t) -> AXWriter {
         if let w = writers[pid] { return w }
-        let w = AXWriter(pid: pid)
+        let w = makeWriter(pid)
         writers[pid] = w
         return w
     }
@@ -92,10 +149,10 @@ final class Animator {
         afterPendingWrites(pids: nil, completion)
     }
 
-    func afterPendingWrites(pids: Set<pid_t>?, _ completion: @escaping () -> Void) {
+    func afterPendingWrites(pids: Set<pid_t>?, completionQueue: DispatchQueue = .main, _ completion: @escaping () -> Void) {
         let selected = pids.map { ids in ids.compactMap { writers[$0] } } ?? Array(writers.values)
         guard !selected.isEmpty else {
-            DispatchQueue.main.async(execute: completion)
+            completionQueue.async(execute: completion)
             return
         }
         let group = DispatchGroup()
@@ -103,7 +160,7 @@ final class Animator {
             group.enter()
             writer.run { group.leave() }
         }
-        group.notify(queue: .main, execute: completion)
+        group.notify(queue: completionQueue, execute: completion)
     }
 
     private func tick() {

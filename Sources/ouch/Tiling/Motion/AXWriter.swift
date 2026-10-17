@@ -2,7 +2,7 @@ import AppKit
 import QuartzCore
 
 final class AXWriter {
-    private enum Op { case step(CGRect), land(CGRect, done: (Bool) -> Void) }
+    private enum Op { case step(CGRect), land(CGRect, done: (Bool) -> Void), position(CGPoint, done: (Bool) -> Void) }
     private struct Pending { let window: Window; let op: Op; let epoch: Int }
     struct Stats { var size = Stat(), position = Stat(), land = Stat(), skipped = 0 }
 
@@ -23,6 +23,8 @@ final class AXWriter {
 
     func step(_ w: Window, to frame: CGRect) { submit(w, .step(frame)) }
     func land(_ w: Window, at frame: CGRect, done: @escaping (Bool) -> Void) { submit(w, .land(frame, done: done)) }
+
+    func position(_ w: Window, at point: CGPoint, done: @escaping (Bool) -> Void) { submit(w, .position(point, done: done)) }
 
     func cancel(_ id: CGWindowID) {
         lock.withLock { pending[id] = nil; epochs[id, default: 0] += 1 }
@@ -71,7 +73,10 @@ final class AXWriter {
         let w = p.window
         if w.placementSuspended || w.isNativeFullscreen || w.element.bool(kAXMinimizedAttribute) == true {
             if animating.remove(w.id) != nil { EnhancedUI.resume(pid) }
-            if case let .land(_, done) = p.op { DispatchQueue.main.async { done(false) } }
+            switch p.op {
+            case let .land(_, done), let .position(_, done): DispatchQueue.main.async { done(false) }
+            case .step: break
+            }
             return
         }
         if animating.insert(w.id).inserted { EnhancedUI.suspend(pid) }
@@ -84,6 +89,12 @@ final class AXWriter {
             }
             let o = measure { w.setPosition(f.origin) }
             lock.withLock { if s > 0 { stats.size.add(s) }; stats.position.add(o) }
+        case let .position(point, done):
+            let t = measure { w.setPosition(point) }
+            animating.remove(w.id)
+            EnhancedUI.resume(pid)
+            lock.withLock { stats.position.add(t) }
+            DispatchQueue.main.async { done(true) }
         case let .land(f, done):
             lastSize[w.id] = nil
             let t = measure { w.setFrame(f) }

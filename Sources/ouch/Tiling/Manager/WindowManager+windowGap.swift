@@ -69,7 +69,7 @@ extension WindowManager {
     func screen(of w: Window, in screens: [Screen] = Screen.all()) -> Screen? {
         if config.virtualWorkspaces || !w.isFloating, let u = workspaceOf[w.id].flatMap({ monitorOf[$0] }),
            let s = screens.first(where: { $0.uuid == u }) { return s }
-        return screen(containing: w.frame, in: screens)
+        return screen(containing: animator.destination(w.id) ?? w.cachedFrame, in: screens)
     }
 
     func currentScreen() -> Screen? {
@@ -87,21 +87,22 @@ extension WindowManager {
 
     func focusedWindow() -> Window? {
         if let p = pendingFocus {
-            if Date() < p.until, let w = windows[p.id], visible.contains(p.id) { return w }
-            pendingFocus = nil
+            let pid = frontmostPID()
+            if pid == p.pid || pid == p.origin, let w = windows[p.id], visible.contains(p.id) { return w }
+            cancelFocusRequest()
         }
         return reportedFocusedWindow()
     }
 
     func reportedFocusedWindow() -> Window? {
-        guard let app = NSWorkspace.shared.frontmostApplication,
-              let el = axApp(app.processIdentifier).element(kAXFocusedWindowAttribute),
-              let id = el.windowID else { return nil }
+        guard let pid = frontmostPID(),
+              let report = reportedFocus, report.pid == pid,
+              let id = report.id else { return nil }
         return windows[id]
     }
 
     func navFrame(_ w: Window) -> CGRect {
-        (!w.isFloating && tilingEnabled ? targets[w.id] : nil) ?? w.frame
+        (!w.isFloating && tilingEnabled ? targets[w.id] : nil) ?? animator.destination(w.id) ?? w.cachedFrame
     }
 
     func navItem(_ w: Window, in screens: [Screen]) -> FocusNavigation.Item {

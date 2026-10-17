@@ -30,7 +30,7 @@ extension WindowManager {
         guard let w = focusedWindow(), let src = screen(of: w, in: screens),
               let dst = screen(from: src, spec: spec, in: screens), dst.uuid != src.uuid else { return }
         if w.isFloating {
-            let f = w.frame
+            let f = w.cachedFrame
             var o = CGPoint(x: dst.visible.minX + (f.minX - src.visible.minX), y: dst.visible.minY + (f.minY - src.visible.minY))
             o.x = max(dst.visible.minX, min(o.x, dst.visible.maxX - f.width))
             o.y = max(dst.visible.minY, min(o.y, dst.visible.maxY - f.height))

@@ -9,6 +9,11 @@ final class Window {
     var autoFloating = false
     var userFloating: Bool?
     var naturalFrame = CGRect.null
+    var observedAt = Date.distantPast
+    var title: String?
+    var resizable = true
+    var minimized = false
+    var fullscreen = false
     var isFloating: Bool { userFloating ?? autoFloating }
 
     init(id: CGWindowID, element: AXUIElement, pid: pid_t, bundleID: String?) {
@@ -18,6 +23,8 @@ final class Window {
 
     private let frameLock = NSLock()
     private var lastFrame = CGRect.null
+    private var frameVersion = 0
+    private var lastFrameObservation = Date.distantPast
     private var placementHeld = false
 
     var placementSuspended: Bool {
@@ -26,16 +33,26 @@ final class Window {
     }
 
     var frame: CGRect {
+        let version = frameRevision
+        let readAt = Date()
         let f = element.frame
-        if !f.isNull { frameLock.withLock { lastFrame = f } }
+        remember(f, ifRevision: version, readAt: readAt)
         return f
     }
     var cachedFrame: CGRect {
-        let f = frameLock.withLock { lastFrame }
-        return f.isNull ? frame : f
+        frameLock.withLock { lastFrame }
     }
     func remember(_ f: CGRect) {
-        if !f.isNull { frameLock.withLock { lastFrame = f } }
+        if !f.isNull { frameLock.withLock { lastFrame = f; frameVersion += 1; lastFrameObservation = Date() } }
+    }
+    var frameRevision: Int { frameLock.withLock { frameVersion } }
+    func remember(_ f: CGRect, ifRevision version: Int, readAt: Date = Date()) {
+        guard !f.isNull else { return }
+        frameLock.withLock {
+            guard frameVersion == version, readAt >= lastFrameObservation else { return }
+            lastFrame = f
+            lastFrameObservation = readAt
+        }
     }
     var isValid: Bool { element.string(kAXRoleAttribute) != nil }
     var isNativeFullscreen: Bool { element.bool("AXFullScreen") ?? false }
@@ -43,13 +60,13 @@ final class Window {
     func setPosition(_ p: CGPoint) {
         var p = p
         if let v = AXValueCreate(.cgPoint, &p), element.set(kAXPositionAttribute, v) {
-            frameLock.withLock { if !lastFrame.isNull { lastFrame.origin = p } }
+            frameLock.withLock { if !lastFrame.isNull { lastFrame.origin = p; frameVersion += 1 } }
         }
     }
     func setSize(_ s: CGSize) {
         var s = s
         if let v = AXValueCreate(.cgSize, &s), element.set(kAXSizeAttribute, v) {
-            frameLock.withLock { if !lastFrame.isNull { lastFrame.size = s } }
+            frameLock.withLock { if !lastFrame.isNull { lastFrame.size = s; frameVersion += 1 } }
         }
     }
     func setFrame(_ r: CGRect) {
@@ -58,12 +75,15 @@ final class Window {
         setSize(r.size)
     }
 
-    func focus() {
+    func focus(ifCurrent: () -> Bool = { true }) {
+        guard ifCurrent() else { return }
         if !WindowServerFocus.focus(pid: pid, window: id) {
             axApp(pid).set(kAXFrontmostAttribute, kCFBooleanTrue)
             NSRunningApplication(processIdentifier: pid)?.activate()
         }
+        guard ifCurrent() else { return }
         element.set(kAXMainAttribute, kCFBooleanTrue)
+        guard ifCurrent() else { return }
         element.perform(kAXRaiseAction)
     }
 

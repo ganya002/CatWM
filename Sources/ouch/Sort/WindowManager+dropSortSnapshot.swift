@@ -22,7 +22,7 @@ extension WindowManager {
             let items = mine.compactMap { id -> SortItem? in
                 guard let w = windows[id] else { return nil }
                 let app = NSRunningApplication(processIdentifier: w.pid)
-                let title = w.element.string(kAXTitleAttribute) ?? ""
+                let title = w.title ?? ""
                 return SortItem(id: id, title: title.isEmpty ? "Untitled" : title, app: app?.localizedName ?? w.bundleID ?? "App",
                                 bundleID: w.bundleID, icon: app?.icon, recency: rank[id] ?? 2000)
             }

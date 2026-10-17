@@ -3,9 +3,14 @@ import AppKit
 extension WindowManager {
 
     func focus(_ w: Window, warp: Bool = true) {
-        w.focus()
+        let request = UUID()
+        pendingFocus = PendingFocus(id: w.id, pid: w.pid, origin: frontmostPID(), request: request)
+        animator.focus(w) { [weak self] in
+            guard let self, self.pendingFocus?.request == request else { return }
+            self.pendingFocus?.executed = true
+            self.requestFocusObservation()
+        }
         noteFocus(w.id)
-        pendingFocus = (w.id, Date().addingTimeInterval(0.5))
         if warp, config.mouseFollowsFocus {
             ignoreMouseUntil = Date().addingTimeInterval(0.3)
             CGWarpMouseCursorPosition(navFrame(w).center)
@@ -40,12 +45,20 @@ extension WindowManager {
         guard !drags.isEmpty, !movingToSpace else { drags = [:]; return }
         let finished = drags
         drags = [:]
+        let dragged = finished.keys.compactMap { windows[$0] }
+        let point = mouseLocation()
+        readFrames(dragged) { [weak self] in
+            guard let self, NSEvent.pressedMouseButtons & 1 == 0, !self.movingToSpace else { return }
+            self.finishMouseDrag(finished, at: point)
+        }
+    }
+
+    private func finishMouseDrag(_ finished: [CGWindowID: Bool], at p: CGPoint) {
         let screens = Screen.all()
-        let p = mouseLocation()
         for (id, resized) in finished {
             guard let w = windows[id], let src = screen(of: w, in: screens) else { continue }
             if floatsFreely(id) {
-                if let dst = screen(containing: w.frame, in: screens), dst.uuid != src.uuid, let ws = shown[dst.uuid] { model.assign(id, to: ws) }
+                if let dst = screen(containing: w.cachedFrame, in: screens), dst.uuid != src.uuid, let ws = shown[dst.uuid] { model.assign(id, to: ws) }
                 continue
             }
             if resized {
@@ -67,7 +80,7 @@ extension WindowManager {
     private func applyMouseResize(_ w: Window, on s: Screen) {
         let st = state(for: s)
         let ids = tiled(on: s)
-        let r = usableRect(s), f = w.frame
+        let r = usableRect(s), f = w.cachedFrame
         guard !f.isNull else { return }
         let mains = [.bsp, .twoPane, .twoPaneRight].contains(st.layout) ? 1 : st.mainCount
         guard let idx = ids.firstIndex(of: w.id), ids.count > mains, var axis = st.layout.ratioAxis else { return }

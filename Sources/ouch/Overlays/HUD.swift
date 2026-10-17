@@ -10,6 +10,19 @@ final class HUD {
     private static var margin: CGFloat { Elevation.float.room }
     var avoid: NSRect?
 
+    func prepare(text: String, layout: Layout?) {
+        guard panel == nil else { return }
+        model.text = text
+        model.layout = layout
+        let panel = makePanel()
+        let host = NSHostingView(rootView: HUDView(model: model, margin: Self.margin))
+        panel.contentView = host
+        self.panel = panel
+        self.host = host
+        host.layoutSubtreeIfNeeded()
+        _ = host.fittingSize
+    }
+
     func show(_ text: String, layout: Layout? = nil, on screen: NSScreen?) {
         show(text, layout: layout, warning: false, on: screen)
     }

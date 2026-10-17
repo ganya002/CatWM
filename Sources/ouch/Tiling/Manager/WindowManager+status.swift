@@ -74,9 +74,12 @@ extension WindowManager {
         model.swapWorkspaces(a, b)
     }
 
-    func dispatch(_ dispatcher: String, _ rawArg: String) {
+    func dispatch(_ dispatcher: String, _ rawArg: String, inMode originalMode: Bool? = nil) {
         let arg = rawArg.trimmingCharacters(in: .whitespaces)
-        let inMode = !Hotkeys.shared.submap.isEmpty
+        let inMode = originalMode ?? !Hotkeys.shared.submap.isEmpty
+        if deferFocusCommand(dispatcher, arg: arg, inMode: inMode) { return }
+        let timing = TilingTiming("command \(dispatcher)", windows: windows.count)
+        defer { timing.finish() }
         defer { onDispatch?(dispatcher, arg, inMode) }
         if let feature = FocusDim.features.first(where: { $0.pointer.dispatcher == dispatcher }) {
             feature.run()

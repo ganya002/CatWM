@@ -23,6 +23,8 @@ extension WindowManager {
             let pid = app.processIdentifier
             if let obs = observers[pid] { CFRunLoopRemoveSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(obs), .defaultMode) }
             observers[pid] = nil
+            scanner.forget(pid)
+            observing.removeValue(forKey: pid)
             windows.values.filter { $0.pid == pid }.forEach { self.forget($0.id) }
             scheduleRefresh()
         }
@@ -30,7 +32,8 @@ extension WindowManager {
             ws.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in self?.scheduleRefresh() }
         }
         ws.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] _ in
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { self?.followFocus() }
+            if self?.pendingFocus == nil { self?.animator.cancelFocus() }
+            self?.requestFocusObservation()
         }
         ws.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
             guard let self else { return }
@@ -44,7 +47,7 @@ extension WindowManager {
 
         NSEvent.addGlobalMonitorForEvents(matching: .leftMouseUp) { [weak self] _ in self?.mouseUp() }
         NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-            self?.pendingFocus = nil
+            self?.cancelFocusRequest()
             if !Hotkeys.shared.submap.isEmpty { Hotkeys.shared.setSubmap("") }
         }
         Hotkeys.shared.onSubmapChange = { [weak self] name in
@@ -80,6 +83,9 @@ extension WindowManager {
             if let cmd = n.object as? String { self?.ipc(cmd) }
         }
 
+        prepareFocusSink()
+        HUD.shared.prepare(text: currentWorkspace ?? "1", layout: config.layouts.first)
+        requestFocusObservation()
         refresh()
         for delay in [0.5, 1.5, 3.0, 6.0] {
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in self?.scheduleRefresh() }
@@ -105,6 +111,7 @@ extension WindowManager {
         Hotkeys.shared.setBindings(config.bindings)
         for w in windows.values { w.autoFloating = shouldFloat(w) }
         corrections = [:]
+        scheduleRefresh(after: 0)
         refresh()
         guard showHUD else { return }
         HUD.shared.show(config.errors.isEmpty ? "Config reloaded" : "Config: \(config.errors.count) error(s), see Console",
