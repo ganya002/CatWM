@@ -6,6 +6,7 @@ struct ActionRow: View {
     let hovered: Bool
     let shown: Bool
     let index: Int
+    var remove: (() -> Void)? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let pick: () -> Void
     let hover: (Bool) -> Void
@@ -22,7 +23,23 @@ struct ActionRow: View {
             if action.isOn {
                 Image(systemName: "checkmark").font(Theme.symbol(Theme.Icon.sm, .bold)).foregroundStyle(Theme.accentInk)
             }
-            if !action.keys.isEmpty { Kbd(keys: action.keys).fixedSize() }
+            if !action.keys.isEmpty {
+                Kbd(keys: action.keys).fixedSize()
+                    .opacity(hovered && remove != nil ? 0 : 1)
+            }
+        }
+        .accessibilityLabel(action.title)
+        .accessibilityValue(action.isOn ? "On" : "")
+        .accessibilityHint(action.keys.isEmpty ? "" : "Shortcut \(action.keys.joined(separator: " "))")
+        .accessibilityAddTraits(action.isOn ? .isSelected : [])
+        .accessibilityActions {
+            if let remove { Button("Delete template", action: remove) }
+        }
+        .overlay(alignment: .trailing) {
+            if hovered, let remove {
+                RemoveButton(help: "Delete \(action.title)", variant: .close, action: remove)
+                    .padding(.trailing, OMenuRowStyle.inset)
+            }
         }
         .animation(Motion.fade, value: hovered)
         .opacity(shown || reduceMotion ? 1 : 0)
@@ -30,9 +47,5 @@ struct ActionRow: View {
         .animation(shown ? .timingCurve(0.2, 0.8, 0.2, 1, duration: 0.24).delay(0.06 + 0.022 * Double(index))
                          : .easeIn(duration: 0.08), value: shown) // style-ok: staggered entrance, timed to the surface
         .onHover(perform: hover)
-        .accessibilityLabel(action.title)
-        .accessibilityValue(action.isOn ? "On" : "")
-        .accessibilityHint(action.keys.isEmpty ? "" : "Shortcut \(action.keys.joined(separator: " "))")
-        .accessibilityAddTraits(action.isOn ? .isSelected : [])
     }
 }

@@ -28,7 +28,17 @@ extension WindowManager {
             for id in scan.listed {
                 guard !workspaceMoves.contains(id), onScreenIDs.contains(id), !onOtherSpace(id) else { continue }
                 if windows[id] != nil {
-                    if !scan.fullscreen.contains(id) { present.insert(id) }
+                    if let since = templateHiddenWindows[id] {
+                        let release = TemplatePlacementPlan.releaseHeldWindow(
+                            scanStarted: scan.readAt, heldSince: since, minimized: scan.minimized.contains(id),
+                            fullscreen: scan.fullscreen.contains(id), restoring: restoringTemplate)
+                        guard release else { continue }
+                        templateHiddenWindows[id] = nil
+                        windows[id]?.placementSuspended = false
+                        snapNextPlacement.insert(id)
+                    }
+                    if scan.fullscreen.contains(id) || scan.minimized.contains(id) { continue }
+                    present.insert(id)
                     continue
                 }
                 guard let found = scan.found[id] else { continue }
@@ -69,6 +79,7 @@ extension WindowManager {
         self.present = present
         syncWorkspaces(screens: screens, present: present)
         visible = present.filter { isShown(workspaceOf[$0]) }
+        guard !restoringTemplate else { onChange?(); return }
         if config.virtualWorkspaces {
             for id in present where !visible.contains(id) { park(id, screens: screens) }
             for id in visible where floatsFreely(id) { unpark(floating: id, screens: screens) }

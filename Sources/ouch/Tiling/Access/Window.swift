@@ -18,6 +18,12 @@ final class Window {
 
     private let frameLock = NSLock()
     private var lastFrame = CGRect.null
+    private var placementHeld = false
+
+    var placementSuspended: Bool {
+        get { frameLock.withLock { placementHeld } }
+        set { frameLock.withLock { placementHeld = newValue } }
+    }
 
     var frame: CGRect {
         let f = element.frame

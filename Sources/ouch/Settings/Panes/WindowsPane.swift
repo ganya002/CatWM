@@ -14,28 +14,6 @@ struct WindowsPane: View {
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
-    var windowMode: String {
-        doc.binds.first { $0.submap.isEmpty && $0.dispatcher == "submap" && !["", "reset"].contains($0.args.lowercased()) }?.args ?? ""
-    }
-
-    var pointerShortcuts: [CursorShortcutSpec] {
-        Self.pointerShortcutList.filter { $0.id != "workspace" || doc.config.virtualWorkspaces }
-    }
-
-    static let pointerShortcutList: [CursorShortcutSpec] = [
-        CursorShortcutSpec(id: "float", title: "Float or tile", dispatcher: "togglefloating", args: ""),
-        CursorShortcutSpec(id: "zoom", title: "Zoom", dispatcher: "fullscreen", args: ""),
-        CursorShortcutSpec(id: "native", title: "Native Full Screen", dispatcher: "nativefullscreen", args: ""),
-        CursorShortcutSpec(id: "main", title: "Make Main", dispatcher: "layoutmsg", args: "swapwithmaster"),
-        CursorShortcutSpec(id: "layout", title: "Next Layout", dispatcher: "cyclelayout", args: "next"),
-        CursorShortcutSpec(id: "display", title: "Send to Next Display", dispatcher: "movewindowtomonitor", args: "+1"),
-        CursorShortcutSpec(id: "workspace", title: "Send to Next Workspace", dispatcher: "movetoworkspacesilent", args: "+1", nextWorkspace: true),
-        CursorShortcutSpec(id: "dim", title: "Dim Other Windows", dispatcher: "toggledim", args: ""),
-        CursorShortcutSpec(id: "blur", title: "Blur Other Windows", dispatcher: "toggleblur", args: ""),
-        CursorShortcutSpec(id: "minimize", title: "Minimize", dispatcher: "minimize", args: ""),
-        CursorShortcutSpec(id: "close", title: "Close", dispatcher: "killactive", args: ""),
-    ]
-
     var addMenu: some View {
         let doc = doc, apps = runningApps
         return OMenuButton(style: OButtonStyle(variant: .secondary, size: .sm), items: {
