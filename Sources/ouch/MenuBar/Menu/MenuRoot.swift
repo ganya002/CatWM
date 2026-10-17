@@ -22,7 +22,7 @@ struct MenuRoot: View {
                 if let parent = model.item(id), let row = model.rowFrames[id] {
                     let level = i + 1
                     let h = model.columnHeights[level] ?? 0
-                    let y = max(top, min(row.minY - 4, size.height - h - 30))
+                    let y = max(top, min(row.minY - 4, size.height - h - top))
                     let x = model.opensLeft ? row.minX - 4 - parent.width - 2 : row.maxX + 4 + 2
                     column(level, width: parent.width)
                         .padding(.leading, x).padding(.top, y)

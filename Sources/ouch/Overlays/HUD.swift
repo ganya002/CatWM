@@ -7,7 +7,7 @@ final class HUD {
     private var host: NSHostingView<HUDView>?
     private let model = HUDModel()
     private var hideWork: DispatchWorkItem?
-    private static let margin: CGFloat = 30
+    private static var margin: CGFloat { Elevation.float.room }
     var avoid: NSRect?
 
     func show(_ text: String, layout: Layout? = nil, on screen: NSScreen?) {

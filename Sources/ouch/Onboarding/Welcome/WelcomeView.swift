@@ -4,7 +4,7 @@ import SwiftUI
 struct WelcomeView: View {
     @ObservedObject var model: WelcomeModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    static let margin: CGFloat = 44
+    static var margin: CGFloat { Elevation.float.room }
     static let width: CGFloat = 480 - 64
 
     var body: some View {

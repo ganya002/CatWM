@@ -8,7 +8,7 @@ final class StatusMenu: NSObject, NSWindowDelegate {
     let model = MenuModel()
     private var panel: OuchPanel?
     private let dismiss = DismissMonitor()
-    private static let margin: CGFloat = 26
+    private static var margin: CGFloat { Elevation.popover.room }
 
     var isOpen: Bool { panel?.isVisible == true }
 
@@ -27,14 +27,14 @@ final class StatusMenu: NSObject, NSWindowDelegate {
         model.opensLeft = left + Theme.menuWidth + subs > v.maxX - 8
         let width = Theme.menuWidth + subs + 2 * m
         let x = model.opensLeft ? left - subs - m : left - m
-        let top = b.minY - 4 + m / 4
+        let top = b.minY - 4 + m
         let height = min(top - v.minY, 820)
         let frame = NSRect(x: x, y: top - height, width: width, height: height)
         let rootX = model.opensLeft ? subs + m : m
 
         let p = panel ?? makePanel()
         panel = p
-        p.contentView = OuchHostingView(rootView: MenuRoot(model: model, rootX: rootX, top: m / 4,
+        p.contentView = OuchHostingView(rootView: MenuRoot(model: model, rootX: rootX, top: m,
                                                          size: frame.size))
         p.setFrame(frame, display: true)
         p.makeKeyAndOrderFront(nil)
