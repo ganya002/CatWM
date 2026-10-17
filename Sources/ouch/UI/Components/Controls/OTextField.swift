@@ -24,3 +24,16 @@ struct OTextField: View {
             .accessibilityLabel(placeholder)
     }
 }
+
+#if DEBUG
+extension GalleryContent {
+    @ViewBuilder var textFieldExamples: some View {
+        HStack(spacing: Theme.Space.lg) {
+            OTextField(placeholder: "Text field", text: $m.text)
+                .frame(width: 220)
+            OTextField(placeholder: "Monospaced", text: $m.text, mono: true)
+                .frame(width: 220)
+        }
+    }
+}
+#endif

@@ -18,3 +18,12 @@ struct OKnob: View {
         .frame(width: size, height: size)
     }
 }
+
+#if DEBUG
+extension GalleryContent {
+    @ViewBuilder var knobExamples: some View {
+        OKnob()
+        OKnob(color: Theme.accent)
+    }
+}
+#endif

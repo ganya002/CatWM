@@ -9,74 +9,81 @@ struct GeneralPane: View {
     var body: some View {
         let s = ui.status
         VStack(alignment: .leading, spacing: 30) {
-            StatusHero(ui: ui).setting("general.status", ui)
+            StatusHero(ui: ui).setting(GeneralPane.searchStatus.id, ui)
 
             OGroup("Startup") {
-                OSwitchRow("Open at login", isOn: loginBinding)
-                    .setting("general.login", ui)
+                OSwitchRow(GeneralPane.searchLogin.title, isOn: loginBinding)
+                    .setting(GeneralPane.searchLogin.id, ui)
                 if s.loginNeedsApproval {
                     ORow("Waiting for approval", description: "Allow Ouch in Login Items", symbol: "exclamationmark.triangle.fill") {
                         OButton("Open Login Items", size: .sm) { LoginItem.openSettings() }
                     }
                 }
                 if !s.inputMonitoring && CapsLockChord.shared.isBound {
-                    ORow("Instant Caps Lock shortcuts", description: "Needs Input Monitoring; otherwise Caps Lock waits for a hold") {
+                    ORow(GeneralPane.searchInputMonitoring.title, description: "Needs Input Monitoring; otherwise Caps Lock waits for a hold") {
                         OButton("Allow…", size: .sm) { Permissions.requestInputMonitoring() }
                     }
-                    .setting("general.inputMonitoring", ui)
+                    .setting(GeneralPane.searchInputMonitoring.id, ui)
                 }
             }
 
-            OGroup("Tiling") {
+            OGroup(GeneralPane.searchTiling.title) {
                 OSwitchRow("Tile windows",
                            isOn: Binding(get: { ui.status.tilingEnabled }, set: { on in
                                if on != WindowManager.shared.tilingEnabled { WindowManager.shared.toggleTiling() }
                                ui.refreshStatus()
                            }))
                     .disabled(!s.running)
-                    .setting("general.tiling", ui)
-                ORow("Shortcut key", description: "The key you hold for most shortcuts") {
+                    .setting(GeneralPane.searchTiling.id, ui)
+                ORow(GeneralPane.searchModifier.title, description: "The key you hold for most shortcuts") {
                     OMenuPicker(title: "Shortcut key", options: modifierOptions,
                                 selection: Binding(get: { doc.modValue }, set: { doc.modValue = $0 }))
                 }
-                .setting("general.modifier", ui)
+                .setting(GeneralPane.searchModifier.id, ui)
             }
 
             OGroup("Updates") {
                 if updater.isConfigured {
-                    OSwitchRow("Check for updates automatically",
+                    OSwitchRow(GeneralPane.searchAutoCheck.title,
                                isOn: Binding(get: { updater.automaticallyChecks }, set: { updater.automaticallyChecks = $0 }))
-                        .setting("general.autoCheck", ui)
+                        .setting(GeneralPane.searchAutoCheck.id, ui)
                     if updater.automaticallyChecks {
-                        OSwitchRow("Download updates automatically",
+                        OSwitchRow(GeneralPane.searchAutoDownload.title,
                                    isOn: Binding(get: { updater.automaticallyDownloads }, set: { updater.automaticallyDownloads = $0 }))
-                            .setting("general.autoDownload", ui)
+                            .setting(GeneralPane.searchAutoDownload.id, ui)
                             .transition(.opacity)
                     }
-                    OSwitchRow("Include beta releases", description: "Get new versions early. They may have bugs.",
+                    OSwitchRow(GeneralPane.searchBeta.title, description: "Get new versions early. They may have bugs.",
                                isOn: Binding(get: { updater.receivesBeta }, set: { updater.receivesBeta = $0 }))
-                        .setting("general.beta", ui)
-                    ORow("Check for updates", description: updater.lastChecked.map { "Last checked \($0.formatted(.relative(presentation: .named)))" }
+                        .setting(GeneralPane.searchBeta.id, ui)
+                    ORow(GeneralPane.searchCheckNow.title, description: updater.lastChecked.map { "Last checked \($0.formatted(.relative(presentation: .named)))" }
                         ?? "Not checked yet") {
                         OButton("Check Now", icon: "arrow.down.circle", size: .sm) { updater.checkForUpdates() }
                     }
-                    .setting("general.checkNow", ui)
+                    .setting(GeneralPane.searchCheckNow.id, ui)
                 } else {
                     ORow("Updates aren't set up", description: "Release builds published with Amore update themselves")
-                        .setting("general.checkNow", ui)
+                        .setting(GeneralPane.searchCheckNow.id, ui)
                 }
             }
             .animation(Motion.easeOut, value: updater.automaticallyChecks)
 
             OGroup("Reset") {
-                ORow("Reset all settings", description: "Layouts, gaps, floating apps and shortcuts. Your shortcut key stays.") {
+                ORow(GeneralPane.searchReset.title, description: "Layouts, gaps, floating apps and shortcuts. Your shortcut key stays.") {
                     OButton("Reset…", variant: .danger, size: .sm) {
                         if confirm("Reset all settings to their defaults?", "Resets layouts, gaps, floating apps and shortcuts. Your shortcut key is kept.") {
                             doc.resetEverything()
                         }
                     }
                 }
-                .setting("general.reset", ui)
+                .setting(GeneralPane.searchReset.id, ui)
+            }
+
+            AdditionalOptionGroups(pane: .general, doc: doc, ui: ui)
+            if !OptionRows.additionalSections(pane: .general, advanced: true).isEmpty {
+                AdvancedSection(pane: .general, ui: ui) {
+                    AdditionalOptionGroups(pane: .general, advanced: true, doc: doc, ui: ui)
+                }
             }
 
             AmoreCredit().frame(maxWidth: .infinity)
@@ -95,4 +102,17 @@ struct GeneralPane: View {
         if !o.contains(where: { $0.value == doc.modValue }) { o.append((doc.modValue, doc.modValue)) }
         return o
     }
+}
+
+extension GeneralPane {
+    static let searchStatus = SettingEntry(id: "general.status", title: "Accessibility access", pane: .general, keywords: "permission status running grant")
+    static let searchLogin = SettingEntry(id: "general.login", title: "Open at login", pane: .general, keywords: "startup launch login items")
+    static let searchInputMonitoring = SettingEntry(id: "general.inputMonitoring", title: "Instant Caps Lock shortcuts", pane: .general, keywords: "input monitoring permission")
+    static let searchTiling = SettingEntry(id: "general.tiling", title: "Tiling", pane: .general, keywords: "enable disable pause on off")
+    static let searchModifier = SettingEntry(id: "general.modifier", title: "Shortcut key", pane: .general, keywords: "main modifier mod key option command control super")
+    static let searchAutoCheck = SettingEntry(id: "general.autoCheck", title: "Check for updates automatically", pane: .general, keywords: "update sparkle")
+    static let searchAutoDownload = SettingEntry(id: "general.autoDownload", title: "Download updates automatically", pane: .general, keywords: "update sparkle")
+    static let searchCheckNow = SettingEntry(id: "general.checkNow", title: "Check for updates", pane: .general, keywords: "update version")
+    static let searchBeta = SettingEntry(id: "general.beta", title: "Include beta releases", pane: .general, keywords: "update channel early")
+    static let searchReset = SettingEntry(id: "general.reset", title: "Reset all settings", pane: .general, keywords: "defaults restore factory")
 }

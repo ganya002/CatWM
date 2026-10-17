@@ -14,3 +14,15 @@ struct OSegmentTrack<Content: View>: View {
             .accessibilityLabel(title)
     }
 }
+
+#if DEBUG
+extension GalleryContent {
+    @ViewBuilder var segmentTrackExamples: some View {
+        OSegmentTrack(title: "Filter") {
+            OSegment(label: "All", count: 12, on: true) {}
+            OSegment(label: "Floating", count: 3, on: false) {}
+            OSegment(label: "Needs review", on: false, hot: true) {}
+        }
+    }
+}
+#endif

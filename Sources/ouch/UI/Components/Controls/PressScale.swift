@@ -9,3 +9,12 @@ struct PressScale: ButtonStyle {
             .animation(Motion.spring, value: configuration.isPressed)
     }
 }
+
+#if DEBUG
+extension GalleryContent {
+    @ViewBuilder var pressScaleExample: some View {
+        Button {} label: { Text("Press scale").padding(Theme.Space.md).background(Capsule().fill(Theme.well)) }
+            .buttonStyle(PressScale())
+    }
+}
+#endif

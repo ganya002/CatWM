@@ -32,3 +32,9 @@ struct WindowsPane: View {
     }
 
 }
+
+extension WindowsPane {
+    static let searchSortCrowded = SettingEntry(id: "windows.sortCrowded", title: "Crowded from", pane: .windows, keywords: "sort windows workspace count tip")
+    static let searchBundleID = SettingEntry(id: "windows.bundleID", title: "Add app by bundle ID", pane: .windows, advanced: true, keywords: "floating wildcard identifier")
+    static let searchHome = SettingEntry(id: "windows.home", title: "Home Desktop", pane: .windows, advanced: true, keywords: "spaces desktop workspaces live")
+}

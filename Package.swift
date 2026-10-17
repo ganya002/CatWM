@@ -14,6 +14,7 @@ let package = Package(
         .package(url: "https://github.com/noxaur/mackeys-sdk.git", from: "0.2.0"),
     ],
     targets: [
+        .plugin(name: "CatalogPlugin", capability: .buildTool()),
         .executableTarget(
             name: "ouch",
             dependencies: [
@@ -22,7 +23,8 @@ let package = Package(
                 .product(name: "MacKeysUI", package: "mackeys-sdk"),
             ],
             path: "Sources/ouch",
-            linkerSettings: [.unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"])]
+            linkerSettings: [.unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"])],
+            plugins: [.plugin(name: "CatalogPlugin")]
         ),
         .testTarget(
             name: "ouchTests",

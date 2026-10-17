@@ -35,3 +35,14 @@ struct ORow<Control: View>: View {
         .padding(.vertical, 8)
     }
 }
+
+#if DEBUG
+extension GalleryContent {
+    @ViewBuilder var rowExamples: some View {
+        ORow("Animation curve", symbol: "wand.and.stars") {
+            OSegmented(title: "Curve", options: ["Ease", "Spring", "Off"].map { ($0, $0) }, selection: $m.segment)
+        }
+        ORow("Enter window mode", symbol: "keyboard") { Kbd(keys: ["⌘", "⇪"]) }
+    }
+}
+#endif

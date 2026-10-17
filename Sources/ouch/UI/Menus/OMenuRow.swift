@@ -30,3 +30,31 @@ struct OMenuRow<Lead: View, Label: View, Trailing: View>: View {
         .buttonStyle(OMenuRowStyle(highlighted: highlighted, open: open, danger: danger))
     }
 }
+
+#if DEBUG
+extension GalleryExamples {
+    static let menus = GalleryExample(order: 11) { AnyView(GalleryContent(m: $0).menus) }
+}
+
+extension GalleryContent {
+    @ViewBuilder var menus: some View {
+        block("Menu rows") {
+            VStack(spacing: 0) {
+                OMenuRow(action: {}, lead: { Image(systemName: "gearshape") }, label: { Text("Settings…") },
+                         trailing: { Text("⌘,").foregroundStyle(Theme.inkMuted) })
+                OMenuRow(highlighted: true, action: {}, lead: { Image(systemName: "macwindow") }, label: { Text("Highlighted row") })
+                OMenuRow(open: true, action: {}, lead: { Image(systemName: "square.grid.2x2") }, label: { Text("Layout") },
+                         trailing: { Image(systemName: "chevron.right").foregroundStyle(Theme.inkMuted) })
+                OMenuRow(danger: true, action: {}, lead: { Image(systemName: "power") }, label: { Text("Quit Ouch") })
+            }
+            .frame(width: Theme.menuWidth)
+            .padding(Theme.Space.xs + Theme.Space.xxs)
+            .surface(.md)
+            HStack(spacing: Theme.Space.md) {
+                menuPickerExample
+                menuButtonExample
+            }
+        }
+    }
+}
+#endif

@@ -32,3 +32,13 @@ struct OSearchField: View {
         .accessibilityElement(children: .contain)
     }
 }
+
+#if DEBUG
+extension OSearchField {
+    static func galleryExample(text: Binding<String>, focus: FocusState<Bool>.Binding) -> some View {
+        OSearchField(placeholder: "Search settings", text: text, shortcut: ["⌘", "K"], focus: focus)
+            .background(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous).fill(Theme.surface.opacity(0.6)))
+            .frame(width: 320)
+    }
+}
+#endif

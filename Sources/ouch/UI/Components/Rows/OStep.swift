@@ -21,3 +21,14 @@ struct OStep: View {
         return s
     }
 }
+
+#if DEBUG
+extension GalleryContent {
+    @ViewBuilder var stepExamples: some View {
+        VStack(alignment: .leading, spacing: Theme.Space.md) {
+            OStep(n: 1, text: "Press **H** to focus the window on the left.")
+            OStep(n: 2, text: "Press **L** to focus the window on the right.")
+        }
+    }
+}
+#endif

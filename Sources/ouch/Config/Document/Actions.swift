@@ -10,19 +10,19 @@ enum Actions {
                  group: String? = nil, short: String? = nil) {
             a.append(Action(title: title, category: c, dispatcher: d, args: args, symbol: symbol, group: group, short: short))
         }
-        for (dir, name, arrow) in [("l", "Left", "left"), ("r", "Right", "right"), ("u", "Up", "up"), ("d", "Down", "down")] {
+        for direction in Direction.allCases {
+            let dir = direction.rawValue, name = direction.title, arrow = direction.symbolName
             add("Focus \(name)", .focus, "movefocus", dir, "arrow.\(arrow)")
         }
         add("Focus Next Window", .focus, "cyclenext", "", "arrow.forward")
         add("Focus Previous Window", .focus, "cyclenext", "prev", "arrow.backward")
         add("Focus Main Window", .focus, "layoutmsg", "focusmaster", "star")
-        for (dir, name, arrow) in [("l", "Left", "left"), ("r", "Right", "right"), ("u", "Up", "up"), ("d", "Down", "down")] {
+        for direction in Direction.allCases {
+            let dir = direction.rawValue, name = direction.title, arrow = direction.symbolName
             add("Move Window \(name)", .move, "movewindow", dir, "arrow.\(arrow).square")
         }
-        add("Swap With Main Window", .move, "layoutmsg", "swapwithmaster", "star.square")
         add("Swap With Next Window", .move, "swapnext", "", "arrow.left.arrow.right")
         add("Swap With Previous Window", .move, "swapnext", "prev", "arrow.right.arrow.left")
-        add("Next Layout", .layout, "cyclelayout", "next", "rectangle.2.swap")
         add("Previous Layout", .layout, "cyclelayout", "prev", "rectangle.2.swap")
         add("Grow Main Pane", .layout, "splitratio", "+0.05", "arrow.left.and.right.square")
         add("Shrink Main Pane", .layout, "splitratio", "-0.05", "arrow.right.and.line.vertical.and.arrow.left")
@@ -31,18 +31,13 @@ enum Actions {
         for l in Layout.allCases {
             add("Use \(l.title) Layout", .layout, "layout", l.rawValue, "rectangle.split.2x2", group: "Use Layout", short: l.title)
         }
-        add("Toggle Floating", .window, "togglefloating", "", "macwindow.on.rectangle")
-        add("Toggle Fullscreen", .window, "fullscreen", "", "arrow.up.left.and.arrow.down.right")
-        add("Toggle macOS Full Screen", .window, "nativefullscreen", "", "arrow.up.left.and.down.right.and.arrow.up.right.and.down.left")
-        add("Close Window", .window, "killactive", "", "xmark.square")
-        add("Minimize Window", .window, "minimize", "", "minus.square")
         add("Sort Windows", .window, "sort", "", "square.grid.3x1.below.line.grid.1x2")
         add("Undo Last Sort", .window, "sort-undo", "", "arrow.uturn.backward")
         add("Focus Next Display", .displays, "focusmonitor", "+1", "display")
         add("Focus Previous Display", .displays, "focusmonitor", "-1", "display")
-        add("Move Window to Next Display", .displays, "movewindow", "mon:+1", "rectangle.portrait.and.arrow.right")
         add("Move Window to Previous Display", .displays, "movewindow", "mon:-1", "rectangle.portrait.and.arrow.right")
-        for (dir, name, arrow) in [("l", "Left", "left"), ("r", "Right", "right"), ("u", "Up", "up"), ("d", "Down", "down")] {
+        for direction in Direction.allCases {
+            let dir = direction.rawValue, name = direction.title, arrow = direction.symbolName
             add("Focus Display \(name)", .displays, "focusmonitor", dir, "arrow.\(arrow).to.line")
             add("Move Window to Display \(name)", .displays, "movewindow", "mon:\(dir)", "arrow.\(arrow).square")
         }
@@ -65,10 +60,15 @@ enum Actions {
         add("Leave Mode", .app, "submap", "reset", "escape")
         add("Toggle Tiling", .app, "toggletiling", "", "power")
         add("Retile Windows", .app, "retile", "", "arrow.clockwise")
-        add("Toggle Dim Other Windows", .app, "toggledim", "", "circle.lefthalf.filled")
-        add("Toggle Blur Other Windows", .app, "toggleblur", "", "drop.halffull")
         add("Reload Config", .app, "reload", "", "arrow.triangle.2.circlepath")
         add("Quit Ouch", .app, "exit", "", "xmark.circle")
+        for spec in PointerActions.all.sorted(by: { $0.actionOrder < $1.actionOrder }) where spec.includeInActions {
+            if let before = spec.actionBefore, let index = a.firstIndex(where: { $0.id == before }) {
+                a.insert(spec.action, at: index)
+            } else {
+                a.append(spec.action)
+            }
+        }
         return a
     }()
 
@@ -154,8 +154,12 @@ enum Actions {
         return ("\(r.dispatcher) \(r.args)", first.category, first.symbol)
     }
 
-    static let dispatchers = ["movefocus", "movewindow", "swapwindow", "cyclenext", "swapnext", "layoutmsg", "splitratio",
-                              "togglefloating", "fullscreen", "nativefullscreen", "killactive", "minimize", "exec", "focusmonitor", "movewindowtomonitor",
-                              "workspace", "movetoworkspace", "movetoworkspacesilent", "cyclelayout", "layout", "setlayout",
-                              "toggletiling", "toggledim", "toggleblur", "retile", "reevaluate", "reload", "exit", "submap", "sethomespace", "sort", "sort-undo"]
+    static let dispatchers: [String] = {
+        var names = DispatcherNames.all
+        for feature in FocusDim.features {
+            let index = names.firstIndex(of: feature.dispatcherBefore) ?? names.endIndex
+            names.insert(feature.pointer.dispatcher, at: index)
+        }
+        return names
+    }()
 }

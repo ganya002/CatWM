@@ -38,7 +38,7 @@ The app source is in `Sources/ouch/`. Each folder has one job:
 
 # UI rules
 
-- Read `docs/design-system.md` before you build or change UI. It says how each component must look and when to use it. To see the components, open the Design Gallery: `./build.sh --dev`, then `open build/ouch.app --args --gallery`. When you add or change a component, update its example in `UI/Gallery/`.
+- Read `docs/design-system.md` before you build or change UI. It says how each component must look and when to use it.
 - Use the tokens in `UI/Theme/` for colour, type, symbol size, radius, spacing, shadow and motion. Do not type a raw value when a token exists.
 - Use the components in `UI/Components/` and `UI/Menus/`. Do not make a local copy of a control. If a control cannot do what you need, extend it. Each control is its own file under `Controls/`, `Rows/`, `Keys/`, or `Picker/`.
 - For a new window or panel, use `OuchPanel` (`UI/Chrome/OuchPanel.swift`).
@@ -46,9 +46,11 @@ The app source is in `Sources/ouch/`. Each folder has one job:
 
 # Add a setting
 
-1. Add a property to `Config`, then add one entry for it in `Config/Options/Options.swift`.
-2. Add its row to the pane with the rows in `Settings/Rows/` (`OptionSwitch`, `OptionSlider` or `OptionRow`). The row gets its label, help, range and search anchor from the entry.
-3. Add a line for it in `Resources/AgentDocs/config.md`. A test checks this file.
+1. Add a property to `Config`.
+2. Add one option declaration with `.setting(...)` in `Config/Options/Options.swift`. Set its section, order, range, and enabled state there. Effect descriptors can publish their options beside the effect.
+3. Run `swift run ouch --write-config-docs`. This generates `Resources/AgentDocs/config.md` from the option declarations and `config.template.md`.
+
+`OptionRows` renders the declaration. Settings search reads the same declaration. Keep custom controls in that renderer. Put pointer behavior in `PointerActions` or its effect descriptor. The build collects custom search entries, dispatcher names, and palette tokens. The linter rejects duplicate catalogs. Catalog rules do not accept `style-ok` escapes.
 
 # Tests
 

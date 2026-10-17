@@ -31,3 +31,22 @@ struct OStatus: View {
         }
     }
 }
+
+#if DEBUG
+extension GalleryExamples {
+    static let status = GalleryExample(order: 13) { AnyView(GalleryContent(m: $0).status) }
+}
+
+extension GalleryContent {
+    @ViewBuilder var status: some View {
+        block("Status") {
+            HStack(spacing: Theme.Space.xl) {
+                OStatus(kind: .success, text: "Granted")
+                OStatus(kind: .warning, text: "Safari won't shrink further")
+                OStatus(kind: .danger, text: "Failed")
+                OStatus(kind: .info, text: "Applies to new windows")
+            }
+        }
+    }
+}
+#endif

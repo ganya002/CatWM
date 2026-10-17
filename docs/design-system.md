@@ -13,7 +13,7 @@ The Design Gallery is the visual reference. It draws every token and component w
 open build/ouch.app --args --gallery
 ```
 
-The Appearance control at the top switches between system, light and dark. When you add or change a component, add or change its example in `Sources/ouch/UI/Gallery/`. To get a picture without a window, run the test with `OUCH_GALLERY_PNG=/path/to/gallery.png swift test`.
+The Appearance control at the top switches between system, light and dark. When you add or change a component, add or change its example in the component’s own file. The build collects `GalleryExample` registrations. To get a picture without a window, run the test with `OUCH_GALLERY_PNG=/path/to/gallery.png swift test`.
 
 A change to a token or a component rule is not finished until `Sources/ouch/UI/Theme/`, the matching file in `UI/Components/`, the gallery and this file agree with it.
 

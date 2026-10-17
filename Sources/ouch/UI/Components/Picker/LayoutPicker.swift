@@ -46,3 +46,20 @@ struct LayoutPicker: View {
         }
     }
 }
+
+#if DEBUG
+extension GalleryExamples {
+    static let tiling = GalleryExample(order: 12) { AnyView(GalleryContent(m: $0).tiling) }
+}
+
+extension GalleryContent {
+    @ViewBuilder var tiling: some View {
+        block("Tiling") {
+            workspaceExample
+            LayoutPicker(layouts: Layout.allCases, selection: m.layout, columns: 5) { m.layout = $0 }
+                .frame(width: 320)
+            thumbnailExamples
+        }
+    }
+}
+#endif

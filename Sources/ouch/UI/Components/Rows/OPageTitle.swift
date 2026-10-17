@@ -23,3 +23,31 @@ struct OPageTitle<Trailing: View>: View {
         }
     }
 }
+
+#if DEBUG
+extension GalleryExamples {
+    static let moreControls = GalleryExample(order: 6) { AnyView(GalleryContent(m: $0).moreControls) }
+}
+
+extension GalleryContent {
+    @ViewBuilder var moreControls: some View {
+        block("More controls") {
+            OPageTitle(crumbs: ["Settings", "Layout"], title: "Gaps & padding") {
+                OButton("Reset", size: .sm) {}
+            }
+            .frame(maxWidth: 560)
+            GallerySearch(text: $m.search)
+            HStack(spacing: Theme.Space.xl) {
+                knobExamples
+                segmentTrackExamples
+            }
+            HStack(spacing: Theme.Space.xl) {
+                removeExamples
+                pressScaleExample
+            }
+            essentialExamples
+            stepExamples
+        }
+    }
+}
+#endif
