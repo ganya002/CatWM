@@ -16,8 +16,7 @@ For fast rebuilds while you work, use `./build.sh --dev` (debug build, a few sec
 
 ### Requires visual verification
 
-build the project
-output `open build/ouch.app`
+output `./build.sh --dev && open build/ouch.app`
 state verifying needs
 
 # Code map
