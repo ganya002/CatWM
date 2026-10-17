@@ -27,7 +27,7 @@ extension FocusDim {
     }
 
     func makePanel(_ screen: NSScreen) -> NSPanel {
-        let p = NSPanel(contentRect: screen.frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        let p = NSPanel(contentRect: screen.frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false) // style-ok: full-screen click-through dim
         p.isOpaque = false
         p.hasShadow = false
         p.ignoresMouseEvents = true
