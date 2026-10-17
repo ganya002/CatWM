@@ -115,11 +115,11 @@ enum Options {
             .setting(.shortcuts, "shortcuts.keyboardFinish", "Keyboard finish", help: "Used by keyboard help and Shortcut Map",
                      keywords: "keyboard model colour color auto macbook air pro neo magic"),
         .bool("cursor-actions", \.cursorActions)
-            .documented("bool", "in window mode, a dot at the pointer; a tap of the mode's modifier opens actions for the window under it")
-            .note("In window mode a dot follows the pointer; tap the mode's modifier to open actions for the window under it.")
+            .documented("bool", "in window mode, a dot at the pointer; a tap of the mode modifier opens saved workspace templates and the Save workspace action")
+            .note("In window mode a dot follows the pointer; tap the mode's modifier to save or open workspace templates.")
             .setting(.windows, "windows.cursorActions", "Quick actions at the pointer",
-                     help: "In window mode, tap the mode's modifier. Press a shortcut below to run it",
-                     keywords: "cursor mouse menu window mode tap modifier shortcut float zoom fullscreen minimize close", section: "Pointer menu"),
+                     help: "In window mode, tap the mode's modifier to save or open a workspace template",
+                     keywords: "cursor mouse menu window mode tap modifier template save", section: "Pointer menu"),
 
         .bool("animate", \.animate)
             .documented("bool", "`animations { enabled = … }` also works").aliases("animations").animation()

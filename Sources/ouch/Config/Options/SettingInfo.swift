@@ -23,6 +23,7 @@ extension Pane {
         case .layout: "Gaps"
         case .windows: "Focus"
         case .motion: "Feel"
+        case .templates: "Saved templates"
         case .shortcuts: "Keyboard"
         }
     }

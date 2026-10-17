@@ -2,7 +2,7 @@ import AppKit
 
 extension Hotkeys {
     func match(_ event: CGEvent) -> Match {
-        guard !paused, event.getIntegerValueField(.eventSourceUserData) != Self.syntheticMarker else { return .pass }
+        guard !paused, !textInputActive, event.getIntegerValueField(.eventSourceUserData) != Self.syntheticMarker else { return .pass }
         let code = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
         let k = Self.key(code, event.flags)
         if code == 36 || code == 76, let onReturn,

@@ -9,5 +9,6 @@ struct QuickAction: Identifiable {
     var keyMods: CGEventFlags = []
     var isOn = false
     var destructive = false
+    var remove: (() -> Void)? = nil
     let run: () -> Void
 }

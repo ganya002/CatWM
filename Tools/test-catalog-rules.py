@@ -23,6 +23,7 @@ class CatalogRules(unittest.TestCase):
             ("Settings/Panes/WindowsPane.swift", 'CursorShortcutSpec(id: "dim")'),
             ("Settings/Panes/WindowsPane.swift", "let list: [CursorShortcutSpec] = [.init()]"),
             ("Tiling/Manager/WindowManager+quickActions.swift", 'out.append(action("dim", "Dim", "toggledim"))'),
+            ("Tiling/Manager/WindowManager+quickActions.swift", 'QuickAction(id: "focus.dim", title: "Dim") {}'),
             ("Keys/Keyboard/KeyHint.swift", 'case "toggledim": return "Dim"'),
             ("UI/Gallery/DesignGalleryView.swift", 'var buttons: some View { block("Buttons") {} }'),
             ("UI/Gallery/DesignGalleryView+block.swift", 'OButton("New example") {}'),
@@ -63,6 +64,9 @@ class CatalogRules(unittest.TestCase):
             ("Settings/Panes/WindowsPane.swift", "PointerActions.all.filter { $0.available(context) }"),
             ("UI/Components/Controls/OButton.swift", "static let buttons = GalleryExample(order: 3) {}"),
             ("Keys/Help/KeyHelpModel.swift", "binds.map { KeyHint($0) }"),
+            ("Templates/Model/TemplateLibrary.swift", 'QuickAction(id: "template.save", title: "Save") {}'),
+            ("Tiling/Focus/FocusDim.swift", 'QuickAction(id: "focus.dim", title: "Dim") {}'),
+            ("UI/Components/Rows/TemplateRow.swift", 'static let templates = GalleryExample(order: 15) {}\nQuickAction(id: "x", title: "Save") {}'),
         ]
         for path, source in cases:
             self.assertFalse(style.catalog_violations("Sources/ouch/" + path, source))

@@ -24,7 +24,16 @@ extension WindowManager {
             guard list || known[pid] != nil else { continue }
             jobs.append(.init(pid: pid, listWindows: list, known: known[pid] ?? [:]))
         }
-        scanner.scan(jobs, done: { [weak self] in self?.refresh() }, late: { [weak self] in self?.refresh() })
+        let refresh: () -> Void = { [weak self] in self?.refresh() }
+        scanner.scan(jobs, done: refresh, late: refresh)
+    }
+
+    func finishTemplateRestore() {
+        restoringTemplate = false
+        refreshWork?.cancel()
+        refreshWork = nil
+        refreshDeadline = .distantFuture
+        scheduleRefresh(after: 0)
     }
 
 }

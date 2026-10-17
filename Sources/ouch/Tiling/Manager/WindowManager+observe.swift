@@ -72,7 +72,9 @@ extension WindowManager {
     }
 
     func forget(_ id: CGWindowID) {
-        if focusClock > 0, focusStamps[id] == focusClock { refocusAfterClose = workspaceOf[id] }
+        animator.cancel(id)
+        templateHiddenWindows[id] = nil
+        if !restoringTemplate, focusClock > 0, focusStamps[id] == focusClock { refocusAfterClose = workspaceOf[id] }
         if pendingFocus?.id == id { pendingFocus = nil }
         windows[id] = nil
         snapNextPlacement.remove(id)

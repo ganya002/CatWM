@@ -18,7 +18,7 @@ extension CursorActions {
 
     func place(menu panel: NSPanel, at point: CGPoint) {
         let m = CursorActionsView.margin, gap: CGFloat = 10
-        let size = CursorActionsView.menuSize(for: model.actions)
+        let size = CursorActionsView.menuSize(for: model.actions, editing: model.templateDraft != nil)
         let screen = OuchPanel.screen(at: point)
         let v = screen.visibleFrame
         var x = point.x + gap, top = point.y - gap
@@ -50,11 +50,15 @@ extension CursorActions {
 
     func makeMenuPanel() -> NSPanel {
         let p = Self.makePanel()
+        p.onClose = { [weak self] in
+            guard let self else { return }
+            if model.templateDraft != nil { cancelTemplateSave() } else { dismissMenu() }
+        }
         let host = OuchHostingView(rootView: CursorActionsView(model: model))
         host.sizingOptions = []
         p.contentView = host
         return p
     }
 
-    static func makePanel() -> NSPanel { OuchPanel(role: .pointer) }
+    static func makePanel() -> OuchPanel { OuchPanel(role: .pointer) }
 }

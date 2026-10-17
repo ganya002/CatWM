@@ -48,7 +48,9 @@ def render():
     colors = [name.strip() for fields in re.findall(r"^    var ([\w, ]+): Pair$", palette, re.M) for name in fields.split(",")]
     tokens = ",\n".join('        ColorToken(name: "' + name + '", path: \\.' + name + ')' for name in colors)
     settings = []
-    for path in sorted((ROOT / "Sources/ouch/Settings/Panes").glob("*.swift")):
+    for path in sorted((ROOT / "Sources/ouch/Settings").rglob("*.swift")):
+        if "Search" in path.parts:
+            continue
         for match in re.finditer(r"static\s+let\s+(search\w+)\s*=\s*SettingEntry\(", path.read_text()):
             settings.append(path.stem + "." + match[1])
     placements = []

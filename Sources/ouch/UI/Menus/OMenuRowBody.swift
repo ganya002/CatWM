@@ -16,7 +16,7 @@ struct OMenuRowBody: View {
                 configuration.label
             } else {
                 configuration.label
-                    .padding(.horizontal, 10)
+                    .padding(.horizontal, OMenuRowStyle.inset)
                     .frame(maxWidth: .infinity, minHeight: Theme.rowHeight, maxHeight: Theme.rowHeight, alignment: .leading)
             }
         }

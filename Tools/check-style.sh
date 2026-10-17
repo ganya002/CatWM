@@ -92,14 +92,18 @@ def catalog_violations(path, source):
     pointer = "Sources/ouch/Settings/Panes/CursorShortcutSpec.swift"
     feature = "Sources/ouch/Tiling/Focus/FocusDim.swift"
     quick = "Sources/ouch/Tiling/Manager/WindowManager+quickActions.swift"
+    action_owners = {
+        "Sources/ouch/Templates/Model/TemplateLibrary.swift",
+        feature,
+    }
     if path != renderer:
         reject(r"\bOption(?:Switch|Slider|Row)(?:<[^>]+>)?\s*(?:\(|\.init\s*\()",
                "catalog: construct option rows only in OptionRows, which reads Options.all")
     if path not in (pointer, feature):
         reject(r"\bCursorShortcutSpec\s*(?:\(|\.init\s*\()", "catalog: declare pointer actions only in PointerActions or the effect descriptor")
         reject(r"\[CursorShortcutSpec\]\s*=\s*\[", "catalog: a second pointer action array is not allowed")
-    if path != quick:
-        reject(r"\bQuickAction\s*(?:\(|\.init\s*\()", "catalog: build quick actions only by walking PointerActions.all")
+    if path not in action_owners and "GalleryExample(" not in source:
+        reject(r"\bQuickAction\s*(?:\(|\.init\s*\()", "catalog: declare quick actions on the feature or its gallery example")
     reject(r"\[(?:QuickAction|KeyHint)\]\s*=\s*\[\s*[^]\s]", "catalog: a hand-written quick action or key hint table is not allowed")
     if path == quick:
         reject(r'\baction\(\s*"', "catalog: quick action literals belong in PointerActions")

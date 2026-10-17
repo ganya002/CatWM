@@ -13,9 +13,13 @@ extension CursorActions {
             self?.menuKey(code, flags, isRepeat) ?? false
         }
         model.onPick = { [weak self] action in
+            if action.id == "template.save" { self?.beginTemplateSave(); return }
             self?.dismissMenu()
             DispatchQueue.main.async { action.run() }
         }
+        model.onSave = { [weak self] in self?.saveTemplate() }
+        model.onDelete = { [weak self] in self?.deleteTemplate($0) }
+        model.onCancelSave = { [weak self] in self?.cancelTemplateSave() }
     }
 
     func modeChanged(_ name: String) {
@@ -27,8 +31,8 @@ extension CursorActions {
         guard enabled, !Hotkeys.shared.submap.isEmpty else { return }
         if model.open || opening { dismissMenu(); return }
         let point = NSEvent.mouseLocation
-        guard let found = WindowManager.shared.quickActions(at: point) else {
-            HUD.shared.show("No window here", on: nil)
+        guard let found = WindowManager.shared.quickActions() else {
+            HUD.shared.show("Grant Accessibility access to use templates", on: nil)
             return
         }
         show()
@@ -41,7 +45,7 @@ extension CursorActions {
         menuPanel = menu
         place(menu: menu, at: point)
         menu.ignoresMouseEvents = false
-        menu.orderFrontRegardless()
+        menu.makeKeyAndOrderFront(nil)
         fadeDot(out: true)
         opening = true
         DispatchQueue.main.async { [weak self] in
@@ -54,6 +58,24 @@ extension CursorActions {
     func menuKey(_ code: UInt16, _ flags: CGEventFlags, _ isRepeat: Bool) -> Bool {
         guard model.open else { return false }
         let mods = flags.intersection([.maskCommand, .maskAlternate, .maskControl, .maskShift])
+        if mods.isEmpty, [125, 126].contains(code), !model.actions.isEmpty {
+            if !isRepeat {
+                let current = model.actions.firstIndex { $0.id == model.hovered }
+                let next = code == 125 ? (current.map { ($0 + 1) % model.actions.count } ?? 0)
+                    : (current.map { ($0 + model.actions.count - 1) % model.actions.count } ?? model.actions.count - 1)
+                DispatchQueue.main.async { [weak self] in
+                    guard let self, model.actions.indices.contains(next) else { return }
+                    model.hovered = model.actions[next].id
+                }
+            }
+            return true
+        }
+        if mods.isEmpty, code == 36 {
+            if !isRepeat, let action = model.actions.first(where: { $0.id == model.hovered }) ?? model.actions.first {
+                DispatchQueue.main.async { [weak self] in self?.model.onPick?(action) }
+            }
+            return true
+        }
         guard let action = model.actions.first(where: { $0.keyCode == code && $0.keyMods == mods }) else { return false }
         if !isRepeat { DispatchQueue.main.async { [weak self] in self?.model.onPick?(action) } }
         return true
@@ -61,6 +83,7 @@ extension CursorActions {
 
     func dismissMenu() {
         guard model.open || opening else { return }
+        resetTemplateSave()
         opening = false
         model.open = false
         model.hovered = nil

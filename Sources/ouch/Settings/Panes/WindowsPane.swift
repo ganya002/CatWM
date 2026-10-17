@@ -14,14 +14,6 @@ struct WindowsPane: View {
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
-    var windowMode: String {
-        doc.binds.first { $0.submap.isEmpty && $0.dispatcher == "submap" && !["", "reset"].contains($0.args.lowercased()) }?.args ?? ""
-    }
-
-    var pointerShortcuts: [CursorShortcutSpec] {
-        PointerActions.all.filter { $0.id != "workspace" || doc.config.virtualWorkspaces }
-    }
-
     var addMenu: some View {
         let doc = doc, apps = runningApps
         return OMenuButton(style: OButtonStyle(variant: .secondary, size: .sm), items: {

@@ -25,6 +25,7 @@ extension WindowManager {
     }
 
     func moveToMonitor(_ spec: String) {
+        guard !restoringTemplate else { return }
         let screens = Screen.all()
         guard let w = focusedWindow(), let src = screen(of: w, in: screens),
               let dst = screen(from: src, spec: spec, in: screens), dst.uuid != src.uuid else { return }

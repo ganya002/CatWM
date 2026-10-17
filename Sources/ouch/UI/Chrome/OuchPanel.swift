@@ -57,7 +57,7 @@ final class OuchPanel: NSPanel {
 
     override var canBecomeKey: Bool {
         switch role {
-        case .menu, .card: true
+        case .menu, .card, .pointer: true
         default: false
         }
     }
