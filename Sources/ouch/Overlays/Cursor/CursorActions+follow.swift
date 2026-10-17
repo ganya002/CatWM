@@ -64,9 +64,7 @@ extension CursorActions {
         let origin = view.convert(CGPoint.zero, to: nil)
         let x = local.x - origin.x
         let y = origin.y - local.y
-        let height = CursorActionsView.contentHeight(for: model.actions)
-        let row = (x >= 0 && x <= view.bounds.width && y >= 0 && y < height)
-            ? CursorActionsView.rowID(at: y, actions: model.actions) : nil
+        let row = Self.rowUnder(view, at: local, x: x, y: y, actions: model.actions)
         let moved = abs(pointerAnchor.x - mouse.x) >= 1 || abs(pointerAnchor.y - mouse.y) >= 1
         if let row {
             guard moved || model.keyboardHover == nil else { return }
@@ -77,6 +75,14 @@ extension CursorActions {
         guard pointerInRows else { return }
         pointerInRows = false
         model.hovered = nil
+    }
+
+    static func rowUnder(_ view: NSView, at local: CGPoint, x: CGFloat, y: CGFloat, actions: [QuickAction]) -> String? {
+        guard let clip = view.enclosingScrollView?.contentView, clip.bounds.contains(clip.convert(local, from: nil)) else { return nil }
+        let top = view.convert(CGPoint.zero, to: nil).y - clip.convert(CGPoint(x: 0, y: clip.bounds.minY), to: nil).y
+        let bottom = view.convert(CGPoint.zero, to: nil).y - clip.convert(CGPoint(x: 0, y: clip.bounds.maxY), to: nil).y
+        let visible = min(top, bottom)..<max(top, bottom)
+        return CursorActionsView.rowUnderPointer(x: x, y: y, width: view.bounds.width, actions: actions, visible: visible)
     }
 
     static func glyph(of flags: CGEventFlags) -> String {

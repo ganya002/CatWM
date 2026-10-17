@@ -36,6 +36,11 @@ struct CursorActionsView: View {
         return nil
     }
 
+    static func rowUnderPointer(x: CGFloat, y: CGFloat, width: CGFloat, actions: [QuickAction], visible: Range<CGFloat>) -> String? {
+        guard x >= 0, x <= width, visible.contains(y) else { return nil }
+        return rowID(at: y, actions: actions)
+    }
+
     private static let divider: CGFloat = 9
 
     private static func dividerIndex(_ actions: [QuickAction]) -> Int? {
