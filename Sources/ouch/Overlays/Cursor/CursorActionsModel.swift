@@ -17,6 +17,7 @@ final class CursorActionsModel: ObservableObject {
     var previewJob: TemplatePreviewJob?
     var snapshotTask: Task<Void, Never>?
     var templateSaveGeneration = 0
+    var hoverArm = 0
     var onPick: ((QuickAction) -> Void)?
     var onDelete: ((QuickAction) -> Void)?
     var onSave: (() -> Void)?
