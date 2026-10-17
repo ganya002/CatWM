@@ -30,6 +30,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
         }
         if let pane {
             ui.pane = pane
+            ui.showMap = false
             ui.search = ""
         }
         if map { ui.showMap = true }

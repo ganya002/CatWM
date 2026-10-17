@@ -46,7 +46,7 @@ The Settings window writes options in this order. Aliases (after `/`) are read b
 | `keyboard-help` | bool | `true` | on-screen keyboard help in window mode |
 | `keyboard-help-key` | one character | `?` | toggles the keyboard help in window mode |
 | `keyboard-finish` | `auto`, `macbook-pro`, `macbook-air`, `macbook-neo`, `magic-keyboard`, or a finish such as `macbook-pro-space-black` | `auto` | look of the Shortcut Map keyboard |
-| `cursor-actions` | bool | `true` | in window mode, a dot at the pointer; a tap of the mode's modifier opens actions for the window under it |
+| `cursor-actions` | bool | `true` | in window mode, a dot at the pointer; a tap of the mode modifier opens saved workspace templates and the Save workspace action |
 | `animate` / `animations` | bool | `true` | `animations { enabled = … }` also works |
 | `animation-duration` | seconds, or ms if above 5 | `0.18` | |
 | `animation-curve` | `ease-out` `ease-in-out` `linear` `spring` `bounce` `overshoot` `cubic-bezier(x1, y1, x2, y2)` | `ease-out` | |
@@ -86,6 +86,14 @@ bind = $mod, return, exec, open -na Terminal
 
 ## Settings window and saved configs
 
-Menu bar → **Settings…** (⌘,). Panes: General, Layout, Windows, Motion, Shortcuts. Changes save and apply automatically. **Configs** (menu bar submenu / Settings) stores named keyboard, animation, and full presets in `~/.config/ouch/configs.json`; switching one rewrites the matching part of `ouch.conf`. Presets can be imported and exported.
+Menu bar → **Settings…** (⌘,). Panes: General, Layout, Windows, Motion, Templates, Shortcuts. Changes save and apply automatically. **Configs** (menu bar submenu / Settings) stores named keyboard, animation, and full presets in `~/.config/ouch/configs.json`; switching one rewrites the matching part of `ouch.conf`. Presets can be imported and exported.
 
 When editing by hand while the app runs, make the edit then run `ouch reload`. If the user also has Settings open, tell them: UI edits can overwrite hand edits.
+
+## Workspace templates
+
+Settings → **Templates** saves the current workspace across connected displays. A template stores app identities, document addresses when available, window frames, display sizes, layouts, main-pane ratios and counts, window order, tiling status, and floating, minimized, zoomed, or native full screen states. Templates are stored in `~/.config/ouch/templates.json`, separately from configs.
+
+In window mode, tap the mode modifier to open quick actions at the pointer. Press **S** to save the workspace, **1–9** to open a saved template, or **comma** to manage templates. Arrow keys and Return select an action. These actions also work over empty desktop space.
+
+Restore reuses matching windows in the current workspace, opens missing apps or supplied documents, and requests new windows from apps that support them. Missing displays use available displays. Frames scale to fit. Existing extra windows stay open. Tabs, unsaved work, and other internal app state are not saved. Ouch reports windows that it cannot open or position.

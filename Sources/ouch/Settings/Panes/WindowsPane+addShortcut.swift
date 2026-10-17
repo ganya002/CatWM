@@ -2,20 +2,6 @@ import AppKit
 import SwiftUI
 
 extension WindowsPane {
-    func addShortcut(_ spec: CursorShortcutSpec) {
-        let row: BindRow
-        if let existing = unfinishedShortcut(spec) {
-            row = existing
-        } else {
-            let mode = windowMode
-            row = BindRow(mods: mode.isEmpty ? doc.modVarName : "", key: "",
-                          dispatcher: spec.dispatcher, args: spec.args, submap: mode)
-            doc.binds.append(row)
-        }
-        ui.open(SettingEntry(id: "bind.\(row.id)", title: spec.title, pane: .shortcuts, bind: row))
-        DispatchQueue.main.async { ui.recording = row.id }
-    }
-
     func add() {
         let id = ui.newID.trimmingCharacters(in: .whitespaces)
         guard !id.isEmpty, !doc.config.floating.contains(id) else { return }

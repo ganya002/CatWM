@@ -6,6 +6,7 @@ final class WindowManager {
 
     var config = Config.load()
     var tilingEnabled = true
+    var restoringTemplate = false
     var onChange: (() -> Void)?
     var onDispatch: ((_ dispatcher: String, _ arg: String, _ inMode: Bool) -> Void)?
     var onModeChange: ((String) -> Void)?

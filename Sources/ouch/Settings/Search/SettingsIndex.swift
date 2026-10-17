@@ -34,6 +34,9 @@ enum SettingsIndex {
         SettingEntry(id: "motion.preview", title: "Animation preview", pane: .motion, keywords: "play"),
         SettingEntry(id: "motion.bezier", title: "Bezier control points", pane: .motion, advanced: true, keywords: "cubic custom curve"),
 
+        SettingEntry(id: "templates.save", title: "Save workspace template", pane: .templates, keywords: "apps windows layout snapshot create quick actions"),
+        SettingEntry(id: "templates.saved", title: "Saved workspace templates", pane: .templates, keywords: "open restore rename delete displays quick actions"),
+
         SettingEntry(id: "shortcuts.list", title: "Keyboard shortcuts", pane: .shortcuts, keywords: "keybinds hotkeys bind"),
         SettingEntry(id: "shortcuts.map", title: "Shortcut map", pane: .shortcuts, keywords: "keyboard overview"),
     ]

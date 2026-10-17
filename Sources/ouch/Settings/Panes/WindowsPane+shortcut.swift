@@ -22,13 +22,6 @@ extension WindowsPane {
                 OptionSwitch(\.mouseResizesWindows, doc: doc, ui: ui)
             }
 
-            OGroup("Pointer menu") {
-                OptionSwitch(\.cursorActions, doc: doc, ui: ui)
-                if doc.config.cursorActions {
-                    ForEach(pointerShortcuts) { spec in pointerShortcutRow(spec) }
-                }
-            }
-
             OGroup("Floating") {
                 OptionRow(\Config.floatingIsBlacklist, ui: ui,
                           description: doc.config.floatingIsBlacklist ? "Float; everything else tiles" : "Are the only ones that tile") { label in
@@ -98,44 +91,6 @@ extension WindowsPane {
                     .setting("windows.home", ui)
                 }
             }
-        }
-    }
-
-    func shortcut(for spec: CursorShortcutSpec) -> ConfigDocument.KeyAction? {
-        doc.keyActions(in: windowMode).first {
-            $0.code < 0x1000 && (spec.nextWorkspace
-                ? Actions.isNextWorkspace($0.row.dispatcher, $0.arg)
-                : Actions.same($0.row.dispatcher, $0.arg, spec.dispatcher, spec.args))
-        }
-    }
-
-    func pointerShortcutRow(_ spec: CursorShortcutSpec) -> some View {
-        let hit = shortcut(for: spec)
-        return ORow(spec.title) {
-            if let hit {
-                let caps = ConfigDocument.modifierCaps(hit.flags) + [ConfigDocument.capLabel(hit.key)]
-                Button {
-                    ui.open(SettingEntry(id: "bind.\(hit.row.id)", title: doc.title(hit.row), pane: .shortcuts, bind: hit.row))
-                } label: { Kbd(keys: caps) }
-                    .buttonStyle(.plain)
-                    .tooltip("Edit in Shortcuts")
-                    .accessibilityLabel("Shortcut \(caps.joined(separator: " ")) for \(spec.title)")
-            } else {
-                OButton("Add", size: .sm) { addShortcut(spec) }
-                    .accessibilityLabel("Add a shortcut for \(spec.title)")
-            }
-        }
-    }
-
-    func unfinishedShortcut(_ spec: CursorShortcutSpec) -> BindRow? {
-        doc.binds.first { row in
-            guard row.submap == windowMode else { return false }
-            let matches = spec.nextWorkspace
-                ? Actions.isNextWorkspace(row.dispatcher, row.args)
-                : Actions.same(row.dispatcher, row.args, spec.dispatcher, spec.args)
-            guard matches else { return false }
-            guard case .success(let pairs) = BindRange.pairs(key: row.key, dispatcher: row.dispatcher, arg: row.args) else { return true }
-            return !pairs.contains { keyCodes[$0.key.lowercased()] != nil }
         }
     }
 

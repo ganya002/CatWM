@@ -81,7 +81,7 @@ extension WindowManager {
             if fresh.isEmpty { DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in self?.refocusRecent(on: ws) } }
         }
 
-        guard tilingEnabled else { onChange?(); return }
+        guard tilingEnabled, !restoringTemplate else { onChange?(); return }
         var moves: [Animator.Move] = [], instant: [Animator.Move] = []
         for s in screens {
             let st = state(for: s)

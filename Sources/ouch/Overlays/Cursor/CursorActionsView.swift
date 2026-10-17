@@ -11,7 +11,7 @@ struct CursorActionsView: View {
     private static let inset: CGFloat = 6
 
     static func menuSize(for actions: [QuickAction]) -> CGSize {
-        let rows = CGFloat(actions.count) * Theme.rowHeight + (dividerIndex(actions) == nil ? 0 : divider)
+        let rows = CGFloat(min(actions.count, 9)) * Theme.rowHeight + (dividerIndex(actions) == nil ? 0 : divider)
         return CGSize(width: Theme.submenuWidth, height: 2 * inset + headHeight + rows)
     }
 
@@ -29,14 +29,25 @@ struct CursorActionsView: View {
         ZStack(alignment: .topLeading) {
             VStack(alignment: .leading, spacing: 0) {
                 head
-                ForEach(Array(model.actions.enumerated()), id: \.element.id) { i, action in
-                    if i == divide { Rectangle().fill(Theme.hairline).frame(height: 1).padding(.vertical, 4).padding(.horizontal, 4) }
-                    ActionRow(action: action, hovered: model.hovered == action.id, shown: model.open, index: i) {
-                        model.onPick?(action)
-                    } hover: { inside in
-                        if inside { model.hovered = action.id } else if model.hovered == action.id { model.hovered = nil }
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            ForEach(Array(model.actions.enumerated()), id: \.element.id) { i, action in
+                                if i == divide { Rectangle().fill(Theme.hairline).frame(height: 1).padding(.vertical, 4).padding(.horizontal, 4) }
+                                ActionRow(action: action, hovered: model.hovered == action.id, shown: model.open, index: min(i, 8)) {
+                                    model.onPick?(action)
+                                } hover: { inside in
+                                    if inside { model.hovered = action.id } else if model.hovered == action.id { model.hovered = nil }
+                                }
+                                .id(action.id)
+                            }
+                        }
+                    }
+                    .onChange(of: model.hovered) { _, id in
+                        if let id { proxy.scrollTo(id) }
                     }
                 }
+                .frame(height: size.height - 2 * Self.inset - Self.headHeight)
             }
             .padding(Self.inset - 4)
             .frame(width: Theme.submenuWidth, alignment: .leading)
@@ -45,7 +56,7 @@ struct CursorActionsView: View {
             .allowsHitTesting(model.open)
             .offset(x: Self.margin, y: Self.margin)
             .accessibilityElement(children: .contain)
-            .accessibilityLabel(model.title.isEmpty ? "Window actions" : "Actions for \(model.title)")
+            .accessibilityLabel("Workspace templates")
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }

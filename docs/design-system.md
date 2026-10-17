@@ -109,6 +109,8 @@ Each entry gives the design intent. The Swift type is in brackets.
 
 **Row and Group** [`ORow`, `OGroup`, `OSectionHeader`, `OPageTitle`]. A row has an optional symbol, a label, a description and a control on the right. A group is an open list with hairlines between rows and no box. Labels are sentence case and name the effect ("Focus follows mouse"). Put units and current values in the description, not the label.
 
+**Template row** [`TemplateRow`]. A saved workspace uses an `ORow` with its name, window count and display count. Open is a text button. Rename, replace and delete use labelled icon buttons. The Templates settings pane lists these rows without a surrounding box. Quick actions use the same saved templates, with S to save and 1–9 to open.
+
 **Kbd** [`Kbd`]. Keycaps for a shortcut, a chord or a sequence. Small keycaps (20 pt) go in tooltips, labels and buttons. Menu rows use plain `kbd` text. Medium keycaps (30 pt, raised) go in onboarding key pickers and summaries. Large keycaps (40 pt) go only in coach marks, where the real key press fills them with `accent` and sinks them 2 pt. Order modifiers the macOS way: control, option, shift, command, then the key.
 
 **Tooltip** [`OTooltip`, `Tooltip`]. The smallest surface (`xs`). One short phrase in sentence case, with no full stop. Never a button inside. Every icon-only button gets one. A shortcut is one chord at most. It points at its target with a small caret.

@@ -5,6 +5,7 @@ struct SettingsView: View {
     @ObservedObject var doc: ConfigDocument
     @ObservedObject var ui: SettingsUI
     @ObservedObject private var library = SettingsWindow.shared.library
+    @ObservedObject private var templates = TemplateLibrary.shared
     @ObservedObject private var feedback = Feedback.shared
     @FocusState private var searchFocused: Bool
 
@@ -16,6 +17,7 @@ struct SettingsView: View {
                 .pane()
                 .padding(.vertical, 8).padding(.trailing, 8)
         }
+        .sheet(item: $templates.draft) { TemplateSheet(template: $0, library: templates) }
         .sheet(isPresented: $feedback.isOpen) { FeedbackSheet(feedback: feedback) }
         .background(Theme.wash.ignoresSafeArea())
         .overlayPreferenceValue(TipAnchorKey.self) { SettingsTipLayer(anchors: $0) }

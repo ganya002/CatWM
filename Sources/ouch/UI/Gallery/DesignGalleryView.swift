@@ -77,6 +77,10 @@ struct DesignGalleryView: View {
                 ORow("Enter window mode", symbol: "keyboard") { Kbd(keys: ["⌘", "⇪"]) }
             }
             .frame(maxWidth: 560)
+            OGroup("Workspace templates") {
+                TemplateRow(name: "Writing", summary: "3 windows · 1 display", open: {}, rename: {}, update: {}, delete: {})
+                TemplateRow(name: "Research", summary: "6 windows · 2 displays", busy: true, open: {}, rename: {}, update: {}, delete: {})
+            }
         }
     }
 
