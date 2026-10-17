@@ -53,6 +53,9 @@ extension CursorActions {
             model.actions = found.actions
             model.hovered = nil
             resizeMenu()
+            DispatchQueue.main.async { [weak self] in
+                DispatchQueue.main.async { self?.notePointer(at: NSEvent.mouseLocation) }
+            }
         }
         if let error = TemplateLibrary.shared.error { HUD.shared.show(error, on: nil) }
     }

@@ -3,7 +3,11 @@ import SwiftUI
 
 extension CursorActions {
     func follow(cgPoint: CGPoint) {
-        guard shown, !model.open, !opening, menuPanel?.isVisible != true else { return }
+        guard shown else { return }
+        if model.open || opening || menuPanel?.isVisible == true {
+            queuePointerNote()
+            return
+        }
         let p = CGPoint(x: cgPoint.x, y: (NSScreen.screens.first?.frame.height ?? 0) - cgPoint.y)
         guard p != lastFollow else { return }
         lastFollow = p
@@ -29,6 +33,50 @@ extension CursorActions {
                                     inset: EdgeInsets(all: m))
         panel.setFrame(frame, display: true)
         model.anchor = CGPoint(x: point.x - frame.minX, y: frame.maxY - point.y)
+    }
+
+    func armPointerTracking() {
+        pointerInRows = false
+        pointerAnchor = NSEvent.mouseLocation
+        notePointer(at: pointerAnchor)
+    }
+
+    func resetPointerTracking() {
+        pointerInRows = false
+        pointerAnchor = .zero
+        pointerNoteQueued = false
+    }
+
+    func queuePointerNote() {
+        guard model.open, model.trackPointer, !pointerNoteQueued else { return }
+        pointerNoteQueued = true
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            pointerNoteQueued = false
+            guard model.open, model.trackPointer else { return }
+            notePointer(at: NSEvent.mouseLocation)
+        }
+    }
+
+    func notePointer(at mouse: CGPoint) {
+        guard model.open, model.trackPointer, let view = rowHover, let window = view.window, view.bounds.width > 1 else { return }
+        let local = window.convertPoint(fromScreen: mouse)
+        let origin = view.convert(CGPoint.zero, to: nil)
+        let x = local.x - origin.x
+        let y = origin.y - local.y
+        let height = CursorActionsView.contentHeight(for: model.actions)
+        let row = (x >= 0 && x <= view.bounds.width && y >= 0 && y < height)
+            ? CursorActionsView.rowID(at: y, actions: model.actions) : nil
+        let moved = abs(pointerAnchor.x - mouse.x) >= 1 || abs(pointerAnchor.y - mouse.y) >= 1
+        if let row {
+            guard moved || model.keyboardHover == nil else { return }
+            pointerInRows = true
+            if model.hovered != row { model.hovered = row }
+            return
+        }
+        guard pointerInRows else { return }
+        pointerInRows = false
+        model.hovered = nil
     }
 
     static func glyph(of flags: CGEventFlags) -> String {

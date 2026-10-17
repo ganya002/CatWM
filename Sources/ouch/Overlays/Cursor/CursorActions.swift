@@ -10,6 +10,10 @@ final class CursorActions {
     var menuPanel: NSPanel?
     var moveTap: CFMachPort?
     var moveSource: CFRunLoopSource?
+    weak var rowHover: NSView?
+    var pointerInRows = false
+    var pointerAnchor = CGPoint.zero
+    var pointerNoteQueued = false
     var lastFollow = CGPoint(x: -1, y: -1)
     var shown = false
     var opening = false
