@@ -28,8 +28,6 @@ extension WindowManager {
                                    keys: ["B"], keyCode: keyCodes["b"], isOn: FocusDim.shared.blurs) {
             self.dispatch("toggleblur", "")
         })
-        actions.append(QuickAction(id: "template.manage", title: "Manage templates", symbol: "gearshape",
-                                   keys: [","], keyCode: keyCodes["comma"]) { SettingsWindow.shared.show(pane: .templates) })
         return ("Workspace templates", actions)
     }
 }
