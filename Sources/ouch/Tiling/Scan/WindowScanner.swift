@@ -30,25 +30,35 @@ final class WindowScanner {
     private(set) var results: [pid_t: AppScan] = [:]
     private(set) var desktop = WindowServerObservation()
     private var observingDesktop = false
+    private var pendingDesktop: (known: Set<CGWindowID>, done: () -> Void)?
+    private let readDesktop: (Set<CGWindowID>) -> WindowServerObservation
     private(set) var lastScan: CFTimeInterval = 0
     private var busy: [pid_t: UUID] = [:]
     private var queues: [pid_t: DispatchQueue] = [:]
     private let read: (Job) -> AppScan
 
-    init(read: @escaping (Job) -> AppScan = WindowScanner.read) {
+    init(read: @escaping (Job) -> AppScan = WindowScanner.read,
+         readDesktop: @escaping (Set<CGWindowID>) -> WindowServerObservation = WindowServerObservation.read) {
         self.read = read
+        self.readDesktop = readDesktop
     }
 
     func observeDesktop(known: Set<CGWindowID>, done: @escaping () -> Void) {
-        guard !observingDesktop else { return }
+        guard !observingDesktop else {
+            pendingDesktop = ((pendingDesktop?.known ?? []).union(known), done)
+            return
+        }
         observingDesktop = true
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let observation = WindowServerObservation.read(known: known)
+        DispatchQueue.global(qos: .userInitiated).async { [weak self, readDesktop] in
+            let observation = readDesktop(known)
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.desktop = observation
                 self.observingDesktop = false
+                let pending = self.pendingDesktop
+                self.pendingDesktop = nil
                 done()
+                if let pending { self.observeDesktop(known: pending.known, done: pending.done) }
             }
         }
     }

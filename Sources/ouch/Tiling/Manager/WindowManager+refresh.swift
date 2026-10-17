@@ -162,8 +162,12 @@ extension WindowManager {
 
     func refocusRecent(on ws: String) {
         guard isShown(ws), pendingFocus == nil else { return }
-        guard let app = NSWorkspace.shared.frontmostApplication,
-              let report = reportedFocus, report.pid == app.processIdentifier else { return }
+        guard let pid = frontmostPID() else { return }
+        guard let report = reportedFocus, report.pid == pid else {
+            waitingRefocus = (ws, pid)
+            requestFocusObservation()
+            return
+        }
         if let id = report.id, windows[id] == nil { return }
         let here = visible.filter { workspaceOf[$0] == ws }
         guard let id = model.mostRecent(of: here), reportedFocusedWindow()?.id != id, let w = windows[id] else { return }

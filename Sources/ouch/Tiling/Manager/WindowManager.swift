@@ -44,7 +44,22 @@ final class WindowManager {
     var workspaceMoves: Set<CGWindowID> = []
     var snapNextPlacement: Set<CGWindowID> = []
     var present: Set<CGWindowID> = []
-    var pendingFocus: (id: CGWindowID, until: Date)?
+    struct PendingFocus {
+        let id: CGWindowID
+        let pid: pid_t
+        let origin: pid_t?
+        let request: UUID
+        var executed = false
+    }
+    struct FocusCommand {
+        let pid: pid_t
+        let dispatcher: String
+        let arg: String
+        let inMode: Bool
+    }
+    var pendingFocus: PendingFocus?
+    var focusCommands: [FocusCommand] = []
+    var waitingRefocus: (workspace: String, pid: pid_t)?
     var refocusAfterClose: String?
     var lastClose = Date.distantPast
     var floatFrames: [CGWindowID: CGRect] = [:]
@@ -73,6 +88,8 @@ final class WindowManager {
     var visible: Set<CGWindowID> = []
     var targets: [CGWindowID: CGRect] = [:]
     var reportedFocus: (pid: pid_t, id: CGWindowID?)?
+    var frontmostPID: () -> pid_t? = { NSWorkspace.shared.frontmostApplication?.processIdentifier }
+    var focusReader = FocusReader()
     var focusObservation = 0
     var focusReads: Set<pid_t> = []
     var frameReads: [CGWindowID: UUID] = [:]
@@ -91,7 +108,7 @@ final class WindowManager {
     var movingToSpace = false
     var pendingSpace: (display: String, index: Int, until: Date)?
     var spaceGeneration = 0
-    let animator = Animator()
+    var animator = Animator()
     let scanner = WindowScanner()
     let dockWindowPull = DockWindowPull()
     let dockArea = DockArea()

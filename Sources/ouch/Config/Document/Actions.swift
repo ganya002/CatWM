@@ -7,8 +7,9 @@ enum Actions {
     static let all: [Action] = {
         var a: [Action] = []
         func add(_ title: String, _ c: ActionCategory, _ d: String, _ args: String = "", _ symbol: String,
-                 group: String? = nil, short: String? = nil) {
-            a.append(Action(title: title, category: c, dispatcher: d, args: args, symbol: symbol, group: group, short: short))
+                 group: String? = nil, short: String? = nil, focusRequired: Bool? = nil) {
+            a.append(Action(title: title, category: c, dispatcher: d, args: args, symbol: symbol,
+                            group: group, short: short, focusRequired: focusRequired))
         }
         for direction in Direction.allCases {
             let dir = direction.rawValue, name = direction.title, arrow = direction.symbolName
@@ -31,15 +32,15 @@ enum Actions {
         for l in Layout.allCases {
             add("Use \(l.title) Layout", .layout, "layout", l.rawValue, "rectangle.split.2x2", group: "Use Layout", short: l.title)
         }
-        add("Sort Windows", .window, "sort", "", "square.grid.3x1.below.line.grid.1x2")
-        add("Undo Last Sort", .window, "sort-undo", "", "arrow.uturn.backward")
+        add("Sort Windows", .window, "sort", "", "square.grid.3x1.below.line.grid.1x2", focusRequired: false)
+        add("Undo Last Sort", .window, "sort-undo", "", "arrow.uturn.backward", focusRequired: false)
         add("Focus Next Display", .displays, "focusmonitor", "+1", "display")
         add("Focus Previous Display", .displays, "focusmonitor", "-1", "display")
-        add("Move Window to Previous Display", .displays, "movewindow", "mon:-1", "rectangle.portrait.and.arrow.right")
+        add("Move Window to Previous Display", .displays, "movewindow", "mon:-1", "rectangle.portrait.and.arrow.right", focusRequired: true)
         for direction in Direction.allCases {
             let dir = direction.rawValue, name = direction.title, arrow = direction.symbolName
             add("Focus Display \(name)", .displays, "focusmonitor", dir, "arrow.\(arrow).to.line")
-            add("Move Window to Display \(name)", .displays, "movewindow", "mon:\(dir)", "arrow.\(arrow).square")
+            add("Move Window to Display \(name)", .displays, "movewindow", "mon:\(dir)", "arrow.\(arrow).square", focusRequired: true)
         }
         add("Use This Desktop as Home", .spaces, "sethomespace", "", "house")
         for n in 1...10 { add("Workspace \(n)", .spaces, "workspace", "\(n)", "\(n).square", group: "Go to Workspace", short: "Workspace \(n)") }
@@ -49,11 +50,11 @@ enum Actions {
         add("Next Workspace With Windows", .spaces, "workspace", "e+1", "chevron.forward.2")
         for n in 1...10 {
             add("Move Window to Workspace \(n)", .spaces, "movetoworkspace", "\(n)", "\(n).square.fill",
-                group: "Move Window to Workspace", short: "Workspace \(n)")
+                group: "Move Window to Workspace", short: "Workspace \(n)", focusRequired: true)
         }
         for n in 1...10 {
             add("Send Window to Workspace \(n)", .spaces, "movetoworkspacesilent", "\(n)", "\(n).square.fill",
-                group: "Send Window to Workspace", short: "Workspace \(n)")
+                group: "Send Window to Workspace", short: "Workspace \(n)", focusRequired: true)
         }
         add("Run Command", .commands, "exec", "", "terminal")
         add("Enter Window Mode", .app, "submap", "window", "keyboard")
@@ -100,9 +101,10 @@ enum Actions {
         s.lowercased().split(separator: " ").joined(separator: " ")
     }
 
-    static func match(_ r: BindRow) -> Action? {
+    private static func normalized(_ r: BindRow) -> (dispatcher: String, args: String) {
         var d = r.dispatcher.lowercased(), x = norm(r.args)
-        if d == "exec" { return all.first { $0.dispatcher == "exec" } }
+        if d == "setlayout" { d = "layout" }
+        if d == "reevaluate" { d = "retile" }
         if d == "swapwindow" { d = "movewindow" }
         if d == "movewindowtomonitor" { d = "movewindow"; x = "mon:" + x }
         if d == "layoutmsg" {
@@ -122,7 +124,18 @@ enum Actions {
             d = "splitratio"; x = v > 0 ? "+0.05" : "-0.05"
         }
 
+        return (d, x)
+    }
+
+    static func match(_ r: BindRow) -> Action? {
+        let (d, x) = normalized(r)
+        if d == "exec" { return all.first { $0.dispatcher == "exec" } }
         return all.first { $0.dispatcher == d && norm($0.args) == x }
+    }
+
+    static func requiresFocus(_ r: BindRow) -> Bool {
+        let (d, _) = normalized(r)
+        return (match(r) ?? all.first { $0.dispatcher == d })?.requiresFocus ?? false
     }
 
     static func same(_ d1: String, _ a1: String, _ d2: String, _ a2: String) -> Bool {

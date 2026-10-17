@@ -43,7 +43,7 @@ extension WindowManager {
                 guard let self, config.virtualWorkspaces, virtualShown[display.uuid] == ws,
                       isOnHomeSpace(display), w.isValid else { return }
                 if w.naturalFrame.isNull { readDirectActionFacts(w); w.autoFloating = shouldFloat(w) }
-                pendingFocus = nil
+                cancelFocusRequest()
                 Hotkeys.shared.setSubmap("")
                 moveWindow(w, toWorkspace: ws, follow: true)
             }
@@ -55,7 +55,7 @@ extension WindowManager {
         guard isStarted, !restoringTemplate, let w = reportedFocusedWindow() else { return }
         if let p = pendingFocus {
             guard p.id == w.id else { return }
-            pendingFocus = nil
+            if p.executed { pendingFocus = nil }
         }
         noteFocus(w.id)
         guard !sortSession else { return }
@@ -97,6 +97,7 @@ extension WindowManager {
     }
 
     func parkFocus() {
+        cancelFocusRequest()
         prepareFocusSink()
         guard let sink = focusSink else { return }
         if sink.isKeyWindow, NSWorkspace.shared.frontmostApplication?.processIdentifier == getpid() {

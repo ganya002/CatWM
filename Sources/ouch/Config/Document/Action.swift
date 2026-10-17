@@ -11,5 +11,7 @@ struct Action: Identifiable {
     let symbol: String
     var group: String? = nil
     var short: String? = nil
+    var focusRequired: Bool? = nil
+    var requiresFocus: Bool { focusRequired ?? [.focus, .move, .layout, .window, .custom].contains(category) }
     var id: String { "\(dispatcher) \(args)" }
 }

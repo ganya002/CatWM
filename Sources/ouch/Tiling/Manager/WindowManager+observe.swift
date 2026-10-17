@@ -90,7 +90,11 @@ extension WindowManager {
         animator.cancel(id)
         templateHiddenWindows[id] = nil
         if !restoringTemplate, focusClock > 0, focusStamps[id] == focusClock { refocusAfterClose = workspaceOf[id] }
-        if pendingFocus?.id == id { pendingFocus = nil }
+        if pendingFocus?.id == id { cancelFocusRequest() }
+        if reportedFocus?.id == id {
+            reportedFocus = nil
+            focusObservation += 1
+        }
         windows[id] = nil
         frameReads[id] = nil
         dirtyFrames.remove(id)

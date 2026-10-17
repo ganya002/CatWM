@@ -45,9 +45,9 @@ enum PointerActions {
                            title: "Make Main", actionBefore: "swapnext ", available: { $0.canMakeMain }),
         CursorShortcutSpec(id: "layout", action: Action(title: "Next Layout", category: .layout, dispatcher: "cyclelayout", args: "next", symbol: "rectangle.2.swap"),
                            title: "Next Layout", actionBefore: "cyclelayout prev", available: { $0.multipleLayouts }),
-        CursorShortcutSpec(id: "display", action: Action(title: "Move Window to Next Display", category: .displays, dispatcher: "movewindow", args: "mon:+1", symbol: "rectangle.portrait.and.arrow.right"),
+        CursorShortcutSpec(id: "display", action: Action(title: "Move Window to Next Display", category: .displays, dispatcher: "movewindow", args: "mon:+1", symbol: "rectangle.portrait.and.arrow.right", focusRequired: true),
                            title: "Send to Next Display", menuDispatcher: "movewindowtomonitor", menuArgs: "+1", actionBefore: "movewindow mon:-1", available: { $0.multipleDisplays }),
-        CursorShortcutSpec(id: "workspace", action: Action(title: "Send Window to Next Workspace", category: .spaces, dispatcher: "movetoworkspacesilent", args: "+1", symbol: "arrow.right.square"),
+        CursorShortcutSpec(id: "workspace", action: Action(title: "Send Window to Next Workspace", category: .spaces, dispatcher: "movetoworkspacesilent", args: "+1", symbol: "arrow.right.square", focusRequired: true),
                            title: "Send to Next Workspace", includeInActions: false, nextWorkspace: true, available: { $0.virtualWorkspace }),
     ] + FocusDim.features.map(\.pointer) + [
         CursorShortcutSpec(id: "minimize", action: Action(title: "Minimize Window", category: .window, dispatcher: "minimize", args: "", symbol: "minus.square"),

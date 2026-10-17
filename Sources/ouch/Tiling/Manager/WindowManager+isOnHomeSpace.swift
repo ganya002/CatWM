@@ -101,6 +101,7 @@ extension WindowManager {
     }
 
     func restoreHiddenWindows(completion: (() -> Void)? = nil) {
+        cancelFocusRequest()
         let deliver = {
             if let completion { RunLoop.main.perform(inModes: [.common, .modalPanel]) { completion() } }
         }

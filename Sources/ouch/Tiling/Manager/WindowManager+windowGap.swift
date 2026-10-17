@@ -87,15 +87,16 @@ extension WindowManager {
 
     func focusedWindow() -> Window? {
         if let p = pendingFocus {
-            if Date() < p.until, let w = windows[p.id], visible.contains(p.id) { return w }
-            pendingFocus = nil
+            let pid = frontmostPID()
+            if pid == p.pid || pid == p.origin, let w = windows[p.id], visible.contains(p.id) { return w }
+            cancelFocusRequest()
         }
         return reportedFocusedWindow()
     }
 
     func reportedFocusedWindow() -> Window? {
-        guard let app = NSWorkspace.shared.frontmostApplication,
-              let report = reportedFocus, report.pid == app.processIdentifier,
+        guard let pid = frontmostPID(),
+              let report = reportedFocus, report.pid == pid,
               let id = report.id else { return nil }
         return windows[id]
     }

@@ -3,9 +3,14 @@ import AppKit
 extension WindowManager {
 
     func focus(_ w: Window, warp: Bool = true) {
-        animator.focus(w)
+        let request = UUID()
+        pendingFocus = PendingFocus(id: w.id, pid: w.pid, origin: frontmostPID(), request: request)
+        animator.focus(w) { [weak self] in
+            guard let self, self.pendingFocus?.request == request else { return }
+            self.pendingFocus?.executed = true
+            self.requestFocusObservation()
+        }
         noteFocus(w.id)
-        pendingFocus = (w.id, Date().addingTimeInterval(0.5))
         if warp, config.mouseFollowsFocus {
             ignoreMouseUntil = Date().addingTimeInterval(0.3)
             CGWarpMouseCursorPosition(navFrame(w).center)

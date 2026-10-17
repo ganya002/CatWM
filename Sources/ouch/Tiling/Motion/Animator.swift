@@ -27,17 +27,34 @@ final class Animator {
     private var epochs: [CGWindowID: Int] = [:]
     private let focusLock = NSLock()
     private var focusGeneration = 0
+    private var focusQueues: [pid_t: DispatchQueue] = [:]
+    private let makeWriter: (pid_t) -> AXWriter
+    private let applyFocus: (Window, () -> Bool) -> Void
     private var timer: Timer?
     private var timing = Timing()
     private var frameRun: FrameRun?
     var onMinimumSize: ((CGWindowID, CGSize) -> Void)?
 
-    func focus(_ w: Window) {
+    init(makeWriter: @escaping (pid_t) -> AXWriter = AXWriter.init,
+         applyFocus: @escaping (Window, () -> Bool) -> Void = { $0.focus(ifCurrent: $1) }) {
+        self.makeWriter = makeWriter
+        self.applyFocus = applyFocus
+    }
+
+    func cancelFocus() { focusLock.withLock { focusGeneration += 1 } }
+
+    func focus(_ w: Window, done: @escaping () -> Void = {}) {
         let generation = focusLock.withLock { focusGeneration += 1; return focusGeneration }
-        writer(w.pid).run { [weak self] in
+        if focusQueues[w.pid] == nil { focusQueues[w.pid] = DispatchQueue(label: "ouch.focus-write.\(w.pid)", qos: .userInteractive) }
+        focusQueues[w.pid]!.async { [weak self] in
             guard let self else { return }
             let isCurrent = { self.focusLock.withLock { self.focusGeneration == generation } }
-            w.focus(ifCurrent: isCurrent)
+            guard isCurrent() else { return }
+            self.applyFocus(w, isCurrent)
+            DispatchQueue.main.async {
+                guard isCurrent() else { return }
+                done()
+            }
         }
     }
 
@@ -121,7 +138,7 @@ final class Animator {
 
     private func writer(_ pid: pid_t) -> AXWriter {
         if let w = writers[pid] { return w }
-        let w = AXWriter(pid: pid)
+        let w = makeWriter(pid)
         writers[pid] = w
         return w
     }
