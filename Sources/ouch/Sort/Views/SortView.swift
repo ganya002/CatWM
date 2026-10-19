@@ -59,6 +59,11 @@ struct SortView: View {
                     SortAddLane(model: model, plan: plan, rows: rows)
                         .tileItem(model.shown, style: model.motion,
                                   spread: CGSize(width: -CGFloat(plan.lanes.count) * (SortMetrics.lane + 4), height: 0))
+                    ForEach(Array((model.currentDisplay?.fullscreen ?? []).filter { plan.items[$0.id] == nil }.enumerated()), id: \.element.id) { i, item in
+                        SortFullscreenLane(model: model, item: item, rows: rows)
+                            .tileItem(model.shown, style: model.motion,
+                                      spread: CGSize(width: -CGFloat(plan.lanes.count + 1 + i) * (SortMetrics.lane + 4), height: 0))
+                    }
                 }
                 .padding(.horizontal, 8).padding(.bottom, 6)
                 .background(SortScrollAccessor(model: model))

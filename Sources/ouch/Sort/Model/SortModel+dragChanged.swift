@@ -6,14 +6,20 @@ extension SortModel {
         if drag == nil {
             let origin = zones[.row(item.id)]?.origin ?? CGPoint(x: v.startLocation.x - 80, y: v.startLocation.y - 15)
             drag = SortDrag(item: item, closing: plan.isClosing(item.id), location: v.location,
-                            grab: CGSize(width: v.startLocation.x - origin.x, height: v.startLocation.y - origin.y))
+                            grab: CGSize(width: min(max(v.startLocation.x - origin.x, 0), 160),
+                                         height: min(max(v.startLocation.y - origin.y, 0), SortMetrics.rowHeight)))
             hover = item.id
             startEdgeTimer()
         }
         drag?.location = v.location
         let zone = zone(at: v.location)
         let source = plan.lane(of: item.id).map { SortZone.lane(plan.lanes[$0].id) } ?? (plan.isClosing(item.id) ? .close : nil)
-        let next = zone == source || (zone == .add && nextName == nil) ? nil : zone
+        let landable: Bool = {
+            guard unplacedFullscreen(item.id) != nil else { return true }
+            if case .lane = zone { return true }
+            return zone == .add
+        }()
+        let next = zone == source || (zone == .add && nextName == nil) || !landable ? nil : zone
         if over != next { over = next }
     }
 
@@ -31,9 +37,10 @@ extension SortModel {
         drag = nil
         over = nil
         hover = nil
+        let unplaced = unplacedFullscreen(d.id) != nil
         switch landing {
-        case .display(let uuid): moveToDisplay(d.id, uuid)
-        case .close: if !plan.isClosing(d.id) { markClosing(d.id) }
+        case .display(let uuid): if !unplaced { moveToDisplay(d.id, uuid) }
+        case .close: if !unplaced, !plan.isClosing(d.id) { markClosing(d.id) }
         case .add:
             if let new = addLane(focus: false) { place(d.id, inLane: new) }
         case .lane(let id):

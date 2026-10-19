@@ -12,6 +12,7 @@ struct WorkspaceObservation {
     let frames: [CGWindowID: CGRect]
     let present: Set<CGWindowID>
     let held: Set<CGWindowID>
+    var fullscreen: [CGWindowID: UInt64] = [:]
 }
 
 struct WorkspaceReconciliation {
@@ -60,6 +61,14 @@ struct WorkspaceReconciliation {
                 model.show(WindowManager.spaceWorkspace(display: display.id, space: display.space), on: display.id)
             }
             if let ws = model.shown[display.id] { model.monitorOf[ws] = display.id }
+        }
+        model.fullscreenHost = [:]
+        for (id, space) in observation.fullscreen.sorted(by: { $0.key < $1.key }) {
+            guard let owner = displays.first(where: { $0.spaces.contains(space) }) else { continue }
+            let ws = WindowManager.spaceWorkspace(display: owner.id, space: space)
+            model.assign(id, to: ws)
+            model.monitorOf[ws] = owner.id
+            model.fullscreenHost[ws] = id
         }
         func display(containing frame: CGRect) -> String {
             guard !frame.isNull else { return first.id }

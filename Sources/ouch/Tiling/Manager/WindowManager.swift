@@ -44,6 +44,7 @@ final class WindowManager {
     var workspaceMoves: Set<CGWindowID> = []
     var snapNextPlacement: Set<CGWindowID> = []
     var present: Set<CGWindowID> = []
+    var leavingFullscreen: [CGWindowID: Date] = [:]
     struct PendingFocus {
         let id: CGWindowID
         let pid: pid_t

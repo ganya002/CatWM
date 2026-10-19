@@ -17,11 +17,29 @@ extension SortModel {
     func target() -> CGWindowID? { hover ?? selected }
 
     func place(_ id: CGWindowID, inLane i: Int, at index: Int? = nil) {
-        edit { $0.place(id, inLane: i, at: index) }
+        if let item = unplacedFullscreen(id) {
+            edit { $0.adopt(item, inLane: i, at: index) }
+        } else {
+            edit { $0.place(id, inLane: i, at: index) }
+        }
         show(id)
     }
 
+    func unplacedFullscreen(_ id: CGWindowID) -> SortItem? {
+        plan.items[id] == nil ? currentDisplay?.fullscreen.first { $0.id == id } : nil
+    }
+
+    func fullscreenMoves() -> [CGWindowID: String] {
+        var out: [CGWindowID: String] = [:]
+        for d in displays {
+            guard let p = plans[d.id] else { continue }
+            out.merge(p.moves(of: Set(d.fullscreen.map(\.id)))) { a, _ in a }
+        }
+        return out
+    }
+
     func markClosing(_ id: CGWindowID) {
+        guard unplacedFullscreen(id) == nil else { return }
         edit { $0.markClosing(id) }
         show(id)
     }

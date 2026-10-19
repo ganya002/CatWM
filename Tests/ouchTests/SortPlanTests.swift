@@ -129,3 +129,27 @@ private func plan(items: [SortItem]? = nil, lanes: [SortLane]? = nil, taken: Set
         #expect(Set(a.dropped) == ["1", "2"])
     }
 }
+
+@Suite struct SortFullscreenTests {
+    private func plain() -> SortPlan {
+        SortPlan(display: "D", items: [1: SortItem(id: 1, title: "", app: "Safari", bundleID: nil, icon: nil, recency: 1)],
+                 lanes: [SortLane(ws: "1", name: "", layout: .tall, ids: [1]), SortLane(ws: "2", name: "", layout: .tall, ids: [])],
+                 strategy: nil, existing: ["1", "2"], taken: [], active: "1")
+    }
+
+    @Test func adoptingAFullscreenWindowAddsItToThePlanAndALane() {
+        var p = plain()
+        let fullscreen = SortItem(id: 9, title: "Talk", app: "Keynote", bundleID: nil, icon: nil, recency: 2)
+        p.adopt(fullscreen, inLane: 1)
+        #expect(p.items[9]?.app == "Keynote")
+        #expect(p.lanes[1].ids == [9])
+        #expect(p.lane(of: 9) == 1)
+    }
+
+    @Test func movesNameTheWorkspaceOfEachListedWindow() {
+        var p = plain()
+        p.adopt(SortItem(id: 9, title: "", app: "Keynote", bundleID: nil, icon: nil, recency: 2), inLane: 1)
+        #expect(p.moves(of: [9, 5]) == [9: "2"])
+        #expect(p.moves(of: []).isEmpty)
+    }
+}

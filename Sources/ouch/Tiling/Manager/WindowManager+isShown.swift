@@ -81,13 +81,26 @@ extension WindowManager {
                       spaces: Set(Spaces.list(display: $0.uuid)?.ids ?? []))
             },
             frames: windows.mapValues(\.cachedFrame), present: present,
-            held: held ? present : workspaceMoves.union(present.filter { animator.isBusy($0) }))
+            held: held ? present : workspaceMoves.union(present.filter { animator.isBusy($0) }),
+            fullscreen: fullscreenSpaces())
         let plan = WorkspaceReconciliation.reconcile(observation, model: model, virtual: config.virtualWorkspaces,
                                                      homeSpace: homeSpace, displayOf: displayOf)
         model = plan.model
         homeSpace = plan.homeSpace
         displayOf = plan.displayOf
         return plan
+    }
+
+    func fullscreenSpaces() -> [CGWindowID: UInt64] {
+        var found: [CGWindowID: UInt64] = [:]
+        let stillFullscreen = Set(scanner.results.values.flatMap(\.fullscreen))
+        leavingFullscreen = leavingFullscreen.filter { stillFullscreen.contains($0.key) && Date().timeIntervalSince($0.value) < 3 }
+        for scan in scanner.results.values {
+            for id in scan.fullscreen where windows[id] != nil && !scan.minimized.contains(id) && leavingFullscreen[id] == nil {
+                if let spaces = scanner.desktop.spaces[id], spaces.count == 1, let space = spaces.first { found[id] = space }
+            }
+        }
+        return found
     }
 
     func makeCurrentSpaceHome() {
