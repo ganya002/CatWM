@@ -12,7 +12,7 @@ struct SortToastView: View {
             Text(text).font(Theme.body(13.5)).oneLine()
             OButton("Undo", variant: .ghost, shortcut: keys, action: undo)
         }
-        .surface(.sm, glass: true)
+        .surface(.small, glass: true)
         .padding(Self.inset)
         .fixedSize()
     }

@@ -16,7 +16,7 @@ extension MenuModel {
     func trim(to level: Int) {
         guard path.count > level else { return }
         withAnimation(Motion.easeOut) { path = Array(path.prefix(level)) }
-        for l in highlight.keys where l > level { highlight[l] = nil }
+        for deeper in highlight.keys where deeper > level { highlight[deeper] = nil }
     }
 
     func move(_ delta: Int) {
@@ -33,7 +33,7 @@ extension MenuModel {
         let level = keyLevel
         guard query.isEmpty, let id = highlight[level], let i = item(id), i.kind == .sub, i.enabled else { return }
         withAnimation(Motion.easeOut) { path = Array(path.prefix(level)) + [id] }
-        highlight[level + 1] = i.children.first { $0.selectable }?.id
+        highlight[level + 1] = i.children.first(where: \.selectable)?.id
     }
 
     func back() -> Bool {
@@ -57,7 +57,9 @@ extension MenuModel {
 
     func run(_ item: MenuItem) {
         guard item.enabled, let action = item.action else { return }
-        if item.kind == .action || item.kind == .check { Tips.shared.clicked(id: item.id, label: item.label, shortcut: item.shortcut) }
+        if item.kind == .action || item.kind == .check {
+            Tips.shared.clicked(id: item.id, label: item.label, shortcut: item.shortcut)
+        }
         if item.keepOpen {
             action()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in self?.refresh() }

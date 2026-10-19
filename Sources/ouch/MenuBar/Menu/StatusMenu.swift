@@ -12,32 +12,34 @@ final class StatusMenu: NSObject, NSWindowDelegate {
 
     var isOpen: Bool { panel?.isVisible == true }
 
-    func toggle() { isOpen ? close() : open() }
+    func toggle() {
+        if isOpen { close() } else { open() }
+    }
 
     func open() {
-        guard let button, let bw = button.window, !isOpen else { return }
-        let screen = bw.screen ?? NSScreen.main ?? NSScreen.screens[0]
+        guard let button, let buttonWindow = button.window, !isOpen else { return }
+        let screen = buttonWindow.screen ?? NSScreen.main ?? NSScreen.screens[0]
         model.reset()
         model.rebuild()
         model.close = { [weak self] in self?.close() }
 
-        let b = bw.frame, v = screen.visibleFrame, m = Self.margin
+        let anchor = buttonWindow.frame, visible = screen.visibleFrame, margin = Self.margin
         let subs = 2 * (Theme.submenuWidth + 48)
-        let left = min(max(b.minX, v.minX + 8), v.maxX - Theme.menuWidth - 8)
-        model.opensLeft = left + Theme.menuWidth + subs > v.maxX - 8
-        let width = Theme.menuWidth + subs + 2 * m
-        let x = model.opensLeft ? left - subs - m : left - m
-        let top = b.minY - 4 + m
-        let height = min(top - v.minY, 820)
+        let left = min(max(anchor.minX, visible.minX + 8), visible.maxX - Theme.menuWidth - 8)
+        model.opensLeft = left + Theme.menuWidth + subs > visible.maxX - 8
+        let width = Theme.menuWidth + subs + 2 * margin
+        let x = model.opensLeft ? left - subs - margin : left - margin
+        let top = anchor.minY - 4 + margin
+        let height = min(top - visible.minY, 820)
         let frame = NSRect(x: x, y: top - height, width: width, height: height)
-        let rootX = model.opensLeft ? subs + m : m
+        let rootX = model.opensLeft ? subs + margin : margin
 
-        let p = panel ?? makePanel()
-        panel = p
-        p.contentView = OuchHostingView(rootView: MenuRoot(model: model, rootX: rootX, top: m,
-                                                         size: frame.size))
-        p.setFrame(frame, display: true)
-        p.makeKeyAndOrderFront(nil)
+        let menuPanel = panel ?? makePanel()
+        panel = menuPanel
+        menuPanel.contentView = OuchHostingView(rootView: MenuRoot(model: model, rootX: rootX, top: margin,
+                                                                 size: frame.size))
+        menuPanel.setFrame(frame, display: true)
+        menuPanel.makeKeyAndOrderFront(nil)
         button.highlight(true)
         DispatchQueue.main.async { withAnimation(Motion.easeOut) { self.model.appeared = true } }
         installMonitors()
@@ -61,26 +63,26 @@ final class StatusMenu: NSObject, NSWindowDelegate {
     func refreshIfOpen() { if isOpen { model.refresh() } }
 
     private func makePanel() -> OuchPanel {
-        let p = OuchPanel(role: .menu)
-        p.onClose = { [weak self] in self?.close() }
-        p.delegate = self
-        return p
+        let menuPanel = OuchPanel(role: .menu)
+        menuPanel.onClose = { [weak self] in self?.close() }
+        menuPanel.delegate = self
+        return menuPanel
     }
 
-    func windowDidResignKey(_ notification: Notification) { close() }
+    func windowDidResignKey(_: Notification) { close() }
 
     private func installMonitors() {
-        dismiss.start(keeps: { [weak self] w in w === self?.panel || w === self?.button?.window },
-                      key: { [weak self] e in
+        dismiss.start(keeps: { [weak self] window in window === self?.panel || window === self?.button?.window },
+                      key: { [weak self] event in
                           guard let self, panel?.isKeyWindow == true else { return false }
-                          return key(e)
+                          return key(event)
                       },
                       close: { [weak self] in self?.close() })
     }
 
-    private func key(_ e: NSEvent) -> Bool {
-        let cmd = e.modifierFlags.contains(.command)
-        switch (e.keyCode, cmd) {
+    private func key(_ event: NSEvent) -> Bool {
+        let cmd = event.modifierFlags.contains(.command)
+        switch (event.keyCode, cmd) {
         case (126, _): model.move(-1)
         case (125, _): model.move(1)
         case (124, false) where model.query.isEmpty: model.openHighlighted()

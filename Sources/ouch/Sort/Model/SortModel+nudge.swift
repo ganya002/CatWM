@@ -2,22 +2,22 @@ import AppKit
 import SwiftUI
 
 extension SortModel {
-    func nudge(_ id: CGWindowID, _ d: Direction) {
-        let p = plan
-        switch d {
-        case .up, .down:
-            edit { $0.reorder(id, by: d == .up ? -1 : 1) }
+    func nudge(_ id: CGWindowID, _ direction: Direction) {
+        let snapshot = plan
+        switch direction {
+        case .upward, .down:
+            edit { $0.reorder(id, by: direction == .upward ? -1 : 1) }
             show(id)
         case .left, .right:
-            let zone = p.lane(of: id) ?? p.lanes.count
-            let next = zone + (d == .left ? -1 : 1)
-            guard next >= 0, next <= p.lanes.count else { return }
-            let list = zone < p.lanes.count ? p.lanes[zone].ids : p.close
+            let zone = snapshot.lane(of: id) ?? snapshot.lanes.count
+            let next = zone + (direction == .left ? -1 : 1)
+            guard next >= 0, next <= snapshot.lanes.count else { return }
+            let list = zone < snapshot.lanes.count ? snapshot.lanes[zone].ids : snapshot.close
             let pos = list.firstIndex(of: id) ?? 0
-            if next == p.lanes.count {
+            if next == snapshot.lanes.count {
                 markClosing(id)
             } else {
-                place(id, inLane: next, at: min(pos, p.lanes[next].ids.count))
+                place(id, inLane: next, at: min(pos, snapshot.lanes[next].ids.count))
             }
         }
     }
@@ -28,7 +28,10 @@ extension SortModel {
     }
 
     func moveToDisplay(_ id: CGWindowID, _ uuid: String) {
-        guard uuid != current, var src = plans[current], let item = src.items[id], let to = display(uuid) else { return }
+        guard uuid != current,
+              var src = plans[current],
+              let item = src.items[id],
+              let destination = display(uuid) else { return }
         ensurePlan(uuid, grouped: false)
         guard var dst = plans[uuid] else { return }
         src.detach(id)
@@ -46,100 +49,122 @@ extension SortModel {
         if hover == id { hover = nil }
         let name = dst.lanes[lane].name.trimmingCharacters(in: .whitespaces)
         changed()
-        notice = SortNotice(text: "Moved \(item.title) to \(to.short), \(name.isEmpty ? "workspace \(dst.lanes[lane].ws)" : name).", undo: nil)
+        let laneName = name.isEmpty ? "workspace \(dst.lanes[lane].workspace)" : name
+        notice = SortNotice(text: "Moved \(item.title) to \(destination.short), \(laneName).", undo: nil)
     }
 
-    func moveSelection(_ d: Direction) {
-        let p = plan
-        let zones = p.lanes.map(\.ids) + [p.close]
-        guard let cur = selected, let zi = zones.firstIndex(where: { $0.contains(cur) }), let pos = zones[zi].firstIndex(of: cur) else {
+    func moveSelection(_ direction: Direction) {
+        let snapshot = plan
+        let zones = snapshot.lanes.map(\.ids) + [snapshot.close]
+        guard let cur = selected,
+              let zoneIndex = zones.firstIndex(where: { $0.contains(cur) }),
+              let pos = zones[zoneIndex].firstIndex(of: cur) else {
             selected = zones.first { !$0.isEmpty }?.first
-            if let s = selected { show(s) }
+            if let selected { show(selected) }
             return
         }
-        switch d {
-        case .up, .down:
-            let j = pos + (d == .up ? -1 : 1)
-            if zones[zi].indices.contains(j) { selected = zones[zi][j] }
+        switch direction {
+        case .upward, .down:
+            let j = pos + (direction == .upward ? -1 : 1)
+            if zones[zoneIndex].indices.contains(j) { selected = zones[zoneIndex][j] }
         case .left, .right:
-            let step = d == .left ? -1 : 1
-            var k = zi + step
-            while zones.indices.contains(k) {
-                if !zones[k].isEmpty { selected = zones[k][min(pos, zones[k].count - 1)]; break }
-                k += step
+            let step = direction == .left ? -1 : 1
+            var candidate = zoneIndex + step
+            while zones.indices.contains(candidate) {
+                if !zones[candidate].isEmpty {
+                    selected = zones[candidate][min(pos, zones[candidate].count - 1)]
+                    break
+                }
+                candidate += step
             }
         }
-        if let s = selected { show(s) }
+        if let selected { show(selected) }
     }
 
     func show(_ id: CGWindowID) {
-        reveal = SortReveal(id: id, lane: plan.lane(of: id).map { plan.lanes[$0].id } ?? nil, token: reveal.token + 1)
+        reveal = SortReveal(id: id, lane: plan.lane(of: id).map { plan.lanes[$0].id }, token: reveal.token + 1)
     }
 
     func handle(code: UInt16, mods: CGEventFlags, characters: String) -> Bool {
-        let t = target()
-        if let b = binds[Self.key(code, mods)], run(b, on: t) { return true }
-        if let t, mods.isEmpty, let n = Self.digits[code] { send(t, toWorkspace: String(n)); return true }
-        if mods.subtracting(.maskShift).isEmpty, characters == "+" || code == 69 || (characters == "=" && code == 24) {
-            let new = addLane(focus: t == nil)
-            if let t, let new { place(t, inLane: new) }
+        let windowID = target()
+        if let bind = binds[Self.key(code, mods)], run(bind, on: windowID) { return true }
+        if let windowID, mods.isEmpty, let number = Self.digits[code] {
+            send(windowID, toWorkspace: String(number))
             return true
         }
-        guard let t, mods.isEmpty else { return false }
-        if [51, 117, 7].contains(code) { toggleClose(t); return true }
+        if mods.subtracting(.maskShift).isEmpty, characters == "+" || code == 69 || (characters == "=" && code == 24) {
+            let new = addLane(focus: windowID == nil)
+            if let windowID, let new { place(windowID, inLane: new) }
+            return true
+        }
+        guard let windowID, mods.isEmpty else { return false }
+        if [51, 117, 7].contains(code) { toggleClose(windowID); return true }
         return false
     }
 
-    func run(_ b: KeyBinding, on t: CGWindowID?) -> Bool {
-        let arg = b.arg.trimmingCharacters(in: .whitespaces).lowercased()
-        let p = plan
-        switch b.dispatcher {
+    func run(_ bind: KeyBinding, on windowID: CGWindowID?) -> Bool {
+        let arg = bind.arg.trimmingCharacters(in: .whitespaces).lowercased()
+        switch bind.dispatcher {
         case "movefocus":
-            guard let d = Direction(arg) else { return false }
-            if let hover { nudge(hover, d) } else { moveSelection(d) }
+            guard let direction = Direction(arg) else { return false }
+            if let hover { nudge(hover, direction) } else { moveSelection(direction) }
             return true
         case "movewindow", "swapwindow", "movewindowtomonitor":
-            let spec = b.dispatcher == "movewindowtomonitor" ? arg : arg.hasPrefix("mon:") ? String(arg.dropFirst(4)) : nil
-            if let spec {
-                guard let t else { return false }
-                let delta = spec.hasPrefix("-") || spec == "l" || spec == "u" ? -1 : 1
-                guard displays.count > 1, let i = displays.firstIndex(where: { $0.id == current }) else { return true }
-                moveToDisplay(t, displays[((i + delta) % displays.count + displays.count) % displays.count].id)
-                return true
-            }
-            guard let t, let d = Direction(arg) else { return false }
-            nudge(t, d)
-            return true
+            return runMoveWindow(dispatcher: bind.dispatcher, arg: arg, on: windowID)
         case "movetoworkspace", "movetoworkspacesilent":
-            guard let t else { return false }
-            let rel = arg.replacingOccurrences(of: "e", with: "").replacingOccurrences(of: "r", with: "").replacingOccurrences(of: "m", with: "")
-            if (arg.hasPrefix("e") || arg.hasPrefix("r") || arg.hasPrefix("m") || arg.hasPrefix("+") || arg.hasPrefix("-")), let d = Int(rel.replacingOccurrences(of: "+", with: "")) {
-                let cur = p.lane(of: t) ?? p.lanes.count
-                let j = cur + d
-                if p.lanes.indices.contains(j) { place(t, inLane: j) }
-                return true
-            }
-            guard let n = Int(arg) else { return false }
-            send(t, toWorkspace: String(n))
-            return true
+            return runMoveToWorkspace(arg: arg, on: windowID)
         case "cyclelayout":
-            guard let t, let l = p.lane(of: t) else { return false }
-            cycleLayout(of: l, by: arg.hasPrefix("prev") ? -1 : 1)
+            guard let windowID, let lane = plan.lane(of: windowID) else { return false }
+            cycleLayout(of: lane, by: arg.hasPrefix("prev") ? -1 : 1)
             return true
         case "layoutmsg":
-            guard arg == "swapwithmaster", let t, p.lane(of: t) != nil else { return false }
-            moveToTop(t)
+            guard arg == "swapwithmaster", let windowID, plan.lane(of: windowID) != nil else { return false }
+            moveToTop(windowID)
             return true
         case "focusmonitor":
             cycleDisplay(arg.hasPrefix("-") ? -1 : 1)
             return true
         case "killactive":
-            guard let t else { return false }
-            toggleClose(t)
+            guard let windowID else { return false }
+            toggleClose(windowID)
             return true
         default:
             return false
         }
     }
 
+    private func runMoveWindow(dispatcher: String, arg: String, on windowID: CGWindowID?) -> Bool {
+        let spec = dispatcher == "movewindowtomonitor"
+            ? arg
+            : arg.hasPrefix("mon:") ? String(arg.dropFirst(4)) : nil
+        if let spec {
+            guard let windowID else { return false }
+            let delta = spec.hasPrefix("-") || spec == "l" || spec == "u" ? -1 : 1
+            guard displays.count > 1, let i = displays.firstIndex(where: { $0.id == current }) else { return true }
+            moveToDisplay(windowID, displays[((i + delta) % displays.count + displays.count) % displays.count].id)
+            return true
+        }
+        guard let windowID, let direction = Direction(arg) else { return false }
+        nudge(windowID, direction)
+        return true
+    }
+
+    private func runMoveToWorkspace(arg: String, on windowID: CGWindowID?) -> Bool {
+        guard let windowID else { return false }
+        let snapshot = plan
+        let rel = arg
+            .replacingOccurrences(of: "e", with: "")
+            .replacingOccurrences(of: "r", with: "")
+            .replacingOccurrences(of: "m", with: "")
+        let relative = ["e", "r", "m", "+", "-"].contains { arg.hasPrefix($0) }
+        if relative, let delta = Int(rel.replacingOccurrences(of: "+", with: "")) {
+            let cur = snapshot.lane(of: windowID) ?? snapshot.lanes.count
+            let j = cur + delta
+            if snapshot.lanes.indices.contains(j) { place(windowID, inLane: j) }
+            return true
+        }
+        guard let number = Int(arg) else { return false }
+        send(windowID, toWorkspace: String(number))
+        return true
+    }
 }

@@ -36,62 +36,79 @@ enum Layout: String, CaseIterable {
         }
     }
 
-    func frames(count n: Int, in r: CGRect, ratio: CGFloat, mainCount: Int) -> [CGRect]? {
-        guard n > 0 else { return [] }
-        let m = max(1, min(mainCount, n))
+    func frames(count: Int, in rect: CGRect, ratio: CGFloat, mainCount: Int) -> [CGRect]? {
+        guard count > 0 else { return [] }
+        let mains = max(1, min(mainCount, count))
         switch self {
         case .floating:
             return nil
         case .fullscreen:
-            return Array(repeating: r, count: n)
+            return Array(repeating: rect, count: count)
         case .column:
-            return columns(r, n)
+            return columns(rect, count)
         case .row:
-            return rows(r, n)
+            return rows(rect, count)
         case .tall, .tallRight:
-            guard n > m else { return rows(r, n) }
-            let (main, rest) = r.divided(atDistance: r.width * ratio, from: self == .tall ? .minXEdge : .maxXEdge)
-            return rows(main, m) + rows(rest, n - m)
+            guard count > mains else { return rows(rect, count) }
+            let (main, rest) = rect.divided(atDistance: rect.width * ratio, from: self == .tall ? .minXEdge : .maxXEdge)
+            return rows(main, mains) + rows(rest, count - mains)
         case .wide:
-            guard n > m else { return columns(r, n) }
-            let (main, rest) = r.divided(atDistance: r.height * ratio, from: .minYEdge)
-            return columns(main, m) + columns(rest, n - m)
+            guard count > mains else { return columns(rect, count) }
+            let (main, rest) = rect.divided(atDistance: rect.height * ratio, from: .minYEdge)
+            return columns(main, mains) + columns(rest, count - mains)
         case .widescreenTall, .widescreenTallRight:
-            guard n > m else { return columns(r, n) }
-            let (main, rest) = r.divided(atDistance: r.width * ratio, from: self == .widescreenTall ? .minXEdge : .maxXEdge)
-            return columns(main, m) + rows(rest, n - m)
+            guard count > mains else { return columns(rect, count) }
+            let (main, rest) = rect.divided(atDistance: rect.width * ratio,
+                                            from: self == .widescreenTall ? .minXEdge : .maxXEdge)
+            return columns(main, mains) + rows(rest, count - mains)
         case .twoPane, .twoPaneRight:
-            guard n > 1 else { return [r] }
-            let (main, rest) = r.divided(atDistance: r.width * ratio, from: self == .twoPane ? .minXEdge : .maxXEdge)
-            return [main] + Array(repeating: rest, count: n - 1)
+            guard count > 1 else { return [rect] }
+            let (main, rest) = rect.divided(atDistance: rect.width * ratio,
+                                            from: self == .twoPane ? .minXEdge : .maxXEdge)
+            return [main] + Array(repeating: rest, count: count - 1)
         case .middleWide, .threeColumnMiddle:
-            if n <= m { return columns(r, n) }
-            if n == m + 1 { return Layout.tall.frames(count: n, in: r, ratio: ratio, mainCount: m) }
-            let mainW = r.width * ratio, sideW = (r.width - mainW) / 2
-            let left = CGRect(x: r.minX, y: r.minY, width: sideW, height: r.height)
-            let main = CGRect(x: left.maxX, y: r.minY, width: mainW, height: r.height)
-            let right = CGRect(x: main.maxX, y: r.minY, width: r.maxX - main.maxX, height: r.height)
-            let rest = n - m, l = (rest + 1) / 2
-            return rows(main, m) + rows(left, l) + rows(right, rest - l)
+            return middleFrames(count: count, in: rect, ratio: ratio, mains: mains)
         case .threeColumnLeft, .threeColumnRight:
-            if n <= m { return columns(r, n) }
-            let left = self == .threeColumnLeft
-            if n == m + 1 { return (left ? Layout.tall : .tallRight).frames(count: n, in: r, ratio: ratio, mainCount: m) }
-            let (main, rest) = r.divided(atDistance: r.width * ratio, from: left ? .minXEdge : .maxXEdge)
-            let (near, far) = rest.divided(atDistance: rest.width / 2, from: left ? .minXEdge : .maxXEdge)
-            let count = n - m, a = (count + 1) / 2
-            return rows(main, m) + rows(near, a) + rows(far, count - a)
+            return sideFrames(count: count, in: rect, ratio: ratio, mains: mains)
         case .bsp:
-            var out: [CGRect] = [], rest = r
-            for i in 0..<n {
-                if i == n - 1 { out.append(rest); break }
-                let vertical = rest.width >= rest.height
-                let amount = (vertical ? rest.width : rest.height) * (i == 0 ? ratio : 0.5)
-                let (a, b) = rest.divided(atDistance: amount, from: vertical ? .minXEdge : .minYEdge)
-                out.append(a); rest = b
-            }
-            return out
+            return Self.bspFrames(count: count, in: rect, ratio: ratio)
         }
+    }
+
+    private func middleFrames(count: Int, in rect: CGRect, ratio: CGFloat, mains: Int) -> [CGRect]? {
+        if count <= mains { return columns(rect, count) }
+        if count == mains + 1 { return Layout.tall.frames(count: count, in: rect, ratio: ratio, mainCount: mains) }
+        let mainW = rect.width * ratio, sideW = (rect.width - mainW) / 2
+        let left = CGRect(x: rect.minX, y: rect.minY, width: sideW, height: rect.height)
+        let main = CGRect(x: left.maxX, y: rect.minY, width: mainW, height: rect.height)
+        let right = CGRect(x: main.maxX, y: rect.minY, width: rect.maxX - main.maxX, height: rect.height)
+        let rest = count - mains, leftCount = (rest + 1) / 2
+        return rows(main, mains) + rows(left, leftCount) + rows(right, rest - leftCount)
+    }
+
+    private func sideFrames(count: Int, in rect: CGRect, ratio: CGFloat, mains: Int) -> [CGRect]? {
+        if count <= mains { return columns(rect, count) }
+        let left = self == .threeColumnLeft
+        if count == mains + 1 {
+            return (left ? Layout.tall : .tallRight).frames(count: count, in: rect, ratio: ratio, mainCount: mains)
+        }
+        let (main, rest) = rect.divided(atDistance: rect.width * ratio, from: left ? .minXEdge : .maxXEdge)
+        let (near, far) = rest.divided(atDistance: rest.width / 2, from: left ? .minXEdge : .maxXEdge)
+        let others = count - mains, nearCount = (others + 1) / 2
+        return rows(main, mains) + rows(near, nearCount) + rows(far, others - nearCount)
+    }
+
+    private static func bspFrames(count: Int, in rect: CGRect, ratio: CGFloat) -> [CGRect] {
+        var out: [CGRect] = [], rest = rect
+        for i in 0..<count {
+            if i == count - 1 { out.append(rest); break }
+            let vertical = rest.width >= rest.height
+            let amount = (vertical ? rest.width : rest.height) * (i == 0 ? ratio : 0.5)
+            let (slice, remainder) = rest.divided(atDistance: amount, from: vertical ? .minXEdge : .minYEdge)
+            out.append(slice)
+            rest = remainder
+        }
+        return out
     }
 
     var ratioAxis: (horizontal: Bool, fromStart: Bool)? {

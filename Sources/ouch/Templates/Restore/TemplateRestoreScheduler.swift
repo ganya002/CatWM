@@ -36,15 +36,15 @@ struct TemplateRestoreScheduler {
         var keepWaiting: Bool
     }
 
-    private struct Attempt {
-        enum Outcome {
-            case pending
-            case refused
-            case failed
-        }
+    private enum AttemptOutcome {
+        case pending
+        case refused
+        case failed
+    }
 
-        var outcome: Outcome
-        var at: Date
+    private struct Attempt {
+        var outcome: AttemptOutcome
+        var time: Date
         var tries: Int
         var token: UUID
     }
@@ -78,15 +78,16 @@ struct TemplateRestoreScheduler {
     mutating func noteRefused(_ savedID: UUID, appName: String, now: Date) {
         guard !cancelled, var attempt = attempts[savedID], attempt.outcome == .pending else { return }
         attempt.outcome = .refused
-        attempt.at = now
+        attempt.time = now
         attempts[savedID] = attempt
         if attempt.tries >= Self.maxAttempts { failures.insert(appName) }
     }
 
     mutating func noteFailed(_ savedID: UUID, token: UUID, appName: String, now: Date) {
-        guard !cancelled, var attempt = attempts[savedID], attempt.token == token, attempt.outcome == .pending else { return }
+        guard !cancelled, var attempt = attempts[savedID], attempt.token == token,
+              attempt.outcome == .pending else { return }
         attempt.outcome = .failed
-        attempt.at = now
+        attempt.time = now
         attempts[savedID] = attempt
         if attempt.tries >= Self.maxAttempts { failures.insert(appName) }
     }
@@ -110,7 +111,8 @@ struct TemplateRestoreScheduler {
             guard let appName = group.first?.appName else { continue }
             let app = apps[bundle] ?? TemplateAppState(running: false, finishedLaunching: false, openable: false)
             let appMatches = Set(targets.filter { $0.bundleID == bundle && matched.contains($0.id) }.map(\.id))
-            if kinds[bundle] == .cold, lastRequest[bundle] == nil, readyAt[bundle] != nil, settledMatches[bundle] != appMatches {
+            if kinds[bundle] == .cold, lastRequest[bundle] == nil, readyAt[bundle] != nil,
+               settledMatches[bundle] != appMatches {
                 readyAt[bundle] = now
             }
             settledMatches[bundle] = appMatches
@@ -132,9 +134,10 @@ struct TemplateRestoreScheduler {
                 for target in admitted {
                     let token = UUID()
                     let tries = (attempts[target.id]?.tries ?? 0) + 1
-                    attempts[target.id] = Attempt(outcome: .pending, at: now, tries: tries, token: token)
+                    attempts[target.id] = Attempt(outcome: .pending, time: now, tries: tries, token: token)
                     requests.append(TemplateRestoreRequest(savedID: target.id, bundleID: target.bundleID,
-                                                           appName: target.appName, document: target.document, token: token))
+                                                           appName: target.appName, document: target.document,
+                                                           token: token))
                 }
                 lastRequest[bundle] = now
                 keep = true
@@ -186,7 +189,7 @@ struct TemplateRestoreScheduler {
         case .pending:
             return false
         case .refused, .failed:
-            return attempt.tries < Self.maxAttempts && now.timeIntervalSince(attempt.at) + 0.001 >= Self.retryDelay
+            return attempt.tries < Self.maxAttempts && now.timeIntervalSince(attempt.time) + 0.001 >= Self.retryDelay
         }
     }
 

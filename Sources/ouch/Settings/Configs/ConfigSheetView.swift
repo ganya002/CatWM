@@ -8,24 +8,26 @@ struct ConfigSheetView: View {
 
     private var kinds: [ConfigKind] {
         switch sheet {
-        case .create(let k, _): [k]
+        case .create(let kind, _): [kind]
         case .edit(let id): [library.config(id: id)?.kind ?? .keyboard]
-        case .export(let k): [k]
+        case .export(let kind): [kind]
         }
     }
 
     private var title: String {
         switch sheet {
-        case .create(let k, _): "New \(k.title.lowercased()) config"
+        case .create(let kind, _): "New \(kind.title.lowercased()) config"
         case .edit: "Edit config"
-        case .export(let k): "Export \(k == .full ? "full" : k.title.lowercased()) config"
+        case .export(let kind): "Export \(kind == .full ? "full" : kind.title.lowercased()) config"
         }
     }
 
     private var nameProblem: String? {
         let trimmed = model.name.trimmingCharacters(in: .whitespaces)
         if trimmed.isEmpty { return nil }
-        if kinds.contains(where: { library.isReserved(trimmed, kind: $0) }) { return "That name is built in. Pick another." }
+        if kinds.contains(where: { library.isReserved(trimmed, kind: $0) }) {
+            return "That name is built in. Pick another."
+        }
         return nil
     }
     private var canConfirm: Bool { !model.name.trimmingCharacters(in: .whitespaces).isEmpty && nameProblem == nil }
@@ -45,42 +47,54 @@ struct ConfigSheetView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 Button { model.pickingSymbol.toggle() } label: {
-                    Image(systemName: model.symbol ?? kinds[0].genericSymbol).font(Theme.symbol(Theme.Icon.lg))
+                    Image(systemName: model.symbol ?? kinds[0].genericSymbol).font(Theme.symbol(Theme.Icon.large))
                         .foregroundStyle(Theme.accentInk)
                         .frame(width: 34, height: Theme.controlHeight)
-                        .background(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(Theme.well))
+                        .background(RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous)
+                            .fill(Theme.well))
                 }
                 .buttonStyle(.plain).tooltip("Icon").accessibilityLabel("Choose icon")
-                .oPopover(isPresented: $model.pickingSymbol) { SymbolGrid(selection: $model.symbol, close: { model.pickingSymbol = false }) }
+                .oPopover(isPresented: $model.pickingSymbol) {
+                    SymbolGrid(selection: $model.symbol, close: { model.pickingSymbol = false })
+                }
 
                 OTextField(placeholder: "Name", text: $model.name) { if canConfirm { confirm() } }
 
                 Button { model.pickingColor.toggle() } label: {
                     Circle().fill(model.hasColor ? model.color.color : Color.clear).frame(width: 22, height: 22)
-                        .overlay(Circle().strokeBorder(model.hasColor ? Theme.hairline : Theme.borderControl, style: StrokeStyle(lineWidth: 1, dash: model.hasColor ? [] : [3, 2])))
+                        .overlay(Circle().strokeBorder(
+                            model.hasColor ? Theme.hairline : Theme.borderControl,
+                            style: StrokeStyle(lineWidth: 1, dash: model.hasColor ? [] : [3, 2])))
                         .frame(width: 32, height: 32).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain).tooltip("Color").accessibilityLabel("Choose color")
                 .oPopover(isPresented: $model.pickingColor) { ColorPopover(model: model) }
             }
-            if let p = nameProblem { OStatus(kind: .danger, text: p) }
+            if let problem = nameProblem { OStatus(kind: .danger, text: problem) }
             HStack(spacing: 8) {
                 Spacer()
                 OButton("Cancel", variant: .ghost) { cancel() }.keyboardShortcut(.cancelAction)
-                OButton(confirmTitle, variant: .primary, shortcut: ["↩"]) { confirm() }.keyboardShortcut(.defaultAction).disabled(!canConfirm)
+                OButton(confirmTitle, variant: .primary, shortcut: ["↩"]) { confirm() }
+                    .keyboardShortcut(.defaultAction).disabled(!canConfirm)
             }
             .padding(.top, 8)
         }
     }
 
     private var confirmTitle: String {
-        switch sheet { case .edit: "Save"; default: "Create" }
+        switch sheet {
+        case .edit: "Save"
+        default: "Create"
+        }
     }
 
     private func exportBody(_ kind: ConfigKind) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             ORow("Config", description: kind == .full ? "With its keyboard and animation" : nil) {
-                OMenuPicker(title: "Config", options: library.configs(kind).map { ($0.id, $0.name + (library.isActive($0) ? " (active)" : "")) },
+                OMenuPicker(title: "Config",
+                            options: library.configs(kind).map {
+                                ($0.id, $0.name + (library.isActive($0) ? " (active)" : ""))
+                            },
                             selection: $model.exportID)
             }
             HStack(spacing: 8) {
@@ -88,7 +102,9 @@ struct ConfigSheetView: View {
                 OButton("Cancel", variant: .ghost) { library.sheet = nil }.keyboardShortcut(.cancelAction)
                 OButton("Export…", variant: .primary, shortcut: ["↩"]) {
                     library.sheet = nil
-                    if let c = library.config(id: model.exportID) { DispatchQueue.main.async { library.runExportPanel(for: c) } }
+                    if let config = library.config(id: model.exportID) {
+                        DispatchQueue.main.async { library.runExportPanel(for: config) }
+                    }
                 }.keyboardShortcut(.defaultAction)
             }
         }
@@ -97,10 +113,10 @@ struct ConfigSheetView: View {
     private func setUp() {
         switch sheet {
         case .edit(let id):
-            guard let c = library.config(id: id) else { return }
-            model.name = c.name
-            model.symbol = c.symbol
-            model.set(color: c.colorHex.flatMap(HSBA.init(hex:)))
+            guard let config = library.config(id: id) else { return }
+            model.name = config.name
+            model.symbol = config.symbol
+            model.set(color: config.colorHex.flatMap(HSBA.init(hex:)))
         case .export(let kind):
             model.exportID = library.current(kind).id
         default:

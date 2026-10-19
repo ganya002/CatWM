@@ -25,7 +25,7 @@ struct SortOfferView: View {
             Capsule().fill(Theme.accent).frame(height: 3).padding(.top, 14)
         }
         .frame(width: Self.width - 40)
-        .surface(.lg, caret: .top(caret))
+        .surface(.large, caret: .top(caret))
         .padding(Self.inset)
         .fixedSize()
     }

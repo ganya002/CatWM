@@ -37,7 +37,7 @@ struct FeedbackSheet: View {
     }
 
     private var editor: some View {
-        let shape = RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous)
         return TextEditor(text: $feedback.text)
             .font(Theme.body(13))
             .foregroundStyle(Theme.ink)

@@ -11,8 +11,9 @@ final class FocusReader {
     }
 
     func observe(_ pid: pid_t, done: @escaping (Result) -> Void) {
-        if queues[pid] == nil { queues[pid] = DispatchQueue(label: "ouch.focus-read.\(pid)", qos: .userInteractive) }
-        queues[pid]!.async { [read] in
+        let queue = queues[pid] ?? DispatchQueue(label: "ouch.focus-read.\(pid)", qos: .userInteractive)
+        queues[pid] = queue
+        queue.async { [read] in
             let id = read(pid)
             DispatchQueue.main.async { done(id) }
         }
@@ -25,7 +26,7 @@ final class FocusReader {
         if result == .noValue || result == .attributeUnsupported { return .focused(nil) }
         guard result == .success else { return .unavailable }
         guard let value, CFGetTypeID(value) == AXUIElementGetTypeID() else { return .focused(nil) }
-        return resolve(value as! AXUIElement)
+        return resolve(unsafeDowncast(value, to: AXUIElement.self))
     }
 
     static func resolve(_ focusedElement: AXUIElement) -> Result {

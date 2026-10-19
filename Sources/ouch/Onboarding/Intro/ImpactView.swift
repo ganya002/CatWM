@@ -7,9 +7,10 @@ final class ImpactView: NSView {
         wantsLayer = true
     }
 
-    required init?(coder: NSCoder) { fatalError() }
+    @available(*, unavailable)
+    required init?(coder _: NSCoder) { fatalError("init(coder:) is not supported") }
 
-    func fire(at c: NSPoint) {
+    func fire(at center: NSPoint) {
         guard let root = layer else { return }
         let flash = CALayer()
         flash.frame = bounds
@@ -23,11 +24,12 @@ final class ImpactView: NSView {
         blink.timingFunctions = [CAMediaTimingFunction(name: .easeOut), CAMediaTimingFunction(name: .easeOut)]
         flash.add(blink, forKey: "blink")
 
-        let reach = hypot(max(c.x, bounds.width - c.x), max(c.y, bounds.height - c.y)) * 1.1
+        let reach = hypot(max(center.x, bounds.width - center.x), max(center.y, bounds.height - center.y)) * 1.1
         for (i, (color, width)) in [(NSColor.white, 3.0), (Theme.iconBlue, 10.0)].enumerated() {
             let ring = CAShapeLayer()
-            ring.path = CGPath(ellipseIn: CGRect(x: -reach, y: -reach, width: reach * 2, height: reach * 2), transform: nil)
-            ring.position = c
+            let circle = CGRect(x: -reach, y: -reach, width: reach * 2, height: reach * 2)
+            ring.path = CGPath(ellipseIn: circle, transform: nil)
+            ring.position = center
             ring.fillColor = nil
             ring.strokeColor = color.cgColor
             ring.lineWidth = width

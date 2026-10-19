@@ -45,12 +45,12 @@ final class OuchPanel: NSPanel {
             collectionBehavior = base.union(.stationary)
             becomesKeyOnlyIfNeeded = true
             animationBehavior = .none
-        case let .overlay(l, clickThrough):
-            level = l
+        case let .overlay(windowLevel, clickThrough):
+            level = windowLevel
             collectionBehavior = base
             ignoresMouseEvents = clickThrough
-        case let .card(l):
-            level = l
+        case let .card(windowLevel):
+            level = windowLevel
             collectionBehavior = base
         }
     }
@@ -76,20 +76,20 @@ final class OuchPanel: NSPanel {
         if let onClose { onClose() } else { super.cancelOperation(sender) }
     }
 
-    private static func isCloseKey(_ e: NSEvent) -> Bool {
-        e.modifierFlags.intersection([.command, .option, .control, .shift]) == .command
-            && ["w", "q"].contains(e.charactersIgnoringModifiers?.lowercased() ?? "")
+    private static func isCloseKey(_ event: NSEvent) -> Bool {
+        event.modifierFlags.intersection([.command, .option, .control, .shift]) == .command
+            && ["w", "q"].contains(event.charactersIgnoringModifiers?.lowercased() ?? "")
     }
 
     static func closeKeyWindow() -> Bool {
-        guard let w = NSApp.keyWindow, w.isVisible else { return false }
-        if let p = w as? OuchPanel {
-            guard let close = p.onClose else { return false }
+        guard let window = NSApp.keyWindow, window.isVisible else { return false }
+        if let panel = window as? OuchPanel {
+            guard let close = panel.onClose else { return false }
             close()
             return true
         }
-        guard w.styleMask.contains(.closable) else { return false }
-        w.performClose(nil)
+        guard window.styleMask.contains(.closable) else { return false }
+        window.performClose(nil)
         return true
     }
 
@@ -106,25 +106,27 @@ final class OuchPanel: NSPanel {
     }
 
     static func frame(size: CGSize, on screen: NSScreen, anchor: Anchor, inset: EdgeInsets = EdgeInsets()) -> NSRect {
-        let v = screen.visibleFrame
-        let room = NSRect(x: v.minX - inset.leading, y: v.minY - inset.bottom,
-                          width: v.width + inset.leading + inset.trailing, height: v.height + inset.top + inset.bottom)
-        let w = min(size.width, room.width), h = min(size.height, room.height)
-        var o: NSPoint
+        let visible = screen.visibleFrame
+        let room = NSRect(x: visible.minX - inset.leading, y: visible.minY - inset.bottom,
+                          width: visible.width + inset.leading + inset.trailing,
+                          height: visible.height + inset.top + inset.bottom)
+        let width = min(size.width, room.width), height = min(size.height, room.height)
+        var origin: NSPoint
         switch anchor {
-        case let .center(dy): o = NSPoint(x: v.midX - w / 2, y: v.midY - h / 2 + dy)
-        case let .bottom(y): o = NSPoint(x: v.midX - w / 2, y: v.minY + y)
-        case let .origin(p): o = p
+        case let .center(dy): origin = NSPoint(x: visible.midX - width / 2, y: visible.midY - height / 2 + dy)
+        case let .bottom(y): origin = NSPoint(x: visible.midX - width / 2, y: visible.minY + y)
+        case let .origin(point): origin = point
         }
-        o.x = min(max(o.x, room.minX), room.maxX - w)
-        o.y = min(max(o.y, room.minY), room.maxY - h)
-        return NSRect(origin: o, size: CGSize(width: w, height: h))
+        origin.x = min(max(origin.x, room.minX), room.maxX - width)
+        origin.y = min(max(origin.y, room.minY), room.maxY - height)
+        return NSRect(origin: origin, size: CGSize(width: width, height: height))
     }
 
     @discardableResult
-    func place(size: CGSize, on screen: NSScreen, anchor: Anchor, inset: EdgeInsets = EdgeInsets(), display: Bool = true) -> NSRect {
-        let f = Self.frame(size: size, on: screen, anchor: anchor, inset: inset)
-        setFrame(f, display: display)
-        return f
+    func place(size: CGSize, on screen: NSScreen, anchor: Anchor, inset: EdgeInsets = EdgeInsets(),
+               display: Bool = true) -> NSRect {
+        let frame = Self.frame(size: size, on: screen, anchor: anchor, inset: inset)
+        setFrame(frame, display: display)
+        return frame
     }
 }

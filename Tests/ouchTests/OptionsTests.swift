@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import ouch
+import Testing
 
 private let changed = """
 floating = com.example.app
@@ -46,14 +46,14 @@ debug-logging = true
 perf-reports = true
 """
 
-private func values(_ c: Config) -> [String: String] {
-    Dictionary(uniqueKeysWithValues: Options.all.map { ($0.key, $0.text(c)) })
+private func values(_ config: Config) -> [String: String] {
+    Dictionary(uniqueKeysWithValues: Options.all.map { ($0.key, $0.text(config)) })
 }
 
 @Test func defaultTextHasEveryOptionAtItsDefault() {
-    let c = Config.parse(defaultText)
-    #expect(c.errors.isEmpty)
-    #expect(values(c) == values(Config()))
+    let config = Config.parse(defaultText)
+    #expect(config.errors.isEmpty)
+    #expect(values(config) == values(Config()))
 }
 
 @Test func savedFileReadsBackTheSame() {
@@ -70,13 +70,13 @@ private func values(_ c: Config) -> [String: String] {
 }
 
 @Test func changedTextExercisesItsDeclaredOptions() {
-    let c = Config.parse(changed), d = Config()
+    let config = Config.parse(changed), defaults = Config()
     let options = changed.components(separatedBy: "\n").compactMap { line -> ConfigOption? in
         guard let key = line.split(separator: "=", maxSplits: 1).first else { return nil }
         return ConfigOption.named(key.trimmingCharacters(in: .whitespaces))
     }
-    for o in options {
-        #expect(o.text(c) != o.text(d), "\(o.key) kept its default")
+    for option in options {
+        #expect(option.text(config) != option.text(defaults), "\(option.key) kept its default")
     }
 }
 
@@ -101,30 +101,33 @@ private func values(_ c: Config) -> [String: String] {
     let source = ConfigDocument(text: changed)
     let target = ConfigDocument(text: defaultText)
     target.applyAnimation(source.animationText())
-    for o in Options.all {
-        let expected = o.group == .animation ? source.config : Config.parse(defaultText)
-        #expect(o.text(target.config) == o.text(expected), "\(o.key)")
+    for option in Options.all {
+        let expected = option.group == .animation ? source.config : Config.parse(defaultText)
+        #expect(option.text(target.config) == option.text(expected), "\(option.key)")
     }
 }
 
 @Test func namesAreUniqueAndResolve() {
     let names = Options.all.flatMap(\.names).map(ConfigOption.norm)
     #expect(Set(names).count == names.count)
-    for o in Options.all { for n in o.names { #expect(ConfigOption.named(n)?.key == o.key) } }
+    for option in Options.all { for name in option.names { #expect(ConfigOption.named(name)?.key == option.key) } }
     let ids = SettingsIndex.all.map(\.id)
     #expect(Set(ids).count == ids.count)
 }
 
 @Test func agentDocsListEveryOptionWithItsDefault() throws {
-    let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+    let url = URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         .appendingPathComponent("Resources/AgentDocs/config.md")
-    let rows = try String(contentsOf: url, encoding: .utf8).components(separatedBy: "\n").filter { $0.hasPrefix("| `") }
-    for o in Options.all {
-        let row = rows.first { $0.hasPrefix("| `\(o.key)`") }
-        #expect(row != nil, "config.md has no row for \(o.key)")
+    let rows = try String(contentsOf: url, encoding: .utf8)
+        .components(separatedBy: "\n")
+        .filter { $0.hasPrefix("| `") }
+    for option in Options.all {
+        let row = rows.first { $0.hasPrefix("| `\(option.key)`") }
+        #expect(row != nil, "config.md has no row for \(option.key)")
         guard let row else { continue }
         let first = row.components(separatedBy: "|")[1]
-        for alias in o.aliases { #expect(first.contains("`\(alias)`"), "config.md lacks alias \(alias)") }
-        #expect(row.contains("| `\(o.defaultText)` |"), "config.md has the wrong default for \(o.key)")
+        for alias in option.aliases { #expect(first.contains("`\(alias)`"), "config.md lacks alias \(alias)") }
+        #expect(row.contains("| `\(option.defaultText)` |"), "config.md has the wrong default for \(option.key)")
     }
 }

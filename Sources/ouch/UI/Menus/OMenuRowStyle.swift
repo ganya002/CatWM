@@ -3,7 +3,7 @@ import SwiftUI
 
 struct OMenuRowStyle: ButtonStyle {
     static let inset: CGFloat = 10
-    var highlighted: Bool? = nil
+    var highlight = MenuRowHighlight.followsHover
     var open = false
     var danger = false
     var bare = false

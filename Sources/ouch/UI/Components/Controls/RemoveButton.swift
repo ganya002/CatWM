@@ -17,28 +17,28 @@ struct RemoveButton: View {
             switch variant {
             case .row:
                 Image(systemName: "minus").font(Theme.symbol(10, .bold))
-                    .foregroundStyle(hover.on ? Theme.danger : Theme.inkMuted)
+                    .foregroundStyle(hover.isOn ? Theme.danger : Theme.inkMuted)
                     .frame(width: 22, height: 22)
-                    .background(Circle().fill(hover.on ? Theme.dangerSoft : Theme.well))
+                    .background(Circle().fill(hover.isOn ? Theme.dangerSoft : Theme.well))
                     .contentShape(Circle())
             case .close, .restore:
                 let removes = variant == .close
                 Image(systemName: removes ? "xmark" : "arrow.uturn.backward").font(Theme.symbol(10, .semibold))
-                    .foregroundStyle(hover.on && removes ? Theme.danger : hover.on ? Theme.ink : Theme.inkMuted)
+                    .foregroundStyle(hover.isOn && removes ? Theme.danger : hover.isOn ? Theme.ink : Theme.inkMuted)
                     .frame(width: 22, height: 22)
-                    .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
-                        .fill(hover.on ? (removes ? Theme.dangerSoft : Theme.hover) : .clear))
+                    .background(RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
+                        .fill(hover.isOn ? (removes ? Theme.dangerSoft : Theme.hover) : .clear))
                     .contentShape(Rectangle())
             case .badge:
                 Image(systemName: "xmark").font(Theme.symbol(7, .heavy)).foregroundStyle(Theme.surface)
                     .frame(width: 16, height: 16)
-                    .background(Circle().fill(hover.on ? Theme.danger : Theme.inkMuted))
+                    .background(Circle().fill(hover.isOn ? Theme.danger : Theme.inkMuted))
                     .contentShape(Circle())
             }
         }
         .buttonStyle(PressScale(scale: 0.88))
-        .onHover { hover.on = $0 }
-        .animation(Motion.fade, value: hover.on)
+        .onHover { hover.isOn = $0 }
+        .animation(Motion.fade, value: hover.isOn)
         .tooltip(help)
         .accessibilityLabel(help)
     }

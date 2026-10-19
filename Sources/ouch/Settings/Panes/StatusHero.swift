@@ -2,36 +2,42 @@ import AppKit
 import SwiftUI
 
 struct StatusHero: View {
-    @ObservedObject var ui: SettingsUI
+    @ObservedObject var settingsUI: SettingsUI
 
     var body: some View {
-        let s = ui.status
-        let live = s.trusted && s.keybindsActive && s.tilingEnabled
+        let status = settingsUI.status
+        let live = status.trusted && status.keybindsActive && status.tilingEnabled
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 16) {
-                BadgedAppIcon(badge: !s.trusted ? "lock.circle.fill" : live ? "checkmark.circle.fill"
-                                  : s.keybindsActive ? "pause.circle.fill" : "exclamationmark.circle.fill",
+                BadgedAppIcon(badge: !status.trusted ? "lock.circle.fill" : live ? "checkmark.circle.fill"
+                                  : status.keybindsActive ? "pause.circle.fill" : "exclamationmark.circle.fill",
                               color: live ? Theme.success : Theme.warning, size: 52)
                     .squish(on: live, when: live)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(!s.trusted ? "Ouch needs Accessibility access" : !s.tilingEnabled ? "Tiling is paused"
-                         : s.keybindsActive ? "Ouch is running" : "Keyboard shortcuts aren't active")
+                    Text(!status.trusted ? "Ouch needs Accessibility access"
+                         : !status.tilingEnabled ? "Tiling is paused"
+                         : status.keybindsActive ? "Ouch is running" : "Keyboard shortcuts aren't active")
                         .textStyle(.title).oneLine()
                         .contentTransition(.opacity)
-                    Text(s.trusted ? summary(s) : "macOS only lets apps move other apps' windows with this permission.")
+                    Text(status.trusted
+                         ? summary(status)
+                         : "macOS only lets apps move other apps' windows with this permission.")
                         .font(Theme.body(13.5)).foregroundStyle(Theme.inkMuted).oneLine()
                         .contentTransition(.numericText())
                 }
                 Spacer(minLength: 0)
-                if s.trusted && !s.keybindsActive {
-                    OButton("Retry", icon: "arrow.clockwise", size: .sm) { Hotkeys.shared.restart(); ui.refreshStatus() }
+                if status.trusted && !status.keybindsActive {
+                    OButton("Retry", icon: "arrow.clockwise", size: .small) {
+                        Hotkeys.shared.restart(); settingsUI.refreshStatus()
+                    }
                 }
             }
-            if !s.trusted {
+            if !status.trusted {
                 VStack(alignment: .leading, spacing: 8) {
-                    OStep(n: 1, text: "Click **Grant Access**. A guide appears next to System Settings.")
-                    OStep(n: 2, text: "Turn on Ouch in the list.")
-                    OStep(n: 3, text: "Still not working after a rebuild? Click **Reset Permission**, then turn it on again.")
+                    OStep(number: 1, text: "Click **Grant Access**. A guide appears next to System Settings.")
+                    OStep(number: 2, text: "Turn on Ouch in the list.")
+                    OStep(number: 3, text: "Still not working after a rebuild? "
+                        + "Click **Reset Permission**, then turn it on again.")
                 }
                 HStack(spacing: 8) {
                     OButton("Grant Access", icon: "lock.open", variant: .primary) { Permissions.request() }
@@ -43,13 +49,13 @@ struct StatusHero: View {
                 .transition(.opacity)
             }
         }
-        .animation(Motion.easeOut, value: s.trusted)
+        .animation(Motion.easeOut, value: status.trusted)
     }
 
-    private func summary(_ s: WindowManager.Status) -> String {
-        let w = "\(s.tiled) tiled window\(s.tiled == 1 ? "" : "s")"
-        let f = s.floating > 0 ? " · \(s.floating) floating" : ""
-        let d = " · \(s.screens.count) display\(s.screens.count == 1 ? "" : "s")"
-        return w + f + d
+    private func summary(_ status: WindowManager.Status) -> String {
+        let windows = "\(status.tiled) tiled window\(status.tiled == 1 ? "" : "s")"
+        let floating = status.floating > 0 ? " · \(status.floating) floating" : ""
+        let displays = " · \(status.screens.count) display\(status.screens.count == 1 ? "" : "s")"
+        return windows + floating + displays
     }
 }

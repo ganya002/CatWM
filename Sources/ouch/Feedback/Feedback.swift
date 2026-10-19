@@ -25,10 +25,11 @@ final class Feedback: ObservableObject {
         let body = text.trimmingCharacters(in: .whitespacesAndNewlines)
         let title = body.split(separator: "\n").first.map(String.init) ?? ""
         let log = (try? String(contentsOf: Log.url, encoding: .utf8)) ?? ""
-        Self.post(title: title, body: body, log: log, crash: nil, to: endpoint) { [weak self] ok in
+        let report = Report(title: title, body: body, log: log, crash: nil)
+        Self.post(report, to: endpoint) { [weak self] success in
             guard let self else { return }
             sending = false
-            guard ok else { return failed = true }
+            guard success else { return failed = true }
             text = ""
             isOpen = false
             HUD.shared.show("Feedback sent", on: nil)
@@ -36,8 +37,9 @@ final class Feedback: ObservableObject {
     }
 
     static var endpoint: URL? {
-        let v = (Bundle.main.object(forInfoDictionaryKey: "OuchReportURL") as? String)?.trimmingCharacters(in: .whitespaces)
-        return v.flatMap(URL.init(string:))
+        let value = (Bundle.main.object(forInfoDictionaryKey: "OuchReportURL") as? String)?
+            .trimmingCharacters(in: .whitespaces)
+        return value.flatMap(URL.init(string:))
     }
 
     static func sendCrash(_ crash: URL, done: @escaping (Bool) -> Void) {
@@ -45,14 +47,25 @@ final class Feedback: ObservableObject {
         let summary = CrashSummary(crash)
         let title = "Crash: " + (summary?.headline ?? crash.lastPathComponent)
         let body = "Ouch crashed\(summary.map { " at \($0.time)" } ?? ""). Sent on its own after the restart."
-        post(title: title, body: body, log: Log.beforeLaunch(), crash: crash, to: endpoint, done: done)
+        post(Report(title: title, body: body, log: Log.beforeLaunch(), crash: crash), to: endpoint, done: done)
     }
 
-    private static func post(title: String, body: String, log: String, crash: URL?, to url: URL, done: @escaping (Bool) -> Void) {
-        let title = String(title.prefix(110))
+    private struct Report {
+        let title: String
+        let body: String
+        let log: String
+        let crash: URL?
+    }
+
+    private static func post(_ report: Report, to url: URL, done: @escaping (Bool) -> Void) {
+        let title = String(report.title.prefix(110))
+        let body = report.body
+        let log = report.log
+        let crash = report.crash
         var files: [(String, String)] = [("environment.md", environment(crash: crash.flatMap(CrashSummary.init)))]
         if !log.isEmpty {
-            files.append(("ouch.log", log.split(separator: "\n", omittingEmptySubsequences: false).suffix(1500).joined(separator: "\n")))
+            let tail = log.split(separator: "\n", omittingEmptySubsequences: false).suffix(1500)
+            files.append(("ouch.log", tail.joined(separator: "\n")))
         }
         if let conf = try? String(contentsOf: Config.url, encoding: .utf8) { files.append(("ouch.conf", conf)) }
         if let crash, let ips = try? String(contentsOf: crash, encoding: .utf8) { files.append(("crash.ips", ips)) }
@@ -97,27 +110,28 @@ final class Feedback: ObservableObject {
         return "\(info["CFBundleShortVersionString"] as? String ?? "?") (\(info["CFBundleVersion"] as? String ?? "?"))"
     }
 
-    private static func redact(_ s: String) -> String {
-        s.replacingOccurrences(of: FileManager.default.homeDirectoryForCurrentUser.path, with: "~")
+    private static func redact(_ text: String) -> String {
+        text.replacingOccurrences(of: FileManager.default.homeDirectoryForCurrentUser.path, with: "~")
     }
 
     private static func environment(crash: CrashSummary?) -> String {
-        let os = ProcessInfo.processInfo.operatingSystemVersionString
-        let displays = NSScreen.screens.map { s in
-            "\(s.localizedName) \(Int(s.frame.width))×\(Int(s.frame.height)) @\(Int(s.backingScaleFactor))x"
+        let system = ProcessInfo.processInfo.operatingSystemVersionString
+        let displays = NSScreen.screens.map { screen in
+            "\(screen.localizedName) \(Int(screen.frame.width))×\(Int(screen.frame.height)) "
+                + "@\(Int(screen.backingScaleFactor))x"
         }
         let date = ISO8601DateFormatter.string(from: Date(), timeZone: .current, formatOptions: [.withInternetDateTime])
         var lines = [
             "# Environment",
             "",
             "- Ouch \(version)",
-            "- macOS \(os)",
+            "- macOS \(system)",
             "- Mac: \(hardwareModel()), \(arch())",
             "- Displays: \(displays.joined(separator: "; "))",
             "- Accessibility: \(Permission.accessibility.isGranted ? "granted" : "not granted")",
             "- Input Monitoring: \(Permission.inputMonitoring.isGranted ? "granted" : "not granted")",
             "- Window manager running: \(WindowManager.shared.isStarted ? "yes" : "no")",
-            "- Sent: \(date)",
+            "- Sent: \(date)"
         ]
         if let crash {
             lines.append("- Crash: \(crash.headline) at \(crash.time) (see crash.ips)")

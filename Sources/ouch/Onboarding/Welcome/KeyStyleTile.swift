@@ -17,7 +17,7 @@ struct KeyStyleTile: View {
                     Text(style.title).font(Theme.heading()).oneLine()
                     Spacer(minLength: 0)
                     Image(systemName: selected ? "checkmark.circle.fill" : "circle")
-                        .font(Theme.symbol(Theme.Icon.lg))
+                        .font(Theme.symbol(Theme.Icon.large))
                         .contentTransition(.symbolEffect(.replace))
                 }
                 .padding(.top, 12)
@@ -27,9 +27,9 @@ struct KeyStyleTile: View {
             }
             .foregroundStyle(selected ? Theme.onAccent : Theme.ink)
             .padding(14)
-            .background(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
+            .background(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous)
                 .fill(selected ? Theme.accent : model.hover ? Theme.wellHover : Theme.well))
-            .contentShape(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous))
         }
         .buttonStyle(PressScale(scale: 0.97))
         .onHover { model.hover = $0 }
@@ -50,7 +50,7 @@ struct KeyStyleTile: View {
         }
     }
 
-    private func cap(_ k: String) -> some View {
-        Kbd(keys: [k], size: .medium, onAccent: selected)
+    private func cap(_ key: String) -> some View {
+        Kbd(keys: [key], size: .medium, onAccent: selected)
     }
 }

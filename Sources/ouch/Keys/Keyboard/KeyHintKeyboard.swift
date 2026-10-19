@@ -1,7 +1,7 @@
 import AppKit
-import SwiftUI
 import MacKeysCore
 import MacKeysUI
+import SwiftUI
 
 struct KeyHintKeyboard: View {
     let binds: [KeyHint]
@@ -20,34 +20,39 @@ struct KeyHintKeyboard: View {
         self.scale = scale
     }
 
-    func onKeyTap(_ action: @escaping (Key) -> Void) -> Self { var c = self; c.tap = action; return c }
-    func onKeyHover(_ action: @escaping (Key, Bool) -> Void) -> Self { var c = self; c.hover = action; return c }
+    func onKeyTap(_ action: @escaping (Key) -> Void) -> Self { var copy = self; copy.tap = action; return copy }
+    func onKeyHover(_ action: @escaping (Key, Bool) -> Void) -> Self {
+        var copy = self
+        copy.hover = action
+        return copy
+    }
 
     var body: some View {
-        let bound = Dictionary(binds.map { ($0.code, $0) }, uniquingKeysWith: { a, _ in a })
+        let bound = Dictionary(binds.map { ($0.code, $0) }, uniquingKeysWith: { first, _ in first })
         let size = Self.size(scale: scale)
         let deck = mac.deckLayout.deck
         ZStack(alignment: .topLeading) {
             MacKeyboardDeckView(device: mac.device, scale: scale)
                 .offset(x: -deck.minX * scale, y: -deck.minY * scale)
-            ForEach(mac.keys) { k in
-                let r = Self.rect(of: k, scale: scale)
-                HintKeyCap(key: k, device: mac.device, scale: scale,
-                           hint: k.code.flatMap { bound[$0] }, pressed: k.code != nil && k.code == pressed,
-                           hot: k.code.map(hot.contains) ?? false, tap: tap, hover: hover)
-                    .frame(width: r.width, height: r.height)
-                    .tileItem(tile ?? true, style: tile == nil ? .rise : .tile,
-                              spread: CGSize(width: (size.width / 2 - r.midX) * 0.35, height: (size.height / 2 - r.midY) * 0.35))
-                    .offset(x: r.minX, y: r.minY)
+            ForEach(mac.keys) { key in
+                let rect = Self.rect(of: key, scale: scale)
+                HintKeyCap(key: key, device: mac.device, scale: scale,
+                           hint: key.code.flatMap { bound[$0] }, pressed: key.code != nil && key.code == pressed,
+                           hot: key.code.map(hot.contains) ?? false, tap: tap, hover: hover)
+                    .frame(width: rect.width, height: rect.height)
+                    .tileItem(tile.shown, style: tile.style,
+                              spread: CGSize(width: (size.width / 2 - rect.midX) * 0.35,
+                                             height: (size.height / 2 - rect.midY) * 0.35))
+                    .offset(x: rect.minX, y: rect.minY)
             }
         }
         .frame(width: size.width, height: size.height, alignment: .topLeading)
     }
 
-    static func keycap(_ k: Key, hint: KeyHint?, scale: CGFloat) -> some View {
-        HintKeyCap(key: k, device: MacKeyboard.shared.device, scale: scale, hint: hint,
+    static func keycap(_ key: Key, hint: KeyHint?, scale: CGFloat) -> some View {
+        HintKeyCap(key: key, device: MacKeyboard.shared.device, scale: scale, hint: hint,
                    pressed: false, hot: false, tap: nil, hover: nil, fades: false)
-            .frame(width: k.frame.width * scale, height: k.frame.height * scale)
+            .frame(width: key.frame.width * scale, height: key.frame.height * scale)
     }
 
     static func size(scale: CGFloat) -> CGSize {
@@ -55,8 +60,9 @@ struct KeyHintKeyboard: View {
         return CGSize(width: deck.width * scale, height: deck.height * scale)
     }
 
-    static func rect(of k: Key, scale: CGFloat) -> CGRect {
-        CGRect(x: k.frame.minX * scale, y: k.frame.minY * scale, width: k.frame.width * scale, height: k.frame.height * scale)
+    static func rect(of key: Key, scale: CGFloat) -> CGRect {
+        CGRect(x: key.frame.minX * scale, y: key.frame.minY * scale,
+               width: key.frame.width * scale, height: key.frame.height * scale)
     }
 
     static func cornerRadius(scale: CGFloat) -> CGFloat { 5 * scale }
@@ -93,23 +99,23 @@ struct KeyHintKeyboard: View {
 
     static func key(for code: UInt16) -> Key? { keys.first { $0.code == code } }
 
-    static func legend(_ k: Key) -> String {
-        switch k.cap.kind {
+    static func legend(_ key: Key) -> String {
+        switch key.cap.kind {
         case .char, .dual, .quad, .jis, .kana:
-            let slots = k.cap.legends
-            return (slots.first { $0.slot == .b } ?? slots.first)?.text ?? k.cap.label
+            let slots = key.cap.legends
+            return (slots.first { $0.slot == .b } ?? slots.first)?.text ?? key.cap.label
         case .space: return "Space"
         case .touchid: return "Touch ID"
         case .fn: return "fn"
-        case .fkey: return k.cap.label
+        case .fkey: return key.cap.label
         case .mod:
-            if k.modifier.contains(.shift) { return "⇧" }
-            if k.modifier.contains(.control) { return "⌃" }
-            if k.modifier.contains(.option) { return "⌥" }
+            if key.modifier.contains(.shift) { return "⇧" }
+            if key.modifier.contains(.control) { return "⌃" }
+            if key.modifier.contains(.option) { return "⌥" }
             return "⌘"
         case .word, .icon, .arrow:
-            let named = k.code.flatMap { ConfigDocument.keyName(for: $0) }.map(ConfigDocument.capLabel)
-            return named ?? k.cap.legends.first?.text ?? k.cap.label
+            let named = key.code.flatMap { ConfigDocument.keyName(for: $0) }.map(ConfigDocument.capLabel)
+            return named ?? key.cap.legends.first?.text ?? key.cap.label
         }
     }
 }

@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 extension EnvironmentValues {
-    var keyTile: Bool? {
+    var keyTile: KeyTile {
         get { self[KeyTileKey.self] }
         set { self[KeyTileKey.self] = newValue }
     }

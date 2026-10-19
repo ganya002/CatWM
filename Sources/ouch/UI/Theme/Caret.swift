@@ -13,12 +13,13 @@ enum Caret: Equatable {
 
 #if DEBUG
 extension GalleryExamples {
-    static let carets = GalleryExample(order: 9) { AnyView(GalleryContent(m: $0).carets) }
+    static let carets = GalleryExample(order: 9) { AnyView(GalleryContent(model: $0).carets) }
 }
 
 extension GalleryContent {
     func caretDemo(_ name: String, _ caret: Caret) -> some View {
-        Text(name).font(Theme.body(12.5)).foregroundStyle(Theme.ink).frame(width: 124, height: 40).surface(.md, caret: caret)
+        Text(name).font(Theme.body(12.5)).foregroundStyle(Theme.ink).frame(width: 124, height: 40)
+            .surface(.medium, caret: caret)
     }
 
     @ViewBuilder var carets: some View {
@@ -30,7 +31,7 @@ extension GalleryContent {
                 caretDemo("leading(20)", .leading(20))
                 caretDemo("leadingBottom(24)", .leadingBottom(24))
             }
-            .padding(Theme.Space.lg)
+            .padding(Theme.Space.large)
         }
     }
 }

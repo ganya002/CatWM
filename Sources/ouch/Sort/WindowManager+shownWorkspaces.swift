@@ -1,20 +1,22 @@
 import AppKit
 
 extension WindowManager {
-    func shownWorkspaces() -> [(workspace: String, count: Int, screen: NSScreen)] {
+    func shownWorkspaces() -> [ShownWorkspace] {
         guard config.virtualWorkspaces, isStarted else { return [] }
         let screens = Screen.all()
         let focus = currentScreen()?.uuid
-        return (screens.filter { $0.uuid == focus } + screens.filter { $0.uuid != focus }).compactMap { s in
-            guard let ws = shown[s.uuid], isVirtual(ws) else { return nil }
-            return (ws, tiledCount(in: ws), s.ns)
+        return (screens.filter { $0.uuid == focus } + screens.filter { $0.uuid != focus }).compactMap { screen in
+            guard let workspace = shown[screen.uuid], isVirtual(workspace) else { return nil }
+            return ShownWorkspace(workspace: workspace, count: tiledCount(in: workspace), screen: screen.nsScreen)
         }
     }
 
     func watchCrowding(_ screens: [Screen]) {
-        guard config.virtualWorkspaces, tilingEnabled, config.sortNudge > 0,
-              screens.contains(where: { s in shown[s.uuid].map { isVirtual($0) && tiledCount(in: $0) > config.sortNudge } ?? false })
-        else { crowdWork?.cancel(); crowdWork = nil; return }
+        guard config.virtualWorkspaces, tilingEnabled, config.sortNudge > 0, isCrowded(screens) else {
+            crowdWork?.cancel()
+            crowdWork = nil
+            return
+        }
         guard crowdWork == nil else { return }
         let work = DispatchWorkItem { [weak self] in
             guard let self else { return }
@@ -25,5 +27,11 @@ extension WindowManager {
         }
         crowdWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.5, execute: work)
+    }
+
+    private func isCrowded(_ screens: [Screen]) -> Bool {
+        screens.contains { screen in
+            shown[screen.uuid].map { isVirtual($0) && tiledCount(in: $0) > config.sortNudge } ?? false
+        }
     }
 }

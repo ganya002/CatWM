@@ -28,8 +28,8 @@ struct CycleChip: View {
                     if count > 1 {
                         RemoveButton(help: "Remove \(layout.title)", variant: .badge, action: remove)
                             .offset(x: 6, y: -6)
-                            .opacity(hover.on && !dragging ? 1 : 0)
-                            .scaleEffect(hover.on && !dragging ? 1 : 0.5)
+                            .opacity(hover.isOn && !dragging ? 1 : 0)
+                            .scaleEffect(hover.isOn && !dragging ? 1 : 0.5)
                     }
                 }
             Text(layout.shortTitle).textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine()
@@ -40,15 +40,16 @@ struct CycleChip: View {
         .offset(x: dragging ? drag.x : 0)
         .zIndex(dragging ? 1 : 0)
         .contentShape(Rectangle())
-        .onHover { hover.on = $0 }
-        .animation(Motion.fade, value: hover.on)
+        .onHover { hover.isOn = $0 }
+        .animation(Motion.fade, value: hover.isOn)
         .animation(Motion.fade, value: dragging)
         .onTapGesture { remove() }
         .gesture(DragGesture(minimumDistance: 5, coordinateSpace: .named(Self.space))
-            .onChanged { v in
+            .onChanged { value in
                 if drag.layout != layout { drag.layout = layout; drag.origin = index }
-                let target = min(max(drag.origin + Int((v.translation.width / (Self.width + Self.gap)).rounded()), 0), count - 1)
-                drag.x = v.translation.width - CGFloat(target - drag.origin) * (Self.width + Self.gap)
+                let steps = Int((value.translation.width / (Self.width + Self.gap)).rounded())
+                let target = min(max(drag.origin + steps, 0), count - 1)
+                drag.x = value.translation.width - CGFloat(target - drag.origin) * (Self.width + Self.gap)
                 if target != index { move(target) }
             }
             .onEnded { _ in
@@ -56,9 +57,9 @@ struct CycleChip: View {
             })
         .focusable()
         .onKeyPress(phases: .down) { press in
-            let c = press.characters.lowercased()
-            if press.key == .leftArrow || keys.left.contains(c) { move(index - 1); return .handled }
-            if press.key == .rightArrow || keys.right.contains(c) { move(index + 1); return .handled }
+            let typed = press.characters.lowercased()
+            if press.key == .leftArrow || keys.left.contains(typed) { move(index - 1); return .handled }
+            if press.key == .rightArrow || keys.right.contains(typed) { move(index + 1); return .handled }
             if press.key == .delete || press.key == .deleteForward { remove(); return .handled }
             return .ignored
         }

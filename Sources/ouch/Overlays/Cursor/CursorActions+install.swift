@@ -80,7 +80,9 @@ extension CursorActions {
             }
             return true
         }
-        guard let action = model.actions.first(where: { $0.keyCode == code && $0.keyMods == mods }) else { return false }
+        guard let action = model.actions.first(where: { $0.keyCode == code && $0.keyMods == mods }) else {
+            return false
+        }
         if !isRepeat { DispatchQueue.main.async { [weak self] in self?.model.onPick?(action) } }
         return true
     }
@@ -142,24 +144,27 @@ extension CursorActions {
         guard moveTap == nil else { return }
         let mask = [CGEventType.mouseMoved, .leftMouseDragged, .rightMouseDragged, .otherMouseDragged]
             .reduce(CGEventMask(0)) { $0 | CGEventMask(1 << $1.rawValue) }
-        guard let t = CGEvent.tapCreate(tap: .cgSessionEventTap, place: .tailAppendEventTap, options: .listenOnly,
-                                        eventsOfInterest: mask, callback: cursorMoveCallback, userInfo: nil) else { return }
-        let src = CFMachPortCreateRunLoopSource(nil, t, 0)
+        guard let tap = CGEvent.tapCreate(tap: .cgSessionEventTap, place: .tailAppendEventTap, options: .listenOnly,
+                                          eventsOfInterest: mask, callback: cursorMoveCallback,
+                                          userInfo: nil) else { return }
+        let src = CFMachPortCreateRunLoopSource(nil, tap, 0)
         CFRunLoopAddSource(CFRunLoopGetMain(), src, .commonModes)
-        CGEvent.tapEnable(tap: t, enable: true)
-        moveTap = t
+        CGEvent.tapEnable(tap: tap, enable: true)
+        moveTap = tap
         moveSource = src
     }
 
     func stopMoveTap() {
-        if let t = moveTap { CGEvent.tapEnable(tap: t, enable: false); CFMachPortInvalidate(t) }
+        if let tap = moveTap {
+            CGEvent.tapEnable(tap: tap, enable: false)
+            CFMachPortInvalidate(tap)
+        }
         if let src = moveSource { CFRunLoopRemoveSource(CFRunLoopGetMain(), src, .commonModes) }
         moveTap = nil
         moveSource = nil
     }
 
     func reenableMoveTap() {
-        if let t = moveTap { CGEvent.tapEnable(tap: t, enable: true) }
+        if let tap = moveTap { CGEvent.tapEnable(tap: tap, enable: true) }
     }
-
 }

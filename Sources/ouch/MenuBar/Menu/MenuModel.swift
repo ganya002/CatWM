@@ -2,10 +2,9 @@ import AppKit
 import SwiftUI
 
 final class MenuModel: ObservableObject {
-
     @Published var items: [MenuItem] = []
     @Published var query = "" {
-        didSet { if query.first?.isWhitespace == true { query = String(query.drop { $0.isWhitespace }) } }
+        didSet { if query.first?.isWhitespace == true { query = String(query.drop(while: \.isWhitespace)) } }
     }
     @Published var path: [String] = []
     @Published var highlight: [Int: String] = [:]
@@ -45,5 +44,4 @@ final class MenuModel: ObservableObject {
     }
 
     var keyLevel: Int { query.isEmpty ? min(path.count, highlight.keys.filter { highlight[$0] != nil }.max() ?? 0) : 0 }
-
 }

@@ -5,8 +5,9 @@ struct EssentialTile: View {
     let title: String
     let label: String
     let symbol: String
-    var offSymbol: String? = nil
-    var isOn: Bool? = nil
+    var offSymbol: String?
+    var isOn = false
+    var toggles = true
     var shortcut: [String] = []
     var rotates = false
     let action: () -> Void
@@ -19,47 +20,49 @@ struct EssentialTile: View {
     }
 
     var body: some View {
-        let on = isOn == true, lit = model.hover && enabled
+        let lit = model.hover && enabled
         Button {
             model.count += 1
             action()
         } label: {
-            let image = Image(systemName: isOn == false ? offSymbol ?? symbol : symbol)
-                .font(Theme.symbol(Theme.Icon.lg))
+            let image = Image(systemName: toggles && !isOn ? offSymbol ?? symbol : symbol)
+                .font(Theme.symbol(Theme.Icon.large))
                 .contentTransition(.symbolEffect(.replace, options: .speed(2.2)))
             VStack(spacing: 4) {
                 Group {
                     if rotates { image.rotateEffect(value: model.count) } else { image }
                 }
                 .frame(height: 18)
-                Text(title).font(Theme.body(11.5, on ? .medium : .regular)).oneLine().minimumScaleFactor(0.85)
+                Text(title).font(Theme.body(11.5, isOn ? .medium : .regular)).oneLine().minimumScaleFactor(0.85)
             }
-            .foregroundStyle(on ? Theme.onAccent : lit ? Theme.ink : Theme.inkMuted)
+            .foregroundStyle(isOn ? Theme.onAccent : lit ? Theme.ink : Theme.inkMuted)
             .padding(.horizontal, 4)
             .frame(maxWidth: .infinity).frame(height: 54)
-            .background(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
-                .fill(on ? Theme.accent : lit ? Theme.wellHover : Theme.well))
-            .contentShape(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous))
+            .background(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous)
+                .fill(isOn ? Theme.accent : lit ? Theme.wellHover : Theme.well))
+            .contentShape(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous))
         }
         .buttonStyle(PressScale())
         .onHover { model.hover = $0 }
-        .animation(Motion.fadeMedium, value: on)
+        .animation(Motion.fadeMedium, value: isOn)
         .tooltip(label, keys: shortcut)
         .accessibilityLabel(label)
-        .accessibilityAddTraits(isOn == nil ? [] : on ? [.isToggle, .isSelected] : .isToggle)
+        .accessibilityAddTraits(!toggles ? [] : isOn ? [.isToggle, .isSelected] : .isToggle)
     }
 }
 
 #if DEBUG
 extension GalleryContent {
     @ViewBuilder var essentialExamples: some View {
-        HStack(alignment: .top, spacing: Theme.Space.xs) {
-            EssentialTile(title: "Tiling", label: "Tiling", symbol: "rectangle.split.3x1", offSymbol: "rectangle.on.rectangle",
-                          isOn: m.essentialOn, shortcut: ["⌥", "T"]) { m.essentialOn.toggle() }
-            EssentialTile(title: "Float", label: "Float window", symbol: "macwindow.on.rectangle", offSymbol: "macwindow",
-                          isOn: false, shortcut: ["⌥", "F"]) {}
+        HStack(alignment: .top, spacing: Theme.Space.extraSmall) {
+            EssentialTile(title: "Tiling", label: "Tiling", symbol: "rectangle.split.3x1",
+                          offSymbol: "rectangle.on.rectangle", isOn: model.essentialOn, shortcut: ["⌥", "T"]) {
+                model.essentialOn.toggle()
+            }
+            EssentialTile(title: "Float", label: "Float window", symbol: "macwindow.on.rectangle",
+                          offSymbol: "macwindow", isOn: false, shortcut: ["⌥", "F"]) {}
             EssentialTile(title: "Retile", label: "Retile windows", symbol: "arrow.triangle.2.circlepath",
-                          shortcut: ["⌥", "Z"], rotates: true) {}
+                          toggles: false, shortcut: ["⌥", "Z"], rotates: true) {}
         }
         .frame(width: Theme.menuWidth)
     }

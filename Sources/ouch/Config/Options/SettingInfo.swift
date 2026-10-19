@@ -4,10 +4,10 @@ struct SettingInfo {
     let pane: Pane
     let id: String
     let label: String
-    var help: String? = nil
+    var help: String?
     var keywords = ""
     var advanced = false
-    var range: ClosedRange<Double>? = nil
+    var range: ClosedRange<Double>?
     var scale: Double = 1
     var section = ""
     var order = 0

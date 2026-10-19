@@ -6,8 +6,8 @@ final class FrameRun: NSObject {
     struct Stats { let frames: Int; let duration, period, p95, slowShare: Double }
 
     let kind: String
-    fileprivate(set) var tags: Set<String> = []
-    let hz: Int
+    private(set) var tags: Set<String> = []
+    let refreshRate: Int
     private var link: CADisplayLink?
     private let started = CACurrentMediaTime()
     private var last = 0.0, period = 1.0 / 60
@@ -16,7 +16,7 @@ final class FrameRun: NSObject {
 
     init(kind: String, screen: NSScreen) {
         self.kind = kind
-        hz = screen.maximumFramesPerSecond
+        refreshRate = screen.maximumFramesPerSecond
         super.init()
         let info = ProcessInfo.processInfo
         if info.thermalState.rawValue >= ProcessInfo.ThermalState.serious.rawValue { tags.insert("thermal") }
@@ -25,19 +25,19 @@ final class FrameRun: NSObject {
         link?.add(to: .main, forMode: .common)
     }
 
-    @objc private func frame(_ l: CADisplayLink) {
-        period = max(0.001, l.targetTimestamp - l.timestamp)
-        defer { last = l.timestamp }
+    @objc private func frame(_ displayLink: CADisplayLink) {
+        period = max(0.001, displayLink.targetTimestamp - displayLink.timestamp)
+        defer { last = displayLink.timestamp }
         guard last > 0 else { return }
-        let dt = l.timestamp - last
-        if dt > 0.5 { tags.insert("gap") } else { gaps.append(dt) }
+        let gap = displayLink.timestamp - last
+        if gap > 0.5 { tags.insert("gap") } else { gaps.append(gap) }
     }
 
     var stats: Stats? {
         guard !gaps.isEmpty else { return nil }
-        let s = gaps.sorted()
+        let sorted = gaps.sorted()
         return Stats(frames: gaps.count, duration: CACurrentMediaTime() - started, period: period,
-                     p95: s[min(s.count - 1, Int(Double(s.count) * 0.95))],
+                     p95: sorted[min(sorted.count - 1, Int(Double(sorted.count) * 0.95))],
                      slowShare: Double(gaps.filter { $0 > period * 1.5 }.count) / Double(gaps.count))
     }
 

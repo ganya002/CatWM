@@ -8,8 +8,8 @@ final class ScreenState {
     init(layout: Layout) { self.layout = layout }
 
     func copy() -> ScreenState {
-        let c = ScreenState(layout: layout)
-        c.ratio = ratio; c.mainCount = mainCount; c.zoomed = zoomed
-        return c
+        let clone = ScreenState(layout: layout)
+        clone.ratio = ratio; clone.mainCount = mainCount; clone.zoomed = zoomed
+        return clone
     }
 }

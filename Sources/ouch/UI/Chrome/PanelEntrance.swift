@@ -4,7 +4,7 @@ import SwiftUI
 struct PanelEntrance: ViewModifier {
     let shown: Bool
     let style: PanelMotion
-    var radius: CGFloat = Theme.Radius.xl
+    var radius: CGFloat = Theme.Radius.extraLarge
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
@@ -13,7 +13,7 @@ struct PanelEntrance: ViewModifier {
         } else {
             switch style {
             case .tile:
-                content.modifier(TileProgress(t: shown ? 1 : 0, shown: shown, surface: true))
+                content.modifier(TileProgress(progress: shown ? 1 : 0, shown: shown, surface: true))
                     .animation(style.animation(in: shown), value: shown)
             case .draw:
                 content.modifier(DrawEntrance(shown: shown, radius: radius))

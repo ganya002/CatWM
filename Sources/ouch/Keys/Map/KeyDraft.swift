@@ -11,11 +11,11 @@ final class KeyDraft: ObservableObject {
     let row: BindRow?
     let isRange: Bool
 
-    init(_ a: ConfigDocument.KeyAction?, flags: NSEvent.ModifierFlags, mode: String) {
-        row = a?.row
-        isRange = a?.isRange ?? false
-        dispatcher = a?.row.dispatcher ?? ""
-        args = a?.arg ?? ""
+    init(_ action: ConfigDocument.KeyAction?, flags: NSEvent.ModifierFlags, mode: String) {
+        row = action?.row
+        isRange = action?.isRange ?? false
+        dispatcher = action?.row.dispatcher ?? ""
+        args = action?.arg ?? ""
         self.flags = flags
         self.mode = mode
     }

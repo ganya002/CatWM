@@ -5,33 +5,34 @@ import SwiftUI
 enum Theme {
     static var palette = Palette.ouch
 
-    static func isDark(_ a: NSAppearance) -> Bool { a.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua }
+    static func isDark(_ appearance: NSAppearance) -> Bool {
+        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+    }
 
-    private static func hex(_ v: UInt32, _ alpha: CGFloat) -> NSColor {
-        NSColor(srgbRed: CGFloat((v >> 16) & 0xFF) / 255, green: CGFloat((v >> 8) & 0xFF) / 255,
-                blue: CGFloat(v & 0xFF) / 255, alpha: alpha)
+    private static func hex(_ value: UInt32, _ alpha: CGFloat) -> NSColor {
+        NSColor(srgbRed: CGFloat((value >> 16) & 0xFF) / 255, green: CGFloat((value >> 8) & 0xFF) / 255,
+                blue: CGFloat(value & 0xFF) / 255, alpha: alpha)
     }
 
     static func ns(_ token: KeyPath<Palette, Palette.Pair>) -> NSColor {
-        NSColor(name: nil) { a in
-            let p = palette[keyPath: token]
-            return isDark(a) ? hex(p.dark, p.darkAlpha) : hex(p.light, p.lightAlpha)
+        NSColor(name: nil) { appearance in
+            let pair = palette[keyPath: token]
+            return isDark(appearance) ? hex(pair.dark, pair.darkAlpha) : hex(pair.light, pair.lightAlpha)
         }
     }
-    private static func token(_ kp: KeyPath<Palette, Palette.Pair>) -> Color { Color(nsColor: ns(kp)) }
+    private static func token(_ path: KeyPath<Palette, Palette.Pair>) -> Color { Color(nsColor: ns(path)) }
 
     static func fixed(_ token: KeyPath<Palette, Palette.Pair>, dark: Bool) -> Color {
-        let p = palette[keyPath: token]
-        return Color(nsColor: dark ? hex(p.dark, p.darkAlpha) : hex(p.light, p.lightAlpha))
+        Color(nsColor: nsFixed(token, dark: dark))
     }
     static func nsFixed(_ token: KeyPath<Palette, Palette.Pair>, dark: Bool) -> NSColor {
-        let p = palette[keyPath: token]
-        return dark ? hex(p.dark, p.darkAlpha) : hex(p.light, p.lightAlpha)
+        let pair = palette[keyPath: token]
+        return dark ? hex(pair.dark, pair.darkAlpha) : hex(pair.light, pair.lightAlpha)
     }
-    static func rgb(_ v: UInt32, _ alpha: CGFloat = 1) -> Color { Color(nsColor: hex(v, alpha)) }
+    static func rgb(_ value: UInt32, _ alpha: CGFloat = 1) -> Color { Color(nsColor: hex(value, alpha)) }
     static let iconBlue = hex(0x0A74FF, 1)
 
-    static let bg = token(\.bg)
+    static let background = token(\.background)
     static let surface = token(\.surface)
     static let surfaceRaised = token(\.surfaceRaised)
     static let surfaceSunken = token(\.surfaceSunken)
@@ -56,19 +57,19 @@ enum Theme {
     static let wash1 = token(\.wash1)
     static let wash2 = token(\.wash2)
 
-    static let well = Color(nsColor: NSColor(name: nil) { a in
-        ns(\.ink).resolved(a).withAlphaComponent(isDark(a) ? 0.09 : 0.06)
+    static let well = Color(nsColor: NSColor(name: nil) { appearance in
+        ns(\.ink).resolved(appearance).withAlphaComponent(isDark(appearance) ? 0.09 : 0.06)
     })
-    static let wellHover = Color(nsColor: NSColor(name: nil) { a in
-        ns(\.ink).resolved(a).withAlphaComponent(isDark(a) ? 0.15 : 0.1)
+    static let wellHover = Color(nsColor: NSColor(name: nil) { appearance in
+        ns(\.ink).resolved(appearance).withAlphaComponent(isDark(appearance) ? 0.15 : 0.1)
     })
 
-    static let thumbMain = Color(nsColor: NSColor(name: nil) { a in
-        let accent = ns(\.accent).resolved(a), tint = ns(\.tint).resolved(a)
+    static let thumbMain = Color(nsColor: NSColor(name: nil) { appearance in
+        let accent = ns(\.accent).resolved(appearance), tint = ns(\.tint).resolved(appearance)
         return accent.blended(withFraction: 0.45, of: tint) ?? accent
     })
 
-    static let wash = LinearGradient(stops: [.init(color: wash1, location: 0), .init(color: bg, location: 0.55),
+    static let wash = LinearGradient(stops: [.init(color: wash1, location: 0), .init(color: background, location: 0.55),
                                              .init(color: wash2, location: 1)],
                                      startPoint: UnitPoint(x: 0.1, y: 0), endPoint: UnitPoint(x: 0.9, y: 1))
 
@@ -113,21 +114,23 @@ enum Theme {
     }
 
     enum Icon {
-        static let xs: CGFloat = 9, sm: CGFloat = 11, md: CGFloat = 13, lg: CGFloat = 15, xl: CGFloat = 22
+        static let extraSmall: CGFloat = 9, small: CGFloat = 11, medium: CGFloat = 13, large: CGFloat = 15
+        static let extraLarge: CGFloat = 22
     }
-    static func symbol(_ size: CGFloat = Icon.md, _ weight: Font.Weight = .medium) -> Font {
+    static func symbol(_ size: CGFloat = Icon.medium, _ weight: Font.Weight = .medium) -> Font {
         .system(size: size, weight: weight)
     }
 
     enum Radius {
-        static let xs: CGFloat = 4, sm: CGFloat = 6, md: CGFloat = 8, lg: CGFloat = 12, xl: CGFloat = 18
+        static let extraSmall: CGFloat = 4, small: CGFloat = 6, medium: CGFloat = 8, large: CGFloat = 12
+        static let extraLarge: CGFloat = 18
         static let pane: CGFloat = 14
         static let hud: CGFloat = 22
         static let xxl: CGFloat = 24
     }
     enum Space {
-        static let xxs: CGFloat = 2, xs: CGFloat = 4, sm: CGFloat = 8, md: CGFloat = 12, lg: CGFloat = 16
-        static let xl: CGFloat = 24, xxl: CGFloat = 32
+        static let xxs: CGFloat = 2, extraSmall: CGFloat = 4, small: CGFloat = 8, medium: CGFloat = 12
+        static let large: CGFloat = 16, extraLarge: CGFloat = 24, xxl: CGFloat = 32
         static let page: CGFloat = 36
     }
     static let rowHeight: CGFloat = 30
@@ -140,20 +143,20 @@ enum Theme {
 
 #if DEBUG
 extension GalleryExamples {
-    static let colours = GalleryExample(order: 0) { AnyView(GalleryContent(m: $0).colours) }
+    static let colours = GalleryExample(order: 0) { AnyView(GalleryContent(model: $0).colours) }
 }
 
 extension GalleryContent {
     @ViewBuilder var colours: some View {
         block("Colour (hex: light / dark)") {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: Theme.Space.md)], alignment: .leading,
-                      spacing: Theme.Space.md) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: Theme.Space.medium)], alignment: .leading,
+                      spacing: Theme.Space.medium) {
                 ForEach(ColorToken.all) { token in
-                    VStack(alignment: .leading, spacing: Theme.Space.xs) {
-                        RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
+                    VStack(alignment: .leading, spacing: Theme.Space.extraSmall) {
+                        RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
                             .fill(Color(nsColor: Theme.ns(token.path)))
                             .frame(height: 36)
-                            .overlay(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
+                            .overlay(RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
                                 .strokeBorder(Theme.hairline, lineWidth: 1))
                         Text(token.name).font(Theme.body(12.5, .medium)).foregroundStyle(Theme.ink)
                         Text(hex(token.path)).font(Theme.mono(11, .regular)).foregroundStyle(Theme.inkMuted)

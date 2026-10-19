@@ -1,6 +1,6 @@
 import AppKit
-import Testing
 @testable import ouch
+import Testing
 
 @Suite struct WindowObservationTests {
     private func window() -> Window {
@@ -26,12 +26,12 @@ import Testing
 
     @Test @MainActor func floatingFocusUsesThePendingUnparkDestination() {
         let manager = WindowManager()
-        let w = window()
-        w.userFloating = true
-        w.remember(CGRect(x: 1999, y: 799, width: 300, height: 200))
+        let tracked = window()
+        tracked.userFloating = .chosen(true)
+        tracked.remember(CGRect(x: 1999, y: 799, width: 300, height: 200))
         let destination = CGRect(x: 100, y: 100, width: 300, height: 200)
-        manager.animator.position(w, at: destination)
-        #expect(manager.navFrame(w) == destination)
+        manager.animator.position(tracked, at: destination)
+        #expect(manager.navFrame(tracked) == destination)
     }
 
     @Test func anEmptyFrameCacheDoesNotReadAX() {
@@ -39,41 +39,41 @@ import Testing
     }
 
     @Test func anObservationCannotReplaceANewerPlacement() {
-        let w = window()
+        let tracked = window()
         let observed = CGRect(x: 10, y: 20, width: 100, height: 200)
         let placed = CGRect(x: 50, y: 60, width: 300, height: 400)
-        w.remember(observed)
-        let version = w.frameRevision
-        w.remember(placed)
-        w.remember(observed, ifRevision: version)
-        #expect(w.cachedFrame == placed)
+        tracked.remember(observed)
+        let version = tracked.frameRevision
+        tracked.remember(placed)
+        tracked.remember(observed, ifRevision: version)
+        #expect(tracked.cachedFrame == placed)
     }
 
     @Test func theFinalDragObservationReplacesEarlierObservations() {
-        let w = window()
-        let revision = w.frameRevision
+        let tracked = window()
+        let revision = tracked.frameRevision
         let first = CGRect(x: 10, y: 20, width: 100, height: 200)
         let final = CGRect(x: 50, y: 60, width: 300, height: 400)
         let start = Date(timeIntervalSince1970: 1000)
-        w.remember(first, ifRevision: revision, readAt: start)
-        w.remember(final, ifRevision: revision, readAt: start.addingTimeInterval(1))
-        #expect(w.cachedFrame == final)
-        w.remember(first, ifRevision: revision, readAt: start)
-        #expect(w.cachedFrame == final)
+        tracked.remember(first, ifRevision: revision, readAt: start)
+        tracked.remember(final, ifRevision: revision, readAt: start.addingTimeInterval(1))
+        #expect(tracked.cachedFrame == final)
+        tracked.remember(first, ifRevision: revision, readAt: start)
+        #expect(tracked.cachedFrame == final)
     }
 
     @Test @MainActor func replayingAScanCannotUndoANewerFrame() {
         let manager = WindowManager()
-        let w = window()
+        let tracked = window()
         let frame = CGRect(x: 10, y: 20, width: 100, height: 200)
         let placed = CGRect(x: 50, y: 60, width: 300, height: 400)
-        let found = WindowScanner.Found(element: w.element, frame: frame, title: "Window", resizable: false)
+        let found = WindowScanner.Found(element: tracked.element, frame: frame, title: "Window", resizable: false)
         let scan = WindowScanner.AppScan()
-        manager.accept(found, from: scan, for: w)
-        #expect(w.title == "Window" && !w.resizable)
-        w.remember(placed)
-        manager.accept(found, from: scan, for: w)
-        #expect(w.cachedFrame == placed)
+        manager.accept(found, from: scan, for: tracked)
+        #expect(tracked.title == "Window" && !tracked.resizable)
+        tracked.remember(placed)
+        manager.accept(found, from: scan, for: tracked)
+        #expect(tracked.cachedFrame == placed)
     }
 
     @Test @MainActor func aSlowAppDoesNotBlockTheMainQueueOrOtherApps() async {

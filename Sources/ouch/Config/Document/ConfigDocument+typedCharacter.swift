@@ -20,40 +20,42 @@ extension ConfigDocument {
                                   OptionBits(kUCKeyTranslateNoDeadKeysBit), &dead, 4, &length, &chars)
         }
         guard status == noErr, length > 0 else { return nil }
-        let s = String(utf16CodeUnits: chars, count: length)
-        let visible = s.unicodeScalars.allSatisfy { !CharacterSet.controlCharacters.contains($0) }
-        return visible && !s.trimmingCharacters(in: .whitespaces).isEmpty ? s : nil
+        let typed = String(utf16CodeUnits: chars, count: length)
+        let visible = typed.unicodeScalars.allSatisfy { !CharacterSet.controlCharacters.contains($0) }
+        return visible && !typed.trimmingCharacters(in: .whitespaces).isEmpty ? typed : nil
     }
 
     static func keyName(for code: UInt16) -> String? {
         if let name = canonicalKeyNames[code] { return name }
-        let names = keyCodes.filter { $0.value == code }.map(\.key).filter { $0.allSatisfy { $0.isLetter || $0.isNumber } }
+        let names = keyCodes.filter { $0.value == code }.map(\.key)
+            .filter { $0.allSatisfy { $0.isLetter || $0.isNumber } }
         guard let best = names.max(by: { $0.count < $1.count }) else { return nil }
         return best.count == 1 ? best.uppercased() : best
     }
 
     func prettyShortcut(_ row: BindRow) -> [String] {
-        guard let f = Self.flags(resolvedMods(row.mods)) else { return [row.mods, row.key] }
-        var caps = Self.modifierCaps(f)
+        guard let flags = Self.flags(resolvedMods(row.mods)) else { return [row.mods, row.key] }
+        var caps = Self.modifierCaps(flags)
         let cap = Self.capLabel
         if row.key.contains("|") {
             let keys = row.key.split(separator: "|").map { cap($0.trimmingCharacters(in: .whitespaces)) }
             if keys.count <= 5 { caps += keys } else { caps.append(keys.joined(separator: " ")) }
-        } else if let r = row.key.range(of: "..") {
-            let b = row.key[r.upperBound...].drop { $0 == "." }
-            caps.append("\(cap(String(row.key[..<r.lowerBound]).trimmingCharacters(in: .whitespaces)))…\(cap(b.trimmingCharacters(in: .whitespaces)))")
+        } else if let dots = row.key.range(of: "..") {
+            let first = String(row.key[..<dots.lowerBound]).trimmingCharacters(in: .whitespaces)
+            let last = row.key[dots.upperBound...].drop { $0 == "." }.trimmingCharacters(in: .whitespaces)
+            caps.append("\(cap(first))…\(cap(last))")
         } else {
             caps.append(cap(row.key))
         }
         return caps
     }
 
-    static func modifierCaps(_ f: NSEvent.ModifierFlags) -> [String] {
+    static func modifierCaps(_ flags: NSEvent.ModifierFlags) -> [String] {
         var caps: [String] = []
-        if f.contains(.control) { caps.append("⌃") }
-        if f.contains(.option) { caps.append("⌥") }
-        if f.contains(.shift) { caps.append("⇧") }
-        if f.contains(.command) { caps.append("⌘") }
+        if flags.contains(.control) { caps.append("⌃") }
+        if flags.contains(.option) { caps.append("⌥") }
+        if flags.contains(.shift) { caps.append("⇧") }
+        if flags.contains(.command) { caps.append("⌘") }
         return caps
     }
 
@@ -62,15 +64,17 @@ extension ConfigDocument {
     func keyActions(in submap: String) -> [KeyAction] {
         var out: [KeyAction] = []
         for row in binds where row.submap == submap {
-            guard let f = Self.flags(resolvedMods(row.mods)),
-                  case .success(let pairs) = BindRange.pairs(key: row.key, dispatcher: row.dispatcher, arg: row.args) else { continue }
-            for p in pairs {
-                guard let code = keyCodes[p.key.lowercased()] else { continue }
-                let single = BindRow(mods: "", key: "", dispatcher: row.dispatcher, args: p.arg)
+            guard let flags = Self.flags(resolvedMods(row.mods)),
+                  case .success(let pairs) = BindRange.pairs(key: row.key, dispatcher: row.dispatcher, arg: row.args)
+            else { continue }
+            for pair in pairs {
+                guard let code = keyCodes[pair.key.lowercased()] else { continue }
+                let single = BindRow(mods: "", key: "", dispatcher: row.dispatcher, args: pair.arg)
                 let action = Actions.match(single)
-                let title = row.dispatcher == "exec" ? (p.arg.isEmpty ? "Run Command" : "Run “\(p.arg)”")
-                    : action?.title ?? "\(row.dispatcher) \(p.arg)".trimmingCharacters(in: .whitespaces)
-                out.append(KeyAction(code: code, key: p.key, flags: f, arg: p.arg, title: title, symbol: action?.symbol ?? "curlybraces",
+                let title = row.dispatcher == "exec" ? (pair.arg.isEmpty ? "Run Command" : "Run “\(pair.arg)”")
+                    : action?.title ?? "\(row.dispatcher) \(pair.arg)".trimmingCharacters(in: .whitespaces)
+                out.append(KeyAction(code: code, key: pair.key, flags: flags, arg: pair.arg, title: title,
+                                     symbol: action?.symbol ?? "curlybraces",
                                      category: action?.category ?? .custom, row: row))
             }
         }

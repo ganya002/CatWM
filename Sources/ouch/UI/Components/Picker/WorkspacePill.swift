@@ -11,15 +11,15 @@ struct WorkspacePill: View {
     var body: some View {
         Button(action: action) {
             Text(name).font(Theme.body(12, .medium)).oneLine()
-                .foregroundStyle(current ? Theme.onAccent : hover.on ? Theme.ink : Theme.inkMuted)
+                .foregroundStyle(current ? Theme.onAccent : hover.isOn ? Theme.ink : Theme.inkMuted)
                 .frame(width: 24, height: 24)
-                .background(Circle().fill(current ? Theme.accent : hover.on ? Theme.wellHover : .clear))
-                .opacity(occupied || current || hover.on ? 1 : 0.35)
+                .background(Circle().fill(current ? Theme.accent : hover.isOn ? Theme.wellHover : .clear))
+                .opacity(occupied || current || hover.isOn ? 1 : 0.35)
                 .scaleEffect(current ? 1.04 : 1)
                 .contentShape(Circle())
         }
         .buttonStyle(PressScale(scale: 0.88))
-        .onHover { hover.on = $0 }
+        .onHover { hover.isOn = $0 }
         .animation(Motion.spring, value: current)
         .animation(Motion.spring, value: occupied)
         .tooltip("Workspace \(name)")

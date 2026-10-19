@@ -1,7 +1,6 @@
 import AppKit
 
 final class WindowManager {
-
     static let shared = WindowManager()
 
     var config = Config.load()
@@ -27,12 +26,16 @@ final class WindowManager {
     var model = WorkspaceModel()
     var workspaceOf: [CGWindowID: String] { model.workspaceOf }
     var order: [CGWindowID] { get { model.order } set { model.order = newValue } _modify { yield &model.order } }
-    var monitorOf: [String: String] { get { model.monitorOf } set { model.monitorOf = newValue } _modify { yield &model.monitorOf } }
+    var monitorOf: [String: String] {
+        get { model.monitorOf } set { model.monitorOf = newValue } _modify { yield &model.monitorOf }
+    }
     var shown: [String: String] { get { model.shown } set { model.shown = newValue } _modify { yield &model.shown } }
     var virtualShown: [String: String] {
         get { model.virtualShown } set { model.virtualShown = newValue } _modify { yield &model.virtualShown }
     }
-    var states: [String: ScreenState] { get { model.states } set { model.states = newValue } _modify { yield &model.states } }
+    var states: [String: ScreenState] {
+        get { model.states } set { model.states = newValue } _modify { yield &model.states }
+    }
     var lastFocused: [String: CGWindowID] {
         get { model.lastFocused } set { model.lastFocused = newValue } _modify { yield &model.lastFocused }
     }
@@ -77,7 +80,7 @@ final class WindowManager {
     var quietWorkspaceHUD = false
     struct Slide {
         let monitor: String
-        let to: String
+        let workspace: String
         let outgoing: Set<CGWindowID>
         let forward: Bool
         let until: CFTimeInterval
@@ -108,22 +111,28 @@ final class WindowManager {
     var isStarted = false
     var ignoreMouseUntil = Date.distantPast
     var movingToSpace = false
-    var pendingSpace: (display: String, index: Int, until: Date)?
+    struct PendingSpace {
+        let display: String
+        let index: Int
+        let until: Date
+    }
+    var pendingSpace: PendingSpace?
     var spaceGeneration = 0
     var animator = Animator()
+    var notificationObservers: [NSObjectProtocol] = []
     let scanner = WindowScanner()
     let dockWindowPull = DockWindowPull()
     let dockArea = DockArea()
 
     var currentLayoutTitle: String {
-        guard let s = currentScreen() else { return "" }
-        return state(for: s).layout.title
+        guard let screen = currentScreen() else { return "" }
+        return state(for: screen).layout.title
     }
 
     lazy var grabHints: [String: (fromLeft: CGPoint, fromRight: CGPoint)] = {
         let saved = UserDefaults.standard.dictionary(forKey: "grabHints") as? [String: [Double]] ?? [:]
-        return saved.compactMapValues { v in
-            v.count == 4 ? (CGPoint(x: v[0], y: v[1]), CGPoint(x: v[2], y: v[3])) : nil
+        return saved.compactMapValues { values in
+            values.count == 4 ? (CGPoint(x: values[0], y: values[1]), CGPoint(x: values[2], y: values[3])) : nil
         }
     }()
 }

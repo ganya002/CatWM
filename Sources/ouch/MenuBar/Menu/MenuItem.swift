@@ -2,15 +2,17 @@ import AppKit
 import SwiftUI
 
 struct MenuItem: Identifiable {
-    enum Kind { case action, check, radio, sub, label, separator, essentials, workspaces, layoutPicker, attention, footer }
+    enum Kind {
+        case action, check, radio, sub, label, separator, essentials, workspaces, layoutPicker, attention, footer
+    }
 
     var id: String
     var kind: Kind = .action
     var label = ""
-    var symbol: String? = nil
-    var image: NSImage? = nil
+    var symbol: String?
+    var image: NSImage?
     var shortcut: [String] = []
-    var value: String? = nil
+    var value: String?
     var checked = false
     var danger = false
     var enabled = true
@@ -20,9 +22,9 @@ struct MenuItem: Identifiable {
     var children: [MenuItem] = []
     var keepOpen = false
     var rotates = false
-    var badge: Int? = nil
+    var badge: Int?
     var dot = false
-    var action: (() -> Void)? = nil
+    var action: (() -> Void)?
 
     var selectable: Bool {
         guard enabled, !hidden else { return false }

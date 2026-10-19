@@ -9,13 +9,14 @@ final class TooltipTrackingView: PassThroughView {
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
         if let area { removeTrackingArea(area) }
-        let a = NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self)
-        addTrackingArea(a)
-        area = a
+        let options: NSTrackingArea.Options = [.mouseEnteredAndExited, .activeAlways, .inVisibleRect]
+        let tracking = NSTrackingArea(rect: .zero, options: options, owner: self)
+        addTrackingArea(tracking)
+        area = tracking
     }
 
-    override func mouseEntered(with event: NSEvent) { Tooltip.shared.hover(self, text: text, chords: chords) }
-    override func mouseExited(with event: NSEvent) { Tooltip.shared.leave(self) }
+    override func mouseEntered(with _: NSEvent) { Tooltip.shared.hover(self, text: text, chords: chords) }
+    override func mouseExited(with _: NSEvent) { Tooltip.shared.leave(self) }
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()

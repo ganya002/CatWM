@@ -53,8 +53,9 @@ extension WindowManager {
         var zoomed: [String: CGWindowID] = [:]
         for screen in screens {
             let state = state(for: screen)
-            displays.append(.init(id: screen.uuid, name: screen.ns.localizedName, frame: screen.frame, visible: screen.visible,
-                                  isMain: screen.id == mainID, layout: state.layout.rawValue, ratio: state.ratio, mainCount: state.mainCount))
+            displays.append(.init(id: screen.uuid, name: screen.nsScreen.localizedName, frame: screen.frame,
+                                  visible: screen.visible, isMain: screen.id == mainID, layout: state.layout.rawValue,
+                                  ratio: state.ratio, mainCount: state.mainCount))
             if let id = state.zoomed { zoomed[screen.uuid] = id }
         }
         var knownFloating: [CGWindowID: Bool] = [:]
@@ -76,10 +77,13 @@ extension WindowManager {
                                          virtualWorkspaces: config.virtualWorkspaces, knownFloating: knownFloating,
                                          naturalFrames: naturalFrames, fallbackFocus: model.mostRecent(of: visible))
         let apps = NSWorkspace.shared.runningApplications.compactMap { app -> TemplateAppSnapshot? in
-            guard app.activationPolicy == .regular, app.processIdentifier != getpid(), let bundleID = app.bundleIdentifier else { return nil }
-            return TemplateAppSnapshot(pid: app.processIdentifier, bundleID: bundleID, name: app.localizedName ?? bundleID, launchDate: app.launchDate)
+            guard app.activationPolicy == .regular, app.processIdentifier != getpid(),
+                  let bundleID = app.bundleIdentifier else { return nil }
+            return TemplateAppSnapshot(pid: app.processIdentifier, bundleID: bundleID,
+                                       name: app.localizedName ?? bundleID, launchDate: app.launchDate)
         }
-        return TemplateCaptureRequest(facts: facts, apps: apps, frontmostPID: NSWorkspace.shared.frontmostApplication?.processIdentifier)
+        return TemplateCaptureRequest(facts: facts, apps: apps,
+                                      frontmostPID: NSWorkspace.shared.frontmostApplication?.processIdentifier)
     }
 
     private func finish(_ batch: TemplateWindowBatch, facts: TemplateCaptureFacts) throws -> WorkspaceTemplate {
@@ -96,7 +100,8 @@ extension WindowManager {
 
     private func floatingDecision(_ window: TemplateObservedWindow) -> Bool {
         let title: String? = window.title
-        let created = Window(id: window.windowID, element: AXUIElementCreateApplication(window.pid), pid: window.pid, bundleID: window.bundleID)
+        let created = Window(id: window.windowID, element: AXUIElementCreateApplication(window.pid), pid: window.pid,
+                             bundleID: window.bundleID)
         created.naturalFrame = window.frame
         return shouldFloat(created, title: title, resizable: window.resizable)
     }

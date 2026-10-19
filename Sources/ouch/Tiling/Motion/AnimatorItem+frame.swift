@@ -3,12 +3,12 @@ import QuartzCore
 
 extension Animator.Item {
     func frame(at now: CFTimeInterval) -> CGRect {
-        let t = min(1, max(0, (now - start) / duration))
-        let e = CGFloat(curve.progress(t, bounce: bounce))
-        let to = move.to
-        return CGRect(x: from.minX + (to.minX - from.minX) * e,
-                      y: from.minY + (to.minY - from.minY) * e,
-                      width: max(1, from.width + (to.width - from.width) * e),
-                      height: max(1, from.height + (to.height - from.height) * e)).pixelAligned
+        let time = min(1, max(0, (now - start) / duration))
+        let eased = CGFloat(curve.progress(time, bounce: bounce))
+        let target = move.target
+        return CGRect(x: from.minX + (target.minX - from.minX) * eased,
+                      y: from.minY + (target.minY - from.minY) * eased,
+                      width: max(1, from.width + (target.width - from.width) * eased),
+                      height: max(1, from.height + (target.height - from.height) * eased)).pixelAligned
     }
 }

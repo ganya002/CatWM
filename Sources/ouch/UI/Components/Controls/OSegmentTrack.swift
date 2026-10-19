@@ -19,9 +19,9 @@ struct OSegmentTrack<Content: View>: View {
 extension GalleryContent {
     @ViewBuilder var segmentTrackExamples: some View {
         OSegmentTrack(title: "Filter") {
-            OSegment(label: "All", count: 12, on: true) {}
-            OSegment(label: "Floating", count: 3, on: false) {}
-            OSegment(label: "Needs review", on: false, hot: true) {}
+            OSegment(label: "All", count: 12, selected: true) {}
+            OSegment(label: "Floating", count: 3, selected: false) {}
+            OSegment(label: "Needs review", selected: false, hot: true) {}
         }
     }
 }

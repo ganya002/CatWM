@@ -4,28 +4,29 @@ struct ConfigOption {
     let key: String
     var aliases: [String] = []
     var group = OptionGroup.general
-    var section: String? = nil
-    var note: String? = nil
-    var valid: ClosedRange<Double>? = nil
-    var setting: SettingInfo? = nil
+    var section: String?
+    var note: String?
+    var valid: ClosedRange<Double>?
+    var setting: SettingInfo?
     var valueDescription = "value"
     var documentation = ""
     var choices: [(String, String)] = []
-    var setNumber: ((inout Config, Double) -> Void)? = nil
+    var setNumber: ((inout Config, Double) -> Void)?
     let path: PartialKeyPath<Config>
     let read: (inout Config, _ value: String, _ rawKey: String) -> String?
     let text: (Config) -> String
     let copy: (inout Config, Config) -> Void
     let number: (Config) -> Double
 
-    init<V>(_ key: String, _ path: WritableKeyPath<Config, V>, read: @escaping (String, _ rawKey: String) -> (V?, String?),
+    init<V>(_ key: String, _ path: WritableKeyPath<Config, V>,
+            read: @escaping (String, _ rawKey: String) -> (V?, String?),
             text: @escaping (V) -> String, number: @escaping (V) -> Double = { _ in 0 }) {
         self.valueDescription = V.self == Bool.self ? "bool" : "value"
         self.key = key
         self.path = path
-        self.read = { c, v, raw in
-            let (value, error) = read(v, raw)
-            if let value { c[keyPath: path] = value }
+        self.read = { config, input, raw in
+            let (value, error) = read(input, raw)
+            if let value { config[keyPath: path] = value }
             return error
         }
         self.text = { text($0[keyPath: path]) }
@@ -37,81 +38,90 @@ struct ConfigOption {
     var defaultText: String { text(Config()) }
 
     func documented(_ value: String?, _ notes: String) -> Self {
-        var o = self
-        if let value { o.valueDescription = value }
-        o.documentation = notes
-        return o
+        var option = self
+        if let value { option.valueDescription = value }
+        option.documentation = notes
+        return option
     }
 
-    func aliases(_ a: String...) -> Self { var o = self; o.aliases = a; return o }
-    func section(_ s: String) -> Self { var o = self; o.section = s; return o }
-    func note(_ s: String) -> Self { var o = self; o.note = s; return o }
-    func animation() -> Self { var o = self; o.group = .animation; return o }
-    func setting(_ pane: Pane, _ id: String, _ label: String, help: String? = nil, keywords: String = "", advanced: Bool = false,
-                 range: ClosedRange<Double>? = nil, scale: Double = 1, section: String? = nil, order: Int = 0,
-                 enabled: @escaping (Config) -> Bool = { _ in true }, unit: String = " pt", width: CGFloat = 160) -> Self {
-        var o = self
-        o.setting = SettingInfo(pane: pane, id: id, label: label, help: help, keywords: keywords, advanced: advanced, range: range, scale: scale,
-                                section: section ?? pane.defaultSection, order: order, enabled: enabled, unit: unit, width: width)
-        return o
+    func aliases(_ names: String...) -> Self { var option = self; option.aliases = names; return option }
+    func section(_ title: String) -> Self { var option = self; option.section = title; return option }
+    func note(_ text: String) -> Self { var option = self; option.note = text; return option }
+    func animation() -> Self { var option = self; option.group = .animation; return option }
+    func setting(_ pane: Pane, _ id: String, _ label: String, help: String? = nil, keywords: String = "",
+                 advanced: Bool = false, range: ClosedRange<Double>? = nil, scale: Double = 1,
+                 section: String? = nil, order: Int = 0, enabled: @escaping (Config) -> Bool = { _ in true },
+                 unit: String = " pt", width: CGFloat = 160) -> Self {
+        var option = self
+        option.setting = SettingInfo(pane: pane, id: id, label: label, help: help, keywords: keywords,
+                                     advanced: advanced, range: range, scale: scale,
+                                     section: section ?? pane.defaultSection, order: order, enabled: enabled,
+                                     unit: unit, width: width)
+        return option
     }
 
     static let trueWords = ["true", "yes", "on", "1"], falseWords = ["false", "no", "off", "0"]
 
-    static func readBool(_ v: String, _ rawKey: String) -> (Bool, String?) {
-        let l = v.lowercased()
-        return (trueWords.contains(l), trueWords.contains(l) || falseWords.contains(l) ? nil : "`\(rawKey)` needs true or false")
+    static func readBool(_ input: String, _ rawKey: String) -> (Bool, String?) {
+        let word = input.lowercased()
+        let known = trueWords.contains(word) || falseWords.contains(word)
+        return (trueWords.contains(word), known ? nil : "`\(rawKey)` needs true or false")
     }
 
     static func bool(_ key: String, _ path: WritableKeyPath<Config, Bool>) -> Self {
-        Self(key, path, read: { v, raw in let (b, error) = readBool(v, raw); return (b, error) }, text: { $0 ? "true" : "false" })
+        Self(key, path, read: { input, raw in let (value, error) = readBool(input, raw); return (value, error) },
+             text: { $0 ? "true" : "false" })
     }
 
     static func number<V>(_ key: String, _ path: WritableKeyPath<Config, V>, valid: ClosedRange<Double>? = nil,
-                          convert: @escaping (Double) -> Double = { $0 }, make: @escaping (Double) -> V,
+                          convert: @escaping (Double) -> Double = \.self, make: @escaping (Double) -> V,
                           text: @escaping (V) -> String, number: @escaping (V) -> Double) -> Self {
-        var o = Self(key, path, read: { v, raw in
-            guard let n = Double(v), n.isFinite else { return (nil, "`\(raw)` needs a number") }
-            var x = convert(n)
-            if let valid { x = min(valid.upperBound, max(valid.lowerBound, x)) }
-            return (make(x), nil)
+        var option = Self(key, path, read: { input, raw in
+            guard let parsed = Double(input), parsed.isFinite else { return (nil, "`\(raw)` needs a number") }
+            var value = convert(parsed)
+            if let valid { value = min(valid.upperBound, max(valid.lowerBound, value)) }
+            return (make(value), nil)
         }, text: text, number: number)
-        o.setNumber = { $0[keyPath: path] = make($1) }
-        o.valueDescription = "number"
-        o.valid = valid
-        return o
+        option.setNumber = { $0[keyPath: path] = make($1) }
+        option.valueDescription = "number"
+        option.valid = valid
+        return option
     }
 
     static func points(_ key: String, _ path: WritableKeyPath<Config, CGFloat>, valid: ClosedRange<Double>? = nil,
-                       convert: @escaping (Double) -> Double = { $0 }) -> Self {
-        number(key, path, valid: valid, convert: convert, make: { CGFloat($0) }, text: { String(format: "%g", Double($0)) }, number: { Double($0) })
+                       convert: @escaping (Double) -> Double = \.self) -> Self {
+        number(key, path, valid: valid, convert: convert, make: { CGFloat($0) },
+               text: { String(format: "%g", Double($0)) }, number: { Double($0) })
     }
 
-    static func choice<V: RawRepresentable & CaseIterable>(_ key: String, _ path: WritableKeyPath<Config, V>, noun: String) -> Self
+    static func choice<V: RawRepresentable & CaseIterable>(_ key: String, _ path: WritableKeyPath<Config, V>,
+                                                           noun: String) -> Self
     where V.RawValue == String {
-        var o = Self(key, path, read: { v, _ in
-            guard let x = V(rawValue: v.lowercased()) else {
-                return (nil, "unknown \(noun) `\(v)` (\(V.allCases.map(\.rawValue).joined(separator: ", ")))")
+        var option = Self(key, path, read: { input, _ in
+            guard let value = V(rawValue: input.lowercased()) else {
+                return (nil, "unknown \(noun) `\(input)` (\(V.allCases.map(\.rawValue).joined(separator: ", ")))")
             }
-            return (x, nil)
+            return (value, nil)
         }, text: { $0.rawValue })
-        o.choices = V.allCases.map { ($0.rawValue, $0.rawValue) }
-        o.valueDescription = V.allCases.map { "`\($0.rawValue)`" }.joined(separator: " ")
-        return o
+        option.choices = V.allCases.map { ($0.rawValue, $0.rawValue) }
+        option.valueDescription = V.allCases.map { "`\($0.rawValue)`" }.joined(separator: " ")
+        return option
     }
 
     private static let byName: [String: ConfigOption] = {
-        var d: [String: ConfigOption] = [:]
-        for o in Options.all { for n in o.names { d[norm(n)] = o } }
-        return d
+        var options: [String: ConfigOption] = [:]
+        for option in Options.all { for name in option.names { options[norm(name)] = option } }
+        return options
     }()
 
     static func named(_ key: String) -> ConfigOption? { byName[norm(key)] }
 
     static func at(_ path: PartialKeyPath<Config>) -> ConfigOption {
-        guard let o = Options.all.first(where: { $0.path == path }) else { fatalError("no config option for \(path)") }
-        return o
+        guard let option = Options.all.first(where: { $0.path == path }) else {
+            fatalError("no config option for \(path)")
+        }
+        return option
     }
 
-    static func norm(_ s: String) -> String { s.lowercased().replacingOccurrences(of: "-", with: "_") }
+    static func norm(_ name: String) -> String { name.lowercased().replacingOccurrences(of: "-", with: "_") }
 }

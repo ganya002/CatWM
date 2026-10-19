@@ -9,11 +9,15 @@ struct SortCloseList: View {
     var body: some View {
         let grouped = Set(plan.closedLanes.flatMap(\.ids))
         ScrollViewReader { proxy in
-            ScrollView(.vertical, showsIndicators: plan.close.count + plan.closedLanes.count > rows + Int(SortMetrics.closeExtra / SortMetrics.rowHeight)) {
+            let extraRows = Int(SortMetrics.closeExtra / SortMetrics.rowHeight)
+            let overflows = plan.close.count + plan.closedLanes.count > rows + extraRows
+            ScrollView(.vertical, showsIndicators: overflows) {
                 VStack(spacing: 0) {
-                    ForEach(plan.closedLanes) { g in
-                        SortClosedHeader(model: model, group: g)
-                        ForEach(g.ids.compactMap { plan.items[$0] }) { item in SortRow(model: model, item: item, closing: true, indented: true).id(item.id) }
+                    ForEach(plan.closedLanes) { group in
+                        SortClosedHeader(model: model, group: group)
+                        ForEach(group.ids.compactMap { plan.items[$0] }) { item in
+                            SortRow(model: model, item: item, closing: true, indented: true).id(item.id)
+                        }
                     }
                     ForEach(plan.close.filter { !grouped.contains($0) }.compactMap { plan.items[$0] }) { item in
                         SortRow(model: model, item: item, closing: true).id(item.id)
@@ -21,8 +25,10 @@ struct SortCloseList: View {
                 }
             }
             .frame(height: CGFloat(rows) * SortMetrics.rowHeight + SortMetrics.closeExtra)
-            .onChange(of: model.reveal) { _, r in
-                if plan.close.contains(r.id) || grouped.contains(r.id) { withAnimation(Motion.easeOut) { proxy.scrollTo(r.id) } }
+            .onChange(of: model.reveal) { _, reveal in
+                if plan.close.contains(reveal.id) || grouped.contains(reveal.id) {
+                    withAnimation(Motion.easeOut) { proxy.scrollTo(reveal.id) }
+                }
             }
         }
     }

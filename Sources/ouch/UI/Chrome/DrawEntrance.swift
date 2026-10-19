@@ -8,25 +8,26 @@ struct DrawEntrance: ViewModifier {
     private struct State { var draw = 0.0, glass = 0.0, line = 0.0 }
 
     func body(content: Content) -> some View {
-        content.keyframeAnimator(initialValue: State(), trigger: shown) { view, v in
+        content.keyframeAnimator(initialValue: State(), trigger: shown) { view, state in
             view
-                .opacity(v.glass)
-                .scaleEffect(0.985 + 0.015 * v.glass, anchor: .bottom)
+                .opacity(state.glass)
+                .scaleEffect(0.985 + 0.015 * state.glass, anchor: .bottom)
                 .overlay {
                     ZStack {
                         ForEach([false, true], id: \.self) { mirrored in
                             let half = OutlineHalf(radius: radius)
                             ZStack {
-                                half.trim(from: 0, to: v.draw)
+                                half.trim(from: 0, to: state.draw)
                                     .stroke(Theme.accent, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
-                                half.trim(from: max(0, v.draw - 0.08), to: v.draw)
-                                    .stroke(Theme.accent, style: StrokeStyle(lineWidth: 12, lineCap: .round)).blur(radius: 7)
-                                    .opacity(v.draw >= 1 ? 0 : 1)
+                                half.trim(from: max(0, state.draw - 0.08), to: state.draw)
+                                    .stroke(Theme.accent, style: StrokeStyle(lineWidth: 12, lineCap: .round))
+                                    .blur(radius: 7)
+                                    .opacity(state.draw >= 1 ? 0 : 1)
                             }
                             .scaleEffect(x: mirrored ? -1 : 1, y: 1)
                         }
                     }
-                    .opacity(v.line)
+                    .opacity(state.line)
                     .allowsHitTesting(false)
                 }
         } keyframes: { _ in

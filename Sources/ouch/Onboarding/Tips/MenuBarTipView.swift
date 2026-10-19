@@ -8,7 +8,7 @@ struct MenuBarTipView: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
             Image(systemName: model.state == .good ? "checkmark.circle.fill" : "lightbulb")
-                .font(Theme.symbol(Theme.Icon.lg))
+                .font(Theme.symbol(Theme.Icon.large))
                 .foregroundStyle(model.state == .good ? Theme.success : Theme.accentInk)
                 .contentTransition(.symbolEffect(.replace))
                 .frame(width: 16)
@@ -22,7 +22,7 @@ struct MenuBarTipView: View {
         }
         .padding(.horizontal, 10).padding(.vertical, 8)
         .frame(width: model.state == .good ? nil : 288, alignment: .leading)
-        .surface(.md, caret: model.caret.map { .top($0 - Self.inset.leading) } ?? .none)
+        .surface(.medium, caret: model.caret.map { .top($0 - Self.inset.leading) } ?? .none)
         .padding(Self.inset)
         .fixedSize()
     }

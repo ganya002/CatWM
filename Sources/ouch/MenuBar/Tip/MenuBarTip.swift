@@ -2,6 +2,12 @@ import AppKit
 import SwiftUI
 
 final class MenuBarTip {
+    private struct Placement {
+        let state: MenuBarTipModel.State
+        let anchor: NSRect?
+        let screen: NSScreen?
+    }
+
     static let shared = MenuBarTip()
 
     weak var statusButton: NSStatusBarButton?
@@ -17,12 +23,12 @@ final class MenuBarTip {
     func show() {
         guard timer == nil else { return }
         if panel == nil {
-            let h = NSHostingView(rootView: MenuBarTipView(model: model))
-            let p = OuchPanel(role: .overlay(.floating, clickThrough: true))
-            p.contentView = h
-            p.alphaValue = 0
-            panel = p
-            host = h
+            let hosting = NSHostingView(rootView: MenuBarTipView(model: model))
+            let tipPanel = OuchPanel(role: .overlay(.floating, clickThrough: true))
+            tipPanel.contentView = hosting
+            tipPanel.alphaValue = 0
+            panel = tipPanel
+            host = hosting
         }
         timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in self?.update() }
         timer?.tolerance = 0.05
@@ -38,7 +44,8 @@ final class MenuBarTip {
 
     private func update() {
         guard let panel, let host else { return }
-        let (state, anchor, screen) = locate()
+        let placement = locate()
+        let state = placement.state, anchor = placement.anchor, screen = placement.screen
         if model.state != state { withAnimation(Motion.fadeSlow) { model.state = state } }
         if state == .good { goodSince = goodSince ?? Date() } else { goodSince = nil }
         let settled = goodSince.map { Date().timeIntervalSince($0) > 3 } ?? false
@@ -61,30 +68,32 @@ final class MenuBarTip {
         setVisible(true)
     }
 
-    private func setVisible(_ on: Bool) {
-        guard let panel, on != shown else { return }
-        shown = on
-        if on {
+    private func setVisible(_ visible: Bool) {
+        guard let panel, visible != shown else { return }
+        shown = visible
+        if visible {
             panel.orderFrontRegardless()
             animate(0.35) { panel.animator().alphaValue = 1 }
         } else {
-            animate(0.2, changes: { panel.animator().alphaValue = 0 }) { [weak self] in
+            animate(0.2, changes: { panel.animator().alphaValue = 0 }, completion: { [weak self] in
                 if self?.shown == false { panel.orderOut(nil) }
-            }
+            })
         }
     }
 
-    private func locate() -> (MenuBarTipModel.State, NSRect?, NSScreen?) {
+    private func locate() -> Placement {
         let focused: NSScreen? = OuchPanel.pointerScreen()
-        guard let w = statusButton?.window, w.occlusionState.contains(.visible),
-              let itemScreen = NSScreen.screens.first(where: { $0.frame.contains(NSPoint(x: w.frame.midX, y: w.frame.midY)) })
-        else { return (.hidden, nil, focused) }
-        let f = w.frame
-        let state = state(for: f, on: itemScreen)
+        guard let window = statusButton?.window, window.occlusionState.contains(.visible),
+              let itemScreen = NSScreen.screens.first(where: {
+                  $0.frame.contains(NSPoint(x: window.frame.midX, y: window.frame.midY))
+              })
+        else { return Placement(state: .hidden, anchor: nil, screen: focused) }
+        let frame = window.frame
+        let state = state(for: frame, on: itemScreen)
         if let focused, focused != itemScreen {
-            return (state, nil, focused)
+            return Placement(state: state, anchor: nil, screen: focused)
         }
-        return (state, f, itemScreen)
+        return Placement(state: state, anchor: frame, screen: itemScreen)
     }
 
     private func state(for frame: NSRect, on screen: NSScreen) -> MenuBarTipModel.State {

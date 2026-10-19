@@ -6,9 +6,12 @@ final class DockArea {
     private var refreshQueued = false
     private static let maxAge: TimeInterval = 10
 
+    private var screenObserver: NSObjectProtocol?
+
     init() {
-        NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification,
-                                               object: nil, queue: .main) { [weak self] _ in self?.refresh() }
+        screenObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
+        ) { [weak self] _ in self?.refresh() }
     }
 
     func contains(_ point: CGPoint) -> Bool {
@@ -25,30 +28,34 @@ final class DockArea {
         refreshed = Date()
         let dock = "com.apple.dock" as CFString
         CFPreferencesAppSynchronize(dock)
-        func number(_ key: String) -> CGFloat? { (CFPreferencesCopyAppValue(key as CFString, dock) as? NSNumber).map { CGFloat($0.doubleValue) } }
+        func number(_ key: String) -> CGFloat? {
+            (CFPreferencesCopyAppValue(key as CFString, dock) as? Double).map { CGFloat($0) }
+        }
         let edge = CFPreferencesCopyAppValue("orientation" as CFString, dock) as? String ?? "bottom"
         let tile = number("tilesize") ?? 64
-        let magnified = (CFPreferencesCopyAppValue("magnification" as CFString, dock) as? NSNumber)?.boolValue == true
+        let magnified = (CFPreferencesCopyAppValue("magnification" as CFString, dock) as? Bool) == true
         let icon = magnified ? max(tile, number("largesize") ?? 128) : tile
         guard let primary = NSScreen.screens.first else { bands = nil; return }
-        let h = primary.frame.height
-        func flip(_ r: CGRect) -> CGRect { CGRect(x: r.minX, y: h - r.maxY, width: r.width, height: r.height) }
+        let height = primary.frame.height
+        func flip(_ rect: CGRect) -> CGRect {
+            CGRect(x: rect.minX, y: height - rect.maxY, width: rect.width, height: rect.height)
+        }
         bands = Self.bands(screens: NSScreen.screens.map { (flip($0.frame), flip($0.visibleFrame)) }, edge: edge,
                            depth: min(max(icon, 16), 512) + 48)
     }
 
     static func bands(screens: [(frame: CGRect, visible: CGRect)], edge: String, depth: CGFloat) -> [CGRect] {
-        screens.map { f, v in
+        screens.map { frame, visible in
             switch edge {
             case "left":
-                let d = max(depth, v.minX - f.minX)
-                return CGRect(x: f.minX - 1, y: f.minY, width: d + 1, height: f.height)
+                let size = max(depth, visible.minX - frame.minX)
+                return CGRect(x: frame.minX - 1, y: frame.minY, width: size + 1, height: frame.height)
             case "right":
-                let d = max(depth, f.maxX - v.maxX)
-                return CGRect(x: f.maxX - d, y: f.minY, width: d + 1, height: f.height)
+                let size = max(depth, frame.maxX - visible.maxX)
+                return CGRect(x: frame.maxX - size, y: frame.minY, width: size + 1, height: frame.height)
             default:
-                let d = max(depth, f.maxY - v.maxY)
-                return CGRect(x: f.minX, y: f.maxY - d, width: f.width, height: d + 1)
+                let size = max(depth, frame.maxY - visible.maxY)
+                return CGRect(x: frame.minX, y: frame.maxY - size, width: frame.width, height: size + 1)
             }
         }
     }

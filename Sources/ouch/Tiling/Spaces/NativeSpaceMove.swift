@@ -5,7 +5,9 @@ import ObjectiveC
 enum NativeSpaceMove {
     private typealias Perform = @convention(c) (UnsafeMutableRawPointer) -> Int64
     private typealias Allocate = @convention(c) (AnyClass, Selector) -> UnsafeMutableRawPointer?
-    private typealias Initialize = @convention(c) (UnsafeMutableRawPointer, Selector, CFArray, UInt64) -> UnsafeMutableRawPointer?
+    private typealias Initialize = @convention(c) (
+        UnsafeMutableRawPointer, Selector, CFArray, UInt64
+    ) -> UnsafeMutableRawPointer?
     private typealias Release = @convention(c) (UnsafeMutableRawPointer, Selector) -> Void
 
     private struct Binding {
@@ -20,9 +22,13 @@ enum NativeSpaceMove {
     private static let allocate = NSSelectorFromString("alloc")
     private static let release = NSSelectorFromString("release")
     private static let binding: Binding? = {
-        guard dlopen("/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight", RTLD_LAZY) != nil else { return nil }
-        let name = "__ZL54SLSPerformAsynchronousBridgedWindowManagementOperationP47SLSAsynchronousBridgedWindowManagementOperation"
-        guard let address = dlsym(UnsafeMutableRawPointer(bitPattern: -2), String(name.dropFirst())) ?? localSymbol(name),
+        guard dlopen("/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight", RTLD_LAZY) != nil else {
+            return nil
+        }
+        let name = "__ZL54SLSPerformAsynchronousBridgedWindowManagementOperation"
+            + "P47SLSAsynchronousBridgedWindowManagementOperation"
+        guard let address = dlsym(UnsafeMutableRawPointer(bitPattern: -2), String(name.dropFirst()))
+                ?? localSymbol(name),
               let type = NSClassFromString("SLSBridgedMoveWindowsToManagedSpaceOperation"),
               let allocMethod = class_getClassMethod(type, allocate),
               let initMethod = class_getInstanceMethod(type, initializer),
@@ -37,15 +43,15 @@ enum NativeSpaceMove {
 
     static func move(window: CGWindowID, to space: UInt64) -> Bool {
         guard let binding, let allocated = binding.allocate(binding.type, allocate) else { return false }
-        let windows = [NSNumber(value: window)] as CFArray
+        let windows = [window] as CFArray
         guard let operation = binding.initialize(allocated, initializer, windows, space) else { return false }
         defer { binding.release(operation, release) }
         _ = binding.perform(operation)
         return true
     }
 
-    private static func adding(_ a: UInt, _ b: UInt) -> UInt? {
-        let (value, overflow) = a.addingReportingOverflow(b)
+    private static func adding(_ base: UInt, _ amount: UInt) -> UInt? {
+        let (value, overflow) = base.addingReportingOverflow(amount)
         return overflow ? nil : value
     }
 
@@ -56,54 +62,77 @@ enum NativeSpaceMove {
         return overflow ? nil : value
     }
 
+    private struct SymbolTable {
+        let entries: UInt
+        let strings: UInt
+        let count: Int
+        let stringSize: UInt32
+    }
+
     private static func localSymbol(_ name: String) -> UnsafeMutableRawPointer? {
+        let expected = Array(name.utf8) + [0]
         for i in 0..<_dyld_image_count() {
             guard let path = _dyld_get_image_name(i), String(cString: path).hasSuffix("/SkyLight"),
                   let header = _dyld_get_image_header(i), header.pointee.magic == MH_MAGIC_64 else { continue }
-            let base = UnsafeRawPointer(header)
-            let image = base.load(as: mach_header_64.self)
-            var linkedit: segment_command_64?
-            var symbols: symtab_command?
-            var offset = 0
-            let commands = base.advanced(by: MemoryLayout<mach_header_64>.size)
-            for _ in 0..<image.ncmds {
-                guard offset <= Int(image.sizeofcmds) - MemoryLayout<load_command>.size else { return nil }
-                let pointer = commands.advanced(by: offset)
-                let command = pointer.load(as: load_command.self)
-                guard command.cmdsize >= MemoryLayout<load_command>.size,
-                      Int(command.cmdsize) <= Int(image.sizeofcmds) - offset else { return nil }
-                if command.cmd == LC_SEGMENT_64, command.cmdsize >= MemoryLayout<segment_command_64>.size {
-                    var segment = pointer.load(as: segment_command_64.self)
-                    let segmentName = withUnsafeBytes(of: &segment.segname) { String(decoding: $0.prefix { $0 != 0 }, as: UTF8.self) }
-                    if segmentName == "__LINKEDIT" { linkedit = segment }
-                } else if command.cmd == LC_SYMTAB, command.cmdsize >= MemoryLayout<symtab_command>.size {
-                    symbols = pointer.load(as: symtab_command.self)
-                }
-                offset += Int(command.cmdsize)
-            }
-            guard let segment = linkedit, let table = symbols, table.nsyms > 0, table.strsize > 0,
-                  let start = sliding(segment.vmaddr, by: _dyld_get_image_vmaddr_slide(i)),
-                  let length = UInt(exactly: segment.vmsize), let end = adding(start, length),
-                  let fileOffset = UInt(exactly: segment.fileoff), start >= fileOffset,
-                  let entries = adding(start - fileOffset, UInt(table.symoff)),
-                  let entriesEnd = adding(entries, UInt(table.nsyms) * UInt(MemoryLayout<nlist_64>.size)),
-                  let strings = adding(start - fileOffset, UInt(table.stroff)),
-                  let stringsEnd = adding(strings, UInt(table.strsize)),
-                  entries >= start, entriesEnd <= end, strings >= start, stringsEnd <= end else { return nil }
-            let expected = Array(name.utf8) + [0]
-            for index in 0..<Int(table.nsyms) {
-                guard let pointer = UnsafeRawPointer(bitPattern: entries + UInt(index * MemoryLayout<nlist_64>.size)) else { return nil }
+            let slide = _dyld_get_image_vmaddr_slide(i)
+            guard let table = symbolTable(UnsafeRawPointer(header), slide: slide) else { return nil }
+            for index in 0..<table.count {
+                let entryAddress = table.entries + UInt(index * MemoryLayout<nlist_64>.size)
+                guard let pointer = UnsafeRawPointer(bitPattern: entryAddress) else { return nil }
                 let entry = pointer.load(as: nlist_64.self)
                 let stringOffset = entry.n_un.n_strx
-                guard stringOffset > 0, stringOffset < table.strsize, entry.n_value != 0,
-                      expected.count <= Int(table.strsize - stringOffset),
-                      let string = UnsafeRawPointer(bitPattern: strings + UInt(stringOffset)) else { continue }
+                guard stringOffset > 0, stringOffset < table.stringSize, entry.n_value != 0,
+                      expected.count <= Int(table.stringSize - stringOffset),
+                      let string = UnsafeRawPointer(bitPattern: table.strings + UInt(stringOffset)) else { continue }
                 let bytes = UnsafeRawBufferPointer(start: string, count: expected.count)
                 guard bytes.elementsEqual(expected) else { continue }
-                guard let address = sliding(entry.n_value, by: _dyld_get_image_vmaddr_slide(i)) else { return nil }
+                guard let address = sliding(entry.n_value, by: slide) else { return nil }
                 return UnsafeMutableRawPointer(bitPattern: address)
             }
         }
         return nil
+    }
+
+    private static func loadCommands(
+        _ base: UnsafeRawPointer
+    ) -> (linkedit: segment_command_64, symbols: symtab_command)? {
+        let image = base.load(as: mach_header_64.self)
+        var linkedit: segment_command_64?
+        var symbols: symtab_command?
+        var offset = 0
+        let commands = base.advanced(by: MemoryLayout<mach_header_64>.size)
+        for _ in 0..<image.ncmds {
+            guard offset <= Int(image.sizeofcmds) - MemoryLayout<load_command>.size else { return nil }
+            let pointer = commands.advanced(by: offset)
+            let command = pointer.load(as: load_command.self)
+            guard command.cmdsize >= MemoryLayout<load_command>.size,
+                  Int(command.cmdsize) <= Int(image.sizeofcmds) - offset else { return nil }
+            if command.cmd == LC_SEGMENT_64, command.cmdsize >= MemoryLayout<segment_command_64>.size {
+                var segment = pointer.load(as: segment_command_64.self)
+                let segmentName = withUnsafeBytes(of: &segment.segname) {
+                    String(bytes: $0.prefix { $0 != 0 }, encoding: .utf8)
+                }
+                if segmentName == "__LINKEDIT" { linkedit = segment }
+            } else if command.cmd == LC_SYMTAB, command.cmdsize >= MemoryLayout<symtab_command>.size {
+                symbols = pointer.load(as: symtab_command.self)
+            }
+            offset += Int(command.cmdsize)
+        }
+        guard let linkedit, let symbols else { return nil }
+        return (linkedit, symbols)
+    }
+
+    private static func symbolTable(_ base: UnsafeRawPointer, slide: Int) -> SymbolTable? {
+        guard let (segment, table) = loadCommands(base),
+              table.nsyms > 0, table.strsize > 0,
+              let start = sliding(segment.vmaddr, by: slide),
+              let length = UInt(exactly: segment.vmsize), let end = adding(start, length),
+              let fileOffset = UInt(exactly: segment.fileoff), start >= fileOffset,
+              let entries = adding(start - fileOffset, UInt(table.symoff)),
+              let entriesEnd = adding(entries, UInt(table.nsyms) * UInt(MemoryLayout<nlist_64>.size)),
+              let strings = adding(start - fileOffset, UInt(table.stroff)),
+              let stringsEnd = adding(strings, UInt(table.strsize)),
+              entries >= start, entriesEnd <= end, strings >= start, stringsEnd <= end else { return nil }
+        return SymbolTable(entries: entries, strings: strings, count: Int(table.nsyms), stringSize: table.strsize)
     }
 }

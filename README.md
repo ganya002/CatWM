@@ -13,10 +13,13 @@ For fast rebuilds while you work, run `./build.sh --dev`. It makes a debug build
 
 ## Lint
 
-Install SwiftLint before you work on the code.
+SwiftLint needs the Xcode tools. Install Xcode, or install the Command Line Tools with `xcode-select --install`.
+
+The project pins SwiftLint 0.65.1. `.swiftlint.yml` sets `swiftlint_version`, so a different version stops with an error. Install that version from the [0.65.1 release](https://github.com/realm/SwiftLint/releases/tag/0.65.1), or with Homebrew while 0.65.1 is the current formula:
 
 ```sh
 brew install swiftlint
+swiftlint version
 ```
 
 Run it from the repo root.
@@ -25,7 +28,13 @@ Run it from the repo root.
 swiftlint
 ```
 
-The config is in `.swiftlint.yml`. The `lint` workflow runs SwiftLint on each push and pull request.
+If you have only the Command Line Tools (no Xcode), SwiftLint cannot find SourceKit. Give it the toolchain path:
+
+```sh
+TOOLCHAIN_DIR=/Library/Developer/CommandLineTools swiftlint
+```
+
+The config is in `.swiftlint.yml`. It is strict: all default rules are on, more opt-in rules are on, and each warning is an error. Comments are not allowed in this repo, so you cannot disable a rule in the code. Fix the code. The `lint` workflow runs SwiftLint 0.65.1 on each push and pull request.
 
 To install a beta build to `/Applications/Ouch.app` and open it, run `./install.sh`. Add `--stable` to skip the beta channel marker.
 

@@ -23,7 +23,7 @@ A change to a token or a component rule is not finished until `Sources/ouch/UI/T
 2. **One floating surface.** Menus, tooltips, tips, coach marks, the HUD and the welcome card are one component: `.surface(_ density:)`, at five densities. A new floating thing gets a density, never a new look.
 3. **Two levels, then search.** Menus nest one level, two at most. Deeper items go behind the search field at the top of every menu.
 4. **No boxes around content.** Content sits on the ground. Hairlines separate rows. Only floating things (menus, tips, tour cards, HUD) and the one content pane get a surface. They get depth from the `popover` and `float` elevations, not from borders.
-5. **Chrome is a wash.** Window chrome and sidebars sit on `Theme.wash`: `wash1`, then `bg` at 55%, then `wash2`. Items sit on it as pills. The content is one floating rounded pane (`.pane()`, `surface`, radius 14), inset by the popover shadow room on the top, bottom and trailing sides so the shadow fades out on the wash.
+5. **Chrome is a wash.** Window chrome and sidebars sit on `Theme.wash`: `wash1`, then `background` at 55%, then `wash2`. Items sit on it as pills. The content is one floating rounded pane (`.pane()`, `surface`, radius 14), inset by the popover shadow room on the top, bottom and trailing sides so the shadow fades out on the wash.
 6. **Quiet type, one face.** Chillax everywhere. Weight 400 for text, 500 for emphasis, 300 for large display. Nothing bolder, except the wordmark.
 7. **Symbols move with meaning.** An SF Symbol effect always reports something: an action landed, a thing refused, the app is busy, a tip is waiting. Never decoration.
 
@@ -35,7 +35,7 @@ One palette, `Palette.ouch`, with a light and a dark theme. It comes from the ap
 - Text is `ink`. Secondary text is `inkMuted`. Placeholders are `inkFaint`. Every pair meets 4.5:1 in both themes.
 - Blue is an accent. Use `accent` for one thing per view: the primary button, the switch that is on, the current workspace, the progress bar, the selected layout. Its text is `onAccent`. Everything else is neutral.
 - A hovered or highlighted row is a `hover` fill. Its text keeps its colour. Hover and keyboard highlight never use `accent`.
-- A selected sidebar item is a `surface` pill with the `sm` elevation, on the wash.
+- A selected sidebar item is a `surface` pill with the `small` elevation, on the wash.
 - Tour cards are plain raised surfaces. They are not filled with `accent`.
 - `tint` is for shapes only: layout thumbnails and illustrations. Never text.
 - `success`, `warning` and `danger` always come with a symbol and a word.
@@ -55,7 +55,7 @@ Labels, captions, buttons, keys and menu rows never wrap. They are one line and 
 ## Space, radius and size
 
 - The grid is 4 pt: `Theme.Space` 2, 4, 8, 12, 16, 24, 32.
-- Radii nest. The panel radius equals the row radius plus the panel padding: `Radius.lg` 12 = `Radius.sm` 6 + 6 menu padding. Rows sit concentric inside menus.
+- Radii nest. The panel radius equals the row radius plus the panel padding: `Radius.large` 12 = `Radius.small` 6 + 6 menu padding. Rows sit concentric inside menus.
 - Rows are 30 pt (`Theme.rowHeight`). Controls are 28 pt (26 small, 36 large). Small keycaps are 20 pt, medium 30 pt, tour keycaps 40 pt. Menus are 272 pt wide, submenus 232 pt, the command menu 360 pt.
 
 ## Surface
@@ -64,7 +64,7 @@ Labels, captions, buttons, keys and menu rows never wrap. They are one line and 
 
 ```text
 head      lead symbol, kicker, trailing item, close
-title     Chillax title (smaller at sm and md)
+title     Chillax title (smaller at small and medium)
 body      inkMuted body
 keys      large keycaps and live state ("Press it now", then "Nice")
 children  rows, menus, groups
@@ -75,19 +75,19 @@ caret     optional: top, bottom or leading, pointing at the real target
 
 | Density | Use | Radius | Padding | Elevation |
 | --- | --- | --- | --- | --- |
-| `xs` | Tooltip | `md` 8 | 5 x 8 | popover |
-| `sm` | Toast, "config reloaded" | `lg` 12 | 12 x 16 | float, glass |
-| `md` | Menus, submenus, command menu, inline tips | `lg` 12 | 6 | popover |
-| `lg` | Coach marks (tour steps), 344 pt wide | `xl` 18 | 20 x 20 x 16 | float, glass |
-| `xl` | Welcome card, 480 pt wide | 24 | 32 | float |
+| `extraSmall` | Tooltip | `medium` 8 | 5 x 8 | popover |
+| `small` | Toast, "config reloaded" | `large` 12 | 12 x 16 | float, glass |
+| `medium` | Menus, submenus, command menu, inline tips | `large` 12 | 6 | popover |
+| `large` | Coach marks (tour steps), 344 pt wide | `extraLarge` 18 | 20 x 20 x 16 | float, glass |
+| `extraLarge` | Welcome card, 480 pt wide | 24 | 32 | float |
 
-Choose the density by job, not by size. A tooltip never holds a button. Anything with a button is `md` or larger. Tour cards always point with the caret at the real menu bar item or real window. They never dim or cover the desktop. Tips after onboarding are `md` with a lead `lightbulb`, a close button and "No more tips". Nothing inside a surface gets its own box.
+Choose the density by job, not by size. A tooltip never holds a button. Anything with a button is `medium` or larger. Tour cards always point with the caret at the real menu bar item or real window. They never dim or cover the desktop. Tips after onboarding are `medium` with a lead `lightbulb`, a close button and "No more tips". Nothing inside a surface gets its own box.
 
 ## Components
 
 Each entry gives the design intent. The Swift type is in brackets.
 
-**Button** [`OButton`, `OIconButton`]. Variants: primary, secondary, ghost, danger, ghostDanger. Sizes: sm, regular, lg.
+**Button** [`OButton`, `OIconButton`]. Variants: primary, secondary, ghost, danger, ghostDanger. Sizes: small, regular, large.
 - One primary per surface. It carries the return key shortcut.
 - Use ghost for Skip, Back, Close and other ways out.
 - Use danger only for destructive actions, always with a verb ("Reset Shortcuts").
@@ -115,7 +115,7 @@ Each entry gives the design intent. The Swift type is in brackets.
 
 **Kbd** [`Kbd`]. Keycaps for a shortcut, a chord or a sequence. Small keycaps (20 pt) go in tooltips, labels and buttons. Menu rows use plain `kbd` text. Medium keycaps (30 pt, raised) go in onboarding key pickers and summaries. Large keycaps (40 pt) go only in coach marks, where the real key press fills them with `accent` and sinks them 2 pt. Order modifiers the macOS way: control, option, shift, command, then the key.
 
-**Tooltip** [`OTooltip`, `Tooltip`]. The smallest surface (`xs`). One short phrase in sentence case, with no full stop. Never a button inside. Every icon-only button gets one. A shortcut is one chord at most. It points at its target with a small caret.
+**Tooltip** [`OTooltip`, `Tooltip`]. The smallest surface (`extraSmall`). One short phrase in sentence case, with no full stop. Never a button inside. Every icon-only button gets one. A shortcut is one chord at most. It points at its target with a small caret.
 
 **Menu** [`Popup`, `OMenuRow`, `OMenuButton`, `OMenuPicker`]. A dropdown with groups, checks, radios, switches, inline controls and nested submenus, with type-to-search.
 - Nest one level, two at most. Put the current choice of a radio group in the parent row's value.
@@ -125,7 +125,7 @@ Each entry gives the design intent. The Swift type is in brackets.
 
 **Command menu**. A menu that opens with the search field first, 360 pt wide. Results group under their top-level parent and show the rest of the path as a breadcrumb. It shares its data with the menu so the two never disagree.
 
-**Coach mark** [`.surface(.lg, caret:)`]. One step of the keyboard tour: step dots, a title, a body, live keycaps and Next. A step completes only when the person presses the real key. Next appears, with the return key, after that. The kicker counts ("STEP 3 OF 6"). The done line is short ("Focus moved").
+**Coach mark** [`.surface(.large, caret:)`]. One step of the keyboard tour: step dots, a title, a body, live keycaps and Next. A step completes only when the person presses the real key. Next appears, with the return key, after that. The kicker counts ("STEP 3 OF 6"). The done line is short ("Focus moved").
 
 **HUD**. Confirms a keyboard action in the middle of the screen: a glass surface with a layout thumbnail and its name. Shown for about one second. Never interactive. It ignores the mouse. The warning variant wiggles `exclamationmark.triangle.fill` and names the app that refused.
 

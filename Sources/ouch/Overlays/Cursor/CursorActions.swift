@@ -2,7 +2,6 @@ import AppKit
 import SwiftUI
 
 final class CursorActions {
-
     static let shared = CursorActions()
 
     let model = CursorActionsModel()
@@ -23,5 +22,4 @@ final class CursorActions {
 
     var enabled: Bool { WindowManager.shared.config.cursorActions }
     var isMenuOpen: Bool { model.open }
-
 }

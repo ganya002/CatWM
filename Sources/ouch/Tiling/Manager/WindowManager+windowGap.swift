@@ -5,90 +5,104 @@ extension WindowManager {
         config.windowMargins && !(config.smartWindowMargins && count == 1) ? config.windowMarginSize : 0
     }
 
-    func rawSlots(_ ids: [CGWindowID], on s: Screen, _ st: ScreenState, ratio: CGFloat) -> ([CGRect], CGFloat)? {
+    func rawSlots(
+        _ ids: [CGWindowID], on screen: Screen, _ screenState: ScreenState, ratio: CGFloat
+    ) -> ([CGRect], CGFloat)? {
         let gap = windowGap(count: ids.count)
-        guard let raw = st.layout.frames(count: ids.count, in: usableRect(s).insetBy(dx: -gap / 2, dy: -gap / 2),
-                                         ratio: ratio, mainCount: st.mainCount) else { return nil }
+        guard let raw = screenState.layout.frames(count: ids.count,
+                                                  in: usableRect(screen).insetBy(dx: -gap / 2, dy: -gap / 2),
+                                                  ratio: ratio, mainCount: screenState.mainCount) else { return nil }
         let slots = raw.map { $0.insetBy(dx: gap / 2, dy: gap / 2).pixelAligned }
         guard slots.allSatisfy({ [$0.minX, $0.minY, $0.width, $0.height].allSatisfy(\.isFinite) }) else { return nil }
         return (slots, gap)
     }
 
-    func windowRefusingRatio(_ ratio: CGFloat, from old: CGFloat, ids: [CGWindowID], on s: Screen, _ st: ScreenState) -> CGWindowID? {
+    func windowRefusingRatio(
+        _ ratio: CGFloat, from old: CGFloat, ids: [CGWindowID], on screen: Screen, _ screenState: ScreenState
+    ) -> CGWindowID? {
         guard ids.contains(where: { minSizes[$0] != nil }),
-              let (before, _) = rawSlots(ids, on: s, st, ratio: old),
-              let (after, _) = rawSlots(ids, on: s, st, ratio: ratio) else { return nil }
+              let (before, _) = rawSlots(ids, on: screen, screenState, ratio: old),
+              let (after, _) = rawSlots(ids, on: screen, screenState, ratio: ratio) else { return nil }
         return zip(ids, zip(before, after)).first { id, slots in
-            guard let m = minSizes[id] else { return false }
-            let (b, a) = slots
-            return (m.width > a.width + 1 && a.width < b.width - 1) || (m.height > a.height + 1 && a.height < b.height - 1)
+            guard let minimum = minSizes[id] else { return false }
+            let (previous, next) = slots
+            return (minimum.width > next.width + 1 && next.width < previous.width - 1)
+                || (minimum.height > next.height + 1 && next.height < previous.height - 1)
         }?.0
     }
 
-    func warnTooSmall(_ id: CGWindowID, on s: Screen?) {
-        let name = windows[id].flatMap { NSRunningApplication(processIdentifier: $0.pid)?.localizedName } ?? "This window"
-        HUD.shared.warn("\(name) can't get any smaller", on: s?.ns)
+    func warnTooSmall(_ id: CGWindowID, on screen: Screen?) {
+        let name = windows[id].flatMap { NSRunningApplication(processIdentifier: $0.pid)?.localizedName }
+            ?? "This window"
+        HUD.shared.warn("\(name) can't get any smaller", on: screen?.nsScreen)
     }
 
-    func tiled(on s: Screen) -> [CGWindowID] {
-        order.filter { visible.contains($0) && windows[$0]?.isFloating == false && workspaceOf[$0] == shown[s.uuid] }
-    }
-
-    func usableRect(_ s: Screen) -> CGRect {
-        var r = s.visible
-        if config.ignoreMenuBar { r = CGRect(x: r.minX, y: s.frame.minY, width: r.width, height: r.maxY - s.frame.minY) }
-        if config.disablePaddingOnBuiltinDisplay && s.isBuiltin { return r }
-        return CGRect(x: r.minX + config.paddingLeft, y: r.minY + config.paddingTop,
-                      width: r.width - config.paddingLeft - config.paddingRight,
-                      height: r.height - config.paddingTop - config.paddingBottom)
-    }
-
-    func state(for s: Screen) -> ScreenState {
-        state(workspace: workspaceKey(for: s))
-    }
-
-    func workspaceKey(for s: Screen) -> String {
-        shown[s.uuid] ?? Self.spaceWorkspace(display: s.uuid, space: Spaces.current(display: s.uuid))
-    }
-
-    func state(workspace key: String) -> ScreenState {
-        if let st = states[key] { return st }
-        let st = ScreenState(layout: config.layouts.first ?? .tall)
-        states[key] = st
-        return st
-    }
-
-    func screen(containing r: CGRect, in screens: [Screen] = Screen.all()) -> Screen? {
-        guard !r.isNull else { return screens.first }
-        return screens.max { a, b in
-            let ia = a.frame.intersection(r), ib = b.frame.intersection(r)
-            return (ia.isNull ? 0 : ia.width * ia.height) < (ib.isNull ? 0 : ib.width * ib.height)
+    func tiled(on screen: Screen) -> [CGWindowID] {
+        order.filter {
+            visible.contains($0) && windows[$0]?.isFloating == false && workspaceOf[$0] == shown[screen.uuid]
         }
     }
 
-    func screen(of w: Window, in screens: [Screen] = Screen.all()) -> Screen? {
-        if config.virtualWorkspaces || !w.isFloating, let u = workspaceOf[w.id].flatMap({ monitorOf[$0] }),
-           let s = screens.first(where: { $0.uuid == u }) { return s }
-        return screen(containing: animator.destination(w.id) ?? w.cachedFrame, in: screens)
+    func usableRect(_ screen: Screen) -> CGRect {
+        var rect = screen.visible
+        if config.ignoreMenuBar {
+            rect = CGRect(x: rect.minX, y: screen.frame.minY, width: rect.width, height: rect.maxY - screen.frame.minY)
+        }
+        if config.disablePaddingOnBuiltinDisplay && screen.isBuiltin { return rect }
+        return CGRect(x: rect.minX + config.paddingLeft, y: rect.minY + config.paddingTop,
+                      width: rect.width - config.paddingLeft - config.paddingRight,
+                      height: rect.height - config.paddingTop - config.paddingBottom)
+    }
+
+    func state(for screen: Screen) -> ScreenState {
+        state(workspace: workspaceKey(for: screen))
+    }
+
+    func workspaceKey(for screen: Screen) -> String {
+        shown[screen.uuid] ?? Self.spaceWorkspace(display: screen.uuid, space: Spaces.current(display: screen.uuid))
+    }
+
+    func state(workspace key: String) -> ScreenState {
+        if let existing = states[key] { return existing }
+        let created = ScreenState(layout: config.layouts.first ?? .tall)
+        states[key] = created
+        return created
+    }
+
+    func screen(containing rect: CGRect, in screens: [Screen] = Screen.all()) -> Screen? {
+        guard !rect.isNull else { return screens.first }
+        return screens.max { first, second in
+            let firstOverlap = first.frame.intersection(rect), secondOverlap = second.frame.intersection(rect)
+            return (firstOverlap.isNull ? 0 : firstOverlap.width * firstOverlap.height)
+                < (secondOverlap.isNull ? 0 : secondOverlap.width * secondOverlap.height)
+        }
+    }
+
+    func screen(of window: Window, in screens: [Screen] = Screen.all()) -> Screen? {
+        if config.virtualWorkspaces || !window.isFloating,
+           let uuid = workspaceOf[window.id].flatMap({ monitorOf[$0] }),
+           let match = screens.first(where: { $0.uuid == uuid }) { return match }
+        return screen(containing: animator.destination(window.id) ?? window.cachedFrame, in: screens)
     }
 
     func currentScreen() -> Screen? {
         let screens = Screen.all()
-        if let w = focusedWindow(), let s = screen(of: w, in: screens) { return s }
-        let p = mouseLocation()
-        return screens.first { $0.frame.contains(p) } ?? screens.first
+        if let window = focusedWindow(), let match = screen(of: window, in: screens) { return match }
+        let point = mouseLocation()
+        return screens.first { $0.frame.contains(point) } ?? screens.first
     }
 
     func focusedWindowState() -> (floating: Bool, fullscreen: Bool)? {
-        guard let w = focusedWindow() else { return nil }
-        let zoomed = screen(of: w).map { state(for: $0).zoomed == w.id } ?? false
-        return (w.isFloating, zoomed)
+        guard let window = focusedWindow() else { return nil }
+        let zoomed = screen(of: window).map { state(for: $0).zoomed == window.id } ?? false
+        return (window.isFloating, zoomed)
     }
 
     func focusedWindow() -> Window? {
-        if let p = pendingFocus {
+        if let pending = pendingFocus {
             let pid = frontmostPID()
-            if pid == p.pid || pid == p.origin, let w = windows[p.id], visible.contains(p.id) { return w }
+            if pid == pending.pid || pid == pending.origin, let window = windows[pending.id],
+               visible.contains(pending.id) { return window }
             cancelFocusRequest()
         }
         return reportedFocusedWindow()
@@ -101,19 +115,19 @@ extension WindowManager {
         return windows[id]
     }
 
-    func navFrame(_ w: Window) -> CGRect {
-        (!w.isFloating && tilingEnabled ? targets[w.id] : nil) ?? animator.destination(w.id) ?? w.cachedFrame
+    func navFrame(_ window: Window) -> CGRect {
+        (!window.isFloating && tilingEnabled ? targets[window.id] : nil)
+            ?? animator.destination(window.id) ?? window.cachedFrame
     }
 
-    func navItem(_ w: Window, in screens: [Screen]) -> FocusNavigation.Item {
-        .init(id: w.id, frame: navFrame(w), screen: screen(of: w, in: screens)?.uuid)
+    func navItem(_ window: Window, in screens: [Screen]) -> FocusNavigation.Item {
+        .init(id: window.id, frame: navFrame(window), screen: screen(of: window, in: screens)?.uuid)
     }
 
-    func neighbor(of w: Window, _ dir: Direction, among candidates: [Window]) -> Window? {
+    func neighbor(of window: Window, _ dir: Direction, among candidates: [Window]) -> Window? {
         let screens = Screen.all()
-        let id = FocusNavigation.neighbor(of: navItem(w, in: screens), dir,
+        let id = FocusNavigation.neighbor(of: navItem(window, in: screens), dir,
                                           among: candidates.map { navItem($0, in: screens) }, stamps: focusStamps)
         return id.flatMap { windows[$0] }
     }
-
 }

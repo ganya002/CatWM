@@ -2,15 +2,15 @@ import AppKit
 import SwiftUI
 
 extension ConfigOption {
-    var ui: SettingInfo {
+    var settingInfo: SettingInfo {
         guard let setting else { fatalError("config option \(key) has no Settings row") }
         return setting
     }
 
-    var resetValue: Double { number(Config()) * ui.scale }
+    var resetValue: Double { number(Config()) * settingInfo.scale }
 
     func sliderRange(holding value: Double) -> ClosedRange<Double> {
-        let r = ui.range ?? 0...1
-        return min(r.lowerBound, value)...max(r.upperBound, value)
+        let range = settingInfo.range ?? 0...1
+        return min(range.lowerBound, value)...max(range.upperBound, value)
     }
 }
