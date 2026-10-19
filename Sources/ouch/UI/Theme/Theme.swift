@@ -135,6 +135,7 @@ enum Theme {
     }
     static let rowHeight: CGFloat = 30
     static let controlHeight: CGFloat = 28
+ static let keycapSize: CGFloat = 20
     static let menuWidth: CGFloat = 272
     static let submenuWidth: CGFloat = 232
 

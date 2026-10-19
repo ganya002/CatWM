@@ -23,7 +23,7 @@ struct Kbd: View {
                 .font(Theme.keys(11.5, .medium)).oneLine()
                 .foregroundStyle(Theme.inkMuted)
                 .padding(.horizontal, 5)
-                .frame(minWidth: 20, minHeight: 20)
+                .frame(minWidth: Theme.keycapSize, minHeight: Theme.keycapSize)
                 .background(RoundedRectangle(cornerRadius: Theme.Radius.extraSmall, style: .continuous)
                     .fill(Theme.well))
         } else {
