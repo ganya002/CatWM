@@ -43,6 +43,7 @@ final class WindowManager {
     var displayOf: [CGWindowID: String] = [:]
     var workspaceMoves: Set<CGWindowID> = []
     var snapNextPlacement: Set<CGWindowID> = []
+    var restoredEarly: [CGWindowID: Date] = [:]
     var present: Set<CGWindowID> = []
     struct PendingFocus {
         let id: CGWindowID

@@ -29,7 +29,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let watcher = PermissionWatcher.shared
         watcher.start()
         let trusted = watcher.granted.contains(.accessibility)
-        if trusted { WindowManager.shared.start() } else { Log.info("launch: Accessibility not granted") }
+        if trusted {
+            WindowManager.shared.start()
+        } else {
+            Log.info("launch: Accessibility not granted")
+            WindowManager.shared.prewarm()
+        }
         if Onboarding.shouldShow(firstRun: firstRun, trusted: trusted) || CommandLine.arguments.contains("--onboarding") {
             Onboarding.shared.start()
         } else if !trusted {
