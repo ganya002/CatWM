@@ -5,7 +5,11 @@ Tools/install-hooks.sh
 Tools/check-style.sh
 CONFIG=release
 if [ "$1" = "--dev" ]; then CONFIG=debug; fi
-swift build -c "$CONFIG"
+if [ "$CONFIG" = "debug" ]; then
+  swift build -c debug --build-system native
+else
+  swift build -c release
+fi
 pkill -x ouch 2>/dev/null || true
 pkill -x Hyprthyst 2>/dev/null || true
 APP=build/ouch.app
