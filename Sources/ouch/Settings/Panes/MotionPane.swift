@@ -17,12 +17,7 @@ struct MotionPane: View {
     static let presets: [Preset] = [
         Preset(name: "None", animate: false),
         Preset(name: "Snappy", duration: 0.12),
-        Preset(name: "Smooth", duration: 0.2),
         Preset(name: "Relaxed", curve: .easeInOut, duration: 0.35),
-        Preset(name: "Springy", curve: .spring, duration: 0.5, bounce: 0.55),
-        Preset(name: "Wobbly", curve: .spring, duration: 0.8, bounce: 0.85),
-        Preset(name: "Bouncy", curve: .bounce, duration: 0.6, bounce: 0.5),
-        Preset(name: "Playful", curve: .overshoot, duration: 0.35, bounce: 0.6),
     ]
 
     private func matches(_ p: Preset, _ c: Config) -> Bool {
@@ -35,32 +30,31 @@ struct MotionPane: View {
         let c = doc.config
         VStack(alignment: .leading, spacing: 30) {
             OGroup("Style") {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
-                    ForEach(Self.presets, id: \.name) { p in
-                        PresetTile(preset: p, selected: matches(p, c)) {
-                            doc.config.animate = p.animate
-                            if p.animate {
-                                doc.config.animationCurve = p.curve
-                                doc.config.animationDuration = p.duration
-                                if p.curve.usesBounce { doc.config.animationBounce = p.bounce }
+                HStack(spacing: 12) {
+                    VStack(spacing: 8) {
+                        ForEach(Self.presets, id: \.name) { p in
+                            PresetTile(preset: p, selected: matches(p, c)) {
+                                doc.config.animate = p.animate
+                                if p.animate {
+                                    doc.config.animationCurve = p.curve
+                                    doc.config.animationDuration = p.duration
+                                    if p.curve.usesBounce { doc.config.animationBounce = p.bounce }
+                                }
+                                play()
                             }
-                            play()
                         }
                     }
+                    .frame(width: 190)
+                    .setting(MotionPane.searchStyle.id, ui)
+                    preview
+                        .setting(MotionPane.searchPreview.id, ui)
                 }
+                .frame(height: 170)
                 .padding(.vertical, 10)
-            }
-            .setting(MotionPane.searchStyle.id, ui)
-
-            OGroup("Preview") {
-                preview
-                    .frame(height: 150)
-                    .padding(.vertical, 10)
                 ORow("Play it again", description: "Plays with exactly the curve windows use") {
                     OButton("Play", icon: "play.fill", size: .sm, action: play)
                 }
             }
-            .setting(MotionPane.searchPreview.id, ui)
 
             OGroup("Feel") {
                 OptionRows(pane: .motion, section: "Feel", doc: doc, ui: ui, onCommit: play)
@@ -102,15 +96,14 @@ struct MotionPane: View {
     private static func points(_ v: Double...) -> String { v.map { String(format: "%g", $0) }.joined(separator: ", ") }
 
     private func play() {
-        let c = doc.config
-        withAnimation(c.animate ? Animation(CurveAnimation(curve: c.animationCurve, bounce: c.animationBounce, duration: c.animationDuration)) : nil) {
+        withAnimation(PanelMotion.windowAnimation) {
             ui.previewFlipped.toggle()
         }
     }
 }
 
 extension MotionPane {
-    static let searchStyle = SettingEntry(id: "motion.style", title: "Animation style", pane: .motion, keywords: "preset snappy smooth springy bouncy")
+    static let searchStyle = SettingEntry(id: "motion.style", title: "Animation style", pane: .motion, keywords: "preset snappy relaxed none")
     static let searchPreview = SettingEntry(id: "motion.preview", title: "Animation preview", pane: .motion, keywords: "play")
     static let searchBezier = SettingEntry(id: "motion.bezier", title: "Bezier control points", pane: .motion, advanced: true, keywords: "cubic custom curve")
 }

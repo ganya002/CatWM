@@ -21,19 +21,30 @@ enum PanelMotion: String, CaseIterable {
         }
     }
 
-    var outDuration: Double { self == .focus ? 0.22 : self == .pop ? 0.2 : 0.18 }
-
-    func animation(in shown: Bool) -> Animation {
-        guard shown else {
-            return self == .focus ? .easeIn(duration: outDuration) : .timingCurve(0.4, 0, 1, 1, duration: outDuration)
-        }
+    var outDuration: Double {
         switch self {
-        case .rise: return .spring(response: 0.38, dampingFraction: 0.86)
-        case .pop: return .spring(response: 0.42, dampingFraction: 0.58)
-        case .focus: return .timingCurve(0.16, 1, 0.3, 1, duration: 0.42)
-        case .tile: return .linear(duration: Self.tileDuration)
-        case .draw: return .linear(duration: 0.45)
+        case .rise, .pop, .focus: Self.windowDuration
+        default: 0.18
         }
+    }
+
+    func animation(in shown: Bool) -> Animation? {
+        switch self {
+        case .rise, .pop, .focus: Self.windowAnimation
+        case .tile: shown ? .linear(duration: Self.tileDuration) : .timingCurve(0.4, 0, 1, 1, duration: outDuration)
+        case .draw: shown ? .linear(duration: 0.45) : .timingCurve(0.4, 0, 1, 1, duration: outDuration)
+        }
+    }
+
+    static var windowDuration: Double {
+        let c = WindowManager.shared.config
+        return c.animate ? c.animationDuration : 0
+    }
+
+    static var windowAnimation: Animation? {
+        let c = WindowManager.shared.config
+        guard c.animate else { return nil }
+        return Animation(CurveAnimation(curve: c.animationCurve, bounce: c.animationBounce, duration: c.animationDuration))
     }
 
     static var tileDuration: Double { max(0.3, WindowManager.shared.config.animationDuration * 1.7) }
