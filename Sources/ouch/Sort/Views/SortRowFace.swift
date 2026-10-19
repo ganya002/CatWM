@@ -11,8 +11,9 @@ struct SortRowFace: View {
                 if let icon = item.icon {
                     Image(nsImage: icon).resizable().interpolation(.high)
                 } else {
-                    RoundedRectangle(cornerRadius: Theme.Radius.xs, style: .continuous).fill(Theme.tint)
-                        .overlay(Text(String(item.app.prefix(1))).font(Theme.body(10.5, .medium)).foregroundStyle(Theme.ink))
+                    RoundedRectangle(cornerRadius: Theme.Radius.extraSmall, style: .continuous).fill(Theme.tint)
+                        .overlay(Text(String(item.app.prefix(1)))
+                            .font(Theme.body(10.5, .medium)).foregroundStyle(Theme.ink))
                 }
             }
             .frame(width: 20, height: 20)

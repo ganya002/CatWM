@@ -46,18 +46,24 @@ extension FocusDim {
     func observe() {
         guard !observing else { return }
         observing = true
-        let ws = NSWorkspace.shared.notificationCenter
+        let center = NSWorkspace.shared.notificationCenter
         for name in [NSWorkspace.didActivateApplicationNotification, NSWorkspace.activeSpaceDidChangeNotification,
                      NSWorkspace.didHideApplicationNotification, NSWorkspace.didUnhideApplicationNotification,
                      NSWorkspace.didTerminateApplicationNotification] {
-            ws.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in self?.update() }
+            notificationObservers.append(center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                self?.update()
+            })
         }
-        NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
+        notificationObservers.append(NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
+        ) { [weak self] _ in
             self?.rebuild()
-        }
-        NotificationCenter.default.addObserver(forName: NSWindow.didBecomeKeyNotification, object: nil, queue: .main) { [weak self] _ in
+        })
+        notificationObservers.append(NotificationCenter.default.addObserver(
+            forName: NSWindow.didBecomeKeyNotification, object: nil, queue: .main
+        ) { [weak self] _ in
             self?.update()
-        }
+        })
         NSEvent.addGlobalMonitorForEvents(matching: .leftMouseUp) { [weak self] _ in self?.update() }
     }
 
@@ -67,17 +73,17 @@ extension FocusDim {
         layoutPanels()
         let level = NSWindow.Level(rawValue: layer)
         if id == target {
-            for p in pairs.values { p.front.level = level; p.front.order(.below, relativeTo: Int(id)) }
+            for pair in pairs.values { pair.front.level = level; pair.front.order(.below, relativeTo: Int(id)) }
             return
         }
         let first = target == nil
         target = id
         generation += 1
         let gen = generation
-        for (display, var p) in pairs {
-            swap(&p.front, &p.spare)
-            pairs[display] = p
-            let incoming = p.front, outgoing = p.spare
+        for (display, var pair) in pairs {
+            swap(&pair.front, &pair.spare)
+            pairs[display] = pair
+            let incoming = pair.front, outgoing = pair.spare
             incoming.level = level
             if first || !incoming.isVisible { incoming.alphaValue = 0 }
             incoming.order(.below, relativeTo: Int(id))
@@ -112,14 +118,15 @@ extension FocusDim {
         guard let app = NSWorkspace.shared.frontmostApplication else { return nil }
         var id: CGWindowID?
         if app.processIdentifier == getpid() {
-            if let n = NSApp.keyWindow?.windowNumber, n > 0, !owns(n) { id = CGWindowID(n) }
+            if let number = NSApp.keyWindow?.windowNumber, number > 0, !owns(number) { id = CGWindowID(number) }
         } else if let report = WindowManager.shared.reportedFocus, report.pid == app.processIdentifier {
             id = report.id
         }
         if id == nil { id = CGWindowInfo.onScreen().first { $0.pid == app.processIdentifier }?.id }
         guard let id, let info = (CGWindowListCopyWindowInfo(.optionIncludingWindow, id) as? [[String: Any]])?.first,
               info[kCGWindowIsOnscreen as String] as? Bool == true,
-              let b = info[kCGWindowBounds as String] as? NSDictionary, let bounds = CGRect(dictionaryRepresentation: b),
+              let rawBounds = info[kCGWindowBounds as String] as? [String: Any],
+              let bounds = CGRect(dictionaryRepresentation: rawBounds as CFDictionary),
               bounds.width >= 60, bounds.height >= 40,
               (info[kCGWindowAlpha as String] as? Double ?? 1) > 0.01 else { return nil }
         let layer = info[kCGWindowLayer as String] as? Int ?? 0
@@ -128,9 +135,8 @@ extension FocusDim {
         return (id, layer)
     }
 
-    func flipped(_ r: CGRect) -> CGRect {
-        let h = NSScreen.screens.first?.frame.height ?? 0
-        return CGRect(x: r.minX, y: h - r.maxY, width: r.width, height: r.height)
+    func flipped(_ rect: CGRect) -> CGRect {
+        let height = NSScreen.screens.first?.frame.height ?? 0
+        return CGRect(x: rect.minX, y: height - rect.maxY, width: rect.width, height: rect.height)
     }
-
 }

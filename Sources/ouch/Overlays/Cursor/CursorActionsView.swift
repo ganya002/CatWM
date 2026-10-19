@@ -36,7 +36,8 @@ struct CursorActionsView: View {
         return nil
     }
 
-    static func rowUnderPointer(x: CGFloat, y: CGFloat, width: CGFloat, actions: [QuickAction], visible: Range<CGFloat>) -> String? {
+    static func rowUnderPointer(x: CGFloat, y: CGFloat, width: CGFloat, actions: [QuickAction],
+                                visible: Range<CGFloat>) -> String? {
         guard x >= 0, x <= width, visible.contains(y) else { return nil }
         return rowID(at: y, actions: actions)
     }
@@ -62,7 +63,7 @@ struct CursorActionsView: View {
             }
             .padding(Self.inset - 4)
             .frame(width: size.width, alignment: .leading)
-            .surface(.md)
+            .surface(.medium)
             .modifier(MenuEntrance(shown: model.open, from: grow))
             .allowsHitTesting(model.open)
             .offset(x: Self.margin, y: Self.margin)
@@ -86,9 +87,10 @@ struct CursorActionsView: View {
                     ForEach(Array(model.actions.enumerated()), id: \.element.id) { i, action in
                         if i == Self.dividerIndex(model.actions) {
                             Rectangle().fill(Theme.hairline).frame(height: 1)
-                                .padding(.vertical, Theme.Space.xs).padding(.horizontal, Theme.Space.xs)
+                                .padding(.vertical, Theme.Space.extraSmall).padding(.horizontal, Theme.Space.extraSmall)
                         }
-                        ActionRow(action: action, hovered: model.hovered == action.id, shown: model.open, index: min(i, 8),
+                        ActionRow(action: action, hovered: model.hovered == action.id, shown: model.open,
+                                  index: min(i, 8),
                                   remove: action.remove == nil ? nil : { model.onDelete?(action) }) {
                             model.onPick?(action)
                         }
@@ -110,13 +112,13 @@ struct CursorActionsView: View {
     }
 
     private var editor: some View {
-        VStack(alignment: .leading, spacing: Theme.Space.sm) {
+        VStack(alignment: .leading, spacing: Theme.Space.small) {
             TemplateSaveRow(name: $model.templateName, busy: !model.snapshotReady, problem: model.nameProblem,
                             save: { model.onSave?() }, cancel: { model.onCancelSave?() })
             Text(editorHint).textStyle(.caption).foregroundStyle(Theme.inkMuted)
                 .lineLimit(2).frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(Theme.Space.sm)
+        .padding(Theme.Space.small)
         .frame(height: Theme.controlHeight + Theme.Space.xxl * 2, alignment: .top)
     }
 
@@ -124,24 +126,28 @@ struct CursorActionsView: View {
         if let error = model.saveError { return error }
         if !model.templateName.isEmpty, let problem = model.nameProblem { return problem }
         if !model.snapshotReady { return "Reading windows…" }
-        if !model.capturing, model.templateDraft?.screenshot == nil { return "No screenshot. Allow screen recording to capture previews." }
+        if !model.capturing, model.templateDraft?.screenshot == nil {
+            return "No screenshot. Allow screen recording to capture previews."
+        }
         return "Return to save · Esc to cancel"
     }
 }
 
 private struct RowHoverAnchor: NSViewRepresentable {
-    func makeNSView(context: Context) -> RowHoverView { RowHoverView() }
+    func makeNSView(context _: Context) -> RowHoverView { RowHoverView() }
 
-    func updateNSView(_ view: RowHoverView, context: Context) {
+    func updateNSView(_ view: RowHoverView, context _: Context) {
         CursorActions.shared.rowHover = view
     }
 
-    func sizeThatFits(_ proposal: ProposedViewSize, nsView: RowHoverView, context: Context) -> CGSize? {
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView _: RowHoverView, context _: Context) -> CGSize? {
         proposal.replacingUnspecifiedDimensions(by: CGSize(width: Theme.submenuWidth, height: 0))
     }
 }
 
 private final class RowHoverView: PassThroughView {
     override var isFlipped: Bool { true }
-    override var intrinsicContentSize: NSSize { NSSize(width: NSView.noIntrinsicMetric, height: NSView.noIntrinsicMetric) }
+    override var intrinsicContentSize: NSSize {
+        NSSize(width: NSView.noIntrinsicMetric, height: NSView.noIntrinsicMetric)
+    }
 }

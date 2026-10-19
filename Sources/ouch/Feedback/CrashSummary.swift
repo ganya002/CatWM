@@ -6,7 +6,7 @@ struct CrashSummary {
     let frame: String?
     let date: Date
 
-    var headline: String { [exception, frame].compactMap { $0 }.joined(separator: " in ") }
+    var headline: String { [exception, frame].compactMap(\.self).joined(separator: " in ") }
     var time: String { DateFormatter.localizedString(from: date, dateStyle: .none, timeStyle: .short) }
 
     init?(_ url: URL) {
@@ -21,8 +21,8 @@ struct CrashSummary {
         let threads = body["threads"] as? [[String: Any]] ?? []
         let faulting = body["faultingThread"] as? Int ?? 0
         let frames = faulting < threads.count ? threads[faulting]["frames"] as? [[String: Any]] ?? [] : []
-        let ours = frames.first { f in
-            let i = f["imageIndex"] as? Int ?? -1
+        let ours = frames.first { frame in
+            let i = frame["imageIndex"] as? Int ?? -1
             return i >= 0 && i < images.count && images[i]["name"] as? String == "ouch"
         }
         frame = (ours ?? frames.first)?["symbol"] as? String

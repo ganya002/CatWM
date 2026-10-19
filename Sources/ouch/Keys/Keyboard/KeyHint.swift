@@ -1,7 +1,7 @@
 import AppKit
-import SwiftUI
 import MacKeysCore
 import MacKeysUI
+import SwiftUI
 
 struct KeyHint: Identifiable, Equatable {
     let code: UInt16
@@ -19,59 +19,64 @@ struct KeyHint: Identifiable, Equatable {
         self.arg = arg
         self.title = title
     }
-    init(_ a: ConfigDocument.KeyAction) {
-        self.init(code: a.code, dispatcher: a.row.dispatcher, arg: a.arg, title: a.title)
+    init(_ action: ConfigDocument.KeyAction) {
+        self.init(code: action.code, dispatcher: action.row.dispatcher, arg: action.arg, title: action.title)
     }
-    init(_ b: KeyBinding) {
-        let match = Actions.match(BindRow(mods: "", key: "", dispatcher: b.dispatcher, args: b.arg))
-        let title = b.dispatcher == "exec" ? (b.arg.isEmpty ? "Run Command" : "Run “\(b.arg)”")
-            : match?.title ?? "\(b.dispatcher) \(b.arg)".trimmingCharacters(in: .whitespaces)
-        self.init(code: b.keyCode, dispatcher: b.dispatcher, arg: b.arg, title: title)
+    init(_ bind: KeyBinding) {
+        let match = Actions.match(BindRow(mods: "", key: "", dispatcher: bind.dispatcher, args: bind.arg))
+        let title = bind.dispatcher == "exec" ? (bind.arg.isEmpty ? "Run Command" : "Run “\(bind.arg)”")
+            : match?.title ?? "\(bind.dispatcher) \(bind.arg)".trimmingCharacters(in: .whitespaces)
+        self.init(code: bind.keyCode, dispatcher: bind.dispatcher, arg: bind.arg, title: title)
     }
 
-    static func normalized(_ dispatcher: String, _ arg: String) -> (d: String, a: String) {
-        var d = dispatcher.lowercased(), a = arg.trimmingCharacters(in: .whitespaces).lowercased()
-        if d == "swapwindow" { d = "movewindow" }
-        if d == "movewindowtomonitor" { d = "movewindow"; a = "mon:" + a }
-        if d == "setlayout" { d = "layout" }
-        if d == "layoutmsg" {
-            switch a {
-            case "cyclenext": d = "cyclenext"; a = ""
-            case "cycleprev": d = "cyclenext"; a = "prev"
-            case "swapnext": d = "swapnext"; a = ""
-            case "swapprev": d = "swapnext"; a = "prev"
-            case "orientationnext": d = "cyclelayout"; a = "next"
-            case "orientationprev": d = "cyclelayout"; a = "prev"
-            default: if a.hasPrefix("mfact") { d = "splitratio"; a = String(a.dropFirst(5)).trimmingCharacters(in: .whitespaces) }
+    static func normalized(_ dispatcher: String, _ arg: String) -> (command: String, argument: String) {
+        var command = dispatcher.lowercased(), argument = arg.trimmingCharacters(in: .whitespaces).lowercased()
+        if command == "swapwindow" { command = "movewindow" }
+        if command == "movewindowtomonitor" { command = "movewindow"; argument = "mon:" + argument }
+        if command == "setlayout" { command = "layout" }
+        if command == "layoutmsg" {
+            switch argument {
+            case "cyclenext": command = "cyclenext"; argument = ""
+            case "cycleprev": command = "cyclenext"; argument = "prev"
+            case "swapnext": command = "swapnext"; argument = ""
+            case "swapprev": command = "swapnext"; argument = "prev"
+            case "orientationnext": command = "cyclelayout"; argument = "next"
+            case "orientationprev": command = "cyclelayout"; argument = "prev"
+            default:
+                if argument.hasPrefix("mfact") {
+                    command = "splitratio"
+                    argument = String(argument.dropFirst(5)).trimmingCharacters(in: .whitespaces)
+                }
             }
         }
-        return (d, a)
+        return (command, argument)
     }
 
     static func label(dispatcher: String, arg: String) -> String {
-        let (d, a) = normalized(dispatcher, arg)
-        if let hint = PointerActions.hint(d) { return hint }
+        let (command, argument) = normalized(dispatcher, arg)
+        if let hint = PointerActions.hint(command) { return hint }
         let arrows = Direction.hintArrows
-        let back = a.hasPrefix("prev") || a.hasPrefix("-") || a.hasPrefix("e-")
-        func screen(_ s: String) -> String {
-            if let arrow = arrows[s] { return "Screen \(arrow)" }
-            return s.hasPrefix("-") ? "‹ Screen" : "Screen ›"
+        let back = argument.hasPrefix("prev") || argument.hasPrefix("-") || argument.hasPrefix("e-")
+        func screen(_ target: String) -> String {
+            if let arrow = arrows[target] { return "Screen \(arrow)" }
+            return target.hasPrefix("-") ? "‹ Screen" : "Screen ›"
         }
-        switch d {
-        case "movefocus": return arrows[a] ?? "Focus"
-        case "movewindow": return a.hasPrefix("mon:") ? screen(String(a.dropFirst(4))) : arrows[a] ?? "Move"
-        case "focusmonitor": return screen(a)
+        switch command {
+        case "movefocus": return arrows[argument] ?? "Focus"
+        case "movewindow":
+            return argument.hasPrefix("mon:") ? screen(String(argument.dropFirst(4))) : arrows[argument] ?? "Move"
+        case "focusmonitor": return screen(argument)
         case "cyclenext": return back ? "‹ Cycle" : "Cycle"
         case "swapnext": return back ? "‹ Swap" : "Swap ›"
         case "workspace", "movetoworkspace", "movetoworkspacesilent":
-            if let n = Int(a) { return "\(n)" }
-            if a == "previous" { return "Back" }
+            if let number = Int(argument) { return "\(number)" }
+            if argument == "previous" { return "Back" }
             return back ? "‹ Prev" : "Next ›"
         case "cyclelayout": return back ? "‹ Layout" : "Layout ›"
-        case "layout": return Layout(rawValue: a)?.title ?? a.capitalized
-        case "splitratio": return a.hasPrefix("-") ? "Main −" : "Main +"
+        case "layout": return Layout(rawValue: argument)?.title ?? argument.capitalized
+        case "splitratio": return argument.hasPrefix("-") ? "Main −" : "Main +"
         case "layoutmsg":
-            switch a {
+            switch argument {
             case "swapwithmaster": return "Swap"
             case "focusmaster": return "Main"
             case "addmaster": return "Mains +"
@@ -84,9 +89,9 @@ struct KeyHint: Identifiable, Equatable {
         case "exec": return "Run"
         case "exit": return "Quit"
         case "sethomespace": return "Home"
-        case "submap": return a == "reset" ? "Exit" : a.capitalized
+        case "submap": return argument == "reset" ? "Exit" : argument.capitalized
         default:
-            var name = Substring(d)
+            var name = Substring(command)
             for prefix in ["toggle", "move", "focus", "set"] where name.hasPrefix(prefix) && name.count > prefix.count {
                 name = name.dropFirst(prefix.count)
                 break

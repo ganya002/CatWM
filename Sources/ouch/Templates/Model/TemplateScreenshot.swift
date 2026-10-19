@@ -6,7 +6,9 @@ enum TemplateScreenshot {
     private static let slot = TemplateCaptureSlot<Data?>()
 
     static func capture() async -> Data? {
-        guard case .finished(let data) = await slot.run(within: timeout, operation: { await take() }) else { return nil }
+        guard case .finished(let data) = await slot.run(within: timeout, operation: { await take() }) else {
+            return nil
+        }
         return data
     }
 
@@ -15,7 +17,8 @@ enum TemplateScreenshot {
         guard allowed else { return nil }
         do {
             let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
-            guard let display = content.displays.first(where: { $0.displayID == CGMainDisplayID() }) ?? content.displays.first else { return nil }
+            guard let display = content.displays.first(where: { $0.displayID == CGMainDisplayID() })
+                    ?? content.displays.first else { return nil }
             let excluded = content.applications.filter { $0.processID == getpid() }
             let filter = SCContentFilter(display: display, excludingApplications: excluded, exceptingWindows: [])
             let configuration = SCStreamConfiguration()

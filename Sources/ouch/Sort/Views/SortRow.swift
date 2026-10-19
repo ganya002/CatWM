@@ -13,7 +13,7 @@ struct SortRow: View {
         SortRowFace(item: item, closing: closing)
             .padding(.leading, indented ? 19 : 5).padding(.trailing, 8)
             .frame(height: SortMetrics.rowHeight)
-            .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
+            .background(RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
                 .fill(closing ? (pointed ? Theme.hover : .clear) : lit ? Theme.accentSoft : .clear))
             .overlay(alignment: .trailing) {
                 if pointed && model.drag == nil {
@@ -27,9 +27,12 @@ struct SortRow: View {
             .opacity(model.drag?.id == item.id ? 0.3 : 1)
             .contentShape(Rectangle())
             .zone(.row(item.id))
-            .onHover { on in
-                if on { model.hover = item.id }
-                else if model.hover == item.id, model.drag == nil { model.hover = nil }
+            .onHover { inside in
+                if inside {
+                    model.hover = item.id
+                } else if model.hover == item.id, model.drag == nil {
+                    model.hover = nil
+                }
             }
             .onTapGesture { if closing { model.restore(item.id) } else { model.selected = item.id } }
             .gesture(DragGesture(minimumDistance: 4, coordinateSpace: .named("sort"))

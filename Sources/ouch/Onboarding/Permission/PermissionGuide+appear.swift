@@ -30,34 +30,34 @@ extension PermissionGuide {
     }
 
     func makePanel() -> NSPanel {
-        let p = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 300, height: 10), // style-ok: titled glass permission guide
-                        styleMask: [.titled, .fullSizeContentView, .nonactivatingPanel, .utilityWindow],
-                        backing: .buffered, defer: false)
-        p.clearTitlebar(hiding: [.closeButton, .miniaturizeButton, .zoomButton])
-        p.isMovableByWindowBackground = true
-        p.isReleasedWhenClosed = false
-        p.hidesOnDeactivate = false
-        p.level = .floating
-        p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
+        let panel = NSPanel( // style-ok: titled glass permission guide
+            contentRect: NSRect(x: 0, y: 0, width: 300, height: 10),
+            styleMask: [.titled, .fullSizeContentView, .nonactivatingPanel, .utilityWindow],
+            backing: .buffered, defer: false)
+        panel.clearTitlebar(hiding: [.closeButton, .miniaturizeButton, .zoomButton])
+        panel.isMovableByWindowBackground = true
+        panel.isReleasedWhenClosed = false
+        panel.hidesOnDeactivate = false
+        panel.level = .floating
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
         let host = NSHostingView(rootView: GuideView(model: model, dismiss: { [weak self] in self?.hide() }))
         host.sizingOptions = [.intrinsicContentSize]
         host.safeAreaRegions = []
         if #available(macOS 26.0, *) {
-            p.isOpaque = false
-            p.backgroundColor = .clear
+            panel.isOpaque = false
+            panel.backgroundColor = .clear
             let glass = NSGlassEffectView()
-            glass.cornerRadius = Theme.Radius.xl
+            glass.cornerRadius = Theme.Radius.extraLarge
             glass.contentView = host
-            p.contentView = glass
+            panel.contentView = glass
         } else {
-            p.backgroundColor = Theme.ns(\.surfaceRaised)
-            p.contentView = host
+            panel.backgroundColor = Theme.ns(\.surfaceRaised)
+            panel.contentView = host
         }
-        p.setContentSize(host.fittingSize)
+        panel.setContentSize(host.fittingSize)
         self.host = host
-        return p
+        return panel
     }
 
     static func alertFrame() -> NSRect? { Snapshot().alert }
-
 }

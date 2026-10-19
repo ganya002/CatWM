@@ -1,11 +1,11 @@
 import SwiftUI
 
 struct TemplatesPane: View {
-    @ObservedObject var ui: SettingsUI
+    @ObservedObject var settingsUI: SettingsUI
     @ObservedObject private var library = TemplateLibrary.shared
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Space.xl) {
+        VStack(alignment: .leading, spacing: Theme.Space.extraLarge) {
             if let error = library.error { OStatus(kind: .danger, text: error) }
             if library.restoring {
                 ORow("Opening template", description: library.status) {
@@ -15,7 +15,8 @@ struct TemplatesPane: View {
 
             OGroup("Saved templates") {
                 if library.templates.isEmpty {
-                    ORow("No templates yet", description: "In window mode, open cursor actions and choose Save workspace.") { EmptyView() }
+                    ORow("No templates yet",
+                         description: "In window mode, open cursor actions and choose Save workspace.") { EmptyView() }
                 }
                 ForEach(library.templates) { template in
                     TemplateRow(name: template.name, summary: template.summary, screenshot: template.screenshot,
@@ -25,12 +26,13 @@ struct TemplatesPane: View {
                                 update: { library.update(template) }, delete: { library.delete(template) })
                 }
             }
-            .setting(Self.searchSaved.id, ui)
+            .setting(Self.searchSaved.id, settingsUI)
         }
         .sheet(item: $library.preview) { template in
             TemplatePreviewSheet(template: template) { library.preview = nil }
         }
     }
 
-    static let searchSaved = SettingEntry(id: "templates.saved", title: "Saved workspace templates", pane: .templates, keywords: "open restore rename delete displays quick actions")
+    static let searchSaved = SettingEntry(id: "templates.saved", title: "Saved workspace templates", pane: .templates,
+                                          keywords: "open restore rename delete displays quick actions")
 }

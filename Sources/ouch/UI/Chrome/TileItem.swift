@@ -9,7 +9,7 @@ struct TileItem: ViewModifier {
 
     func body(content: Content) -> some View {
         if style == .tile && !reduceMotion {
-            content.modifier(TileProgress(t: shown ? 1 : 0, shown: shown, surface: false, spread: spread))
+            content.modifier(TileProgress(progress: shown ? 1 : 0, shown: shown, surface: false, spread: spread))
                 .animation(style.animation(in: shown), value: shown)
         } else {
             content

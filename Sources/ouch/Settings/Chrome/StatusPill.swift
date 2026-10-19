@@ -36,7 +36,7 @@ struct StatusPill: View {
                     if let message { label(message).transition(.opacity) }
                     if message != nil && undo { Rectangle().fill(Theme.hairline).frame(width: 1, height: 16) }
                     if undo {
-                        OButton("Undo All Changes", icon: "arrow.uturn.backward", size: .sm) { doc.undoAllChanges() }
+                        OButton("Undo All Changes", icon: "arrow.uturn.backward", size: .small) { doc.undoAllChanges() }
                         .tooltip("Go back to how things were when you opened Settings")
                     }
                 }
@@ -54,18 +54,18 @@ struct StatusPill: View {
         }
     }
 
-    @ViewBuilder private func label(_ m: Message) -> some View {
-        switch m {
+    @ViewBuilder private func label(_ message: Message) -> some View {
+        switch message {
         case .error(let err):
             OStatus(kind: .danger, text: "Couldn't save: \(err)").tooltip(err)
-        case .problems(let n):
-            OStatus(kind: .warning, text: "Fix \(n) shortcut\(n == 1 ? "" : "s") to save")
-        case .skipped(let n):
-            OStatus(kind: .warning, text: "\(n) line\(n == 1 ? "" : "s") in the config file skipped")
+        case .problems(let count):
+            OStatus(kind: .warning, text: "Fix \(count) shortcut\(count == 1 ? "" : "s") to save")
+        case .skipped(let count):
+            OStatus(kind: .warning, text: "\(count) line\(count == 1 ? "" : "s") in the config file skipped")
                 .tooltip(doc.fileErrors.joined(separator: "\n"))
         case .saved:
             HStack(spacing: 6) {
-                Image(systemName: "checkmark.circle.fill").font(Theme.symbol(Theme.Icon.sm, .semibold))
+                Image(systemName: "checkmark.circle.fill").font(Theme.symbol(Theme.Icon.small, .semibold))
                     .foregroundStyle(Theme.success)
                 Text("Saved").font(Theme.body(12.5, .medium)).foregroundStyle(Theme.inkMuted)
             }

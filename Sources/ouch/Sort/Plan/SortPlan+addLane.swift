@@ -14,51 +14,54 @@ extension SortPlan {
         } else {
             return nil
         }
-        let at = lanes.firstIndex { Self.order(name, $0.ws) } ?? lanes.count
-        lanes.insert(SortLane(ws: name, name: "", layout: layout, ids: []), at: at)
-        return at
+        let position = lanes.firstIndex { Self.order(name, $0.workspace) } ?? lanes.count
+        lanes.insert(SortLane(workspace: name, name: "", layout: layout, ids: []), at: position)
+        return position
     }
 
     mutating func closeLane(at i: Int) -> Int? {
         guard lanes.count > 1, lanes.indices.contains(i) else { return nil }
         let lane = lanes.remove(at: i)
         guard !lane.ids.isEmpty else { return 0 }
-        closedLanes.append(SortClosedLane(ws: lane.ws, name: lane.name, layout: lane.layout, ids: lane.ids))
+        closedLanes.append(SortClosedLane(workspace: lane.workspace, name: lane.name,
+                                          layout: lane.layout, ids: lane.ids))
         close += lane.ids
         return lane.ids.count
     }
 
     mutating func restore(_ id: CGWindowID, avoiding other: Set<String>) {
         guard isClosing(id) else { return }
-        if let g = closedLanes.first(where: { $0.ids.contains(id) }) { return reopen(g.id, avoiding: other) }
-        if let o = origin[id], let l = lanes.firstIndex(where: { $0.ws == o.ws }) {
-            place(id, inLane: l, at: o.at)
+        if let group = closedLanes.first(where: { $0.ids.contains(id) }) { return reopen(group.id, avoiding: other) }
+        if let from = origin[id], let laneIndex = lanes.firstIndex(where: { $0.workspace == from.workspace }) {
+            place(id, inLane: laneIndex, at: from.at)
         } else {
             place(id, inLane: activeLane)
         }
     }
 
     mutating func reopen(_ group: UUID, avoiding other: Set<String>) {
-        guard let g = closedLanes.first(where: { $0.id == group }) else { return }
+        guard let closed = closedLanes.first(where: { $0.id == group }) else { return }
         let free = available(avoiding: other)
-        guard lanes.count < Self.maxLanes, let ws = free.contains(g.ws) ? g.ws : free.first else {
-            for id in g.ids { place(id, inLane: activeLane) }
+        guard lanes.count < Self.maxLanes,
+              let workspace = free.contains(closed.workspace) ? closed.workspace : free.first else {
+            for id in closed.ids { place(id, inLane: activeLane) }
             return
         }
-        close.removeAll { g.ids.contains($0) }
-        for id in g.ids { origin[id] = nil }
+        close.removeAll { closed.ids.contains($0) }
+        for id in closed.ids { origin[id] = nil }
         closedLanes.removeAll { $0.id == group }
-        lanes.insert(SortLane(ws: ws, name: g.name, layout: g.layout, ids: g.ids), at: lanes.firstIndex { Self.order(ws, $0.ws) } ?? lanes.count)
+        lanes.insert(SortLane(workspace: workspace, name: closed.name, layout: closed.layout, ids: closed.ids),
+                     at: lanes.firstIndex { Self.order(workspace, $0.workspace) } ?? lanes.count)
     }
 
-    mutating func renumberLane(_ i: Int, to ws: String) {
+    mutating func renumberLane(_ i: Int, to workspace: String) {
         guard lanes.indices.contains(i) else { return }
-        let id = lanes[i].id, old = lanes[i].ws
-        lanes.removeAll { $0.ws == ws && $0.id != id }
-        guard let at = lanes.firstIndex(where: { $0.id == id }) else { return }
-        lanes[at].ws = ws
-        lanes.sort { Self.order($0.ws, $1.ws) }
-        for (k, o) in origin where o.ws == old { origin[k] = (ws, o.at) }
+        let id = lanes[i].id, old = lanes[i].workspace
+        lanes.removeAll { $0.workspace == workspace && $0.id != id }
+        guard let position = lanes.firstIndex(where: { $0.id == id }) else { return }
+        lanes[position].workspace = workspace
+        lanes.sort { Self.order($0.workspace, $1.workspace) }
+        for (key, from) in origin where from.workspace == old { origin[key] = (workspace, from.at) }
     }
 
     mutating func removeLane(at i: Int) -> (target: Int, moved: Int)? {
@@ -80,12 +83,12 @@ extension SortPlan {
 
     mutating func moveLane(_ i: Int, toSlot slot: Int) -> Int? {
         guard lanes.indices.contains(i), (0...lanes.count).contains(slot), slot != i, slot != i + 1 else { return nil }
-        let names = lanes.map(\.ws)
+        let names = lanes.map(\.workspace)
         let lane = lanes.remove(at: i)
-        let at = slot > i ? slot - 1 : slot
-        lanes.insert(lane, at: at)
-        for k in lanes.indices { lanes[k].ws = names[k] }
-        return at
+        let position = slot > i ? slot - 1 : slot
+        lanes.insert(lane, at: position)
+        for index in lanes.indices { lanes[index].workspace = names[index] }
+        return position
     }
 
     mutating func cycleLayout(of lane: Int, by delta: Int, in layouts: [Layout]) {
@@ -98,14 +101,14 @@ extension SortPlan {
         if let i = close.firstIndex(of: id) {
             let j = i + delta
             if close.indices.contains(j) { close.swapAt(i, j) }
-        } else if let l = lane(of: id), let i = lanes[l].ids.firstIndex(of: id) {
+        } else if let laneIndex = lane(of: id), let i = lanes[laneIndex].ids.firstIndex(of: id) {
             let j = i + delta
-            if lanes[l].ids.indices.contains(j) { lanes[l].ids.swapAt(i, j) }
+            if lanes[laneIndex].ids.indices.contains(j) { lanes[laneIndex].ids.swapAt(i, j) }
         }
     }
 
     mutating func moveToTop(_ id: CGWindowID) {
-        guard let l = lane(of: id) else { return }
-        place(id, inLane: l, at: 0)
+        guard let laneIndex = lane(of: id) else { return }
+        place(id, inLane: laneIndex, at: 0)
     }
 }

@@ -43,40 +43,42 @@ final class Tooltip {
 
     private func show(over view: NSView, text: String, chords: [[String]]) {
         guard let window = view.window, window.isVisible else { return }
-        let r = window.convertToScreen(view.convert(view.bounds, to: nil))
+        let rect = window.convertToScreen(view.convert(view.bounds, to: nil))
         let screen = window.screen ?? NSScreen.main ?? NSScreen.screens[0]
-        let v = screen.visibleFrame, m = Self.margin
+        let visible = screen.visibleFrame, margin = Self.margin
 
         let measure = NSHostingView(rootView: OTooltip(text: text, chords: chords, caret: .none))
         let tip = measure.fittingSize
-        let x = min(max(r.midX - tip.width / 2, v.minX + 6), v.maxX - tip.width - 6)
+        let x = min(max(rect.midX - tip.width / 2, visible.minX + 6), visible.maxX - tip.width - 6)
         let gap: CGFloat = 14
-        let above = r.maxY + gap + tip.height < v.maxY - 4
-        let y = above ? r.maxY + gap : r.minY - gap - tip.height
-        let caretX = min(max(r.midX - x, 14), tip.width - 14)
+        let above = rect.maxY + gap + tip.height < visible.maxY - 4
+        let y = above ? rect.maxY + gap : rect.minY - gap - tip.height
+        let caretX = min(max(rect.midX - x, 14), tip.width - 14)
         let caret: Caret = above ? .bottomAt(caretX - tip.width / 2) : .top(caretX)
 
-        let p = panel ?? makePanel()
-        panel = p
-        let frame = OuchPanel.frame(size: CGSize(width: tip.width + 2 * m, height: tip.height + 2 * m), on: screen,
-                                    anchor: .origin(NSPoint(x: x - m, y: y - m)), inset: EdgeInsets(all: m))
-        let host = NSHostingView(rootView: OTooltip(text: text, chords: chords, caret: caret).padding(m))
+        let tipPanel = panel ?? makePanel()
+        panel = tipPanel
+        let frame = OuchPanel.frame(size: CGSize(width: tip.width + 2 * margin, height: tip.height + 2 * margin),
+                                    on: screen, anchor: .origin(NSPoint(x: x - margin, y: y - margin)),
+                                    inset: EdgeInsets(all: margin))
+        let host = NSHostingView(rootView: OTooltip(text: text, chords: chords, caret: caret).padding(margin))
         host.sizingOptions = []
         host.frame = NSRect(origin: .zero, size: frame.size)
-        p.contentView = host
-        p.setFrame(frame, display: true)
-        p.orderFrontRegardless()
+        tipPanel.contentView = host
+        tipPanel.setFrame(frame, display: true)
+        tipPanel.orderFrontRegardless()
         watch?.invalidate()
         watch = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self, weak view] _ in
             guard let self else { return }
-            guard let view, let w = view.window, w.isVisible, w.occlusionState.contains(.visible),
-                  w.convertToScreen(view.convert(view.bounds, to: nil)).contains(NSEvent.mouseLocation)
+            guard let view, let window = view.window, window.isVisible, window.occlusionState.contains(.visible),
+                  window.convertToScreen(view.convert(view.bounds, to: nil)).contains(NSEvent.mouseLocation)
             else { self.hide(); return }
         }
         if monitor == nil {
-            monitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .keyDown, .scrollWheel]) { [weak self] e in
+            let events: NSEvent.EventTypeMask = [.leftMouseDown, .rightMouseDown, .keyDown, .scrollWheel]
+            monitor = NSEvent.addLocalMonitorForEvents(matching: events) { [weak self] event in
                 self?.hide()
-                return e
+                return event
             }
         }
     }

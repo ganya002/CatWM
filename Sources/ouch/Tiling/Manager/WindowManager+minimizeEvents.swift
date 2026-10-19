@@ -9,16 +9,17 @@ extension WindowManager {
     }
 
     func windowMinimizeChanged(_ element: AXUIElement, minimized: Bool) {
-        guard let w = windows.values.first(where: { CFEqual($0.element, element) }), w.minimized != minimized else {
+        guard let window = windows.values.first(where: { CFEqual($0.element, element) }),
+              window.minimized != minimized else {
             return scheduleRefresh(after: 0)
         }
-        w.minimized = minimized
-        w.observedAt = Date()
+        window.minimized = minimized
+        window.observedAt = Date()
         guard !minimized else { return scheduleRefresh(after: 0) }
-        claimForCurrentWorkspace([w.id])
-        restoredEarly[w.id] = Date()
-        snapNextPlacement.insert(w.id)
-        refresh(instant: true, placing: [w.id])
+        claimForCurrentWorkspace([window.id])
+        restoredEarly[window.id] = Date()
+        snapNextPlacement.insert(window.id)
+        refresh(instant: true, placing: [window.id])
         scheduleRefresh(after: 0)
     }
 

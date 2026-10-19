@@ -10,7 +10,7 @@ final class ModeCursor {
 
     private init() {
         let handle = dlopen("/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight", RTLD_LAZY)
-        func lookup<T>(_ name: String, as: T.Type) -> T? {
+        func lookup<T>(_ name: String, as _: T.Type) -> T? {
             guard let handle, let address = dlsym(handle, name) else { return nil }
             return unsafeBitCast(address, to: T.self)
         }
@@ -20,19 +20,20 @@ final class ModeCursor {
             return
         }
         let cid = connection()
-        setInBackground = { on in
-            _ = set(cid, cid, "SetsCursorInBackground" as CFString, (on ? kCFBooleanTrue : kCFBooleanFalse)!)
+        setInBackground = { active in
+            guard let value = active ? kCFBooleanTrue : kCFBooleanFalse else { return }
+            _ = set(cid, cid, "SetsCursorInBackground" as CFString, value)
         }
     }
 
-    func setActive(_ on: Bool) {
-        guard on != (timer != nil) else { return }
-        if on {
+    func setActive(_ active: Bool) {
+        guard active != (timer != nil) else { return }
+        if active {
             setInBackground?(true)
             NSCursor.arrow.set()
-            let t = Timer(timeInterval: 1.0 / 120, repeats: true) { _ in NSCursor.arrow.set() }
-            RunLoop.main.add(t, forMode: .common)
-            timer = t
+            let repeating = Timer(timeInterval: 1.0 / 120, repeats: true) { _ in NSCursor.arrow.set() }
+            RunLoop.main.add(repeating, forMode: .common)
+            timer = repeating
         } else {
             timer?.invalidate()
             timer = nil

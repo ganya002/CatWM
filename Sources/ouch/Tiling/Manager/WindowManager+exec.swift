@@ -3,21 +3,21 @@ import AppKit
 extension WindowManager {
     func exec(_ cmd: String) {
         guard !cmd.isEmpty else { return }
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: "/bin/sh")
-        p.arguments = ["-c", cmd]
-        try? p.run()
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/sh")
+        process.arguments = ["-c", cmd]
+        try? process.run()
     }
 
     func focusMonitor(_ spec: String) {
         let screens = Screen.all()
         guard let src = currentScreen(), let dst = screen(from: src, spec: spec, in: screens) else { return }
-        let p = CGWindowInfo.onScreen().first { info in
-            guard visible.contains(info.id), let w = windows[info.id] else { return false }
-            return screen(of: w, in: screens)?.uuid == dst.uuid
+        let topmost = CGWindowInfo.onScreen().first { info in
+            guard visible.contains(info.id), let window = windows[info.id] else { return false }
+            return screen(of: window, in: screens)?.uuid == dst.uuid
         }
-        if let id = p?.id ?? tiled(on: dst).first, let w = windows[id] {
-            focus(w)
+        if let id = topmost?.id ?? tiled(on: dst).first, let window = windows[id] {
+            focus(window)
         } else {
             CGWarpMouseCursorPosition(dst.center)
             CursorRefresh.soon()
@@ -27,22 +27,23 @@ extension WindowManager {
     func moveToMonitor(_ spec: String) {
         guard !restoringTemplate else { return }
         let screens = Screen.all()
-        guard let w = focusedWindow(), let src = screen(of: w, in: screens),
+        guard let window = focusedWindow(), let src = screen(of: window, in: screens),
               let dst = screen(from: src, spec: spec, in: screens), dst.uuid != src.uuid else { return }
-        if w.isFloating {
-            let f = w.cachedFrame
-            var o = CGPoint(x: dst.visible.minX + (f.minX - src.visible.minX), y: dst.visible.minY + (f.minY - src.visible.minY))
-            o.x = max(dst.visible.minX, min(o.x, dst.visible.maxX - f.width))
-            o.y = max(dst.visible.minY, min(o.y, dst.visible.maxY - f.height))
-            animator.animate([.init(window: w, to: CGRect(origin: o, size: f.size), bounds: dst.visible)],
+        if window.isFloating {
+            let frame = window.cachedFrame
+            var origin = CGPoint(x: dst.visible.minX + (frame.minX - src.visible.minX),
+                                 y: dst.visible.minY + (frame.minY - src.visible.minY))
+            origin.x = max(dst.visible.minX, min(origin.x, dst.visible.maxX - frame.width))
+            origin.y = max(dst.visible.minY, min(origin.y, dst.visible.maxY - frame.height))
+            animator.animate([.init(window: window, to: CGRect(origin: origin, size: frame.size), bounds: dst.visible)],
                              duration: config.animate ? config.animationDuration : 0,
                              curve: config.animationCurve, bounce: config.animationBounce)
-            model.assign(w.id, to: shown[dst.uuid])
+            model.assign(window.id, to: shown[dst.uuid])
             scheduleRefresh()
         } else {
-            model.assign(w.id, to: shown[dst.uuid])
+            model.assign(window.id, to: shown[dst.uuid])
             refresh()
         }
-        focus(w)
+        focus(window)
     }
 }

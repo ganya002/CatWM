@@ -9,7 +9,9 @@ struct GuideView: View {
         VStack(alignment: .leading, spacing: 14) {
             if model.granted {
                 HStack(spacing: 10) {
-                    Image(systemName: "checkmark.circle.fill").font(Theme.symbol(Theme.Icon.xl, .regular)).foregroundStyle(Theme.success)
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(Theme.symbol(Theme.Icon.extraLarge, .regular))
+                        .foregroundStyle(Theme.success)
                         .transition(.symbolEffect(.appear))
                     Text("All set").textStyle(.title).oneLine()
                 }
@@ -20,18 +22,20 @@ struct GuideView: View {
                         Text(model.kind.title).kicker()
                     }
                     Text("Allow Ouch").textStyle(.title).oneLine().padding(.top, 6)
-                    Text(model.alertUp ? "macOS asks first, then System Settings opens." : "Follow these steps in System Settings.")
+                    Text(model.alertUp
+                         ? "macOS asks first, then System Settings opens."
+                         : "Follow these steps in System Settings.")
                         .font(Theme.body(13)).foregroundStyle(Theme.inkMuted).lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 VStack(alignment: .leading, spacing: 10) {
                     if model.alertUp {
-                        OStep(n: 1, text: "In the macOS alert, click **Open System Settings**.")
-                        OStep(n: 2, text: "Turn its switch **on**. Enter your password if asked.")
+                        OStep(number: 1, text: "In the macOS alert, click **Open System Settings**.")
+                        OStep(number: 2, text: "Turn its switch **on**. Enter your password if asked.")
                     } else {
-                        OStep(n: 1, text: "Find **Ouch** in the \(model.kind.title) list.")
-                        OStep(n: 2, text: "Turn its switch **on**. Enter your password if asked.")
-                        OStep(n: 3, text: "Not in the list? Click **+**, or drag this icon into it:")
+                        OStep(number: 1, text: "Find **Ouch** in the \(model.kind.title) list.")
+                        OStep(number: 2, text: "Turn its switch **on**. Enter your password if asked.")
+                        OStep(number: 3, text: "Not in the list? Click **+**, or drag this icon into it:")
                     }
                 }
                 if !model.alertUp { dragTile }
@@ -40,11 +44,11 @@ struct GuideView: View {
                     ProgressView().controlSize(.small).scaleEffect(0.7).frame(width: 14, height: 14)
                     Text("Waiting…").textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine()
                     Spacer(minLength: 4)
-                    OButton("Reset", variant: .ghost, size: .sm) {
+                    OButton("Reset", variant: .ghost, size: .small) {
                         model.kind.reset()
                     }
                     .tooltip("Clears a stale entry left by a rebuilt or moved copy of the app")
-                    OButton("Hide", size: .sm, action: dismiss)
+                    OButton("Hide", size: .small, action: dismiss)
                 }
             }
         }
@@ -64,8 +68,8 @@ struct GuideView: View {
             Image(systemName: "hand.draw").foregroundStyle(Theme.inkMuted)
         }
         .padding(.horizontal, 10).padding(.vertical, 6)
-        .background(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous).fill(Theme.well))
-        .onDrag { NSItemProvider(object: Bundle.main.bundleURL as NSURL) }
+        .background(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous).fill(Theme.well))
+        .onDrag { NSItemProvider(object: Bundle.main.bundleURL as NSItemProviderWriting) }
         .tooltip("Drag into the \(model.kind.title) list")
     }
 }

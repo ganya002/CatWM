@@ -4,7 +4,6 @@ import Combine
 import SwiftUI
 
 final class ConfigDocument: ObservableObject {
-
     @Published var config = Config()
     @Published var vars: [VarRow] = []
     @Published var binds: [BindRow] = []
@@ -19,7 +18,7 @@ final class ConfigDocument: ObservableObject {
     static let modifierChoices: [(value: String, label: String)] = [
         ("ALT", "⌥ Option"), ("SUPER", "⌘ Command"), ("CTRL", "⌃ Control"),
         ("ALT CTRL", "⌃⌥ Control + Option"), ("CTRL SHIFT", "⌃⇧ Control + Shift"), ("SUPER ALT", "⌥⌘ Option + Command"),
-        ("SUPER CTRL", "⌃⌘ Control + Command"), 
+        ("SUPER CTRL", "⌃⌘ Control + Command")
     ]
 
     var extraLineCount: Int { extraLines.count }
@@ -31,28 +30,36 @@ final class ConfigDocument: ObservableObject {
     var modValue: String {
         get { vars.first { $0.name == modVarName }?.value ?? "ALT" }
         set {
-            if let i = vars.firstIndex(where: { $0.name == modVarName }) { vars[i].value = newValue }
-            else { vars.insert(VarRow(name: modVarName, value: newValue), at: 0) }
+            if let i = vars.firstIndex(where: { $0.name == modVarName }) {
+                vars[i].value = newValue
+            } else {
+                vars.insert(VarRow(name: modVarName, value: newValue), at: 0)
+            }
         }
     }
 
     enum Severity { case error, warning }
 
-    static let commonShortcuts: Set<String> = ["q", "w", "c", "v", "x", "z", "a", "s", "t", "n", "h", "m", "f", "p", "o", "r", "tab", "space", "comma"]
+    static let commonShortcuts: Set<String> = [
+        "q", "w", "c", "v", "x", "z", "a", "s", "t", "n", "h", "m", "f", "p", "o", "r", "tab", "space", "comma"
+    ]
 
     struct Combo: Hashable { let code: UInt16; let flags: UInt }
 
     var submaps: [String] {
         var seen = [""]
-        for b in binds where !seen.contains(b.submap) { seen.append(b.submap) }
-        for b in binds where b.dispatcher == "submap" && b.args.lowercased() != "reset" && !seen.contains(b.args) { seen.append(b.args) }
+        for bind in binds where !seen.contains(bind.submap) { seen.append(bind.submap) }
+        for bind in binds where bind.dispatcher == "submap" && bind.args.lowercased() != "reset"
+            && !seen.contains(bind.args) {
+            seen.append(bind.args)
+        }
         return seen
     }
 
     var problemCount: Int { binds.filter { issue($0)?.severity == .error }.count }
 
     static let canonicalKeyNames: [UInt16: String] = [
-        10: "section", 93: "yen", 94: "underscore_jis", 102: "eisu", 104: "kana",
+        10: "section", 93: "yen", 94: "underscore_jis", 102: "eisu", 104: "kana"
     ]
 
     static let keySymbols = [
@@ -63,7 +70,7 @@ final class ConfigDocument: ObservableObject {
         "pageup": "⇞", "pagedown": "⇟", "home": "↖", "end": "↘",
         "mouse_up": "Scroll ↑", "mouse_down": "Scroll ↓", "mouse_left": "Scroll ←", "mouse_right": "Scroll →",
         "section": "§", "yen": "¥", "underscore_jis": "_", "eisu": "英数", "kana": "かな",
-        "swipe_left": "Swipe ←", "swipe_right": "Swipe →", "swipe_up": "Swipe ↑", "swipe_down": "Swipe ↓",
+        "swipe_left": "Swipe ←", "swipe_right": "Swipe →", "swipe_up": "Swipe ↑", "swipe_down": "Swipe ↓"
     ]
 
     struct KeyAction: Identifiable {
@@ -87,5 +94,4 @@ final class ConfigDocument: ObservableObject {
             .debounce(for: .milliseconds(50), scheduler: RunLoop.main)
             .sink { [weak self] in self?.autosaveIfNeeded() }
     }
-
 }

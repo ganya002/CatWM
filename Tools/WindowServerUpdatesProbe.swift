@@ -8,23 +8,23 @@ final class Calls {
 }
 let calls = Calls()
 let batches = WindowServerUpdates(maximumHold: 0.04, disable: calls.disable, enable: calls.enable)
-let first = batches.begin()!
-let second = batches.begin()!
+guard let first = batches.begin(), let second = batches.begin() else { fatalError("Batching must start") }
 precondition(calls.counts == [1, 0])
 first.finish(); first.finish()
 precondition(calls.counts == [1, 0], "Overlapping import must keep the batch alive")
 second.finish()
 precondition(calls.counts == [1, 1], "Last lease must release exactly once")
-let timedOut = batches.begin()!
+guard let timedOut = batches.begin() else { fatalError("Batching must restart") }
 usleep(80_000)
 precondition(calls.counts == [2, 2], "Watchdog must release without the main run loop")
-let next = batches.begin()!
+guard let next = batches.begin() else { fatalError("Batching must start after a timeout") }
 timedOut.finish()
 precondition(calls.counts == [3, 2], "An expired lease must not release a newer batch")
 next.finish()
 precondition(calls.counts == [3, 3])
-do { _ = batches.begin()! }
+do { precondition(batches.begin() != nil) }
 precondition(calls.counts == [4, 4], "Dropping the lease must release it")
-let unavailable = WindowServerUpdates(disable: { false }, enable: { fatalError("Must not enable after failed disable") })
+let unavailable = WindowServerUpdates(disable: { false },
+                                      enable: { fatalError("Must not enable after failed disable") })
 precondition(unavailable.begin() == nil)
 print("PASS: overlapping imports, idempotent release, off-main watchdog, stale leases, dropped leases, unavailable API")

@@ -2,10 +2,9 @@ import AppKit
 import SwiftUI
 
 final class SortPanel: NSObject, NSWindowDelegate {
-
     static let shared = SortPanel()
 
-    let wm = WindowManager.shared
+    let manager = WindowManager.shared
     let model = SortModel()
     var panel: OuchPanel?
     var host: SortHost?
@@ -24,5 +23,4 @@ final class SortPanel: NSObject, NSWindowDelegate {
     var toastWork: DispatchWorkItem?
 
     var isOpen: Bool { active }
-
 }

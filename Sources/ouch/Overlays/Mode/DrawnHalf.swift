@@ -7,20 +7,23 @@ struct DrawnHalf: Shape {
     var notchHalfWidth: CGFloat = 0
     var notchHeight: CGFloat = 0
     func path(in rect: CGRect) -> Path {
-        let r = rect.insetBy(dx: inset, dy: inset)
+        let box = rect.insetBy(dx: inset, dy: inset)
         let rad = max(0, radius - inset)
-        var p = Path()
+        var path = Path()
         if notchHalfWidth > 0 {
-            let x = r.midX + notchHalfWidth + inset, y = rect.minY + notchHeight + inset
-            p.move(to: CGPoint(x: r.midX, y: y))
-            p.addArc(tangent1End: CGPoint(x: x, y: y), tangent2End: CGPoint(x: x, y: r.minY), radius: Notch.bottomRadius + inset)
-            p.addArc(tangent1End: CGPoint(x: x, y: r.minY), tangent2End: CGPoint(x: r.maxX, y: r.minY), radius: max(0.5, Notch.flareRadius - inset))
+            let x = box.midX + notchHalfWidth + inset, y = rect.minY + notchHeight + inset
+            path.move(to: CGPoint(x: box.midX, y: y))
+            path.addArc(tangent1End: CGPoint(x: x, y: y), tangent2End: CGPoint(x: x, y: box.minY),
+                        radius: Notch.bottomRadius + inset)
+            path.addArc(tangent1End: CGPoint(x: x, y: box.minY), tangent2End: CGPoint(x: box.maxX, y: box.minY),
+                        radius: max(0.5, Notch.flareRadius - inset))
         } else {
-            p.move(to: CGPoint(x: r.midX, y: r.minY))
+            path.move(to: CGPoint(x: box.midX, y: box.minY))
         }
-        p.addArc(tangent1End: CGPoint(x: r.maxX, y: r.minY), tangent2End: CGPoint(x: r.maxX, y: r.maxY), radius: rad)
-        p.addLine(to: CGPoint(x: r.maxX, y: r.maxY))
-        p.addLine(to: CGPoint(x: r.midX, y: r.maxY))
-        return p
+        path.addArc(tangent1End: CGPoint(x: box.maxX, y: box.minY), tangent2End: CGPoint(x: box.maxX, y: box.maxY),
+                    radius: rad)
+        path.addLine(to: CGPoint(x: box.maxX, y: box.maxY))
+        path.addLine(to: CGPoint(x: box.midX, y: box.maxY))
+        return path
     }
 }

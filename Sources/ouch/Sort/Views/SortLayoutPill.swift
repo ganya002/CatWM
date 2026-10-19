@@ -14,15 +14,15 @@ struct SortLayoutPill: View {
                 SortLayoutGlyph(layout: layout).frame(width: 16, height: 14)
                 Text(layout == .bsp ? "BSP" : layout.title).textStyle(.caption).oneLine()
             }
-            .foregroundStyle(hover.on ? Theme.ink : Theme.inkMuted)
+            .foregroundStyle(hover.isOn ? Theme.ink : Theme.inkMuted)
             .padding(.leading, 7).padding(.trailing, 10).frame(height: 24)
-            .background(Capsule().fill(hover.on ? Theme.wellHover : Theme.well))
+            .background(Capsule().fill(hover.isOn ? Theme.wellHover : Theme.well))
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .overlay(SortRightClick(action: previous))
-        .onHover { hover.on = $0 }
-        .animation(Motion.fade, value: hover.on)
+        .onHover { hover.isOn = $0 }
+        .animation(Motion.fade, value: hover.isOn)
         .tooltip(help)
         .accessibilityLabel("Layout: \(layout.title)")
         .accessibilityAction(named: "Previous layout", previous)

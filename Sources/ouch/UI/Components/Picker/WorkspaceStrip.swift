@@ -9,7 +9,9 @@ struct WorkspaceStrip: View {
 
     var body: some View {
         HStack(spacing: 2) {
-            ForEach(names, id: \.self) { n in WorkspacePill(name: n, current: n == current, occupied: occupied.contains(n)) { pick(n) } }
+            ForEach(names, id: \.self) { name in
+                WorkspacePill(name: name, current: name == current, occupied: occupied.contains(name)) { pick(name) }
+            }
         }
     }
 }
@@ -17,7 +19,8 @@ struct WorkspaceStrip: View {
 #if DEBUG
 extension GalleryContent {
     @ViewBuilder var workspaceExample: some View {
-        WorkspaceStrip(names: (1...9).map(String.init), current: m.workspace, occupied: ["1", "2", "3", "5"]) { m.workspace = $0 }
+        WorkspaceStrip(names: (1...9).map(String.init), current: model.workspace,
+                       occupied: ["1", "2", "3", "5"]) { model.workspace = $0 }
     }
 }
 #endif

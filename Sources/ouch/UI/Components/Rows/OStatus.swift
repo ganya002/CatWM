@@ -8,7 +8,7 @@ struct OStatus: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Image(systemName: symbol).font(Theme.symbol(Theme.Icon.sm, .semibold))
+            Image(systemName: symbol).font(Theme.symbol(Theme.Icon.small, .semibold))
             Text(text).font(Theme.body(12.5, .medium)).oneLine()
         }
         .foregroundStyle(color)
@@ -34,13 +34,13 @@ struct OStatus: View {
 
 #if DEBUG
 extension GalleryExamples {
-    static let status = GalleryExample(order: 13) { AnyView(GalleryContent(m: $0).status) }
+    static let status = GalleryExample(order: 13) { AnyView(GalleryContent(model: $0).status) }
 }
 
 extension GalleryContent {
     @ViewBuilder var status: some View {
         block("Status") {
-            HStack(spacing: Theme.Space.xl) {
+            HStack(spacing: Theme.Space.extraLarge) {
                 OStatus(kind: .success, text: "Granted")
                 OStatus(kind: .warning, text: "Safari won't shrink further")
                 OStatus(kind: .danger, text: "Failed")

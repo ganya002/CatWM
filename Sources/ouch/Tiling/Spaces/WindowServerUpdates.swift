@@ -16,7 +16,7 @@ final class WindowServerUpdates {
     private typealias Update = @convention(c) (Int32) -> Int32
     static let shared: WindowServerUpdates = {
         let handle = dlopen("/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight", RTLD_LAZY)
-        func lookup<T>(_ name: String, as: T.Type) -> T? {
+        func lookup<T>(_ name: String, as _: T.Type) -> T? {
             guard let handle, let address = dlsym(handle, name) else { return nil }
             return unsafeBitCast(address, to: T.self)
         }

@@ -19,7 +19,8 @@ struct OSearchField: View {
                 .onSubmit(onSubmit)
             if !text.isEmpty {
                 Button { text = "" } label: {
-                    Image(systemName: "xmark.circle.fill").font(Theme.symbol(Theme.Icon.sm, .regular)).foregroundStyle(Theme.inkFaint)
+                    Image(systemName: "xmark.circle.fill").font(Theme.symbol(Theme.Icon.small, .regular))
+                        .foregroundStyle(Theme.inkFaint)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Clear search")
@@ -37,7 +38,8 @@ struct OSearchField: View {
 extension OSearchField {
     static func galleryExample(text: Binding<String>, focus: FocusState<Bool>.Binding) -> some View {
         OSearchField(placeholder: "Search settings", text: text, shortcut: ["⌘", "K"], focus: focus)
-            .background(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous).fill(Theme.surface.opacity(0.6)))
+            .background(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous)
+                .fill(Theme.surface.opacity(0.6)))
             .frame(width: 320)
     }
 }

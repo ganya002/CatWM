@@ -8,9 +8,11 @@ enum AgentConfigDocs {
             let notes = option.documentation.isEmpty ? "" : " " + option.documentation
             return "| \(names) | \(option.valueDescription) | `\(option.defaultText)` |\(notes) |"
         }.joined(separator: "\n")
+        let defaultLayouts = Config().layouts.map(\.rawValue).joined(separator: ", ")
+        let layouts = Layout.allCases.map { "`\($0.rawValue)`" }.joined(separator: ", ")
         return template.replacingOccurrences(of: "{{options}}", with: rows)
-            .replacingOccurrences(of: "{{default-layouts}}", with: Config().layouts.map(\.rawValue).joined(separator: ", "))
-            .replacingOccurrences(of: "{{layouts}}", with: Layout.allCases.map { "`\($0.rawValue)`" }.joined(separator: ", "))
+            .replacingOccurrences(of: "{{default-layouts}}", with: defaultLayouts)
+            .replacingOccurrences(of: "{{layouts}}", with: layouts)
     }
 
     static func write(in root: URL) throws {
@@ -31,7 +33,8 @@ enum AgentConfigDocs {
             data.append(0)
         }
         let digest = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined() + "\n"
-        try digest.write(to: directory.appendingPathComponent("config.catalog.sha256"), atomically: true, encoding: .utf8)
+        try digest.write(to: directory.appendingPathComponent("config.catalog.sha256"), atomically: true,
+                         encoding: .utf8)
     }
 
     private struct Inputs: Decodable {

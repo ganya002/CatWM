@@ -1,6 +1,6 @@
 import AppKit
-import Testing
 @testable import ouch
+import Testing
 
 @Suite struct DesktopObservationTests {
     @Test @MainActor func eventsDuringADesktopReadProduceOneFreshFollowUp() async {
@@ -9,7 +9,8 @@ import Testing
         let scanner = WindowScanner(readDesktop: { known in
             #expect(!Thread.isMainThread)
             if reads.next() == 1 { _ = release.wait(timeout: .now() + 3) }
-            return WindowServerObservation(spaces: Dictionary(uniqueKeysWithValues: known.map { ($0, Set<UInt64>([1])) }))
+            let spaces = Dictionary(uniqueKeysWithValues: known.map { ($0, Set<UInt64>([1])) })
+            return WindowServerObservation(spaces: spaces)
         })
         var firstCompleted = false
         await withCheckedContinuation { continuation in

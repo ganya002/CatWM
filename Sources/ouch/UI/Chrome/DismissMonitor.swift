@@ -8,27 +8,31 @@ final class DismissMonitor {
     func start(keeps: @escaping (NSWindow?) -> Bool, swallowsClick: Bool = false, screens: Bool = false,
                key: ((NSEvent) -> Bool)? = nil, close: @escaping () -> Void) {
         stop()
-        if let key, let m = NSEvent.addLocalMonitorForEvents(matching: .keyDown, handler: { key($0) ? nil : $0 }) {
-            monitors.append(m)
+        if let key,
+           let monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown, handler: { key($0) ? nil : $0 }) {
+            monitors.append(monitor)
         }
-        if let m = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown], handler: { _ in
+        let anyClick: NSEvent.EventTypeMask = [.leftMouseDown, .rightMouseDown, .otherMouseDown]
+        if let monitor = NSEvent.addGlobalMonitorForEvents(matching: anyClick, handler: { _ in
             close()
-        }) { monitors.append(m) }
-        if let m = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown], handler: { e in
-            if keeps(e.window) { return e }
+        }) { monitors.append(monitor) }
+        let click: NSEvent.EventTypeMask = [.leftMouseDown, .rightMouseDown]
+        if let monitor = NSEvent.addLocalMonitorForEvents(matching: click, handler: { event in
+            if keeps(event.window) { return event }
             close()
-            return swallowsClick ? nil : e
-        }) { monitors.append(m) }
+            return swallowsClick ? nil : event
+        }) { monitors.append(monitor) }
         if screens {
-            screenObserver = NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification,
-                                                                    object: nil, queue: .main) { _ in close() }
+            screenObserver = NotificationCenter.default.addObserver(
+                forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
+            ) { _ in close() }
         }
     }
 
     func stop() {
         monitors.forEach(NSEvent.removeMonitor)
         monitors = []
-        if let o = screenObserver { NotificationCenter.default.removeObserver(o) }
+        if let screenObserver { NotificationCenter.default.removeObserver(screenObserver) }
         screenObserver = nil
     }
 }

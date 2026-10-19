@@ -15,7 +15,7 @@ struct IntroLabView: View {
             .padding(.horizontal, 20).padding(.top, 36).padding(.bottom, 12)
             ScrollView {
                 VStack(spacing: 2) {
-                    ForEach(IntroScore.Arrangement.all) { a in row(a) }
+                    ForEach(IntroScore.Arrangement.all) { row($0) }
                 }
                 .padding(.horizontal, 12).padding(.bottom, 16)
             }
@@ -23,21 +23,26 @@ struct IntroLabView: View {
         .frame(minWidth: 460, minHeight: 360)
     }
 
-    private func row(_ a: IntroScore.Arrangement) -> some View {
-        let on = model.playing == a.id
+    private func row(_ arrangement: IntroScore.Arrangement) -> some View {
+        let playing = model.playing == arrangement.id
         return HStack(spacing: 12) {
-            Text(a.id).font(Theme.body(13, .medium)).monospacedDigit()
+            Text(arrangement.id).font(Theme.body(13, .medium)).monospacedDigit()
                 .foregroundStyle(Theme.inkMuted).frame(width: 34, alignment: .trailing)
             VStack(alignment: .leading, spacing: 2) {
-                Text(a.name).font(Theme.body(13.5, .medium)).lineLimit(1)
-                Text(a.blurb).textStyle(.caption).foregroundStyle(Theme.inkMuted).lineLimit(1)
+                Text(arrangement.name).font(Theme.body(13.5, .medium)).lineLimit(1)
+                Text(arrangement.blurb).textStyle(.caption).foregroundStyle(Theme.inkMuted).lineLimit(1)
             }
             Spacer(minLength: 8)
-            Button(on ? "Playing" : "Music", systemImage: on ? "speaker.wave.2.fill" : "music.note") { model.music(a) }
-            Button("Intro", systemImage: "play.fill") { model.intro(a) }
+            Button(playing ? "Playing" : "Music", systemImage: playing ? "speaker.wave.2.fill" : "music.note") {
+                model.music(arrangement)
+            }
+            Button("Intro", systemImage: "play.fill") { model.intro(arrangement) }
                 .help("Plays the whole intro with this music. Click anywhere to skip.")
         }
         .padding(.horizontal, 8).padding(.vertical, 8)
-        .background(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(on ? Theme.accentSoft : .clear))
+        .background(
+            RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous)
+                .fill(playing ? Theme.accentSoft : .clear)
+        )
     }
 }

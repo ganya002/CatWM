@@ -1,20 +1,20 @@
 import AppKit
-import SwiftUI
 import MacKeysCore
 import MacKeysUI
+import SwiftUI
 
 enum KeyGroup: CaseIterable, Identifiable {
     case navigation, spaces, layout, window, leave
     var id: Self { self }
 
     init(dispatcher: String, arg: String) {
-        let (d, a) = KeyHint.normalized(dispatcher, arg)
-        switch d {
-        case "movewindow": self = a.hasPrefix("mon:") ? .spaces : .navigation
+        let (command, argument) = KeyHint.normalized(dispatcher, arg)
+        switch command {
+        case "movewindow": self = argument.hasPrefix("mon:") ? .spaces : .navigation
         case "movefocus", "cyclenext", "swapnext": self = .navigation
         case "workspace", "movetoworkspace", "movetoworkspacesilent", "focusmonitor", "sethomespace": self = .spaces
         case "cyclelayout", "splitratio", "layoutmsg", "layout": self = .layout
-        case "submap" where a == "reset": self = .leave
+        case "submap" where argument == "reset": self = .leave
         default: self = .window
         }
     }

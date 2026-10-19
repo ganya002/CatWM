@@ -21,10 +21,11 @@ extension WindowManager {
         guard isStarted else { return }
         let pidsOnScreen = Set(scanner.desktop.windows.map(\.pid))
         var known: [pid_t: [CGWindowID: Window]] = [:]
-        for w in windows.values { known[w.pid, default: [:]][w.id] = w }
+        for window in windows.values { known[window.pid, default: [:]][window.id] = window }
         var jobs: [WindowScanner.Job] = []
         let applications = NSWorkspace.shared.runningApplications.filter { $0.processIdentifier != getpid() }
-        observedApps = applications.filter { $0.activationPolicy == .regular && !$0.isHidden }.map { ($0.processIdentifier, $0.bundleIdentifier) }
+        observedApps = applications.filter { $0.activationPolicy == .regular && !$0.isHidden }
+            .map { ($0.processIdentifier, $0.bundleIdentifier) }
         for app in applications {
             observe(app)
             let pid = app.processIdentifier
@@ -43,5 +44,4 @@ extension WindowManager {
         refreshDeadline = .distantFuture
         scheduleRefresh(after: 0)
     }
-
 }

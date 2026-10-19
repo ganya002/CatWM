@@ -125,7 +125,7 @@ def catalog_violations(path, source):
         reject(r"\b(?!(?:ScrollView|VStack|ForEach)\b)[A-Z]\w*\s*\(",
                "catalog: the gallery body can only render the discovered registry")
     if "DesignGalleryView" in path:
-        reject(r"\bvar\s+(?!(?:body|header|m)\b)\w+\s*:", "catalog: the gallery view must walk GalleryExamples.all")
+        reject(r"\bvar\s+(?!(?:body|header|model)\b)\w+\s*:", "catalog: the gallery view must walk GalleryExamples.all")
     if path == "Sources/ouch/Config/Document/Actions.swift":
         reject(r'\badd\([^\n]*"(?:togglefloating|fullscreen|nativefullscreen|killactive|minimize|toggledim|toggleblur)"',
                "catalog: read pointer commands from PointerActions")

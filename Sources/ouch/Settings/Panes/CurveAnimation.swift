@@ -6,7 +6,7 @@ struct CurveAnimation: CustomAnimation {
     let bounce: Double
     let duration: Double
 
-    func animate<V: VectorArithmetic>(value: V, time: TimeInterval, context: inout AnimationContext<V>) -> V? {
+    func animate<V: VectorArithmetic>(value: V, time: TimeInterval, context _: inout AnimationContext<V>) -> V? {
         guard time < duration else { return nil }
         return value.scaled(by: curve.progress(time / duration, bounce: bounce))
     }

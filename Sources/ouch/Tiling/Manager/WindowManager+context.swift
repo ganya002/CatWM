@@ -1,140 +1,167 @@
 import AppKit
 
+struct TilingContext {
+    let window: Window?
+    let screen: Screen
+    let state: ScreenState
+    let ids: [CGWindowID]
+}
+
 extension WindowManager {
-    func context() -> (w: Window?, s: Screen, st: ScreenState, ids: [CGWindowID])? {
-        guard let s = currentScreen() else { return nil }
-        return (focusedWindow(), s, state(for: s), tiled(on: s))
+    func context() -> TilingContext? {
+        guard let screen = currentScreen() else { return nil }
+        return TilingContext(window: focusedWindow(), screen: screen, state: state(for: screen), ids: tiled(on: screen))
     }
 
-    func moveFocus(_ d: Direction) {
-        guard let w = focusedWindow() else {
-            if let c = context(), let first = c.ids.first.flatMap({ windows[$0] }) { focus(first) }
+    func moveFocus(_ direction: Direction) {
+        guard let window = focusedWindow() else {
+            if let current = context(), let first = current.ids.first.flatMap({ windows[$0] }) { focus(first) }
             return
         }
         let candidates = order.filter(visible.contains).compactMap { windows[$0] }
         let screens = Screen.all()
-        let home = screen(of: w, in: screens)
-        if let home, state(for: home).zoomed == w.id { cycleFocus(d == .left || d == .up ? -1 : 1); return }
-        let to = FocusNavigation.target(from: navItem(w, in: screens), d,
-                                        among: candidates.map { navItem($0, in: screens) }, stamps: focusStamps)
-        if let n = to.flatMap({ windows[$0] }) { focus(n) }
+        let home = screen(of: window, in: screens)
+        if let home, state(for: home).zoomed == window.id {
+            cycleFocus(direction == .left || direction == .upward ? -1 : 1)
+            return
+        }
+        let target = FocusNavigation.target(from: navItem(window, in: screens), direction,
+                                            among: candidates.map { navItem($0, in: screens) }, stamps: focusStamps)
+        if let next = target.flatMap({ windows[$0] }) { focus(next) }
     }
 
-    func moveWindow(_ d: Direction) {
-        guard let w = focusedWindow(), !w.isFloating else { return }
+    func moveWindow(_ direction: Direction) {
+        guard let window = focusedWindow(), !window.isFloating else { return }
         let candidates = order.filter(visible.contains).compactMap { windows[$0] }.filter { !$0.isFloating }
-        if let n = neighbor(of: w, d, among: candidates) {
-            if let a = screen(of: w), let b = screen(of: n), a.uuid != b.uuid {
-                model.assign(w.id, to: shown[b.uuid])
+        if let next = neighbor(of: window, direction, among: candidates) {
+            if let from = screen(of: window), let into = screen(of: next), from.uuid != into.uuid {
+                model.assign(window.id, to: shown[into.uuid])
             } else {
-                swapOrder(w.id, n.id)
+                swapOrder(window.id, next.id)
             }
-        } else if let src = screen(of: w), let dst = screen(from: src, spec: arg(d), in: Screen.all()) {
-            model.assign(w.id, to: shown[dst.uuid])
+        } else if let src = screen(of: window), let dst = screen(from: src, spec: arg(direction), in: Screen.all()) {
+            model.assign(window.id, to: shown[dst.uuid])
         } else { return }
         refresh()
-        focus(w)
+        focus(window)
     }
 
-    func arg(_ d: Direction) -> String {
-        switch d { case .left: "l"; case .right: "r"; case .up: "u"; case .down: "d" }
+    func arg(_ direction: Direction) -> String {
+        switch direction {
+        case .left: "l"
+        case .right: "r"
+        case .upward: "u"
+        case .down: "d"
+        }
     }
 
     func cycleFocus(_ delta: Int) {
-        guard let c = context(), !c.ids.isEmpty else { return }
-        let i = c.w.flatMap { c.ids.firstIndex(of: $0.id) } ?? (delta > 0 ? -1 : 0)
-        let next = c.ids[((i + delta) % c.ids.count + c.ids.count) % c.ids.count]
-        if let w = windows[next] { focus(w) }
+        guard let current = context(), !current.ids.isEmpty else { return }
+        let ids = current.ids
+        let i = current.window.flatMap { ids.firstIndex(of: $0.id) } ?? (delta > 0 ? -1 : 0)
+        let next = ids[((i + delta) % ids.count + ids.count) % ids.count]
+        if let window = windows[next] { focus(window) }
     }
 
     func cycleSwap(_ delta: Int) {
-        guard let c = context(), let w = c.w, let i = c.ids.firstIndex(of: w.id), c.ids.count > 1 else { return }
-        swapOrder(w.id, c.ids[((i + delta) % c.ids.count + c.ids.count) % c.ids.count])
+        guard let current = context(), let window = current.window,
+              let i = current.ids.firstIndex(of: window.id), current.ids.count > 1 else { return }
+        let ids = current.ids
+        swapOrder(window.id, ids[((i + delta) % ids.count + ids.count) % ids.count])
         refresh()
     }
 
     func swapWithMain() {
-        guard let c = context(), let w = c.w, c.ids.count > 1, c.ids.contains(w.id) else { return }
-        swapOrder(w.id, c.ids[0] == w.id ? c.ids[1] : c.ids[0])
+        guard let current = context(), let window = current.window,
+              current.ids.count > 1, current.ids.contains(window.id) else { return }
+        swapOrder(window.id, current.ids[0] == window.id ? current.ids[1] : current.ids[0])
         refresh()
-        focus(w)
+        focus(window)
     }
 
     func focusMain() {
-        guard let c = context(), let id = c.ids.first, let w = windows[id] else { return }
-        focus(w)
+        guard let current = context(), let id = current.ids.first, let window = windows[id] else { return }
+        focus(window)
     }
 
     func changeMainCount(_ delta: Int) {
-        guard let c = context() else { return }
-        c.st.mainCount = max(1, min(10, c.st.mainCount + delta))
+        guard let current = context() else { return }
+        current.state.mainCount = max(1, min(10, current.state.mainCount + delta))
         corrections = [:]
         refresh()
     }
 
     func adjustRatio(_ arg: String) {
-        guard let c = context() else { return }
+        guard let current = context() else { return }
         let parts = arg.lowercased().split(separator: " ")
-        var ratio = c.st.ratio
-        if parts.first == "exact", parts.count > 1, let v = Double(parts[1]) {
-            ratio = CGFloat(v)
+        var ratio = current.state.ratio
+        if parts.first == "exact", parts.count > 1, let value = Double(parts[1]) {
+            ratio = CGFloat(value)
         } else {
-            let delta = Double(arg.replacingOccurrences(of: "+", with: "")).map { CGFloat($0) } ?? config.windowResizeStep
+            let delta = Double(arg.replacingOccurrences(of: "+", with: "")).map { CGFloat($0) }
+                ?? config.windowResizeStep
             ratio += delta
         }
         ratio = min(0.9, max(0.1, ratio))
-        if let stubborn = windowRefusingRatio(ratio, from: c.st.ratio, ids: c.ids, on: c.s, c.st) {
-            warnTooSmall(stubborn, on: c.s)
+        if let stubborn = windowRefusingRatio(ratio, from: current.state.ratio, ids: current.ids,
+                                              on: current.screen, current.state) {
+            warnTooSmall(stubborn, on: current.screen)
             return
         }
-        c.st.ratio = ratio
+        current.state.ratio = ratio
         corrections = [:]
-        ratioChange = (c.s.uuid, Date() + (config.animate ? config.animationDuration : 0) + 0.6)
+        ratioChange = (current.screen.uuid, Date() + (config.animate ? config.animationDuration : 0) + 0.6)
         refresh()
     }
 
     func toggleFloating() {
-        guard let w = focusedWindow() else { return }
-        w.userFloating = !w.isFloating
-        if w.isFloating {
-            targets[w.id] = nil
+        guard let window = focusedWindow() else { return }
+        window.userFloating = .chosen(!window.isFloating)
+        if window.isFloating {
+            targets[window.id] = nil
         } else {
-            if let s = screen(containing: w.cachedFrame) { model.assign(w.id, to: shown[s.uuid]) }
-            corrections[w.id] = nil
+            if let screen = screen(containing: window.cachedFrame) { model.assign(window.id, to: shown[screen.uuid]) }
+            corrections[window.id] = nil
         }
         refresh()
     }
 
     func toggleZoom() {
-        guard let c = context(), let w = c.w, c.ids.contains(w.id) else { return }
-        c.st.zoomed = c.st.zoomed == w.id ? nil : w.id
+        guard let current = context(), let window = current.window, current.ids.contains(window.id) else { return }
+        current.state.zoomed = current.state.zoomed == window.id ? nil : window.id
         refresh()
-        focus(w, warp: false)
+        focus(window, warp: false)
     }
 
     func toggleNativeFullscreen() {
         guard let app = NSWorkspace.shared.frontmostApplication,
-              let el = focusedWindow()?.element
+              let element = focusedWindow()?.element
                 ?? axApp(app.processIdentifier).element(kAXFocusedWindowAttribute) else { return }
-        let on = el.bool("AXFullScreen") ?? false
+        let isOn = element.flag("AXFullScreen")
         let done: Bool
-        if el.isSettable("AXFullScreen") {
-            done = el.set("AXFullScreen", on ? kCFBooleanFalse : kCFBooleanTrue)
-        } else if let button = el.element("AXFullScreenButton") ?? el.element(kAXZoomButtonAttribute) {
+        if element.isSettable("AXFullScreen") {
+            done = element.set("AXFullScreen", isOn ? kCFBooleanFalse : kCFBooleanTrue)
+        } else if let button = element.element("AXFullScreenButton") ?? element.element(kAXZoomButtonAttribute) {
             done = AXUIElementPerformAction(button, kAXPressAction as CFString) == .success
         } else {
             done = false
         }
-        Log.info("native fullscreen \(on ? "off" : "on") for \(el.windowID.map(String.init) ?? "?") \(app.bundleIdentifier ?? ""): \(done ? "ok" : "refused")")
+        let windowName = element.windowID.map(String.init) ?? "?"
+        Log.info(
+            "native fullscreen \(isOn ? "off" : "on") for \(windowName) \(app.bundleIdentifier ?? ""): "
+                + (done ? "ok" : "refused")
+        )
         guard done else { return }
-        if let id = el.windowID, !on { for s in Screen.all() where state(for: s).zoomed == id { state(for: s).zoomed = nil } }
+        if let id = element.windowID, !isOn {
+            for screen in Screen.all() where state(for: screen).zoomed == id { state(for: screen).zoomed = nil }
+        }
         scheduleRefresh(after: 0.8)
     }
 
     func cycleLayout(_ delta: Int) {
-        guard let c = context(), !config.layouts.isEmpty else { return }
-        let i = config.layouts.firstIndex(of: c.st.layout) ?? (delta > 0 ? -1 : 0)
-        setLayout(config.layouts[((i + delta) % config.layouts.count + config.layouts.count) % config.layouts.count], on: c.s)
+        guard let current = context(), !config.layouts.isEmpty else { return }
+        let layouts = config.layouts
+        let i = layouts.firstIndex(of: current.state.layout) ?? (delta > 0 ? -1 : 0)
+        setLayout(layouts[((i + delta) % layouts.count + layouts.count) % layouts.count], on: current.screen)
     }
-
 }

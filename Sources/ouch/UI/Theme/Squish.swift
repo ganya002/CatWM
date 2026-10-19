@@ -10,9 +10,9 @@ struct Squish<Trigger: Equatable>: ViewModifier {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
-        let on = enabled && !reduceMotion, delay = delay
-        return content.keyframeAnimator(initialValue: CGSize(width: 1, height: 1), trigger: trigger) { view, s in
-            view.scaleEffect(x: on ? s.width : 1, y: on ? s.height : 1, anchor: anchor)
+        let active = enabled && !reduceMotion, delay = delay
+        return content.keyframeAnimator(initialValue: CGSize(width: 1, height: 1), trigger: trigger) { view, scale in
+            view.scaleEffect(x: active ? scale.width : 1, y: active ? scale.height : 1, anchor: anchor)
         } keyframes: { _ in
             let wobble = Spring(response: 0.38, dampingRatio: 0.42)
             KeyframeTrack(\.width) {

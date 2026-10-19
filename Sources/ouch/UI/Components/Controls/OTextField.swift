@@ -18,8 +18,8 @@ struct OTextField: View {
             .focused($focused)
             .onSubmit(onSubmit)
             .padding(.horizontal, 10).frame(height: Theme.controlHeight)
-            .background(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(Theme.well))
-            .overlay(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+            .background(RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous).fill(Theme.well))
+            .overlay(RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous)
                 .strokeBorder(Theme.focus, lineWidth: focused ? 2 : 0))
             .accessibilityLabel(placeholder)
     }
@@ -28,10 +28,10 @@ struct OTextField: View {
 #if DEBUG
 extension GalleryContent {
     @ViewBuilder var textFieldExamples: some View {
-        HStack(spacing: Theme.Space.lg) {
-            OTextField(placeholder: "Text field", text: $m.text)
+        HStack(spacing: Theme.Space.large) {
+            OTextField(placeholder: "Text field", text: $model.text)
                 .frame(width: 220)
-            OTextField(placeholder: "Monospaced", text: $m.text, mono: true)
+            OTextField(placeholder: "Monospaced", text: $model.text, mono: true)
                 .frame(width: 220)
         }
     }

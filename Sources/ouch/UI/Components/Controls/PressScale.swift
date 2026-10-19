@@ -13,7 +13,7 @@ struct PressScale: ButtonStyle {
 #if DEBUG
 extension GalleryContent {
     @ViewBuilder var pressScaleExample: some View {
-        Button {} label: { Text("Press scale").padding(Theme.Space.md).background(Capsule().fill(Theme.well)) }
+        Button {} label: { Text("Press scale").padding(Theme.Space.medium).background(Capsule().fill(Theme.well)) }
             .buttonStyle(PressScale())
     }
 }

@@ -1,6 +1,6 @@
 import CoreGraphics
-import Testing
 @testable import ouch
+import Testing
 
 @Suite struct WorkspaceKeyTests {
     @Test func aSpaceWorkspaceIsNotAnOuchWorkspace() {
@@ -10,8 +10,11 @@ import Testing
     }
 
     @Test func eachDisplayAndSpaceHasItsOwnKey() {
-        let keys: Set = [WindowManager.spaceWorkspace(display: "A", space: 1), WindowManager.spaceWorkspace(display: "A", space: 2),
-                         WindowManager.spaceWorkspace(display: "B", space: 1)]
+        let keys: Set = [
+            WindowManager.spaceWorkspace(display: "A", space: 1),
+            WindowManager.spaceWorkspace(display: "A", space: 2),
+            WindowManager.spaceWorkspace(display: "B", space: 1)
+        ]
         #expect(keys.count == 3)
     }
 }

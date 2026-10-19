@@ -1,23 +1,26 @@
 import AppKit
 
 extension WindowManager {
-    func screen(from s: Screen, spec: String, in screens: [Screen]) -> Screen? {
+    func screen(from source: Screen, spec: String, in screens: [Screen]) -> Screen? {
         if let dir = Direction(spec) {
-            let c = s.center
-            return screens.filter { o in
+            let center = source.center
+            return screens.filter { other in
                 switch dir {
-                case .left: o.center.x < c.x - 1
-                case .right: o.center.x > c.x + 1
-                case .up: o.center.y < c.y - 1
-                case .down: o.center.y > c.y + 1
+                case .left: other.center.x < center.x - 1
+                case .right: other.center.x > center.x + 1
+                case .upward: other.center.y < center.y - 1
+                case .down: other.center.y > center.y + 1
                 }
-            }.min { hypot($0.center.x - c.x, $0.center.y - c.y) < hypot($1.center.x - c.x, $1.center.y - c.y) }
+            }.min {
+                hypot($0.center.x - center.x, $0.center.y - center.y)
+                    < hypot($1.center.x - center.x, $1.center.y - center.y)
+            }
         }
-        let i = screens.firstIndex { $0.uuid == s.uuid } ?? 0
-        if spec.hasPrefix("+") || spec.hasPrefix("-"), let d = Int(spec) {
-            return screens[((i + d) % screens.count + screens.count) % screens.count]
+        let i = screens.firstIndex { $0.uuid == source.uuid } ?? 0
+        if spec.hasPrefix("+") || spec.hasPrefix("-"), let delta = Int(spec) {
+            return screens[((i + delta) % screens.count + screens.count) % screens.count]
         }
-        if let n = Int(spec), screens.indices.contains(n) { return screens[n] }
+        if let index = Int(spec), screens.indices.contains(index) { return screens[index] }
         return nil
     }
 }

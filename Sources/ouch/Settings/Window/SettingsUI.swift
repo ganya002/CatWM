@@ -25,8 +25,9 @@ final class SettingsUI: ObservableObject {
     init(doc: ConfigDocument) { self.doc = doc }
 
     func beginSession() {
-        let c = doc.config
-        linkedPadding = Set([c.paddingTop, c.paddingBottom, c.paddingLeft, c.paddingRight]).count == 1
+        let config = doc.config
+        let paddings = [config.paddingTop, config.paddingBottom, config.paddingLeft, config.paddingRight]
+        linkedPadding = Set(paddings).count == 1
         refreshStatus()
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in self?.refreshStatus() }
@@ -70,21 +71,27 @@ final class SettingsUI: ObservableObject {
         }
         Hotkeys.shared.paused = true
         if monitor == nil {
-            monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { [weak self] e in guard let self else { return e }; return self.record(e) }
+            monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { [weak self] event in
+                guard let self else { return event }
+                return self.record(event)
+            }
         }
     }
 
-    private func record(_ e: NSEvent) -> NSEvent? {
-        if e.type == .flagsChanged && e.keyCode != 57 { return e }
-        guard let id = recording, let i = doc.binds.firstIndex(where: { $0.id == id }) else { recording = nil; return e }
-        let flags = e.modifierFlags.intersection([.command, .option, .control, .shift])
-        let esc = e.keyCode == 53 && flags.isEmpty
+    private func record(_ event: NSEvent) -> NSEvent? {
+        if event.type == .flagsChanged && event.keyCode != 57 { return event }
+        guard let id = recording, let i = doc.binds.firstIndex(where: { $0.id == id }) else {
+            recording = nil
+            return event
+        }
+        let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
+        let esc = event.keyCode == 53 && flags.isEmpty
         let isRange = BindRange.isRange(doc.binds[i].key)
         if esc && (doc.binds[i].submap.isEmpty || isRange) {
             recording = nil
             return nil
         }
-        guard let name = ConfigDocument.keyName(for: e.keyCode) else { NSSound.beep(); return nil }
+        guard let name = ConfigDocument.keyName(for: event.keyCode) else { NSSound.beep(); return nil }
         if esc {
             doc.binds[i].key = "escape"; doc.binds[i].mods = ""
         } else if isRange {

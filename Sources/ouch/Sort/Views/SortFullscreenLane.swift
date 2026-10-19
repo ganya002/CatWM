@@ -16,7 +16,8 @@ struct SortFullscreenLane: View {
         let lit = model.hover == item.id || model.selected == item.id
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Image(systemName: "arrow.up.left.and.arrow.down.right").font(Theme.symbol(Theme.Icon.xl, .regular))
+                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                    .font(Theme.symbol(Theme.Icon.extraLarge, .regular))
                     .foregroundStyle(Theme.accentInk).fixedSize()
                 Text(item.app).font(Theme.heading()).foregroundStyle(Theme.ink).oneLine()
             }
@@ -36,11 +37,15 @@ struct SortFullscreenLane: View {
                 SortRowFace(item: item, closing: false)
                     .padding(.leading, 5).padding(.trailing, 8)
                     .frame(height: SortMetrics.rowHeight)
-                    .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous).fill(lit ? Theme.accentSoft : .clear))
+                    .background(RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
+                        .fill(lit ? Theme.accentSoft : .clear))
                     .contentShape(Rectangle())
-                    .onHover { on in
-                        if on { model.hover = item.id }
-                        else if model.hover == item.id, model.drag == nil { model.hover = nil }
+                    .onHover { inside in
+                        if inside {
+                            model.hover = item.id
+                        } else if model.hover == item.id, model.drag == nil {
+                            model.hover = nil
+                        }
                     }
                     .zone(.row(item.id))
                     .onTapGesture(count: 2) { model.openFullscreen(item.id) }

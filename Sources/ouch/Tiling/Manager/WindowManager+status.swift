@@ -4,27 +4,31 @@ extension WindowManager {
     func status() -> Status {
         let screens = Screen.all()
         let managed = visible.compactMap { windows[$0] }
-        return Status(trusted: Permission.accessibility.isGranted, keybindsActive: Hotkeys.shared.isActive, running: isStarted,
+        return Status(trusted: Permission.accessibility.isGranted, keybindsActive: Hotkeys.shared.isActive,
+                      running: isStarted,
                       tilingEnabled: tilingEnabled,
                       launchAtLogin: LoginItem.isEnabled, loginNeedsApproval: LoginItem.needsApproval,
                       inputMonitoring: Permission.inputMonitoring.isGranted,
                       tiled: managed.filter { !$0.isFloating }.count, floating: managed.filter(\.isFloating).count,
-                      screens: isStarted ? screens.map { ($0.uuid, $0.ns.localizedName, state(for: $0).layout,
-                                                           isVirtual(shown[$0.uuid]) ? (shown[$0.uuid] ?? "") : "") } : [])
+                      screens: isStarted ? screens.map { screen in
+                          ScreenStatus(uuid: screen.uuid, name: screen.nsScreen.localizedName,
+                                       layout: state(for: screen).layout,
+                                       workspace: isVirtual(shown[screen.uuid]) ? (shown[screen.uuid] ?? "") : "")
+                      } : [])
     }
 
-    func setLayout(_ l: Layout, screen uuid: String) {
-        guard let s = Screen.all().first(where: { $0.uuid == uuid }) else { return }
-        setLayout(l, on: s)
+    func setLayout(_ layout: Layout, screen uuid: String) {
+        guard let screen = Screen.all().first(where: { $0.uuid == uuid }) else { return }
+        setLayout(layout, on: screen)
     }
 
-    func setLayout(_ l: Layout, on s: Screen) {
-        let st = state(for: s)
-        st.layout = l
-        st.zoomed = nil
+    func setLayout(_ layout: Layout, on screen: Screen) {
+        let screenState = state(for: screen)
+        screenState.layout = layout
+        screenState.zoomed = nil
         corrections = [:]
         refresh()
-        if config.enablesLayoutHUD { HUD.shared.show(l.title, layout: l, on: s.ns) }
+        if config.enablesLayoutHUD { HUD.shared.show(layout.title, layout: layout, on: screen.nsScreen) }
     }
 
     func ipc(_ command: String) {
@@ -37,46 +41,64 @@ extension WindowManager {
         case "dump": dumpState()
         case "grabtest": grabTest()
         case "poststyle" where parts.count >= 2:
-            if let n = Int(parts[1]), let style = Hotkeys.PostStyle(rawValue: n) { Hotkeys.postStyle = style }
+            if let raw = Int(parts[1]), let style = Hotkeys.PostStyle(rawValue: raw) { Hotkeys.postStyle = style }
             Log.info("ipc: post style is now \(Hotkeys.postStyle)")
         case "reload": reload()
-        case "modefx": ModeFX.shared.command(Array(parts.dropFirst()).flatMap { $0.split(separator: " ").map(String.init) })
+        case "modefx":
+            ModeFX.shared.command(Array(parts.dropFirst()).flatMap { $0.split(separator: " ").map(String.init) })
         case "panelfx": PanelMotionDemo.command(Array(parts.dropFirst()))
         case "introlab": IntroLab.shared.open()
-        case "intro": Onboarding.shared.playIntro(parts.dropFirst().first.flatMap { IntroScore.Arrangement.named($0) } ?? .standard)
+        case "intro":
+            Onboarding.shared.playIntro(
+                parts.dropFirst().first.flatMap { IntroScore.Arrangement.named($0) } ?? .standard
+            )
         default: Log.info("ipc: unknown command")
         }
     }
 
     func dumpState() {
-        var lines = ["state: trusted=\(Permission.accessibility.isGranted) keybinds=\(Hotkeys.shared.isActive) tiling=\(tilingEnabled) focused=\(focusedWindow()?.id ?? 0)"]
-        for s in Screen.all() {
-            let st = state(for: s)
-            lines.append("  screen \(s.ns.localizedName) workspace=\(shown[s.uuid] ?? "?") home=\(isOnHomeSpace(s)) layout=\(st.layout.rawValue) ratio=\(st.ratio) main=\(st.mainCount) usable=\(usableRect(s))")
-            for id in tiled(on: s) {
-                let w = windows[id]!
-                let ok = targets[id].map { w.frame.approxEqual($0, tolerance: 2) } ?? false
-                lines.append("    tiled \(id) \(w.bundleID ?? "pid \(w.pid)") target=\(targets[id] ?? .null) actual=\(w.frame) \(ok ? "OK" : "MISMATCH")")
+        var lines = [
+            "state: trusted=\(Permission.accessibility.isGranted) keybinds=\(Hotkeys.shared.isActive) "
+                + "tiling=\(tilingEnabled) focused=\(focusedWindow()?.id ?? 0)"
+        ]
+        for screen in Screen.all() {
+            let screenState = state(for: screen)
+            lines.append(
+                "  screen \(screen.nsScreen.localizedName) workspace=\(shown[screen.uuid] ?? "?") "
+                    + "home=\(isOnHomeSpace(screen)) layout=\(screenState.layout.rawValue) "
+                    + "ratio=\(screenState.ratio) main=\(screenState.mainCount) usable=\(usableRect(screen))"
+            )
+            for id in tiled(on: screen) {
+                guard let window = windows[id] else { continue }
+                let matches = targets[id].map { window.frame.approxEqual($0, tolerance: 2) } ?? false
+                lines.append(
+                    "    tiled \(id) \(window.bundleID ?? "pid \(window.pid)") target=\(targets[id] ?? .null) "
+                        + "actual=\(window.frame) \(matches ? "OK" : "MISMATCH")"
+                )
             }
         }
-        for id in visible where windows[id]?.isFloating == true {
-            lines.append("  floating \(id) \(windows[id]!.bundleID ?? "") \(windows[id]!.frame)")
+        for id in visible {
+            guard let window = windows[id], window.isFloating else { continue }
+            lines.append("  floating \(id) \(window.bundleID ?? "") \(window.frame)")
         }
-        for (id, ws) in workspaceOf.sorted(by: { $0.value < $1.value }) where present.contains(id) && !visible.contains(id) {
-            lines.append("  parked \(id) \(windows[id]?.bundleID ?? "") workspace=\(ws) frame=\(windows[id]?.frame ?? .null)")
+        let parked = workspaceOf.sorted(by: { $0.value < $1.value })
+        for (id, workspace) in parked where present.contains(id) && !visible.contains(id) {
+            lines.append(
+                "  parked \(id) \(windows[id]?.bundleID ?? "") workspace=\(workspace) "
+                    + "frame=\(windows[id]?.frame ?? .null)"
+            )
         }
         lines.forEach { Log.info($0) }
     }
 
-    func swapOrder(_ a: CGWindowID, _ b: CGWindowID) {
-        guard let i = order.firstIndex(of: a), let j = order.firstIndex(of: b) else { return }
+    func swapOrder(_ first: CGWindowID, _ second: CGWindowID) {
+        guard let i = order.firstIndex(of: first), let j = order.firstIndex(of: second) else { return }
         order.swapAt(i, j)
-        model.swapWorkspaces(a, b)
+        model.swapWorkspaces(first, second)
     }
 
-    func dispatch(_ dispatcher: String, _ rawArg: String, inMode originalMode: Bool? = nil) {
+    func dispatch(_ dispatcher: String, _ rawArg: String, inMode: Bool = !Hotkeys.shared.submap.isEmpty) {
         let arg = rawArg.trimmingCharacters(in: .whitespaces)
-        let inMode = originalMode ?? !Hotkeys.shared.submap.isEmpty
         if deferFocusCommand(dispatcher, arg: arg, inMode: inMode) { return }
         let timing = TilingTiming("command \(dispatcher)", windows: windows.count)
         defer { timing.finish() }
@@ -86,11 +108,9 @@ extension WindowManager {
             return
         }
         switch dispatcher {
-        case "movefocus": if let d = Direction(arg) { moveFocus(d) }
-        case "movewindow":
-            if arg.lowercased().hasPrefix("mon:") { moveToMonitor(String(arg.dropFirst(4))) }
-            else if let d = Direction(arg) { moveWindow(d) }
-        case "swapwindow": if let d = Direction(arg) { moveWindow(d) }
+        case "movefocus": if let direction = Direction(arg) { moveFocus(direction) }
+        case "movewindow": moveWindowCommand(arg)
+        case "swapwindow": if let direction = Direction(arg) { moveWindow(direction) }
         case "cyclenext": cycleFocus(arg.lowercased().hasPrefix("prev") ? -1 : 1)
         case "swapnext": cycleSwap(arg.lowercased().hasPrefix("prev") ? -1 : 1)
         case "layoutmsg": layoutMessage(arg)
@@ -103,26 +123,58 @@ extension WindowManager {
         case "exec": exec(arg)
         case "focusmonitor": focusMonitor(arg)
         case "movewindowtomonitor": moveToMonitor(arg)
-        case "workspace":
-            if config.virtualWorkspaces { if let ws = resolveWorkspace(arg) { showWorkspace(ws) } }
-            else if let n = Int(arg) { switchSpace(n) }
+        case "workspace": showWorkspaceCommand(arg)
         case "movetoworkspace", "movetoworkspacesilent":
-            if config.virtualWorkspaces {
-                if let ws = resolveWorkspace(arg) { moveFocusedWindow(to: ws, follow: dispatcher == "movetoworkspace") }
-            } else if let n = Int(arg) { moveToSpace(n) }
+            moveToWorkspaceCommand(arg, follow: dispatcher == "movetoworkspace")
         case "cyclelayout": cycleLayout(arg.lowercased().hasPrefix("prev") ? -1 : 1)
-        case "layout", "setlayout": if let l = Layout(rawValue: arg.lowercased()), let s = currentScreen() { setLayout(l, on: s) }
+        case "layout", "setlayout": setLayoutCommand(arg)
         case "toggletiling": toggleTiling()
         case "retile", "reevaluate": corrections = [:]; refresh()
         case "reload": reload()
         case "exit": NSApp.terminate(nil)
         case "submap": Hotkeys.shared.setSubmap(arg)
         case "sethomespace": makeCurrentSpaceHome()
-        case "sort":
-            if config.virtualWorkspaces { SortPanel.shared.toggle() }
-            else { HUD.shared.show("Overview needs Ouch workspaces", on: currentScreen()?.ns) }
+        case "sort": toggleSortCommand()
         case "sort-undo": SortPanel.shared.undoApplied()
         default: NSLog("Ouch: unknown dispatcher %@", dispatcher)
+        }
+    }
+
+    private func moveWindowCommand(_ arg: String) {
+        if arg.lowercased().hasPrefix("mon:") {
+            moveToMonitor(String(arg.dropFirst(4)))
+        } else if let direction = Direction(arg) {
+            moveWindow(direction)
+        }
+    }
+
+    private func setLayoutCommand(_ arg: String) {
+        if let layout = Layout(rawValue: arg.lowercased()), let screen = currentScreen() {
+            setLayout(layout, on: screen)
+        }
+    }
+
+    private func toggleSortCommand() {
+        if config.virtualWorkspaces {
+            SortPanel.shared.toggle()
+        } else {
+            HUD.shared.show("Overview needs Ouch workspaces", on: currentScreen()?.nsScreen)
+        }
+    }
+
+    private func showWorkspaceCommand(_ arg: String) {
+        if config.virtualWorkspaces {
+            if let workspace = resolveWorkspace(arg) { showWorkspace(workspace) }
+        } else if let number = Int(arg) {
+            switchSpace(number)
+        }
+    }
+
+    private func moveToWorkspaceCommand(_ arg: String, follow: Bool) {
+        if config.virtualWorkspaces {
+            if let workspace = resolveWorkspace(arg) { moveFocusedWindow(to: workspace, follow: follow) }
+        } else if let number = Int(arg) {
+            moveToSpace(number)
         }
     }
 
@@ -144,5 +196,4 @@ extension WindowManager {
         default: NSLog("Ouch: unknown layoutmsg %@", cmd)
         }
     }
-
 }

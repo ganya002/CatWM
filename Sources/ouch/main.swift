@@ -22,8 +22,10 @@ if CommandLine.arguments.dropFirst().first == "docs" {
 }
 
 let cliArgs = Array(CommandLine.arguments.dropFirst())
-if let cmd = cliArgs.first, ["dispatch", "dump", "reload", "poststyle", "grabtest", "modefx", "panelfx", "intro", "introlab"].contains(cmd) {
-    DistributedNotificationCenter.default().postNotificationName(ipcNotification, object: cliArgs.joined(separator: " "),
+let ipcCommands = ["dispatch", "dump", "reload", "poststyle", "grabtest", "modefx", "panelfx", "intro", "introlab"]
+if let cmd = cliArgs.first, ipcCommands.contains(cmd) {
+    DistributedNotificationCenter.default().postNotificationName(ipcNotification,
+                                                                 object: cliArgs.joined(separator: " "),
                                                                  userInfo: nil, deliverImmediately: true)
     if cmd == "dump" { print("State written to \(Log.url.path)") }
     exit(0)

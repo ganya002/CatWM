@@ -7,7 +7,7 @@ enum PanelMotionDemo {
     static func command(_ args: [String]) {
         switch args.first?.lowercased() {
         case "all": play(PanelMotion.allCases)
-        case let name? where PanelMotion(rawValue: name) != nil: play([PanelMotion(rawValue: name)!])
+        case let name? where PanelMotion(rawValue: name) != nil: play(PanelMotion(rawValue: name).map { [$0] } ?? [])
         default: Log.info("panelfx: styles are \(PanelMotion.allCases.map(\.rawValue).joined(separator: ", ")), or all")
         }
     }
@@ -17,27 +17,27 @@ enum PanelMotionDemo {
         work = []
         KeyHelp.shared.hide()
         let mode = ShortcutIndex().modeName
-        var t = 0.0
-        for s in styles {
+        var time = 0.0
+        for style in styles {
             if keyboardOnly {
-                at(t + 0.3) { PanelMotion.preview = s; KeyHelp.shared.showFromMenu(preferredMode: mode) }
-                at(t + 2.2) { KeyHelp.shared.hide() }
-                t += 2.6
+                at(time + 0.3) { PanelMotion.preview = style; KeyHelp.shared.showFromMenu(preferredMode: mode) }
+                at(time + 2.2) { KeyHelp.shared.hide() }
+                time += 2.6
             } else {
-                at(t) { PanelMotion.preview = s; HUD.shared.show(s.title, on: NSScreen.main) }
-                at(t + 1.0) { SortPanel.shared.open() }
-                at(t + 2.9) { SortPanel.shared.finish() }
-                at(t + 3.6) { KeyHelp.shared.showFromMenu(preferredMode: mode) }
-                at(t + 5.6) { KeyHelp.shared.hide() }
-                t += 6.4
+                at(time) { PanelMotion.preview = style; HUD.shared.show(style.title, on: NSScreen.main) }
+                at(time + 1.0) { SortPanel.shared.open() }
+                at(time + 2.9) { SortPanel.shared.finish() }
+                at(time + 3.6) { KeyHelp.shared.showFromMenu(preferredMode: mode) }
+                at(time + 5.6) { KeyHelp.shared.hide() }
+                time += 6.4
             }
         }
-        at(t) { PanelMotion.preview = nil }
+        at(time) { PanelMotion.preview = nil }
     }
 
-    private static func at(_ delay: Double, _ f: @escaping () -> Void) {
-        let w = DispatchWorkItem(block: f)
-        work.append(w)
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: w)
+    private static func at(_ delay: Double, _ block: @escaping () -> Void) {
+        let item = DispatchWorkItem(block: block)
+        work.append(item)
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: item)
     }
 }

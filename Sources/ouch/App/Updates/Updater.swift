@@ -47,11 +47,11 @@ final class Updater: NSObject, SPUUpdaterDelegate, ObservableObject {
         set { objectWillChange.send(); UserDefaults.standard.set(newValue, forKey: Self.betaKey) }
     }
 
-    func allowedChannels(for updater: SPUUpdater) -> Set<String> {
+    func allowedChannels(for _: SPUUpdater) -> Set<String> {
         receivesBeta ? ["beta"] : []
     }
 
-    func updater(_ updater: SPUUpdater, didFinishUpdateCycleFor updateCheck: SPUUpdateCheck, error: Error?) {
+    func updater(_ updater: SPUUpdater, didFinishUpdateCycleFor _: SPUUpdateCheck, error _: Error?) {
         DispatchQueue.main.async { self.lastChecked = updater.lastUpdateCheckDate }
     }
 }

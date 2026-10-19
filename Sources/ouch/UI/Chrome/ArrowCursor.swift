@@ -9,21 +9,22 @@ final class ArrowCursor: NSResponder {
         let keeper = ArrowCursor()
         keeper.view = view
         objc_setAssociatedObject(view, &key, keeper, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-        view.addTrackingArea(NSTrackingArea(rect: .zero, options: [.mouseMoved, .mouseEnteredAndExited, .activeAlways, .inVisibleRect],
-                                            owner: keeper))
+        let options: NSTrackingArea.Options = [.mouseMoved, .mouseEnteredAndExited, .activeAlways, .inVisibleRect]
+        view.addTrackingArea(NSTrackingArea(rect: .zero, options: options, owner: keeper))
     }
 
     override func mouseEntered(with event: NSEvent) { update(event) }
     override func mouseMoved(with event: NSEvent) { update(event) }
 
-    private func update(_ e: NSEvent) {
+    private func update(_ event: NSEvent) {
         let current = NSCursor.current
         guard current == NSCursor.iBeam || current == NSCursor.iBeamCursorForVerticalLayout,
               let content = view?.window?.contentView else { return }
-        var hit = content.hitTest(content.superview?.convert(e.locationInWindow, from: nil) ?? e.locationInWindow)
-        while let v = hit {
-            if v is NSText || v is NSTextField { return }
-            hit = v.superview
+        let location = event.locationInWindow
+        var hit = content.hitTest(content.superview?.convert(location, from: nil) ?? location)
+        while let view = hit {
+            if view is NSText || view is NSTextField { return }
+            hit = view.superview
         }
         NSCursor.arrow.set()
     }

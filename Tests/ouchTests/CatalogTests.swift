@@ -9,7 +9,9 @@ private func preservesOriginalOrder(_ actual: [String], _ original: [String]) ->
     actual.filter { original.contains($0) } == original
 }
 
-private let originalPointerIDs = ["float", "zoom", "native", "main", "layout", "display", "workspace", "dim", "blur", "minimize", "close"]
+private let originalPointerIDs = [
+    "float", "zoom", "native", "main", "layout", "display", "workspace", "dim", "blur", "minimize", "close"
+]
 
 private var catalogRoot: URL {
     URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
@@ -25,15 +27,18 @@ private var catalogRoot: URL {
 @Test func everySettingHasOneRendererPlacement() throws {
     let directory = catalogRoot.appendingPathComponent("Sources/ouch/Settings/Panes")
     let files = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
-    let expression = try NSRegularExpression(pattern: #"OptionRows\s*\(\s*pane:\s*\.(\w+)\s*,\s*section:\s*"([^"]+)"(?:\s*,\s*advanced:\s*(true))?"#)
+    let expression = try NSRegularExpression(
+        pattern: #"OptionRows\s*\(\s*pane:\s*\.(\w+)\s*,\s*section:\s*"([^"]+)"(?:\s*,\s*advanced:\s*(true))?"#
+    )
     var placed: [String] = []
     for file in files where file.pathExtension == "swift" {
         let source = try String(contentsOf: file, encoding: .utf8)
         for match in expression.matches(in: source, range: NSRange(source.startIndex..., in: source)) {
-            let paneName = String(source[Range(match.range(at: 1), in: source)!])
-            let section = String(source[Range(match.range(at: 2), in: source)!])
+            let paneName = try String(source[#require(Range(match.range(at: 1), in: source))])
+            let section = try String(source[#require(Range(match.range(at: 2), in: source))])
             let pane = try #require(Pane.allCases.first { $0.rawValue.lowercased() == paneName })
-            placed += OptionRows.options(pane: pane, section: section, advanced: match.range(at: 3).location != NSNotFound).map(\.key)
+            let advanced = match.range(at: 3).location != NSNotFound
+            placed += OptionRows.options(pane: pane, section: section, advanced: advanced).map(\.key)
         }
     }
     for pane in Pane.allCases {
@@ -51,22 +56,22 @@ private var catalogRoot: URL {
 @Test func settingsKeepTheirRowOrder() {
     #expect(
         preservesOriginalOrder(
-            OptionRows.options(pane: .windows, section: "Focus", advanced: false).map { $0.ui.id },
+            OptionRows.options(pane: .windows, section: "Focus", advanced: false).map(\.settingInfo.id),
             [
-                "windows.ffm", "windows.ffmModeOnly", "windows.mff", "windows.dimOthers", "windows.dimStrength", "windows.blurOthers",
-                "windows.blurRadius",
+                "windows.ffm", "windows.ffmModeOnly", "windows.mff", "windows.dimOthers", "windows.dimStrength",
+                "windows.blurOthers", "windows.blurRadius"
             ]))
     #expect(
         preservesOriginalOrder(
-            OptionRows.options(pane: .windows, section: "Workspaces", advanced: false).map { $0.ui.id },
+            OptionRows.options(pane: .windows, section: "Workspaces", advanced: false).map(\.settingInfo.id),
             [
-                "windows.workspaces", "windows.sortStrategy", "windows.sortNudge",
+                "windows.workspaces", "windows.sortStrategy", "windows.sortNudge"
             ]))
     #expect(
         preservesOriginalOrder(
-            OptionRows.options(pane: .layout, section: "Gaps", advanced: false).map { $0.ui.id },
+            OptionRows.options(pane: .layout, section: "Gaps", advanced: false).map(\.settingInfo.id),
             [
-                "layout.gaps", "layout.gapSize", "layout.smartGaps",
+                "layout.gaps", "layout.gapSize", "layout.smartGaps"
             ]))
 }
 
@@ -80,7 +85,8 @@ private var catalogRoot: URL {
     for spec in PointerActions.all {
         #expect(Actions.dispatchers.contains(spec.dispatcher))
         if !spec.nextWorkspace {
-            #expect(Actions.match(BindRow(mods: "", key: "", dispatcher: spec.dispatcher, args: spec.args))?.id == spec.action.id)
+            let row = BindRow(mods: "", key: "", dispatcher: spec.dispatcher, args: spec.args)
+            #expect(Actions.match(row)?.id == spec.action.id)
         }
         if let hint = spec.hint { #expect(KeyHint.label(dispatcher: spec.dispatcher, arg: spec.args) == hint) }
     }
@@ -92,14 +98,14 @@ private var catalogRoot: URL {
         canMakeMain: false, multipleLayouts: false, multipleDisplays: false, virtualWorkspace: false)
     #expect(
         PointerActions.all.filter { $0.available(floating) && originalPointerIDs.contains($0.id) }.map(\.id) == [
-            "float", "native", "dim", "blur", "minimize", "close",
+            "float", "native", "dim", "blur", "minimize", "close"
         ])
     let tiled = CursorShortcutSpec.Context(
         floating: false, tiled: true, zoomed: true, nativeFullscreen: false,
         canMakeMain: true, multipleLayouts: true, multipleDisplays: true, virtualWorkspace: true)
     #expect(
         PointerActions.all.filter {
-            ["float", "zoom", "native", "main", "layout", "display", "workspace", "dim", "blur", "minimize", "close"].contains($0.id)
+            originalPointerIDs.contains($0.id)
         }.allSatisfy { $0.available(tiled) })
     #expect(PointerActions.all.first { $0.id == "zoom" }?.selected(tiled) == true)
 }
@@ -136,7 +142,9 @@ private var catalogRoot: URL {
 }
 
 @Test func shortcutActionMenuKeepsItsOriginalWindowOrder() {
-    let original = ["togglefloating ", "fullscreen ", "nativefullscreen ", "killactive ", "minimize ", "sort ", "sort-undo "]
+    let original = [
+        "togglefloating ", "fullscreen ", "nativefullscreen ", "killactive ", "minimize ", "sort ", "sort-undo "
+    ]
     #expect(preservesOriginalOrder(Actions.all.filter { $0.category == .window }.map(\.id), original))
 }
 
@@ -151,9 +159,9 @@ private var catalogRoot: URL {
     let matches = declaration.matches(in: source, range: NSRange(source.startIndex..., in: source))
     #expect(matches.count == CustomSettingsIndex.all.count)
     for match in matches {
-        let name = String(source[Range(match.range(at: 1), in: source)!])
-        let id = String(source[Range(match.range(at: 2), in: source)!])
-        #expect(source.contains(".\(name).id, ui)"), "No row uses \(id)")
+        let name = try String(source[#require(Range(match.range(at: 1), in: source))])
+        let id = try String(source[#require(Range(match.range(at: 2), in: source))])
+        #expect(source.contains(".\(name).id, settingsUI)"), "No row uses \(id)")
         #expect(CustomSettingsIndex.all.contains { $0.id == id })
     }
 }
@@ -163,13 +171,13 @@ private var catalogRoot: URL {
     @Test func rendersSettingsCatalog() throws {
         guard let directory = ProcessInfo.processInfo.environment["OUCH_SETTINGS_PNG"] else { return }
         let doc = ConfigDocument(text: defaultText)
-        let ui = SettingsUI(doc: doc)
-        ui.advancedOpen = Set(Pane.allCases)
+        let settingsUI = SettingsUI(doc: doc)
+        settingsUI.advancedOpen = Set(Pane.allCases)
         let views: [(String, AnyView)] = [
-            ("windows", AnyView(WindowsPane(doc: doc, ui: ui))),
-            ("layout", AnyView(LayoutPane(doc: doc, ui: ui))),
-            ("motion", AnyView(MotionPane(doc: doc, ui: ui))),
-            ("shortcuts", AnyView(ShortcutsPane(doc: doc, ui: ui))),
+            ("windows", AnyView(WindowsPane(doc: doc, settingsUI: settingsUI))),
+            ("layout", AnyView(LayoutPane(doc: doc, settingsUI: settingsUI))),
+            ("motion", AnyView(MotionPane(doc: doc, settingsUI: settingsUI))),
+            ("shortcuts", AnyView(ShortcutsPane(doc: doc, settingsUI: settingsUI)))
         ]
         try FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true)
         for (name, view) in views {
@@ -178,7 +186,7 @@ private var catalogRoot: URL {
                     view
                     Spacer(minLength: 0)
                 }
-                .padding(Theme.Space.page).background(Theme.bg))
+                .padding(Theme.Space.page).background(Theme.background))
             host.frame = NSRect(x: 0, y: 0, width: 660, height: 4000)
             host.layoutSubtreeIfNeeded()
             let rep = try #require(host.bitmapImageRepForCachingDisplay(in: host.bounds))
@@ -193,6 +201,8 @@ private var catalogRoot: URL {
 @Test func directionCatalogKeepsActionAndHintNames() {
     #expect(Direction.allCases.map(\.rawValue) == ["l", "r", "u", "d"])
     #expect(Direction.allCases.map(\.title) == ["Left", "Right", "Up", "Down"])
-    #expect(Direction.hintArrows == ["l": "←", "left": "←", "r": "→", "right": "→", "u": "↑", "up": "↑", "d": "↓", "down": "↓"])
+    #expect(Direction.hintArrows == [
+        "l": "←", "left": "←", "r": "→", "right": "→", "u": "↑", "up": "↑", "d": "↓", "down": "↓"
+    ])
     #expect(KeyHint.label(dispatcher: "movefocus", arg: "top") == "Focus")
 }

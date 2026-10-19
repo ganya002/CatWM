@@ -1,14 +1,15 @@
 import AppKit
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private var statusItem: NSStatusItem!
+    private var statusItem: NSStatusItem?
     private var statusUpdatePending = false
 
-    func applicationDidFinishLaunching(_ notification: Notification) {
+    func applicationDidFinishLaunching(_: Notification) {
         closePreviousInstances()
         migrateLegacyDefaults()
         Theme.registerFonts()
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        self.statusItem = statusItem
         statusItem.button?.image = NSImage(systemSymbolName: "rectangle.split.3x1", accessibilityDescription: "Ouch")
         statusItem.button?.target = self
         statusItem.button?.action = #selector(toggleMenu)
@@ -35,7 +36,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Log.info("launch: Accessibility not granted")
             WindowManager.shared.prewarm()
         }
-        if Onboarding.shouldShow(firstRun: firstRun, trusted: trusted) || CommandLine.arguments.contains("--onboarding") {
+        if Onboarding.shouldShow(firstRun: firstRun, trusted: trusted)
+            || CommandLine.arguments.contains("--onboarding") {
             Onboarding.shared.start()
         } else if !trusted {
             Permission.accessibility.request()
@@ -49,10 +51,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func closePreviousInstances() {
-        let me = ProcessInfo.processInfo.processIdentifier
+        let ownPid = ProcessInfo.processInfo.processIdentifier
         let myExe = Bundle.main.executableURL?.resolvingSymlinksInPath()
         let others = NSWorkspace.shared.runningApplications.filter { app in
-            guard app.processIdentifier != me, !app.isTerminated else { return false }
+            guard app.processIdentifier != ownPid, !app.isTerminated else { return false }
             if let id = Bundle.main.bundleIdentifier, app.bundleIdentifier == id { return true }
             return myExe != nil && app.executableURL?.resolvingSymlinksInPath() == myExe
         }
@@ -70,12 +72,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func migrateLegacyDefaults() {
-        let d = UserDefaults.standard
-        guard !d.bool(forKey: "migratedFromHyprthyst") else { return }
-        d.set(true, forKey: "migratedFromHyprthyst")
-        guard let old = d.persistentDomain(forName: "local.hyprthyst") else { return }
-        for (key, value) in old where d.object(forKey: key) == nil && !key.hasPrefix("NSWindow Frame") && key != "didSetUpLaunchAtLogin" {
-            d.set(value, forKey: key)
+        let defaults = UserDefaults.standard
+        guard !defaults.bool(forKey: "migratedFromHyprthyst") else { return }
+        defaults.set(true, forKey: "migratedFromHyprthyst")
+        guard let old = defaults.persistentDomain(forName: "local.hyprthyst") else { return }
+        for (key, value) in old where defaults.object(forKey: key) == nil
+            && !key.hasPrefix("NSWindow Frame")
+            && key != "didSetUpLaunchAtLogin" {
+            defaults.set(value, forKey: key)
         }
         Log.info("migrated \(old.count) settings from Hyprthyst")
     }
@@ -100,7 +104,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+    func applicationShouldHandleReopen(_: NSApplication, hasVisibleWindows _: Bool) -> Bool {
         SettingsWindow.shared.show(pane: nil)
         return false
     }
@@ -113,7 +117,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return .terminateLater
     }
 
-    func applicationWillTerminate(_ notification: Notification) {
+    func applicationWillTerminate(_: Notification) {
         CrashWatch.cleanExit()
     }
 
@@ -130,7 +134,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func updateIcon() {
         let trusted = Permission.accessibility.isGranted
-        guard let button = statusItem.button else { return }
+        guard let button = statusItem?.button else { return }
         button.attributedTitle = NSAttributedString(string: "")
         guard trusted, let state = WindowManager.shared.menuBarState() else {
             button.image = NSImage(systemSymbolName: trusted ? "rectangle.split.3x1" : "exclamationmark.triangle",
@@ -145,7 +149,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func makeMainMenu() -> NSMenu {
         let main = NSMenu()
         let appMenu = NSMenu()
-        let updates = appMenu.addItem(withTitle: "Check for Updates…", action: #selector(checkForUpdatesItem), keyEquivalent: "")
+        let updates = appMenu.addItem(withTitle: "Check for Updates…", action: #selector(checkForUpdatesItem),
+                                      keyEquivalent: "")
         updates.target = self
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Close Window", action: #selector(closeWindow), keyEquivalent: "w").target = self
@@ -165,11 +170,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     static func checkForUpdates() {
         guard Updater.shared.isConfigured else {
-            let a = NSAlert()
-            a.messageText = "Updates aren't set up in this build"
-            a.informativeText = "This build has no update feed. Release builds check for updates automatically."
+            let alert = NSAlert()
+            alert.messageText = "Updates aren't set up in this build"
+            alert.informativeText = "This build has no update feed. Release builds check for updates automatically."
             NSApp.activate(ignoringOtherApps: true)
-            a.runModal()
+            alert.runModal()
             return
         }
         NSApp.activate(ignoringOtherApps: true)

@@ -8,23 +8,22 @@ struct OButtonBody: View {
     @Environment(\.isEnabled) private var enabled
 
     var body: some View {
-        let s = style
         configuration.label
-            .font(Theme.body(s.size == .sm ? 12.5 : s.size == .lg ? 14 : 13, .medium))
+            .font(Theme.body(style.size == .small ? 12.5 : style.size == .large ? 14 : 13, .medium))
             .oneLine()
             .foregroundStyle(ink)
-            .padding(.horizontal, s.iconOnly ? 0 : s.size == .sm ? 11 : s.size == .lg ? 18 : 14)
-            .frame(width: s.iconOnly ? s.height : nil, height: s.height)
+            .padding(.horizontal, style.iconOnly ? 0 : style.size == .small ? 11 : style.size == .large ? 18 : 14)
+            .frame(width: style.iconOnly ? style.height : nil, height: style.height)
             .background(Capsule().fill(fill))
             .contentShape(Capsule())
             .scaleEffect(configuration.isPressed ? 0.95 : 1)
             .animation(Motion.spring, value: configuration.isPressed)
             .animation(Motion.fade, value: lit)
             .opacity(enabled ? 1 : 0.45)
-            .onHover { hover.on = $0 }
+            .onHover { hover.isOn = $0 }
     }
 
-    private var lit: Bool { hover.on && enabled }
+    private var lit: Bool { hover.isOn && enabled }
 
     private var ink: Color {
         switch style.variant {

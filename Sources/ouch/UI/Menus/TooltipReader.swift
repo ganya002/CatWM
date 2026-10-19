@@ -5,10 +5,10 @@ struct TooltipReader: NSViewRepresentable {
     let text: String
     let chords: [[String]]
 
-    func makeNSView(context: Context) -> TooltipTrackingView { TooltipTrackingView() }
-    func updateNSView(_ v: TooltipTrackingView, context: Context) {
-        v.text = text
-        v.chords = chords
+    func makeNSView(context _: Context) -> TooltipTrackingView { TooltipTrackingView() }
+    func updateNSView(_ view: TooltipTrackingView, context _: Context) {
+        view.text = text
+        view.chords = chords
     }
-    static func dismantleNSView(_ v: TooltipTrackingView, coordinator: ()) { Tooltip.shared.leave(v) }
+    static func dismantleNSView(_ view: TooltipTrackingView, coordinator _: ()) { Tooltip.shared.leave(view) }
 }

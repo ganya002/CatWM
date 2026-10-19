@@ -8,13 +8,22 @@ extension SortModel {
         strategy = config.sortStrategy
         nextLayout = layouts.contains(.tall) ? .tall : layouts[0]
         plans = [:]
-        hover = nil; selected = nil; notice = nil; drag = nil; columnDrag = nil; over = nil; columnSlot = nil; focusName = nil
+        hover = nil
+        selected = nil
+        notice = nil
+        drag = nil
+        columnDrag = nil
+        over = nil
+        columnSlot = nil
+        focusName = nil
         running = true
         binds = [:]
         var modes: [String] = []
-        for b in config.bindings where !b.submap.isEmpty && !modes.contains(b.submap) { modes.append(b.submap) }
+        for bind in config.bindings where !bind.submap.isEmpty && !modes.contains(bind.submap) {
+            modes.append(bind.submap)
+        }
         let mode = modes.first { $0.lowercased() == "window" } ?? modes.first ?? ""
-        for b in config.bindings where b.submap == mode { binds[Self.key(b.keyCode, b.mods)] = b }
+        for bind in config.bindings where bind.submap == mode { binds[Self.key(bind.keyCode, bind.mods)] = bind }
         use(start)
     }
 
@@ -26,7 +35,7 @@ extension SortModel {
         running = false
         edgeTimer?.invalidate()
         edgeTimer = nil
-        if let o = scrollObserver { NotificationCenter.default.removeObserver(o) }
+        if let observer = scrollObserver { NotificationCenter.default.removeObserver(observer) }
         scrollObserver = nil
         scroller = nil
         drag = nil; columnDrag = nil; over = nil; columnSlot = nil; hover = nil
@@ -37,19 +46,20 @@ extension SortModel {
     func count(of uuid: String) -> Int { plans[uuid]?.items.count ?? display(uuid)?.items.count ?? 0 }
 
     func ensurePlan(_ uuid: String, grouped: Bool) {
-        guard plans[uuid] == nil, let d = display(uuid) else { return }
-        if grouped && !d.isSorted {
-            var p = SortPlan.grouped(d, by: strategy, layouts: layouts, avoiding: reserved(excluding: uuid))
-            p.touched = true
-            p.pending = true
-            plans[uuid] = p
+        guard plans[uuid] == nil, let shown = display(uuid) else { return }
+        if grouped && !shown.isSorted {
+            var displayPlan = SortPlan.grouped(shown, by: strategy, layouts: layouts,
+                                               avoiding: reserved(excluding: uuid))
+            displayPlan.touched = true
+            displayPlan.pending = true
+            plans[uuid] = displayPlan
         } else {
-            plans[uuid] = .current(of: d)
+            plans[uuid] = .current(of: shown)
         }
     }
 
     func reserved(excluding uuid: String? = nil) -> Set<String> {
-        Set(plans.filter { $0.key != (uuid ?? current) }.values.flatMap { $0.lanes.map(\.ws) })
+        Set(plans.filter { $0.key != (uuid ?? current) }.values.flatMap { $0.lanes.map(\.workspace) })
     }
 
     func use(_ uuid: String) {
@@ -67,19 +77,19 @@ extension SortModel {
     }
 
     func edit(keepNotice: Bool = false, _ change: (inout SortPlan) -> Void) {
-        guard var p = plans[current] else { return }
-        change(&p)
-        p.touched = true
-        p.pending = true
-        plans[current] = p
+        guard var displayPlan = plans[current] else { return }
+        change(&displayPlan)
+        displayPlan.touched = true
+        displayPlan.pending = true
+        plans[current] = displayPlan
         if !keepNotice { notice = nil }
         changed()
     }
 
-    func pick(_ s: SortStrategy) {
-        strategy = s
+    func pick(_ choice: SortStrategy) {
+        strategy = choice
         let other = reserved()
-        edit { $0.sort(by: s, layouts: layouts, avoiding: other) }
+        edit { $0.sort(by: choice, layouts: layouts, avoiding: other) }
         selected = nil
         scrollToStart()
     }
@@ -87,45 +97,48 @@ extension SortModel {
     func closeDuplicates() { edit { $0.closeDuplicates() } }
 
     func rename(_ lane: UUID, _ name: String) {
-        edit(keepNotice: true) { p in
-            if let i = p.lanes.firstIndex(where: { $0.id == lane }) { p.lanes[i].name = name }
+        edit(keepNotice: true) { displayPlan in
+            if let i = displayPlan.lanes.firstIndex(where: { $0.id == lane }) { displayPlan.lanes[i].name = name }
         }
     }
 
     func renumber(_ lane: UUID, to text: String) {
-        let p = plan
-        let t = text.trimmingCharacters(in: .whitespaces)
-        guard let i = p.lanes.firstIndex(where: { $0.id == lane }), !t.isEmpty, t != p.lanes[i].ws else { return }
-        guard t.allSatisfy(\.isASCII), let n = Int(t), (1...SortPlan.maxLanes).contains(n) else {
+        let snapshot = plan
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        guard let i = snapshot.lanes.firstIndex(where: { $0.id == lane }),
+              !trimmed.isEmpty,
+              trimmed != snapshot.lanes[i].workspace else { return }
+        guard trimmed.allSatisfy(\.isASCII), let number = Int(trimmed), (1...SortPlan.maxLanes).contains(number) else {
             notice = SortNotice(text: "Workspace numbers run from 1 to \(SortPlan.maxLanes).", undo: nil)
             return
         }
-        let ws = String(n)
-        if p.taken.contains(ws) || reserved().contains(ws) {
-            notice = SortNotice(text: "Workspace \(ws) is on another display.", undo: nil)
-        } else if let held = p.lanes.first(where: { $0.ws == ws }), !held.ids.isEmpty || !held.name.trimmingCharacters(in: .whitespaces).isEmpty {
-            notice = SortNotice(text: "Workspace \(ws) is in use. Move its windows away first.", undo: nil)
+        let workspace = String(number)
+        if snapshot.taken.contains(workspace) || reserved().contains(workspace) {
+            notice = SortNotice(text: "Workspace \(workspace) is on another display.", undo: nil)
+        } else if let held = snapshot.lanes.first(where: { $0.workspace == workspace }),
+                  !held.ids.isEmpty || !held.name.trimmingCharacters(in: .whitespaces).isEmpty {
+            notice = SortNotice(text: "Workspace \(workspace) is in use. Move its windows away first.", undo: nil)
         } else {
-            edit { $0.renumberLane(i, to: ws) }
+            edit { $0.renumberLane(i, to: workspace) }
             reveal = SortReveal(id: 0, lane: lane, token: reveal.token + 1)
         }
     }
 
     func pendingApplies() -> [SortApply] {
         let others = displays.map(\.id).filter { $0 != current }.compactMap { plans[$0] }.filter(\.pending)
-        return (others + [plans[current]].compactMap { $0 }.filter(\.pending)).map(\.applied)
+        return (others + [plans[current]].compactMap(\.self).filter(\.pending)).map(\.applied)
     }
 
     func markApplied() {
-        for (k, p) in plans where p.pending {
-            plans[k]?.pending = false
-            plans[k]?.claimed.formUnion(p.lanes.map(\.ws))
+        for (key, displayPlan) in plans where displayPlan.pending {
+            plans[key]?.pending = false
+            plans[key]?.claimed.formUnion(displayPlan.lanes.map(\.workspace))
         }
     }
 
-    func result() -> (changed: Bool, closing: [CGWindowID], workspaces: Int) {
+    func result() -> SortResult {
         let edited = plans.values.filter(\.touched)
-        return (!edited.isEmpty, edited.flatMap(\.close), edited.reduce(0) { $0 + $1.lanes.filter { !$0.ids.isEmpty }.count })
+        return SortResult(changed: !edited.isEmpty, closing: edited.flatMap(\.close),
+                          workspaces: edited.reduce(0) { $0 + $1.lanes.filter { !$0.ids.isEmpty }.count })
     }
-
 }

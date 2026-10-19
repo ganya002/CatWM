@@ -33,15 +33,15 @@ final class HUD {
 
     private func show(_ text: String, layout: Layout?, warning: Bool, on screen: NSScreen?) {
         guard let screen = screen ?? NSScreen.main else { return }
-        let p = panel ?? makePanel()
-        panel = p
-        let wasVisible = p.isVisible && p.alphaValue > 0.5
+        let hud = panel ?? makePanel()
+        panel = hud
+        let wasVisible = hud.isVisible && hud.alphaValue > 0.5
         model.text = text
         model.layout = layout
         model.warning = warning
         if !wasVisible { model.pops += 1; PerfMonitor.track("ui:hud", for: 0.5) }
         let host = host ?? NSHostingView(rootView: HUDView(model: model, margin: Self.margin))
-        if self.host == nil { self.host = host; p.contentView = host }
+        if self.host == nil { self.host = host; hud.contentView = host }
         host.layoutSubtreeIfNeeded()
         let size = host.fittingSize
         var frame = CGRect(x: screen.frame.midX - size.width / 2, y: screen.frame.midY - size.height / 2,
@@ -50,17 +50,17 @@ final class HUD {
             let below = avoid.minY - frame.height + Self.margin - 12
             frame.origin.y = below >= screen.visibleFrame.minY ? below : avoid.maxY - Self.margin + 12
         }
-        p.place(size: frame.size, on: screen, anchor: .origin(frame.origin), inset: EdgeInsets(all: Self.margin))
-        p.alphaValue = 1
-        p.orderFrontRegardless()
+        hud.place(size: frame.size, on: screen, anchor: .origin(frame.origin), inset: EdgeInsets(all: Self.margin))
+        hud.alphaValue = 1
+        hud.orderFrontRegardless()
 
         hideWork?.cancel()
-        let work = DispatchWorkItem { [weak p] in
+        let work = DispatchWorkItem { [weak hud] in
             NSAnimationContext.runAnimationGroup({ ctx in
                 ctx.duration = 0.25
-                p?.animator().alphaValue = 0
+                hud?.animator().alphaValue = 0
             }, completionHandler: {
-                if let p, p.alphaValue == 0 { p.orderOut(nil) }
+                if let hud, hud.alphaValue == 0 { hud.orderOut(nil) }
             })
         }
         hideWork = work

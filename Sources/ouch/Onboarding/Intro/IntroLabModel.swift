@@ -5,20 +5,20 @@ final class IntroLabModel: ObservableObject {
     @Published var playing: String?
     private var score: IntroScore?
 
-    func music(_ a: IntroScore.Arrangement) {
+    func music(_ arrangement: IntroScore.Arrangement) {
         stop()
-        let s = IntroScore(a)
-        s.play()
-        score = s
-        playing = a.id
-        DispatchQueue.main.asyncAfter(deadline: .now() + 9) { [weak self, weak s] in
-            if let self, self.score === s { self.score = nil; self.playing = nil }
+        let started = IntroScore(arrangement)
+        started.play()
+        score = started
+        playing = arrangement.id
+        DispatchQueue.main.asyncAfter(deadline: .now() + 9) { [weak self, weak started] in
+            if let self, self.score === started { self.score = nil; self.playing = nil }
         }
     }
 
-    func intro(_ a: IntroScore.Arrangement) {
+    func intro(_ arrangement: IntroScore.Arrangement) {
         stop()
-        Onboarding.shared.playIntro(a)
+        Onboarding.shared.playIntro(arrangement)
     }
 
     func stop() {

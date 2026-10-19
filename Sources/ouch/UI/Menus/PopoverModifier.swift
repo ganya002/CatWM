@@ -11,9 +11,9 @@ struct PopoverModifier<PopContent: View>: ViewModifier {
         view
             .background(AnchorReader(anchor: anchor))
             .onChange(of: isPresented) { _, now in
-                if now, let r = anchor.screenRect {
+                if now, let rect = anchor.screenRect {
                     let binding = $isPresented
-                    Popup.shared.popover(from: r, onClose: { binding.wrappedValue = false }, content: content)
+                    Popup.shared.popover(from: rect, onClose: { binding.wrappedValue = false }, content: content)
                     state.generation = Popup.shared.generation
                 } else if !now {
                     Popup.shared.close(generation: state.generation)
