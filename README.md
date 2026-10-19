@@ -222,7 +222,7 @@ Open it from the menu bar menu with **Settings…** (⌘,). Changes save and app
 - **General:** permission and keybind status, open at login, tiling, the main modifier, updates. Advanced: beta releases. Reset everything is at the bottom.
 - **Layout:** the layout of each display, the layouts in the cycle, gaps and padding with a live preview, the layout HUD. Advanced: smart gaps, per-side padding, the built-in display, the menu bar, the main pane resize step.
 - **Windows:** focus follows mouse, mouse follows focus, drag to swap or resize, floating apps, Ouch workspaces. Advanced: new windows, small windows, bundle IDs, the home Desktop.
-- **Motion:** style presets (None, Snappy, Smooth, Relaxed, Springy, Wobbly, Bouncy, Playful), a preview and duration. Advanced: curve and bounciness.
+- **Motion:** style presets (None, Snappy, Relaxed), a preview and duration. Advanced: curve and bounciness.
 - **Shortcuts:** grouped by category. Click a shortcut, then press the new keys to record it. Invalid shortcuts are flagged in red; ones that replace a standard app shortcut like ⌘Q are flagged in orange. The keyboard button opens the Shortcut Map. Gaming (WASD) and Restore Defaults are at the bottom.
 
 Detailed logging is a launch argument now: `open build/ouch.app --args --verbose`. The old `debug-logging` key still works.

@@ -20,12 +20,7 @@ struct MotionPane: View {
     static let presets: [Preset] = [
         Preset(name: "None", animate: false),
         Preset(name: "Snappy", duration: 0.12),
-        Preset(name: "Smooth", duration: 0.2),
-        Preset(name: "Relaxed", curve: .easeInOut, duration: 0.35),
-        Preset(name: "Springy", curve: .spring, duration: 0.5, bounce: 0.55),
-        Preset(name: "Wobbly", curve: .spring, duration: 0.8, bounce: 0.85),
-        Preset(name: "Bouncy", curve: .bounce, duration: 0.6, bounce: 0.5),
-        Preset(name: "Playful", curve: .overshoot, duration: 0.35, bounce: 0.6)
+        Preset(name: "Relaxed", curve: .easeInOut, duration: 0.35)
     ]
 
     private func matches(_ preset: Preset, _ config: Config) -> Bool {
@@ -39,32 +34,31 @@ struct MotionPane: View {
         let config = doc.config
         VStack(alignment: .leading, spacing: 30) {
             OGroup("Style") {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
-                    ForEach(Self.presets, id: \.name) { preset in
-                        PresetTile(preset: preset, selected: matches(preset, config)) {
-                            doc.config.animate = preset.animate
-                            if preset.animate {
-                                doc.config.animationCurve = preset.curve
-                                doc.config.animationDuration = preset.duration
-                                if preset.curve.usesBounce { doc.config.animationBounce = preset.bounce }
+                HStack(spacing: 12) {
+                    VStack(spacing: 8) {
+                        ForEach(Self.presets, id: \.name) { preset in
+                            PresetTile(preset: preset, selected: matches(preset, config)) {
+                                doc.config.animate = preset.animate
+                                if preset.animate {
+                                    doc.config.animationCurve = preset.curve
+                                    doc.config.animationDuration = preset.duration
+                                    if preset.curve.usesBounce { doc.config.animationBounce = preset.bounce }
+                                }
+                                play()
                             }
-                            play()
                         }
                     }
+                    .frame(width: 190)
+                    .setting(MotionPane.searchStyle.id, settingsUI)
+                    preview
+                        .setting(MotionPane.searchPreview.id, settingsUI)
                 }
+                .frame(height: 170)
                 .padding(.vertical, 10)
-            }
-            .setting(MotionPane.searchStyle.id, settingsUI)
-
-            OGroup("Preview") {
-                preview
-                    .frame(height: 150)
-                    .padding(.vertical, 10)
                 ORow("Play it again", description: "Plays with exactly the curve windows use") {
                     OButton("Play", icon: "play.fill", size: .small, action: play)
                 }
             }
-            .setting(MotionPane.searchPreview.id, settingsUI)
 
             OGroup("Feel") {
                 OptionRows(pane: .motion, section: "Feel", doc: doc, settingsUI: settingsUI, onCommit: play)
@@ -110,10 +104,7 @@ struct MotionPane: View {
     }
 
     private func play() {
-        let config = doc.config
-        let curve = CurveAnimation(curve: config.animationCurve, bounce: config.animationBounce,
-                                   duration: config.animationDuration)
-        withAnimation(config.animate ? Animation(curve) : nil) {
+        withAnimation(PanelMotion.windowAnimation) {
             settingsUI.previewFlipped.toggle()
         }
     }
@@ -121,7 +112,7 @@ struct MotionPane: View {
 
 extension MotionPane {
     static let searchStyle = SettingEntry(id: "motion.style", title: "Animation style", pane: .motion,
-                                          keywords: "preset snappy smooth springy bouncy")
+                                          keywords: "preset snappy relaxed none")
     static let searchPreview = SettingEntry(id: "motion.preview", title: "Animation preview", pane: .motion,
                                             keywords: "play")
     static let searchBezier = SettingEntry(id: "motion.bezier", title: "Bezier control points", pane: .motion,
