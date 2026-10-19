@@ -32,8 +32,8 @@ enum Actions {
         for l in Layout.allCases {
             add("Use \(l.title) Layout", .layout, "layout", l.rawValue, "rectangle.split.2x2", group: "Use Layout", short: l.title)
         }
-        add("Sort Windows", .window, "sort", "", "square.grid.3x1.below.line.grid.1x2", focusRequired: false)
-        add("Undo Last Sort", .window, "sort-undo", "", "arrow.uturn.backward", focusRequired: false)
+        add("Overview", .window, "sort", "", "square.grid.3x1.below.line.grid.1x2", focusRequired: false)
+        add("Undo Last Overview Change", .window, "sort-undo", "", "arrow.uturn.backward", focusRequired: false)
         add("Focus Next Display", .displays, "focusmonitor", "+1", "display")
         add("Focus Previous Display", .displays, "focusmonitor", "-1", "display")
         add("Move Window to Previous Display", .displays, "movewindow", "mon:-1", "rectangle.portrait.and.arrow.right", focusRequired: true)

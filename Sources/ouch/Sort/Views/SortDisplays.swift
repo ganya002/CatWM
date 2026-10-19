@@ -6,7 +6,7 @@ struct SortDisplays: View {
     @Namespace private var thumb
 
     var body: some View {
-        OSegmentTrack(title: "Display to sort") {
+        OSegmentTrack(title: "Display to overview") {
             ForEach(model.displays) { d in
                 let on = d.id == model.current
                 OSegment(label: d.short, count: model.count(of: d.id), on: on, hot: model.over == .display(d.id) && !on,

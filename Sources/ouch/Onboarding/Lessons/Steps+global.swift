@@ -33,14 +33,14 @@ extension Steps {
     static func sortIntro(_ c: Coach) -> PlannedStep? {
         guard c.wm.config.virtualWorkspaces, let sort = c.book.find(["sort"], global: true) ?? c.book.find(["sort"]) else { return nil }
         return PlannedStep { _ in
-            Step(title: "Sort Windows", text: "", target: .bar, caps: KeyWords.caps(sort, long: true), button: "Next", count: 0)
+            Step(title: "Overview", text: "", target: .bar, caps: KeyWords.caps(sort, long: true), button: "Next", count: 0)
         }
     }
 
     static func sortTry(_ c: Coach) -> [PlannedStep] {
         guard c.wm.config.virtualWorkspaces, let sort = c.book.find(["sort"], global: true) else { return [] }
         let open = PlannedStep { c in
-            Step(title: "Sort Windows",
+            Step(title: "Overview",
                  text: "\(KeyWords.modWords(sort.mods))-\(KeyWords.keyLabel(sort.keyCode, long: false)) splits a crowded workspace into several, by task. Open it.",
                  target: .bar, caps: KeyWords.caps(sort, long: true),
                  accept: { e in
