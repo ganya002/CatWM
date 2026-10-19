@@ -9,24 +9,26 @@ struct OMenuPicker<T: Hashable>: View {
     @Environment(\.isEnabled) private var enabled
 
     var body: some View {
-        let options = options, binding = $selection, lit = hover.on && enabled
+        let options = options, binding = $selection, lit = hover.isOn && enabled
         OMenuButton(items: {
-            options.enumerated().map { n, o in
-                MenuItem(id: "\(n)", kind: .radio, label: o.label, checked: o.value == binding.wrappedValue,
-                         action: { binding.wrappedValue = o.value })
+            options.enumerated().map { index, option in
+                MenuItem(id: "\(index)", kind: .radio, label: option.label,
+                         checked: option.value == binding.wrappedValue,
+                         action: { binding.wrappedValue = option.value })
             }
-        }) {
+        }, label: {
             HStack(spacing: 6) {
                 Text(options.first { $0.value == selection }?.label ?? "").font(Theme.body(13)).oneLine()
-                Image(systemName: "chevron.up.chevron.down").font(Theme.symbol(Theme.Icon.xs, .semibold)).foregroundStyle(Theme.inkMuted)
+                Image(systemName: "chevron.up.chevron.down").font(Theme.symbol(Theme.Icon.extraSmall, .semibold))
+                    .foregroundStyle(Theme.inkMuted)
             }
             .foregroundStyle(Theme.ink)
             .padding(.horizontal, 12).frame(height: Theme.controlHeight)
             .background(Capsule().fill(lit ? Theme.wellHover : Theme.well))
             .contentShape(Capsule())
-        }
+        })
         .fixedSize()
-        .onHover { hover.on = $0 }
+        .onHover { hover.isOn = $0 }
         .animation(Motion.fade, value: lit)
         .accessibilityLabel(title)
         .accessibilityValue(options.first { $0.value == selection }?.label ?? "")
@@ -36,7 +38,7 @@ struct OMenuPicker<T: Hashable>: View {
 #if DEBUG
 extension GalleryContent {
     @ViewBuilder var menuPickerExample: some View {
-        OMenuPicker(title: "Curve", options: ["Ease", "Spring", "Off"].map { ($0, $0) }, selection: $m.segment)
+        OMenuPicker(title: "Curve", options: ["Ease", "Spring", "Off"].map { ($0, $0) }, selection: $model.segment)
     }
 }
 #endif

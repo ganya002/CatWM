@@ -11,7 +11,7 @@ struct HUDView: View {
         Group {
             if model.warning {
                 HStack(spacing: 8) {
-                    Image(systemName: "exclamationmark.triangle.fill").font(Theme.symbol(Theme.Icon.lg, .semibold))
+                    Image(systemName: "exclamationmark.triangle.fill").font(Theme.symbol(Theme.Icon.large, .semibold))
                         .foregroundStyle(Theme.warning)
                         .wiggleEffect(value: model.pops)
                     Text(model.text).font(Theme.body(14, .medium)).oneLine().fixedSize()

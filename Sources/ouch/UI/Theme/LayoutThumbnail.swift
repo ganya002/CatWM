@@ -9,15 +9,15 @@ struct LayoutThumbnail: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        GeometryReader { g in
-            let frames = Self.frames(layout, count: count, size: g.size)
-            let r = max(1.5, min(g.size.width, g.size.height) * 0.05)
+        GeometryReader { geometry in
+            let frames = Self.frames(layout, count: count, size: geometry.size)
+            let radius = max(1.5, min(geometry.size.width, geometry.size.height) * 0.05)
             ZStack(alignment: .topLeading) {
-                ForEach(Array(frames.enumerated()).reversed(), id: \.offset) { i, f in
-                    RoundedRectangle(cornerRadius: r, style: .continuous)
+                ForEach(Array(frames.enumerated()).reversed(), id: \.offset) { i, frame in
+                    RoundedRectangle(cornerRadius: radius, style: .continuous)
                         .fill(i == 0 ? (selected ? Theme.accent : Theme.thumbMain) : Theme.tint)
-                        .frame(width: f.width, height: f.height)
-                        .offset(x: f.minX, y: f.minY)
+                        .frame(width: frame.width, height: frame.height)
+                        .offset(x: frame.minX, y: frame.minY)
                 }
             }
         }
@@ -29,22 +29,25 @@ struct LayoutThumbnail: View {
 
     private static func frames(_ layout: Layout, count: Int, size: CGSize) -> [CGRect] {
         let gap = max(1.5, size.width * 0.035)
-        let r = CGRect(origin: .zero, size: size)
-        return layout.frames(count: count, in: r.insetBy(dx: -gap / 2, dy: -gap / 2), ratio: 0.5, mainCount: 1)?
+        let bounds = CGRect(origin: .zero, size: size)
+        return layout.frames(count: count, in: bounds.insetBy(dx: -gap / 2, dy: -gap / 2), ratio: 0.5, mainCount: 1)?
             .map { $0.insetBy(dx: gap / 2, dy: gap / 2) }
-            ?? [CGRect(x: size.width * 0.06, y: size.height * 0.1, width: size.width * 0.56, height: size.height * 0.56),
-                CGRect(x: size.width * 0.38, y: size.height * 0.34, width: size.width * 0.56, height: size.height * 0.56)]
+            ?? [CGRect(x: size.width * 0.06, y: size.height * 0.1,
+                       width: size.width * 0.56, height: size.height * 0.56),
+                CGRect(x: size.width * 0.38, y: size.height * 0.34,
+                       width: size.width * 0.56, height: size.height * 0.56)]
     }
 }
 
 #if DEBUG
 extension GalleryContent {
     @ViewBuilder var thumbnailExamples: some View {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 112), spacing: Theme.Space.md)], alignment: .leading, spacing: Theme.Space.md) {
-                ForEach(Layout.allCases, id: \.self) { l in
-                    VStack(spacing: Theme.Space.xs) {
-                        LayoutThumbnail(layout: l, selected: l == m.layout).frame(width: 64, height: 40)
-                        Text(l.shortTitle).textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine()
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 112), spacing: Theme.Space.medium)], alignment: .leading,
+                      spacing: Theme.Space.medium) {
+                ForEach(Layout.allCases, id: \.self) { layout in
+                    VStack(spacing: Theme.Space.extraSmall) {
+                        LayoutThumbnail(layout: layout, selected: layout == model.layout).frame(width: 64, height: 40)
+                        Text(layout.shortTitle).textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine()
                     }
                 }
             }

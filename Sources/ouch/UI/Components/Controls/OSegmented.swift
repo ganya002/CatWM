@@ -35,12 +35,13 @@ struct OSegmented<T: Hashable>: View {
 
     var body: some View {
         OSegmentTrack(title: title) {
-            ForEach(options, id: \.value) { o in
-                OSegment(label: o.label, keys: o.keys, count: o.count, on: isOn(o.value), thumb: multiple ? nil : thumb) {
-                    withAnimation(Motion.spring) { pick(o.value) }
+            ForEach(options, id: \.value) { option in
+                OSegment(label: option.label, keys: option.keys, count: option.count, selected: isOn(option.value),
+                         thumb: multiple ? nil : thumb) {
+                    withAnimation(Motion.spring) { pick(option.value) }
                 }
-                .tooltip(o.help ?? "")
-                .accessibilityLabel(o.help ?? o.label)
+                .tooltip(option.help ?? "")
+                .accessibilityLabel(option.help ?? option.label)
                 .accessibilityAddTraits(multiple ? .isToggle : [])
             }
         }
@@ -50,7 +51,7 @@ struct OSegmented<T: Hashable>: View {
 #if DEBUG
 extension GalleryContent {
     @ViewBuilder var segmentExamples: some View {
-        OSegmented(title: "Curve", options: ["Ease", "Spring", "Off"].map { ($0, $0) }, selection: $m.segment)
+        OSegmented(title: "Curve", options: ["Ease", "Spring", "Off"].map { ($0, $0) }, selection: $model.segment)
     }
 }
 #endif

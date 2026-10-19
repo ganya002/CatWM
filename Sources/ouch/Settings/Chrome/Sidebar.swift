@@ -3,7 +3,7 @@ import SwiftUI
 
 struct Sidebar: View {
     @ObservedObject var doc: ConfigDocument
-    @ObservedObject var ui: SettingsUI
+    @ObservedObject var settingsUI: SettingsUI
     var searchFocused: FocusState<Bool>.Binding
     @ObservedObject private var library = SettingsWindow.shared.library
 
@@ -12,18 +12,21 @@ struct Sidebar: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Color.clear.frame(height: SettingsWindow.titlebarHeight)
-            OSearchField(placeholder: "Search settings", text: $ui.search, shortcut: ["⌘", "K"], focus: searchFocused) {
-                if let first = SettingsIndex.search(ui.search, doc: doc).first { ui.open(first) }
+            OSearchField(placeholder: "Search settings", text: $settingsUI.search, shortcut: ["⌘", "K"],
+                         focus: searchFocused) {
+                if let first = SettingsIndex.search(settingsUI.search, doc: doc).first { settingsUI.open(first) }
             }
-            .background(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous).fill(Theme.surface.opacity(0.6)))
+            .background(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous)
+                .fill(Theme.surface.opacity(0.6)))
             .padding(.bottom, 14)
             VStack(spacing: 2) {
-                ForEach(Pane.allCases) { p in
-                    SideItem(pane: p, on: p == ui.pane && ui.search.isEmpty, badge: badge(p)) {
+                ForEach(Pane.allCases) { pane in
+                    SideItem(pane: pane, selected: pane == settingsUI.pane && settingsUI.search.isEmpty,
+                             badge: badge(pane)) {
                         withAnimation(Motion.fade) {
-                            ui.search = ""
-                            ui.showMap = false
-                            ui.pane = p
+                            settingsUI.search = ""
+                            settingsUI.showMap = false
+                            settingsUI.pane = pane
                         }
                     }
                 }
@@ -47,9 +50,9 @@ struct Sidebar: View {
         .padding(.leading, 10).padding(.trailing, 6).padding(.bottom, 12)
     }
 
-    private func badge(_ p: Pane) -> SideItem.Badge? {
-        switch p {
-        case .general where !(ui.status.trusted && ui.status.keybindsActive): .attention
+    private func badge(_ pane: Pane) -> SideItem.Badge? {
+        switch pane {
+        case .general where !(settingsUI.status.trusted && settingsUI.status.keybindsActive): .attention
         case .shortcuts where doc.problemCount > 0: .count(doc.problemCount)
         default: nil
         }

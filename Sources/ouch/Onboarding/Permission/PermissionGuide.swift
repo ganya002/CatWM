@@ -2,7 +2,6 @@ import AppKit
 import SwiftUI
 
 final class PermissionGuide {
-
     static let shared = PermissionGuide()
     var panel: NSPanel?
     var host: NSView?
@@ -32,19 +31,27 @@ final class PermissionGuide {
         var settings: NSRect?
 
         init() {
+            let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
             guard let primary = NSScreen.screens.first,
-                  let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]]
+                  let list = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]]
             else { return }
-            let agent = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.accessibility.universalAccessAuthWarn").first?.processIdentifier
-            let settingsPID = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.systempreferences").first?.processIdentifier
+            let agent = Self.pid(of: "com.apple.accessibility.universalAccessAuthWarn")
+            let settingsPID = Self.pid(of: "com.apple.systempreferences")
             for info in list {
-                guard let pid = (info[kCGWindowOwnerPID as String] as? Int).map(pid_t.init), pid == agent || pid == settingsPID,
-                      let dict = info[kCGWindowBounds as String] as? NSDictionary,
-                      let r = CGRect(dictionaryRepresentation: dict as CFDictionary) else { continue }
-                let frame = NSRect(x: r.minX, y: primary.frame.maxY - r.maxY, width: r.width, height: r.height)
-                if pid == agent, alert == nil, r.width > 150, r.height > 80 { alert = frame }
-                if pid == settingsPID, settings == nil, (info[kCGWindowLayer as String] as? Int) == 0, r.width > 200 { settings = frame }
+                guard let pid = (info[kCGWindowOwnerPID as String] as? Int).map(pid_t.init),
+                      pid == agent || pid == settingsPID,
+                      let dict = info[kCGWindowBounds as String] as? [String: Any],
+                      let rect = CGRect(dictionaryRepresentation: dict as CFDictionary) else { continue }
+                let frame = NSRect(x: rect.minX, y: primary.frame.maxY - rect.maxY,
+                                   width: rect.width, height: rect.height)
+                if pid == agent, alert == nil, rect.width > 150, rect.height > 80 { alert = frame }
+                let layer = info[kCGWindowLayer as String] as? Int
+                if pid == settingsPID, settings == nil, layer == 0, rect.width > 200 { settings = frame }
             }
+        }
+
+        private static func pid(of bundleID: String) -> pid_t? {
+            NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first?.processIdentifier
         }
     }
 }

@@ -3,8 +3,8 @@ import SwiftUI
 
 extension View {
     func zone(_ z: SortZone) -> some View {
-        background(GeometryReader { g in
-            Color.clear.preference(key: SortZoneKey.self, value: [z: g.frame(in: .named("sort"))])
+        background(GeometryReader { geo in
+            Color.clear.preference(key: SortZoneKey.self, value: [z: geo.frame(in: .named("sort"))])
         })
     }
 

@@ -6,83 +6,89 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
     private(set) var window: NSWindow?
     let doc = ConfigDocument()
     private(set) lazy var library = ConfigLibrary(doc: doc)
-    private(set) lazy var ui = SettingsUI(doc: doc)
+    private(set) lazy var settingsUI = SettingsUI(doc: doc)
 
     func show(pane: Pane?, map: Bool = false) {
         let wasVisible = window?.isVisible ?? false
         if window == nil {
-            let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 940, height: 680),
-                             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
-                             backing: .buffered, defer: false)
-            w.title = "Ouch Settings"
-            w.isReleasedWhenClosed = false
-            let host = NSHostingController(rootView: SettingsView(doc: doc, ui: ui))
+            let settingsWindow = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 940, height: 680),
+                                          styleMask: [.titled, .closable, .miniaturizable, .resizable,
+                                                      .fullSizeContentView],
+                                          backing: .buffered, defer: false)
+            settingsWindow.title = "Ouch Settings"
+            settingsWindow.isReleasedWhenClosed = false
+            let host = NSHostingController(rootView: SettingsView(doc: doc, settingsUI: settingsUI))
             host.sizingOptions = []
-            w.contentViewController = host
+            settingsWindow.contentViewController = host
             ArrowCursor.keep(in: host.view)
-            w.setContentSize(NSSize(width: 940, height: 680))
-            w.contentMinSize = NSSize(width: 840, height: 540)
-            w.level = .floating
-            w.clearTitlebar(hiding: [.zoomButton])
-            w.collectionBehavior.insert(.fullScreenNone)
-            w.delegate = self
-            window = w
+            settingsWindow.setContentSize(NSSize(width: 940, height: 680))
+            settingsWindow.contentMinSize = NSSize(width: 840, height: 540)
+            settingsWindow.level = .floating
+            settingsWindow.clearTitlebar(hiding: [.zoomButton])
+            settingsWindow.collectionBehavior.insert(.fullScreenNone)
+            settingsWindow.delegate = self
+            window = settingsWindow
         }
         if let pane {
-            ui.pane = pane
-            ui.showMap = false
-            ui.search = ""
+            settingsUI.pane = pane
+            settingsUI.showMap = false
+            settingsUI.search = ""
         }
-        if map { ui.showMap = true }
+        if map { settingsUI.showMap = true }
         if !wasVisible {
             doc.beginSession()
-            ui.beginSession()
+            settingsUI.beginSession()
             centerOnPointerScreen()
         }
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
         if !wasVisible { DispatchQueue.main.async { self.window?.makeFirstResponder(nil) } }
-        Tips.shared.paneShown(ui.pane)
+        Tips.shared.paneShown(settingsUI.pane)
     }
 
     private func centerOnPointerScreen() {
-        guard let w = window else { return }
+        guard let window else { return }
         let area = OuchPanel.pointerScreen().visibleFrame
-        let size = NSSize(width: min(w.frame.width, area.width), height: min(w.frame.height, area.height))
-        w.setFrame(NSRect(x: area.midX - size.width / 2, y: area.midY - size.height / 2, width: size.width, height: size.height),
-                   display: false)
+        let size = NSSize(width: min(window.frame.width, area.width), height: min(window.frame.height, area.height))
+        window.setFrame(NSRect(x: area.midX - size.width / 2, y: area.midY - size.height / 2,
+                               width: size.width, height: size.height),
+                        display: false)
     }
 
-    func windowDidUpdate(_ notification: Notification) {
-        if window?.standardWindowButton(.zoomButton)?.isHidden == false { window?.standardWindowButton(.zoomButton)?.isHidden = true }
+    func windowDidUpdate(_: Notification) {
+        if window?.standardWindowButton(.zoomButton)?.isHidden == false {
+            window?.standardWindowButton(.zoomButton)?.isHidden = true
+        }
         placeTrafficLights()
     }
 
-    func windowDidResize(_ notification: Notification) { placeTrafficLights() }
+    func windowDidResize(_: Notification) { placeTrafficLights() }
 
     static let titlebarHeight: CGFloat = 48
 
     private func placeTrafficLights() {
-        guard let w = window, let close = w.standardWindowButton(.closeButton), let mini = w.standardWindowButton(.miniaturizeButton),
+        guard let window, let close = window.standardWindowButton(.closeButton),
+              let mini = window.standardWindowButton(.miniaturizeButton),
               let bar = close.superview, let container = bar.superview else { return }
-        let h = Self.titlebarHeight
-        if container.frame.height != h {
-            container.setFrameSize(NSSize(width: container.frame.width, height: h))
-            container.setFrameOrigin(NSPoint(x: container.frame.minX, y: (container.superview?.frame.height ?? w.frame.height) - h))
-            bar.setFrameSize(NSSize(width: bar.frame.width, height: h))
+        let height = Self.titlebarHeight
+        if container.frame.height != height {
+            container.setFrameSize(NSSize(width: container.frame.width, height: height))
+            container.setFrameOrigin(NSPoint(x: container.frame.minX,
+                                             y: (container.superview?.frame.height ?? window.frame.height) - height))
+            bar.setFrameSize(NSSize(width: bar.frame.width, height: height))
         }
-        let y = (h - close.frame.height) / 2
-        for (i, b) in [close, mini].enumerated() {
+        let y = (height - close.frame.height) / 2
+        for (i, button) in [close, mini].enumerated() {
             let x = 22 + CGFloat(i) * 20
-            if b.frame.origin != NSPoint(x: x, y: y) { b.setFrameOrigin(NSPoint(x: x, y: y)) }
+            if button.frame.origin != NSPoint(x: x, y: y) { button.setFrameOrigin(NSPoint(x: x, y: y)) }
         }
     }
 
-    func windowShouldZoom(_ window: NSWindow, toFrame newFrame: NSRect) -> Bool { false }
+    func windowShouldZoom(_: NSWindow, toFrame _: NSRect) -> Bool { false }
 
-    func windowWillClose(_ notification: Notification) {
-        ui.endSession()
+    func windowWillClose(_: Notification) {
+        settingsUI.endSession()
         Tips.shared.settingsClosed()
         NSApp.setActivationPolicy(.accessory)
     }

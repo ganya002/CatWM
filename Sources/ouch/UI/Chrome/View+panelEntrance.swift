@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 extension View {
-    func panelEntrance(_ shown: Bool, style: PanelMotion, radius: CGFloat = Theme.Radius.xl) -> some View {
+    func panelEntrance(_ shown: Bool, style: PanelMotion, radius: CGFloat = Theme.Radius.extraLarge) -> some View {
         modifier(PanelEntrance(shown: shown, style: style, radius: radius))
     }
 

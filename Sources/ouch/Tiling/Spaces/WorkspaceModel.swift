@@ -16,14 +16,14 @@ struct WorkspaceModel {
     var focusOrder: [CGWindowID] = []
     private(set) var shownSet: Set<String> = []
 
-    func isShown(_ ws: String?) -> Bool { ws.map(shownSet.contains) ?? false }
+    func isShown(_ workspace: String?) -> Bool { workspace.map(shownSet.contains) ?? false }
 
-    func isFullscreenWorkspace(_ ws: String?) -> Bool { ws.map { fullscreenHost[$0] != nil } ?? false }
+    func isFullscreenWorkspace(_ workspace: String?) -> Bool { workspace.map { fullscreenHost[$0] != nil } ?? false }
 
-    mutating func assign(_ id: CGWindowID, to ws: String?) { workspaceOf[id] = ws }
+    mutating func assign(_ id: CGWindowID, to workspace: String?) { workspaceOf[id] = workspace }
 
-    mutating func swapWorkspaces(_ a: CGWindowID, _ b: CGWindowID) {
-        (workspaceOf[a], workspaceOf[b]) = (workspaceOf[b], workspaceOf[a])
+    mutating func swapWorkspaces(_ first: CGWindowID, _ second: CGWindowID) {
+        (workspaceOf[first], workspaceOf[second]) = (workspaceOf[second], workspaceOf[first])
     }
 
     mutating func keepWorkspaces(where keep: (String) -> Bool) { workspaceOf = workspaceOf.filter { keep($0.value) } }
@@ -37,10 +37,11 @@ struct WorkspaceModel {
         fullscreenHost = fullscreenHost.filter { $0.value != id }
     }
 
-    mutating func show(_ ws: String?, on display: String) { shown[display] = ws }
+    mutating func show(_ workspace: String?, on display: String) { shown[display] = workspace }
 
     mutating func resetWorkspaces() {
-        workspaceOf = [:]; monitorOf = [:]; shown = [:]; virtualShown = [:]; states = [:]; lastFocused = [:]; fullscreenHost = [:]
+        workspaceOf = [:]; monitorOf = [:]; shown = [:]; virtualShown = [:]
+        states = [:]; lastFocused = [:]; fullscreenHost = [:]
     }
 
     mutating func noteFocus(_ id: CGWindowID) {
@@ -54,7 +55,8 @@ struct WorkspaceModel {
     }
 
     func mostRecent<S: Sequence>(of ids: S) -> CGWindowID? where S.Element == CGWindowID {
-        guard let id = ids.max(by: { (focusStamps[$0] ?? 0) < (focusStamps[$1] ?? 0) }), focusStamps[id] != nil else { return nil }
+        guard let id = ids.max(by: { (focusStamps[$0] ?? 0) < (focusStamps[$1] ?? 0) }),
+              focusStamps[id] != nil else { return nil }
         return id
     }
 

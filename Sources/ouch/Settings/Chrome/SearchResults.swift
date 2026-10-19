@@ -3,22 +3,26 @@ import SwiftUI
 
 struct SearchResults: View {
     @ObservedObject var doc: ConfigDocument
-    @ObservedObject var ui: SettingsUI
+    @ObservedObject var settingsUI: SettingsUI
 
     var body: some View {
-        let results = SettingsIndex.search(ui.search, doc: doc)
+        let results = SettingsIndex.search(settingsUI.search, doc: doc)
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                OPageTitle(crumbs: ["Settings", "Search"], title: "“\(ui.search)”")
+                OPageTitle(crumbs: ["Settings", "Search"], title: "“\(settingsUI.search)”")
                 if results.isEmpty {
                     Text("Nothing matches. Try another word, like “gaps” or “focus”.")
                         .font(Theme.body(13.5)).foregroundStyle(Theme.inkMuted).oneLine()
                 }
-                ForEach(Pane.allCases) { p in
-                    let here = results.filter { $0.pane == p }
+                ForEach(Pane.allCases) { pane in
+                    let here = results.filter { $0.pane == pane }
                     if !here.isEmpty {
-                        OGroup(p.rawValue) {
-                            ForEach(here) { r in ResultRow(entry: r, first: r.id == results.first?.id) { ui.open(r) } }
+                        OGroup(pane.rawValue) {
+                            ForEach(here) { result in
+                                ResultRow(entry: result, first: result.id == results.first?.id) {
+                                    settingsUI.open(result)
+                                }
+                            }
                         }
                     }
                 }

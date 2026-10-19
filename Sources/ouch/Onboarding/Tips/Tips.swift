@@ -2,19 +2,19 @@ import AppKit
 import SwiftUI
 
 final class Tips: ObservableObject {
-
     static let shared = Tips()
 
+    enum TipPlace: Equatable { case settings(String), menuBar, modeBar }
+
     struct Tip: Equatable {
-        enum Place: Equatable { case settings(String), menuBar, modeBar }
         let id: String
         let title: String
         var body: String?
         var chords: [[String]] = []
-        let place: Place
+        let place: TipPlace
         var action: (label: String, run: () -> Void)?
 
-        static func == (a: Tip, b: Tip) -> Bool { a.id == b.id }
+        static func == (lhs: Tip, rhs: Tip) -> Bool { lhs.id == rhs.id }
     }
 
     enum Known: String { case tutorial, keyHelp }
@@ -40,7 +40,9 @@ final class Tips: ObservableObject {
         set {
             defaults.set(!newValue, forKey: Self.offKey)
             if newValue {
-                for k in [Self.seenKey, Self.clicksKey, Self.panesKey, Self.lastKey] { defaults.removeObject(forKey: k) }
+                for key in [Self.seenKey, Self.clicksKey, Self.panesKey, Self.lastKey] {
+                    defaults.removeObject(forKey: key)
+                }
             } else {
                 dismissAll()
             }
@@ -50,15 +52,14 @@ final class Tips: ObservableObject {
     var seen: Set<String> { Set(defaults.stringArray(forKey: Self.seenKey) ?? []) }
 
     var daysUsed: Int {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
         var days = Set(defaults.stringArray(forKey: Self.daysKey) ?? [])
-        if days.insert(f.string(from: Date())).inserted { defaults.set(Array(days), forKey: Self.daysKey) }
+        if days.insert(formatter.string(from: Date())).inserted { defaults.set(Array(days), forKey: Self.daysKey) }
         return days.count
     }
 
     var rested: Bool {
         Date().timeIntervalSince1970 - defaults.double(forKey: Self.lastKey) >= Self.cooldown
     }
-
 }

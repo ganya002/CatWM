@@ -2,7 +2,6 @@ import AppKit
 import SwiftUI
 
 struct KeyEditor: View {
-
     static let width: CGFloat = 340
     static let flyoutWidth: CGFloat = 268
 
@@ -20,7 +19,10 @@ struct KeyEditor: View {
     var catalog: [Action] {
         var modes = doc.submaps.filter { !$0.isEmpty }
         if !modes.contains(where: { $0.lowercased() == "window" }) { modes.insert("window", at: 0) }
-        let enter = modes.map { Action(title: "Enter \($0.capitalized) Mode", category: .app, dispatcher: "submap", args: $0, symbol: "keyboard") }
+        let enter = modes.map {
+            Action(title: "Enter \($0.capitalized) Mode", category: .app, dispatcher: "submap", args: $0,
+                   symbol: "keyboard")
+        }
         let leave = Actions.all.filter { $0.dispatcher == "submap" && $0.args == "reset" }
         return Actions.all.filter { $0.dispatcher != "submap" } + enter + leave
     }
@@ -41,27 +43,31 @@ struct KeyEditor: View {
     }
 
     var candidate: BindRow? {
-        guard let name = ConfigDocument.keyName(for: code), !draft.dispatcher.isEmpty, !draft.isRange else { return nil }
-        var r = draft.row ?? BindRow(mods: "", key: name, dispatcher: "", args: "")
-        if draft.row == nil || draft.flags != model.flags { r.mods = doc.modsString(for: draft.flags) }
-        r.dispatcher = draft.dispatcher
-        r.args = draft.args
-        r.submap = draft.mode
-        return r
+        guard let name = ConfigDocument.keyName(for: code), !draft.dispatcher.isEmpty, !draft.isRange else {
+            return nil
+        }
+        var row = draft.row ?? BindRow(mods: "", key: name, dispatcher: "", args: "")
+        if draft.row == nil || draft.flags != model.flags { row.mods = doc.modsString(for: draft.flags) }
+        row.dispatcher = draft.dispatcher
+        row.args = draft.args
+        row.submap = draft.mode
+        return row
     }
 
     var issue: (severity: ConfigDocument.Severity, message: String)? { candidate.flatMap { doc.issue($0) } }
 
     var changed: Bool {
-        guard let row = draft.row, let c = candidate else { return true }
-        return c.mods != row.mods || c.dispatcher != row.dispatcher || c.args != row.args || c.submap != row.submap
+        guard let row = draft.row, let candidate else { return true }
+        return candidate.mods != row.mods || candidate.dispatcher != row.dispatcher || candidate.args != row.args
+            || candidate.submap != row.submap
     }
 
     var canSave: Bool { candidate != nil && issue?.severity != .error && changed }
 
     var head: some View {
         let capScale = min(1, 96 / key.frame.width)
-        let preview = draft.dispatcher.isEmpty ? nil : KeyHint(code: code, dispatcher: draft.dispatcher, arg: draft.args, title: title)
+        let preview = draft.dispatcher.isEmpty ? nil
+            : KeyHint(code: code, dispatcher: draft.dispatcher, arg: draft.args, title: title)
         var chords = [ConfigDocument.modifierCaps(draft.flags) + [KeyHintKeyboard.legend(key)]]
         if let entry = modeEntry(draft.mode) { chords.insert(entry, at: 0) }
         return HStack(spacing: 12) {
@@ -84,7 +90,7 @@ struct KeyEditor: View {
     }
 
     var check: some View {
-        Image(systemName: "checkmark").font(Theme.symbol(Theme.Icon.sm, .semibold)).foregroundStyle(Theme.accentInk)
+        Image(systemName: "checkmark").font(Theme.symbol(Theme.Icon.small, .semibold)).foregroundStyle(Theme.accentInk)
     }
 
     var hasArgument: Bool {
@@ -96,16 +102,18 @@ struct KeyEditor: View {
             if draft.dispatcher == "exec" {
                 Text("Command").foregroundStyle(Theme.inkMuted).oneLine().fixedSize()
                 OTextField(placeholder: "open -na Terminal", text: $draft.args, mono: true, autofocus: true)
-            } else if let a = action, let group = a.group {
+            } else if let action, let group = action.group {
                 let family = catalog.filter { $0.group == group }
                 Text(group).oneLine()
                 Spacer(minLength: 8)
                 OMenuPicker(title: group, options: family.map { ($0.id, $0.short ?? $0.title) },
-                            selection: Binding(get: { a.id }, set: { id in if let f = family.first(where: { $0.id == id }) { pick(f) } }))
+                            selection: Binding(get: { action.id }, set: { id in
+                                if let member = family.first(where: { $0.id == id }) { pick(member) }
+                            }))
             } else {
                 Text("\(draft.dispatcher) \(draft.args)").font(Theme.mono(12)).oneLine()
                 Spacer(minLength: 8)
-                if let row = draft.row { OButton("Edit in Shortcuts", size: .sm) { reveal(row) } }
+                if let row = draft.row { OButton("Edit in Shortcuts", size: .small) { reveal(row) } }
             }
         }
         .font(Theme.body(13))
@@ -126,7 +134,8 @@ struct KeyEditor: View {
                 HStack(spacing: 10) {
                     Text("Shortcut set").foregroundStyle(Theme.inkMuted).oneLine()
                     Spacer(minLength: 8)
-                    OMenuPicker(title: "Shortcut set", options: doc.submaps.map { ($0, $0.isEmpty ? "Global" : "\($0.capitalized) mode") },
+                    OMenuPicker(title: "Shortcut set",
+                                options: doc.submaps.map { ($0, $0.isEmpty ? "Global" : "\($0.capitalized) mode") },
                                 selection: $draft.mode)
                 }
                 .frame(height: 40)
@@ -147,15 +156,15 @@ struct KeyEditor: View {
     var actions: some View {
         HStack(spacing: 6) {
             if let row = draft.row, !draft.isRange {
-                OButton("Remove", variant: .ghostDanger, size: .sm) { remove(row) }
+                OButton("Remove", variant: .ghostDanger, size: .small) { remove(row) }
             }
             Spacer(minLength: 8)
-            OButton("Cancel", size: .sm) { close() }
+            OButton("Cancel", size: .small) { close() }
                 .keyboardShortcut(.cancelAction)
             if draft.isRange, let row = draft.row {
-                OButton("Edit in Shortcuts", icon: "arrow.right", variant: .primary, size: .sm) { reveal(row) }
+                OButton("Edit in Shortcuts", icon: "arrow.right", variant: .primary, size: .small) { reveal(row) }
             } else {
-                OButton("Save", variant: .primary, size: .sm, shortcut: ["↩"]) { save() }
+                OButton("Save", variant: .primary, size: .small, shortcut: ["↩"]) { save() }
                     .keyboardShortcut(.defaultAction)
                     .disabled(!canSave)
             }
@@ -174,5 +183,4 @@ struct KeyEditor: View {
         let here = doc.keyActions(in: model.mode).first { $0.code == code && $0.flags == model.flags }
         _draft = StateObject(wrappedValue: KeyDraft(here, flags: model.flags, mode: model.mode))
     }
-
 }

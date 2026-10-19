@@ -2,14 +2,14 @@ import AppKit
 
 func stripComment(_ line: String) -> String {
     var out = ""
-    var it = line.makeIterator()
-    while let ch = it.next() {
-        if ch == "#" {
-            var peek = it
+    var iterator = line.makeIterator()
+    while let character = iterator.next() {
+        if character == "#" {
+            var peek = iterator
             guard peek.next() == "#" else { break }
-            it = peek
+            iterator = peek
         }
-        out.append(ch)
+        out.append(character)
     }
     return out
 }

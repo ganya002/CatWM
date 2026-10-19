@@ -40,7 +40,7 @@ struct CoachCardView: View {
                     Text(warning).font(Theme.body(12.5)).fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.horizontal, 12).padding(.vertical, 8)
-                .background(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(Theme.well))
+                .background(RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous).fill(Theme.well))
                 .padding(.top, 14)
             }
             if let button = model.button {
@@ -51,10 +51,10 @@ struct CoachCardView: View {
                 }
                 .padding(.top, 20)
             }
-            GeometryReader { g in
+            GeometryReader { geometry in
                 ZStack(alignment: .leading) {
                     Capsule().fill(Theme.surfaceSunken)
-                    Capsule().fill(Theme.accent).frame(width: g.size.width * model.progress)
+                    Capsule().fill(Theme.accent).frame(width: geometry.size.width * model.progress)
                 }
             }
             .frame(height: 3)
@@ -62,7 +62,7 @@ struct CoachCardView: View {
             .animation(Motion.spring, value: model.progress)
         }
         .frame(width: Self.width - 40)
-        .surface(.lg, caret: caret)
+        .surface(.large, caret: caret)
         .padding(Self.inset)
         .animation(Motion.fadeMedium, value: model.done)
         .animation(Motion.fadeMedium, value: model.hidden)
@@ -79,7 +79,7 @@ struct CoachCardView: View {
                         Text("Hint")
                     }
                 }
-                .buttonStyle(OButtonStyle(variant: .ghost, size: .sm))
+                .buttonStyle(OButtonStyle(variant: .ghost, size: .small))
                 .tooltip("Show the keys")
             } else {
                 Button(action: model.tryKeys) { caps.fixedSize().contentShape(Rectangle()) }
@@ -93,11 +93,12 @@ struct CoachCardView: View {
     @ViewBuilder private var caps: some View {
         if model.capsDone.count == model.caps.count, !model.capsDone.isEmpty {
             HStack(spacing: 6) {
-                ForEach(Array(model.caps.enumerated()), id: \.offset) { i, k in
-                    Kbd(keys: [k], size: .large, pressed: model.capsDone[i])
+                ForEach(Array(model.caps.enumerated()), id: \.offset) { i, key in
+                    Kbd(keys: [key], size: .large, pressed: model.capsDone[i])
                         .overlay(alignment: .topTrailing) {
                             if model.capsDone[i] {
-                                Image(systemName: "checkmark.circle.fill").font(Theme.symbol(Theme.Icon.md, .semibold))
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(Theme.symbol(Theme.Icon.medium, .semibold))
                                     .symbolRenderingMode(.palette)
                                     .foregroundStyle(Theme.onAccent, Theme.success)
                                     .background(Circle().fill(Theme.surfaceRaised).padding(-1.5))
@@ -136,7 +137,7 @@ struct CoachCardView: View {
     private var caret: Caret {
         switch model.caret {
         case .none: .none
-        case .up(let x): .top(x)
+        case .pointingUp(let x): .top(x)
         case .down: .bottom
         }
     }

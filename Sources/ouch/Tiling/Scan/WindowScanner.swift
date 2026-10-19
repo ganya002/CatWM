@@ -13,7 +13,7 @@ final class WindowScanner {
         let frame: CGRect
         let title: String?
         let resizable: Bool
-        var frameRevision: Int? = nil
+        var frameRevision: Int?
     }
 
     struct AppScan {
@@ -81,15 +81,16 @@ final class WindowScanner {
             busy[job.pid] = token
             run(job.pid) { [weak self, read] in
                 let start = CACurrentMediaTime()
-                let r = read(job)
+                let scan = read(job)
                 let elapsed = CACurrentMediaTime() - start
                 DispatchQueue.main.async {
                     guard let self else { return }
                     waiting -= 1
                     if self.busy[job.pid] == token {
                         self.busy[job.pid] = nil
-                        self.results[job.pid] = r
-                        Log.debug(String(format: "scan: pid %d windows %d %.1fms", job.pid, r.listed.count, elapsed * 1000))
+                        self.results[job.pid] = scan
+                        Log.debug(String(format: "scan: pid %d windows %d %.1fms",
+                                         job.pid, scan.listed.count, elapsed * 1000))
                         if finished { late() }
                     }
                     if waiting == 0 { finish() }
@@ -105,45 +106,51 @@ final class WindowScanner {
     }
 
     func run(_ pid: pid_t, _ work: @escaping () -> Void) {
-        if queues[pid] == nil { queues[pid] = DispatchQueue(label: "ouch.scan.\(pid)", qos: .userInitiated) }
-        queues[pid]!.async(execute: work)
+        let queue = queues[pid] ?? DispatchQueue(label: "ouch.scan.\(pid)", qos: .userInitiated)
+        queues[pid] = queue
+        queue.async(execute: work)
     }
 
     private static func read(_ job: Job) -> AppScan {
         dispatchPrecondition(condition: .notOnQueue(.main))
-        var s = AppScan()
+        var scan = AppScan()
         if job.listWindows {
-            for el in axApp(job.pid).elements(kAXWindowsAttribute) {
-                guard let id = el.windowID else { continue }
-                s.listed.append(id)
-                AXUIElementSetMessagingTimeout(el, axTimeout)
+            for element in axApp(job.pid).elements(kAXWindowsAttribute) {
+                guard let id = element.windowID else { continue }
+                scan.listed.append(id)
+                AXUIElementSetMessagingTimeout(element, axTimeout)
                 if let known = job.known[id] {
-                    readKnown(known, into: &s)
+                    readKnown(known, into: &scan)
                     continue
                 }
-                if el.bool("AXFullScreen") == true { s.fullscreen.insert(id) }
-                if el.bool(kAXMinimizedAttribute) == true { s.minimized.insert(id) }
-                guard el.string(kAXSubroleAttribute) == kAXStandardWindowSubrole,
-                      !s.minimized.contains(id), !s.fullscreen.contains(id) else { continue }
-                s.found[id] = Found(element: el, frame: el.frame, title: el.string(kAXTitleAttribute),
-                                    resizable: el.isSettable(kAXSizeAttribute))
+                if element.flag("AXFullScreen") { scan.fullscreen.insert(id) }
+                if element.flag(kAXMinimizedAttribute) { scan.minimized.insert(id) }
+                guard element.string(kAXSubroleAttribute) == kAXStandardWindowSubrole,
+                      !scan.minimized.contains(id), !scan.fullscreen.contains(id) else { continue }
+                scan.found[id] = Found(element: element, frame: element.frame,
+                                       title: element.string(kAXTitleAttribute),
+                                       resizable: element.isSettable(kAXSizeAttribute))
             }
         }
-        let listed = Set(s.listed)
-        for (id, w) in job.known where !listed.contains(id) {
+        let listed = Set(scan.listed)
+        for (id, window) in job.known where !listed.contains(id) {
             var role: CFTypeRef?
-            let result = AXUIElementCopyAttributeValue(w.element, kAXRoleAttribute as CFString, &role)
-            if result == .invalidUIElement { s.gone.insert(id) }
-            else if result == .success { readKnown(w, into: &s) }
+            let result = AXUIElementCopyAttributeValue(window.element, kAXRoleAttribute as CFString, &role)
+            if result == .invalidUIElement {
+                scan.gone.insert(id)
+            } else if result == .success {
+                readKnown(window, into: &scan)
+            }
         }
-        return s
+        return scan
     }
 
-    private static func readKnown(_ w: Window, into scan: inout AppScan) {
-        let revision = w.frameRevision
-        if w.isNativeFullscreen { scan.fullscreen.insert(w.id) }
-        if w.element.bool(kAXMinimizedAttribute) == true { scan.minimized.insert(w.id) }
-        scan.found[w.id] = Found(element: w.element, frame: w.element.frame, title: w.element.string(kAXTitleAttribute),
-                                 resizable: w.element.isSettable(kAXSizeAttribute), frameRevision: revision)
+    private static func readKnown(_ window: Window, into scan: inout AppScan) {
+        let revision = window.frameRevision
+        if window.isNativeFullscreen { scan.fullscreen.insert(window.id) }
+        if window.element.flag(kAXMinimizedAttribute) { scan.minimized.insert(window.id) }
+        scan.found[window.id] = Found(element: window.element, frame: window.element.frame,
+                                      title: window.element.string(kAXTitleAttribute),
+                                      resizable: window.element.isSettable(kAXSizeAttribute), frameRevision: revision)
     }
 }

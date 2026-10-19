@@ -8,7 +8,7 @@ struct FinishCardView: View {
     private static let pad = EdgeInsets(top: 26, leading: 28, bottom: 0, trailing: 28)
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: Density.xl.radius, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: Density.extraLarge.radius, style: .continuous)
         VStack(alignment: .leading, spacing: 0) {
             title
             if !model.text.isEmpty {
@@ -56,8 +56,9 @@ struct FinishCardView: View {
         return HStack(alignment: .top, spacing: 28) {
             ForEach(1...max(1, count), id: \.self) { col in
                 VStack(alignment: .leading, spacing: 14) {
-                    ForEach(Array(summary.groups.enumerated()).filter { $0.element.column == col }, id: \.offset) { _, g in
-                        group(g)
+                    let columnGroups = Array(summary.groups.enumerated()).filter { $0.element.column == col }
+                    ForEach(columnGroups, id: \.offset) { _, summaryGroup in
+                        group(summaryGroup)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -65,10 +66,10 @@ struct FinishCardView: View {
         }
     }
 
-    private func group(_ g: Coach.Summary.Group) -> some View {
+    private func group(_ summaryGroup: Coach.SummaryGroup) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            OSectionHeader(g.title, tone: Theme.inkMuted).padding(.bottom, Theme.Space.xs)
-            ForEach(Array(g.rows.enumerated()), id: \.offset) { i, row in
+            OSectionHeader(summaryGroup.title, tone: Theme.inkMuted).padding(.bottom, Theme.Space.extraSmall)
+            ForEach(Array(summaryGroup.rows.enumerated()), id: \.offset) { i, row in
                 HStack(spacing: 10) {
                     Text(row.label).font(Theme.body()).oneLine()
                     Spacer(minLength: 8)

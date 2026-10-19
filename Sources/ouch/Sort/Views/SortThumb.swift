@@ -10,10 +10,10 @@ struct SortThumb: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        GeometryReader { g in
-            let frames = Self.frames(layout, ids.count, g.size, ratio: ratio, mainCount: mainCount)
+        GeometryReader { geo in
+            let frames = Self.frames(layout, ids.count, geo.size, ratio: ratio, mainCount: mainCount)
             ZStack(alignment: .topLeading) {
-                RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(Theme.well)
+                RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous).fill(Theme.well)
                 ForEach(Array(ids.enumerated()), id: \.element) { j, id in
                     if j < frames.count {
                         RoundedRectangle(cornerRadius: 3, style: .continuous) // style-ok: a window in a thumbnail
@@ -25,26 +25,31 @@ struct SortThumb: View {
             }
         }
         .aspectRatio(16 / 10, contentMode: .fit)
-        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous))
         .animation(Motion.snap(reduceMotion), value: layout)
         .animation(Motion.snap(reduceMotion), value: ids)
         .accessibilityHidden(true)
     }
 
-    static func frames(_ layout: Layout, _ n: Int, _ size: CGSize, ratio: CGFloat, mainCount: Int) -> [CGRect] {
-        guard n > 0 else { return [] }
-        let k = size.width / 140
-        let inset = 4 * k, gap = 3 * k
-        let r = CGRect(x: inset, y: inset, width: size.width - 2 * inset, height: size.height - 2 * inset)
+    static func frames(_ layout: Layout, _ count: Int, _ size: CGSize, ratio: CGFloat, mainCount: Int) -> [CGRect] {
+        guard count > 0 else { return [] }
+        let scale = size.width / 140
+        let inset = 4 * scale, gap = 3 * scale
+        let rect = CGRect(x: inset, y: inset, width: size.width - 2 * inset, height: size.height - 2 * inset)
         if layout == .fullscreen {
-            let step = 4 * k, shrink = CGFloat(min(n - 1, 6)) * step
-            return (0..<n).map { CGRect(x: r.minX + CGFloat(min($0, 6)) * step, y: r.minY + CGFloat(min($0, 6)) * step,
-                                        width: r.width - shrink, height: r.height - shrink) }
+            let step = 4 * scale, shrink = CGFloat(min(count - 1, 6)) * step
+            return (0..<count).map {
+                CGRect(x: rect.minX + CGFloat(min($0, 6)) * step, y: rect.minY + CGFloat(min($0, 6)) * step,
+                       width: rect.width - shrink, height: rect.height - shrink)
+            }
         }
-        if let f = layout.frames(count: n, in: r.insetBy(dx: -gap / 2, dy: -gap / 2), ratio: ratio, mainCount: mainCount) {
-            return f.map { $0.insetBy(dx: gap / 2, dy: gap / 2) }
+        if let frames = layout.frames(count: count, in: rect.insetBy(dx: -gap / 2, dy: -gap / 2),
+                                      ratio: ratio, mainCount: mainCount) {
+            return frames.map { $0.insetBy(dx: gap / 2, dy: gap / 2) }
         }
-        return (0..<n).map { CGRect(x: r.minX + CGFloat(min($0, 6)) * 6 * k, y: r.minY + CGFloat(min($0, 6)) * 6 * k,
-                                    width: r.width * 0.6, height: r.height * 0.6) }
+        return (0..<count).map {
+            CGRect(x: rect.minX + CGFloat(min($0, 6)) * 6 * scale, y: rect.minY + CGFloat(min($0, 6)) * 6 * scale,
+                   width: rect.width * 0.6, height: rect.height * 0.6)
+        }
     }
 }

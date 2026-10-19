@@ -8,33 +8,33 @@ enum Log {
     private static var launchOffset: UInt64 = 0
 
     private static let handle: FileHandle? = {
-        let fm = FileManager.default
-        if let size = (try? fm.attributesOfItem(atPath: url.path))?[.size] as? Int, size > 2_000_000,
-           let data = fm.contents(atPath: url.path) {
+        let fileManager = FileManager.default
+        if let size = (try? fileManager.attributesOfItem(atPath: url.path))?[.size] as? Int, size > 2_000_000,
+           let data = fileManager.contents(atPath: url.path) {
             try? data.suffix(500_000).write(to: url)
         }
-        if !fm.fileExists(atPath: url.path) { fm.createFile(atPath: url.path, contents: nil) }
-        let h = try? FileHandle(forWritingTo: url)
-        launchOffset = (try? h?.seekToEnd()) ?? 0
-        return h
+        if !fileManager.fileExists(atPath: url.path) { fileManager.createFile(atPath: url.path, contents: nil) }
+        let fileHandle = try? FileHandle(forWritingTo: url)
+        launchOffset = (try? fileHandle?.seekToEnd()) ?? 0
+        return fileHandle
     }()
 
     static func beforeLaunch() -> String {
         _ = handle
         guard let data = FileManager.default.contents(atPath: url.path) else { return "" }
-        return String(decoding: data.prefix(Int(launchOffset)), as: UTF8.self)
+        return String(decoding: data.prefix(Int(launchOffset)), as: Unicode.UTF8.self)
     }
 
     private static let time: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "HH:mm:ss.SSS"
-        return f
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss.SSS"
+        return formatter
     }()
 
-    static func info(_ s: @autoclosure () -> String) { write(s()) }
-    static func debug(_ s: @autoclosure () -> String) { if verbose { write(s()) } }
+    static func info(_ message: @autoclosure () -> String) { write(message()) }
+    static func debug(_ message: @autoclosure () -> String) { if verbose { write(message()) } }
 
-    private static func write(_ s: String) {
-        try? handle?.write(contentsOf: Data("\(time.string(from: Date())) \(s)\n".utf8))
+    private static func write(_ message: String) {
+        try? handle?.write(contentsOf: Data("\(time.string(from: Date())) \(message)\n".utf8))
     }
 }

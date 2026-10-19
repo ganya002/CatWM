@@ -15,11 +15,12 @@ final class KeyHelpModel: ObservableObject {
     static let keyboardMax: CGFloat = 580
     private(set) var keyboardWidth: CGFloat = keyboardMax
 
-    func load(mode: String, binds all: [KeyBinding], chord: NSEvent.ModifierFlags, reason: Reason, room: CGFloat) {
+    func load(mode: String, binds all: [KeyBinding], chord _: NSEvent.ModifierFlags, reason: Reason, room: CGFloat) {
         self.mode = mode
         self.reason = reason
         binds = all.filter { $0.submap == mode && $0.keyCode < 0x1000 }
-        let counts = Dictionary(grouping: binds, by: { KeyHelp.mods($0.mods).subtracting(.shift).rawValue }).mapValues(\.count)
+        let counts = Dictionary(grouping: binds, by: { KeyHelp.mods($0.mods).subtracting(.shift).rawValue })
+            .mapValues(\.count)
         base = counts.max { $0.value != $1.value ? $0.value < $1.value : $0.key > $1.key }
             .map { NSEvent.ModifierFlags(rawValue: $0.key) } ?? []
         keyboardWidth = min(Self.keyboardMax, max(440, room))

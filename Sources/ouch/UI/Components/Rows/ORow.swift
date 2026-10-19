@@ -3,8 +3,8 @@ import SwiftUI
 
 struct ORow<Control: View>: View {
     let label: String
-    var description: String? = nil
-    var symbol: String? = nil
+    var description: String?
+    var symbol: String?
     @ViewBuilder var control: Control
     @Environment(\.isEnabled) private var enabled
 
@@ -18,7 +18,7 @@ struct ORow<Control: View>: View {
     var body: some View {
         HStack(spacing: 12) {
             if let symbol {
-                Image(systemName: symbol).font(Theme.symbol(Theme.Icon.lg)).foregroundStyle(Theme.accentInk)
+                Image(systemName: symbol).font(Theme.symbol(Theme.Icon.large)).foregroundStyle(Theme.accentInk)
                     .frame(width: 18)
             }
             VStack(alignment: .leading, spacing: 1) {
@@ -40,7 +40,7 @@ struct ORow<Control: View>: View {
 extension GalleryContent {
     @ViewBuilder var rowExamples: some View {
         ORow("Animation curve", symbol: "wand.and.stars") {
-            OSegmented(title: "Curve", options: ["Ease", "Spring", "Off"].map { ($0, $0) }, selection: $m.segment)
+            OSegmented(title: "Curve", options: ["Ease", "Spring", "Off"].map { ($0, $0) }, selection: $model.segment)
         }
         ORow("Enter window mode", symbol: "keyboard") { Kbd(keys: ["⌘", "⇪"]) }
     }

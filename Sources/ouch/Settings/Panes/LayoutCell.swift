@@ -3,24 +3,24 @@ import SwiftUI
 
 struct LayoutCell: View {
     let layout: Layout
-    let on: Bool
+    let active: Bool
     let action: () -> Void
     @StateObject private var hover = Flag()
 
     var body: some View {
         Button(action: action) {
-            LayoutThumbnail(layout: layout, selected: on)
-                .squish(on: on, when: on)
-                .scaleEffect(hover.on ? 1.06 : 1)
+            LayoutThumbnail(layout: layout, selected: active)
+                .squish(on: active, when: active)
+                .scaleEffect(hover.isOn ? 1.06 : 1)
                 .padding(6)
-                .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
-                    .fill(on ? Theme.accentSoft : hover.on ? Theme.wellHover : .clear))
+                .background(RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
+                    .fill(active ? Theme.accentSoft : hover.isOn ? Theme.wellHover : .clear))
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .onHover { hover.on = $0 }
-        .animation(Motion.spring, value: hover.on)
-        .accessibilityLabel("\(layout.title), \(on ? "in the cycle" : "not in the cycle")")
-        .accessibilityAddTraits(on ? .isSelected : [])
+        .onHover { hover.isOn = $0 }
+        .animation(Motion.spring, value: hover.isOn)
+        .accessibilityLabel("\(layout.title), \(active ? "in the cycle" : "not in the cycle")")
+        .accessibilityAddTraits(active ? .isSelected : [])
     }
 }

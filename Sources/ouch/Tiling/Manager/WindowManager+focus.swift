@@ -1,19 +1,18 @@
 import AppKit
 
 extension WindowManager {
-
-    func focus(_ w: Window, warp: Bool = true) {
+    func focus(_ window: Window, warp: Bool = true) {
         let request = UUID()
-        pendingFocus = PendingFocus(id: w.id, pid: w.pid, origin: frontmostPID(), request: request)
-        animator.focus(w) { [weak self] in
+        pendingFocus = PendingFocus(id: window.id, pid: window.pid, origin: frontmostPID(), request: request)
+        animator.focus(window) { [weak self] in
             guard let self, self.pendingFocus?.request == request else { return }
             self.pendingFocus?.executed = true
             self.requestFocusObservation()
         }
-        noteFocus(w.id)
+        noteFocus(window.id)
         if warp, config.mouseFollowsFocus {
             ignoreMouseUntil = Date().addingTimeInterval(0.3)
-            CGWarpMouseCursorPosition(navFrame(w).center)
+            CGWarpMouseCursorPosition(navFrame(window).center)
         }
         CursorRefresh.soon()
     }
@@ -33,12 +32,13 @@ extension WindowManager {
     func noteFocus(_ id: CGWindowID) { model.noteFocus(id) }
 
     private func focusUnderMouse() {
-        guard focusFollowsMouseNow, !sortSession, Date() > ignoreMouseUntil, NSEvent.pressedMouseButtons == 0, !movingToSpace else { return }
-        let p = mouseLocation()
-        guard let hit = CGWindowInfo.normalWindow(at: p), let w = windows[hit.id], visible.contains(w.id),
-              focusedWindow()?.id != w.id else { return }
-        Log.debug("ffm: focusing \(w.id) \(w.bundleID ?? "")")
-        focus(w, warp: false)
+        guard focusFollowsMouseNow, !sortSession, Date() > ignoreMouseUntil, NSEvent.pressedMouseButtons == 0,
+              !movingToSpace else { return }
+        let point = mouseLocation()
+        guard let hit = CGWindowInfo.normalWindow(at: point), let window = windows[hit.id], visible.contains(window.id),
+              focusedWindow()?.id != window.id else { return }
+        Log.debug("ffm: focusing \(window.id) \(window.bundleID ?? "")")
+        focus(window, warp: false)
     }
 
     func mouseUp() {
@@ -53,21 +53,24 @@ extension WindowManager {
         }
     }
 
-    private func finishMouseDrag(_ finished: [CGWindowID: Bool], at p: CGPoint) {
+    private func finishMouseDrag(_ finished: [CGWindowID: Bool], at point: CGPoint) {
         let screens = Screen.all()
         for (id, resized) in finished {
-            guard let w = windows[id], let src = screen(of: w, in: screens) else { continue }
+            guard let window = windows[id], let src = screen(of: window, in: screens) else { continue }
             if floatsFreely(id) {
-                if let dst = screen(containing: w.cachedFrame, in: screens), dst.uuid != src.uuid, let ws = shown[dst.uuid] { model.assign(id, to: ws) }
+                if let dst = screen(containing: window.cachedFrame, in: screens), dst.uuid != src.uuid,
+                   let workspace = shown[dst.uuid] {
+                    model.assign(id, to: workspace)
+                }
                 continue
             }
             if resized {
-                if config.mouseResizesWindows { applyMouseResize(w, on: src) }
+                if config.mouseResizesWindows { applyMouseResize(window, on: src) }
                 continue
             }
-            let dst = screens.first { $0.frame.contains(p) } ?? src
+            let dst = screens.first { $0.frame.contains(point) } ?? src
             if config.mouseSwapsWindows,
-               let hit = tiled(on: dst).first(where: { $0 != id && targets[$0]?.contains(p) == true }) {
+               let hit = tiled(on: dst).first(where: { $0 != id && targets[$0]?.contains(point) == true }) {
                 swapOrder(id, hit)
             } else if dst.uuid != src.uuid {
                 model.assign(id, to: shown[dst.uuid])
@@ -77,31 +80,33 @@ extension WindowManager {
         refresh()
     }
 
-    private func applyMouseResize(_ w: Window, on s: Screen) {
-        let st = state(for: s)
-        let ids = tiled(on: s)
-        let r = usableRect(s), f = w.cachedFrame
-        guard !f.isNull else { return }
-        let mains = [.bsp, .twoPane, .twoPaneRight].contains(st.layout) ? 1 : st.mainCount
-        guard let idx = ids.firstIndex(of: w.id), ids.count > mains, var axis = st.layout.ratioAxis else { return }
-        if st.layout == .bsp { axis = (r.width >= r.height, true) }
+    private func applyMouseResize(_ window: Window, on screen: Screen) {
+        let screenState = state(for: screen)
+        let ids = tiled(on: screen)
+        let rect = usableRect(screen), frame = window.cachedFrame
+        guard !frame.isNull else { return }
+        let layout = screenState.layout
+        let mains = [.bsp, .twoPane, .twoPaneRight].contains(layout) ? 1 : screenState.mainCount
+        guard let idx = ids.firstIndex(of: window.id), ids.count > mains, var axis = layout.ratioAxis else { return }
+        if layout == .bsp { axis = (rect.width >= rect.height, true) }
         let isMain = idx < mains
-        if st.layout == .widescreenTall, isMain, mains > 1, idx != mains - 1 { return }
-        if st.layout == .widescreenTallRight, isMain, mains > 1, idx != 0 { return }
-        if !isMain, [.threeColumnLeft, .threeColumnRight].contains(st.layout) { return }
+        if layout == .widescreenTall, isMain, mains > 1, idx != mains - 1 { return }
+        if layout == .widescreenTallRight, isMain, mains > 1, idx != 0 { return }
+        if !isMain, [.threeColumnLeft, .threeColumnRight].contains(layout) { return }
         let gap = windowGap(count: ids.count)
-        let total = axis.horizontal ? r.width : r.height
-        func boundary(_ f: CGRect) -> CGFloat {
+        let total = axis.horizontal ? rect.width : rect.height
+        func boundary(_ slot: CGRect) -> CGFloat {
             switch (axis.horizontal, axis.fromStart, isMain) {
-            case (true, true, true): f.maxX - r.minX + gap
-            case (true, true, false): f.minX - r.minX
-            case (true, false, true): r.maxX - f.minX + gap
-            case (true, false, false): r.maxX - f.maxX
-            case (false, _, true): f.maxY - r.minY + gap
-            case (false, _, false): f.minY - r.minY
+            case (true, true, true): slot.maxX - rect.minX + gap
+            case (true, true, false): slot.minX - rect.minX
+            case (true, false, true): rect.maxX - slot.minX + gap
+            case (true, false, false): rect.maxX - slot.maxX
+            case (false, _, true): slot.maxY - rect.minY + gap
+            case (false, _, false): slot.minY - rect.minY
             }
         }
-        if let slot = layoutTargets(ids, st, on: s)?[w.id], abs(boundary(slot) - st.ratio * (total + gap)) > 3 { return }
-        st.ratio = min(0.9, max(0.1, boundary(f) / (total + gap)))
+        if let slot = layoutTargets(ids, screenState, on: screen)?[window.id],
+           abs(boundary(slot) - screenState.ratio * (total + gap)) > 3 { return }
+        screenState.ratio = min(0.9, max(0.1, boundary(frame) / (total + gap)))
     }
 }

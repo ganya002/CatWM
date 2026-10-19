@@ -13,7 +13,9 @@ final class TileView: NSView {
         self.main = main
         super.init(frame: frame)
         wantsLayer = true
-        card.backgroundColor = main ? Self.blue.withAlphaComponent(0.92).cgColor : NSColor(white: 1, alpha: 0.13).cgColor
+        card.backgroundColor = main
+            ? Self.blue.withAlphaComponent(0.92).cgColor
+            : NSColor(white: 1, alpha: 0.13).cgColor
         card.borderColor = NSColor(white: 1, alpha: main ? 0.5 : 0.38).cgColor
         card.borderWidth = 1
         card.cornerRadius = 14
@@ -29,41 +31,43 @@ final class TileView: NSView {
         sheen.cornerCurve = .continuous
         sheen.masksToBounds = true
         card.addSublayer(sheen)
-        for a in [0.55, 0.35, 0.25] {
-            let d = CALayer()
-            d.backgroundColor = NSColor(white: 1, alpha: main ? a + 0.25 : a).cgColor
-            d.cornerRadius = 4.5
-            card.addSublayer(d)
-            dots.append(d)
+        for alpha in [0.55, 0.35, 0.25] {
+            let dot = CALayer()
+            dot.backgroundColor = NSColor(white: 1, alpha: main ? alpha + 0.25 : alpha).cgColor
+            dot.cornerRadius = 4.5
+            card.addSublayer(dot)
+            dots.append(dot)
         }
         layer?.addSublayer(card)
     }
 
-    required init?(coder: NSCoder) { fatalError() }
+    @available(*, unavailable)
+    required init?(coder _: NSCoder) { fatalError("init(coder:) is not supported") }
 
     override func layout() {
         super.layout()
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        let r = bounds.insetBy(dx: Intro.margin, dy: Intro.margin)
-        card.bounds = CGRect(origin: .zero, size: CGSize(width: max(0, r.width), height: max(0, r.height)))
-        card.position = CGPoint(x: r.midX, y: r.midY)
+        let inner = bounds.insetBy(dx: Intro.margin, dy: Intro.margin)
+        card.bounds = CGRect(origin: .zero, size: CGSize(width: max(0, inner.width), height: max(0, inner.height)))
+        card.position = CGPoint(x: inner.midX, y: inner.midY)
         sheen.frame = card.bounds
-        for (i, d) in dots.enumerated() {
-            d.frame = CGRect(x: 12 + CGFloat(i) * 15, y: card.bounds.height - 11 - 9, width: 9, height: 9)
+        for (i, dot) in dots.enumerated() {
+            dot.frame = CGRect(x: 12 + CGFloat(i) * 15, y: card.bounds.height - 11 - 9, width: 9, height: 9)
         }
         CATransaction.commit()
     }
 
     func squish() {
         for (key, values) in [("transform.scale.x", [1, 1.035, 0.99, 1]), ("transform.scale.y", [1, 0.955, 1.01, 1])] {
-            let a = CAKeyframeAnimation(keyPath: key)
-            a.values = values
-            a.keyTimes = [0, 0.3, 0.7, 1]
-            a.duration = 0.42
-            a.timingFunctions = [CAMediaTimingFunction(name: .easeOut), CAMediaTimingFunction(name: .easeInEaseOut),
-                                 CAMediaTimingFunction(name: .easeOut)]
-            card.add(a, forKey: key)
+            let animation = CAKeyframeAnimation(keyPath: key)
+            animation.values = values
+            animation.keyTimes = [0, 0.3, 0.7, 1]
+            animation.duration = 0.42
+            animation.timingFunctions = [CAMediaTimingFunction(name: .easeOut),
+                                         CAMediaTimingFunction(name: .easeInEaseOut),
+                                         CAMediaTimingFunction(name: .easeOut)]
+            card.add(animation, forKey: key)
         }
     }
 

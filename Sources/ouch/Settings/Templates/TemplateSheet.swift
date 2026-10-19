@@ -8,21 +8,21 @@ struct TemplateSheet: View {
     private var problem: String? { library.nameProblem(model.name, id: template.id) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Space.lg) {
+        VStack(alignment: .leading, spacing: Theme.Space.large) {
             Text(library.templates.contains { $0.id == template.id } ? "Rename template" : "Save workspace template")
                 .textStyle(.title).oneLine()
             Text(template.summary).textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine()
             OTextField(placeholder: "Template name", text: $model.name, onSubmit: save, autofocus: true)
             if !model.name.isEmpty, let problem { OStatus(kind: .warning, text: problem) }
             if let error = library.error { OStatus(kind: .danger, text: error) }
-            HStack(spacing: Theme.Space.sm) {
+            HStack(spacing: Theme.Space.small) {
                 Spacer()
                 OButton("Cancel", variant: .ghost) { library.draft = nil }.keyboardShortcut(.cancelAction)
                 OButton("Save", variant: .primary, shortcut: ["↩"], action: save)
                     .keyboardShortcut(.defaultAction).disabled(problem != nil)
             }
         }
-        .padding(Theme.Space.xl)
+        .padding(Theme.Space.extraLarge)
         .frame(width: Theme.menuWidth + Theme.Space.xxl * 4)
         .foregroundStyle(Theme.ink)
         .background(Theme.surfaceRaised)

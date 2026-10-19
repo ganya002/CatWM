@@ -1,7 +1,7 @@
 import AppKit
+@testable import ouch
 import SwiftUI
 import Testing
-@testable import ouch
 
 @MainActor
 @Suite struct ElevationTests {
@@ -13,14 +13,14 @@ import Testing
         host.layoutSubtreeIfNeeded()
         let rep = try #require(host.bitmapImageRepForCachingDisplay(in: host.bounds))
         host.cacheDisplay(in: host.bounds, to: rep)
-        let bg = darkness(rep, x: 2, y: rep.pixelsHigh - 2)
+        let background = darkness(rep, x: 2, y: rep.pixelsHigh - 2)
         let top = darkness(rep, x: rep.pixelsWide / 2, y: 2)
         let bottom = darkness(rep, x: rep.pixelsWide / 2, y: rep.pixelsHigh - 2)
         let scale = CGFloat(rep.pixelsHigh) / size.height
         let inShadow = darkness(rep, x: rep.pixelsWide / 2, y: Int((elevation.room - 8) * scale))
-        #expect(top < bg + 6)
-        #expect(bottom < bg + 6)
-        #expect(inShadow > bg + 20)
+        #expect(top < background + 6)
+        #expect(bottom < background + 6)
+        #expect(inShadow > background + 20)
     }
 
     private func darkness(_ rep: NSBitmapImageRep, x: Int, y: Int) -> Int {

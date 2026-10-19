@@ -8,17 +8,19 @@ final class CapsLockChord {
 
     private var timer: Timer?
     private var ticks = 0
+    private var terminateObserver: NSObjectProtocol?
 
     private init() {
         timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in self?.tick() }
-        NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil,
-                                               queue: nil) { [weak self] _ in self?.restore() }
+        terminateObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.willTerminateNotification, object: nil, queue: nil
+        ) { [weak self] _ in self?.restore() }
     }
 
     private func tick() {
         if Permission.accessibility.isGranted, !rawActive { startRaw() }
         ticks += 1
-        if ticks % 20 == 0 { refreshDelay() }
+        if ticks.isMultiple(of: 20) { refreshDelay() }
     }
 
     static func isLocked(_ flags: CGEventFlags) -> Bool { flags.contains(.maskAlphaShift) }
@@ -35,10 +37,11 @@ final class CapsLockChord {
         if isBound { Self.setDelay(0) }
     }
 
-    private static func setDelay(_ ms: Int, wait: Bool = false) {
+    private static func setDelay(_ milliseconds: Int, wait: Bool = false) {
         let run = {
-            Process.runTool("/usr/bin/hidutil", ["property", "--matching", "{\"PrimaryUsagePage\":1,\"PrimaryUsage\":6}",
-                                                 "--set", "{\"CapsLockDelayOverride\":\(ms)}"])
+            Process.runTool("/usr/bin/hidutil", ["property",
+                                                 "--matching", "{\"PrimaryUsagePage\":1,\"PrimaryUsage\":6}",
+                                                 "--set", "{\"CapsLockDelayOverride\":\(milliseconds)}"])
         }
         if wait { run() } else { DispatchQueue.global(qos: .utility).async(execute: run) }
     }
@@ -67,29 +70,33 @@ final class CapsLockChord {
 
     private func startRaw() {
         guard hidManager == nil, Permission.inputMonitoring.isGranted else { return }
-        let m = IOHIDManagerCreate(kCFAllocatorDefault, IOOptionBits(kIOHIDOptionsTypeNone))
-        IOHIDManagerSetDeviceMatching(m, [kIOHIDDeviceUsagePageKey: kHIDPage_GenericDesktop,
-                                          kIOHIDDeviceUsageKey: kHIDUsage_GD_Keyboard] as CFDictionary)
-        IOHIDManagerRegisterInputValueCallback(m, { _, _, _, value in
-            let el = IOHIDValueGetElement(value)
-            guard IOHIDElementGetUsagePage(el) == UInt32(kHIDPage_KeyboardOrKeypad),
-                  IOHIDElementGetUsage(el) == UInt32(kHIDUsage_KeyboardCapsLock) else { return }
-            if IOHIDValueGetIntegerValue(value) == 1 { CapsLockChord.shared.rawDown() } else { CapsLockChord.shared.rawUp() }
+        let manager = IOHIDManagerCreate(kCFAllocatorDefault, IOOptionBits(kIOHIDOptionsTypeNone))
+        IOHIDManagerSetDeviceMatching(manager, [kIOHIDDeviceUsagePageKey: kHIDPage_GenericDesktop,
+                                                kIOHIDDeviceUsageKey: kHIDUsage_GD_Keyboard] as CFDictionary)
+        IOHIDManagerRegisterInputValueCallback(manager, { _, _, _, value in
+            let element = IOHIDValueGetElement(value)
+            guard IOHIDElementGetUsagePage(element) == UInt32(kHIDPage_KeyboardOrKeypad),
+                  IOHIDElementGetUsage(element) == UInt32(kHIDUsage_KeyboardCapsLock) else { return }
+            if IOHIDValueGetIntegerValue(value) == 1 {
+                CapsLockChord.shared.rawDown()
+            } else {
+                CapsLockChord.shared.rawUp()
+            }
         }, nil)
-        IOHIDManagerScheduleWithRunLoop(m, CFRunLoopGetMain(), CFRunLoopMode.commonModes.rawValue)
-        if IOHIDManagerOpen(m, IOOptionBits(kIOHIDOptionsTypeNone)) == kIOReturnSuccess {
-            hidManager = m
+        IOHIDManagerScheduleWithRunLoop(manager, CFRunLoopGetMain(), CFRunLoopMode.commonModes.rawValue)
+        if IOHIDManagerOpen(manager, IOOptionBits(kIOHIDOptionsTypeNone)) == kIOReturnSuccess {
+            hidManager = manager
         } else {
-            IOHIDManagerUnscheduleFromRunLoop(m, CFRunLoopGetMain(), CFRunLoopMode.commonModes.rawValue)
+            IOHIDManagerUnscheduleFromRunLoop(manager, CFRunLoopGetMain(), CFRunLoopMode.commonModes.rawValue)
         }
     }
 
     func stop() {
-        guard let m = hidManager else { return }
-        IOHIDManagerRegisterInputValueCallback(m, nil, nil)
-        IOHIDManagerUnscheduleFromRunLoop(m, CFRunLoopGetMain(), CFRunLoopMode.commonModes.rawValue)
-        IOHIDManagerClose(m, IOOptionBits(kIOHIDOptionsTypeNone))
-        hidManager = nil
+        guard let hidManager else { return }
+        IOHIDManagerRegisterInputValueCallback(hidManager, nil, nil)
+        IOHIDManagerUnscheduleFromRunLoop(hidManager, CFRunLoopGetMain(), CFRunLoopMode.commonModes.rawValue)
+        IOHIDManagerClose(hidManager, IOOptionBits(kIOHIDOptionsTypeNone))
+        self.hidManager = nil
     }
 
     private func rawListenerMissed() {
@@ -100,7 +107,8 @@ final class CapsLockChord {
             startRaw()
         } else if rawMisses == 2, !grantedAtLaunch {
             Log.info("Input Monitoring granted but no events: relaunching")
-            Process.runTool("/bin/sh", ["-c", "sleep 0.7; /usr/bin/open -n \"$0\"", Bundle.main.bundlePath], wait: false)
+            Process.runTool("/bin/sh", ["-c", "sleep 0.7; /usr/bin/open -n \"$0\"", Bundle.main.bundlePath],
+                            wait: false)
             DispatchQueue.main.async { NSApp.terminate(nil) }
         }
     }
@@ -144,13 +152,15 @@ final class CapsLockChord {
         DispatchQueue.main.async { Self.setLock(want) }
     }
 
-    static func setLock(_ on: Bool) {
+    static func setLock(_ locked: Bool) {
         let service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching(kIOHIDSystemClass))
         guard service != 0 else { return }
         defer { IOObjectRelease(service) }
         var conn: io_connect_t = 0
-        guard IOServiceOpen(service, mach_task_self_, UInt32(kIOHIDParamConnectType), &conn) == KERN_SUCCESS else { return }
+        guard IOServiceOpen(service, mach_task_self_, UInt32(kIOHIDParamConnectType), &conn) == KERN_SUCCESS else {
+            return
+        }
         defer { IOServiceClose(conn) }
-        IOHIDSetModifierLockState(conn, Int32(kIOHIDCapsLockState), on)
+        IOHIDSetModifierLockState(conn, Int32(kIOHIDCapsLockState), locked)
     }
 }

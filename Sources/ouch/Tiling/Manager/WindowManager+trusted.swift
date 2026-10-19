@@ -1,6 +1,12 @@
 import AppKit
 
 extension WindowManager {
+    struct ScreenStatus {
+        var uuid: String
+        var name: String
+        var layout: Layout
+        var workspace: String
+    }
 
     struct Status {
         var trusted: Bool
@@ -12,7 +18,6 @@ extension WindowManager {
         var inputMonitoring: Bool
         var tiled: Int
         var floating: Int
-        var screens: [(uuid: String, name: String, layout: Layout, workspace: String)]
+        var screens: [ScreenStatus]
     }
-
 }

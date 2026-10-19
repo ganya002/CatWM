@@ -2,7 +2,7 @@ import AppKit
 
 extension FocusDim {
     func rebuild() {
-        for p in pairs.values { p.front.orderOut(nil); p.spare.orderOut(nil) }
+        for pair in pairs.values { pair.front.orderOut(nil); pair.spare.orderOut(nil) }
         pairs = [:]
         panelNumbers = []
         target = nil
@@ -14,52 +14,54 @@ extension FocusDim {
         for screen in NSScreen.screens {
             guard let display = screen.displayID else { continue }
             seen.insert(display)
-            if pairs[display] == nil { pairs[display] = Pair(front: makePanel(screen), spare: makePanel(screen)) }
-            for p in [pairs[display]!.front, pairs[display]!.spare] where p.frame != screen.frame {
-                p.setFrame(screen.frame, display: false)
+            let pair = pairs[display] ?? Pair(front: makePanel(screen), spare: makePanel(screen))
+            pairs[display] = pair
+            for panel in [pair.front, pair.spare] where panel.frame != screen.frame {
+                panel.setFrame(screen.frame, display: false)
             }
         }
-        for (display, p) in pairs where !seen.contains(display) {
-            p.front.orderOut(nil); p.spare.orderOut(nil)
-            panelNumbers.remove(p.front.windowNumber); panelNumbers.remove(p.spare.windowNumber)
+        for (display, pair) in pairs where !seen.contains(display) {
+            pair.front.orderOut(nil); pair.spare.orderOut(nil)
+            panelNumbers.remove(pair.front.windowNumber); panelNumbers.remove(pair.spare.windowNumber)
             pairs[display] = nil
         }
     }
 
     func makePanel(_ screen: NSScreen) -> NSPanel {
-        let p = NSPanel(contentRect: screen.frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false) // style-ok: full-screen click-through dim
-        p.isOpaque = false
-        p.hasShadow = false
-        p.ignoresMouseEvents = true
-        p.isReleasedWhenClosed = false
-        p.hidesOnDeactivate = false
-        p.animationBehavior = .none
-        p.collectionBehavior = [.canJoinAllSpaces, .transient, .ignoresCycle, .fullScreenAuxiliary]
-        p.alphaValue = 0
-        panelNumbers.insert(p.windowNumber)
-        style(p)
-        return p
+        let panel = NSPanel( // style-ok: full-screen click-through dim
+            contentRect: screen.frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false
+        )
+        panel.isOpaque = false
+        panel.hasShadow = false
+        panel.ignoresMouseEvents = true
+        panel.isReleasedWhenClosed = false
+        panel.hidesOnDeactivate = false
+        panel.animationBehavior = .none
+        panel.collectionBehavior = [.canJoinAllSpaces, .transient, .ignoresCycle, .fullScreenAuxiliary]
+        panel.alphaValue = 0
+        panelNumbers.insert(panel.windowNumber)
+        style(panel)
+        return panel
     }
 
-    func style(_ p: NSPanel) {
+    func style(_ panel: NSPanel) {
         let amount = dims ? strength : 0, blur = blurs ? radius : 0
-        p.backgroundColor = NSColor.black.withAlphaComponent(max(amount, 0.01))
-        if Blur.set(p.windowNumber, radius: blur) || blur == 0 {
-            p.contentView = NSView()
+        panel.backgroundColor = NSColor.black.withAlphaComponent(max(amount, 0.01))
+        if Blur.set(panel.windowNumber, radius: blur) || blur == 0 {
+            panel.contentView = NSView()
         } else {
-            let v = NSVisualEffectView()
-            v.material = .fullScreenUI
-            v.blendingMode = .behindWindow
-            v.state = .active
-            p.backgroundColor = .clear
+            let effect = NSVisualEffectView()
+            effect.material = .fullScreenUI
+            effect.blendingMode = .behindWindow
+            effect.state = .active
+            panel.backgroundColor = .clear
             let tint = NSView()
             tint.wantsLayer = true
             tint.layer?.backgroundColor = NSColor.black.withAlphaComponent(amount).cgColor
             tint.autoresizingMask = [.width, .height]
-            v.addSubview(tint)
-            p.contentView = v
-            tint.frame = v.bounds
+            effect.addSubview(tint)
+            panel.contentView = effect
+            tint.frame = effect.bounds
         }
     }
-
 }

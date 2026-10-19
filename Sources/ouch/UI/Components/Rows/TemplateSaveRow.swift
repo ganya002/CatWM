@@ -8,7 +8,7 @@ struct TemplateSaveRow: View {
     let cancel: () -> Void
 
     var body: some View {
-        HStack(spacing: Theme.Space.sm) {
+        HStack(spacing: Theme.Space.small) {
             OTextField(placeholder: "Template name", text: $name, onSubmit: save, autofocus: true)
             OButton("Save", variant: .primary, shortcut: ["↩"], action: save)
                 .disabled(busy || problem != nil)

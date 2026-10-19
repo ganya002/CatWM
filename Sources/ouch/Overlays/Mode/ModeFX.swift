@@ -23,14 +23,14 @@ final class ModeFX {
     private var hideWork: DispatchWorkItem?
     private var demo: [DispatchWorkItem] = []
 
-    func setActive(_ on: Bool) {
-        setActive(on, style: style)
+    func setActive(_ active: Bool) {
+        setActive(active, style: style)
     }
 
-    private func setActive(_ on: Bool, style: Style) {
-        guard on != model.active else { return }
+    private func setActive(_ active: Bool, style: Style) {
+        guard active != model.active else { return }
         hideWork?.cancel()
-        if on {
+        if active {
             guard style != .none else { return }
             model.style = style
             layoutPanels()
@@ -51,30 +51,38 @@ final class ModeFX {
         demo = []
         switch args.first?.lowercased() {
         case "all":
-            for (i, s) in Style.allCases.filter({ $0 != .none }).enumerated() {
-                schedule(Double(i) * 2.6) { [weak self] in self?.preview(s) }
+            for (i, choice) in Style.allCases.filter({ $0 != .none }).enumerated() {
+                schedule(Double(i) * 2.6) { [weak self] in self?.preview(choice) }
             }
-        case let name? where Style(rawValue: name) != nil:
-            preview(Style(rawValue: name)!)
+        case let name?:
+            if let choice = Style(rawValue: name) {
+                preview(choice)
+            } else {
+                logStyles()
+            }
         default:
-            Log.info("modefx: styles are \(Style.allCases.map(\.rawValue).joined(separator: ", ")), or all")
+            logStyles()
         }
     }
 
-    private func preview(_ s: Style) {
+    private func logStyles() {
+        Log.info("modefx: styles are \(Style.allCases.map(\.rawValue).joined(separator: ", ")), or all")
+    }
+
+    private func preview(_ choice: Style) {
         setActive(false)
         hideWork?.cancel()
-        HUD.shared.show(s.rawValue.capitalized, on: NSScreen.main)
-        schedule(0.05) { [weak self] in self?.setActive(true, style: s) }
+        HUD.shared.show(choice.rawValue.capitalized, on: NSScreen.main)
+        schedule(0.05) { [weak self] in self?.setActive(true, style: choice) }
         schedule(1.9) { [weak self] in
             if Hotkeys.shared.submap.isEmpty { self?.setActive(false) }
         }
     }
 
-    private func schedule(_ delay: Double, _ f: @escaping () -> Void) {
-        let w = DispatchWorkItem(block: f)
-        demo.append(w)
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: w)
+    private func schedule(_ delay: Double, _ block: @escaping () -> Void) {
+        let work = DispatchWorkItem(block: block)
+        demo.append(work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
     }
 
     private func layoutPanels() {
@@ -82,27 +90,28 @@ final class ModeFX {
         for screen in NSScreen.screens {
             guard let id = screen.displayID else { continue }
             seen.insert(id)
-            let p = panels[id] ?? makePanel(screen)
-            panels[id] = p
-            if let host = p.contentView as? NSHostingView<ModeFXView> { host.rootView = view(for: screen) }
-            p.setFrame(screen.frame, display: false)
-            p.orderFrontRegardless()
+            let panel = panels[id] ?? makePanel(screen)
+            panels[id] = panel
+            if let host = panel.contentView as? NSHostingView<ModeFXView> { host.rootView = view(for: screen) }
+            panel.setFrame(screen.frame, display: false)
+            panel.orderFrontRegardless()
         }
-        for (id, p) in panels where !seen.contains(id) {
-            p.orderOut(nil)
+        for (id, panel) in panels where !seen.contains(id) {
+            panel.orderOut(nil)
             panels[id] = nil
         }
     }
 
     private func makePanel(_ screen: NSScreen) -> NSPanel {
-        let p = OuchPanel(role: .fullscreenFX, frame: screen.frame)
-        p.contentView = NSHostingView(rootView: view(for: screen))
-        return p
+        let panel = OuchPanel(role: .fullscreenFX, frame: screen.frame)
+        panel.contentView = NSHostingView(rootView: view(for: screen))
+        return panel
     }
 
     private func view(for screen: NSScreen) -> ModeFXView {
         let shape = ScreenShape.of(screen)
         return ModeFXView(model: model, radius: shape.topRadius, origin: screen.frame.origin,
-                          notchHalfWidth: shape.notchHalfWidth, notchHeight: shape.notchHeight, topInset: shape.topInset)
+                          notchHalfWidth: shape.notchHalfWidth, notchHeight: shape.notchHeight,
+                          topInset: shape.topInset)
     }
 }

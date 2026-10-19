@@ -6,10 +6,10 @@ enum LoginItem {
     static var needsApproval: Bool { SMAppService.mainApp.status == .requiresApproval }
 
     @discardableResult
-    static func set(_ on: Bool) -> Bool {
+    static func set(_ enabled: Bool) -> Bool {
         do {
-            if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
-            Log.info("launch at login \(on ? "on" : "off") (status \(SMAppService.mainApp.status.rawValue))")
+            if enabled { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
+            Log.info("launch at login \(enabled ? "on" : "off") (status \(SMAppService.mainApp.status.rawValue))")
             return true
         } catch {
             Log.info("launch at login: \(error.localizedDescription)")

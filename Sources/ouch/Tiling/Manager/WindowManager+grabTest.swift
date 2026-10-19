@@ -1,36 +1,60 @@
 import AppKit
 
 extension WindowManager {
+    private struct GrabCandidates {
+        var best: [CGPoint] = []
+        var usable: [CGPoint] = []
+        var unknown: [CGPoint] = []
+        var skipped: [String: Int] = [:]
+        var hintedCount = 0
+    }
+
+    private static let blockedGrabRoles: Set<String> = [
+        kAXButtonRole, kAXRadioButtonRole, kAXCheckBoxRole, kAXTextFieldRole, kAXTextAreaRole,
+        kAXPopUpButtonRole, kAXMenuButtonRole, kAXComboBoxRole, kAXSliderRole, "AXLink",
+        kAXIncrementorRole, "AXTab", kAXImageRole, kAXScrollAreaRole, "AXWebArea",
+        kAXStaticTextRole, kAXMenuBarRole, kAXMenuItemRole
+    ]
+
+    private static let backgroundGrabRoles: Set<String> = [
+        kAXWindowRole, kAXGroupRole, kAXToolbarRole, kAXUnknownRole, kAXSplitGroupRole, "AXTabGroup"
+    ]
+
     func grabTest() {
-        guard !movingToSpace, let w = focusedWindow() else { Log.info("grabtest: no focused window"); return }
-        let points = grabPoints(for: w, frame: w.frame)
-        Log.info("grabtest: \(w.bundleID ?? "pid \(w.pid)") frame \(w.frame) candidates \(points)")
+        guard !movingToSpace, let window = focusedWindow() else {
+            Log.info("grabtest: no focused window")
+            return
+        }
+        let points = grabPoints(for: window, frame: window.frame)
+        Log.info("grabtest: \(window.bundleID ?? "pid \(window.pid)") frame \(window.frame) candidates \(points)")
         movingToSpace = true
         let restore = mouseLocation()
         func next(_ rest: ArraySlice<CGPoint>) {
-            guard let p = rest.first else { finishMove(restore: restore); return }
-            let original = serverFrame(w.id) ?? w.frame
-            attemptGrab(w, at: p) { [weak self] grabbed, held in
+            guard let point = rest.first else { finishMove(restore: restore); return }
+            let original = serverFrame(window.id) ?? window.frame
+            attemptGrab(window, at: point) { [weak self] grabbed, held in
                 self?.postMouse(.leftMouseUp, held)
-                Log.info("grabtest: \(p) \(grabbed ? "GRABS" : "no")")
-                if grabbed { self?.rememberGrab(w, p, frame: original) }
+                Log.info("grabtest: \(point) \(grabbed ? "GRABS" : "no")")
+                if grabbed { self?.rememberGrab(window, point, frame: original) }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { next(rest.dropFirst()) }
             }
         }
         next(points[...])
     }
 
-    func holdUntilArrived(space n: Int, release: CGPoint, restore: CGPoint, waited: Double, settle: Double, attemptsLeft: Int) {
+    func holdUntilArrived(space number: Int, release: CGPoint, restore: CGPoint, settle: Double, attemptsLeft: Int) {
         DispatchQueue.main.asyncAfter(deadline: .now() + settle) { [weak self] in
             guard let self else { return }
-            let p = mouseLocation()
-            if attemptsLeft > 0, let s = Screen.all().first(where: { $0.frame.contains(p) }),
-               let info = Spaces.list(display: s.uuid), let cur = info.current, info.desktops.indices.contains(n - 1),
-               cur != info.desktops[n - 1], let combo = SystemShortcut.step(right: info.desktops[n - 1] > cur) {
-                let delta = info.desktops[n - 1] - cur
+            let point = mouseLocation()
+            if attemptsLeft > 0, let screen = Screen.all().first(where: { $0.frame.contains(point) }),
+               let info = Spaces.list(display: screen.uuid), let cur = info.current,
+               info.desktops.indices.contains(number - 1),
+               cur != info.desktops[number - 1],
+               let combo = SystemShortcut.step(right: info.desktops[number - 1] > cur) {
+                let delta = info.desktops[number - 1] - cur
                 Log.info("move to space: landed on \(cur + 1); stepping \(delta) more")
                 for _ in 0..<abs(delta) { Hotkeys.post(keyCode: combo.keyCode, flags: combo.flags) }
-                holdUntilArrived(space: n, release: release, restore: restore, waited: waited + settle,
+                holdUntilArrived(space: number, release: release, restore: restore,
                                  settle: 0.45 + 0.15 * Double(abs(delta) - 1), attemptsLeft: attemptsLeft - 1)
                 return
             }
@@ -49,75 +73,110 @@ extension WindowManager {
 
     func serverFrame(_ id: CGWindowID) -> CGRect? {
         guard let list = CGWindowListCopyWindowInfo(.optionIncludingWindow, id) as? [[String: Any]],
-              let b = list.first?[kCGWindowBounds as String] as? NSDictionary else { return nil }
-        return CGRect(dictionaryRepresentation: b)
+              let bounds = list.first?[kCGWindowBounds as String] as? [String: Any] else { return nil }
+        return CGRect(dictionaryRepresentation: bounds as CFDictionary)
     }
 
-    func rememberGrab(_ w: Window, _ p: CGPoint, frame f: CGRect) {
-        guard let id = w.bundleID else { return }
-        let hint = (CGPoint(x: p.x - f.minX, y: p.y - f.minY), CGPoint(x: f.maxX - p.x, y: p.y - f.minY))
+    func rememberGrab(_ window: Window, _ point: CGPoint, frame: CGRect) {
+        guard let id = window.bundleID else { return }
+        let hint = (CGPoint(x: point.x - frame.minX, y: point.y - frame.minY),
+                    CGPoint(x: frame.maxX - point.x, y: point.y - frame.minY))
         grabHints[id] = hint
-        UserDefaults.standard.set(grabHints.mapValues { [Double($0.fromLeft.x), Double($0.fromLeft.y), Double($0.fromRight.x), Double($0.fromRight.y)] },
-                                  forKey: "grabHints")
+        let saved = grabHints.mapValues {
+            [Double($0.fromLeft.x), Double($0.fromLeft.y), Double($0.fromRight.x), Double($0.fromRight.y)]
+        }
+        UserDefaults.standard.set(saved, forKey: "grabHints")
     }
 
-    func grabPoints(for w: Window, frame f: CGRect) -> [CGPoint] {
+    func grabPoints(for window: Window, frame: CGRect) -> [CGPoint] {
+        let raw = rawGrabPoints(for: window, frame: frame)
+        let candidates = classifyGrabPoints(raw, for: window, frame: frame)
+        let hintedPicks = Array(candidates.best[..<candidates.hintedCount])
+        let rest = Array(candidates.best.dropFirst(candidates.hintedCount))
+        let picks = Array((hintedPicks + Self.spaced(rest, 14) + Self.spaced(candidates.usable, 4)
+                           + Self.spaced(candidates.unknown, 2)).prefix(20))
+        Log.info(
+            "move to space: \(picks.count) grab candidates for \(window.bundleID ?? "pid \(window.pid)"); "
+                + "skipped \(candidates.skipped)"
+        )
+        return picks
+    }
+
+    private func rawGrabPoints(for window: Window, frame: CGRect) -> [CGPoint] {
         var raw: [CGPoint] = []
-        if let id = w.bundleID, let h = grabHints[id] {
-            raw.append(CGPoint(x: f.minX + h.fromLeft.x, y: f.minY + h.fromLeft.y))
-            raw.append(CGPoint(x: f.maxX - h.fromRight.x, y: f.minY + h.fromRight.y))
+        if let id = window.bundleID, let hint = grabHints[id] {
+            raw.append(CGPoint(x: frame.minX + hint.fromLeft.x, y: frame.minY + hint.fromLeft.y))
+            raw.append(CGPoint(x: frame.maxX - hint.fromRight.x, y: frame.minY + hint.fromRight.y))
         }
-        if let zoom = w.element.element(kAXZoomButtonAttribute)?.frame, !zoom.isNull {
+        if let zoom = window.element.element(kAXZoomButtonAttribute)?.frame, !zoom.isNull {
             raw.append(CGPoint(x: zoom.maxX + 14, y: zoom.midY))
         }
         for dy: CGFloat in [9, 15, 22, 30] {
-            var x = f.minX + 72
-            while x < f.maxX - 30 {
-                raw.append(CGPoint(x: x, y: f.minY + dy))
+            var x = frame.minX + 72
+            while x < frame.maxX - 30 {
+                raw.append(CGPoint(x: x, y: frame.minY + dy))
                 x += 22
             }
         }
-        let app = axApp(w.pid)
-        let blocked: Set<String> = [kAXButtonRole, kAXRadioButtonRole, kAXCheckBoxRole, kAXTextFieldRole, kAXTextAreaRole,
-                                    kAXPopUpButtonRole, kAXMenuButtonRole, kAXComboBoxRole, kAXSliderRole, "AXLink",
-                                    kAXIncrementorRole, "AXTab", kAXImageRole, kAXScrollAreaRole, "AXWebArea",
-                                    kAXStaticTextRole, kAXMenuBarRole, kAXMenuItemRole]
-        let background: Set<String> = [kAXWindowRole, kAXGroupRole, kAXToolbarRole, kAXUnknownRole, kAXSplitGroupRole, "AXTabGroup"]
-        var best: [CGPoint] = [], ok: [CGPoint] = [], unknown: [CGPoint] = []
-        var skipped: [String: Int] = [:]
-        let hinted = grabHints[w.bundleID ?? ""] != nil ? 2 : 0
-        var hintedCount = 0
-        for (k, p) in raw.enumerated() where f.contains(p) {
-            if k < hinted { best.append(p); hintedCount += 1; continue }
+        return raw
+    }
+
+    private func classifyGrabPoints(_ raw: [CGPoint], for window: Window, frame: CGRect) -> GrabCandidates {
+        let app = axApp(window.pid)
+        var candidates = GrabCandidates()
+        let hinted = grabHints[window.bundleID ?? ""] != nil ? 2 : 0
+        for (index, point) in raw.enumerated() where frame.contains(point) {
+            if index < hinted {
+                candidates.best.append(point)
+                candidates.hintedCount += 1
+                continue
+            }
             var hit: AXUIElement?
-            guard AXUIElementCopyElementAtPosition(app, Float(p.x), Float(p.y), &hit) == .success, let hit else {
-                unknown.append(p); continue
+            guard AXUIElementCopyElementAtPosition(app, Float(point.x), Float(point.y), &hit) == .success,
+                  let hit else {
+                candidates.unknown.append(point)
+                continue
             }
             let role = hit.string(kAXRoleAttribute) ?? "?"
-            if blocked.contains(role) { skipped[role, default: 0] += 1; continue }
-            var actions: CFArray?
-            if AXUIElementCopyActionNames(hit, &actions) == .success,
-               let names = actions as? [String], names.contains(kAXPressAction) { skipped["\(role)+press", default: 0] += 1; continue }
-            let owner = role == kAXWindowRole ? hit : hit.element(kAXWindowAttribute)
-            if let owner, let oid = owner.windowID, oid != w.id { skipped["covered", default: 0] += 1; continue }
-            if background.contains(role) { best.append(p) } else { ok.append(p) }
-        }
-        func spaced(_ ps: [CGPoint], _ limit: Int) -> [CGPoint] {
-            var thin: [CGPoint] = []
-            for p in ps where !thin.contains(where: { abs($0.x - p.x) < 30 && abs($0.y - p.y) < 6 }) { thin.append(p) }
-            let sorted = thin.sorted { $0.x < $1.x }
-            var out: [CGPoint] = []
-            var lo = 0, hi = sorted.count - 1
-            while lo <= hi && out.count < limit {
-                out.append(sorted[lo]); lo += 1
-                if lo <= hi && out.count < limit { out.append(sorted[hi]); hi -= 1 }
+            if let reason = skipReason(hit, role: role, window: window) {
+                candidates.skipped[reason, default: 0] += 1
+                continue
             }
-            return out
+            if Self.backgroundGrabRoles.contains(role) {
+                candidates.best.append(point)
+            } else {
+                candidates.usable.append(point)
+            }
         }
-        let hintedPicks = Array(best[..<hintedCount])
-        let rest = Array(best.dropFirst(hintedCount))
-        let picks = Array((hintedPicks + spaced(rest, 14) + spaced(ok, 4) + spaced(unknown, 2)).prefix(20))
-        Log.info("move to space: \(picks.count) grab candidates for \(w.bundleID ?? "pid \(w.pid)"); skipped \(skipped)")
-        return picks
+        return candidates
+    }
+
+    private func skipReason(_ hit: AXUIElement, role: String, window: Window) -> String? {
+        if Self.blockedGrabRoles.contains(role) { return role }
+        var actions: CFArray?
+        if AXUIElementCopyActionNames(hit, &actions) == .success,
+           let names = actions as? [String], names.contains(kAXPressAction) { return "\(role)+press" }
+        let owner = role == kAXWindowRole ? hit : hit.element(kAXWindowAttribute)
+        if let owner, let ownerID = owner.windowID, ownerID != window.id { return "covered" }
+        return nil
+    }
+
+    private static func spaced(_ points: [CGPoint], _ limit: Int) -> [CGPoint] {
+        var thin: [CGPoint] = []
+        for point in points where !thin.contains(where: { abs($0.x - point.x) < 30 && abs($0.y - point.y) < 6 }) {
+            thin.append(point)
+        }
+        let sorted = thin.sorted { $0.x < $1.x }
+        var out: [CGPoint] = []
+        var low = 0, high = sorted.count - 1
+        while low <= high && out.count < limit {
+            out.append(sorted[low])
+            low += 1
+            if low <= high && out.count < limit {
+                out.append(sorted[high])
+                high -= 1
+            }
+        }
+        return out
     }
 }

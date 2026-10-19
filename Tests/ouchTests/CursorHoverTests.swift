@@ -1,7 +1,7 @@
 import AppKit
+@testable import ouch
 import SwiftUI
 import Testing
-@testable import ouch
 
 @MainActor
 @Suite struct CursorHoverTests {
@@ -9,7 +9,7 @@ import Testing
         let actions = [
             QuickAction(id: "save", title: "Save", symbol: "plus") {},
             QuickAction(id: "one", title: "One", symbol: "rectangle.3.group") {},
-            QuickAction(id: "close", title: "Close", symbol: "xmark", destructive: true) {},
+            QuickAction(id: "close", title: "Close", symbol: "xmark", destructive: true) {}
         ]
         let row = Theme.rowHeight
         #expect(CursorActionsView.rowID(at: 0, actions: actions) == "save")
@@ -17,7 +17,9 @@ import Testing
         #expect(CursorActionsView.rowID(at: row, actions: actions) == "one")
         #expect(CursorActionsView.rowID(at: row * 2, actions: actions) == "close")
         #expect(CursorActionsView.rowID(at: row * 2 + 8, actions: actions) == "close")
-        #expect(CursorActionsView.rowID(at: CursorActionsView.contentHeight(for: actions) - 0.1, actions: actions) == "close")
+        #expect(CursorActionsView.rowID(
+            at: CursorActionsView.contentHeight(for: actions) - 0.1, actions: actions
+        ) == "close")
         #expect(CursorActionsView.rowID(at: CursorActionsView.contentHeight(for: actions), actions: actions) == nil)
         #expect(CursorActionsView.rowID(at: -1, actions: actions) == nil)
     }
@@ -26,11 +28,19 @@ import Testing
         let actions = (0..<12).map { QuickAction(id: "\($0)", title: "\($0)", symbol: "plus") {} }
         let row = Theme.rowHeight
         let visible = 0..<(9 * row)
-        #expect(CursorActionsView.rowUnderPointer(x: 10, y: row / 2, width: 200, actions: actions, visible: visible) == "0")
-        #expect(CursorActionsView.rowUnderPointer(x: 10, y: 9.5 * row, width: 200, actions: actions, visible: visible) == nil)
+        #expect(CursorActionsView.rowUnderPointer(
+            x: 10, y: row / 2, width: 200, actions: actions, visible: visible
+        ) == "0")
+        #expect(CursorActionsView.rowUnderPointer(
+            x: 10, y: 9.5 * row, width: 200, actions: actions, visible: visible
+        ) == nil)
         let scrolled = (3 * row)..<(12 * row)
-        #expect(CursorActionsView.rowUnderPointer(x: 10, y: row / 2, width: 200, actions: actions, visible: scrolled) == nil)
-        #expect(CursorActionsView.rowUnderPointer(x: 10, y: 3.5 * row, width: 200, actions: actions, visible: scrolled) == "3")
+        #expect(CursorActionsView.rowUnderPointer(
+            x: 10, y: row / 2, width: 200, actions: actions, visible: scrolled
+        ) == nil)
+        #expect(CursorActionsView.rowUnderPointer(
+            x: 10, y: 3.5 * row, width: 200, actions: actions, visible: scrolled
+        ) == "3")
     }
 
     @Test func anchorMarksTheTopOfTheFirstRow() throws {
@@ -38,7 +48,7 @@ import Testing
         model.open = true
         model.actions = [
             QuickAction(id: "save", title: "Save", symbol: "plus") {},
-            QuickAction(id: "one", title: "One", symbol: "rectangle.3.group") {},
+            QuickAction(id: "one", title: "One", symbol: "rectangle.3.group") {}
         ]
         let size = CursorActionsView.menuSize(for: model.actions)
         let host = NSHostingView(rootView: CursorActionsView(model: model))
@@ -81,7 +91,9 @@ import Testing
         #expect(y < CursorActionsView.contentHeight(for: model.actions))
         #expect(CursorActions.rowUnder(anchor, at: below, x: below.x - origin.x, y: y, actions: model.actions) == nil)
         let above = clip.convert(CGPoint(x: clip.bounds.midX, y: clip.bounds.minY - 16), to: nil)
-        #expect(CursorActions.rowUnder(anchor, at: above, x: above.x - origin.x, y: origin.y - above.y, actions: model.actions) == nil)
+        #expect(CursorActions.rowUnder(
+            anchor, at: above, x: above.x - origin.x, y: origin.y - above.y, actions: model.actions
+        ) == nil)
     }
 
     private func hitRow(_ anchor: NSView, in row: NSRect, actions: [QuickAction]) throws -> String? {

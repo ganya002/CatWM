@@ -10,7 +10,7 @@ struct TipView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
-                Image(systemName: "lightbulb").font(Theme.symbol(Theme.Icon.lg)).foregroundStyle(Theme.accentInk)
+                Image(systemName: "lightbulb").font(Theme.symbol(Theme.Icon.large)).foregroundStyle(Theme.accentInk)
                     .breatheEffect().frame(width: 16)
                 Text(tip.title).font(Theme.heading()).oneLine()
                 Spacer(minLength: 4)
@@ -30,7 +30,7 @@ struct TipView: View {
                 .padding(.top, 10)
             }
             HStack(spacing: 4) {
-                OButton("No more tips", variant: .ghost, size: .sm) { Tips.shared.noMore() }
+                OButton("No more tips", variant: .ghost, size: .small) { Tips.shared.noMore() }
                     .padding(.leading, -11)
                 Spacer(minLength: 8)
                 if let action = tip.action {
@@ -46,7 +46,7 @@ struct TipView: View {
         }
         .frame(width: 276)
         .padding(.horizontal, 6).padding(.top, 4).padding(.bottom, 2)
-        .surface(.md, caret: caret)
+        .surface(.medium, caret: caret)
         .padding(inset)
         .fixedSize()
         .font(Theme.body())

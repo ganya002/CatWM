@@ -2,30 +2,35 @@ import AppKit
 import SwiftUI
 
 extension Intro {
-    func layout(bsp: Bool, _ n: Int = Intro.count) -> [NSRect] {
-        let f = screen.frame.insetBy(dx: 28, dy: 28)
+    func layout(bsp: Bool, _ count: Int = Intro.count) -> [NSRect] {
+        let area = screen.frame.insetBy(dx: 28, dy: 28)
         let gap: CGFloat = 18
         var out: [NSRect] = []
-        var r = CGRect(x: 0, y: 0, width: f.width + gap, height: f.height + gap)
-        if bsp || n == 1 {
-            for i in 0..<(n - 1) {
-                if i % 2 == 0 {
-                    out.append(CGRect(x: r.minX, y: r.minY, width: r.width / 2, height: r.height))
-                    r = CGRect(x: r.minX + r.width / 2, y: r.minY, width: r.width / 2, height: r.height)
+        var rest = CGRect(x: 0, y: 0, width: area.width + gap, height: area.height + gap)
+        if bsp || count == 1 {
+            for i in 0..<(count - 1) {
+                if i.isMultiple(of: 2) {
+                    out.append(CGRect(x: rest.minX, y: rest.minY, width: rest.width / 2, height: rest.height))
+                    rest = CGRect(x: rest.minX + rest.width / 2, y: rest.minY,
+                                  width: rest.width / 2, height: rest.height)
                 } else {
-                    out.append(CGRect(x: r.minX, y: r.minY, width: r.width, height: r.height / 2))
-                    r = CGRect(x: r.minX, y: r.minY + r.height / 2, width: r.width, height: r.height / 2)
+                    out.append(CGRect(x: rest.minX, y: rest.minY, width: rest.width, height: rest.height / 2))
+                    rest = CGRect(x: rest.minX, y: rest.minY + rest.height / 2,
+                                  width: rest.width, height: rest.height / 2)
                 }
             }
-            out.append(r)
+            out.append(rest)
         } else {
-            let main = r.width / 2, h = r.height / CGFloat(n - 1)
-            out.append(CGRect(x: 0, y: 0, width: main, height: r.height))
-            for i in 0..<(n - 1) { out.append(CGRect(x: main, y: CGFloat(i) * h, width: r.width - main, height: h)) }
+            let main = rest.width / 2, height = rest.height / CGFloat(count - 1)
+            out.append(CGRect(x: 0, y: 0, width: main, height: rest.height))
+            for i in 0..<(count - 1) {
+                out.append(CGRect(x: main, y: CGFloat(i) * height, width: rest.width - main, height: height))
+            }
         }
-        return out.map { t in
-            let g = t.insetBy(dx: gap / 2, dy: gap / 2)
-            return NSRect(x: f.minX + g.minX, y: f.maxY - g.maxY, width: g.width, height: g.height).integral
+        return out.map { slot in
+            let inset = slot.insetBy(dx: gap / 2, dy: gap / 2)
+            return NSRect(x: area.minX + inset.minX, y: area.maxY - inset.maxY,
+                          width: inset.width, height: inset.height).integral
         }
     }
 
@@ -36,13 +41,13 @@ extension Intro {
         }
     }
 
-    func arrive(_ n: Int) {
-        let frames = layout(bsp: true, n)
-        for i in 0..<(n - 1) {
+    func arrive(_ count: Int) {
+        let frames = layout(bsp: true, count)
+        for i in 0..<(count - 1) {
             move(i, to: frames[i], alpha: 1, duration: 0.45)
             later(0.12) { [weak self] in self?.tile(i)?.squish() }
         }
-        let i = n - 1, slot = frames[i]
+        let i = count - 1, slot = frames[i]
         tiles[i].setFrame(padded(slot.insetBy(dx: slot.width * 0.3, dy: slot.height * 0.3)), display: false)
         move(i, to: slot, alpha: 1, duration: 0.45)
         later(0.12) { [weak self] in self?.tile(i)?.squish() }
@@ -67,8 +72,8 @@ extension Intro {
     func retile() {
         wordModel.subtitle = true
         let step = IntroScore.Beat.step
-        for (i, r) in layout(bsp: false).enumerated() {
-            move(i, to: r, alpha: i == 0 ? 0.4 : 0.3, duration: 0.6, delay: Double(i) * step)
+        for (i, slot) in layout(bsp: false).enumerated() {
+            move(i, to: slot, alpha: i == 0 ? 0.4 : 0.3, duration: 0.6, delay: Double(i) * step)
             later(Double(i) * step + 0.1) { [weak self] in self?.tile(i)?.squish() }
         }
     }
@@ -76,13 +81,15 @@ extension Intro {
     func gather() {
         hideWord()
         let span = IntroScore.Beat.impact - 0.25 - IntroScore.Beat.gather
-        let c = NSPoint(x: landing.midX, y: landing.midY)
-        let w = landing.width * 0.42, h = landing.height * 0.42
+        let center = NSPoint(x: landing.midX, y: landing.midY)
+        let width = landing.width * 0.42, height = landing.height * 0.42
         let pull = CAMediaTimingFunction(controlPoints: 0.6, 0, 0.2, 1)
         for i in tiles.indices.reversed() {
-            let o = CGFloat(i) * 7
-            let r = NSRect(x: c.x - w / 2 + o, y: c.y - h / 2 - o, width: w, height: h)
-            move(i, to: r, alpha: i == 0 ? 1 : 0.85, duration: span, delay: Double(Self.count - 1 - i) * 0.04, curve: pull)
+            let offset = CGFloat(i) * 7
+            let rect = NSRect(x: center.x - width / 2 + offset, y: center.y - height / 2 - offset,
+                              width: width, height: height)
+            move(i, to: rect, alpha: i == 0 ? 1 : 0.85, duration: span,
+                 delay: Double(Self.count - 1 - i) * 0.04, curve: pull)
             tiles[i].order(.above, relativeTo: i == Self.count - 1 ? 0 : tiles[i + 1].windowNumber)
         }
         later(span) { [weak self] in self?.tiles.indices.forEach { self?.tile($0)?.brace() } }
@@ -92,7 +99,8 @@ extension Intro {
         guard !done else { return }
         pending.forEach { $0.cancel() }
         pending = []
-        (fx.contentView as? ImpactView)?.fire(at: NSPoint(x: landing.midX - screen.frame.minX, y: landing.midY - screen.frame.minY))
+        let origin = NSPoint(x: landing.midX - screen.frame.minX, y: landing.midY - screen.frame.minY)
+        (effects.contentView as? ImpactView)?.fire(at: origin)
         let burst = CAMediaTimingFunction(controlPoints: 0.1, 0.8, 0.2, 1)
         for i in tiles.indices {
             let spread = CGFloat(i) * 10

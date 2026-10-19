@@ -3,14 +3,14 @@ import AppKit
 import SwiftUI
 
 struct GalleryContent {
-    @ObservedObject var m: GalleryModel
+    @ObservedObject var model: GalleryModel
 
     func hex(_ path: KeyPath<Palette, Palette.Pair>) -> String {
-        let p = Theme.palette[keyPath: path]
-        return String(format: "%06X / %06X", p.light, p.dark)
+        let pair = Theme.palette[keyPath: path]
+        return String(format: "%06X / %06X", pair.light, pair.dark)
     }
     func block<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: Theme.Space.md) {
+        VStack(alignment: .leading, spacing: Theme.Space.medium) {
             OSectionHeader(title)
             content()
         }

@@ -10,9 +10,9 @@ enum ConfigSheet: Identifiable {
 
     var id: String {
         switch self {
-        case .create(let k, let b): "create.\(k.rawValue).\(b)"
+        case .create(let kind, let baseID): "create.\(kind.rawValue).\(baseID)"
         case .edit(let id): "edit.\(id)"
-        case .export(let k): "export.\(k.rawValue)"
+        case .export(let kind): "export.\(kind.rawValue)"
         }
     }
 }

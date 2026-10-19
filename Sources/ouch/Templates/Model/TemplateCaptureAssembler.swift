@@ -21,7 +21,7 @@ struct TemplateObservedWindow: @unchecked Sendable {
     var windowID: CGWindowID
     var launchDate: Date?
     var spaces: [UInt64] = []
-    var floatingOverride: Bool?
+    var floatingOverride = false
 }
 
 struct TemplateWindowBatch: @unchecked Sendable {
@@ -62,7 +62,8 @@ enum TemplateWindowCapture {
 }
 
 enum TemplateWindowWalk {
-    static func collect(apps: [TemplateAppSnapshot], budget: TimeInterval, now: @escaping @Sendable () -> Date = { Date() },
+    static func collect(apps: [TemplateAppSnapshot], budget: TimeInterval,
+                        now: @escaping @Sendable () -> Date = { Date() },
                         stop: @escaping @Sendable () -> Bool = { false },
                         read: (TemplateAppSnapshot) -> TemplateAppRead) -> TemplateWindowBatch {
         let deadline = now().addingTimeInterval(budget)
@@ -106,8 +107,10 @@ enum TemplateCaptureAssembler {
             let natural = facts.naturalFrames[window.windowID] ?? .null
             let frame = window.fullscreen && !natural.isNull ? natural : window.frame
             guard !frame.isNull, !frame.isEmpty else { continue }
-            let floating = facts.knownFloating[window.windowID] ?? window.floatingOverride ?? false
-            guard let display = display(for: window.windowID, frame: frame, floating: floating, facts: facts) else { continue }
+            let floating = facts.knownFloating[window.windowID] ?? window.floatingOverride
+            guard let display = display(for: window.windowID, frame: frame, floating: floating, facts: facts) else {
+                continue
+            }
             captured.append(.init(bundleID: window.bundleID, appName: window.appName, title: window.title,
                                   document: window.document, display: display, frame: frame, floating: floating,
                                   minimized: window.minimized, fullscreen: window.fullscreen,
@@ -122,10 +125,12 @@ enum TemplateCaptureAssembler {
             return left == right ? lhs.windowID < rhs.windowID : left < right
         }
         guard !captured.isEmpty else { throw WindowManager.TemplateError.empty }
-        return WorkspaceTemplate(name: "", tilingEnabled: facts.tilingEnabled, displays: facts.displays, windows: captured)
+        return WorkspaceTemplate(name: "", tilingEnabled: facts.tilingEnabled, displays: facts.displays,
+                                 windows: captured)
     }
 
-    private static func display(for id: CGWindowID, frame: CGRect, floating: Bool, facts: TemplateCaptureFacts) -> String? {
+    private static func display(for id: CGWindowID, frame: CGRect, floating: Bool,
+                                facts: TemplateCaptureFacts) -> String? {
         if facts.virtualWorkspaces || !floating, let monitor = facts.monitorForTiled[id],
            facts.displays.contains(where: { $0.id == monitor }) { return monitor }
         guard !frame.isNull else { return facts.displays.first?.id }

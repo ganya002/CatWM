@@ -5,21 +5,23 @@ enum CrashWatch {
     private static let support = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent("Library/Application Support/Ouch")
     private static let marker = support.appendingPathComponent("running")
-    private static let reports = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/DiagnosticReports")
+    private static let reports = FileManager.default.homeDirectoryForCurrentUser
+        .appendingPathComponent("Library/Logs/DiagnosticReports")
     private static let seenKey = "lastCrashReportSeen"
     private static let pendingKey = "pendingCrashReport"
 
     private static var pending: URL? {
-        guard let path = UserDefaults.standard.string(forKey: pendingKey), FileManager.default.fileExists(atPath: path) else { return nil }
+        guard let path = UserDefaults.standard.string(forKey: pendingKey),
+              FileManager.default.fileExists(atPath: path) else { return nil }
         return URL(fileURLWithPath: path)
     }
 
     static func start() {
-        let fm = FileManager.default
-        try? fm.createDirectory(at: support, withIntermediateDirectories: true)
-        let previous = (try? fm.attributesOfItem(atPath: marker.path))?[.modificationDate] as? Date
-        try? fm.removeItem(at: marker)
-        fm.createFile(atPath: marker.path, contents: Data("\(getpid())".utf8))
+        let files = FileManager.default
+        try? files.createDirectory(at: support, withIntermediateDirectories: true)
+        let previous = (try? files.attributesOfItem(atPath: marker.path))?[.modificationDate] as? Date
+        try? files.removeItem(at: marker)
+        files.createFile(atPath: marker.path, contents: Data("\(getpid())".utf8))
         startWatchdog()
 
         let defaults = UserDefaults.standard
@@ -49,19 +51,20 @@ enum CrashWatch {
     }
 
     private static func send(_ report: URL) {
-        Feedback.sendCrash(report) { ok in
-            if ok { UserDefaults.standard.removeObject(forKey: pendingKey) }
+        Feedback.sendCrash(report) { success in
+            if success { UserDefaults.standard.removeObject(forKey: pendingKey) }
         }
     }
 
     private static func newestReport(after date: Date) -> URL? {
-        let files = (try? FileManager.default.contentsOfDirectory(at: reports, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
+        let files = (try? FileManager.default.contentsOfDirectory(
+            at: reports, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
         return files
             .filter { $0.lastPathComponent.hasPrefix("ouch-") && $0.pathExtension == "ips" }
             .compactMap { url -> (URL, Date)? in
-                guard let d = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate, d > date
-                else { return nil }
-                return (url, d)
+                let values = try? url.resourceValues(forKeys: [.contentModificationDateKey])
+                guard let modified = values?.contentModificationDate, modified > date else { return nil }
+                return (url, modified)
             }
             .max { $0.1 < $1.1 }?.0
     }
@@ -84,12 +87,12 @@ enum CrashWatch {
           sleep 1
         done
         """
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: "/bin/sh")
-        p.arguments = ["-c", script, "ouch-watchdog", "\(getpid())", marker.path, app.path, reports.path]
-        p.standardInput = FileHandle.nullDevice
-        p.standardOutput = FileHandle.nullDevice
-        p.standardError = FileHandle.nullDevice
-        do { try p.run() } catch { Log.info("crash watch: no watchdog: \(error.localizedDescription)") }
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/sh")
+        process.arguments = ["-c", script, "ouch-watchdog", "\(getpid())", marker.path, app.path, reports.path]
+        process.standardInput = FileHandle.nullDevice
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        do { try process.run() } catch { Log.info("crash watch: no watchdog: \(error.localizedDescription)") }
     }
 }

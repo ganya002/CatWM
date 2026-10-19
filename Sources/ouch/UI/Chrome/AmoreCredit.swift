@@ -9,7 +9,7 @@ struct AmoreCredit: View {
     final class Model: ObservableObject { @Published var beats = 0 }
 
     var body: some View {
-        let hovering = hover.on, reduce = reduceMotion, beats = model.beats
+        let hovering = hover.isOn, reduce = reduceMotion, beats = model.beats
         return Button {
             openURL(URL(string: "https://amore.computer")!)
             model.beats += 1
@@ -34,7 +34,7 @@ struct AmoreCredit: View {
             .animation(reduce ? Motion.fade : Motion.spring, value: hovering)
         }
         .buttonStyle(PressScale(scale: reduce ? 1 : 0.95))
-        .onHover { hover.on = $0 }
+        .onHover { hover.isOn = $0 }
         .tooltip("Updates delivered by Amore")
     }
 }

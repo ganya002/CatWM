@@ -22,7 +22,7 @@ struct WelcomeView: View {
         }
         .animation(Motion.snap(reduceMotion), value: model.page)
         .frame(width: Self.width)
-        .surface(.xl)
+        .surface(.extraLarge)
         .padding(Self.margin)
     }
 
@@ -31,7 +31,7 @@ struct WelcomeView: View {
             Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 72, height: 72)
                 .offset(y: model.landed || reduceMotion ? 0 : -28)
                 .opacity(model.landed ? 1 : 0)
-                .animation(.easeIn(duration: 0.22), value: model.landed) // style-ok: the drop lands on the squish's beat
+                .animation(.easeIn(duration: 0.22), value: model.landed) // style-ok: drop lands on squish beat
                 .squish(on: model.landed, delay: 0.22)
                 .padding(.leading, -6).padding(.vertical, -6)
             Text("Welcome to Ouch").textStyle(.largeTitle).oneLine()
@@ -41,19 +41,22 @@ struct WelcomeView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.bottom, 16)
             OGroup {
-                permission(granted: model.accessibility, symbol: "lock", title: "Accessibility", required: true,
-                           detail: "Moves windows, reads shortcuts", primary: true, action: model.allowAccessibility)
-                permission(granted: model.inputMonitoring, symbol: "keyboard", title: "Input Monitoring", required: false,
-                           detail: "Makes Caps Lock shortcuts instant", primary: false, action: model.allowInputMonitoring)
-                permission(granted: model.login, symbol: "power", title: "Open at login", required: false,
-                           detail: "Starts Ouch when you log in", primary: false, action: model.allowLogin)
+                permission(PermissionItem(granted: model.accessibility, symbol: "lock", title: "Accessibility",
+                                          required: true, detail: "Moves windows, reads shortcuts", primary: true,
+                                          action: model.allowAccessibility))
+                permission(PermissionItem(granted: model.inputMonitoring, symbol: "keyboard", title: "Input Monitoring",
+                                          required: false, detail: "Makes Caps Lock shortcuts instant", primary: false,
+                                          action: model.allowInputMonitoring))
+                permission(PermissionItem(granted: model.login, symbol: "power", title: "Open at login",
+                                          required: false, detail: "Starts Ouch when you log in", primary: false,
+                                          action: model.allowLogin))
             }
             Spacer(minLength: 24)
             HStack(spacing: 8) {
                 dots(0)
                 Spacer(minLength: 0)
                 OButton("Skip setup", variant: .ghost, action: model.skip)
-                OButton("Continue", variant: .primary, size: .lg, shortcut: ["↩"], action: model.next)
+                OButton("Continue", variant: .primary, size: .large, shortcut: ["↩"], action: model.next)
                     .disabled(!model.accessibility)
                     .tooltip(model.accessibility ? "" : "Allow Accessibility first")
                     .keyboardShortcut(model.page == .permissions ? .defaultAction : nil)
@@ -61,21 +64,31 @@ struct WelcomeView: View {
         }
     }
 
-    private func permission(granted: Bool, symbol: String, title: String, required: Bool,
-                            detail: String, primary: Bool, action: @escaping () -> Void) -> some View {
-        HStack(spacing: 12) {
+    private struct PermissionItem {
+        let granted: Bool
+        let symbol: String
+        let title: String
+        let required: Bool
+        let detail: String
+        let primary: Bool
+        let action: () -> Void
+    }
+
+    private func permission(_ item: PermissionItem) -> some View {
+        let granted = item.granted, symbol = item.symbol, required = item.required
+        return HStack(spacing: 12) {
             Image(systemName: granted && symbol == "lock" ? "lock.open" : symbol)
-                .font(Theme.symbol(Theme.Icon.lg))
+                .font(Theme.symbol(Theme.Icon.large))
                 .foregroundStyle(Theme.accentInk)
                 .contentTransition(.symbolEffect(.replace))
                 .frame(width: 22)
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 6) {
-                    Text(title).font(Theme.body(14)).oneLine()
+                    Text(item.title).font(Theme.body(14)).oneLine()
                     Text(required ? "Required" : "Optional").font(Theme.body(11.5, .medium))
                         .foregroundStyle(required ? Theme.accentInk : Theme.inkMuted).oneLine()
                 }
-                Text(detail).textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine()
+                Text(item.detail).textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine()
             }
             Spacer(minLength: 0)
             ZStack(alignment: .leading) {
@@ -83,7 +96,7 @@ struct WelcomeView: View {
                     OStatus(kind: .success, text: symbol == "power" ? "On" : "Granted")
                         .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 } else {
-                    OButton("Allow…", variant: primary ? .primary : .secondary, size: .sm, action: action)
+                    OButton("Allow…", variant: item.primary ? .primary : .secondary, size: .small, action: item.action)
                 }
             }
         }
@@ -100,9 +113,9 @@ struct WelcomeView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.bottom, 22)
             HStack(spacing: 12) {
-                ForEach(KeyStyle.allCases, id: \.self) { s in
-                    KeyStyleTile(style: s, selected: model.style == s) {
-                        withAnimation(Motion.snap(reduceMotion)) { model.style = s }
+                ForEach(KeyStyle.allCases, id: \.self) { style in
+                    KeyStyleTile(style: style, selected: model.style == style) {
+                        withAnimation(Motion.snap(reduceMotion)) { model.style = style }
                     }
                 }
             }
@@ -111,7 +124,7 @@ struct WelcomeView: View {
                 dots(1)
                 Spacer(minLength: 0)
                 OButton("Skip", variant: .ghost, action: model.skip)
-                OButton("Learn", variant: .primary, size: .lg, shortcut: ["↩"], action: model.start)
+                OButton("Learn", variant: .primary, size: .large, shortcut: ["↩"], action: model.start)
                     .keyboardShortcut(model.page == .keys ? .defaultAction : nil)
             }
         }

@@ -1,78 +1,71 @@
 import AppKit
 
 extension SortPlan {
-    static func current(of d: SortDisplay) -> SortPlan {
-        var lanes = d.workspaces.map { SortLane(ws: $0.name, name: $0.label, layout: $0.layout, ids: $0.ids) }
-        if lanes.isEmpty { lanes = [SortLane(ws: "1", name: "", layout: .tall, ids: [])] }
-        var plan = SortPlan(display: d.id, items: Dictionary(d.items.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a }),
+    static func current(of display: SortDisplay) -> SortPlan {
+        var lanes = display.workspaces.map {
+            SortLane(workspace: $0.name, name: $0.label, layout: $0.layout, ids: $0.ids)
+        }
+        if lanes.isEmpty { lanes = [SortLane(workspace: "1", name: "", layout: .tall, ids: [])] }
+        let items = Dictionary(display.items.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        var plan = SortPlan(display: display.id, items: items,
                             lanes: lanes, strategy: nil,
-                            existing: d.workspaces.map(\.name), taken: d.taken, active: d.active)
-        for w in d.workspaces { plan.geometry[w.name] = (w.ratio, w.mainCount) }
+                            existing: display.workspaces.map(\.name), taken: display.taken, active: display.active)
+        for workspace in display.workspaces { plan.geometry[workspace.name] = (workspace.ratio, workspace.mainCount) }
         return plan
     }
 
-    static func grouped(_ d: SortDisplay, by strategy: SortStrategy, layouts: [Layout], avoiding other: Set<String>) -> SortPlan {
-        var plan = current(of: d)
+    static func grouped(_ display: SortDisplay, by strategy: SortStrategy, layouts: [Layout],
+                        avoiding other: Set<String>) -> SortPlan {
+        var plan = current(of: display)
         plan.sort(by: strategy, layouts: layouts, avoiding: other)
         return plan
     }
 
-    static func order(_ a: String, _ b: String) -> Bool {
-        switch (Int(a), Int(b)) {
+    static func order(_ lhs: String, _ rhs: String) -> Bool {
+        switch (Int(lhs), Int(rhs)) {
         case let (x?, y?): return x < y
         case (_?, nil): return true
         case (nil, _?): return false
-        default: return a < b
+        default: return lhs < rhs
         }
     }
 
     func available(avoiding other: Set<String>) -> [String] {
-        let used = Set(lanes.map(\.ws))
+        let used = Set(lanes.map(\.workspace))
         var out: [String] = []
-        for n in existing + (1...10).map(String.init) where !out.contains(n) && !used.contains(n) && !taken.contains(n) && !other.contains(n) {
-            out.append(n)
+        for name in existing + (1...10).map(String.init)
+        where !out.contains(name) && !used.contains(name) && !taken.contains(name) && !other.contains(name) {
+            out.append(name)
         }
         return out
     }
 
-    func canAdd(avoiding other: Set<String>) -> Bool { lanes.count < Self.maxLanes && !available(avoiding: other).isEmpty }
-
-    func title(of lane: Int) -> String {
-        let n = lanes[lane].name.trimmingCharacters(in: .whitespaces)
-        return n.isEmpty ? "Workspace \(lanes[lane].ws)" : n
+    func canAdd(avoiding other: Set<String>) -> Bool {
+        lanes.count < Self.maxLanes && !available(avoiding: other).isEmpty
     }
 
-    static func layout(forCount n: Int, in layouts: [Layout]) -> Layout {
-        let want: Layout = n <= 1 ? .fullscreen : n == 2 ? .column : n == 3 ? .tall : n == 4 ? .bsp : .tall
+    func title(of lane: Int) -> String {
+        let name = lanes[lane].name.trimmingCharacters(in: .whitespaces)
+        return name.isEmpty ? "Workspace \(lanes[lane].workspace)" : name
+    }
+
+    static func layout(forCount count: Int, in layouts: [Layout]) -> Layout {
+        let want: Layout
+        switch count {
+        case ...1: want = .fullscreen
+        case 2: want = .column
+        case 4: want = .bsp
+        default: want = .tall
+        }
         return layouts.contains(want) ? want : layouts.first ?? .tall
     }
 
-    mutating func sort(by s: SortStrategy, layouts: [Layout], avoiding other: Set<String>) {
-        strategy = s
+    mutating func sort(by sortStrategy: SortStrategy, layouts: [Layout], avoiding other: Set<String>) {
+        strategy = sortStrategy
         let dupes = duplicatesClosed ? Set(duplicates) : []
         let live = items.values.filter { !dupes.contains($0.id) }.sorted { ($0.recency, $0.id) < ($1.recency, $1.id) }
-        var groups: [(name: String, items: [SortItem], layout: Layout?)]
-        switch s {
-        case .task:
-            groups = SortCategory.all.map { c in (c.rawValue, live.filter { SortCategory.of($0.bundleID) == c }, nil) }
-        case .app:
-            var count: [String: Int] = [:]
-            for i in live { count[i.app, default: 0] += 1 }
-            let ranked = count.keys.sorted { a, b in
-                count[a]! != count[b]! ? count[a]! > count[b]!
-                    : (live.first { $0.app == a }?.recency ?? 0) < (live.first { $0.app == b }?.recency ?? 0)
-            }
-            let own = Array(ranked.prefix(4))
-            groups = own.map { a in (a, live.filter { $0.app == a }, nil) }
-            let rest = live.filter { !own.contains($0.app) }
-            if !rest.isEmpty { groups.append(("Everything else", rest, nil)) }
-        case .focus:
-            groups = [("Now", Array(live.prefix(3)), nil), ("Later", Array(live.dropFirst(3)), .fullscreen)]
-        case .none:
-            groups = [("", live, nil)]
-        }
-        groups = groups.filter { !$0.items.isEmpty }
-        if groups.isEmpty { groups = [("", [], nil)] }
+        var groups = Self.groups(of: live, by: sortStrategy).filter { !$0.items.isEmpty }
+        if groups.isEmpty { groups = [SortGroup(name: "", items: [])] }
         lanes = []
         let pool = available(avoiding: other)
         let cap = max(1, min(Self.maxLanes, pool.count))
@@ -81,18 +74,48 @@ extension SortPlan {
             groups[groups.count - 1].items += last.items
         }
         let names = Array(pool.prefix(groups.count)).sorted(by: Self.order)
-        lanes = groups.enumerated().map { i, g in
-            SortLane(ws: i < names.count ? names[i] : existing.first ?? "1", name: g.name,
-                     layout: Self.fit(g.layout, g.items.count, layouts), ids: g.items.map(\.id))
+        lanes = groups.enumerated().map { i, group in
+            SortLane(workspace: i < names.count ? names[i] : existing.first ?? "1", name: group.name,
+                     layout: Self.fit(group.layout, group.items.count, layouts), ids: group.items.map(\.id))
         }
         closedLanes = []
         origin = [:]
-        close = items.values.filter { dupes.contains($0.id) }.sorted { ($0.recency, $0.id) < ($1.recency, $1.id) }.map(\.id)
+        close = items.values
+            .filter { dupes.contains($0.id) }
+            .sorted { ($0.recency, $0.id) < ($1.recency, $1.id) }
+            .map(\.id)
     }
 
-    static func fit(_ forced: Layout?, _ n: Int, _ layouts: [Layout]) -> Layout {
+    private static func groups(of live: [SortItem], by sortStrategy: SortStrategy) -> [SortGroup] {
+        switch sortStrategy {
+        case .task:
+            return SortCategory.all.map { category in
+                SortGroup(name: category.rawValue, items: live.filter { SortCategory.of($0.bundleID) == category })
+            }
+        case .app:
+            var count: [String: Int] = [:]
+            for item in live { count[item.app, default: 0] += 1 }
+            let ranked = count.keys.sorted { lhs, rhs in
+                count[lhs, default: 0] != count[rhs, default: 0]
+                    ? count[lhs, default: 0] > count[rhs, default: 0]
+                    : (live.first { $0.app == lhs }?.recency ?? 0) < (live.first { $0.app == rhs }?.recency ?? 0)
+            }
+            let own = Array(ranked.prefix(4))
+            var groups = own.map { app in SortGroup(name: app, items: live.filter { $0.app == app }) }
+            let rest = live.filter { !own.contains($0.app) }
+            if !rest.isEmpty { groups.append(SortGroup(name: "Everything else", items: rest)) }
+            return groups
+        case .focus:
+            return [SortGroup(name: "Now", items: Array(live.prefix(3))),
+                    SortGroup(name: "Later", items: Array(live.dropFirst(3)), layout: .fullscreen)]
+        case .none:
+            return [SortGroup(name: "", items: live)]
+        }
+    }
+
+    static func fit(_ forced: Layout?, _ count: Int, _ layouts: [Layout]) -> Layout {
         if let forced { return layouts.contains(forced) ? forced : layouts.first ?? .tall }
-        return layout(forCount: n, in: layouts)
+        return layout(forCount: count, in: layouts)
     }
 
     mutating func closeDuplicates() {
@@ -113,8 +136,8 @@ extension SortPlan {
     mutating func place(_ id: CGWindowID, inLane i: Int, at index: Int? = nil) {
         guard lanes.indices.contains(i) else { return }
         detach(id)
-        let at = min(index ?? lanes[i].ids.count, lanes[i].ids.count)
-        lanes[i].ids.insert(id, at: at)
+        let position = min(index ?? lanes[i].ids.count, lanes[i].ids.count)
+        lanes[i].ids.insert(id, at: position)
     }
 
     mutating func adopt(_ item: SortItem, inLane i: Int, at index: Int? = nil) {
@@ -125,15 +148,23 @@ extension SortPlan {
 
     func moves(of ids: Set<CGWindowID>) -> [CGWindowID: String] {
         var out: [CGWindowID: String] = [:]
-        for lane in lanes { for id in lane.ids where ids.contains(id) { out[id] = lane.ws } }
+        for lane in lanes { for id in lane.ids where ids.contains(id) { out[id] = lane.workspace } }
         return out
     }
 
     mutating func markClosing(_ id: CGWindowID) {
         guard !isClosing(id) else { return }
-        let from = lane(of: id).flatMap { l in lanes[l].ids.firstIndex(of: id).map { (lanes[l].ws, $0) } }
+        let from = lane(of: id).flatMap { laneIndex in
+            lanes[laneIndex].ids.firstIndex(of: id).map { (lanes[laneIndex].workspace, $0) }
+        }
         detach(id)
         close.append(id)
         if let from { origin[id] = from }
     }
+}
+
+private struct SortGroup {
+    var name: String
+    var items: [SortItem]
+    var layout: Layout?
 }

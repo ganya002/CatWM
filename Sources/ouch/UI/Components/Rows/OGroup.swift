@@ -3,7 +3,7 @@ import SwiftUI
 
 struct OGroup<Content: View>: View {
     let title: String?
-    var footer: String? = nil
+    var footer: String?
     @ViewBuilder var content: Content
 
     init(_ title: String? = nil, footer: String? = nil, @ViewBuilder content: () -> Content) {
@@ -15,11 +15,12 @@ struct OGroup<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let title {
-                OSectionHeader(title).padding(.bottom, Theme.Space.xs)
+                OSectionHeader(title).padding(.bottom, Theme.Space.extraSmall)
             }
             _VariadicView.Tree(Separated()) { content }
             if let footer {
-                Text(footer).textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine().padding(.top, Theme.Space.sm)
+                Text(footer).textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine()
+                    .padding(.top, Theme.Space.small)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -40,7 +41,7 @@ struct OGroup<Content: View>: View {
 
 #if DEBUG
 extension GalleryExamples {
-    static let rows = GalleryExample(order: 5) { AnyView(GalleryContent(m: $0).rows) }
+    static let rows = GalleryExample(order: 5) { AnyView(GalleryContent(model: $0).rows) }
 }
 
 extension GalleryContent {

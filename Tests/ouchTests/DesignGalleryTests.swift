@@ -1,8 +1,8 @@
 #if DEBUG
 import AppKit
+@testable import ouch
 import SwiftUI
 import Testing
-@testable import ouch
 
 @MainActor
 @Suite struct DesignGalleryTests {

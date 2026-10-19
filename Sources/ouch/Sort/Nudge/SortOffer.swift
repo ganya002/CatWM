@@ -13,26 +13,28 @@ final class SortOffer {
         let view = SortOfferView(caret: 0) { [weak self] in self?.end($0) }
         var host = OuchHostingView(rootView: view)
         let size = host.fittingSize
-        let v = screen.visibleFrame
-        var x = v.midX - size.width / 2, y = v.maxY - size.height - 16
+        let visible = screen.visibleFrame
+        var x = visible.midX - size.width / 2, y = visible.maxY - size.height - 16
         var caret: CGFloat = SortOfferView.width / 2
-        if let b = button?.window?.frame {
+        if let buttonFrame = button?.window?.frame {
             let card = SortOfferView.width
-            let left = min(max(b.midX - card + 60, v.minX + 16), v.maxX - card - 16)
-            x = left - SortOfferView.inset.leading
-            y = b.minY - 10 - (size.height - SortOfferView.inset.top - SortOfferView.inset.bottom) - SortOfferView.inset.bottom
-            caret = min(max(b.midX - left, 20), card - 20)
+            let inset = SortOfferView.inset
+            let left = min(max(buttonFrame.midX - card + 60, visible.minX + 16), visible.maxX - card - 16)
+            x = left - inset.leading
+            y = buttonFrame.minY - 10 - (size.height - inset.top - inset.bottom) - inset.bottom
+            caret = min(max(buttonFrame.midX - left, 20), card - 20)
         }
         host = OuchHostingView(rootView: SortOfferView(caret: caret) { [weak self] in
             self?.end($0)
         })
-        let p = OuchPanel(role: .overlay(.floating, clickThrough: false),
-                          frame: OuchPanel.frame(size: size, on: screen, anchor: .origin(NSPoint(x: x, y: y)), inset: SortOfferView.inset).integral)
-        p.contentView = host
-        p.alphaValue = 0
-        p.orderFrontRegardless()
-        animate(0.35) { p.animator().alphaValue = 1 }
-        panel = p
+        let card = OuchPanel(role: .overlay(.floating, clickThrough: false),
+                             frame: OuchPanel.frame(size: size, on: screen, anchor: .origin(NSPoint(x: x, y: y)),
+                                                    inset: SortOfferView.inset).integral)
+        card.contentView = host
+        card.alphaValue = 0
+        card.orderFrontRegardless()
+        animate(0.35) { card.animator().alphaValue = 1 }
+        panel = card
         let work = DispatchWorkItem { [weak self] in self?.end(false) }
         timeout = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 20, execute: work)
@@ -41,11 +43,11 @@ final class SortOffer {
     private func end(_ sort: Bool) {
         timeout?.cancel()
         timeout = nil
-        guard let p = panel else { return }
+        guard let card = panel else { return }
         panel = nil
         let done = finish
         finish = nil
-        animate(0.25, changes: { p.animator().alphaValue = 0 }) { p.orderOut(nil) }
+        animate(0.25, changes: { card.animator().alphaValue = 0 }, completion: { card.orderOut(nil) })
         done?(sort)
     }
 }

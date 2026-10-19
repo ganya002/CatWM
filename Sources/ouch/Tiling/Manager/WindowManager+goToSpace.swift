@@ -2,44 +2,49 @@ import AppKit
 
 extension WindowManager {
     @discardableResult
-    func goToSpace(_ n: Int, autoCorrect: Bool = true) -> Int? {
-        if let combo = SystemShortcut.desktop(n) {
+    func goToSpace(_ number: Int, autoCorrect: Bool = true) -> Int? {
+        if let combo = SystemShortcut.desktop(number) {
             Hotkeys.post(keyCode: combo.keyCode, flags: combo.flags)
             pendingSpace = nil
             return 1
         }
         let screens = Screen.all()
-        let p = mouseLocation()
-        guard let s = screens.first(where: { $0.frame.contains(p) }) ?? currentScreen(),
-              let info = Spaces.list(display: s.uuid), var cur = info.current else {
+        let point = mouseLocation()
+        guard let screen = screens.first(where: { $0.frame.contains(point) }) ?? currentScreen(),
+              let info = Spaces.list(display: screen.uuid), var cur = info.current else {
             Log.info("spaces: can't read the space list")
             return nil
         }
-        guard n >= 1, n <= info.desktops.count else {
-            HUD.shared.show("There is no space \(n)", on: s.ns)
+        guard number >= 1, number <= info.desktops.count else {
+            HUD.shared.show("There is no space \(number)", on: screen.nsScreen)
             return nil
         }
-        if let p = pendingSpace, p.display == s.uuid, Date() < p.until { cur = p.index }
-        let delta = info.desktops[n - 1] - cur
+        if let pending = pendingSpace, pending.display == screen.uuid, Date() < pending.until { cur = pending.index }
+        let delta = info.desktops[number - 1] - cur
         guard delta != 0 else { return 0 }
         guard let combo = SystemShortcut.step(right: delta > 0) else {
-            HUD.shared.show("Turn on “Move left/right a space” in Keyboard Shortcuts", on: s.ns)
+            HUD.shared.show("Turn on “Move left/right a space” in Keyboard Shortcuts", on: screen.nsScreen)
             return nil
         }
-        Log.info("spaces: desktop \(cur + 1) → \(n), stepping \(delta) with key \(combo.keyCode) flags \(combo.flags.rawValue) style \(Hotkeys.postStyle)")
+        Log.info(
+            "spaces: desktop \(cur + 1) → \(number), stepping \(delta) with key \(combo.keyCode) "
+                + "flags \(combo.flags.rawValue) style \(Hotkeys.postStyle)"
+        )
         for _ in 0..<abs(delta) { Hotkeys.post(keyCode: combo.keyCode, flags: combo.flags) }
         let settle = 0.6 + 0.15 * Double(abs(delta))
-        pendingSpace = (s.uuid, info.desktops[n - 1], Date().addingTimeInterval(settle))
+        pendingSpace = PendingSpace(display: screen.uuid, index: info.desktops[number - 1],
+                                    until: Date().addingTimeInterval(settle))
         spaceGeneration += 1
         let generation = spaceGeneration
         guard autoCorrect else { return abs(delta) }
         DispatchQueue.main.asyncAfter(deadline: .now() + settle) { [weak self] in
-            self?.correctSpace(display: s.uuid, target: info.desktops[n - 1], generation: generation, attemptsLeft: 2)
+            self?.correctSpace(display: screen.uuid, target: info.desktops[number - 1], generation: generation,
+                               attemptsLeft: 2)
         }
         return abs(delta)
     }
 
-    func switchSpace(_ n: Int) { goToSpace(n) }
+    func switchSpace(_ number: Int) { goToSpace(number) }
 
     func correctSpace(display: String, target: Int, generation: Int, attemptsLeft: Int) {
         guard generation == spaceGeneration, attemptsLeft > 0,
@@ -49,84 +54,87 @@ extension WindowManager {
         Log.info("spaces: landed on \(cur + 1) instead of \(target + 1); correcting by \(delta)")
         for _ in 0..<abs(delta) { Hotkeys.post(keyCode: combo.keyCode, flags: combo.flags) }
         let settle = 0.6 + 0.15 * Double(abs(delta))
-        pendingSpace = (display, target, Date().addingTimeInterval(settle))
+        pendingSpace = PendingSpace(display: display, index: target, until: Date().addingTimeInterval(settle))
         DispatchQueue.main.asyncAfter(deadline: .now() + settle) { [weak self] in
             self?.correctSpace(display: display, target: target, generation: generation, attemptsLeft: attemptsLeft - 1)
         }
     }
 
-    func moveToSpace(_ n: Int) {
-        guard !movingToSpace, let w = focusedWindow() else { return }
-        let f = w.frame
-        guard !f.isNull else { return }
-        let points = grabPoints(for: w, frame: f)
+    func moveToSpace(_ number: Int) {
+        guard !movingToSpace, let window = focusedWindow() else { return }
+        let frame = window.frame
+        guard !frame.isNull else { return }
+        let points = grabPoints(for: window, frame: frame)
         guard !points.isEmpty else {
-            HUD.shared.show("This window has nothing to grab", on: screen(of: w)?.ns)
-            Log.info("move to space: no grab point for \(w.bundleID ?? "pid \(w.pid)")")
+            HUD.shared.show("This window has nothing to grab", on: screen(of: window)?.nsScreen)
+            Log.info("move to space: no grab point for \(window.bundleID ?? "pid \(window.pid)")")
             return
         }
         movingToSpace = true
-        focus(w, warp: false)
-        tryGrab(w, points[...], space: n, restore: mouseLocation())
+        focus(window, warp: false)
+        tryGrab(window, points[...], space: number, restore: mouseLocation())
     }
 
-    func postMouse(_ type: CGEventType, _ p: CGPoint) {
-        guard let e = CGEvent(mouseEventSource: CGEventSource(stateID: .hidSystemState), mouseType: type,
-                              mouseCursorPosition: p, mouseButton: .left) else { return }
-        e.setIntegerValueField(.eventSourceUserData, value: Hotkeys.syntheticMarker)
-        e.post(tap: .cghidEventTap)
+    func postMouse(_ type: CGEventType, _ point: CGPoint) {
+        guard let event = CGEvent(mouseEventSource: CGEventSource(stateID: .hidSystemState), mouseType: type,
+                                  mouseCursorPosition: point, mouseButton: .left) else { return }
+        event.setIntegerValueField(.eventSourceUserData, value: Hotkeys.syntheticMarker)
+        event.post(tap: .cghidEventTap)
     }
 
-    func attemptGrab(_ w: Window, at p: CGPoint, completion: @escaping (Bool, CGPoint) -> Void) {
-        let before = serverFrame(w.id) ?? w.frame
+    func attemptGrab(_ window: Window, at point: CGPoint, completion: @escaping (Bool, CGPoint) -> Void) {
+        let before = serverFrame(window.id) ?? window.frame
         let offsets: [CGFloat] = [4, 12, 22]
-        postMouse(.leftMouseDown, p)
-        func step(_ k: Int) {
-            guard k < offsets.count else {
+        let lastOffset = offsets.last ?? 0
+        postMouse(.leftMouseDown, point)
+        func step(_ index: Int) {
+            guard index < offsets.count else {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.09) { [weak self] in
                     guard let self else { return }
-                    let after = serverFrame(w.id) ?? w.frame
+                    let after = serverFrame(window.id) ?? window.frame
                     let grabbed = !after.approxEqual(before, tolerance: 4)
-                    Log.info("move to space: pressed \(w.bundleID ?? "pid \(w.pid)") at \(p); frame \(before) → \(after)")
-                    completion(grabbed, CGPoint(x: p.x + offsets.last!, y: p.y))
+                    Log.info(
+                        "move to space: pressed \(window.bundleID ?? "pid \(window.pid)") at \(point); "
+                            + "frame \(before) → \(after)"
+                    )
+                    completion(grabbed, CGPoint(x: point.x + lastOffset, y: point.y))
                 }
                 return
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + (k == 0 ? 0.05 : 0.025)) { [weak self] in
-                self?.postMouse(.leftMouseDragged, CGPoint(x: p.x + offsets[k], y: p.y))
-                step(k + 1)
+            DispatchQueue.main.asyncAfter(deadline: .now() + (index == 0 ? 0.05 : 0.025)) { [weak self] in
+                self?.postMouse(.leftMouseDragged, CGPoint(x: point.x + offsets[index], y: point.y))
+                step(index + 1)
             }
         }
         step(0)
     }
 
-    func tryGrab(_ w: Window, _ points: ArraySlice<CGPoint>, space n: Int, restore: CGPoint) {
-        guard let p = points.first else {
-            Log.info("move to space: couldn't grab \(w.bundleID ?? "pid \(w.pid)")")
-            HUD.shared.show("Couldn't grab this window", on: screen(of: w)?.ns)
+    func tryGrab(_ window: Window, _ points: ArraySlice<CGPoint>, space number: Int, restore: CGPoint) {
+        guard let point = points.first else {
+            Log.info("move to space: couldn't grab \(window.bundleID ?? "pid \(window.pid)")")
+            HUD.shared.show("Couldn't grab this window", on: screen(of: window)?.nsScreen)
             finishMove(restore: restore)
             return
         }
-        let original = serverFrame(w.id) ?? w.frame
-        attemptGrab(w, at: p) { [weak self] grabbed, held in
+        let original = serverFrame(window.id) ?? window.frame
+        attemptGrab(window, at: point) { [weak self] grabbed, held in
             guard let self else { return }
             guard grabbed else {
                 postMouse(.leftMouseUp, held)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) { [weak self] in
-                    self?.tryGrab(w, points.dropFirst(), space: n, restore: restore)
+                    self?.tryGrab(window, points.dropFirst(), space: number, restore: restore)
                 }
                 return
             }
-            Log.info("move to space: holding \(w.bundleID ?? "pid \(w.pid)"), going to space \(n)")
-            rememberGrab(w, p, frame: original)
-            guard let steps = goToSpace(n, autoCorrect: false), steps > 0 else {
+            Log.info("move to space: holding \(window.bundleID ?? "pid \(window.pid)"), going to space \(number)")
+            rememberGrab(window, point, frame: original)
+            guard let steps = goToSpace(number, autoCorrect: false), steps > 0 else {
                 postMouse(.leftMouseUp, held)
                 finishMove(restore: restore)
                 return
             }
-            holdUntilArrived(space: n, release: held, restore: restore, waited: 0,
+            holdUntilArrived(space: number, release: held, restore: restore,
                              settle: 0.45 + 0.15 * Double(steps - 1), attemptsLeft: 2)
         }
     }
-
 }

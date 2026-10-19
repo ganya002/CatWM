@@ -5,7 +5,7 @@ import SwiftUI
 
 final class GalleryModel: ObservableObject {
     @Published var appearance = GalleryAppearance.system
-    @Published var on = true
+    @Published var isOn = true
     @Published var off = false
     @Published var segment = "Spring"
     @Published var gap = 12.0

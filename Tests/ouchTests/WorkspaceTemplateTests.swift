@@ -1,6 +1,6 @@
 import AppKit
-import Testing
 @testable import ouch
+import Testing
 
 @Suite struct WorkspaceTemplateTests {
     func template() -> WorkspaceTemplate {
@@ -10,12 +10,12 @@ import Testing
                   layout: "tall", ratio: 0.65, mainCount: 2),
             .init(id: "builtin", name: "Laptop", frame: CGRect(x: -1000, y: 0, width: 1000, height: 800),
                   visible: CGRect(x: -1000, y: 24, width: 1000, height: 776), isMain: false,
-                  layout: "floating", ratio: 0.5, mainCount: 1),
+                  layout: "floating", ratio: 0.5, mainCount: 1)
         ], windows: [
             .init(bundleID: "com.example.editor", appName: "Editor", title: "Draft", document: "file:///tmp/draft.txt",
                   display: "external", frame: CGRect(x: 0, y: 24, width: 1300, height: 1176), floating: false,
                   minimized: true, fullscreen: false, zoomed: true, focused: false, windowID: 42,
-                  launchDate: Date(timeIntervalSince1970: 100)),
+                  launchDate: Date(timeIntervalSince1970: 100))
         ])
     }
 
@@ -101,7 +101,9 @@ import Testing
         #expect(TemplateWindowMatch.score(saved, title: "Other", document: "file:///tmp/other.txt", windowID: 42,
                                          launchDate: saved.launchDate) == nil)
         #expect(TemplateWindowMatch.score(saved, title: "Draft", document: nil, windowID: 12, launchDate: nil) == 1)
-        #expect(TemplateWindowMatch.score(saved, title: "Renamed", document: saved.document, windowID: 12, launchDate: nil) == 2)
+        #expect(TemplateWindowMatch.score(
+            saved, title: "Renamed", document: saved.document, windowID: 12, launchDate: nil
+        ) == 2)
     }
 
     @Test func reusedWindowIDsNeedTheSameAppLaunch() {
@@ -109,10 +111,12 @@ import Testing
         saved.document = nil
         #expect(TemplateWindowMatch.score(saved, title: "Other", document: nil, windowID: 42,
                                          launchDate: Date(timeIntervalSince1970: 200)) == 0)
-        #expect(TemplateWindowMatch.score(saved, title: "Other", document: nil, windowID: 42, launchDate: saved.launchDate) == 3)
+        #expect(TemplateWindowMatch.score(
+            saved, title: "Other", document: nil, windowID: 42, launchDate: saved.launchDate
+        ) == 3)
     }
 
-    @Test func libraryPersistsRenamesAndDeletes() throws {
+    @Test func libraryPersistsRenamesAndDeletes() {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let url = directory.appendingPathComponent("templates.json")
@@ -128,7 +132,7 @@ import Testing
         #expect(TemplateLibrary(url: url).templates.isEmpty)
     }
 
-    @Test func libraryRejectsEmptyAndDuplicateNames() throws {
+    @Test func libraryRejectsEmptyAndDuplicateNames() {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let library = TemplateLibrary(url: directory.appendingPathComponent("templates.json"))

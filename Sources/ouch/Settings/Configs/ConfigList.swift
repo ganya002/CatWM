@@ -8,13 +8,14 @@ struct ConfigList: View {
 
     var body: some View {
         VStack(spacing: 4) {
-            ForEach(library.configs(kind)) { c in row(c) }
+            ForEach(library.configs(kind)) { config in row(config) }
             Rectangle().fill(Theme.hairline).frame(height: 1).padding(.horizontal, 6).padding(.vertical, 2)
             OMenuRow {
                 dismiss()
                 library.sheet = .create(kind: kind, baseID: library.current(kind).id)
             } lead: {
-                Image(systemName: "plus").font(Theme.symbol(Theme.Icon.sm, .semibold)).foregroundStyle(Theme.inkMuted)
+                Image(systemName: "plus").font(Theme.symbol(Theme.Icon.small, .semibold))
+                    .foregroundStyle(Theme.inkMuted)
             } label: {
                 Text("New config from “\(library.current(kind).name)”").oneLine()
             }
@@ -23,49 +24,55 @@ struct ConfigList: View {
         .foregroundStyle(Theme.ink)
     }
 
-    private func row(_ c: SavedConfig) -> some View {
-        let fg = configInk(for: c)
+    private func row(_ config: SavedConfig) -> some View {
+        let ink = configInk(for: config)
         return HStack(spacing: 4) {
-            Button { library.select(c); dismiss() } label: {
+            Button { library.select(config); dismiss() } label: {
                 HStack(spacing: 8) {
-                    ConfigGlyph(config: c, size: 14, tint: fg)
-                    Text(c.name).font(Theme.body(13.5, library.isActive(c) ? .medium : .regular)).oneLine().foregroundStyle(fg)
+                    ConfigGlyph(config: config, size: 14, tint: ink)
+                    Text(config.name).font(Theme.body(13.5, library.isActive(config) ? .medium : .regular)).oneLine()
+                        .foregroundStyle(ink)
                     Spacer(minLength: 0)
-                    if library.isActive(c) {
-                        Image(systemName: "checkmark").font(Theme.symbol(Theme.Icon.sm, .bold))
-                            .foregroundStyle(configFill(for: c) == nil ? Theme.accentInk : fg)
+                    if library.isActive(config) {
+                        Image(systemName: "checkmark").font(Theme.symbol(Theme.Icon.small, .bold))
+                            .foregroundStyle(configFill(for: config) == nil ? Theme.accentInk : ink)
                     }
                 }
                 .padding(.horizontal, 8).frame(height: 34)
-                .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
-                    .fill(configFill(for: c) ?? (library.isActive(c) ? Theme.accentSoft : .clear)))
+                .background(RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
+                    .fill(configFill(for: config) ?? (library.isActive(config) ? Theme.accentSoft : .clear)))
             }
             .buttonStyle(OMenuRowStyle(bare: true))
-            if c.isBuiltIn {
-                OIconButton(symbol: "plus", label: "New config based on “\(c.name)”") {
-                    dismiss(); library.sheet = .create(kind: kind, baseID: c.id)
+            if config.isBuiltIn {
+                OIconButton(symbol: "plus", label: "New config based on “\(config.name)”") {
+                    dismiss(); library.sheet = .create(kind: kind, baseID: config.id)
                 }
             } else {
-                OMenuButton(style: OButtonStyle(variant: .ghost, size: .sm, iconOnly: true), items: {
+                OMenuButton(style: OButtonStyle(variant: .ghost, size: .small, iconOnly: true), items: {
                     [
-                        MenuItem(id: "edit", label: "Edit Name, Icon and Color…", symbol: "pencil", action: { dismiss(); library.sheet = .edit(id: c.id) }),
-                        MenuItem(id: "duplicate", label: "Duplicate", symbol: "plus.square.on.square", action: { library.duplicate(c) }),
+                        MenuItem(id: "edit", label: "Edit Name, Icon and Color…", symbol: "pencil",
+                                 action: { dismiss(); library.sheet = .edit(id: config.id) }),
+                        MenuItem(id: "duplicate", label: "Duplicate", symbol: "plus.square.on.square",
+                                 action: { library.duplicate(config) }),
                         .sep("s"),
-                        MenuItem(id: "delete", label: "Delete…", symbol: "trash", danger: true, action: { confirmDelete(c) }),
+                        MenuItem(id: "delete", label: "Delete…", symbol: "trash", danger: true,
+                                 action: { confirmDelete(config) })
                     ]
-                }) {
+                }, label: {
                     Image(systemName: "ellipsis").font(Theme.symbol())
-                }
-                .tooltip("Edit, duplicate or delete “\(c.name)”")
-                .accessibilityLabel("Edit, duplicate or delete \(c.name)")
+                })
+                .tooltip("Edit, duplicate or delete “\(config.name)”")
+                .accessibilityLabel("Edit, duplicate or delete \(config.name)")
             }
         }
     }
 
-    private func confirmDelete(_ c: SavedConfig) {
+    private func confirmDelete(_ config: SavedConfig) {
         dismiss()
         DispatchQueue.main.async {
-            if ConfigLibrary.confirm("Delete “\(c.name)”?", "This can't be undone.", yes: "Delete", no: "Cancel") { library.delete(c) }
+            if ConfigLibrary.confirm("Delete “\(config.name)”?", "This can't be undone.", yes: "Delete", no: "Cancel") {
+                library.delete(config)
+            }
         }
     }
 }

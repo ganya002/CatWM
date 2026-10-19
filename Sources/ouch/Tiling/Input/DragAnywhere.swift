@@ -7,10 +7,10 @@ enum DragAnywhere {
         CFPreferencesGetAppBooleanValue(key, kCFPreferencesAnyApplication, nil)
     }
 
-    static func set(_ on: Bool) {
-        CFPreferencesSetValue(key, on ? kCFBooleanTrue : nil, kCFPreferencesAnyApplication,
+    static func set(_ enabled: Bool) {
+        CFPreferencesSetValue(key, enabled ? kCFBooleanTrue : nil, kCFPreferencesAnyApplication,
                               kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
         CFPreferencesSynchronize(kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
-        Log.info("drag windows from anywhere \(on ? "on" : "off")")
+        Log.info("drag windows from anywhere \(enabled ? "on" : "off")")
     }
 }

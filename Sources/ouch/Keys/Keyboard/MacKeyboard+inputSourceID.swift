@@ -31,8 +31,7 @@ extension MacKeyboard {
             : has("swiss") ? .ch
             : has("portuguese", "brazilian") ? .pt
             : nil
-        if shape == .ansi { return mapped == .ru || mapped == .ko ? mapped! : .enUS }
+        if shape == .ansi { return mapped == .ru || mapped == .ko ? mapped ?? .enUS : .enUS }
         return mapped ?? .enIntl
     }
-
 }

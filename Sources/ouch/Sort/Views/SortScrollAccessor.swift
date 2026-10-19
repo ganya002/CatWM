@@ -4,15 +4,15 @@ import SwiftUI
 struct SortScrollAccessor: NSViewRepresentable {
     let model: SortModel
 
-    func makeNSView(context: Context) -> NSView {
-        let v = NSView()
-        DispatchQueue.main.async { [weak v, weak model] in model?.attach(v?.enclosingScrollView) }
-        return v
+    func makeNSView(context _: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async { [weak view, weak model] in model?.attach(view?.enclosingScrollView) }
+        return view
     }
 
-    func updateNSView(_ v: NSView, context: Context) {
-        DispatchQueue.main.async { [weak v, weak model] in
-            model?.attach(v?.enclosingScrollView)
+    func updateNSView(_ view: NSView, context _: Context) {
+        DispatchQueue.main.async { [weak view, weak model] in
+            model?.attach(view?.enclosingScrollView)
             model?.measureRow()
         }
     }

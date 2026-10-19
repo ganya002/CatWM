@@ -1,6 +1,6 @@
 import AppKit
-import Testing
 @testable import ouch
+import Testing
 
 @Suite struct TemplateMotionTests {
     final class ResultBox: @unchecked Sendable {
@@ -63,13 +63,17 @@ import Testing
     @Test func collapsingDisplaysKeepsTheMainDisplaysLayoutAndZoomPriority() {
         var template = WorkspaceTemplateTests().template()
         template.displays.reverse()
-        let preferred = TemplatePlacementPlan.preferredDisplays(template, mapping: ["external": "only", "builtin": "only"])
+        let preferred = TemplatePlacementPlan.preferredDisplays(
+            template, mapping: ["external": "only", "builtin": "only"]
+        )
         #expect(preferred == ["only": "external"])
     }
 
     @Test func separateDisplaysKeepTheirOwnLayoutAndZoomPriority() {
         let template = WorkspaceTemplateTests().template()
-        let preferred = TemplatePlacementPlan.preferredDisplays(template, mapping: ["external": "desk", "builtin": "laptop"])
+        let preferred = TemplatePlacementPlan.preferredDisplays(
+            template, mapping: ["external": "desk", "builtin": "laptop"]
+        )
         #expect(preferred == ["desk": "external", "laptop": "builtin"])
     }
 

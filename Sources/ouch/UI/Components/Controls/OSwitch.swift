@@ -29,14 +29,14 @@ struct OSwitch: View {
         .animation(Motion.spring, value: state.pressed)
         .animation(Motion.fade, value: shownOn)
         .gesture(DragGesture(minimumDistance: 0)
-            .onChanged { v in
+            .onChanged { gesture in
                 if !state.pressed { state.pressed = true }
-                if abs(v.translation.width) > 3 || state.drag != nil {
-                    state.drag = min(max((isOn ? 14 : 0) + v.translation.width, 0), 14)
+                if abs(gesture.translation.width) > 3 || state.drag != nil {
+                    state.drag = min(max((isOn ? 14 : 0) + gesture.translation.width, 0), 14)
                 }
             }
             .onEnded { _ in
-                if let d = state.drag { isOn = d > 7 } else { isOn.toggle() }
+                if let drag = state.drag { isOn = drag > 7 } else { isOn.toggle() }
                 state.drag = nil
                 state.pressed = false
             })
@@ -55,9 +55,9 @@ struct OSwitch: View {
 #if DEBUG
 extension GalleryContent {
     @ViewBuilder var switchExamples: some View {
-        OSwitch(isOn: $m.on, label: "Tiling")
-        OSwitch(isOn: $m.off, label: "Focus follows mouse")
-        OSwitch(isOn: $m.on, label: "Disabled").disabled(true)
+        OSwitch(isOn: $model.isOn, label: "Tiling")
+        OSwitch(isOn: $model.off, label: "Focus follows mouse")
+        OSwitch(isOn: $model.isOn, label: "Disabled").disabled(true)
     }
 }
 #endif

@@ -1,97 +1,101 @@
 import CoreGraphics
-import Testing
 @testable import ouch
+import Testing
 
 @Suite struct WorkspaceModelTests {
     @Test func theShownSetFollowsEveryChange() {
-        var m = WorkspaceModel()
-        #expect(!m.isShown("1"))
-        m.show("1", on: "A")
-        m.shown["B"] = "2"
-        #expect(m.isShown("1") && m.isShown("2"))
-        m.show("3", on: "A")
-        #expect(!m.isShown("1") && m.isShown("3"))
-        m.shown["B"] = nil
-        #expect(!m.isShown("2"))
-        m.shown = [:]
-        #expect(!m.isShown("3"))
-        #expect(!m.isShown(nil))
+        var model = WorkspaceModel()
+        #expect(!model.isShown("1"))
+        model.show("1", on: "A")
+        model.shown["B"] = "2"
+        #expect(model.isShown("1") && model.isShown("2"))
+        model.show("3", on: "A")
+        #expect(!model.isShown("1") && model.isShown("3"))
+        model.shown["B"] = nil
+        #expect(!model.isShown("2"))
+        model.shown = [:]
+        #expect(!model.isShown("3"))
+        #expect(!model.isShown(nil))
     }
 
     @Test func forgetRemovesEveryTraceOfAWindow() {
-        var m = WorkspaceModel()
-        m.assign(7, to: "1"); m.assign(8, to: "1")
-        m.order = [7, 8]
-        m.noteFocus(8); m.noteFocus(7)
-        m.lastFocused["1"] = 7
-        m.forget(7)
-        #expect(m.workspaceOf[7] == nil)
-        #expect(m.order == [8])
-        #expect(m.focusStamps[7] == nil)
-        #expect(m.focusOrder == [8])
-        #expect(m.lastFocused["1"] == nil)
-        #expect(m.mostRecent(of: [7]) == nil)
-        #expect(m.mostRecent(of: [7, 8]) == 8)
+        var model = WorkspaceModel()
+        model.assign(7, to: "1"); model.assign(8, to: "1")
+        model.order = [7, 8]
+        model.noteFocus(8); model.noteFocus(7)
+        model.lastFocused["1"] = 7
+        model.forget(7)
+        #expect(model.workspaceOf[7] == nil)
+        #expect(model.order == [8])
+        #expect(model.focusStamps[7] == nil)
+        #expect(model.focusOrder == [8])
+        #expect(model.lastFocused["1"] == nil)
+        #expect(model.mostRecent(of: [7]) == nil)
+        #expect(model.mostRecent(of: [7, 8]) == 8)
     }
 
     @Test func noteFocusKeepsTheMostRecentFirst() {
-        var m = WorkspaceModel()
-        m.noteFocus(1); m.noteFocus(2); m.noteFocus(1)
-        #expect(m.focusOrder == [1, 2])
-        #expect(m.mostRecent(of: [1, 2]) == 1)
-        let clock = m.focusClock
-        m.noteFocus(1)
-        #expect(m.focusClock == clock)
+        var model = WorkspaceModel()
+        model.noteFocus(1); model.noteFocus(2); model.noteFocus(1)
+        #expect(model.focusOrder == [1, 2])
+        #expect(model.mostRecent(of: [1, 2]) == 1)
+        let clock = model.focusClock
+        model.noteFocus(1)
+        #expect(model.focusClock == clock)
     }
 
     @Test func focusOrderIsCapped() {
-        var m = WorkspaceModel()
-        for id in 1...100 { m.noteFocus(CGWindowID(id)) }
-        #expect(m.focusOrder.count == 80)
-        #expect(m.focusOrder.first == 100)
+        var model = WorkspaceModel()
+        for id in 1...100 { model.noteFocus(CGWindowID(id)) }
+        #expect(model.focusOrder.count == 80)
+        #expect(model.focusOrder.first == 100)
     }
 
     @Test func swapAndKeepChangeOnlyTheirWindows() {
-        var m = WorkspaceModel()
-        m.assign(1, to: "1"); m.assign(2, to: "2"); m.assign(3, to: WindowManager.spaceWorkspace(display: "A", space: 9))
-        m.swapWorkspaces(1, 2)
-        #expect(m.workspaceOf[1] == "2" && m.workspaceOf[2] == "1")
-        m.keepWorkspaces { !$0.hasPrefix(WindowManager.spacePrefix) }
-        #expect(m.workspaceOf.count == 2 && m.workspaceOf[3] == nil)
+        var model = WorkspaceModel()
+        model.assign(1, to: "1"); model.assign(2, to: "2")
+        model.assign(3, to: WindowManager.spaceWorkspace(display: "A", space: 9))
+        model.swapWorkspaces(1, 2)
+        #expect(model.workspaceOf[1] == "2" && model.workspaceOf[2] == "1")
+        model.keepWorkspaces { !$0.hasPrefix(WindowManager.spacePrefix) }
+        #expect(model.workspaceOf.count == 2 && model.workspaceOf[3] == nil)
     }
 
     @Test func forgettingAWindowReleasesItsFullscreenWorkspace() {
-        var m = WorkspaceModel()
-        let ws = WindowManager.spaceWorkspace(display: "A", space: 5)
-        m.assign(7, to: ws); m.fullscreenHost[ws] = 7
-        #expect(m.isFullscreenWorkspace(ws))
-        m.forget(7)
-        #expect(!m.isFullscreenWorkspace(ws) && m.workspaceOf[7] == nil)
-        m.fullscreenHost[ws] = 8
-        m.resetWorkspaces()
-        #expect(m.fullscreenHost.isEmpty)
+        var model = WorkspaceModel()
+        let workspace = WindowManager.spaceWorkspace(display: "A", space: 5)
+        model.assign(7, to: workspace); model.fullscreenHost[workspace] = 7
+        #expect(model.isFullscreenWorkspace(workspace))
+        model.forget(7)
+        #expect(!model.isFullscreenWorkspace(workspace) && model.workspaceOf[7] == nil)
+        model.fullscreenHost[workspace] = 8
+        model.resetWorkspaces()
+        #expect(model.fullscreenHost.isEmpty)
     }
 
     @Test func resetKeepsOrderAndFocusHistory() {
-        var m = WorkspaceModel()
-        m.assign(1, to: "1"); m.order = [1]; m.noteFocus(1)
-        m.show("1", on: "A"); m.virtualShown["A"] = "1"; m.monitorOf["1"] = "A"; m.lastFocused["1"] = 1
-        _ = m.states["1", default: ScreenState(layout: .tall)]
-        m.resetWorkspaces()
-        #expect(m.workspaceOf.isEmpty && m.shown.isEmpty && m.virtualShown.isEmpty && m.monitorOf.isEmpty && m.lastFocused.isEmpty)
-        #expect(!m.isShown("1"))
-        #expect(m.order == [1] && m.focusOrder == [1])
+        var model = WorkspaceModel()
+        model.assign(1, to: "1"); model.order = [1]; model.noteFocus(1)
+        model.show("1", on: "A"); model.virtualShown["A"] = "1"; model.monitorOf["1"] = "A"; model.lastFocused["1"] = 1
+        _ = model.states["1", default: ScreenState(layout: .tall)]
+        model.resetWorkspaces()
+        #expect(
+            model.workspaceOf.isEmpty && model.shown.isEmpty && model.virtualShown.isEmpty
+                && model.monitorOf.isEmpty && model.lastFocused.isEmpty
+        )
+        #expect(!model.isShown("1"))
+        #expect(model.order == [1] && model.focusOrder == [1])
     }
 
     @Test func aSnapshotDoesNotChangeWithTheModel() {
-        var m = WorkspaceModel()
-        let st = ScreenState(layout: .tall)
-        st.ratio = 0.6; st.mainCount = 2; st.zoomed = 4
-        m.states["1"] = st
-        m.assign(4, to: "1"); m.order = [4]; m.lastFocused["1"] = 4
-        let snap = m.snapshot()
-        st.layout = .bsp; st.ratio = 0.3
-        m.assign(4, to: "2"); m.order = []; m.lastFocused["1"] = nil
+        var model = WorkspaceModel()
+        let state = ScreenState(layout: .tall)
+        state.ratio = 0.6; state.mainCount = 2; state.zoomed = 4
+        model.states["1"] = state
+        model.assign(4, to: "1"); model.order = [4]; model.lastFocused["1"] = 4
+        let snap = model.snapshot()
+        state.layout = .bsp; state.ratio = 0.3
+        model.assign(4, to: "2"); model.order = []; model.lastFocused["1"] = nil
         #expect(snap.states["1"]?.layout == .tall)
         #expect(snap.states["1"]?.ratio == 0.6)
         #expect(snap.states["1"]?.mainCount == 2)

@@ -17,5 +17,5 @@ let keyCodes: [String: UInt16] = [
     "mouse_up": SpecialKey.mouseUp, "mouse_down": SpecialKey.mouseDown,
     "mouse_left": SpecialKey.mouseLeft, "mouse_right": SpecialKey.mouseRight,
     "swipe_left": SpecialKey.swipeLeft, "swipe_right": SpecialKey.swipeRight,
-    "swipe_up": SpecialKey.swipeUp, "swipe_down": SpecialKey.swipeDown,
+    "swipe_up": SpecialKey.swipeUp, "swipe_down": SpecialKey.swipeDown
 ]

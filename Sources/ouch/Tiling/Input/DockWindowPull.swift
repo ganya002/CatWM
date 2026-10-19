@@ -36,7 +36,7 @@ final class DockWindowPull {
         switch type {
         case .leftMouseDown:
             guard pending == nil,
-                  event.flags.intersection([.maskCommand, .maskControl, .maskAlternate, .maskShift]).isEmpty,
+                  event.flags.isDisjoint(with: [.maskCommand, .maskControl, .maskAlternate, .maskShift]),
                   event.getIntegerValueField(.mouseEventClickState) <= 1,
                   let action = prepare?(event.location), let down = event.copy() else { return false }
             pending = (down, action)
@@ -54,8 +54,9 @@ final class DockWindowPull {
             return true
         case .leftMouseUp:
             guard let pending else { return false }
-            let close = hypot(event.location.x - pending.down.location.x, event.location.y - pending.down.location.y) <= 5
-                && event.flags.intersection([.maskCommand, .maskControl, .maskAlternate, .maskShift]).isEmpty
+            let distance = hypot(event.location.x - pending.down.location.x, event.location.y - pending.down.location.y)
+            let close = distance <= 5
+                && event.flags.isDisjoint(with: [.maskCommand, .maskControl, .maskAlternate, .maskShift])
             hold?.cancel(); hold = nil
             self.pending = nil
             if close {

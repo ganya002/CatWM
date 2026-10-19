@@ -21,7 +21,7 @@ struct OTooltip: View {
                 .fixedSize()
             }
         }
-        .surface(.xs, caret: caret)
+        .surface(.extraSmall, caret: caret)
         .accessibilityElement(children: .combine)
     }
 }
@@ -29,7 +29,7 @@ struct OTooltip: View {
 #if DEBUG
 extension GalleryContent {
     @ViewBuilder var tooltipExamples: some View {
-        HStack(alignment: .top, spacing: Theme.Space.xl) {
+        HStack(alignment: .top, spacing: Theme.Space.extraLarge) {
             OTooltip(text: "Retile", chords: [["Z"]], caret: .none).fixedSize()
             OTooltip(text: "Settings", chords: [["⌘", ","]], caret: .none).fixedSize()
             OTooltip(text: "Swap with main", caret: .none).fixedSize()

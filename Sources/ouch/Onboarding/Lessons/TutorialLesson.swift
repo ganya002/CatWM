@@ -17,31 +17,37 @@ final class TutorialLesson: Lesson {
     var count: Int { plan.count }
 
     static var paused: (id: String, name: String)? {
-        guard let s = UserDefaults.standard.string(forKey: savedKey) else { return nil }
-        let parts = s.split(separator: "|", maxSplits: 1).map(String.init)
+        guard let saved = UserDefaults.standard.string(forKey: savedKey) else { return nil }
+        let parts = saved.split(separator: "|", maxSplits: 1).map(String.init)
         return parts.count == 2 ? (parts[0], parts[1]) : nil
     }
     static var finishedOnce: Bool { UserDefaults.standard.bool(forKey: doneKey) }
     static func forget() { UserDefaults.standard.removeObject(forKey: savedKey) }
 
-    func prepare(_ c: Coach) {
+    func prepare(_ coach: Coach) {
         func chapter(_ id: String, _ name: String, _ steps: [PlannedStep?]) {
-            let list = steps.compactMap { $0 }
+            let list = steps.compactMap(\.self)
             if !list.isEmpty { chapters.append(Chapter(id: id, name: name, steps: list)) }
         }
-        chapter("welcome", "Welcome", [Steps.intro(c, title: "Learn every key", button: "Start")])
-        chapter("mode", "Window mode", [Steps.modeOn(c), Steps.modeOff(c), Steps.modeDrill(c), Steps.help(c)])
-        chapter("focus", "Focus", [Steps.focus(c), Steps.cycle(c), Steps.focusDrill(c), Steps.focusDrill(c), Steps.focusDrill(c)])
-        chapter("move", "Moving windows", [Steps.move(c), Steps.main(c), Steps.mainDrill(c), Steps.mainDrill(c)])
-        chapter("main", "The main pane", [Steps.masters(c), Steps.resize(c)])
-        chapter("layouts", "Layouts", [Steps.layouts(c), Steps.layoutDrill(c), Steps.layoutDrill(c)])
-        chapter("zoom", "Zoom and float", [Steps.zoom(c), Steps.float(c), Steps.retile(c)])
-        chapter("workspaces", "Workspaces", [Steps.visit(c), Steps.back(c), Steps.neighbours(c), Steps.workspaceDrill(c), Steps.send(c)])
-        chapter("global", "Global keys", [Steps.modeOff(c), Steps.global(c)])
-        chapter("displays", "Displays", [Steps.monitor(c)])
-        chapter("sort", "Overview", Steps.sortTry(c))
-        chapter("done", "Done", [Steps.summary(c, title: "That's every key")])
-        for (i, ch) in chapters.enumerated() { plan += ch.steps.map { (i, $0) } }
+        chapter("welcome", "Welcome", [Steps.intro(coach, title: "Learn every key", button: "Start")])
+        chapter("mode", "Window mode",
+                [Steps.modeOn(coach), Steps.modeOff(coach), Steps.modeDrill(coach), Steps.help(coach)])
+        chapter("focus", "Focus",
+                [Steps.focus(coach), Steps.cycle(coach),
+                 Steps.focusDrill(coach), Steps.focusDrill(coach), Steps.focusDrill(coach)])
+        chapter("move", "Moving windows",
+                [Steps.move(coach), Steps.main(coach), Steps.mainDrill(coach), Steps.mainDrill(coach)])
+        chapter("main", "The main pane", [Steps.mainCount(coach), Steps.resize(coach)])
+        chapter("layouts", "Layouts", [Steps.layouts(coach), Steps.layoutDrill(coach), Steps.layoutDrill(coach)])
+        chapter("zoom", "Zoom and float", [Steps.zoom(coach), Steps.float(coach), Steps.retile(coach)])
+        chapter("workspaces", "Workspaces",
+                [Steps.visit(coach), Steps.back(coach), Steps.neighbours(coach),
+                 Steps.workspaceDrill(coach), Steps.send(coach)])
+        chapter("global", "Global keys", [Steps.modeOff(coach), Steps.global(coach)])
+        chapter("displays", "Displays", [Steps.monitor(coach)])
+        chapter("sort", "Overview", Steps.sortTry(coach))
+        chapter("done", "Done", [Steps.summary(coach, title: "That's every key")])
+        for (i, entry) in chapters.enumerated() { plan += entry.steps.map { (i, $0) } }
         if let saved = Self.paused, let i = chapters.firstIndex(where: { $0.id == saved.id }),
            let start = plan.firstIndex(where: { $0.chapter == i }) {
             startIndex = start
@@ -51,14 +57,18 @@ final class TutorialLesson: Lesson {
     func step(_ i: Int, in coach: Coach) -> Coach.Step { plan[i].step.build(coach) }
 
     func ended(_ how: Coach.Ending, at index: Int) {
-        let d = UserDefaults.standard
+        let defaults = UserDefaults.standard
         switch how {
         case .finished, .tutorial:
             Self.forget()
-            d.set(true, forKey: Self.doneKey)
+            defaults.set(true, forKey: Self.doneKey)
         case .paused, .skipped:
-            let ch = chapters[plan[min(index, plan.count - 1)].chapter]
-            if ch.id == "welcome" || ch.id == "done" { Self.forget() } else { d.set("\(ch.id)|\(ch.name)", forKey: Self.savedKey) }
+            let chapter = chapters[plan[min(index, plan.count - 1)].chapter]
+            if chapter.id == "welcome" || chapter.id == "done" {
+                Self.forget()
+            } else {
+                defaults.set("\(chapter.id)|\(chapter.name)", forKey: Self.savedKey)
+            }
         }
     }
 }

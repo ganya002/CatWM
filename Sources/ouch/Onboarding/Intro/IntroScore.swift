@@ -1,7 +1,8 @@
-import AVFoundation
 import AudioToolbox
+import AVFoundation
 
 final class IntroScore {
+    typealias AddNote = (Double, Voice, [UInt8], UInt8, Double) -> Void
 
     struct Voice: Hashable {
         let program: UInt8
@@ -35,11 +36,11 @@ final class IntroScore {
         let notes: () -> [Note]
 
         static func named(_ id: String) -> Arrangement? { all.first { $0.id == id } }
-        static var standard: Arrangement { named("1")! }
+        static var standard: Arrangement { named("1") ?? all[0] }
     }
 
     struct Note {
-        let at: Double
+        let time: Double
         let voice: Voice
         let keys: [UInt8]
         let velocity: UInt8
@@ -55,7 +56,9 @@ final class IntroScore {
         static let impact = 5.75
     }
 
-    static let soundBank = URL(fileURLWithPath: "/System/Library/Components/CoreAudio.component/Contents/Resources/gs_instruments.dls")
+    static let soundBank = URL(
+        fileURLWithPath: "/System/Library/Components/CoreAudio.component/Contents/Resources/gs_instruments.dls"
+    )
 
     let engine = AVAudioEngine()
     let reverb = AVAudioUnitReverb()
@@ -68,24 +71,27 @@ final class IntroScore {
 
     var isPlaying: Bool { keepAlive != nil }
 
-    static let G1: UInt8 = 31, A1: UInt8 = 33
-    static let D1: UInt8 = 26, D2: UInt8 = 38, G2: UInt8 = 43, A2: UInt8 = 45
-    static let D3: UInt8 = 50, E3: UInt8 = 52, Fs3: UInt8 = 54, G3: UInt8 = 55, A3: UInt8 = 57, B3: UInt8 = 59
-    static let Cs4: UInt8 = 61, D4: UInt8 = 62, E4: UInt8 = 64, Fs4: UInt8 = 66, A4: UInt8 = 69, B4: UInt8 = 71
-    static let Cs5: UInt8 = 73, D5: UInt8 = 74, E5: UInt8 = 76, Fs5: UInt8 = 78, A5: UInt8 = 81, B5: UInt8 = 83
-    static let D6: UInt8 = 86, Fs6: UInt8 = 90, A6: UInt8 = 93
+    static let Gn1: UInt8 = 31, An1: UInt8 = 33
+    static let Dn1: UInt8 = 26, Dn2: UInt8 = 38, Gn2: UInt8 = 43, An2: UInt8 = 45
+    static let Dn3: UInt8 = 50, En3: UInt8 = 52, Fs3: UInt8 = 54
+    static let Gn3: UInt8 = 55, An3: UInt8 = 57, Bn3: UInt8 = 59
+    static let Cs4: UInt8 = 61, Dn4: UInt8 = 62, En4: UInt8 = 64
+    static let Fs4: UInt8 = 66, An4: UInt8 = 69, Bn4: UInt8 = 71
+    static let Cs5: UInt8 = 73, Dn5: UInt8 = 74, En5: UInt8 = 76
+    static let Fs5: UInt8 = 78, An5: UInt8 = 81, Bn5: UInt8 = 83
+    static let Dn6: UInt8 = 86, Fs6: UInt8 = 90, An6: UInt8 = 93
 
     static let kick: UInt8 = 36, snare: UInt8 = 38, hat: UInt8 = 42, openHat: UInt8 = 46, crash: UInt8 = 49
     static let splash: UInt8 = 57, lowTom: UInt8 = 41, midTom: UInt8 = 45, highTom: UInt8 = 48, ride: UInt8 = 51
 
-    static let D7: UInt8 = 98
+    static let Dn7: UInt8 = 98
     static let sideStick: UInt8 = 37, clap: UInt8 = 39, tambourine: UInt8 = 54, cabasa: UInt8 = 69
     static let shaker: UInt8 = 70, claves: UInt8 = 75
 
-    struct Combo {
-        enum Rhythm { case none, kit, brushes, light, claps, softKick }
-        enum Accent { case timpani, taiko, swell, sub, crash }
+    enum Rhythm { case none, kit, brushes, light, claps, softKick }
+    enum Accent { case timpani, taiko, swell, sub, crash }
 
+    struct Combo {
         var lead: Voice = .piano
         var bass: Voice?
         var pad: Voice?
@@ -107,24 +113,23 @@ final class IntroScore {
         engine.attach(reverb)
         engine.connect(band, to: reverb, format: nil)
         engine.connect(reverb, to: engine.mainMixerNode, format: nil)
-        for v in Set(notes.map(\.voice)) {
-            let s = AVAudioUnitSampler()
-            engine.attach(s)
-            engine.connect(s, to: band, fromBus: 0, toBus: band.nextAvailableInputBus, format: nil)
-            s.volume = v.volume
+        for voice in Set(notes.map(\.voice)) {
+            let sampler = AVAudioUnitSampler()
+            engine.attach(sampler)
+            engine.connect(sampler, to: band, fromBus: 0, toBus: band.nextAvailableInputBus, format: nil)
+            sampler.volume = voice.volume
             do {
-                let bank = v.kit ? kAUSampler_DefaultPercussionBankMSB : kAUSampler_DefaultMelodicBankMSB
-                try s.loadSoundBankInstrument(at: Self.soundBank, program: v.program, bankMSB: UInt8(bank),
-                                              bankLSB: UInt8(kAUSampler_DefaultBankLSB))
+                let bank = voice.kit ? kAUSampler_DefaultPercussionBankMSB : kAUSampler_DefaultMelodicBankMSB
+                try sampler.loadSoundBankInstrument(at: Self.soundBank, program: voice.program, bankMSB: UInt8(bank),
+                                                    bankLSB: UInt8(kAUSampler_DefaultBankLSB))
             } catch {
-                Log.info("intro: no instrument \(v.program) (\(error.localizedDescription))")
+                Log.info("intro: no instrument \(voice.program) (\(error.localizedDescription))")
                 continue
             }
-            samplers[v] = s
+            samplers[voice] = sampler
         }
         engine.mainMixerNode.outputVolume = 0.75
         engine.prepare()
         ready = true
     }
-
 }

@@ -72,7 +72,8 @@ extension CursorActions {
         let generation = model.templateSaveGeneration
         let job = TemplatePreviewJob()
         model.previewJob = job
-        model.templateDraft = WorkspaceTemplate(name: "", tilingEnabled: WindowManager.shared.tilingEnabled, displays: [], windows: [])
+        model.templateDraft = WorkspaceTemplate(name: "", tilingEnabled: WindowManager.shared.tilingEnabled,
+                                                displays: [], windows: [])
         model.templateName = ""
         model.saveError = nil
         model.snapshotReady = false
@@ -134,7 +135,7 @@ extension CursorActions {
         dismissMenu()
         HUD.shared.show("Saved \(name)", on: nil)
         guard waiting, let preview else {
-            library.status = template.screenshot == nil ? "Saved \(name) without a screenshot. Allow screen recording, then update the template to add one." : "Saved \(name)."
+            library.status = template.screenshot == nil ? Self.savedWithoutScreenshot(name) : "Saved \(name)."
             return
         }
         library.status = "Saved \(name)."
@@ -144,9 +145,14 @@ extension CursorActions {
                 library.status = "Saved \(name)."
                 return
             }
-            guard library.generation(of: id) == generation, library.templates.contains(where: { $0.id == id }) else { return }
-            library.status = "Saved \(name) without a screenshot. Allow screen recording, then update the template to add one."
+            guard library.generation(of: id) == generation,
+                  library.templates.contains(where: { $0.id == id }) else { return }
+            library.status = Self.savedWithoutScreenshot(name)
         }
+    }
+
+    private static func savedWithoutScreenshot(_ name: String) -> String {
+        "Saved \(name) without a screenshot. Allow screen recording, then update the template to add one."
     }
 
     func cancelTemplateSave() {

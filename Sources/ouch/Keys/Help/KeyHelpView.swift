@@ -17,6 +17,6 @@ struct KeyHelpView: View {
     private var keyboard: some View {
         let scale = model.keyboardWidth / KeyHintKeyboard.size(scale: 1).width
         return KeyHintKeyboard(binds: model.hints, pressed: model.pressed, hot: model.hot, scale: scale)
-            .environment(\.keyTile, model.motion == .tile ? model.shown : nil)
+            .environment(\.keyTile, model.motion == .tile ? .tile(shown: model.shown) : .rise)
     }
 }

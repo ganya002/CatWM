@@ -38,7 +38,8 @@ struct WorkspaceTemplate: Codable, Identifiable {
     }
 
     var summary: String {
-        "\(windows.count) \(windows.count == 1 ? "window" : "windows") · \(displays.count) \(displays.count == 1 ? "display" : "displays")"
+        "\(windows.count) \(windows.count == 1 ? "window" : "windows") · "
+            + "\(displays.count) \(displays.count == 1 ? "display" : "displays")"
     }
 
     static func restoredFrame(_ frame: CGRect, from source: CGRect, to destination: CGRect) -> CGRect {
