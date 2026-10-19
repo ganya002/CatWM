@@ -2,7 +2,8 @@ import AppKit
 import SwiftUI
 
 enum MenuCategory: String, CaseIterable, Identifiable {
-    case focus = "Focus", move = "Move", workspace = "Workspace", layout = "Layout", window = "Window", mode = "Mode", app = "App"
+    case focus = "Focus", move = "Move", workspace = "Workspace", layout = "Layout", window = "Window", mode = "Mode"
+    case app = "App"
     var id: Self { self }
 
     var symbol: String {
@@ -17,15 +18,15 @@ enum MenuCategory: String, CaseIterable, Identifiable {
         }
     }
 
-    init(_ a: Action) {
-        switch a.category {
+    init(_ action: Action) {
+        switch action.category {
         case .focus: self = .focus
         case .move: self = .move
-        case .displays: self = a.dispatcher == "focusmonitor" ? .focus : .move
+        case .displays: self = action.dispatcher == "focusmonitor" ? .focus : .move
         case .spaces: self = .workspace
         case .layout: self = .layout
         case .window, .commands: self = .window
-        case .app, .custom: self = a.dispatcher == "submap" ? .mode : .app
+        case .app, .custom: self = action.dispatcher == "submap" ? .mode : .app
         }
     }
 }

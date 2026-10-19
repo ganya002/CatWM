@@ -6,21 +6,21 @@ enum CursorRefresh {
 
     static func soon(after delay: Double = 0.08) {
         work?.cancel()
-        let w = DispatchWorkItem { post() }
-        work = w
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: w)
+        let item = DispatchWorkItem { post() }
+        work = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: item)
     }
 
     private static func post() {
         guard NSEvent.pressedMouseButtons == 0,
               let here = CGEvent(source: nil)?.location,
-              let e = CGEvent(mouseEventSource: CGEventSource(stateID: .hidSystemState), mouseType: .mouseMoved,
-                              mouseCursorPosition: here, mouseButton: .left) else { return }
-        e.setIntegerValueField(.eventSourceUserData, value: Hotkeys.syntheticMarker)
-        e.post(tap: .cghidEventTap)
+              let event = CGEvent(mouseEventSource: CGEventSource(stateID: .hidSystemState), mouseType: .mouseMoved,
+                                  mouseCursorPosition: here, mouseButton: .left) else { return }
+        event.setIntegerValueField(.eventSourceUserData, value: Hotkeys.syntheticMarker)
+        event.post(tap: .cghidEventTap)
     }
 
-    static func isOurs(_ e: NSEvent) -> Bool {
-        e.cgEvent?.getIntegerValueField(.eventSourceUserData) == Hotkeys.syntheticMarker
+    static func isOurs(_ event: NSEvent) -> Bool {
+        event.cgEvent?.getIntegerValueField(.eventSourceUserData) == Hotkeys.syntheticMarker
     }
 }

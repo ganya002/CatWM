@@ -6,16 +6,16 @@ struct SortDisplays: View {
     @Namespace private var thumb
 
     var body: some View {
-        OSegmentTrack(title: "Display to sort") {
-            ForEach(model.displays) { d in
-                let on = d.id == model.current
-                OSegment(label: d.short, count: model.count(of: d.id), on: on, hot: model.over == .display(d.id) && !on,
-                         thumb: thumb, action: { withAnimation(Motion.spring) { model.use(d.id) } }) { ink in
-                    SortScreenGlyph(display: d, color: ink).padding(.trailing, 2)
-                }
-                .zone(.display(d.id))
-                .tooltip(d.name)
-                .accessibilityLabel(d.name)
+        OSegmentTrack(title: "Display to overview") {
+            ForEach(model.displays) { display in
+                let isCurrent = display.id == model.current
+                OSegment(label: display.short, count: model.count(of: display.id), selected: isCurrent,
+                         hot: model.over == .display(display.id) && !isCurrent, thumb: thumb,
+                         action: { withAnimation(Motion.spring) { model.use(display.id) } },
+                         lead: { ink in SortScreenGlyph(display: display, color: ink).padding(.trailing, 2) })
+                .zone(.display(display.id))
+                .tooltip(display.name)
+                .accessibilityLabel(display.name)
             }
         }
     }

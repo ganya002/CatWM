@@ -6,14 +6,15 @@ final class TourLesson: Lesson {
     let startIndex = 0
     var count: Int { plan.count }
 
-    func prepare(_ c: Coach) {
-        plan = [Steps.modeOn(c), Steps.help(c), Steps.focus(c), Steps.move(c), Steps.main(c), Steps.resize(c),
-                Steps.zoom(c), Steps.float(c), Steps.layouts(c), Steps.visit(c), Steps.send(c),
-                Steps.modeOff(c), Steps.global(c), Steps.sortIntro(c)].compactMap { $0 }
-        plan.append(Steps.summary(c, title: "You learned the *basics*", tutorial: true))
+    func prepare(_ coach: Coach) {
+        plan = [Steps.modeOn(coach), Steps.help(coach), Steps.focus(coach), Steps.move(coach), Steps.main(coach),
+                Steps.resize(coach), Steps.zoom(coach), Steps.float(coach), Steps.layouts(coach), Steps.visit(coach),
+                Steps.send(coach), Steps.modeOff(coach), Steps.global(coach), Steps.sortIntro(coach)]
+            .compactMap(\.self)
+        plan.append(Steps.summary(coach, title: "You learned the *basics*", tutorial: true))
     }
 
     func step(_ i: Int, in coach: Coach) -> Coach.Step { plan[i].build(coach) }
 
-    func ended(_ how: Coach.Ending, at index: Int) {}
+    func ended(_: Coach.Ending, at _: Int) {}
 }

@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 final class CoachModel: ObservableObject {
-    enum Caret: Equatable { case none, up(CGFloat), down }
+    enum Caret: Equatable { case none, pointingUp(CGFloat), down }
     @Published var title = ""
     @Published var text = ""
     @Published var caps: [String] = []

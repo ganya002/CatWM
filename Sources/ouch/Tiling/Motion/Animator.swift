@@ -4,9 +4,16 @@ import QuartzCore
 final class Animator {
     struct Move {
         let window: Window
-        let to: CGRect
+        let target: CGRect
         let bounds: CGRect
-        var from: CGRect? = nil
+        var from: CGRect?
+
+        init(window: Window, to target: CGRect, bounds: CGRect, from: CGRect? = nil) {
+            self.window = window
+            self.target = target
+            self.bounds = bounds
+            self.from = from
+        }
     }
 
     struct Item {
@@ -43,14 +50,16 @@ final class Animator {
 
     func cancelFocus() { focusLock.withLock { focusGeneration += 1 } }
 
-    func focus(_ w: Window, done: @escaping () -> Void = {}) {
+    func focus(_ window: Window, done: @escaping () -> Void = {}) {
         let generation = focusLock.withLock { focusGeneration += 1; return focusGeneration }
-        if focusQueues[w.pid] == nil { focusQueues[w.pid] = DispatchQueue(label: "ouch.focus-write.\(w.pid)", qos: .userInteractive) }
-        focusQueues[w.pid]!.async { [weak self] in
+        let queue = focusQueues[window.pid]
+            ?? DispatchQueue(label: "ouch.focus-write.\(window.pid)", qos: .userInteractive)
+        focusQueues[window.pid] = queue
+        queue.async { [weak self] in
             guard let self else { return }
             let isCurrent = { self.focusLock.withLock { self.focusGeneration == generation } }
             guard isCurrent() else { return }
-            self.applyFocus(w, isCurrent)
+            self.applyFocus(window, isCurrent)
             DispatchQueue.main.async {
                 guard isCurrent() else { return }
                 done()
@@ -75,10 +84,10 @@ final class Animator {
         items[id] != nil || landing[id] != nil || (quietUntil[id] ?? 0) > CACurrentMediaTime()
     }
 
-    func destination(_ id: CGWindowID) -> CGRect? { items[id]?.move.to ?? landing[id]?.move.to }
+    func destination(_ id: CGWindowID) -> CGRect? { items[id]?.move.target ?? landing[id]?.move.target }
 
     func isMoving(_ id: CGWindowID, to frame: CGRect) -> Bool {
-        (items[id]?.move.to ?? landing[id]?.move.to) == frame
+        (items[id]?.move.target ?? landing[id]?.move.target) == frame
     }
 
     func cancel(_ id: CGWindowID) {
@@ -94,53 +103,53 @@ final class Animator {
 
     func animate(_ moves: [Move], duration: Double, curve: AnimationCurve = .easeOut, bounce: Double = 0) {
         let now = CACurrentMediaTime()
-        for m in moves {
-            let id = m.window.id
+        for move in moves {
+            let id = move.window.id
             let from: CGRect
             if let running = items[id] {
                 from = running.frame(at: now)
             } else if let landed = landing.removeValue(forKey: id) {
-                from = m.from ?? landed.move.to
+                from = move.from ?? landed.move.target
             } else {
-                from = m.from ?? m.window.cachedFrame
+                from = move.from ?? move.window.cachedFrame
             }
             cancel(id)
-            owners[id] = m.window.pid
-            if duration < 0.01 || from.isNull || from.approxEqual(m.to, tolerance: 2) {
+            owners[id] = move.window.pid
+            if duration < 0.01 || from.isNull || from.approxEqual(move.target, tolerance: 2) {
                 items[id] = nil
-                land(m)
+                land(move)
             } else {
-                items[id] = Item(move: m, from: from, start: now, duration: duration, curve: curve, bounce: bounce)
+                items[id] = Item(move: move, from: from, start: now, duration: duration, curve: curve, bounce: bounce)
             }
         }
         if !items.isEmpty && timer == nil {
-            let t = Timer(timeInterval: 1.0 / 120.0, repeats: true) { [weak self] _ in self?.tick() }
-            RunLoop.main.add(t, forMode: .common)
-            timer = t
+            let newTimer = Timer(timeInterval: 1.0 / 120.0, repeats: true) { [weak self] _ in self?.tick() }
+            RunLoop.main.add(newTimer, forMode: .common)
+            timer = newTimer
             frameRun = PerfMonitor.begin("window-move")
             tick()
         }
     }
 
-    func position(_ w: Window, at frame: CGRect) {
-        cancel(w.id)
-        owners[w.id] = w.pid
+    func position(_ window: Window, at frame: CGRect) {
+        cancel(window.id)
+        owners[window.id] = window.pid
         landings += 1
         let number = landings
-        landing[w.id] = (.init(window: w, to: frame, bounds: frame), number)
-        quiet(w.id)
-        writer(w.pid).position(w, at: frame.origin) { [weak self] _ in
-            guard let self, self.landing[w.id]?.number == number else { return }
-            self.landing[w.id] = nil
-            self.quiet(w.id)
+        landing[window.id] = (.init(window: window, to: frame, bounds: frame), number)
+        quiet(window.id)
+        writer(window.pid).position(window, at: frame.origin) { [weak self] _ in
+            guard let self, self.landing[window.id]?.number == number else { return }
+            self.landing[window.id] = nil
+            self.quiet(window.id)
         }
     }
 
     private func writer(_ pid: pid_t) -> AXWriter {
-        if let w = writers[pid] { return w }
-        let w = makeWriter(pid)
-        writers[pid] = w
-        return w
+        if let existing = writers[pid] { return existing }
+        let created = makeWriter(pid)
+        writers[pid] = created
+        return created
     }
 
     var activeWriterPids: Set<pid_t> { Set(writers.keys) }
@@ -149,7 +158,9 @@ final class Animator {
         afterPendingWrites(pids: nil, completion)
     }
 
-    func afterPendingWrites(pids: Set<pid_t>?, completionQueue: DispatchQueue = .main, _ completion: @escaping () -> Void) {
+    func afterPendingWrites(
+        pids: Set<pid_t>?, completionQueue: DispatchQueue = .main, _ completion: @escaping () -> Void
+    ) {
         let selected = pids.map { ids in ids.compactMap { writers[$0] } } ?? Array(writers.values)
         guard !selected.isEmpty else {
             completionQueue.async(execute: completion)
@@ -185,58 +196,61 @@ final class Animator {
         }
     }
 
-    private static func slowApp(_ pid: pid_t, _ s: AXWriter.Stats) -> PerfMonitor.SlowApp? {
-        guard s.position.count > 0, let bundle = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier else { return nil }
-        let step = (s.size.count > 0 ? s.size.total / Double(s.size.count) : 0) + s.position.total / Double(s.position.count)
-        return .init(bundle: bundle, stepMs: step * 1000, skipped: Double(s.skipped) / Double(s.skipped + s.position.count))
+    private static func slowApp(_ pid: pid_t, _ stats: AXWriter.Stats) -> PerfMonitor.SlowApp? {
+        guard !stats.position.isEmpty,
+              let bundle = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier else { return nil }
+        let step = (stats.size.isEmpty ? 0 : stats.size.total / Double(stats.size.count))
+            + stats.position.total / Double(stats.position.count)
+        return .init(bundle: bundle, stepMs: step * 1000,
+                     skipped: Double(stats.skipped) / Double(stats.skipped + stats.position.count))
     }
 
-    private func land(_ m: Move) {
-        let id = m.window.id
+    private func land(_ move: Move) {
+        let id = move.window.id
         landings += 1
         let number = landings
         let epoch = epochs[id] ?? 0
-        landing[id] = (m, number)
+        landing[id] = (move, number)
         quietUntil[id] = CACurrentMediaTime() + 0.4
-        writer(m.window.pid).land(m.window, at: m.to) { [weak self] wrote in
+        writer(move.window.pid).land(move.window, at: move.target) { [weak self] wrote in
             guard let self, self.landing[id]?.number == number else { return }
             self.landing[id] = nil
             guard wrote else { return }
             CursorRefresh.soon()
             self.quietUntil[id] = CACurrentMediaTime() + 0.4
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in self?.verify(m, epoch: epoch) }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in self?.verify(move, epoch: epoch) }
         }
     }
 
-    private func verify(_ m: Move, epoch: Int) {
-        let w = m.window
-        guard epochs[w.id, default: 0] == epoch, items[w.id] == nil, landing[w.id] == nil,
-              !w.placementSuspended else { return }
-        quietUntil[w.id] = CACurrentMediaTime() + 0.4
-        writer(w.pid).run(for: w.id) { [weak self] isCurrent in
-            var actual = w.frame
-            guard isCurrent(), !w.placementSuspended, !w.isNativeFullscreen,
-                  w.element.bool(kAXMinimizedAttribute) != true,
-                  !actual.isNull, !actual.approxEqual(m.to, tolerance: 2) else { return }
-            EnhancedUI.suspend(w.pid)
-            defer { EnhancedUI.resume(w.pid) }
-            guard isCurrent(), !w.placementSuspended else { return }
-            w.setFrame(m.to)
-            actual = w.frame
-            guard isCurrent(), !w.placementSuspended else { return }
+    private func verify(_ move: Move, epoch: Int) {
+        let window = move.window
+        guard epochs[window.id, default: 0] == epoch, items[window.id] == nil, landing[window.id] == nil,
+              !window.placementSuspended else { return }
+        quietUntil[window.id] = CACurrentMediaTime() + 0.4
+        writer(window.pid).run(for: window.id) { [weak self] isCurrent in
+            var actual = window.frame
+            guard isCurrent(), !window.placementSuspended, !window.isNativeFullscreen,
+                  !window.element.flag(kAXMinimizedAttribute),
+                  !actual.isNull, !actual.approxEqual(move.target, tolerance: 2) else { return }
+            EnhancedUI.suspend(window.pid)
+            defer { EnhancedUI.resume(window.pid) }
+            guard isCurrent(), !window.placementSuspended else { return }
+            window.setFrame(move.target)
+            actual = window.frame
+            guard isCurrent(), !window.placementSuspended else { return }
             var minimum: CGSize?
-            if !actual.isNull, actual.width > m.to.width + 1 || actual.height > m.to.height + 1 {
-                minimum = CGSize(width: actual.width > m.to.width + 1 ? actual.width : 0,
-                                 height: actual.height > m.to.height + 1 ? actual.height : 0)
-                var o = m.to.origin
-                o.x = max(m.bounds.minX, min(o.x, m.bounds.maxX - actual.width))
-                o.y = max(m.bounds.minY, min(o.y, m.bounds.maxY - actual.height))
-                w.setPosition(o)
+            if !actual.isNull, actual.width > move.target.width + 1 || actual.height > move.target.height + 1 {
+                minimum = CGSize(width: actual.width > move.target.width + 1 ? actual.width : 0,
+                                 height: actual.height > move.target.height + 1 ? actual.height : 0)
+                var origin = move.target.origin
+                origin.x = max(move.bounds.minX, min(origin.x, move.bounds.maxX - actual.width))
+                origin.y = max(move.bounds.minY, min(origin.y, move.bounds.maxY - actual.height))
+                window.setPosition(origin)
             }
             DispatchQueue.main.async {
-                guard let self, self.epochs[w.id, default: 0] == epoch else { return }
-                self.quietUntil[w.id] = CACurrentMediaTime() + 0.4
-                if let minimum { self.onMinimumSize?(w.id, minimum) }
+                guard let self, self.epochs[window.id, default: 0] == epoch else { return }
+                self.quietUntil[window.id] = CACurrentMediaTime() + 0.4
+                if let minimum { self.onMinimumSize?(window.id, minimum) }
             }
         }
     }

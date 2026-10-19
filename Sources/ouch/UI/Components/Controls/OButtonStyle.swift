@@ -10,5 +10,5 @@ struct OButtonStyle: ButtonStyle {
         OButtonBody(configuration: configuration, style: self)
     }
 
-    var height: CGFloat { size == .sm ? 26 : size == .lg ? 36 : Theme.controlHeight }
+    var height: CGFloat { size == .small ? 26 : size == .large ? 36 : Theme.controlHeight }
 }

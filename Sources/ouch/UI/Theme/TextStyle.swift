@@ -28,13 +28,13 @@ enum TextStyle {
 
 #if DEBUG
 extension GalleryExamples {
-    static let type = GalleryExample(order: 1) { AnyView(GalleryContent(m: $0).type) }
+    static let type = GalleryExample(order: 1) { AnyView(GalleryContent(model: $0).type) }
 }
 
 extension GalleryContent {
     @ViewBuilder var type: some View {
         block("Type") {
-            VStack(alignment: .leading, spacing: Theme.Space.md) {
+            VStack(alignment: .leading, spacing: Theme.Space.medium) {
                 Text("Tile without thinking").font(Theme.display(44))
                 Text("Move focus with H J K L").textStyle(.title)
                 Text("Gaps & padding").font(Theme.heading())

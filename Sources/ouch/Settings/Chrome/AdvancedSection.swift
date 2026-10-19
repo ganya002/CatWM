@@ -3,20 +3,20 @@ import SwiftUI
 
 struct AdvancedSection<Content: View>: View {
     let pane: Pane
-    @ObservedObject var ui: SettingsUI
+    @ObservedObject var settingsUI: SettingsUI
     @ViewBuilder var content: Content
 
     var body: some View {
-        let open = ui.advancedOpen.contains(pane)
+        let open = settingsUI.advancedOpen.contains(pane)
         VStack(alignment: .leading, spacing: 0) {
             Button {
                 withAnimation(Motion.easeOut) {
-                    if open { ui.advancedOpen.remove(pane) } else { ui.advancedOpen.insert(pane) }
+                    if open { settingsUI.advancedOpen.remove(pane) } else { settingsUI.advancedOpen.insert(pane) }
                 }
             } label: {
                 HStack(spacing: 6) {
                     Text("Advanced").textStyle(.sectionTitle)
-                    Image(systemName: "chevron.right").font(Theme.symbol(Theme.Icon.xs, .bold))
+                    Image(systemName: "chevron.right").font(Theme.symbol(Theme.Icon.extraSmall, .bold))
                         .rotationEffect(.degrees(open ? 90 : 0))
                     Rectangle().fill(Theme.hairline).frame(height: 1).padding(.leading, 6)
                 }

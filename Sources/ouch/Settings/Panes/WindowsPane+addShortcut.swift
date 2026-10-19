@@ -3,14 +3,14 @@ import SwiftUI
 
 extension WindowsPane {
     func add() {
-        let id = ui.newID.trimmingCharacters(in: .whitespaces)
+        let id = settingsUI.newID.trimmingCharacters(in: .whitespaces)
         guard !id.isEmpty, !doc.config.floating.contains(id) else { return }
         withAnimation(Motion.easeOut) { doc.config.floating.append(id) }
-        ui.newID = ""
+        settingsUI.newID = ""
     }
 
     func resized(_ image: NSImage) -> NSImage {
-        let copy = image.copy() as! NSImage
+        guard let copy = image.copy() as? NSImage else { return image }
         copy.size = NSSize(width: 16, height: 16)
         return copy
     }
@@ -25,7 +25,8 @@ extension WindowsPane {
         if let url = appURL(id) {
             Image(nsImage: NSWorkspace.shared.icon(forFile: url.path)).resizable().frame(width: 28, height: 28)
         } else {
-            RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous).strokeBorder(Theme.borderControl, style: StrokeStyle(lineWidth: 1.5, dash: [3, 2]))
+            RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
+                .strokeBorder(Theme.borderControl, style: StrokeStyle(lineWidth: 1.5, dash: [3, 2]))
                 .frame(width: 26, height: 26).padding(1)
         }
     }

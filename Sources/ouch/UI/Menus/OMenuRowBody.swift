@@ -7,7 +7,7 @@ struct OMenuRowBody: View {
     @StateObject private var hover = Flag()
 
     var body: some View {
-        let lit = style.highlighted ?? hover.on
+        let lit = style.highlight.isLit(hovering: hover.isOn)
         let fill: Color = configuration.isPressed ? Theme.wellHover
             : lit ? (style.danger ? Theme.dangerSoft : Theme.well)
             : style.open ? Theme.wellHover : .clear
@@ -17,11 +17,12 @@ struct OMenuRowBody: View {
             } else {
                 configuration.label
                     .padding(.horizontal, OMenuRowStyle.inset)
-                    .frame(maxWidth: .infinity, minHeight: Theme.rowHeight, maxHeight: Theme.rowHeight, alignment: .leading)
+                    .frame(maxWidth: .infinity, minHeight: Theme.rowHeight, maxHeight: Theme.rowHeight,
+                           alignment: .leading)
             }
         }
-        .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous).fill(fill))
+        .background(RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous).fill(fill))
         .contentShape(Rectangle())
-        .onHover { hover.on = $0 }
+        .onHover { hover.isOn = $0 }
     }
 }

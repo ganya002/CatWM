@@ -5,9 +5,12 @@ struct KeepInside: SwiftUI.Layout {
     let origin: CGPoint
     private let margin: CGFloat = 8
 
-    func sizeThatFits(proposal: ProposedViewSize, subviews: SwiftUI.LayoutSubviews, cache: inout ()) -> CGSize { proposal.replacingUnspecifiedDimensions() }
+    func sizeThatFits(proposal: ProposedViewSize, subviews _: SwiftUI.LayoutSubviews, cache _: inout ()) -> CGSize {
+        proposal.replacingUnspecifiedDimensions()
+    }
 
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: SwiftUI.LayoutSubviews, cache: inout ()) {
+    func placeSubviews(in bounds: CGRect, proposal _: ProposedViewSize, subviews: SwiftUI.LayoutSubviews,
+                       cache _: inout ()) {
         guard let ghost = subviews.first else { return }
         let size = ghost.sizeThatFits(.unspecified)
         let x = max(margin, min(origin.x, bounds.width - size.width - margin))

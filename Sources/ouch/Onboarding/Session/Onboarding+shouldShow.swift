@@ -12,8 +12,8 @@ extension Onboarding {
         let screen = OuchPanel.pointerScreen()
         let card = makeWelcome(on: screen)
         guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return showWelcome() }
-        let m = WelcomeView.margin
-        let intro = Intro(screen: screen, landing: card.frame.insetBy(dx: m, dy: m)) { [weak self] in
+        let margin = WelcomeView.margin
+        let intro = Intro(screen: screen, landing: card.frame.insetBy(dx: margin, dy: margin)) { [weak self] in
             self?.intro = nil
             self?.showWelcome()
         }
@@ -24,8 +24,8 @@ extension Onboarding {
     func playIntro(_ arrangement: IntroScore.Arrangement = .standard) {
         guard !isRunning else { return }
         let screen = OuchPanel.pointerScreen()
-        let v = screen.visibleFrame
-        let landing = NSRect(x: v.midX - 230, y: v.midY - 200, width: 460, height: 400)
+        let visible = screen.visibleFrame
+        let landing = NSRect(x: visible.midX - 230, y: visible.midY - 200, width: 460, height: 400)
         let intro = Intro(screen: screen, landing: landing, music: arrangement) { [weak self] in self?.intro = nil }
         self.intro = intro
         intro.run()
@@ -60,41 +60,41 @@ extension Onboarding {
         }
         refreshWelcome()
         let host = OuchHostingView(rootView: WelcomeView(model: welcomeModel))
-        let p = OuchPanel(role: .card(.normal),
-                          frame: OuchPanel.frame(size: host.fittingSize, on: screen, anchor: .center(dy: -12),
-                                                 inset: EdgeInsets(all: WelcomeView.margin)))
-        p.onClose = { [weak self] in self?.welcomeModel.skip() }
-        p.contentView = host
-        p.isMovableByWindowBackground = true
-        welcome = p
-        return p
+        let panel = OuchPanel(role: .card(.normal),
+                              frame: OuchPanel.frame(size: host.fittingSize, on: screen, anchor: .center(dy: -12),
+                                                     inset: EdgeInsets(all: WelcomeView.margin)))
+        panel.onClose = { [weak self] in self?.welcomeModel.skip() }
+        panel.contentView = host
+        panel.isMovableByWindowBackground = true
+        welcome = panel
+        return panel
     }
 
     func refreshWelcome() {
-        let ax = Permission.accessibility.isGranted, login = LoginItem.isEnabled
-        if welcomeModel.accessibility != ax { welcomeModel.accessibility = ax }
-        let im = Permission.inputMonitoring.isGranted
-        if welcomeModel.inputMonitoring != im { welcomeModel.inputMonitoring = im }
+        let accessibility = Permission.accessibility.isGranted, login = LoginItem.isEnabled
+        if welcomeModel.accessibility != accessibility { welcomeModel.accessibility = accessibility }
+        let inputMonitoring = Permission.inputMonitoring.isGranted
+        if welcomeModel.inputMonitoring != inputMonitoring { welcomeModel.inputMonitoring = inputMonitoring }
         if welcomeModel.login != login { welcomeModel.login = login }
         if login, openedLoginItems {
             openedLoginItems = false
-            if ax { Permission.closeSettingsWindows() }
+            if accessibility { Permission.closeSettingsWindows() }
             welcome?.makeKeyAndOrderFront(nil)
         }
     }
 
     func showWelcome() {
-        guard let p = welcome else { return }
-        let end = p.frame
+        guard let panel = welcome else { return }
+        let end = panel.frame
         welcomeModel.landed = false
-        p.alphaValue = 0
-        p.setFrame(end.offsetBy(dx: 0, dy: -14), display: false)
-        p.orderFrontRegardless()
-        p.makeKey()
-        p.invalidateShadow()
+        panel.alphaValue = 0
+        panel.setFrame(end.offsetBy(dx: 0, dy: -14), display: false)
+        panel.orderFrontRegardless()
+        panel.makeKey()
+        panel.invalidateShadow()
         animate(0.5) {
-            p.animator().alphaValue = 1
-            p.animator().setFrame(end, display: true)
+            panel.animator().alphaValue = 1
+            panel.animator().setFrame(end, display: true)
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in self?.welcomeModel.landed = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
@@ -108,12 +108,12 @@ extension Onboarding {
         poll?.invalidate()
         poll = nil
         PermissionGuide.shared.onGranted = nil
-        guard let p = welcome else { return then() }
+        guard let panel = welcome else { return then() }
         welcome = nil
-        animate(0.3, changes: { p.animator().alphaValue = 0 }) {
-            p.orderOut(nil)
+        animate(0.3, changes: { panel.animator().alphaValue = 0 }, completion: {
+            panel.orderOut(nil)
             then()
-        }
+        })
     }
 
     func startTour() {
@@ -128,5 +128,4 @@ extension Onboarding {
             }
         }
     }
-
 }

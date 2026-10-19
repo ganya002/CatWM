@@ -3,7 +3,8 @@ import Combine
 
 final class TemplateLibrary: ObservableObject {
     static let shared = TemplateLibrary()
-    static let url = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".config/ouch/templates.json")
+    static let url = FileManager.default.homeDirectoryForCurrentUser
+        .appendingPathComponent(".config/ouch/templates.json")
 
     @Published private(set) var templates: [WorkspaceTemplate] = []
     @Published var draft: WorkspaceTemplate?
@@ -40,7 +41,8 @@ final class TemplateLibrary: ObservableObject {
                 return
             }
             templates = stored.templates
-        } catch let problem as NSError where problem.domain == NSCocoaErrorDomain && problem.code == NSFileReadNoSuchFileError {
+        } catch let problem as NSError
+                    where problem.domain == NSCocoaErrorDomain && problem.code == NSFileReadNoSuchFileError {
         } catch {
             readProblem = "Ouch could not read your templates: \(error.localizedDescription)"
             self.error = readProblem
@@ -64,7 +66,8 @@ final class TemplateLibrary: ObservableObject {
         if copy.screenshot == nil { copy.screenshot = templates.first(where: { $0.id == copy.id })?.screenshot }
         var updated = templates.filter { $0.id != copy.id }
         updated.append(copy)
-        guard persist(updated.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }) else { return false }
+        let sorted = updated.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        guard persist(sorted) else { return false }
         generations[copy.id, default: 0] += 1
         workspaceGenerations[copy.id, default: 0] += 1
         return true
@@ -74,7 +77,8 @@ final class TemplateLibrary: ObservableObject {
 
     @discardableResult
     func attachScreenshot(_ data: Data, to id: UUID, generation expected: Int) -> Bool {
-        guard !data.isEmpty, generations[id] == expected, let index = templates.firstIndex(where: { $0.id == id }) else { return false }
+        guard !data.isEmpty, generations[id] == expected,
+              let index = templates.firstIndex(where: { $0.id == id }) else { return false }
         var updated = templates
         updated[index].screenshot = data
         guard persist(updated) else { return false }
@@ -97,7 +101,8 @@ final class TemplateLibrary: ObservableObject {
             do {
                 var copy = try await captureWorkspace()
                 guard !Task.isCancelled, updateToken == token else { endSnapshot(); return }
-                guard workspaceGenerations[id, default: 0] == baseline, let current = templates.first(where: { $0.id == id }) else {
+                guard workspaceGenerations[id, default: 0] == baseline,
+                      let current = templates.first(where: { $0.id == id }) else {
                     endSnapshot()
                     return
                 }
@@ -116,9 +121,11 @@ final class TemplateLibrary: ObservableObject {
                     status = "Updated \(templates.first(where: { $0.id == id })?.name ?? savedName)."
                     return
                 }
-                guard generation(of: id) == expected, let current = templates.first(where: { $0.id == id }) else { return }
+                guard generation(of: id) == expected,
+                      let current = templates.first(where: { $0.id == id }) else { return }
                 if current.screenshot == nil {
-                    status = "Updated \(current.name) without a screenshot. Allow screen recording, then update the template to add one."
+                    status = "Updated \(current.name) without a screenshot. "
+                        + "Allow screen recording, then update the template to add one."
                 }
             } catch is CancellationError {
                 endSnapshot()
@@ -140,7 +147,8 @@ final class TemplateLibrary: ObservableObject {
         if let readProblem { error = readProblem; return false }
         do {
             let data = try JSONEncoder().encode(Stored(templates: updated))
-            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(),
+                                                    withIntermediateDirectories: true)
             try data.write(to: url, options: .atomic)
             templates = updated
             error = nil
@@ -175,7 +183,9 @@ final class TemplateLibrary: ObservableObject {
 
     func quickActions() -> [QuickAction] {
         if restoring {
-            return [QuickAction(id: "template.stop", title: "Stop opening template", symbol: "stop") { [weak self] in self?.cancelRestore() }]
+            return [QuickAction(id: "template.stop", title: "Stop opening template", symbol: "stop") { [weak self] in
+                self?.cancelRestore()
+            }]
         }
         if updating { return [] }
         var actions = [QuickAction(id: "template.save", title: "Save workspace…", symbol: "plus",
@@ -186,9 +196,8 @@ final class TemplateLibrary: ObservableObject {
             let key = index < 9 ? String(index + 1) : nil
             actions.append(QuickAction(id: "template.\(template.id)", title: template.name, symbol: "rectangle.3.group",
                                        keys: key.map { [$0] } ?? [], keyCode: key.flatMap { keyCodes[$0] },
-                                       remove: { [weak self] in self?.delete(template) }) { [weak self] in
-                self?.restore(template)
-            })
+                                       remove: { [weak self] in self?.delete(template) },
+                                       run: { [weak self] in self?.restore(template) }))
         }
         return actions
     }

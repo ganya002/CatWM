@@ -8,27 +8,29 @@ struct SortClosedHeader: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Text(group.ws).font(Theme.display(15)).monospacedDigit().foregroundStyle(Theme.inkFaint).fixedSize()
-            Text(group.name.isEmpty ? "Workspace \(group.ws)" : group.name).font(Theme.body(13.5, .medium))
+            Text(group.workspace).font(Theme.display(15)).monospacedDigit().foregroundStyle(Theme.inkFaint).fixedSize()
+            Text(group.name.isEmpty ? "Workspace \(group.workspace)" : group.name).font(Theme.body(13.5, .medium))
                 .foregroundStyle(Theme.inkMuted).strikethrough(true, color: Theme.danger).oneLine()
             Spacer(minLength: 0)
             Text("\(group.ids.count)").textStyle(.caption).monospacedDigit().foregroundStyle(Theme.inkFaint).fixedSize()
         }
         .padding(.leading, 5).padding(.trailing, 8)
         .frame(height: SortMetrics.rowHeight)
-        .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous).fill(hover.on ? Theme.hover : .clear))
+        .background(RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
+            .fill(hover.isOn ? Theme.hover : .clear))
         .overlay(alignment: .trailing) {
-            if hover.on {
+            if hover.isOn {
                 RemoveButton(help: "Bring back", variant: .restore) { model.reopen(group.id) }
                     .padding(.trailing, 2)
-                    .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous).fill(Theme.hover))
+                    .background(RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
+                        .fill(Theme.hover))
             }
         }
         .contentShape(Rectangle())
-        .onHover { hover.on = $0 }
+        .onHover { hover.isOn = $0 }
         .onTapGesture { model.reopen(group.id) }
         .tooltip("Click to bring back")
-        .accessibilityLabel("Closed workspace \(group.ws), \(group.ids.count) windows")
+        .accessibilityLabel("Closed workspace \(group.workspace), \(group.ids.count) windows")
         .accessibilityAddTraits(.isButton)
     }
 }

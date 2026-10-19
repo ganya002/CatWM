@@ -17,11 +17,13 @@ enum TemplatePlacementPlan {
         return preferred
     }
 
-    static func releaseHeldWindow(scanStarted: Date, heldSince: Date, minimized: Bool, fullscreen: Bool, restoring: Bool) -> Bool {
+    static func releaseHeldWindow(scanStarted: Date, heldSince: Date, minimized: Bool, fullscreen: Bool,
+                                  restoring: Bool) -> Bool {
         !restoring && scanStarted > heldSince && !minimized && !fullscreen
     }
 
-    static func zoomedWindow(savedDisplay: String, window: CGWindowID, zoomed: Bool, preferredSavedDisplay: String?) -> CGWindowID? {
+    static func zoomedWindow(savedDisplay: String, window: CGWindowID, zoomed: Bool,
+                             preferredSavedDisplay: String?) -> CGWindowID? {
         guard zoomed, savedDisplay == preferredSavedDisplay else { return nil }
         return window
     }

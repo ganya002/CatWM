@@ -1,7 +1,7 @@
 import AppKit
-import SwiftUI
 import MacKeysCore
 import MacKeysUI
+import SwiftUI
 
 struct HintKeyCap: View {
     let key: KeyHintKeyboard.Key
@@ -18,8 +18,8 @@ struct HintKeyCap: View {
 
     private var interactive: Bool { tap != nil && key.code != nil }
     private var light: Bool { device.keyboard.lightKeys }
-    private var w: CGFloat { key.frame.width * scale }
-    private var h: CGFloat { key.frame.height * scale }
+    private var width: CGFloat { key.frame.width * scale }
+    private var height: CGFloat { key.frame.height * scale }
     private var radius: CGFloat { CGFloat(key.cap.radius) * scale }
 
     private var groupColor: Color { hint?.group.color(onDarkKeys: !light) ?? legendColor }
@@ -33,11 +33,11 @@ struct HintKeyCap: View {
         let face = ZStack(alignment: .topLeading) {
             cap
             if let hint, labelled {
-                label(hint).frame(width: w, height: h)
+                label(hint).frame(width: width, height: height)
             }
             if let ring = ringColor { outline(ring) }
         }
-        .frame(width: w, height: h)
+        .frame(width: width, height: height)
         .opacity(lit || !fades ? 1 : 0.45)
         .offset(y: filled ? scale : 0)
         .scaleEffect(hot && !key.modifier.isEmpty && !reduceMotion ? 0.96 : 1)
@@ -53,9 +53,9 @@ struct HintKeyCap: View {
                 face
             }
         }
-        .onHover { on in
-            hovering.on = on
-            hover?(key, on)
+        .onHover { inside in
+            hovering.isOn = inside
+            hover?(key, inside)
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityText)
@@ -79,7 +79,8 @@ struct HintKeyCap: View {
         if key.isL {
             KeyOutline(cap: key.cap).stroke(color, lineWidth: 1)
         } else {
-            RoundedRectangle(cornerRadius: radius, style: .circular).inset(by: -1.5 * scale).strokeBorder(color, lineWidth: 1)
+            RoundedRectangle(cornerRadius: radius, style: .circular).inset(by: -1.5 * scale)
+                .strokeBorder(color, lineWidth: 1)
         }
     }
 
@@ -89,39 +90,40 @@ struct HintKeyCap: View {
         } else {
             ZStack {
                 MacKeyCap(key: key.cap, theme: device.theme, scale: scale, legends: !labelled)
-                if hovering.on && interactive {
+                if hovering.isOn && interactive {
                     KeyOutline(cap: key.cap).fill(light ? Color.black.opacity(0.05) : Color.white.opacity(0.06))
-                        .frame(width: w, height: h)
+                        .frame(width: width, height: height)
                 }
             }
-            .frame(width: w, height: h)
+            .frame(width: width, height: height)
         }
     }
 
     private func label(_ hint: KeyHint) -> some View {
-        let k = scale
         let label = hint.label
         let full = key.frame.height >= 50
         let glyph = label.count <= 2
         let numeric = Int(label) != nil
         let ink = filled ? pressedInk : groupColor
-        let box = key.isL ? CGSize(width: w, height: CGFloat(device.keyboard.capHeight) * k) : CGSize(width: w, height: h)
+        let box = key.isL ? CGSize(width: width, height: CGFloat(device.keyboard.capHeight) * scale)
+            : CGSize(width: width, height: height)
         return ZStack(alignment: .topLeading) {
             if full {
                 cornerLegend
             }
             Group {
                 if glyph {
-                    Text(label).font(numeric ? Theme.body((full ? 20 : 13) * k) : Theme.keys((full ? 18 : 12) * k))
+                    Text(label)
+                        .font(numeric ? Theme.body((full ? 20 : 13) * scale) : Theme.keys((full ? 18 : 12) * scale))
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .offset(y: full ? k : 0)
+                        .offset(y: full ? scale : 0)
                 } else if full {
-                    Text(label).font(Theme.body(12 * k, .medium))
-                        .padding(.horizontal, 3 * k).padding(.bottom, 8 * k)
+                    Text(label).font(Theme.body(12 * scale, .medium))
+                        .padding(.horizontal, 3 * scale).padding(.bottom, 8 * scale)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
                 } else {
-                    Text(label).font(Theme.body(9.5 * k, .medium))
-                        .padding(.horizontal, 3 * k)
+                    Text(label).font(Theme.body(9.5 * scale, .medium))
+                        .padding(.horizontal, 3 * scale)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
@@ -129,7 +131,7 @@ struct HintKeyCap: View {
             .foregroundStyle(ink)
         }
         .frame(width: box.width, height: box.height, alignment: .topLeading)
-        .frame(width: w, height: h, alignment: .topTrailing)
+        .frame(width: width, height: height, alignment: .topTrailing)
     }
 
     @ViewBuilder private var cornerLegend: some View {

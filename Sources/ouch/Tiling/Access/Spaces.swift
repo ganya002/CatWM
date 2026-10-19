@@ -43,18 +43,19 @@ enum Spaces {
     }
 
     static func list(display uuid: String) -> DisplaySpaces? {
-        guard let conn, let copySpaces, let arr = copySpaces(conn())?.takeRetainedValue() as? [[String: Any]] else { return nil }
+        guard let conn, let copySpaces,
+              let arr = copySpaces(conn())?.takeRetainedValue() as? [[String: Any]] else { return nil }
         let entry = arr.first { ($0["Display Identifier"] as? String) == uuid } ?? (arr.count == 1 ? arr[0] : nil)
         guard let entry, let spaces = entry["Spaces"] as? [[String: Any]] else { return nil }
-        let ids = spaces.map { ($0["ManagedSpaceID"] as? NSNumber)?.uint64Value ?? 0 }
+        let ids = spaces.map { ($0["ManagedSpaceID"] as? UInt64) ?? 0 }
         let desktops = spaces.indices.filter { (spaces[$0]["type"] as? Int ?? 0) == 0 }
-        let cur = ((entry["Current Space"] as? [String: Any])?["ManagedSpaceID"] as? NSNumber)?.uint64Value
+        let cur = (entry["Current Space"] as? [String: Any])?["ManagedSpaceID"] as? UInt64
         return DisplaySpaces(ids: ids, desktops: desktops, current: cur.flatMap { ids.firstIndex(of: $0) })
     }
 
     static func isFullscreen(display uuid: String) -> Bool {
-        guard let s = list(display: uuid), let cur = s.current else { return false }
-        return !s.desktops.contains(cur)
+        guard let spaces = list(display: uuid), let cur = spaces.current else { return false }
+        return !spaces.desktops.contains(cur)
     }
 
     private typealias WindowSpacesFn = @convention(c) (Int32, Int32, CFArray) -> Unmanaged<CFArray>?
@@ -62,9 +63,9 @@ enum Spaces {
 
     static func of(window id: CGWindowID) -> [UInt64] {
         guard let conn, let windowSpaces,
-              let arr = windowSpaces(conn(), 0x7, [NSNumber(value: id)] as CFArray)?.takeRetainedValue() as? [NSNumber]
+              let arr = windowSpaces(conn(), 0x7, [id] as CFArray)?.takeRetainedValue() as? [UInt64]
         else { return [] }
-        return arr.map(\.uint64Value)
+        return arr
     }
 
     static func current(display uuid: String) -> UInt64 {

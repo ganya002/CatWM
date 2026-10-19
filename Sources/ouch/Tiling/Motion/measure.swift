@@ -1,8 +1,8 @@
 import AppKit
 import QuartzCore
 
-func measure(_ f: () -> Void) -> Double {
-    let t = CACurrentMediaTime()
-    f()
-    return CACurrentMediaTime() - t
+func measure(_ body: () -> Void) -> Double {
+    let start = CACurrentMediaTime()
+    body()
+    return CACurrentMediaTime() - start
 }

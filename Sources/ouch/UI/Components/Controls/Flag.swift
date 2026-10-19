@@ -1,4 +1,4 @@
 import AppKit
 import SwiftUI
 
-final class Flag: ObservableObject { @Published var on = false }
+final class Flag: ObservableObject { @Published var isOn = false }

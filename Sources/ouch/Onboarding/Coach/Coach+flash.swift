@@ -27,8 +27,8 @@ extension Coach {
         ended = true
         hintWork?.cancel()
         follow?.invalidate()
-        wm.onDispatch = nil
-        wm.onModeChange = nil
+        windowManager.onDispatch = nil
+        windowManager.onModeChange = nil
         Hotkeys.shared.onReturn = nil
         statusButton?.highlight(false)
         HUD.shared.avoid = nil
@@ -37,64 +37,68 @@ extension Coach {
         if KeyHelp.shared.isVisible { KeyHelp.shared.hide() }
         if SortPanel.shared.isOpen { SortPanel.shared.revert() }
         if let panel {
-            animate(0.25, changes: { panel.animator().alphaValue = 0 }) { panel.orderOut(nil) }
+            animate(0.25, changes: { panel.animator().alphaValue = 0 }, completion: { panel.orderOut(nil) })
         }
         if helper?.isRunning == true { helper?.terminate() }
         lesson.ended(how, at: index)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [self] in
-            wm.practice = nil
-            if let original, wm.config.virtualWorkspaces { wm.showWorkspace(original) }
+            windowManager.practice = nil
+            if let original, windowManager.config.virtualWorkspaces { windowManager.showWorkspace(original) }
             onEnd(how)
         }
     }
 
     func render() {
-        guard let s = step else { return }
-        model.title = s.title
-        model.text = s.text
-        model.caps = s.caps
-        model.capsDone = s.tokens.count == s.caps.count ? s.tokens.map { seen.contains($0) } : []
-        model.recall = s.recall
+        guard let step else { return }
+        model.title = step.title
+        model.text = step.text
+        model.caps = step.caps
+        model.capsDone = step.tokens.count == step.caps.count ? step.tokens.map { seen.contains($0) } : []
+        model.recall = step.recall
         model.done = done
-        model.button = s.button
-        model.summary = s.summary
-        model.canHead = !s.final
+        model.button = step.button
+        model.summary = step.summary
+        model.canHead = !step.final
         let lastIndex = Double(max(1, lesson.count - 1))
         model.progress = min(1, (Double(index) + (done ? 1 : 0)) / lastIndex)
         let modeOff = Hotkeys.shared.submap.isEmpty
-        model.warning = s.needsMode && modeOff && !done && !book.mode.isEmpty
-            ? "\(book.mode.capitalized) mode is off. Press \(KeyWords.list(book.enterCaps(long: false))) to turn it back on."
+        let enterKeys = KeyWords.list(book.enterCaps(long: false))
+        model.warning = step.needsMode && modeOff && !done && !book.mode.isEmpty
+            ? "\(book.mode.capitalized) mode is off. Press \(enterKeys) to turn it back on."
             : nil
-        statusButton?.highlight(s.target == .bar)
-        MenuBarTip.shared.suppressed = s.target == .bar
+        statusButton?.highlight(step.target == .bar)
+        MenuBarTip.shared.suppressed = step.target == .bar
     }
 
     func reposition(animated: Bool) {
-        guard let panel, !ended, let step else { return }
+        guard let panel, let host, !ended, let step else { return }
         let size = host.fittingSize
         let pad = CoachCardView.inset
         let card = NSSize(width: size.width - pad.leading - pad.trailing, height: size.height - pad.top - pad.bottom)
-        let v = screen.visibleFrame
-        var o = NSPoint(x: v.midX - card.width / 2, y: v.midY - card.height / 2)
+        let visible = screen.visibleFrame
+        var origin = NSPoint(x: visible.midX - card.width / 2, y: visible.midY - card.height / 2)
         var caret = CoachModel.Caret.none
         switch step.target {
         case .center: break
         case .window:
-            if let w = focusedPractice, let f = onScreen(w) { o = NSPoint(x: f.midX - card.width / 2, y: f.midY - card.height / 2) }
+            if let window = focusedPractice, let windowFrame = onScreen(window) {
+                origin = NSPoint(x: windowFrame.midX - card.width / 2, y: windowFrame.midY - card.height / 2)
+            }
         case .bar:
-            if let b = statusButton?.window?.frame {
-                o.x = min(max(b.midX - card.width + 60, v.minX + 16), v.maxX - card.width - 16)
-                o.y = b.minY - 10 - card.height
-                caret = .up(min(max(b.midX - o.x, 20), card.width - 20))
+            if let button = statusButton?.window?.frame {
+                origin.x = min(max(button.midX - card.width + 60, visible.minX + 16), visible.maxX - card.width - 16)
+                origin.y = button.minY - 10 - card.height
+                caret = .pointingUp(min(max(button.midX - origin.x, 20), card.width - 20))
             }
         case .mode:
-            o = NSPoint(x: v.midX - card.width / 2, y: v.minY + 48)
+            origin = NSPoint(x: visible.midX - card.width / 2, y: visible.minY + 48)
         }
-        o.x = min(max(o.x, v.minX + 16), v.maxX - card.width - 16)
-        o.y = min(max(o.y, v.minY + 16), v.maxY - card.height - 16)
+        origin.x = min(max(origin.x, visible.minX + 16), visible.maxX - card.width - 16)
+        origin.y = min(max(origin.y, visible.minY + 16), visible.maxY - card.height - 16)
         if model.caret != caret { model.caret = caret }
-        let frame = NSRect(x: o.x - pad.leading, y: o.y - pad.bottom, width: size.width, height: size.height).integral
-        HUD.shared.avoid = NSRect(origin: o, size: card)
+        let frame = NSRect(x: origin.x - pad.leading, y: origin.y - pad.bottom,
+                           width: size.width, height: size.height).integral
+        HUD.shared.avoid = NSRect(origin: origin, size: card)
         guard frame != target else { return }
         let moved = abs(frame.minX - target.minX) > 1 || abs(frame.maxY - target.maxY) > 1
         target = frame

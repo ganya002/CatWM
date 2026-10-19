@@ -2,7 +2,6 @@ import AppKit
 import SwiftUI
 
 final class Onboarding {
-
     static let shared = Onboarding()
     static let doneKey = "didOnboard"
 
@@ -21,5 +20,4 @@ final class Onboarding {
     var firstRun = false
 
     var isRunning: Bool { intro != nil || welcome != nil || coach != nil || offering }
-
 }

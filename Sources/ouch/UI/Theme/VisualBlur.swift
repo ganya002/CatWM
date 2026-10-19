@@ -6,15 +6,15 @@ struct VisualBlur: NSViewRepresentable {
     var radius: CGFloat
     var material: NSVisualEffectView.Material = .popover
 
-    func makeNSView(context: Context) -> NSVisualEffectView {
-        let v = NSVisualEffectView()
-        v.material = material
-        v.state = .active
-        v.blendingMode = .behindWindow
-        v.maskImage = Self.mask(radius)
-        return v
+    func makeNSView(context _: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = material
+        view.state = .active
+        view.blendingMode = .behindWindow
+        view.maskImage = Self.mask(radius)
+        return view
     }
-    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
+    func updateNSView(_: NSVisualEffectView, context _: Context) {}
 
     private static func mask(_ radius: CGFloat) -> NSImage {
         let edge = radius * 2 + 1

@@ -4,7 +4,7 @@ import SwiftUI
 struct SideItem: View {
     enum Badge { case attention, count(Int) }
     let pane: Pane
-    let on: Bool
+    let selected: Bool
     let badge: Badge?
     let action: () -> Void
     @StateObject private var model = Model()
@@ -19,20 +19,21 @@ struct SideItem: View {
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: pane.icon)
-                    .font(Theme.symbol(Theme.Icon.lg))
-                    .foregroundStyle(on ? Theme.accentInk : Theme.inkMuted)
+                    .font(Theme.symbol(Theme.Icon.large))
+                    .foregroundStyle(selected ? Theme.accentInk : Theme.inkMuted)
                     .frame(width: 18)
-                Text(pane.rawValue).font(Theme.body(13.5, on ? .medium : .regular)).oneLine()
+                Text(pane.rawValue).font(Theme.body(13.5, selected ? .medium : .regular)).oneLine()
                 Spacer(minLength: 0)
                 switch badge {
                 case .attention:
-                    Image(systemName: "exclamationmark.triangle.fill").font(Theme.symbol(Theme.Icon.sm, .regular)).foregroundStyle(Theme.warning)
+                    Image(systemName: "exclamationmark.triangle.fill").font(Theme.symbol(Theme.Icon.small, .regular))
+                        .foregroundStyle(Theme.warning)
                         .accessibilityLabel("Needs attention")
-                case .count(let n):
-                    Text("\(n)").font(Theme.body(11, .medium)).foregroundStyle(Theme.danger)
+                case .count(let count):
+                    Text("\(count)").font(Theme.body(11, .medium)).foregroundStyle(Theme.danger)
                         .padding(.horizontal, 6).frame(minWidth: 18, minHeight: 18)
                         .background(Capsule().fill(Theme.dangerSoft))
-                        .accessibilityLabel("\(n) problems")
+                        .accessibilityLabel("\(count) problems")
                 case nil:
                     EmptyView()
                 }
@@ -40,9 +41,9 @@ struct SideItem: View {
             .foregroundStyle(Theme.ink)
             .padding(.horizontal, 10).frame(height: 34)
             .background {
-                let shape = RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
-                if on {
-                    shape.fill(Theme.surface).elevation(.sm, in: shape)
+                let shape = RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous)
+                if selected {
+                    shape.fill(Theme.surface).elevation(.small, in: shape)
                 } else {
                     shape.fill(Theme.surface.opacity(model.hover ? 0.55 : 0))
                 }
@@ -52,7 +53,7 @@ struct SideItem: View {
         .buttonStyle(.plain)
         .onHover { model.hover = $0 }
         .animation(Motion.fade, value: model.hover)
-        .accessibilityAddTraits(on ? .isSelected : [])
+        .accessibilityAddTraits(selected ? .isSelected : [])
         .tipAnchor("pane.\(pane.rawValue)")
     }
 }

@@ -27,7 +27,8 @@ enum TemplateRestoreAX {
             for probe in probes {
                 guard Date() < deadline else { break }
                 var role: CFTypeRef?
-                if AXUIElementCopyAttributeValue(probe.element, kAXRoleAttribute as CFString, &role) == .invalidUIElement {
+                let status = AXUIElementCopyAttributeValue(probe.element, kAXRoleAttribute as CFString, &role)
+                if status == .invalidUIElement {
                     invalid.insert(probe.id)
                 }
             }
@@ -50,7 +51,7 @@ enum TemplateRestoreAX {
                         guard subrole == kAXStandardWindowSubrole || subrole == kAXDialogSubrole,
                               let id = element.windowID else { continue }
                         guard !stop.isStopped, Date() < deadline else { break }
-                        let minimized = element.bool(kAXMinimizedAttribute) == true
+                        let minimized = element.flag(kAXMinimizedAttribute)
                         guard TemplateWindowKind.includes(subrole: subrole, minimized: minimized) else { continue }
                         guard !stop.isStopped, Date() < deadline else { break }
                         let title = element.string(kAXTitleAttribute) ?? ""
@@ -79,21 +80,8 @@ enum TemplateRestoreAX {
                     guard !expired() else { return false }
                     AXUIElementSetMessagingTimeout(top, axTimeout)
                     for menu in top.elements(kAXChildrenAttribute) {
-                        guard !expired() else { return false }
-                        AXUIElementSetMessagingTimeout(menu, axTimeout)
-                        for item in menu.elements(kAXChildrenAttribute) {
-                            guard !expired() else { return false }
-                            AXUIElementSetMessagingTimeout(item, axTimeout)
-                            guard item.bool(kAXEnabledAttribute) != false, !expired() else { continue }
-                            if item.string(kAXTitleAttribute) == "New Window" {
-                                guard !expired() else { return false }
-                                return AXUIElementPerformAction(item, kAXPressAction as CFString) == .success
-                            }
-                            guard !expired() else { return false }
-                            let command = item.string(kAXMenuItemCmdCharAttribute)
-                            guard command?.lowercased() == "n", !expired() else { continue }
-                            let modifiers = (item.value(kAXMenuItemCmdModifiersAttribute) as? NSNumber)?.intValue
-                            if TemplateNewWindowCommand.isPlainCommandN(command: command, modifiers: modifiers) { fallback = item }
+                        if case .finished(let result) = scan(menu, expired: expired, fallback: &fallback) {
+                            return result
                         }
                     }
                 }
@@ -101,5 +89,46 @@ enum TemplateRestoreAX {
                 return AXUIElementPerformAction(fallback, kAXPressAction as CFString) == .success
             }.value
         } onCancel: { stop.stop() }
+    }
+
+    private enum MenuItemCheck {
+        case pressed(Bool)
+        case expired
+        case fallback
+        case skip
+    }
+
+    private enum MenuScan {
+        case finished(Bool)
+        case next
+    }
+
+    private static func scan(_ menu: AXUIElement, expired: () -> Bool, fallback: inout AXUIElement?) -> MenuScan {
+        guard !expired() else { return .finished(false) }
+        AXUIElementSetMessagingTimeout(menu, axTimeout)
+        for item in menu.elements(kAXChildrenAttribute) {
+            switch check(item, expired: expired) {
+            case .pressed(let success): return .finished(success)
+            case .expired: return .finished(false)
+            case .fallback: fallback = item
+            case .skip: continue
+            }
+        }
+        return .next
+    }
+
+    private static func check(_ item: AXUIElement, expired: () -> Bool) -> MenuItemCheck {
+        guard !expired() else { return .expired }
+        AXUIElementSetMessagingTimeout(item, axTimeout)
+        guard item.flag(kAXEnabledAttribute, default: true), !expired() else { return .skip }
+        if item.string(kAXTitleAttribute) == "New Window" {
+            guard !expired() else { return .expired }
+            return .pressed(AXUIElementPerformAction(item, kAXPressAction as CFString) == .success)
+        }
+        guard !expired() else { return .expired }
+        let command = item.string(kAXMenuItemCmdCharAttribute)
+        guard command?.lowercased() == "n", !expired() else { return .skip }
+        let modifiers = item.value(kAXMenuItemCmdModifiersAttribute) as? Int
+        return TemplateNewWindowCommand.isPlainCommandN(command: command, modifiers: modifiers) ? .fallback : .skip
     }
 }

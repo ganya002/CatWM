@@ -1,50 +1,57 @@
 import AppKit
 
 extension Steps {
-    static func global(_ c: Coach) -> PlannedStep? {
-        guard let desk = c.desk, let global = c.book.find(["workspace"], desk, global: true) else { return nil }
-        return PlannedStep { c in
+    static func global(_ coach: Coach) -> PlannedStep? {
+        guard let desk = coach.desk, let global = coach.book.find(["workspace"], desk, global: true) else { return nil }
+        return PlannedStep { coach in
             Step(title: "Switch workspaces", text: "",
                  target: .bar, caps: KeyWords.caps(global, long: true),
-                 accept: { e in
-                     if case .command("workspace", _, let inMode) = e, !inMode, c.wm.currentWorkspace == desk { return "" }
+                 accept: { event in
+                     if case .command("workspace", _, let inMode) = event, !inMode,
+                        coach.windowManager.currentWorkspace == desk {
+                         return ""
+                     }
                      return nil
                  }, simulate: {
                      Hotkeys.shared.setSubmap("")
-                     DispatchQueue.main.async { c.wm.dispatch("workspace", desk) }
+                     DispatchQueue.main.async { coach.windowManager.dispatch("workspace", desk) }
                  })
         }
     }
 
-    static func monitor(_ c: Coach) -> PlannedStep? {
-        guard NSScreen.screens.count > 1, let mon = c.book.find(["focusmonitor"]) else { return nil }
+    static func monitor(_ coach: Coach) -> PlannedStep? {
+        guard NSScreen.screens.count > 1, let mon = coach.book.find(["focusmonitor"]) else { return nil }
         let key = KeyWords.keyLabel(mon.keyCode, long: false)
-        return PlannedStep { c in
+        return PlannedStep { coach in
             Step(title: "Other display",
                  text: "\(key) moves focus to the next display. Press it again to come back.",
                  target: .window, caps: KeyWords.caps(mon, long: false), needsMode: true, count: 2,
-                 accept: { e in
-                     if case .command("focusmonitor", _, _) = e { return "" }
+                 accept: { event in
+                     if case .command("focusmonitor", _, _) = event { return "" }
                      return nil
-                 }, simulate: { c.wm.dispatch("focusmonitor", "+1") })
+                 }, simulate: { coach.windowManager.dispatch("focusmonitor", "+1") })
         }
     }
 
-    static func sortIntro(_ c: Coach) -> PlannedStep? {
-        guard c.wm.config.virtualWorkspaces, let sort = c.book.find(["sort"], global: true) ?? c.book.find(["sort"]) else { return nil }
+    static func sortIntro(_ coach: Coach) -> PlannedStep? {
+        guard coach.windowManager.config.virtualWorkspaces,
+              let sort = coach.book.find(["sort"], global: true) ?? coach.book.find(["sort"]) else { return nil }
         return PlannedStep { _ in
-            Step(title: "Sort Windows", text: "", target: .bar, caps: KeyWords.caps(sort, long: true), button: "Next", count: 0)
+            Step(title: "Overview", text: "", target: .bar, caps: KeyWords.caps(sort, long: true),
+                 button: "Next", count: 0)
         }
     }
 
-    static func sortTry(_ c: Coach) -> [PlannedStep] {
-        guard c.wm.config.virtualWorkspaces, let sort = c.book.find(["sort"], global: true) else { return [] }
-        let open = PlannedStep { c in
-            Step(title: "Sort Windows",
-                 text: "\(KeyWords.modWords(sort.mods))-\(KeyWords.keyLabel(sort.keyCode, long: false)) splits a crowded workspace into several, by task. Open it.",
+    static func sortTry(_ coach: Coach) -> [PlannedStep] {
+        guard coach.windowManager.config.virtualWorkspaces,
+              let sort = coach.book.find(["sort"], global: true) else { return [] }
+        let shortcut = "\(KeyWords.modWords(sort.mods))-\(KeyWords.keyLabel(sort.keyCode, long: false))"
+        let open = PlannedStep { _ in
+            Step(title: "Overview",
+                 text: "\(shortcut) splits a crowded workspace into several, by task. Open it.",
                  target: .bar, caps: KeyWords.caps(sort, long: true),
-                 accept: { e in
-                     if case .tick = e, SortPanel.shared.isOpen { return "" }
+                 accept: { event in
+                     if case .tick = event, SortPanel.shared.isOpen { return "" }
                      return nil
                  }, simulate: { Hotkeys.shared.setSubmap(""); SortPanel.shared.open() })
         }
@@ -52,89 +59,95 @@ extension Steps {
             Step(title: "Lanes are workspaces",
                  text: "Drag windows between them, or pick a grouping. Esc closes it without changes.",
                  target: .bar, caps: ["esc"],
-                 accept: { e in
-                     if case .tick = e, !SortPanel.shared.isOpen { return "" }
+                 accept: { event in
+                     if case .tick = event, !SortPanel.shared.isOpen { return "" }
                      return nil
                  }, simulate: { SortPanel.shared.revert() })
         }
         return [open, close]
     }
 
-    static func focusDrill(_ c: Coach) -> PlannedStep? {
-        guard focus(c) != nil else { return nil }
-        let b = c.book
-        let keys = b.directions.compactMap { b.find(["movefocus"], $0) }.map { KeyWords.keyLabel($0.keyCode, long: false) }
-        return PlannedStep { c in
-            let target = c.visibleTitles.filter { $0 != c.focusedTitle }.randomElement()
+    static func focusDrill(_ coach: Coach) -> PlannedStep? {
+        guard focus(coach) != nil else { return nil }
+        let book = coach.book
+        let keys = book.directions
+            .compactMap { book.find(["movefocus"], $0) }
+            .map { KeyWords.keyLabel($0.keyCode, long: false) }
+        return PlannedStep { coach in
+            let target = coach.visibleTitles.filter { $0 != coach.focusedTitle }.randomElement()
             return Step(title: "Focus \(target ?? "another window")", text: "From memory.",
                         target: .window, caps: keys, needsMode: true, recall: true,
-                        accept: { e in
-                            guard case .command(let d, _, _) = e, ["movefocus", "cyclenext"].contains(d) else { return nil }
-                            return target == nil || c.focusedTitle == target ? "" : nil
-                        }, simulate: { c.wm.dispatch("cyclenext", "") })
+                        accept: { event in
+                            guard case .command(let dispatcher, _, _) = event,
+                                  ["movefocus", "cyclenext"].contains(dispatcher) else { return nil }
+                            return target == nil || coach.focusedTitle == target ? "" : nil
+                        }, simulate: { coach.windowManager.dispatch("cyclenext", "") })
         }
     }
 
-    static func mainDrill(_ c: Coach) -> PlannedStep? {
-        guard let swap = c.book.find(["layoutmsg"], "swapwithmaster"), focus(c) != nil else { return nil }
-        return PlannedStep { c in
-            let target = c.visibleTitles.filter { $0 != c.mainTitle }.randomElement()
-            return Step(title: "Put \(target ?? "another window") in the main pane", text: "Focus it, then promote it.",
+    static func mainDrill(_ coach: Coach) -> PlannedStep? {
+        guard let swap = coach.book.find(["layoutmsg"], "swapwithmaster"), focus(coach) != nil else { return nil }
+        return PlannedStep { coach in
+            let target = coach.visibleTitles.filter { $0 != coach.mainTitle }.randomElement()
+            return Step(title: "Put \(target ?? "another window") in the main pane",
+                        text: "Focus it, then promote it.",
                         target: .window, caps: KeyWords.caps(swap, long: false), needsMode: true, recall: true,
-                        accept: { e in
-                            guard case .command(let d, let a, _) = e else { return nil }
-                            if let target { return c.mainTitle == target ? "" : nil }
-                            return d == "layoutmsg" && a.lowercased() == "swapwithmaster" ? "" : nil
-                        }, simulate: { c.wm.dispatch("layoutmsg", "swapwithmaster") })
+                        accept: { event in
+                            guard case .command(let dispatcher, let argument, _) = event else { return nil }
+                            if let target { return coach.mainTitle == target ? "" : nil }
+                            return dispatcher == "layoutmsg" && argument.lowercased() == "swapwithmaster" ? "" : nil
+                        }, simulate: { coach.windowManager.dispatch("layoutmsg", "swapwithmaster") })
         }
     }
 
-    static func layoutDrill(_ c: Coach) -> PlannedStep? {
-        guard let next = c.book.find(["cyclelayout"], "next") else { return nil }
-        let options = c.wm.config.layouts.filter { ![.fullscreen, .floating].contains($0) }
+    static func layoutDrill(_ coach: Coach) -> PlannedStep? {
+        guard let next = coach.book.find(["cyclelayout"], "next") else { return nil }
+        let options = coach.windowManager.config.layouts.filter { ![.fullscreen, .floating].contains($0) }
         guard options.count > 1 else { return nil }
-        let prev = c.book.find(["cyclelayout"], "prev")
-        let keys = [next, prev].compactMap { $0 }.map { KeyWords.caps($0, long: false).joined() }
-        return PlannedStep { c in
-            let now = c.wm.menuBarState()?.layout
+        let prev = coach.book.find(["cyclelayout"], "prev")
+        let keys = [next, prev].compactMap(\.self).map { KeyWords.caps($0, long: false).joined() }
+        return PlannedStep { coach in
+            let now = coach.windowManager.menuBarState()?.layout
             let target = options.filter { $0 != now }.randomElement() ?? options[0]
             return Step(title: "Switch to \(target.title)", text: "From memory.",
                         target: .window, caps: keys, needsMode: true, recall: true,
-                        accept: { e in
-                            guard case .command = e else { return nil }
-                            return c.wm.menuBarState()?.layout == target ? "" : nil
-                        }, simulate: { c.wm.dispatch("cyclelayout", "next") })
+                        accept: { event in
+                            guard case .command = event else { return nil }
+                            return coach.windowManager.menuBarState()?.layout == target ? "" : nil
+                        }, simulate: { coach.windowManager.dispatch("cyclelayout", "next") })
         }
     }
 
-    static func workspaceDrill(_ c: Coach) -> PlannedStep? {
-        guard let desk = c.desk, let other = c.other, c.book.find(["workspace"], other) != nil,
-              let back = c.book.find(["workspace"], desk) else { return nil }
-        return PlannedStep { c in
+    static func workspaceDrill(_ coach: Coach) -> PlannedStep? {
+        guard let desk = coach.desk, let other = coach.other, coach.book.find(["workspace"], other) != nil,
+              let back = coach.book.find(["workspace"], desk) else { return nil }
+        let digits = [other, desk].map { $0 == "10" ? "0" : $0 }
+        let caps: [String] = KeyWords.caps(back, long: false).dropLast() + digits
+        return PlannedStep { coach in
             var went = false
             return Step(title: "Visit \(other), then come back to \(desk)", text: "From memory.",
-                        target: .bar, caps: KeyWords.caps(back, long: false).dropLast() + [other, desk].map { $0 == "10" ? "0" : $0 },
+                        target: .bar, caps: caps,
                         tokens: [], needsMode: false, recall: true, count: 1,
-                        accept: { e in
-                            guard case .command("workspace", _, _) = e else { return nil }
-                            if c.wm.currentWorkspace == other { went = true }
-                            return went && c.wm.currentWorkspace == desk ? "" : nil
+                        accept: { event in
+                            guard case .command("workspace", _, _) = event else { return nil }
+                            if coach.windowManager.currentWorkspace == other { went = true }
+                            return went && coach.windowManager.currentWorkspace == desk ? "" : nil
                         }, simulate: {
-                            c.wm.dispatch("workspace", c.wm.currentWorkspace == other ? desk : other)
+                            let manager = coach.windowManager
+                            manager.dispatch("workspace", manager.currentWorkspace == other ? desk : other)
                         })
         }
     }
 
-    static func modeDrill(_ c: Coach) -> PlannedStep? {
-        guard c.book.enter != nil else { return nil }
-        return PlannedStep { c in
-            Step(title: "Turn \(c.book.mode.lowercased()) mode on", text: "From memory.",
-                 target: .mode, caps: c.book.enterCaps(long: true), recall: true,
-                 accept: { e in
-                     if case .mode(let n) = e, !n.isEmpty { return "" }
+    static func modeDrill(_ coach: Coach) -> PlannedStep? {
+        guard coach.book.enter != nil else { return nil }
+        return PlannedStep { coach in
+            Step(title: "Turn \(coach.book.mode.lowercased()) mode on", text: "From memory.",
+                 target: .mode, caps: coach.book.enterCaps(long: true), recall: true,
+                 accept: { event in
+                     if case .mode(let submap) = event, !submap.isEmpty { return "" }
                      return nil
-                 }, simulate: { Hotkeys.shared.setSubmap(c.book.mode) })
+                 }, simulate: { Hotkeys.shared.setSubmap(coach.book.mode) })
         }
     }
-
 }

@@ -16,7 +16,9 @@ final class TemplateRestorer {
     func restore() async throws -> String {
         guard manager.isStarted, !Screen.all().isEmpty else { throw WindowManager.TemplateError.notReady }
         if let list = CGWindowListCopyWindowInfo(.optionAll, kCGNullWindowID) as? [[String: Any]] {
-            initialWindowIDs = Set(list.compactMap { ($0[kCGWindowNumber as String] as? NSNumber)?.uint32Value })
+            initialWindowIDs = Set(list.compactMap {
+                ($0[kCGWindowNumber as String] as? Int).map { CGWindowID(truncatingIfNeeded: $0) }
+            })
         }
         manager.restoringTemplate = true
         defer { manager.finishTemplateRestore() }
@@ -34,7 +36,8 @@ final class TemplateRestorer {
         }
         let problems = Set(missing.map(\.appName)).union(failures).sorted()
         if problems.isEmpty { return "Opened \(template.name)." }
-        return "Opened \(matched.count) of \(template.windows.count) windows. Check \(problems.joined(separator: ", "))."
+        return "Opened \(matched.count) of \(template.windows.count) windows. "
+            + "Check \(problems.joined(separator: ", "))."
     }
 
     private var targets: [TemplateRestoreTarget] {
@@ -53,7 +56,8 @@ final class TemplateRestorer {
             }
             try await matchWindows(deadline: deadline)
             let now = Date()
-            let step = scheduler.step(now: now, deadline: deadline, targets: targets, matched: Set(matched.keys), apps: appStates())
+            let step = scheduler.step(now: now, deadline: deadline, targets: targets,
+                                      matched: Set(matched.keys), apps: appStates())
             for bundle in step.launch {
                 try Task.checkCancellation()
                 guard Date() < deadline else { break }
@@ -78,27 +82,13 @@ final class TemplateRestorer {
         for bundle in bundles {
             try Task.checkCancellation()
             guard Date() < deadline else { break }
-            let apps = NSRunningApplication.runningApplications(withBundleIdentifier: bundle).map {
-                TemplateRestoreAX.App(pid: $0.processIdentifier, bundleID: bundle, launchDate: $0.launchDate)
-            }
-            let raw = await TemplateRestoreAX.read(apps: apps, deadline: min(deadline, Date().addingTimeInterval(1.5)))
-            let spaces = Set(Screen.all().map { Spaces.current(display: $0.uuid) })
-            for candidate in raw {
-                let membership = Spaces.of(window: candidate.id)
-                let offSpace = !membership.isEmpty && spaces.isDisjoint(with: membership)
-                let hidden = manager.workspaceOf[candidate.id].map { !manager.isShown($0) } ?? false
-                let window = manager.windows[candidate.id] ?? Window(id: candidate.id, element: candidate.element,
-                                                                    pid: candidate.pid, bundleID: bundle)
-                AXUIElementSetMessagingTimeout(candidate.element, axTimeout)
-                found.append(.init(window: window, bundleID: bundle, title: candidate.title, document: candidate.document,
-                                   launchDate: candidate.launchDate, allowsGenericFallback:
-                                    TemplateWindowMatch.allowsGenericFallback(offSpace: offSpace, hiddenWorkspace: hidden)))
-            }
+            found += await scan(bundle: bundle, deadline: deadline)
         }
         let candidates = found.map { candidate in
             TemplateWindowCandidate(windowID: candidate.window.id, bundleID: candidate.bundleID,
                                     title: candidate.title, document: candidate.document,
-                                    launchDate: candidate.launchDate, allowsGenericFallback: candidate.allowsGenericFallback,
+                                    launchDate: candidate.launchDate,
+                                    allowsGenericFallback: candidate.allowsGenericFallback,
                                     newlyOpened: initialWindowIDs.map { !$0.contains(candidate.window.id) } ?? false)
         }
         let chosen = TemplateWindowMatch.assign(template.windows, candidates: candidates)
@@ -113,7 +103,8 @@ final class TemplateRestorer {
                 probes.append(.init(id: window.id, element: window.element))
             }
         }
-        invalidated.formUnion(await TemplateRestoreAX.invalidated(probes, deadline: min(deadline, Date().addingTimeInterval(0.6))))
+        invalidated.formUnion(await TemplateRestoreAX.invalidated(
+            probes, deadline: min(deadline, Date().addingTimeInterval(0.6))))
         let retained = TemplateWindowMatch.retainUnscanned(matched.mapValues(\.id), assigned: chosen,
                                                           scanned: Set(windows.keys), invalidated: invalidated)
         for (savedID, windowID) in retained {
@@ -124,7 +115,29 @@ final class TemplateRestorer {
             }
         }
         matched = next
-        waitingForMetadata = matchStability.waiting(saved: template.windows, candidates: candidates, assigned: chosen, now: Date())
+        waitingForMetadata = matchStability.waiting(saved: template.windows, candidates: candidates,
+                                                    assigned: chosen, now: Date())
+    }
+
+    private func scan(bundle: String, deadline: Date) async -> [TemplateWindowMatch] {
+        let apps = NSRunningApplication.runningApplications(withBundleIdentifier: bundle).map {
+            TemplateRestoreAX.App(pid: $0.processIdentifier, bundleID: bundle, launchDate: $0.launchDate)
+        }
+        let raw = await TemplateRestoreAX.read(apps: apps, deadline: min(deadline, Date().addingTimeInterval(1.5)))
+        let spaces = Set(Screen.all().map { Spaces.current(display: $0.uuid) })
+        var found: [TemplateWindowMatch] = []
+        for candidate in raw {
+            let membership = Spaces.of(window: candidate.id)
+            let offSpace = !membership.isEmpty && spaces.isDisjoint(with: membership)
+            let hidden = manager.workspaceOf[candidate.id].map { !manager.isShown($0) } ?? false
+            let window = manager.windows[candidate.id] ?? Window(id: candidate.id, element: candidate.element,
+                                                                pid: candidate.pid, bundleID: bundle)
+            AXUIElementSetMessagingTimeout(candidate.element, axTimeout)
+            let fallback = TemplateWindowMatch.allowsGenericFallback(offSpace: offSpace, hiddenWorkspace: hidden)
+            found.append(.init(window: window, bundleID: bundle, title: candidate.title, document: candidate.document,
+                               launchDate: candidate.launchDate, allowsGenericFallback: fallback))
+        }
+        return found
     }
 
     private func appStates() -> [String: TemplateAppState] {
@@ -133,7 +146,7 @@ final class TemplateRestorer {
             let running = NSRunningApplication.runningApplications(withBundleIdentifier: bundle)
             states[bundle] = TemplateAppState(
                 running: !running.isEmpty,
-                finishedLaunching: running.contains { $0.isFinishedLaunching },
+                finishedLaunching: running.contains(where: \.isFinishedLaunching),
                 openable: NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundle) != nil)
         }
         return states
@@ -178,7 +191,8 @@ final class TemplateRestorer {
             let savedID = request.savedID
             let token = request.token
             let appName = request.appName
-            NSWorkspace.shared.open([url], withApplicationAt: appURL, configuration: configuration) { [weak self] _, error in
+            NSWorkspace.shared.open([url], withApplicationAt: appURL,
+                                    configuration: configuration) { [weak self] _, error in
                 guard error != nil else { return }
                 Task { @MainActor in
                     guard let self else { return }

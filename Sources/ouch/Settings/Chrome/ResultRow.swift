@@ -18,15 +18,17 @@ struct ResultRow: View {
                 }
                 Spacer(minLength: 8)
                 if first { Text("↩").font(Theme.keys(12)).foregroundStyle(Theme.inkMuted) }
-                Image(systemName: "arrow.right").font(Theme.symbol(Theme.Icon.sm, .semibold)).foregroundStyle(Theme.inkMuted)
-                    .opacity(hover.on ? 1 : 0)
+                Image(systemName: "arrow.right").font(Theme.symbol(Theme.Icon.small, .semibold))
+                    .foregroundStyle(Theme.inkMuted)
+                    .opacity(hover.isOn ? 1 : 0)
             }
             .padding(.horizontal, 10).frame(height: 40)
-            .background(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(hover.on ? Theme.well : .clear))
+            .background(RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous)
+                .fill(hover.isOn ? Theme.well : .clear))
             .padding(.horizontal, -10)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .onHover { hover.on = $0 }
+        .onHover { hover.isOn = $0 }
     }
 }

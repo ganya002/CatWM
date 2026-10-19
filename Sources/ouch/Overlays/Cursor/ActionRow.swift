@@ -6,12 +6,12 @@ struct ActionRow: View {
     let hovered: Bool
     let shown: Bool
     let index: Int
-    var remove: (() -> Void)? = nil
+    var remove: (() -> Void)?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let pick: () -> Void
 
     var body: some View {
-        OMenuRow(highlighted: hovered, danger: action.destructive, action: pick) {
+        OMenuRow(highlight: .fixed(hovered), danger: action.destructive, action: pick) {
             Image(systemName: action.symbol)
                 .symbolRenderingMode(.hierarchical)
                 .font(Theme.symbol())
@@ -20,7 +20,8 @@ struct ActionRow: View {
             Text(action.title).oneLine().layoutPriority(1)
         } trailing: {
             if action.isOn {
-                Image(systemName: "checkmark").font(Theme.symbol(Theme.Icon.sm, .bold)).foregroundStyle(Theme.accentInk)
+                Image(systemName: "checkmark").font(Theme.symbol(Theme.Icon.small, .bold))
+                    .foregroundStyle(Theme.accentInk)
             }
             if !action.keys.isEmpty {
                 Kbd(keys: action.keys).fixedSize()

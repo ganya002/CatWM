@@ -2,19 +2,27 @@ import AppKit
 import ApplicationServices
 
 final class Window {
+    enum FloatingChoice: Equatable {
+        case automatic
+        case chosen(Bool)
+    }
+
     let id: CGWindowID
     let element: AXUIElement
     let pid: pid_t
     let bundleID: String?
     var autoFloating = false
-    var userFloating: Bool?
+    var userFloating = FloatingChoice.automatic
     var naturalFrame = CGRect.null
     var observedAt = Date.distantPast
     var title: String?
     var resizable = true
     var minimized = false
     var fullscreen = false
-    var isFloating: Bool { userFloating ?? autoFloating }
+    var isFloating: Bool {
+        if case .chosen(let floating) = userFloating { return floating }
+        return autoFloating
+    }
 
     init(id: CGWindowID, element: AXUIElement, pid: pid_t, bundleID: String?) {
         self.id = id; self.element = element; self.pid = pid; self.bundleID = bundleID
@@ -35,44 +43,46 @@ final class Window {
     var frame: CGRect {
         let version = frameRevision
         let readAt = Date()
-        let f = element.frame
-        remember(f, ifRevision: version, readAt: readAt)
-        return f
+        let current = element.frame
+        remember(current, ifRevision: version, readAt: readAt)
+        return current
     }
     var cachedFrame: CGRect {
         frameLock.withLock { lastFrame }
     }
-    func remember(_ f: CGRect) {
-        if !f.isNull { frameLock.withLock { lastFrame = f; frameVersion += 1; lastFrameObservation = Date() } }
+    func remember(_ observed: CGRect) {
+        if !observed.isNull {
+            frameLock.withLock { lastFrame = observed; frameVersion += 1; lastFrameObservation = Date() }
+        }
     }
     var frameRevision: Int { frameLock.withLock { frameVersion } }
-    func remember(_ f: CGRect, ifRevision version: Int, readAt: Date = Date()) {
-        guard !f.isNull else { return }
+    func remember(_ observed: CGRect, ifRevision version: Int, readAt: Date = Date()) {
+        guard !observed.isNull else { return }
         frameLock.withLock {
             guard frameVersion == version, readAt >= lastFrameObservation else { return }
-            lastFrame = f
+            lastFrame = observed
             lastFrameObservation = readAt
         }
     }
     var isValid: Bool { element.string(kAXRoleAttribute) != nil }
-    var isNativeFullscreen: Bool { element.bool("AXFullScreen") ?? false }
+    var isNativeFullscreen: Bool { element.flag("AXFullScreen") }
 
-    func setPosition(_ p: CGPoint) {
-        var p = p
-        if let v = AXValueCreate(.cgPoint, &p), element.set(kAXPositionAttribute, v) {
-            frameLock.withLock { if !lastFrame.isNull { lastFrame.origin = p; frameVersion += 1 } }
+    func setPosition(_ origin: CGPoint) {
+        var point = origin
+        if let value = AXValueCreate(.cgPoint, &point), element.set(kAXPositionAttribute, value) {
+            frameLock.withLock { if !lastFrame.isNull { lastFrame.origin = point; frameVersion += 1 } }
         }
     }
-    func setSize(_ s: CGSize) {
-        var s = s
-        if let v = AXValueCreate(.cgSize, &s), element.set(kAXSizeAttribute, v) {
-            frameLock.withLock { if !lastFrame.isNull { lastFrame.size = s; frameVersion += 1 } }
+    func setSize(_ newSize: CGSize) {
+        var size = newSize
+        if let value = AXValueCreate(.cgSize, &size), element.set(kAXSizeAttribute, value) {
+            frameLock.withLock { if !lastFrame.isNull { lastFrame.size = size; frameVersion += 1 } }
         }
     }
-    func setFrame(_ r: CGRect) {
-        setSize(r.size)
-        setPosition(r.origin)
-        setSize(r.size)
+    func setFrame(_ rect: CGRect) {
+        setSize(rect.size)
+        setPosition(rect.origin)
+        setSize(rect.size)
     }
 
     func focus(ifCurrent: () -> Bool = { true }) {
@@ -100,8 +110,9 @@ final class Window {
         let bar = axApp(pid).element(kAXMenuBarAttribute)
         for top in bar?.elements(kAXChildrenAttribute) ?? [] {
             for menu in top.elements(kAXChildrenAttribute) {
-                for item in menu.elements(kAXChildrenAttribute) where ["Close Window", "Close"].contains(item.string(kAXTitleAttribute) ?? "") {
-                    guard item.bool(kAXEnabledAttribute) != false else { continue }
+                for item in menu.elements(kAXChildrenAttribute)
+                where ["Close Window", "Close"].contains(item.string(kAXTitleAttribute) ?? "") {
+                    guard item.flag(kAXEnabledAttribute, default: true) else { continue }
                     return AXUIElementPerformAction(item, kAXPressAction as CFString) == .success
                 }
             }

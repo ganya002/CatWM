@@ -79,11 +79,11 @@ extension PermissionGuide {
         let alertUp = snap.alert != nil
         let contentChanged = model.alertUp != alertUp
         if contentChanged { model.alertUp = alertUp }
-        let t = snap.alert ?? snap.settings
-        if t.map({ old in target.map { $0.equalTo(old) } ?? false }) ?? (target == nil) {
+        let next = snap.alert ?? snap.settings
+        if next.map({ old in target.map { $0.equalTo(old) } ?? false }) ?? (target == nil) {
             steadyTicks += 1
         } else {
-            target = t
+            target = next
             steadyTicks = 0
         }
         guard !hidden, let panel else { return }
@@ -94,8 +94,11 @@ extension PermissionGuide {
         }
         if let placed, Date().timeIntervalSince(movedAt) > 0.5,
            abs(panel.frame.minX - placed.minX) > 1 || abs(panel.frame.maxY - placed.maxY) > 1 { userMoved = true }
-        if contentChanged { layout(animated: true, afterFade: true) }
-        else if steadyTicks == 1 && target != nil { layout(animated: true) }
+        if contentChanged {
+            layout(animated: true, afterFade: true)
+        } else if steadyTicks == 1 && target != nil {
+            layout(animated: true)
+        }
     }
 
     func desiredFrame() -> NSRect {
@@ -103,17 +106,18 @@ extension PermissionGuide {
         if let cur = panel?.frame, isShowing, userMoved || target == nil {
             return NSRect(x: cur.minX, y: cur.maxY - size.height, width: size.width, height: size.height)
         }
-        guard let t = target else {
+        guard let target else {
             let area = (NSScreen.main ?? NSScreen.screens[0]).visibleFrame
-            return NSRect(x: area.maxX - size.width - 40, y: area.midY - size.height / 2, width: size.width, height: size.height)
+            return NSRect(x: area.maxX - size.width - 40, y: area.midY - size.height / 2,
+                          width: size.width, height: size.height)
         }
-        let screen = NSScreen.screens.first { $0.frame.intersects(t) } ?? NSScreen.main ?? NSScreen.screens[0]
+        let screen = NSScreen.screens.first { $0.frame.intersects(target) } ?? NSScreen.main ?? NSScreen.screens[0]
         let area = screen.visibleFrame
-        var o = NSPoint(x: t.maxX + gap, y: t.maxY - size.height)
-        if o.x + size.width > area.maxX { o.x = t.minX - gap - size.width }
-        if o.x < area.minX { o.x = area.maxX - size.width - gap }
-        o.y = min(max(o.y, area.minY), area.maxY - size.height)
-        return NSRect(origin: o, size: size).integral
+        var origin = NSPoint(x: target.maxX + gap, y: target.maxY - size.height)
+        if origin.x + size.width > area.maxX { origin.x = target.minX - gap - size.width }
+        if origin.x < area.minX { origin.x = area.maxX - size.width - gap }
+        origin.y = min(max(origin.y, area.minY), area.maxY - size.height)
+        return NSRect(origin: origin, size: size).integral
     }
 
     func layout(animated: Bool, afterFade: Bool = false) {
@@ -134,5 +138,4 @@ extension PermissionGuide {
             }
         }
     }
-
 }

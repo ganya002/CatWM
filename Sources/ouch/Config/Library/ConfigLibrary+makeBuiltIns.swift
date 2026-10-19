@@ -7,14 +7,17 @@ extension ConfigLibrary {
     static func makeBuiltIns() -> [SavedConfig] {
         func normalised(_ text: String) -> ConfigDocument { ConfigDocument(text: text) }
         let def = normalised(defaultText), wasd = normalised(wasdText)
-        func make(_ id: String, _ kind: ConfigKind, _ name: String, _ text: String, kb: String? = nil, an: String? = nil) -> SavedConfig {
-            SavedConfig(id: builtInPrefix + id, kind: kind, name: name, symbol: nil, colorHex: nil, text: text, keyboardID: kb, animationID: an)
+        func make(_ id: String, _ kind: ConfigKind, _ name: String, _ text: String,
+                  keyboard: String? = nil, animation: String? = nil) -> SavedConfig {
+            SavedConfig(id: builtInPrefix + id, kind: kind, name: name, symbol: nil, colorHex: nil, text: text,
+                        keyboardID: keyboard, animationID: animation)
         }
         return [
             make("keyboard.default", .keyboard, "Vim", def.keyboardText()),
             make("keyboard.wasd", .keyboard, "WASD", wasd.keyboardText()),
             make("animation.default", .animation, "Default", def.animationText()),
-            make("full.default", .full, "Default", def.serialize(), kb: builtInPrefix + "keyboard.default", an: builtInPrefix + "animation.default"),
+            make("full.default", .full, "Default", def.serialize(),
+                 keyboard: builtInPrefix + "keyboard.default", animation: builtInPrefix + "animation.default")
         ]
     }
 
@@ -28,12 +31,12 @@ extension ConfigLibrary {
     func current(_ kind: ConfigKind) -> SavedConfig {
         config(id: active[kind]) ?? configs(kind)[0]
     }
-    func isActive(_ c: SavedConfig) -> Bool { active[c.kind] == c.id }
+    func isActive(_ config: SavedConfig) -> Bool { active[config.kind] == config.id }
 
     func load() {
         if let data = try? Data(contentsOf: Self.url), let stored = try? JSONDecoder().decode(Stored.self, from: data) {
             custom = stored.custom
-            for (k, v) in stored.active { if let kind = ConfigKind(rawValue: k) { active[kind] = v } }
+            for (name, id) in stored.active { if let kind = ConfigKind(rawValue: name) { active[kind] = id } }
         } else {
             if FileManager.default.fileExists(atPath: Self.url.path) {
                 let bak = Self.url.appendingPathExtension("bak")
@@ -46,9 +49,11 @@ extension ConfigLibrary {
     }
 
     func save() {
-        let stored = Stored(custom: custom, active: Dictionary(uniqueKeysWithValues: active.map { ($0.key.rawValue, $0.value) }))
+        let stored = Stored(custom: custom,
+                            active: Dictionary(uniqueKeysWithValues: active.map { ($0.key.rawValue, $0.value) }))
         guard let data = try? JSONEncoder().encode(stored) else { return }
-        try? FileManager.default.createDirectory(at: Self.url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? FileManager.default.createDirectory(at: Self.url.deletingLastPathComponent(),
+                                                 withIntermediateDirectories: true)
         try? data.write(to: Self.url, options: .atomic)
     }
 
@@ -58,7 +63,8 @@ extension ConfigLibrary {
             if let match = builtIns.first(where: { $0.kind == kind && $0.text == text }) {
                 active[kind] = match.id
             } else {
-                let mine = SavedConfig(id: UUID().uuidString, kind: kind, name: "My config", symbol: nil, colorHex: nil, text: text)
+                let mine = SavedConfig(id: UUID().uuidString, kind: kind, name: "My config", symbol: nil, colorHex: nil,
+                                       text: text)
                 custom.append(mine)
                 active[kind] = mine.id
             }
@@ -106,15 +112,14 @@ extension ConfigLibrary {
         if !violated.isEmpty { createFromEdit(kinds: violated, name: Self.editCopyName, symbol: nil, colorHex: nil) }
     }
 
-    func apply(_ c: SavedConfig) {
+    func apply(_ config: SavedConfig) {
         applying = true
-        switch c.kind {
-        case .keyboard: doc.applyKeyboard(c.text)
-        case .animation: doc.applyAnimation(c.text)
-        case .full: doc.applyFull(c.text)
+        switch config.kind {
+        case .keyboard: doc.applyKeyboard(config.text)
+        case .animation: doc.applyAnimation(config.text)
+        case .full: doc.applyFull(config.text)
         }
         doc.save()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in self?.applying = false }
     }
-
 }

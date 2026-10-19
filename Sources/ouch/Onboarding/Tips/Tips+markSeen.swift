@@ -7,7 +7,7 @@ extension Tips {
         defaults.set(Array(seen.union([id])), forKey: Self.seenKey)
     }
 
-    func markSeen(_ k: Known) { markSeen(k.rawValue) }
+    func markSeen(_ known: Known) { markSeen(known.rawValue) }
 
     func launched() {
         _ = daysUsed
@@ -17,23 +17,26 @@ extension Tips {
     }
 
     func canShow(_ id: String) -> Bool {
-        enabled && daysUsed >= Self.minDaysUsed && rested && Onboarding.isDone && !Onboarding.shared.isRunning && !seen.contains(id) && settings == nil && global == nil
+        enabled && daysUsed >= Self.minDaysUsed && rested && Onboarding.isDone && !Onboarding.shared.isRunning
+            && !seen.contains(id) && settings == nil && global == nil
             && !SortPanel.shared.isOpen
     }
 
-    func show(_ k: Known) {
-        switch k {
+    func show(_ known: Known) {
+        switch known {
         case .tutorial:
-            guard canShow(k.rawValue) else { return }
-            present(Tip(id: k.rawValue, title: "Make the keys stick",
+            guard canShow(known.rawValue) else { return }
+            present(Tip(id: known.rawValue, title: "Make the keys stick",
                         body: "Keyboard Tutorial, in this menu, drills them a chapter at a time.",
                         place: .menuBar, action: ("Start tutorial", { Onboarding.shared.startTutorial() })))
         case .keyHelp:
             let keys = ShortcutIndex()
-            guard canShow(k.rawValue), WindowManager.shared.config.keyboardHelp, !Hotkeys.shared.submap.isEmpty else { return }
+            guard canShow(known.rawValue), WindowManager.shared.config.keyboardHelp,
+                  !Hotkeys.shared.submap.isEmpty else { return }
             let helpKey = WindowManager.shared.config.keyboardHelpKey
             let held = keys.modeChord.first.map { " Or hold \($0) after you enter." } ?? ""
-            present(Tip(id: k.rawValue, title: "See every key", body: "In window mode, \(helpKey) shows what every key does.\(held)",
+            present(Tip(id: known.rawValue, title: "See every key",
+                        body: "In window mode, \(helpKey) shows what every key does.\(held)",
                         chords: [[helpKey]], place: .modeBar))
         }
     }
@@ -69,7 +72,8 @@ extension Tips {
     }
 
     func paneShown(_ pane: Pane) {
-        if let s = settings, s.place != .settings("pane.\(pane.rawValue)") { dismissSettings() }
+        let place = TipPlace.settings("pane.\(pane.rawValue)")
+        if let current = settings, current.place != place { dismissSettings() }
         let keys = ShortcutIndex()
         let chord = keys.modeChord
         let tip: Tip?
@@ -77,17 +81,18 @@ extension Tips {
         case .shortcuts:
             tip = Tip(id: "settings.shortcuts", title: "Two sets of keys",
                       body: "Global keys work anywhere. The rest work in window mode, so they never clash with typing.",
-                      chords: chord.isEmpty ? [] : [chord], place: .settings("pane.\(pane.rawValue)"))
+                      chords: chord.isEmpty ? [] : [chord], place: place)
         case .layout:
             let next = keys.keys("cyclelayout", "next")
             tip = next.isEmpty ? nil : Tip(id: "settings.layout", title: "Step through these layouts",
                                            body: "In window mode, \(next.joined()) steps through this list.",
-                                           chords: chord.isEmpty ? [next] : [chord, next], place: .settings("pane.\(pane.rawValue)"))
+                                           chords: chord.isEmpty ? [next] : [chord, next], place: place)
         case .windows:
             let float = keys.keys("togglefloating")
+            let body = "This list floats whole apps. \(float.joined()) in window mode floats one window."
             tip = float.isEmpty ? nil : Tip(id: "settings.windows", title: "Float a single window",
-                                            body: "This list floats whole apps. \(float.joined()) in window mode floats one window.",
-                                            chords: chord.isEmpty ? [float] : [chord, float], place: .settings("pane.\(pane.rawValue)"))
+                                            body: body,
+                                            chords: chord.isEmpty ? [float] : [chord, float], place: place)
         default:
             tip = nil
         }
@@ -98,7 +103,7 @@ extension Tips {
         guard opens[tip.id, default: 0] >= Self.paneOpens else { return }
         pendingWork?.cancel()
         let work = DispatchWorkItem { [weak self] in
-            guard let self, canShow(tip.id), SettingsWindow.shared.ui.pane == pane else { return }
+            guard let self, canShow(tip.id), SettingsWindow.shared.settingsUI.pane == pane else { return }
             present(tip)
         }
         pendingWork = work
@@ -134,5 +139,4 @@ extension Tips {
         dismissSettings()
         dismissGlobal()
     }
-
 }

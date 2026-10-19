@@ -12,7 +12,10 @@ enum SettingsIndex {
     static func search(_ query: String, doc: ConfigDocument) -> [SettingEntry] {
         let words = query.lowercased().split(separator: " ").map(String.init)
         guard !words.isEmpty else { return [] }
-        func hit(_ text: String) -> Bool { let t = text.lowercased(); return words.allSatisfy { t.contains($0) } }
+        func hit(_ text: String) -> Bool {
+            let lowered = text.lowercased()
+            return words.allSatisfy { lowered.contains($0) }
+        }
         let settings = all.filter { hit("\($0.title) \($0.keywords) \($0.pane.rawValue)") }
         let binds = doc.binds.filter { hit("\(doc.title($0)) \(doc.prettyShortcut($0).joined()) \($0.submap)") }
             .prefix(12)

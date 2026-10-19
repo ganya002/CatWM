@@ -12,28 +12,30 @@ struct Kbd: View {
     }
 
     var body: some View {
-        HStack(spacing: size == .large ? 6 : size == .medium ? Theme.Space.xs : Theme.Space.xxs) {
-            ForEach(Array(keys.enumerated()), id: \.offset) { _, k in cap(k) }
+        HStack(spacing: size == .large ? 6 : size == .medium ? Theme.Space.extraSmall : Theme.Space.xxs) {
+            ForEach(Array(keys.enumerated()), id: \.offset) { _, key in cap(key) }
         }
     }
 
-    @ViewBuilder private func cap(_ k: String) -> some View {
+    @ViewBuilder private func cap(_ key: String) -> some View {
         if size == .small {
-            Text(k)
+            Text(key)
                 .font(Theme.keys(11.5, .medium)).oneLine()
                 .foregroundStyle(Theme.inkMuted)
                 .padding(.horizontal, 5)
                 .frame(minWidth: 20, minHeight: 20)
-                .background(RoundedRectangle(cornerRadius: Theme.Radius.xs, style: .continuous).fill(Theme.well))
+                .background(RoundedRectangle(cornerRadius: Theme.Radius.extraSmall, style: .continuous)
+                    .fill(Theme.well))
         } else {
-            let large = size == .large, wide = k.count > 2
-            Text(k)
+            let large = size == .large, wide = key.count > 2
+            Text(key)
                 .font(Theme.keys(large ? (wide ? 14 : 17) : (wide ? 11.5 : 13), .medium)).oneLine().fixedSize()
                 .foregroundStyle(pressed ? Theme.onAccent : onAccent ? Theme.accent : Theme.ink)
-                .padding(.horizontal, large ? Theme.Space.md : Theme.Space.sm)
+                .padding(.horizontal, large ? Theme.Space.medium : Theme.Space.small)
                 .frame(minWidth: large ? 40 : 30, minHeight: large ? 40 : 30)
                 .background {
-                    let shape = RoundedRectangle(cornerRadius: large ? Theme.Radius.md : Theme.Radius.sm, style: .continuous)
+                    let shape = RoundedRectangle(cornerRadius: large ? Theme.Radius.medium : Theme.Radius.small,
+                                                 style: .continuous)
                     if pressed {
                         shape.fill(Theme.accent)
                     } else {
@@ -42,7 +44,7 @@ struct Kbd: View {
                                 shape.fill(Theme.surfaceSunken).frame(height: large ? 3 : 2)
                                     .mask(shape)
                             }
-                            .elevation(.sm, in: shape)
+                            .elevation(.small, in: shape)
                     }
                 }
                 .offset(y: pressed ? 2 : 0)
@@ -53,20 +55,22 @@ struct Kbd: View {
 
 #if DEBUG
 extension GalleryExamples {
-    static let keys = GalleryExample(order: 7) { AnyView(GalleryContent(m: $0).keys) }
+    static let keys = GalleryExample(order: 7) { AnyView(GalleryContent(model: $0).keys) }
 }
 
 extension GalleryContent {
     @ViewBuilder var keys: some View {
         block("Keycaps and tooltips") {
-            HStack(alignment: .center, spacing: Theme.Space.xl) {
+            HStack(alignment: .center, spacing: Theme.Space.extraLarge) {
                 Kbd(keys: ["⌘", "K"])
                 Kbd(keys: ["⌥", "⇧", "H"])
                 Kbd(keys: ["H", "J", "K", "L"], size: .medium)
                 Kbd(keys: ["H"], size: .large)
                 Kbd(keys: ["L"], size: .large, pressed: true)
                 Kbd(keys: ["H"], size: .medium, onAccent: true)
-                    .padding(Theme.Space.sm).background(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous).fill(Theme.accent))
+                    .padding(Theme.Space.small)
+                    .background(RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous)
+                        .fill(Theme.accent))
             }
             tooltipExamples
         }

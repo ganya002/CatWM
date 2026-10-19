@@ -1,7 +1,6 @@
 import AppKit
 
 extension WindowManager {
-
     func observe(_ app: NSRunningApplication) {
         let pid = app.processIdentifier
         guard app.activationPolicy == .regular, pid != getpid(), observers[pid] == nil else { return }
@@ -11,15 +10,16 @@ extension WindowManager {
         scanner.run(pid) { [weak self] in
             var observer: AXObserver?
             let created = AXObserverCreate(pid, axCallback, &observer) == .success
-            var ok = false
+            var added = false
             if created, let observer {
                 let element = axApp(pid)
                 for name in [kAXWindowCreatedNotification, kAXFocusedWindowChangedNotification,
-                             kAXApplicationHiddenNotification, kAXApplicationShownNotification] {
-                    if AXObserverAddNotification(observer, element, name as CFString, nil) == .success { ok = true }
+                             kAXApplicationHiddenNotification, kAXApplicationShownNotification]
+                where AXObserverAddNotification(observer, element, name as CFString, nil) == .success {
+                    added = true
                 }
             }
-            let registered = ok ? observer : nil
+            let registered = added ? observer : nil
             DispatchQueue.main.async {
                 guard let self, self.observing[pid] == token else { return }
                 self.observing[pid] = nil
@@ -31,12 +31,13 @@ extension WindowManager {
         }
     }
 
-    func watch(_ w: Window) {
-        guard let obs = observers[w.pid] else { return }
-        scanner.run(w.pid) {
-            for n in [kAXUIElementDestroyedNotification, kAXWindowMiniaturizedNotification,
-                      kAXWindowDeminiaturizedNotification, kAXWindowMovedNotification, kAXWindowResizedNotification] {
-                AXObserverAddNotification(obs, w.element, n as CFString, nil)
+    func watch(_ window: Window) {
+        guard let obs = observers[window.pid] else { return }
+        scanner.run(window.pid) {
+            for name in [kAXUIElementDestroyedNotification, kAXWindowMiniaturizedNotification,
+                         kAXWindowDeminiaturizedNotification, kAXWindowMovedNotification,
+                         kAXWindowResizedNotification] {
+                AXObserverAddNotification(obs, window.element, name as CFString, nil)
             }
         }
     }
@@ -49,21 +50,25 @@ extension WindowManager {
             scheduleRefresh()
             FocusDim.shared.update()
         case kAXWindowMovedNotification, kAXWindowResizedNotification:
-            guard let w = windows.values.first(where: { CFEqual($0.element, element) }),
-                  !animator.isBusy(w.id), !movingToSpace else { return }
-            let id = w.id
-            observeFrame(w)
+            guard let window = windows.values.first(where: { CFEqual($0.element, element) }),
+                  !animator.isBusy(window.id), !movingToSpace else { return }
+            let id = window.id
+            observeFrame(window)
             if NSEvent.pressedMouseButtons & 1 != 0 {
                 drags[id] = (drags[id] ?? false) || notification == kAXWindowResizedNotification
-            } else if !w.isFloating {
+            } else if !window.isFloating {
                 scheduleRefresh(after: 0.25)
             }
         case kAXFocusedWindowChangedNotification:
             observeFocus(element)
             FocusDim.shared.update()
             onChange?()
+        case kAXWindowMiniaturizedNotification:
+            windowMinimizeChanged(element, minimized: true)
+        case kAXWindowDeminiaturizedNotification:
+            windowMinimizeChanged(element, minimized: false)
         case kAXWindowCreatedNotification:
-            for delay in [0.05, 0.3, 1.0] {
+            for delay in [0, 0.3, 1.0] {
                 DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in self?.scheduleRefresh() }
             }
         default:
@@ -79,9 +84,9 @@ extension WindowManager {
         minSizes[id] = new
         corrections[id] = nil
         Log.info("window \(id) has a minimum size of \(Int(new.width))×\(Int(new.height)); re-tiling around it")
-        if let r = ratioChange, Date() < r.until {
+        if let change = ratioChange, Date() < change.until {
             ratioChange = nil
-            warnTooSmall(id, on: Screen.all().first { $0.uuid == r.screen })
+            warnTooSmall(id, on: Screen.all().first { $0.uuid == change.screen })
         }
         scheduleRefresh()
     }
@@ -130,52 +135,58 @@ extension WindowManager {
         "com.lujjjh.LinearMouse",
         "com.amethyst.Amethyst",
         "org.sparkle-project.Sparkle.Autoupdate",
-        "com.microsoft.autoupdate2",
+        "com.microsoft.autoupdate2"
     ]
 
     private static let signInTitle = try? NSRegularExpression(
         pattern: "^(sign[ -]?in|log[ -]?in)(?=$|[\\s\\-–—|:,])", options: .caseInsensitive)
 
-    private func isUtilityWindow(_ w: Window, title: String?) -> Bool {
+    private func isUtilityWindow(_ window: Window, title: String?) -> Bool {
         guard let title, !title.isEmpty else { return false }
         if title == "Picture in Picture" || title == "Picture-in-Picture" { return true }
-        if w.bundleID == "com.apple.finder" { return title.hasSuffix(" Info") }
-        if let re = Self.signInTitle, re.firstMatch(in: title, range: NSRange(title.startIndex..., in: title)) != nil { return true }
-        let name = NSRunningApplication(processIdentifier: w.pid)?.localizedName
+        if window.bundleID == "com.apple.finder" { return title.hasSuffix(" Info") }
+        if let regex = Self.signInTitle,
+           regex.firstMatch(in: title, range: NSRange(title.startIndex..., in: title)) != nil { return true }
+        let name = NSRunningApplication(processIdentifier: window.pid)?.localizedName
         let settings = ["Settings", "Preferences", "Settings…", "Preferences…"]
-        return settings.contains(title) || name.map { n in settings.contains { title == "\(n) \($0)" } } == true
+        return settings.contains(title) || name.map { app in settings.contains { title == "\(app) \($0)" } } == true
     }
 
     private func isMountedImageWindow(title: String?) -> Bool {
         guard let title, !title.isEmpty else { return false }
         let keys: [URLResourceKey] = [.volumeNameKey, .volumeIsEjectableKey, .volumeIsInternalKey]
-        let volumes = FileManager.default.mountedVolumeURLs(includingResourceValuesForKeys: keys, options: [.skipHiddenVolumes]) ?? []
+        let volumes = FileManager.default.mountedVolumeURLs(includingResourceValuesForKeys: keys,
+                                                            options: [.skipHiddenVolumes]) ?? []
         return volumes.contains { url in
-            guard url.path != "/", let v = try? url.resourceValues(forKeys: Set(keys)) else { return false }
-            return v.volumeName == title && (v.volumeIsEjectable == true || v.volumeIsInternal == false)
+            guard url.path != "/", let values = try? url.resourceValues(forKeys: Set(keys)) else { return false }
+            return values.volumeName == title && (values.volumeIsEjectable == true || values.volumeIsInternal == false)
         }
     }
 
-    func shouldFloat(_ w: Window, title known: String?? = nil, resizable: Bool? = nil) -> Bool {
-        if let p = practice, w.pid == p.pid { return false }
-        if let b = w.bundleID, b == Bundle.main.bundleIdentifier || b.hasPrefix("local.ouch") || b == "local.hyprthyst" {
+    func shouldFloat(_ window: Window) -> Bool {
+        shouldFloat(window, title: window.title, resizable: window.resizable)
+    }
+
+    func shouldFloat(_ window: Window, title: String?, resizable: Bool) -> Bool {
+        if let practice, window.pid == practice.pid { return false }
+        if let bundle = window.bundleID,
+           bundle == Bundle.main.bundleIdentifier || bundle.hasPrefix("local.ouch") || bundle == "local.hyprthyst" {
             return true
         }
-        if let b = w.bundleID, Self.alwaysFloatingApps.contains(b) { return true }
-        let title = known ?? w.title
-        if w.bundleID == "com.apple.finder", isMountedImageWindow(title: title) { return true }
-        if isUtilityWindow(w, title: title) { return true }
-        if let b = w.bundleID {
+        if let bundle = window.bundleID, Self.alwaysFloatingApps.contains(bundle) { return true }
+        if window.bundleID == "com.apple.finder", isMountedImageWindow(title: title) { return true }
+        if isUtilityWindow(window, title: title) { return true }
+        if let bundle = window.bundleID {
             let listed = config.floating.contains { pattern in
-                pattern.hasSuffix("*") ? b.hasPrefix(String(pattern.dropLast())) : b == pattern
+                pattern.hasSuffix("*") ? bundle.hasPrefix(String(pattern.dropLast())) : bundle == pattern
             }
-            if config.floatingIsBlacklist ? listed : !listed { return true }
-        } else if !config.floatingIsBlacklist {
+            if config.floatingIsDenylist ? listed : !listed { return true }
+        } else if !config.floatingIsDenylist {
             return true
         }
-        if !(resizable ?? w.resizable) { return true }
-        let f = w.naturalFrame
-        if config.floatSmallWindows, !f.isNull, f.width < 500, f.height < 500 { return true }
+        if !resizable { return true }
+        let frame = window.naturalFrame
+        if config.floatSmallWindows, !frame.isNull, frame.width < 500, frame.height < 500 { return true }
         return false
     }
 }

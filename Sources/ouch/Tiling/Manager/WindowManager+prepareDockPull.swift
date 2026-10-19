@@ -5,8 +5,49 @@ extension WindowManager {
         let deadline = Date().addingTimeInterval(0.15)
         guard isStarted, config.virtualWorkspaces, !sortSession, dockArea.contains(point), Spaces.canMoveWindows,
               let display = Screen.all().first(where: { $0.frame.contains(point) }),
-              isOnHomeSpace(display), let ws = virtualShown[display.uuid],
-              let dock = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.dock").first else { return nil }
+              isOnHomeSpace(display), let workspace = virtualShown[display.uuid],
+              let app = dockApplication(at: point) else { return nil }
+        let appElement = AXUIElementCreateApplication(app.processIdentifier)
+        AXUIElementSetMessagingTimeout(appElement, 0.03)
+        let candidates = [appElement.element(kAXFocusedWindowAttribute), appElement.element(kAXMainWindowAttribute)]
+            .compactMap(\.self)
+            + focusOrder.compactMap { windows[$0] }.filter { $0.pid == app.processIdentifier }.map(\.element)
+            + appElement.elements(kAXWindowsAttribute)
+        let desktops = Set(Screen.all().flatMap { screen -> [UInt64] in
+            guard let info = Spaces.list(display: screen.uuid) else { return [] }
+            return info.desktops.map { info.ids[$0] }
+        })
+        var seen: Set<CGWindowID> = []
+        for candidate in candidates {
+            guard Date() < deadline else { return nil }
+            AXUIElementSetMessagingTimeout(candidate, 0.03)
+            guard let id = candidate.windowID, seen.insert(id).inserted else { continue }
+            guard candidate.string(kAXSubroleAttribute) == kAXStandardWindowSubrole else { continue }
+            let membership = Spaces.of(window: id)
+            guard membership.count == 1, let source = membership.first,
+                  desktops.contains(source), !homeSpace.values.contains(source),
+                  !workspaceMoves.contains(id), !candidate.flag(kAXMinimizedAttribute),
+                  !candidate.flag("AXFullScreen") else { return nil }
+            let window = windows[id]
+                ?? Window(id: id, element: candidate, pid: app.processIdentifier, bundleID: app.bundleIdentifier)
+            return { [weak self] in
+                guard let self, config.virtualWorkspaces, virtualShown[display.uuid] == workspace,
+                      isOnHomeSpace(display), window.isValid else { return }
+                if window.naturalFrame.isNull {
+                    readDirectActionFacts(window)
+                    window.autoFloating = shouldFloat(window)
+                }
+                cancelFocusRequest()
+                Hotkeys.shared.setSubmap("")
+                moveWindow(window, toWorkspace: workspace, follow: true)
+            }
+        }
+        return nil
+    }
+
+    private func dockApplication(at point: CGPoint) -> NSRunningApplication? {
+        guard let dock = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.dock").first
+        else { return nil }
         let dockElement = AXUIElementCreateApplication(dock.processIdentifier)
         AXUIElementSetMessagingTimeout(dockElement, 0.03)
         var hit: AXUIElement?
@@ -18,65 +59,36 @@ extension WindowManager {
               let app = NSWorkspace.shared.runningApplications.first(where: {
                   $0.bundleURL?.standardizedFileURL == url.standardizedFileURL
               }), app.processIdentifier != getpid(), !app.isHidden else { return nil }
-        let appElement = AXUIElementCreateApplication(app.processIdentifier)
-        AXUIElementSetMessagingTimeout(appElement, 0.03)
-        let candidates = [appElement.element(kAXFocusedWindowAttribute), appElement.element(kAXMainWindowAttribute)].compactMap { $0 }
-            + focusOrder.compactMap { windows[$0] }.filter { $0.pid == app.processIdentifier }.map(\.element)
-            + appElement.elements(kAXWindowsAttribute)
-        let desktops = Set(Screen.all().flatMap { screen -> [UInt64] in
-            guard let info = Spaces.list(display: screen.uuid) else { return [] }
-            return info.desktops.map { info.ids[$0] }
-        })
-        var seen: Set<CGWindowID> = []
-        for el in candidates {
-            guard Date() < deadline else { return nil }
-            AXUIElementSetMessagingTimeout(el, 0.03)
-            guard let id = el.windowID, seen.insert(id).inserted else { continue }
-            guard el.string(kAXSubroleAttribute) == kAXStandardWindowSubrole else { continue }
-            let membership = Spaces.of(window: id)
-            guard membership.count == 1, let source = membership.first,
-                  desktops.contains(source), !homeSpace.values.contains(source),
-                  !workspaceMoves.contains(id), el.bool(kAXMinimizedAttribute) != true,
-                  el.bool("AXFullScreen") != true else { return nil }
-            let w = windows[id] ?? Window(id: id, element: el, pid: app.processIdentifier, bundleID: app.bundleIdentifier)
-            return { [weak self] in
-                guard let self, config.virtualWorkspaces, virtualShown[display.uuid] == ws,
-                      isOnHomeSpace(display), w.isValid else { return }
-                if w.naturalFrame.isNull { readDirectActionFacts(w); w.autoFloating = shouldFloat(w) }
-                cancelFocusRequest()
-                Hotkeys.shared.setSubmap("")
-                moveWindow(w, toWorkspace: ws, follow: true)
-            }
-        }
-        return nil
+        return app
     }
 
     func followFocus() {
-        guard isStarted, !restoringTemplate, let w = reportedFocusedWindow() else { return }
-        if let p = pendingFocus {
-            guard p.id == w.id else { return }
-            if p.executed { pendingFocus = nil }
+        guard isStarted, !restoringTemplate, let window = reportedFocusedWindow() else { return }
+        if let pending = pendingFocus {
+            guard pending.id == window.id else { return }
+            if pending.executed { pendingFocus = nil }
         }
-        noteFocus(w.id)
+        noteFocus(window.id)
         guard !sortSession else { return }
-        guard config.virtualWorkspaces, let ws = workspaceOf[w.id], isVirtual(ws) else { return }
-        if isShown(ws) { lastFocused[ws] = w.id; return }
+        guard config.virtualWorkspaces, let workspace = workspaceOf[window.id], isVirtual(workspace) else { return }
+        if isShown(workspace) { lastFocused[workspace] = window.id; return }
         guard Date() > autoSwitchAfter else { return }
-        guard isParked(w.cachedFrame, Screen.all()) else { scheduleRefresh(); return }
+        guard isParked(window.cachedFrame, Screen.all()) else { scheduleRefresh(); return }
         if config.stayOnWorkspaceAfterClose, Date().timeIntervalSince(lastClose) < 1.0 {
-            Log.debug("workspaces: ignoring focus on \(ws) right after a close")
+            Log.debug("workspaces: ignoring focus on \(workspace) right after a close")
             refocusCurrentWorkspace()
             return
         }
-        Log.info("workspaces: \(w.bundleID ?? "a window") on workspace \(ws) was focused; switching")
-        showWorkspace(ws, focusing: w)
+        Log.info("workspaces: \(window.bundleID ?? "a window") on workspace \(workspace) was focused; switching")
+        showWorkspace(workspace, focusing: window)
     }
 
     func refocusCurrentWorkspace() {
-        guard let s = currentScreen(), let cur = virtualShown[s.uuid] else { return parkFocus() }
-        let candidates = [lastFocused[cur]].compactMap { $0 } + order
-        if let id = candidates.first(where: { visible.contains($0) && workspaceOf[$0] == cur }), let w = windows[id] {
-            focus(w)
+        guard let screen = currentScreen(), let cur = virtualShown[screen.uuid] else { return parkFocus() }
+        let candidates = [lastFocused[cur]].compactMap(\.self) + order
+        if let id = candidates.first(where: { visible.contains($0) && workspaceOf[$0] == cur }),
+           let window = windows[id] {
+            focus(window)
         } else {
             parkFocus()
         }
@@ -85,14 +97,14 @@ extension WindowManager {
     func prepareFocusSink() {
         guard focusSink == nil else { return }
         focusSink = {
-            let w = FocusSinkWindow(contentRect: NSRect(x: 0, y: 0, width: 1, height: 1),
-                                    styleMask: [.borderless], backing: .buffered, defer: false)
-            w.isOpaque = false
-            w.backgroundColor = .clear
-            w.alphaValue = 0.01
-            w.ignoresMouseEvents = true
-            w.collectionBehavior = [.canJoinAllSpaces, .ignoresCycle, .stationary]
-            return w
+            let sink = FocusSinkWindow(contentRect: NSRect(x: 0, y: 0, width: 1, height: 1),
+                                       styleMask: [.borderless], backing: .buffered, defer: false)
+            sink.isOpaque = false
+            sink.backgroundColor = .clear
+            sink.alphaValue = 0.01
+            sink.ignoresMouseEvents = true
+            sink.collectionBehavior = [.canJoinAllSpaces, .ignoresCycle, .stationary]
+            return sink
         }()
     }
 

@@ -2,7 +2,6 @@ import AppKit
 import SwiftUI
 
 final class SortModel: ObservableObject {
-
     @Published var displays: [SortDisplay] = []
     @Published var current = ""
     @Published var plans: [String: SortPlan] = [:]
@@ -25,6 +24,7 @@ final class SortModel: ObservableObject {
     var maxRows = 7
     var zones: [SortZone: CGRect] = [:]
     var finish: (String?) -> Void = { _ in }
+    var openFullscreen: (CGWindowID) -> Void = { _ in }
     var revert: () -> Void = {}
     var changed: () -> Void = {}
     weak var scroller: NSScrollView?
@@ -34,14 +34,14 @@ final class SortModel: ObservableObject {
     var running = false
 
     var plan: SortPlan {
-        plans[current] ?? SortPlan(display: current, items: [:], lanes: [], strategy: nil, existing: [], taken: [], active: nil)
+        plans[current] ?? SortPlan(display: current, items: [:], lanes: [], strategy: nil,
+                                   existing: [], taken: [], active: nil)
     }
 
     var currentDisplay: SortDisplay? { displays.first { $0.id == current } }
     var nextName: String? { plan.canAdd(avoiding: reserved()) ? plan.available(avoiding: reserved()).first : nil }
 
-    static let digits: [UInt16: Int] = Dictionary(uniqueKeysWithValues: (0...9).compactMap { n in
-        keyCodes["\(n)"].map { ($0, n == 0 ? 10 : n) }
+    static let digits: [UInt16: Int] = Dictionary(uniqueKeysWithValues: (0...9).compactMap { digit in
+        keyCodes["\(digit)"].map { ($0, digit == 0 ? 10 : digit) }
     })
-
 }

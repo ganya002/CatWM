@@ -5,17 +5,23 @@ struct NotchCutout: Shape {
     let halfWidth: CGFloat
     let height: CGFloat
     func path(in rect: CGRect) -> Path {
-        var p = Path(rect)
-        guard halfWidth > 0 else { return p }
-        let l = rect.midX - halfWidth, r = rect.midX + halfWidth, top = rect.minY
-        let rb = Notch.bottomRadius, rf = Notch.flareRadius, k: CGFloat = 0.5523
-        p.move(to: CGPoint(x: l - rf, y: top))
-        p.addCurve(to: CGPoint(x: l, y: top + rf), control1: CGPoint(x: l - rf + k * rf, y: top), control2: CGPoint(x: l, y: top + rf - k * rf))
-        p.addArc(tangent1End: CGPoint(x: l, y: top + height), tangent2End: CGPoint(x: r, y: top + height), radius: rb)
-        p.addArc(tangent1End: CGPoint(x: r, y: top + height), tangent2End: CGPoint(x: r, y: top), radius: rb)
-        p.addLine(to: CGPoint(x: r, y: top + rf))
-        p.addCurve(to: CGPoint(x: r + rf, y: top), control1: CGPoint(x: r, y: top + rf - k * rf), control2: CGPoint(x: r + rf - k * rf, y: top))
-        p.closeSubpath()
-        return p
+        var path = Path(rect)
+        guard halfWidth > 0 else { return path }
+        let left = rect.midX - halfWidth, right = rect.midX + halfWidth, top = rect.minY
+        let bottom = Notch.bottomRadius, flare = Notch.flareRadius, kappa: CGFloat = 0.5523
+        path.move(to: CGPoint(x: left - flare, y: top))
+        path.addCurve(to: CGPoint(x: left, y: top + flare),
+                      control1: CGPoint(x: left - flare + kappa * flare, y: top),
+                      control2: CGPoint(x: left, y: top + flare - kappa * flare))
+        path.addArc(tangent1End: CGPoint(x: left, y: top + height),
+                    tangent2End: CGPoint(x: right, y: top + height), radius: bottom)
+        path.addArc(tangent1End: CGPoint(x: right, y: top + height),
+                    tangent2End: CGPoint(x: right, y: top), radius: bottom)
+        path.addLine(to: CGPoint(x: right, y: top + flare))
+        path.addCurve(to: CGPoint(x: right + flare, y: top),
+                      control1: CGPoint(x: right, y: top + flare - kappa * flare),
+                      control2: CGPoint(x: right + flare - kappa * flare, y: top))
+        path.closeSubpath()
+        return path
     }
 }

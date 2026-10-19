@@ -8,7 +8,8 @@ struct SortView: View {
 
     var body: some View {
         let plan = model.plan
-        let closeRows = Int(ceil(CGFloat(plan.close.count + plan.closedLanes.count) - SortMetrics.closeExtra / SortMetrics.rowHeight))
+        let closeCount = CGFloat(plan.close.count + plan.closedLanes.count)
+        let closeRows = Int(ceil(closeCount - SortMetrics.closeExtra / SortMetrics.rowHeight))
         let rows = min(model.maxRows, max(1, ([closeRows] + plan.lanes.map(\.ids.count)).max() ?? 1))
         VStack(alignment: .leading, spacing: 0) {
             header(plan)
@@ -20,7 +21,7 @@ struct SortView: View {
             footer(plan)
         }
         .frame(width: width - 40)
-        .surface(.lg, glass: true)
+        .surface(.large, glass: true)
         .panelEntrance(model.shown, style: model.motion)
         .padding(Self.inset)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -34,11 +35,11 @@ struct SortView: View {
     }
 
     private func header(_ plan: SortPlan) -> some View {
-        let n = plan.items.count
+        let count = plan.items.count
         return HStack(spacing: 12) {
-            (Text("Sort ")
-                + Text("\(n)").font(Theme.body(22, .medium)).foregroundColor(Theme.accentInk)
-                + Text(n == 1 ? " window" : " windows"))
+            (Text("Overview · ")
+                + Text("\(count)").font(Theme.body(22, .medium)).foregroundColor(Theme.accentInk)
+                + Text(count == 1 ? " window" : " windows"))
                 .textStyle(.title).oneLine().fixedSize()
             if model.displays.count > 1 { SortDisplays(model: model) }
             Spacer(minLength: 12)
@@ -59,6 +60,12 @@ struct SortView: View {
                     SortAddLane(model: model, plan: plan, rows: rows)
                         .tileItem(model.shown, style: model.motion,
                                   spread: CGSize(width: -CGFloat(plan.lanes.count) * (SortMetrics.lane + 4), height: 0))
+                    ForEach(Array(unplacedFullscreen(plan).enumerated()), id: \.element.id) { i, item in
+                        SortFullscreenLane(model: model, item: item, rows: rows)
+                            .tileItem(model.shown, style: model.motion,
+                                      spread: CGSize(width: -CGFloat(plan.lanes.count + 1 + i) * (SortMetrics.lane + 4),
+                                                     height: 0))
+                    }
                 }
                 .padding(.horizontal, 8).padding(.bottom, 6)
                 .background(SortScrollAccessor(model: model))
@@ -68,26 +75,32 @@ struct SortView: View {
                 HStack(spacing: 0) {
                     Rectangle()
                     if model.moreToRight {
-                        LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing).frame(width: 28)
+                        LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
+                            .frame(width: 28)
                     }
                 }
             }
-            .onChange(of: model.reveal) { _, r in
-                guard let lane = r.lane else { return }
+            .onChange(of: model.reveal) { _, reveal in
+                guard let lane = reveal.lane else { return }
                 withAnimation(Motion.easeOut) { proxy.scrollTo(lane) }
             }
         }
     }
 
+    private func unplacedFullscreen(_ plan: SortPlan) -> [SortItem] {
+        (model.currentDisplay?.fullscreen ?? []).filter { plan.items[$0.id] == nil }
+    }
+
     private func closeLane(_ plan: SortPlan, rows: Int) -> some View {
         let over = model.over == .close
-        let n = plan.close.count
-        let shape = RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
+        let count = plan.close.count
+        let shape = RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous)
         return VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(Image(systemName: "xmark")).font(Theme.display(22)).foregroundStyle(Theme.danger).fixedSize()
                 Text("Close").font(Theme.heading()).foregroundStyle(Theme.ink).oneLine()
-                Text(n > 0 ? "\(n)" : "").textStyle(.caption).monospacedDigit().foregroundStyle(Theme.inkFaint).fixedSize()
+                Text(count > 0 ? "\(count)" : "")
+                    .textStyle(.caption).monospacedDigit().foregroundStyle(Theme.inkFaint).fixedSize()
             }
             .padding(.horizontal, 4)
             SortCloseList(model: model, plan: plan, rows: rows)
@@ -109,7 +122,7 @@ struct SortView: View {
                 HStack(spacing: 8) {
                     Text(notice.text).oneLine()
                     if notice.undo != nil {
-                        OButton("Undo", icon: "arrow.uturn.backward", size: .sm) { model.undoRemove() }
+                        OButton("Undo", icon: "arrow.uturn.backward", size: .small) { model.undoRemove() }
                     }
                 }
             }
@@ -125,31 +138,38 @@ struct SortView: View {
     }
 
     @ViewBuilder private var columnGhost: some View {
-        if let d = model.columnDrag {
+        if let dragged = model.columnDrag {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(d.lane.ws).font(Theme.display(22)).monospacedDigit().tracking(-0.4).foregroundStyle(Theme.accentInk).fixedSize()
-                    Text(d.lane.name.isEmpty ? "Workspace \(d.lane.ws)" : d.lane.name).font(Theme.heading()).oneLine()
+                    Text(dragged.lane.workspace).font(Theme.display(22)).monospacedDigit().tracking(-0.4)
+                        .foregroundStyle(Theme.accentInk).fixedSize()
+                    Text(dragged.lane.name.isEmpty ? "Workspace \(dragged.lane.workspace)" : dragged.lane.name)
+                        .font(Theme.heading()).oneLine()
                 }
                 .padding(.horizontal, 2)
-                SortThumb(layout: d.lane.layout, ids: d.lane.ids, lit: nil, ratio: d.ratio, mainCount: d.mainCount).padding(.horizontal, 2)
+                SortThumb(layout: dragged.lane.layout, ids: dragged.lane.ids, lit: nil,
+                          ratio: dragged.ratio, mainCount: dragged.mainCount)
+                    .padding(.horizontal, 2)
             }
             .padding(.vertical, 2)
             .frame(width: SortMetrics.lane - 12, alignment: .topLeading)
-            .surface(.md)
-            .keepInside(CGPoint(x: d.location.x - d.grab.width, y: d.location.y - d.grab.height))
+            .surface(.medium)
+            .keepInside(CGPoint(x: dragged.location.x - dragged.grab.width,
+                                y: dragged.location.y - dragged.grab.height))
             .allowsHitTesting(false)
         }
     }
 
     @ViewBuilder private var ghost: some View {
-        if let d = model.drag {
-            SortRowFace(item: d.item, closing: d.closing)
+        if let dragged = model.drag {
+            SortRowFace(item: dragged.item, closing: dragged.closing)
                 .padding(.leading, 5).padding(.trailing, 8)
                 .frame(width: 168, height: SortMetrics.rowHeight)
-                .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous).fill(Theme.surfaceRaised)
-                    .elevation(.popover, in: RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)))
-                .keepInside(CGPoint(x: d.location.x - d.grab.width, y: d.location.y - d.grab.height))
+                .background(RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
+                    .fill(Theme.surfaceRaised)
+                    .elevation(.popover, in: RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)))
+                .keepInside(CGPoint(x: dragged.location.x - dragged.grab.width,
+                                y: dragged.location.y - dragged.grab.height))
                 .allowsHitTesting(false)
         }
     }

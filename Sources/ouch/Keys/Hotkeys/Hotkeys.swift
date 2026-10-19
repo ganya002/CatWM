@@ -1,7 +1,6 @@
 import AppKit
 
 final class Hotkeys {
-
     static let shared = Hotkeys()
     static let syntheticMarker: Int64 = 0x4859_5052
 
@@ -34,9 +33,14 @@ final class Hotkeys {
     static let tapLimit = 0.35
     var modeChord: CGEventFlags = []
     var lastMods: CGEventFlags = []
-    var tapDown: (flag: CGEventFlags, at: TimeInterval, clicks: UInt32)?
+    var tapDown: TapDown?
+
+    struct TapDown {
+        let flag: CGEventFlags
+        let time: TimeInterval
+        let clicks: UInt32
+    }
 
     enum PostStyle: Int { case plain = 0, arrowFlags = 1, physical = 2 }
     static var postStyle: PostStyle = .physical
-
 }

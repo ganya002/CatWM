@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 struct OMenuRow<Lead: View, Label: View, Trailing: View>: View {
-    var highlighted: Bool? = nil
+    var highlight = MenuRowHighlight.followsHover
     var open = false
     var danger = false
     let action: () -> Void
@@ -10,9 +10,10 @@ struct OMenuRow<Lead: View, Label: View, Trailing: View>: View {
     @ViewBuilder var label: Label
     @ViewBuilder var trailing: Trailing
 
-    init(highlighted: Bool? = nil, open: Bool = false, danger: Bool = false, action: @escaping () -> Void,
-         @ViewBuilder lead: () -> Lead, @ViewBuilder label: () -> Label, @ViewBuilder trailing: () -> Trailing) {
-        self.highlighted = highlighted; self.open = open; self.danger = danger; self.action = action
+    init(highlight: MenuRowHighlight = .followsHover, open: Bool = false, danger: Bool = false,
+         action: @escaping () -> Void, @ViewBuilder lead: () -> Lead, @ViewBuilder label: () -> Label,
+         @ViewBuilder trailing: () -> Trailing) {
+        self.highlight = highlight; self.open = open; self.danger = danger; self.action = action
         self.lead = lead(); self.label = label(); self.trailing = trailing()
     }
 
@@ -27,13 +28,13 @@ struct OMenuRow<Lead: View, Label: View, Trailing: View>: View {
             .font(Theme.body(13.5))
             .foregroundStyle(danger ? Theme.danger : Theme.ink)
         }
-        .buttonStyle(OMenuRowStyle(highlighted: highlighted, open: open, danger: danger))
+        .buttonStyle(OMenuRowStyle(highlight: highlight, open: open, danger: danger))
     }
 }
 
 #if DEBUG
 extension GalleryExamples {
-    static let menus = GalleryExample(order: 11) { AnyView(GalleryContent(m: $0).menus) }
+    static let menus = GalleryExample(order: 11) { AnyView(GalleryContent(model: $0).menus) }
 }
 
 extension GalleryContent {
@@ -42,15 +43,17 @@ extension GalleryContent {
             VStack(spacing: 0) {
                 OMenuRow(action: {}, lead: { Image(systemName: "gearshape") }, label: { Text("Settings…") },
                          trailing: { Text("⌘,").foregroundStyle(Theme.inkMuted) })
-                OMenuRow(highlighted: true, action: {}, lead: { Image(systemName: "macwindow") }, label: { Text("Highlighted row") })
-                OMenuRow(open: true, action: {}, lead: { Image(systemName: "square.grid.2x2") }, label: { Text("Layout") },
+                OMenuRow(highlight: .fixed(true), action: {}, lead: { Image(systemName: "macwindow") },
+                         label: { Text("Highlighted row") })
+                OMenuRow(open: true, action: {}, lead: { Image(systemName: "square.grid.2x2") },
+                         label: { Text("Layout") },
                          trailing: { Image(systemName: "chevron.right").foregroundStyle(Theme.inkMuted) })
                 OMenuRow(danger: true, action: {}, lead: { Image(systemName: "power") }, label: { Text("Quit Ouch") })
             }
             .frame(width: Theme.menuWidth)
-            .padding(Theme.Space.xs + Theme.Space.xxs)
-            .surface(.md)
-            HStack(spacing: Theme.Space.md) {
+            .padding(Theme.Space.extraSmall + Theme.Space.xxs)
+            .surface(.medium)
+            HStack(spacing: Theme.Space.medium) {
                 menuPickerExample
                 menuButtonExample
             }

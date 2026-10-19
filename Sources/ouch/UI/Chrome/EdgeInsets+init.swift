@@ -2,5 +2,5 @@ import AppKit
 import SwiftUI
 
 extension EdgeInsets {
-    init(all m: CGFloat) { self.init(top: m, leading: m, bottom: m, trailing: m) }
+    init(all inset: CGFloat) { self.init(top: inset, leading: inset, bottom: inset, trailing: inset) }
 }

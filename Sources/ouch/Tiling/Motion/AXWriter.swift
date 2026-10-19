@@ -2,8 +2,10 @@ import AppKit
 import QuartzCore
 
 final class AXWriter {
-    private enum Op { case step(CGRect), land(CGRect, done: (Bool) -> Void), position(CGPoint, done: (Bool) -> Void) }
-    private struct Pending { let window: Window; let op: Op; let epoch: Int }
+    private enum Operation {
+        case step(CGRect), land(CGRect, done: (Bool) -> Void), position(CGPoint, done: (Bool) -> Void)
+    }
+    private struct Pending { let window: Window; let operation: Operation; let epoch: Int }
     struct Stats { var size = Stat(), position = Stat(), land = Stat(), skipped = 0 }
 
     let pid: pid_t
@@ -21,24 +23,28 @@ final class AXWriter {
         queue = DispatchQueue(label: "ouch.ax.\(pid)", qos: .userInteractive)
     }
 
-    func step(_ w: Window, to frame: CGRect) { submit(w, .step(frame)) }
-    func land(_ w: Window, at frame: CGRect, done: @escaping (Bool) -> Void) { submit(w, .land(frame, done: done)) }
+    func step(_ window: Window, to frame: CGRect) { submit(window, .step(frame)) }
+    func land(_ window: Window, at frame: CGRect, done: @escaping (Bool) -> Void) {
+        submit(window, .land(frame, done: done))
+    }
 
-    func position(_ w: Window, at point: CGPoint, done: @escaping (Bool) -> Void) { submit(w, .position(point, done: done)) }
+    func position(_ window: Window, at point: CGPoint, done: @escaping (Bool) -> Void) {
+        submit(window, .position(point, done: done))
+    }
 
     func cancel(_ id: CGWindowID) {
         lock.withLock { pending[id] = nil; epochs[id, default: 0] += 1 }
         queue.async { [self] in if animating.remove(id) != nil { EnhancedUI.resume(pid) } }
     }
 
-    func run(_ f: @escaping () -> Void) { queue.async(execute: f) }
+    func run(_ work: @escaping () -> Void) { queue.async(execute: work) }
 
-    func run(for id: CGWindowID, _ f: @escaping (_ isCurrent: () -> Bool) -> Void) {
+    func run(for id: CGWindowID, _ work: @escaping (_ isCurrent: () -> Bool) -> Void) {
         let epoch = lock.withLock { epochs[id] ?? 0 }
         queue.async { [self] in
             let isCurrent = { self.lock.withLock { (self.epochs[id] ?? 0) == epoch } }
             guard isCurrent() else { return }
-            f(isCurrent)
+            work(isCurrent)
         }
     }
 
@@ -46,10 +52,10 @@ final class AXWriter {
         lock.withLock { defer { stats = Stats() }; return stats }
     }
 
-    private func submit(_ w: Window, _ op: Op) {
+    private func submit(_ window: Window, _ operation: Operation) {
         let start = lock.withLock { () -> Bool in
-            if case .step = pending[w.id]?.op { stats.skipped += 1 }
-            pending[w.id] = Pending(window: w, op: op, epoch: epochs[w.id] ?? 0)
+            if case .step = pending[window.id]?.operation { stats.skipped += 1 }
+            pending[window.id] = Pending(window: window, operation: operation, epoch: epochs[window.id] ?? 0)
             defer { draining = true }
             return !draining
         }
@@ -59,48 +65,48 @@ final class AXWriter {
     private func drain() {
         while true {
             let batch = lock.withLock { () -> [Pending] in
-                let b = Array(pending.values)
+                let items = Array(pending.values)
                 pending = [:]
-                if b.isEmpty { draining = false }
-                return b
+                if items.isEmpty { draining = false }
+                return items
             }
             if batch.isEmpty { return }
-            for p in batch where lock.withLock({ epochs[p.window.id] ?? 0 }) == p.epoch { apply(p) }
+            for item in batch where lock.withLock({ epochs[item.window.id] ?? 0 }) == item.epoch { apply(item) }
         }
     }
 
-    private func apply(_ p: Pending) {
-        let w = p.window
-        if w.placementSuspended || w.isNativeFullscreen || w.element.bool(kAXMinimizedAttribute) == true {
-            if animating.remove(w.id) != nil { EnhancedUI.resume(pid) }
-            switch p.op {
+    private func apply(_ item: Pending) {
+        let window = item.window
+        if window.placementSuspended || window.isNativeFullscreen || window.element.flag(kAXMinimizedAttribute) {
+            if animating.remove(window.id) != nil { EnhancedUI.resume(pid) }
+            switch item.operation {
             case let .land(_, done), let .position(_, done): DispatchQueue.main.async { done(false) }
             case .step: break
             }
             return
         }
-        if animating.insert(w.id).inserted { EnhancedUI.suspend(pid) }
-        switch p.op {
-        case let .step(f):
-            var s = 0.0
-            if lastSize[w.id] != f.size {
-                s = measure { w.setSize(f.size) }
-                lastSize[w.id] = f.size
+        if animating.insert(window.id).inserted { EnhancedUI.suspend(pid) }
+        switch item.operation {
+        case let .step(frame):
+            var sizeTime = 0.0
+            if lastSize[window.id] != frame.size {
+                sizeTime = measure { window.setSize(frame.size) }
+                lastSize[window.id] = frame.size
             }
-            let o = measure { w.setPosition(f.origin) }
-            lock.withLock { if s > 0 { stats.size.add(s) }; stats.position.add(o) }
+            let positionTime = measure { window.setPosition(frame.origin) }
+            lock.withLock { if sizeTime > 0 { stats.size.add(sizeTime) }; stats.position.add(positionTime) }
         case let .position(point, done):
-            let t = measure { w.setPosition(point) }
-            animating.remove(w.id)
+            let elapsed = measure { window.setPosition(point) }
+            animating.remove(window.id)
             EnhancedUI.resume(pid)
-            lock.withLock { stats.position.add(t) }
+            lock.withLock { stats.position.add(elapsed) }
             DispatchQueue.main.async { done(true) }
-        case let .land(f, done):
-            lastSize[w.id] = nil
-            let t = measure { w.setFrame(f) }
-            animating.remove(w.id)
+        case let .land(frame, done):
+            lastSize[window.id] = nil
+            let elapsed = measure { window.setFrame(frame) }
+            animating.remove(window.id)
             EnhancedUI.resume(pid)
-            lock.withLock { stats.land.add(t) }
+            lock.withLock { stats.land.add(elapsed) }
             DispatchQueue.main.async { done(true) }
         }
     }

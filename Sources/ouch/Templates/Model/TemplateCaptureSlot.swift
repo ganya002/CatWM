@@ -35,7 +35,8 @@ final class TemplateCaptureSlot<Value: Sendable>: @unchecked Sendable {
 
     var isIdle: Bool { lock.withLock { active == nil } }
 
-    func run(within timeout: Duration, operation: @escaping @Sendable () async -> Value) async -> TemplateSlotOutcome<Value> {
+    func run(within timeout: Duration,
+             operation: @escaping @Sendable () async -> Value) async -> TemplateSlotOutcome<Value> {
         guard let task = claim(operation) else { return .busy }
         return await race(task, timeout: timeout)
     }

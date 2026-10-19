@@ -13,7 +13,7 @@ struct SortList: View {
             ScrollView(.vertical, showsIndicators: items.count > model.maxRows) {
                 VStack(spacing: 0) {
                     if items.isEmpty && !closing {
-                        RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
+                        RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
                             .strokeBorder(Theme.borderControl, style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
                             .opacity(0.5).frame(height: SortMetrics.rowHeight)
                     }
@@ -21,8 +21,8 @@ struct SortList: View {
                 }
             }
             .frame(height: CGFloat(rows) * SortMetrics.rowHeight)
-            .onChange(of: model.reveal) { _, r in
-                if ids.contains(r.id) { withAnimation(Motion.easeOut) { proxy.scrollTo(r.id) } }
+            .onChange(of: model.reveal) { _, reveal in
+                if ids.contains(reveal.id) { withAnimation(Motion.easeOut) { proxy.scrollTo(reveal.id) } }
             }
         }
     }

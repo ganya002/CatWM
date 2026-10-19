@@ -1,19 +1,25 @@
 import AppKit
-import Testing
 @testable import ouch
+import Testing
 
 private let bundle = "com.example.editor"
 private let launch = Date(timeIntervalSince1970: 100)
 
-private func target(document: String? = nil, bundleID: String = bundle, app: String = "Editor") -> TemplateRestoreTarget {
+private func target(
+    document: String? = nil,
+    bundleID: String = bundle,
+    app: String = "Editor"
+) -> TemplateRestoreTarget {
     TemplateRestoreTarget(id: UUID(), bundleID: bundleID, appName: app, document: document)
 }
 
 private func savedWindow(title: String = "Draft", document: String? = nil, windowID: CGWindowID = 42,
                          launchDate: Date? = launch, bundleID: String = bundle) -> WorkspaceTemplate.SavedWindow {
-    WorkspaceTemplate.SavedWindow(bundleID: bundleID, appName: "Editor", title: title, document: document, display: "main",
-                                  frame: .zero, floating: false, minimized: false, fullscreen: false, zoomed: false,
-                                  focused: false, windowID: windowID, launchDate: launchDate)
+    WorkspaceTemplate.SavedWindow(
+        bundleID: bundleID, appName: "Editor", title: title, document: document, display: "main",
+        frame: .zero, floating: false, minimized: false, fullscreen: false, zoomed: false,
+        focused: false, windowID: windowID, launchDate: launchDate
+    )
 }
 
 private func candidate(id: CGWindowID, title: String, document: String? = nil, launchDate: Date? = nil,
@@ -50,9 +56,13 @@ private func warm(_ bundleID: String = bundle) -> [String: TemplateAppState] {
         var scheduler = TemplateRestoreScheduler()
         let windows = (1...12).map { _ in target() }
         let now = Date(timeIntervalSince1970: 1_000)
-        let step = scheduler.step(now: now, deadline: now.addingTimeInterval(1), targets: windows, matched: [], apps: warm())
+        let step = scheduler.step(
+            now: now, deadline: now.addingTimeInterval(1), targets: windows, matched: [], apps: warm()
+        )
         #expect(Set(step.requests.map(\.savedID)) == Set(windows.map(\.id)))
-        let again = scheduler.step(now: now, deadline: now.addingTimeInterval(1), targets: windows, matched: [], apps: warm())
+        let again = scheduler.step(
+            now: now, deadline: now.addingTimeInterval(1), targets: windows, matched: [], apps: warm()
+        )
         #expect(again.requests.isEmpty)
     }
 
@@ -117,7 +127,9 @@ private func warm(_ bundleID: String = bundle) -> [String: TemplateAppState] {
         let now = Date(timeIntervalSince1970: 4_000)
         let deadline = now.addingTimeInterval(TemplateRestoreScheduler.totalWait)
         let absent = TemplateAppState(running: false, finishedLaunching: false, openable: false)
-        let stopped = scheduler.step(now: now, deadline: deadline, targets: [missing], matched: [], apps: [missing.bundleID: absent])
+        let stopped = scheduler.step(
+            now: now, deadline: deadline, targets: [missing], matched: [], apps: [missing.bundleID: absent]
+        )
         #expect(stopped.launch.isEmpty)
         #expect(stopped.requests.isEmpty)
         #expect(!stopped.keepWaiting)
@@ -156,12 +168,16 @@ private func warm(_ bundleID: String = bundle) -> [String: TemplateAppState] {
         #expect(launching.launch == [bundle])
         #expect(launching.keepWaiting)
         scheduler.noteLaunchFailed(bundle, appName: window.appName)
-        let stopped = scheduler.step(now: now.addingTimeInterval(0.2), deadline: deadline, targets: [window], matched: [], apps: apps)
+        let stopped = scheduler.step(
+            now: now.addingTimeInterval(0.2), deadline: deadline, targets: [window], matched: [], apps: apps
+        )
         #expect(stopped.launch.isEmpty)
         #expect(stopped.requests.isEmpty)
         #expect(!stopped.keepWaiting)
     }
+}
 
+@Suite struct TemplateRestoreLaunchTests {
     @Test func coldLaunchSettlesBeforeSyntheticAndDocumentOpens() {
         var scheduler = TemplateRestoreScheduler()
         let created = target()
@@ -169,11 +185,15 @@ private func warm(_ bundleID: String = bundle) -> [String: TemplateAppState] {
         var now = Date(timeIntervalSince1970: 7_000)
         let deadline = now.addingTimeInterval(TemplateRestoreScheduler.totalWait)
         var apps = [bundle: TemplateAppState(running: false, finishedLaunching: false, openable: true)]
-        let launching = scheduler.step(now: now, deadline: deadline, targets: [created, opened], matched: [], apps: apps)
+        let launching = scheduler.step(
+            now: now, deadline: deadline, targets: [created, opened], matched: [], apps: apps
+        )
         #expect(launching.launch == [bundle])
         #expect(launching.requests.isEmpty)
         #expect(launching.keepWaiting)
-        let repeatLaunch = scheduler.step(now: now, deadline: deadline, targets: [created, opened], matched: [], apps: apps)
+        let repeatLaunch = scheduler.step(
+            now: now, deadline: deadline, targets: [created, opened], matched: [], apps: apps
+        )
         #expect(repeatLaunch.launch.isEmpty)
         #expect(repeatLaunch.keepWaiting)
         now = now.addingTimeInterval(1)
@@ -213,7 +233,8 @@ private func warm(_ bundleID: String = bundle) -> [String: TemplateAppState] {
         let start = Date(timeIntervalSince1970: 25_000)
         let deadline = start.addingTimeInterval(TemplateRestoreScheduler.totalWait)
         let cold = [bundle: TemplateAppState(running: false, finishedLaunching: false, openable: true)]
-        #expect(scheduler.step(now: start, deadline: deadline, targets: [window], matched: [], apps: cold).launch == [bundle])
+        let coldStep = scheduler.step(now: start, deadline: deadline, targets: [window], matched: [], apps: cold)
+        #expect(coldStep.launch == [bundle])
         #expect(scheduler.step(now: start.addingTimeInterval(0.3), deadline: deadline, targets: [window],
                                matched: [], apps: warm()).requests.isEmpty)
         #expect(scheduler.step(now: start.addingTimeInterval(1.5), deadline: deadline, targets: [window],
@@ -230,7 +251,8 @@ private func warm(_ bundleID: String = bundle) -> [String: TemplateAppState] {
         let start = Date(timeIntervalSince1970: 20_000)
         let deadline = start.addingTimeInterval(TemplateRestoreScheduler.totalWait)
         let cold = [bundle: TemplateAppState(running: false, finishedLaunching: false, openable: true)]
-        #expect(scheduler.step(now: start, deadline: deadline, targets: windows, matched: [], apps: cold).launch == [bundle])
+        let coldStep = scheduler.step(now: start, deadline: deadline, targets: windows, matched: [], apps: cold)
+        #expect(coldStep.launch == [bundle])
         #expect(scheduler.step(now: start.addingTimeInterval(1), deadline: deadline, targets: windows,
                                matched: [], apps: warm()).requests.isEmpty)
         #expect(scheduler.step(now: start.addingTimeInterval(1.5), deadline: deadline, targets: windows,
@@ -265,18 +287,24 @@ private func warm(_ bundleID: String = bundle) -> [String: TemplateAppState] {
         let started = scheduler.step(now: now, deadline: deadline, targets: [window], matched: [], apps: warm())
         let token = started.requests[0].token
         scheduler.cancel()
-        let stopped = scheduler.step(now: now.addingTimeInterval(TemplateRestoreScheduler.retryDelay), deadline: deadline,
-                                    targets: [window], matched: [], apps: warm())
+        let stopped = scheduler.step(
+            now: now.addingTimeInterval(TemplateRestoreScheduler.retryDelay), deadline: deadline,
+            targets: [window], matched: [], apps: warm()
+        )
         #expect(stopped.requests.isEmpty)
         #expect(stopped.launch.isEmpty)
         #expect(!stopped.keepWaiting)
         scheduler.noteFailed(window.id, token: token, appName: window.appName, now: now.addingTimeInterval(2))
         scheduler.noteLaunchFailed(bundle, appName: window.appName)
         #expect(scheduler.failures.isEmpty)
-        let later = scheduler.step(now: now.addingTimeInterval(3), deadline: deadline, targets: [window], matched: [], apps: warm())
+        let later = scheduler.step(
+            now: now.addingTimeInterval(3), deadline: deadline, targets: [window], matched: [], apps: warm()
+        )
         #expect(later.requests.isEmpty)
     }
+}
 
+@Suite struct TemplateWindowMatchTests {
     @Test func aLaterStrongMatchReplacesAProvisionalWindow() {
         let notes = savedWindow(title: "Notes", document: nil, windowID: 1, launchDate: nil)
         let draft = savedWindow(title: "Draft", document: "file:///tmp/draft.txt", windowID: 42, launchDate: launch)
@@ -301,11 +329,15 @@ private func warm(_ bundleID: String = bundle) -> [String: TemplateAppState] {
         #expect(TemplateWindowMatch.score(saved, title: unrelated.title, document: nil, windowID: unrelated.windowID,
                                          launchDate: nil) == 0)
         #expect(TemplateWindowMatch.assign([saved], candidates: [unrelated, otherSpace]).isEmpty)
-        let original = candidate(id: 9, title: "Draft", document: nil, launchDate: Date(timeIntervalSince1970: 200), fallback: false)
+        let original = candidate(
+            id: 9, title: "Draft", document: nil, launchDate: Date(timeIntervalSince1970: 200), fallback: false
+        )
         #expect(TemplateWindowMatch.assign([saved], candidates: [unrelated, otherSpace, original])[saved.id] == 9)
         let untitled = candidate(id: 5, title: "", fallback: true)
         #expect(TemplateWindowMatch.assign([saved], candidates: [unrelated, otherSpace, untitled])[saved.id] == 5)
-        let savedDocument = savedWindow(title: "Draft", document: "file:///tmp/draft.txt", windowID: 42, launchDate: launch)
+        let savedDocument = savedWindow(
+            title: "Draft", document: "file:///tmp/draft.txt", windowID: 42, launchDate: launch
+        )
         let elsewhere = candidate(id: 8, title: "Notes", document: savedDocument.document, fallback: false)
         #expect(TemplateWindowMatch.assign([savedDocument], candidates: [unrelated, elsewhere])[savedDocument.id] == 8)
     }

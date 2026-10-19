@@ -2,7 +2,8 @@ import AppKit
 import SwiftUI
 
 enum Pane: String, CaseIterable, Identifiable {
-    case general = "General", layout = "Layout", windows = "Windows", motion = "Motion", templates = "Templates", shortcuts = "Shortcuts"
+    case general = "General", layout = "Layout", windows = "Windows", motion = "Motion", templates = "Templates"
+    case shortcuts = "Shortcuts"
     var id: Self { self }
 
     var icon: String {
@@ -16,6 +17,10 @@ enum Pane: String, CaseIterable, Identifiable {
         }
     }
     var configKind: ConfigKind? {
-        switch self { case .motion: .animation; case .shortcuts: .keyboard; default: nil }
+        switch self {
+        case .motion: .animation
+        case .shortcuts: .keyboard
+        default: nil
+        }
     }
 }

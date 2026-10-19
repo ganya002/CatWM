@@ -14,9 +14,9 @@ struct MenuColumn: View {
                 }
                 .frame(height: 38)
                 .onAppear { DispatchQueue.main.async { searchFocused = true } }
-                .onChange(of: model.query) { _, q in
+                .onChange(of: model.query) { _, query in
                     model.path = []
-                    model.highlight = q.isEmpty ? [:] : [0: model.results.first?.item.id ?? ""]
+                    model.highlight = query.isEmpty ? [:] : [0: model.results.first?.item.id ?? ""]
                 }
             }
             if level == 0 && !model.query.isEmpty {
@@ -27,8 +27,8 @@ struct MenuColumn: View {
                 } else {
                     ScrollView {
                         VStack(spacing: 0) {
-                            ForEach(results, id: \.item.id) { r in
-                                MenuRowView(model: model, item: r.item, level: 0, crumb: r.crumb)
+                            ForEach(results, id: \.item.id) { result in
+                                MenuRowView(model: model, item: result.item, level: 0, crumb: result.crumb)
                             }
                         }
                     }
@@ -62,18 +62,18 @@ struct MenuColumn: View {
         case .essentials:
             EssentialsRow(model: model, enabled: i.enabled)
         case .workspaces:
-            let s = WindowManager.shared.workspaceSummary()
-            let highest = s.all.compactMap { Int($0.name) }.max() ?? 0
-            WorkspaceStrip(names: (1...max(9, min(highest, 10))).map(String.init), current: s.current,
-                           occupied: Set(s.all.filter { $0.windows > 0 }.map(\.name))) { n in
-                WindowManager.shared.showWorkspace(n)
+            let summary = WindowManager.shared.workspaceSummary()
+            let highest = summary.all.compactMap { Int($0.name) }.max() ?? 0
+            WorkspaceStrip(names: (1...max(9, min(highest, 10))).map(String.init), current: summary.current,
+                           occupied: Set(summary.all.filter { $0.windows > 0 }.map(\.name))) { name in
+                WindowManager.shared.showWorkspace(name)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { model.refresh() }
             }
             .padding(.horizontal, 8).padding(.top, 2).padding(.bottom, 8)
         case .layoutPicker:
             let current = WindowManager.shared.menuBarState()?.layout
-            LayoutPicker(layouts: Layout.allCases, selection: current, columns: 4) { l in
-                WindowManager.shared.dispatch("layout", l.rawValue)
+            LayoutPicker(layouts: Layout.allCases, selection: current, columns: 4) { layout in
+                WindowManager.shared.dispatch("layout", layout.rawValue)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { model.close() }
             }
             .padding(.horizontal, 4).padding(.bottom, 4)
@@ -82,7 +82,7 @@ struct MenuColumn: View {
                 Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.warning)
                 Text(i.label).font(Theme.body(13, .medium)).oneLine()
                 Spacer(minLength: 4)
-                OButton("Grant Access", variant: .primary, size: .sm) { model.run(i) }
+                OButton("Grant Access", variant: .primary, size: .small) { model.run(i) }
             }
             .padding(.horizontal, 10).padding(.vertical, 8)
         default:

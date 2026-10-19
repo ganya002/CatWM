@@ -7,5 +7,5 @@ struct SettingEntry: Identifiable {
     let pane: Pane
     var advanced = false
     var keywords = ""
-    var bind: BindRow? = nil
+    var bind: BindRow?
 }

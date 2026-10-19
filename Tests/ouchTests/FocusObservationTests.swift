@@ -1,6 +1,6 @@
 import AppKit
-import Testing
 @testable import ouch
+import Testing
 
 @Suite struct FocusObservationTests {
     final class Counter: @unchecked Sendable {
@@ -40,14 +40,14 @@ import Testing
 
     @Test @MainActor func commandsWaitForFocusAfterActivation() async {
         let manager = manager()
-        let w = window(7)
-        manager.windows[w.id] = w
-        manager.visible = [w.id]
+        let tracked = window(7)
+        manager.windows[tracked.id] = tracked
+        manager.visible = [tracked.id]
         let release = DispatchSemaphore(value: 0)
         let reads = Counter()
         manager.focusReader = FocusReader { _ in
             if reads.next() == 1 { _ = release.wait(timeout: .now() + 3) }
-            return .focused(w.id)
+            return .focused(tracked.id)
         }
         var dispatched: [(String, Bool)] = []
         await withCheckedContinuation { continuation in
@@ -73,10 +73,10 @@ import Testing
 
     @Test @MainActor func anUnavailableReplyDoesNotDiscardACommand() async {
         let manager = manager()
-        let w = window(7)
-        manager.windows[w.id] = w
+        let tracked = window(7)
+        manager.windows[tracked.id] = tracked
         let reads = Counter()
-        manager.focusReader = FocusReader { _ in reads.next() == 1 ? .unavailable : .focused(w.id) }
+        manager.focusReader = FocusReader { _ in reads.next() == 1 ? .unavailable : .focused(tracked.id) }
         await withCheckedContinuation { continuation in
             manager.onDispatch = { [weak manager] _, _, _ in
                 manager?.isStarted = false
@@ -85,7 +85,7 @@ import Testing
             manager.dispatch("minimize", "")
         }
         #expect(reads.value == 2)
-        #expect(manager.reportedFocus?.id == w.id)
+        #expect(manager.reportedFocus?.id == tracked.id)
         manager.onDispatch = nil
     }
 
@@ -161,8 +161,8 @@ import Testing
             return .focused(nil)
         }
         await withCheckedContinuation { continuation in
-            manager.animator = Animator(applyFocus: { [weak manager] w, isCurrent in
-                #expect(w.id == remaining.id && isCurrent())
+            manager.animator = Animator(applyFocus: { [weak manager] focused, isCurrent in
+                #expect(focused.id == remaining.id && isCurrent())
                 DispatchQueue.main.async {
                     manager?.isStarted = false
                     continuation.resume()
@@ -181,11 +181,11 @@ import Testing
 
     @Test @MainActor func focusReadsDoNotWaitForABulkScan() async {
         let manager = manager()
-        let w = window(7)
-        manager.windows[w.id] = w
+        let tracked = window(7)
+        manager.windows[tracked.id] = tracked
         let release = DispatchSemaphore(value: 0)
-        manager.scanner.run(w.pid) { _ = release.wait(timeout: .now() + 3) }
-        manager.focusReader = FocusReader { _ in .focused(w.id) }
+        manager.scanner.run(tracked.pid) { _ = release.wait(timeout: .now() + 3) }
+        manager.focusReader = FocusReader { _ in .focused(tracked.id) }
         await withCheckedContinuation { continuation in
             manager.onChange = { [weak manager] in
                 manager?.isStarted = false
@@ -193,23 +193,23 @@ import Testing
             }
             manager.requestFocusObservation()
         }
-        #expect(manager.reportedFocus?.id == w.id)
+        #expect(manager.reportedFocus?.id == tracked.id)
         release.signal()
         manager.onChange = nil
     }
 
     @Test @MainActor func aPendingFocusDoesNotExpireWhileItsWriteIsBlocked() async throws {
         let manager = manager()
-        let w = window(7)
-        manager.windows[w.id] = w
-        manager.visible = [w.id]
+        let tracked = window(7)
+        manager.windows[tracked.id] = tracked
+        manager.visible = [tracked.id]
         let release = DispatchSemaphore(value: 0)
         manager.animator = Animator(applyFocus: { _, _ in _ = release.wait(timeout: .now() + 3) })
-        manager.focus(w, warp: false)
-        manager.acceptFocus(pid: w.pid, id: w.id)
+        manager.focus(tracked, warp: false)
+        manager.acceptFocus(pid: tracked.pid, id: tracked.id)
         try await Task.sleep(for: .milliseconds(600))
-        #expect(manager.focusedWindow()?.id == w.id)
-        #expect(manager.pendingFocus?.id == w.id)
+        #expect(manager.focusedWindow()?.id == tracked.id)
+        #expect(manager.pendingFocus?.id == tracked.id)
         manager.isStarted = false
         release.signal()
     }
@@ -225,18 +225,18 @@ import Testing
 
     @Test @MainActor func aNewAppInvalidatesAPendingFocusRequest() {
         let manager = manager()
-        let w = window(7)
-        manager.windows[w.id] = w
-        manager.visible = [w.id]
-        manager.pendingFocus = WindowManager.PendingFocus(id: w.id, pid: w.pid, origin: -1, request: UUID())
+        let tracked = window(7)
+        manager.windows[tracked.id] = tracked
+        manager.visible = [tracked.id]
+        manager.pendingFocus = WindowManager.PendingFocus(id: tracked.id, pid: tracked.pid, origin: -1, request: UUID())
         manager.frontmostPID = { -2 }
         #expect(manager.focusedWindow() == nil)
         #expect(manager.pendingFocus == nil)
     }
 
     @Test @MainActor func focusWritesDoNotWaitForPlacementWrites() {
-        let w = window(7)
-        let writer = AXWriter(pid: w.pid)
+        let tracked = window(7)
+        let writer = AXWriter(pid: tracked.pid)
         let release = DispatchSemaphore(value: 0)
         let focused = DispatchSemaphore(value: 0)
         writer.run { _ = release.wait(timeout: .now() + 3) }
@@ -244,8 +244,8 @@ import Testing
             #expect(!Thread.isMainThread && isCurrent())
             focused.signal()
         })
-        animator.position(w, at: CGRect(x: 10, y: 20, width: 300, height: 200))
-        animator.focus(w)
+        animator.position(tracked, at: CGRect(x: 10, y: 20, width: 300, height: 200))
+        animator.focus(tracked)
         #expect(focused.wait(timeout: .now() + 2) == .success)
         release.signal()
     }

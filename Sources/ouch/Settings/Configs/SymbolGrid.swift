@@ -16,20 +16,21 @@ struct SymbolGrid: View {
             OTextField(placeholder: "Search icons", text: $query.text)
             ScrollView {
                 LazyVGrid(columns: Array(repeating: GridItem(.fixed(34), spacing: 4), count: 7), spacing: 4) {
-                    ForEach(shown, id: \.self) { s in
-                        Button { selection = s; close() } label: {
-                            Image(systemName: s).font(Theme.symbol(Theme.Icon.lg)).frame(width: 34, height: 34)
-                                .foregroundStyle(selection == s ? Theme.onAccent : Theme.ink)
-                                .background(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous).fill(selection == s ? Theme.accent : .clear))
+                    ForEach(shown, id: \.self) { symbol in
+                        Button { selection = symbol; close() } label: {
+                            Image(systemName: symbol).font(Theme.symbol(Theme.Icon.large)).frame(width: 34, height: 34)
+                                .foregroundStyle(selection == symbol ? Theme.onAccent : Theme.ink)
+                                .background(RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
+                                    .fill(selection == symbol ? Theme.accent : .clear))
                                 .contentShape(Rectangle())
                         }
-                        .buttonStyle(.plain).tooltip(s).accessibilityLabel(s)
+                        .buttonStyle(.plain).tooltip(symbol).accessibilityLabel(symbol)
                     }
                 }
             }
             .frame(height: 190)
             if shown.isEmpty { Text("No icons match").font(Theme.body(12.5)).foregroundStyle(Theme.inkMuted) }
-            OButton("Use the default icon", variant: .ghost, size: .sm) { selection = nil; close() }
+            OButton("Use the default icon", variant: .ghost, size: .small) { selection = nil; close() }
         }
         .padding(12).frame(width: 300)
     }

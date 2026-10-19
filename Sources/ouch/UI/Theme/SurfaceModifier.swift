@@ -54,45 +54,47 @@ struct SurfaceModifier: ViewModifier {
 
 #if DEBUG
 extension GalleryExamples {
-    static let surfaces = GalleryExample(order: 8) { AnyView(GalleryContent(m: $0).surfaces) }
+    static let surfaces = GalleryExample(order: 8) { AnyView(GalleryContent(model: $0).surfaces) }
 }
 
 extension GalleryContent {
     @ViewBuilder var surfaces: some View {
         block("Surfaces") {
-            HStack(alignment: .top, spacing: Theme.Space.xl) {
-                Text("Retile").font(Theme.body(12.5)).surface(.xs)
+            HStack(alignment: .top, spacing: Theme.Space.extraLarge) {
+                Text("Retile").font(Theme.body(12.5)).surface(.extraSmall)
                 VStack(alignment: .leading, spacing: 2) {
                     Label("Config reloaded", systemImage: "checkmark.circle.fill").font(Theme.body(13.5, .medium))
                     Text("3 binds changed").textStyle(.caption).foregroundStyle(Theme.inkMuted)
                 }
-                .surface(.sm)
-                VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                .surface(.small)
+                VStack(alignment: .leading, spacing: Theme.Space.extraSmall) {
                     Text("Tip").kicker()
-                    Text("Hold ⌥ and drag anywhere in a window to move it.").font(Theme.body()).frame(width: 220, alignment: .leading)
+                    Text("Hold ⌥ and drag anywhere in a window to move it.").font(Theme.body())
+                        .frame(width: 220, alignment: .leading)
                 }
-                .padding(Theme.Space.sm)
-                .surface(.md)
+                .padding(Theme.Space.small)
+                .surface(.medium)
             }
-            HStack(alignment: .top, spacing: Theme.Space.xl) {
-                VStack(alignment: .leading, spacing: Theme.Space.sm) {
+            HStack(alignment: .top, spacing: Theme.Space.extraLarge) {
+                VStack(alignment: .leading, spacing: Theme.Space.small) {
                     Text("Step 2 of 6").kicker()
                     Text("Move focus").textStyle(.title)
                     Text("Use H J K L to jump between windows.").font(Theme.body()).foregroundStyle(Theme.inkMuted)
                     Kbd(keys: ["H"], size: .large)
                 }
                 .frame(width: 304, alignment: .leading)
-                .surface(.lg, caret: .top(40))
-                VStack(alignment: .leading, spacing: Theme.Space.md) {
+                .surface(.large, caret: .top(40))
+                VStack(alignment: .leading, spacing: Theme.Space.medium) {
                     Text("Welcome").kicker()
                     Text("Tile without thinking").font(Theme.display(34))
-                    Text("Ouch arranges your windows as you open them.").font(Theme.body()).foregroundStyle(Theme.inkMuted)
-                    OButton("Continue", variant: .primary, size: .lg, shortcut: ["↩"]) {}
+                    Text("Ouch arranges your windows as you open them.").font(Theme.body())
+                        .foregroundStyle(Theme.inkMuted)
+                    OButton("Continue", variant: .primary, size: .large, shortcut: ["↩"]) {}
                 }
                 .frame(width: 420, alignment: .leading)
-                .surface(.xl)
+                .surface(.extraLarge)
             }
-            .padding(.top, Theme.Space.md)
+            .padding(.top, Theme.Space.medium)
         }
     }
 }

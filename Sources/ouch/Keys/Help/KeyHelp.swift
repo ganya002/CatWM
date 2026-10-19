@@ -11,6 +11,7 @@ final class KeyHelp {
     private var orderOutWork: DispatchWorkItem?
     private var flashWork: DispatchWorkItem?
     private var dismissMonitor: Any?
+    private var fireObserver: NSObjectProtocol?
     private var chordMods: NSEvent.ModifierFlags = []
     private static let margin: CGFloat = 40
     private static let bottomGap: CGFloat = 16
@@ -20,9 +21,11 @@ final class KeyHelp {
     var isVisible: Bool { model.shown }
 
     func install() {
-        Hotkeys.shared.onFlagsChanged = { [weak self] f in self?.flagsChanged(Self.mods(f)) }
-        NotificationCenter.default.addObserver(forName: Hotkeys.didFire, object: nil, queue: .main) { [weak self] n in
-            if let b = n.userInfo?["bind"] as? KeyBinding { self?.fired(b) }
+        Hotkeys.shared.onFlagsChanged = { [weak self] flags in self?.flagsChanged(Self.mods(flags)) }
+        fireObserver = NotificationCenter.default.addObserver(
+            forName: Hotkeys.didFire, object: nil, queue: .main
+        ) { [weak self] note in
+            if let bind = note.userInfo?["bind"] as? KeyBinding { self?.fired(bind) }
         }
         Hotkeys.shared.onHelpKey = { [weak self] in self?.toggle() }
     }
@@ -64,18 +67,20 @@ final class KeyHelp {
         show(mode: mode, reason: .menu)
     }
 
-    private func flagsChanged(_ f: NSEvent.ModifierFlags) {
-        if holdWork != nil, !f.isSuperset(of: chordMods) { holdWork?.cancel(); holdWork = nil }
+    private func flagsChanged(_ flags: NSEvent.ModifierFlags) {
+        if holdWork != nil, !flags.isSuperset(of: chordMods) { holdWork?.cancel(); holdWork = nil }
         guard model.shown else { return }
-        if model.reason == .hold, !f.isSuperset(of: chordMods) { hide(); return }
-        if model.held != f { model.held = f }
+        if model.reason == .hold, !flags.isSuperset(of: chordMods) { hide(); return }
+        if model.held != flags { model.held = flags }
     }
 
-    private func fired(_ b: KeyBinding) {
-        guard model.shown, b.submap == model.mode, b.keyCode < 0x1000 else { return }
+    private func fired(_ bind: KeyBinding) {
+        guard model.shown, bind.submap == model.mode, bind.keyCode < 0x1000 else { return }
         flashWork?.cancel()
-        withAnimation(.easeOut(duration: Theme.fast)) { model.pressed = b.keyCode }
-        let work = DispatchWorkItem { [weak self] in withAnimation(.easeOut(duration: Theme.slow)) { self?.model.pressed = nil } }
+        withAnimation(.easeOut(duration: Theme.fast)) { model.pressed = bind.keyCode }
+        let work = DispatchWorkItem { [weak self] in
+            withAnimation(.easeOut(duration: Theme.slow)) { self?.model.pressed = nil }
+        }
         flashWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.22, execute: work)
     }
@@ -89,19 +94,20 @@ final class KeyHelp {
                    room: screen.visibleFrame.width - Self.margin * 2 - 48)
         model.held = Self.mods(CGEventSource.flagsState(.combinedSessionState))
 
-        let p = panel ?? makePanel()
-        panel = p
+        let helpPanel = panel ?? makePanel()
+        panel = helpPanel
         if !wasShown {
             model.motion = PanelMotion.current
-            let h = NSHostingView(rootView: KeyHelpView(model: model, margin: Self.margin))
-            h.sizingOptions = [.intrinsicContentSize]
-            host = h
-            p.contentView = h
+            let newHost = NSHostingView(rootView: KeyHelpView(model: model, margin: Self.margin))
+            newHost.sizingOptions = [.intrinsicContentSize]
+            host = newHost
+            helpPanel.contentView = newHost
         }
         guard let host else { return }
         host.layoutSubtreeIfNeeded()
-        p.place(size: host.fittingSize, on: screen, anchor: .bottom(Self.bottomGap - Self.margin), inset: EdgeInsets(all: Self.margin))
-        p.orderFrontRegardless()
+        helpPanel.place(size: host.fittingSize, on: screen, anchor: .bottom(Self.bottomGap - Self.margin),
+                        inset: EdgeInsets(all: Self.margin))
+        helpPanel.orderFrontRegardless()
         if !wasShown { DispatchQueue.main.async { [weak self] in self?.model.shown = true } }
 
         setDismissMonitor(reason == .menu)
@@ -120,15 +126,17 @@ final class KeyHelp {
             self?.host = nil
         }
         orderOutWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + max(Theme.medium, model.motion.outDuration) + 0.05, execute: work)
+        let delay = max(Theme.medium, model.motion.outDuration) + 0.05
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
     }
 
-    private func setDismissMonitor(_ on: Bool) {
-        if let m = dismissMonitor { NSEvent.removeMonitor(m); dismissMonitor = nil }
-        guard on else { return }
+    private func setDismissMonitor(_ active: Bool) {
+        if let dismissMonitor { NSEvent.removeMonitor(dismissMonitor); self.dismissMonitor = nil }
+        guard active else { return }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
             guard let self, model.shown, model.reason == .menu, dismissMonitor == nil else { return }
-            dismissMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .keyDown]) { [weak self] _ in
+            let events: NSEvent.EventTypeMask = [.leftMouseDown, .rightMouseDown, .keyDown]
+            dismissMonitor = NSEvent.addGlobalMonitorForEvents(matching: events) { [weak self] _ in
                 self?.hide()
             }
         }
@@ -136,7 +144,7 @@ final class KeyHelp {
 
     private func makePanel() -> OuchPanel { OuchPanel(role: .hud) }
 
-    static func mods(_ f: CGEventFlags) -> NSEvent.ModifierFlags {
-        NSEvent.ModifierFlags(rawValue: UInt(f.rawValue)).intersection([.command, .option, .control, .shift])
+    static func mods(_ flags: CGEventFlags) -> NSEvent.ModifierFlags {
+        NSEvent.ModifierFlags(rawValue: UInt(flags.rawValue)).intersection([.command, .option, .control, .shift])
     }
 }

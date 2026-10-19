@@ -4,12 +4,12 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 extension ConfigLibrary {
-    func select(_ c: SavedConfig) {
-        apply(c)
-        active[c.kind] = c.id
-        if c.kind == .full {
-            active[.keyboard] = config(id: c.keyboardID)?.id ?? builtIns[0].id
-            active[.animation] = config(id: c.animationID)?.id ?? Self.builtInPrefix + "animation.default"
+    func select(_ saved: SavedConfig) {
+        apply(saved)
+        active[saved.kind] = saved.id
+        if saved.kind == .full {
+            active[.keyboard] = config(id: saved.keyboardID)?.id ?? builtIns[0].id
+            active[.animation] = config(id: saved.animationID)?.id ?? Self.builtInPrefix + "animation.default"
             doc.applyKeyboard(current(.keyboard).text)
             doc.applyAnimation(current(.animation).text)
             doc.save()
@@ -22,9 +22,9 @@ extension ConfigLibrary {
         let taken = Set(configs(kind).filter { $0.id != id }.map { $0.name.lowercased() })
         let base = wanted.trimmingCharacters(in: .whitespacesAndNewlines)
         if !taken.contains(base.lowercased()) { return base }
-        var n = 2
-        while taken.contains("\(base) (\(n))".lowercased()) { n += 1 }
-        return "\(base) (\(n))"
+        var suffix = 2
+        while taken.contains("\(base) (\(suffix))".lowercased()) { suffix += 1 }
+        return "\(base) (\(suffix))"
     }
 
     func isReserved(_ name: String, kind: ConfigKind) -> Bool {
@@ -35,68 +35,74 @@ extension ConfigLibrary {
     @discardableResult
     func create(kind: ConfigKind, baseID: String, name: String, symbol: String?, colorHex: String?) -> SavedConfig {
         let base = config(id: baseID) ?? current(kind)
-        let c = SavedConfig(id: UUID().uuidString, kind: kind, name: uniqueName(name, kind: kind), symbol: symbol, colorHex: colorHex,
-                            text: base.text, keyboardID: base.keyboardID, animationID: base.animationID)
-        custom.append(c)
-        select(c)
-        return c
+        let saved = SavedConfig(id: UUID().uuidString, kind: kind, name: uniqueName(name, kind: kind), symbol: symbol,
+                                colorHex: colorHex, text: base.text, keyboardID: base.keyboardID,
+                                animationID: base.animationID)
+        custom.append(saved)
+        select(saved)
+        return saved
     }
 
     func createFromEdit(kinds: [ConfigKind], name: String, symbol: String?, colorHex: String?) {
         for kind in kinds {
-            let c = SavedConfig(id: UUID().uuidString, kind: kind, name: uniqueName(name, kind: kind), symbol: symbol, colorHex: colorHex,
-                                text: extract(kind))
-            custom.append(c)
-            active[kind] = c.id
+            let saved = SavedConfig(id: UUID().uuidString, kind: kind, name: uniqueName(name, kind: kind),
+                                    symbol: symbol, colorHex: colorHex, text: extract(kind))
+            custom.append(saved)
+            active[kind] = saved.id
         }
         refreshLinks()
         save()
     }
 
     func update(id: String, name: String, symbol: String?, colorHex: String?) {
-        guard let i = custom.firstIndex(where: { $0.id == id }) else { return }
-        custom[i].name = uniqueName(name, kind: custom[i].kind, ignoring: id)
-        custom[i].symbol = symbol
-        custom[i].colorHex = colorHex
+        guard let index = custom.firstIndex(where: { $0.id == id }) else { return }
+        custom[index].name = uniqueName(name, kind: custom[index].kind, ignoring: id)
+        custom[index].symbol = symbol
+        custom[index].colorHex = colorHex
         save()
     }
 
-    func duplicate(_ c: SavedConfig) {
-        var copy = c
+    func duplicate(_ saved: SavedConfig) {
+        var copy = saved
         copy.id = UUID().uuidString
-        copy.name = uniqueName(c.name, kind: c.kind)
-        if c.isBuiltIn { copy.symbol = nil }
+        copy.name = uniqueName(saved.name, kind: saved.kind)
+        if saved.isBuiltIn { copy.symbol = nil }
         custom.append(copy)
         save()
     }
 
-    func delete(_ c: SavedConfig) {
-        guard !c.isBuiltIn else { return }
-        let wasActive = isActive(c)
-        custom.removeAll { $0.id == c.id }
-        if wasActive { select(configs(c.kind)[0]) } else { save() }
+    func delete(_ saved: SavedConfig) {
+        guard !saved.isBuiltIn else { return }
+        let wasActive = isActive(saved)
+        custom.removeAll { $0.id == saved.id }
+        if wasActive { select(configs(saved.kind)[0]) } else { save() }
     }
 
-    func export(_ c: SavedConfig, to url: URL) throws {
-        var bundle = ConfigBundle(config: c)
-        if c.kind == .full {
-            bundle.included = [c.keyboardID, c.animationID].compactMap { config(id: $0) }.filter { !$0.isBuiltIn }
+    func export(_ saved: SavedConfig, to url: URL) throws {
+        var bundle = ConfigBundle(config: saved)
+        if saved.kind == .full {
+            bundle.included = [saved.keyboardID, saved.animationID].compactMap { config(id: $0) }
+                .filter { !$0.isBuiltIn }
         }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         try encoder.encode(bundle).write(to: url, options: .atomic)
     }
 
-    func runExportPanel(for c: SavedConfig) {
+    func runExportPanel(for saved: SavedConfig) {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.ouchConfig]
-        panel.nameFieldStringValue = "\(c.name).ouchconfig"
-        panel.message = "Export “\(c.name)”"
-        let finish: (NSApplication.ModalResponse) -> Void = { [weak self] r in
-            guard r == .OK, let url = panel.url else { return }
-            do { try self?.export(c, to: url) } catch { Self.alert("Couldn't export", error.localizedDescription) }
+        panel.nameFieldStringValue = "\(saved.name).ouchconfig"
+        panel.message = "Export “\(saved.name)”"
+        let finish: (NSApplication.ModalResponse) -> Void = { [weak self] response in
+            guard response == .OK, let url = panel.url else { return }
+            do { try self?.export(saved, to: url) } catch { Self.alert("Couldn't export", error.localizedDescription) }
         }
-        if let w = SettingsWindow.shared.window { panel.beginSheetModal(for: w, completionHandler: finish) } else { finish(panel.runModal()) }
+        if let window = SettingsWindow.shared.window {
+            panel.beginSheetModal(for: window, completionHandler: finish)
+        } else {
+            finish(panel.runModal())
+        }
     }
 
     func runImportPanel(only kind: ConfigKind? = nil) {
@@ -104,11 +110,15 @@ extension ConfigLibrary {
         panel.allowedContentTypes = [.ouchConfig, .json]
         panel.allowsMultipleSelection = false
         panel.message = kind.map { "Choose a \($0.title.lowercased()) config to import" } ?? "Choose a config to import"
-        let finish: (NSApplication.ModalResponse) -> Void = { [weak self] r in
-            guard r == .OK, let url = panel.url else { return }
+        let finish: (NSApplication.ModalResponse) -> Void = { [weak self] response in
+            guard response == .OK, let url = panel.url else { return }
             self?.importFile(url, only: kind)
         }
-        if let w = SettingsWindow.shared.window { panel.beginSheetModal(for: w, completionHandler: finish) } else { finish(panel.runModal()) }
+        if let window = SettingsWindow.shared.window {
+            panel.beginSheetModal(for: window, completionHandler: finish)
+        } else {
+            finish(panel.runModal())
+        }
     }
 
     func importFile(_ url: URL, only kind: ConfigKind? = nil) {
@@ -119,7 +129,8 @@ extension ConfigLibrary {
         }
         if let kind, bundle.config.kind != kind {
             let there = bundle.config.kind == .full ? "the sidebar" : "the \(bundle.config.kind.title) pane"
-            Self.alert("Wrong kind of config", "This is a \(bundle.config.kind.title.lowercased()) config. Import it from \(there) instead.")
+            Self.alert("Wrong kind of config",
+                       "This is a \(bundle.config.kind.title.lowercased()) config. Import it from \(there) instead.")
             return
         }
         var remap: [String: String] = [:]
@@ -135,8 +146,9 @@ extension ConfigLibrary {
         save()
         var detail = "Added “\(main.name)” to your \(main.kind.title.lowercased()) configs."
         if added.count > 1 { detail += "\nIncludes: " + added.dropLast().map(\.name).joined(separator: ", ") }
-        if skipped > 0 { detail += "\n\(skipped) setting\(skipped == 1 ? "" : "s") weren't recognised and were skipped." }
+        if skipped > 0 {
+            detail += "\n\(skipped) setting\(skipped == 1 ? "" : "s") weren't recognised and were skipped."
+        }
         if Self.confirm("Use “\(main.name)” now?", detail, yes: "Use Now", no: "Not Now") { select(main) }
     }
-
 }

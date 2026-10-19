@@ -11,7 +11,8 @@ extension KeyEditor {
             } else if ConfigDocument.keyName(for: code) == nil {
                 note("This key can't take a shortcut yet", detail: nil)
             } else {
-                OSearchField(placeholder: "Search actions", text: $draft.search, focus: $searching, onSubmit: pickFirstResult)
+                OSearchField(placeholder: "Search actions", text: $draft.search, focus: $searching,
+                             onSubmit: pickFirstResult)
                     .padding(.horizontal, 2)
                 hairline
                 menu
@@ -33,7 +34,7 @@ extension KeyEditor {
             actions
         }
         .frame(width: Self.width)
-        .surface(.md, glass: true)
+        .surface(.medium, glass: true)
         .overlayPreferenceValue(CategoryAnchor.self) { anchors in flyoutLayer(anchors) }
         .onChange(of: draft.search) { _, _ in draft.open = nil }
         .onAppear { DispatchQueue.main.async { searching = !draft.isRange } }
@@ -50,10 +51,10 @@ extension KeyEditor {
     }
 
     func modeEntry(_ mode: String) -> [String]? {
-        guard !mode.isEmpty, let a = doc.keyActions(in: "").first(where: {
+        guard !mode.isEmpty, let entry = doc.keyActions(in: "").first(where: {
             $0.row.dispatcher == "submap" && $0.arg.lowercased() == mode.lowercased()
         }) else { return nil }
-        return ConfigDocument.modifierCaps(a.flags) + [ConfigDocument.capLabel(a.key)]
+        return ConfigDocument.modifierCaps(entry.flags) + [ConfigDocument.capLabel(entry.key)]
     }
 
     @ViewBuilder var menu: some View {
@@ -63,18 +64,19 @@ extension KeyEditor {
                 ForEach(MenuCategory.allCases) { categoryRow($0) }
             } else {
                 let hits = results(query)
-                ForEach(hits) { a in
-                    OMenuRow(action: { pick(a) }) {
-                        symbol(a.symbol)
-                    } label: {
-                        Text(a.title).oneLine()
-                    } trailing: {
-                        Text(MenuCategory(a).rawValue).foregroundStyle(Theme.inkFaint).oneLine().fixedSize()
-                    }
+                ForEach(hits) { hit in
+                    OMenuRow(action: { pick(hit) }, lead: {
+                        symbol(hit.symbol)
+                    }, label: {
+                        Text(hit.title).oneLine()
+                    }, trailing: {
+                        Text(MenuCategory(hit).rawValue).foregroundStyle(Theme.inkFaint).oneLine().fixedSize()
+                    })
                 }
                 if hits.isEmpty {
                     Text("No actions match “\(query)”").foregroundStyle(Theme.inkMuted).oneLine()
-                        .padding(.horizontal, 8).frame(maxWidth: .infinity, minHeight: Theme.rowHeight, alignment: .leading)
+                        .padding(.horizontal, 8)
+                        .frame(maxWidth: .infinity, minHeight: Theme.rowHeight, alignment: .leading)
                 }
             }
         }
@@ -83,8 +85,8 @@ extension KeyEditor {
 
     func results(_ query: String) -> [Action] {
         let words = query.lowercased().split(separator: " ")
-        return Array(catalog.filter { a in
-            let text = (a.title + " " + MenuCategory(a).rawValue).lowercased()
+        return Array(catalog.filter { candidate in
+            let text = (candidate.title + " " + MenuCategory(candidate).rawValue).lowercased()
             return words.allSatisfy { text.contains($0) }
         }.prefix(8))
     }
@@ -98,33 +100,35 @@ extension KeyEditor {
         Image(systemName: name).font(Theme.symbol()).foregroundStyle(Theme.inkMuted)
     }
 
-    func categoryRow(_ c: MenuCategory) -> some View {
-        let current = action.map(MenuCategory.init) == c
-        return OMenuRow(open: draft.open == c, action: { draft.open = draft.open == c ? nil : c }) {
-            symbol(c.symbol)
-        } label: {
-            Text(c.rawValue).oneLine().fixedSize()
-        } trailing: {
-            if current, let a = action {
-                Text(a.title).foregroundStyle(Theme.accentInk).oneLine()
+    func categoryRow(_ category: MenuCategory) -> some View {
+        let current = action.map(MenuCategory.init) == category
+        return OMenuRow(open: draft.open == category, action: {
+            draft.open = draft.open == category ? nil : category
+        }, lead: {
+            symbol(category.symbol)
+        }, label: {
+            Text(category.rawValue).oneLine().fixedSize()
+        }, trailing: {
+            if current, let action {
+                Text(action.title).foregroundStyle(Theme.accentInk).oneLine()
             }
-            Image(systemName: "chevron.right").font(Theme.symbol(Theme.Icon.xs, .semibold)).foregroundStyle(Theme.inkFaint)
-        }
-        .onHover { if $0 { draft.open = c } }
-        .anchorPreference(key: CategoryAnchor.self, value: .bounds) { [c: $0] }
-        .accessibilityLabel("\(c.rawValue) actions")
+            Image(systemName: "chevron.right").font(Theme.symbol(Theme.Icon.extraSmall, .semibold))
+                .foregroundStyle(Theme.inkFaint)
+        })
+        .onHover { if $0 { draft.open = category } }
+        .anchorPreference(key: CategoryAnchor.self, value: .bounds) { [category: $0] }
+        .accessibilityLabel("\(category.rawValue) actions")
     }
 
     func flyoutLayer(_ anchors: [MenuCategory: Anchor<CGRect>]) -> some View {
-        GeometryReader { g in
-            if let c = draft.open, let a = anchors[c] {
-                let r = g[a]
-                flyout(c)
+        GeometryReader { geometry in
+            if let category = draft.open, let anchor = anchors[category] {
+                let rect = geometry[anchor]
+                flyout(category)
                     .fixedSize()
-                    .offset(x: flyoutLeading ? -Self.flyoutWidth - 2 : g.size.width + 2, y: r.minY - 4)
+                    .offset(x: flyoutLeading ? -Self.flyoutWidth - 2 : geometry.size.width + 2, y: rect.minY - 4)
                     .transition(.opacity)
             }
         }
     }
-
 }

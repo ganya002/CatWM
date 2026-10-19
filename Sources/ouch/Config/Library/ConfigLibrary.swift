@@ -4,9 +4,10 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 final class ConfigLibrary: ObservableObject {
-
     static let builtInPrefix = "builtin."
-    static let reservedNames: [ConfigKind: [String]] = [.keyboard: ["Vim", "WASD"], .animation: ["Default"], .full: ["Default"]]
+    static let reservedNames: [ConfigKind: [String]] = [
+        .keyboard: ["Vim", "WASD"], .animation: ["Default"], .full: ["Default"]
+    ]
 
     @Published var custom: [SavedConfig] = []
     @Published var active: [ConfigKind: String] = [:]
@@ -33,5 +34,4 @@ final class ConfigLibrary: ObservableObject {
             .debounce(for: .milliseconds(50), scheduler: RunLoop.main)
             .sink { [weak self] in self?.reconcile() }
     }
-
 }

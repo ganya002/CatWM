@@ -3,40 +3,40 @@ import ApplicationServices
 
 extension AXUIElement {
     func value(_ attr: String) -> CFTypeRef? {
-        var v: CFTypeRef?
-        return AXUIElementCopyAttributeValue(self, attr as CFString, &v) == .success ? v : nil
+        var result: CFTypeRef?
+        return AXUIElementCopyAttributeValue(self, attr as CFString, &result) == .success ? result : nil
     }
     func string(_ attr: String) -> String? { value(attr) as? String }
-    func bool(_ attr: String) -> Bool? { (value(attr) as? NSNumber)?.boolValue }
+    func flag(_ attr: String, default fallback: Bool = false) -> Bool { (value(attr) as? Bool) ?? fallback }
     func element(_ attr: String) -> AXUIElement? {
-        guard let v = value(attr), CFGetTypeID(v) == AXUIElementGetTypeID() else { return nil }
-        return (v as! AXUIElement)
+        guard let result = value(attr), CFGetTypeID(result) == AXUIElementGetTypeID() else { return nil }
+        return unsafeDowncast(result, to: AXUIElement.self)
     }
     func elements(_ attr: String) -> [AXUIElement] { (value(attr) as? [AXUIElement]) ?? [] }
 
     func point(_ attr: String) -> CGPoint? {
-        guard let v = value(attr), CFGetTypeID(v) == AXValueGetTypeID() else { return nil }
-        var p = CGPoint.zero
-        return AXValueGetValue(v as! AXValue, .cgPoint, &p) ? p : nil
+        guard let result = value(attr), CFGetTypeID(result) == AXValueGetTypeID() else { return nil }
+        var point = CGPoint.zero
+        return AXValueGetValue(unsafeDowncast(result, to: AXValue.self), .cgPoint, &point) ? point : nil
     }
     func size(_ attr: String) -> CGSize? {
-        guard let v = value(attr), CFGetTypeID(v) == AXValueGetTypeID() else { return nil }
-        var s = CGSize.zero
-        return AXValueGetValue(v as! AXValue, .cgSize, &s) ? s : nil
+        guard let result = value(attr), CFGetTypeID(result) == AXValueGetTypeID() else { return nil }
+        var size = CGSize.zero
+        return AXValueGetValue(unsafeDowncast(result, to: AXValue.self), .cgSize, &size) ? size : nil
     }
     var frame: CGRect {
-        guard let p = point(kAXPositionAttribute), let s = size(kAXSizeAttribute),
-              [p.x, p.y, s.width, s.height].allSatisfy(\.isFinite) else { return .null }
-        return CGRect(origin: p, size: s)
+        guard let point = point(kAXPositionAttribute), let size = size(kAXSizeAttribute),
+              [point.x, point.y, size.width, size.height].allSatisfy(\.isFinite) else { return .null }
+        return CGRect(origin: point, size: size)
     }
 
     @discardableResult
-    func set(_ attr: String, _ v: CFTypeRef) -> Bool {
-        AXUIElementSetAttributeValue(self, attr as CFString, v) == .success
+    func set(_ attr: String, _ newValue: CFTypeRef) -> Bool {
+        AXUIElementSetAttributeValue(self, attr as CFString, newValue) == .success
     }
     func isSettable(_ attr: String) -> Bool {
-        var b = DarwinBoolean(false)
-        return AXUIElementIsAttributeSettable(self, attr as CFString, &b) == .success && b.boolValue
+        var settable = DarwinBoolean(false)
+        return AXUIElementIsAttributeSettable(self, attr as CFString, &settable) == .success && settable.boolValue
     }
     func perform(_ action: String) { AXUIElementPerformAction(self, action as CFString) }
 

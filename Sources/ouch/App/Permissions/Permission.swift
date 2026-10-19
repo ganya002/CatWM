@@ -72,7 +72,8 @@ enum Permission: CaseIterable {
     }
 
     static func closeSettingsWindows() {
-        guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.systempreferences").first else { return }
+        let settings = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.systempreferences")
+        guard let app = settings.first else { return }
         for window in AXUIElementCreateApplication(app.processIdentifier).elements(kAXWindowsAttribute) {
             window.element(kAXCloseButtonAttribute)?.perform(kAXPressAction)
         }
@@ -80,7 +81,9 @@ enum Permission: CaseIterable {
 
     static func dismissSystemAlert() {
         guard accessibility.isGranted else { return }
-        for app in NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.accessibility.universalAccessAuthWarn") {
+        let alerts = NSRunningApplication.runningApplications(
+            withBundleIdentifier: "com.apple.accessibility.universalAccessAuthWarn")
+        for app in alerts {
             for window in AXUIElementCreateApplication(app.processIdentifier).elements(kAXWindowsAttribute) {
                 window.element(kAXDefaultButtonAttribute)?.perform(kAXPressAction)
             }

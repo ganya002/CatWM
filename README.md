@@ -11,6 +11,31 @@ open build/ouch.app
 
 For fast rebuilds while you work, run `./build.sh --dev`. It makes a debug build in a few seconds, not about a minute. Do not ship it.
 
+## Lint
+
+SwiftLint needs the Xcode tools. Install Xcode, or install the Command Line Tools with `xcode-select --install`.
+
+The project pins SwiftLint 0.65.1. `.swiftlint.yml` sets `swiftlint_version`, so a different version stops with an error. Install that version from the [0.65.1 release](https://github.com/realm/SwiftLint/releases/tag/0.65.1), or with Homebrew while 0.65.1 is the current formula:
+
+```sh
+brew install swiftlint
+swiftlint version
+```
+
+Run it from the repo root.
+
+```sh
+swiftlint
+```
+
+If you have only the Command Line Tools (no Xcode), SwiftLint cannot find SourceKit. Give it the toolchain path:
+
+```sh
+TOOLCHAIN_DIR=/Library/Developer/CommandLineTools swiftlint
+```
+
+The config is in `.swiftlint.yml`. It is strict: all default rules are on, more opt-in rules are on, and each warning is an error. Comments are not allowed in this repo, so you cannot disable a rule in the code. Fix the code. The `lint` workflow runs SwiftLint 0.65.1 on each push and pull request.
+
 To install a beta build to `/Applications/Ouch.app` and open it, run `./install.sh`. Add `--stable` to skip the beta channel marker.
 
 Testers install with one command. The script is [website/public/install.sh](website/public/install.sh). The website serves it at `https://ouch.perwko.com/install.sh`. Without a flag it installs the latest stable release. With `--beta` it installs the latest beta:
@@ -23,7 +48,7 @@ On first launch, a short intro plays, then a welcome card asks for **Accessibili
 
 The menu bar has two lessons on the same practice windows:
 
-- **Keyboard Tutorial…** is the long one: chapters (window mode, focus, moving, the main pane, layouts, zoom and float, workspaces, global keys, displays, sorting), each followed by drills you answer from memory. **Pause** remembers the chapter; the menu then reads **Resume Tutorial…**.
+- **Keyboard Tutorial…** is the long one: chapters (window mode, focus, moving, the main pane, layouts, zoom and float, workspaces, global keys, displays, overview), each followed by drills you answer from memory. **Pause** remembers the chapter; the menu then reads **Resume Tutorial…**.
 - **Help › Quick Tour** replays the onboarding tour.
 
 After onboarding, small tips turn up once each where they help: beside a Settings pane, above the mode bar, or under the menu bar item after you click a command that has a key. **Help › Show Tips** turns them off and on (turning them on shows them again).
@@ -155,7 +180,7 @@ On the Ouch home Desktop, **Bring Window Here** in the menu bar lists standard, 
 
 A plain click on a running app in the **Dock** also brings its preferred window from a native Desktop into the Ouch workspace on the Dock's display and focuses it. Ouch handles that click before the Dock can switch Desktops. Apps already on an Ouch home Desktop, minimized/fullscreen windows, hidden apps, modified clicks, dragging and long presses keep the Dock's usual behavior.
 
-This uses an undocumented bridged WindowServer operation adapted from [WhichSpace](https://github.com/gechr/WhichSpace). Tested on macOS 27.0.1 with SIP enabled: five imports took 5–7 ms, with no active Desktop change. Older macOS builds may refuse it; Ouch verifies actual Space membership before committing an assignment and reports failure without switching Desktops. See [the investigation and standalone probe](docs/native-space-import.md).
+This uses an undocumented bridged WindowServer operation adapted from [WhichSpace](https://github.com/gechr/WhichSpace). Tested on macOS 27.0.1 with SIP enabled: five imports took 5–7 ms, with no active Desktop change. Older macOS builds may refuse it; Ouch verifies actual Space membership before committing an assignment and reports failure without switching Desktops. See [the investigation and standalone probe](docs/internals/native-space-import.md).
 
 ### Dispatchers
 
@@ -197,7 +222,7 @@ Open it from the menu bar menu with **Settings…** (⌘,). Changes save and app
 - **General:** permission and keybind status, open at login, tiling, the main modifier, updates. Advanced: beta releases. Reset everything is at the bottom.
 - **Layout:** the layout of each display, the layouts in the cycle, gaps and padding with a live preview, the layout HUD. Advanced: smart gaps, per-side padding, the built-in display, the menu bar, the main pane resize step.
 - **Windows:** focus follows mouse, mouse follows focus, drag to swap or resize, floating apps, Ouch workspaces. Advanced: new windows, small windows, bundle IDs, the home Desktop.
-- **Motion:** style presets (None, Snappy, Smooth, Relaxed, Springy, Wobbly, Bouncy, Playful), a preview and duration. Advanced: curve and bounciness.
+- **Motion:** style presets (None, Snappy, Relaxed), a preview and duration. Advanced: curve and bounciness.
 - **Shortcuts:** grouped by category. Click a shortcut, then press the new keys to record it. Invalid shortcuts are flagged in red; ones that replace a standard app shortcut like ⌘Q are flagged in orange. The keyboard button opens the Shortcut Map. Gaming (WASD) and Restore Defaults are at the bottom.
 
 Detailed logging is a launch argument now: `open build/ouch.app --args --verbose`. The old `debug-logging` key still works.

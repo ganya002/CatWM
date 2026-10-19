@@ -1,7 +1,9 @@
 import CoreGraphics
 
-func columns(_ r: CGRect, _ n: Int) -> [CGRect] {
-    guard n > 0 else { return [] }
-    let w = r.width / CGFloat(n)
-    return (0..<n).map { CGRect(x: r.minX + CGFloat($0) * w, y: r.minY, width: w, height: r.height) }
+func columns(_ rect: CGRect, _ count: Int) -> [CGRect] {
+    guard count > 0 else { return [] }
+    let width = rect.width / CGFloat(count)
+    return (0..<count).map {
+        CGRect(x: rect.minX + CGFloat($0) * width, y: rect.minY, width: width, height: rect.height)
+    }
 }

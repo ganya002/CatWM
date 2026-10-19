@@ -9,24 +9,24 @@ struct PresetTile: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 10) {
-                CurveGraph(curve: preset.animate ? preset.curve : .linear, bounce: preset.bounce, instant: !preset.animate,
-                           lineWidth: 2, color: Theme.accent)
-                    .frame(height: 34)
-                    .padding(.horizontal, 8)
+            HStack(spacing: 12) {
                 Text(preset.name).font(Theme.body(12.5, selected ? .medium : .regular)).oneLine()
                     .foregroundStyle(selected ? Theme.accentInk : Theme.ink)
+                Spacer(minLength: 0)
+                CurveGraph(curve: preset.animate ? preset.curve : .linear, bounce: preset.bounce,
+                           instant: !preset.animate, lineWidth: 2, color: Theme.accent)
+                    .frame(width: 56, height: 28)
             }
-            .padding(.vertical, 12).padding(.horizontal, 6)
-            .frame(maxWidth: .infinity)
-            .background(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
-                .fill(selected ? Theme.accentSoft : hover.on ? Theme.wellHover : Theme.well))
-            .overlay(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
+            .padding(.horizontal, 14)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous)
+                .fill(selected ? Theme.accentSoft : hover.isOn ? Theme.wellHover : Theme.well))
+            .overlay(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous)
                 .strokeBorder(Theme.accent, lineWidth: 1.5).opacity(selected ? 1 : 0))
-            .contentShape(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous))
         }
         .buttonStyle(PressScale())
-        .onHover { hover.on = $0 }
+        .onHover { hover.isOn = $0 }
         .animation(.easeOut(duration: Theme.medium), value: selected)
         .accessibilityLabel(preset.name)
         .accessibilityAddTraits(selected ? .isSelected : [])

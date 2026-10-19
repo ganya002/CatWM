@@ -12,12 +12,12 @@ struct DemoWindow: View {
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: corner, style: .continuous)
-        GeometryReader { g in
+        GeometryReader { geometry in
             HStack(spacing: 2.5) {
                 ForEach(0..<3, id: \.self) { i in
                     Circle().fill(Self.lights[i].opacity(app.dark ? 0.85 : 1)).frame(width: 4, height: 4)
                 }
-                if g.size.width > 56 {
+                if geometry.size.width > 56 {
                     Text(app.title)
                         .font(Theme.body(6.5, .medium))
                         .foregroundStyle(app.dark ? Color.white.opacity(0.6) : Color.black.opacity(0.55))
@@ -26,7 +26,7 @@ struct DemoWindow: View {
                 }
             }
             .padding(.horizontal, 5).padding(.top, 5)
-            .opacity(g.size.width > 26 && g.size.height > 14 ? 1 : 0)
+            .opacity(geometry.size.width > 26 && geometry.size.height > 14 ? 1 : 0)
         }
         .background(app.color)
         .clipShape(shape)

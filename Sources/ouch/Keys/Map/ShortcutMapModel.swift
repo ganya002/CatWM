@@ -21,18 +21,27 @@ final class ShortcutMapModel: ObservableObject {
 
     var flags: NSEvent.ModifierFlags { held.isEmpty ? picked : held }
 
-    static let modifiers: [(flag: NSEvent.ModifierFlags, glyph: String, name: String)] =
-        [(.control, "⌃", "Control"), (.option, "⌥", "Option"), (.shift, "⇧", "Shift"), (.command, "⌘", "Command")]
+    struct Modifier {
+        let flag: NSEvent.ModifierFlags
+        let glyph: String
+        let name: String
+    }
+
+    static let modifiers: [Modifier] = [
+        Modifier(flag: .control, glyph: "⌃", name: "Control"), Modifier(flag: .option, glyph: "⌥", name: "Option"),
+        Modifier(flag: .shift, glyph: "⇧", name: "Shift"), Modifier(flag: .command, glyph: "⌘", name: "Command")
+    ]
 
     func busiest(all: [ConfigDocument.KeyAction]) -> NSEvent.ModifierFlags {
         let counts = Dictionary(grouping: all, by: { $0.flags.rawValue }).mapValues(\.count)
-        return counts.max { $0.value != $1.value ? $0.value < $1.value : $0.key > $1.key }.map { NSEvent.ModifierFlags(rawValue: $0.key) } ?? []
+        return counts.max { $0.value != $1.value ? $0.value < $1.value : $0.key > $1.key }
+            .map { NSEvent.ModifierFlags(rawValue: $0.key) } ?? []
     }
 
-    func toggle(_ f: NSEvent.ModifierFlags) {
+    func toggle(_ flag: NSEvent.ModifierFlags) {
         held = []
         selected = nil
-        withAnimation(Motion.fade) { picked.formSymmetricDifference(f) }
+        withAnimation(Motion.fade) { picked.formSymmetricDifference(flag) }
     }
 
     func hover(_ code: UInt16, _ inside: Bool) {
@@ -57,8 +66,8 @@ final class ShortcutMapModel: ObservableObject {
         }
     }
 
-    private func flash(_ code: UInt16, flags f: NSEvent.ModifierFlags, submap: String?) {
-        guard f == flags, submap.map({ $0 == mode }) ?? true else { return }
+    private func flash(_ code: UInt16, flags pressedFlags: NSEvent.ModifierFlags, submap: String?) {
+        guard pressedFlags == flags, submap.map({ $0 == mode }) ?? true else { return }
         flashTimer?.cancel()
         withAnimation(Motion.fade) { pressed = code }
         let work = DispatchWorkItem { [weak self] in withAnimation(Motion.fadeSlow) { self?.pressed = nil } }
@@ -70,20 +79,22 @@ final class ShortcutMapModel: ObservableObject {
 
     func startWatching() {
         guard monitor == nil else { return }
-        monitor = NSEvent.addLocalMonitorForEvents(matching: [.flagsChanged, .keyDown]) { [weak self] e in
-            guard let self else { return e }
-            let f = e.modifierFlags.intersection(Self.watched)
-            if e.type == .keyDown {
-                if self.selected == nil, !e.isARepeat { self.flash(e.keyCode, flags: f, submap: nil) }
-            } else if f != self.held, self.selected == nil {
-                withAnimation(Motion.fade) { self.held = f }
+        monitor = NSEvent.addLocalMonitorForEvents(matching: [.flagsChanged, .keyDown]) { [weak self] event in
+            guard let self else { return event }
+            let mods = event.modifierFlags.intersection(Self.watched)
+            if event.type == .keyDown {
+                if self.selected == nil, !event.isARepeat { self.flash(event.keyCode, flags: mods, submap: nil) }
+            } else if mods != self.held, self.selected == nil {
+                withAnimation(Motion.fade) { self.held = mods }
             }
-            return e
+            return event
         }
-        fireObserver = NotificationCenter.default.addObserver(forName: Hotkeys.didFire, object: nil, queue: .main) { [weak self] n in
-            guard let b = n.userInfo?["bind"] as? KeyBinding else { return }
-            let f = NSEvent.ModifierFlags(rawValue: UInt(b.mods.rawValue)).intersection(Self.watched)
-            self?.flash(b.keyCode, flags: f, submap: b.submap)
+        fireObserver = NotificationCenter.default.addObserver(
+            forName: Hotkeys.didFire, object: nil, queue: .main
+        ) { [weak self] note in
+            guard let bind = note.userInfo?["bind"] as? KeyBinding else { return }
+            let mods = NSEvent.ModifierFlags(rawValue: UInt(bind.mods.rawValue)).intersection(Self.watched)
+            self?.flash(bind.keyCode, flags: mods, submap: bind.submap)
         }
     }
 

@@ -1,4 +1,4 @@
 import AppKit
 import SwiftUI
 
-enum ButtonSize { case sm, regular, lg }
+enum ButtonSize { case small, regular, large }

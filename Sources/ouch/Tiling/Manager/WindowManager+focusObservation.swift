@@ -18,7 +18,8 @@ extension WindowManager {
             switch result {
             case .focused(let id): self.acceptFocus(pid: pid, id: id, confirmsRequest: true)
             case .unavailable:
-                guard !self.focusCommands.isEmpty || self.waitingRefocus != nil || self.pendingFocus?.executed == true else { return }
+                guard !self.focusCommands.isEmpty || self.waitingRefocus != nil
+                        || self.pendingFocus?.executed == true else { return }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
                     guard let self, self.focusObservation == generation, self.frontmostPID() == pid else { return }
                     self.requestFocusObservation()
@@ -65,15 +66,15 @@ extension WindowManager {
 
     func readFrames(_ windows: [Window], completion: @escaping () -> Void) {
         let group = DispatchGroup()
-        for w in windows {
-            let revision = w.frameRevision
+        for window in windows {
+            let revision = window.frameRevision
             group.enter()
-            scanner.run(w.pid) { [weak self] in
+            scanner.run(window.pid) { [weak self] in
                 let readAt = Date()
-                let frame = w.element.frame
+                let frame = window.element.frame
                 DispatchQueue.main.async {
-                    if let self, self.windows[w.id] === w, !self.animator.isBusy(w.id) {
-                        w.remember(frame, ifRevision: revision, readAt: readAt)
+                    if let self, self.windows[window.id] === window, !self.animator.isBusy(window.id) {
+                        window.remember(frame, ifRevision: revision, readAt: readAt)
                     }
                     group.leave()
                 }
@@ -82,29 +83,29 @@ extension WindowManager {
         group.notify(queue: .main, execute: completion)
     }
 
-    func observeFrame(_ w: Window) {
-        guard frameReads[w.id] == nil else { dirtyFrames.insert(w.id); return }
+    func observeFrame(_ window: Window) {
+        guard frameReads[window.id] == nil else { dirtyFrames.insert(window.id); return }
         let token = UUID()
-        frameReads[w.id] = token
-        let revision = w.frameRevision
-        scanner.run(w.pid) { [weak self] in
+        frameReads[window.id] = token
+        let revision = window.frameRevision
+        scanner.run(window.pid) { [weak self] in
             let readAt = Date()
-            let frame = w.element.frame
+            let frame = window.element.frame
             DispatchQueue.main.async {
-                guard let self, self.frameReads[w.id] == token else { return }
-                self.frameReads[w.id] = nil
-                guard self.windows[w.id] === w else { return }
-                if !self.animator.isBusy(w.id) { w.remember(frame, ifRevision: revision, readAt: readAt) }
-                if self.dirtyFrames.remove(w.id) != nil { self.observeFrame(w) }
+                guard let self, self.frameReads[window.id] == token else { return }
+                self.frameReads[window.id] = nil
+                guard self.windows[window.id] === window else { return }
+                if !self.animator.isBusy(window.id) { window.remember(frame, ifRevision: revision, readAt: readAt) }
+                if self.dirtyFrames.remove(window.id) != nil { self.observeFrame(window) }
             }
         }
     }
 
     func observeFocus(_ element: AXUIElement) {
         focusObservation += 1
-        if let w = windows.values.first(where: { CFEqual($0.element, element) }),
-           frontmostPID() == w.pid {
-            acceptFocus(pid: w.pid, id: w.id)
+        if let window = windows.values.first(where: { CFEqual($0.element, element) }),
+           frontmostPID() == window.pid {
+            acceptFocus(pid: window.pid, id: window.id)
         } else {
             requestFocusObservation()
         }

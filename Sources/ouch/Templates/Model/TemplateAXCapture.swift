@@ -15,7 +15,8 @@ enum TemplateAXCapture {
         return batch
     }
 
-    private static func read(_ app: TemplateAppSnapshot, deadline: Date, stop: @escaping @Sendable () -> Bool) -> TemplateAppRead {
+    private static func read(_ app: TemplateAppSnapshot, deadline: Date,
+                             stop: @escaping @Sendable () -> Bool) -> TemplateAppRead {
         if stop() || Date() >= deadline { return .stalled }
         let application = axApp(app.pid)
         let listed: [AXUIElement]
@@ -101,12 +102,14 @@ enum TemplateAXCapture {
         case .value(let value): frame = value
         }
         return .window(TemplateObservedWindow(pid: app.pid, bundleID: app.bundleID, appName: app.name, title: title,
-                                              document: document, frame: frame, minimized: minimized, fullscreen: fullscreen,
-                                              resizable: resizable, windowID: id, launchDate: app.launchDate))
+                                              document: document, frame: frame, minimized: minimized,
+                                              fullscreen: fullscreen, resizable: resizable, windowID: id,
+                                              launchDate: app.launchDate))
     }
 
     private static func documentURL(_ raw: String) -> String? {
-        guard let url = URL(string: raw), ["file", "https", "http"].contains(url.scheme?.lowercased() ?? "") else { return nil }
+        guard let url = URL(string: raw),
+              ["file", "https", "http"].contains(url.scheme?.lowercased() ?? "") else { return nil }
         return url.absoluteString
     }
 
@@ -144,8 +147,8 @@ enum TemplateAXCapture {
         case .stalled: return .stalled
         case .missing: return .missing
         case .value(let raw):
-            guard let number = raw as? NSNumber else { return .missing }
-            return .value(number.boolValue)
+            guard let flag = raw as? Bool else { return .missing }
+            return .value(flag)
         }
     }
 
@@ -165,7 +168,7 @@ enum TemplateAXCapture {
         case .missing: return .missing
         case .value(let raw):
             guard CFGetTypeID(raw) == AXUIElementGetTypeID() else { return .missing }
-            return .value(raw as! AXUIElement)
+            return .value(unsafeDowncast(raw, to: AXUIElement.self))
         }
     }
 
@@ -184,7 +187,9 @@ enum TemplateAXCapture {
         if case .stalled = origin { return .stalled }
         if case .stalled = extent { return .stalled }
         guard case .value(let position) = origin, case .value(let dimensions) = extent,
-              [position.x, position.y, dimensions.width, dimensions.height].allSatisfy(\.isFinite) else { return .missing }
+              [position.x, position.y, dimensions.width, dimensions.height].allSatisfy(\.isFinite) else {
+            return .missing
+        }
         return .value(CGRect(origin: position, size: dimensions))
     }
 
@@ -195,7 +200,7 @@ enum TemplateAXCapture {
         case .value(let raw):
             guard CFGetTypeID(raw) == AXValueGetTypeID() else { return .missing }
             var point = CGPoint.zero
-            return AXValueGetValue(raw as! AXValue, .cgPoint, &point) ? .value(point) : .missing
+            return AXValueGetValue(unsafeDowncast(raw, to: AXValue.self), .cgPoint, &point) ? .value(point) : .missing
         }
     }
 
@@ -206,7 +211,7 @@ enum TemplateAXCapture {
         case .value(let raw):
             guard CFGetTypeID(raw) == AXValueGetTypeID() else { return .missing }
             var size = CGSize.zero
-            return AXValueGetValue(raw as! AXValue, .cgSize, &size) ? .value(size) : .missing
+            return AXValueGetValue(unsafeDowncast(raw, to: AXValue.self), .cgSize, &size) ? .value(size) : .missing
         }
     }
 }

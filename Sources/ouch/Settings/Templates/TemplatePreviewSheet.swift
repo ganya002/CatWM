@@ -9,14 +9,14 @@ struct TemplatePreviewSheet: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Space.lg) {
+        VStack(alignment: .leading, spacing: Theme.Space.large) {
             HStack {
                 Text(template.name).textStyle(.title).oneLine()
                 Spacer()
                 OButton("Close", variant: .ghost, action: close).keyboardShortcut(.cancelAction)
             }
             if let data = template.screenshot, let image = NSImage(data: data) {
-                let imageWidth = width - Theme.Space.xl * 2
+                let imageWidth = width - Theme.Space.extraLarge * 2
                 let imageHeight = imageWidth * image.size.height / max(image.size.width, 1)
                 ScrollView {
                     Image(nsImage: image).resizable().scaledToFit()
@@ -24,11 +24,11 @@ struct TemplatePreviewSheet: View {
                         .accessibilityLabel("Saved screenshot of \(template.name)")
                 }
                 .frame(height: min(imageHeight, (NSScreen.main?.visibleFrame.height ?? 800) - Theme.Space.xxl * 5))
-                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous))
             }
             Text(template.summary).textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine()
         }
-        .padding(Theme.Space.xl)
+        .padding(Theme.Space.extraLarge)
         .frame(width: width)
         .foregroundStyle(Theme.ink)
         .background(Theme.surfaceRaised)

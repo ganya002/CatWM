@@ -14,13 +14,13 @@ struct WordmarkView: View {
                 .foregroundStyle(Color.white.opacity(0.92))
                 .legible(strong: true)
                 .opacity(model.subtitle ? 1 : 0)
-                .animation(.easeOut(duration: 0.9), value: model.subtitle) // style-ok: the intro's timing, set to the music
+                .animation(.easeOut(duration: 0.9), value: model.subtitle) // style-ok: intro timing follows music
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func tagline(_ pt: CGFloat) -> Text {
-        Text("Hyprland").font(Theme.body(pt, .medium)).foregroundColor(hyprlandBlue)
-            + Text("-style tiling for macOS.").font(Theme.body(pt, .light))
+    private func tagline(_ points: CGFloat) -> Text {
+        Text("Hyprland").font(Theme.body(points, .medium)).foregroundColor(hyprlandBlue)
+            + Text("-style tiling for macOS.").font(Theme.body(points, .light))
     }
 }

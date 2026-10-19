@@ -6,12 +6,14 @@ extension MenuItem {
         let font = Theme.nsBody(13.5)
         let keyFont = NSFont.systemFont(ofSize: 13)
         var widest: CGFloat = 0
-        for i in items where !i.hidden {
-            var w = (i.label as NSString).size(withAttributes: [.font: font]).width
-            if let value = i.value { w += 8 + (value as NSString).size(withAttributes: [.font: font]).width }
-            if !i.shortcut.isEmpty { w += 16 + (i.shortcut.joined() as NSString).size(withAttributes: [.font: keyFont]).width }
-            if i.kind == .sub { w += 18 }
-            widest = max(widest, w)
+        for item in items where !item.hidden {
+            var width = item.label.size(withAttributes: [.font: font]).width
+            if let value = item.value { width += 8 + value.size(withAttributes: [.font: font]).width }
+            if !item.shortcut.isEmpty {
+                width += 16 + item.shortcut.joined().size(withAttributes: [.font: keyFont]).width
+            }
+            if item.kind == .sub { width += 18 }
+            widest = max(widest, width)
         }
         return min(max(widest * 1.1 + 20 + 26 + 12 + 20, 180), 380)
     }

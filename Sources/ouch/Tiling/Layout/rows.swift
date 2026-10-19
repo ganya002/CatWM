@@ -1,7 +1,9 @@
 import CoreGraphics
 
-func rows(_ r: CGRect, _ n: Int) -> [CGRect] {
-    guard n > 0 else { return [] }
-    let h = r.height / CGFloat(n)
-    return (0..<n).map { CGRect(x: r.minX, y: r.minY + CGFloat($0) * h, width: r.width, height: h) }
+func rows(_ rect: CGRect, _ count: Int) -> [CGRect] {
+    guard count > 0 else { return [] }
+    let height = rect.height / CGFloat(count)
+    return (0..<count).map {
+        CGRect(x: rect.minX, y: rect.minY + CGFloat($0) * height, width: rect.width, height: height)
+    }
 }

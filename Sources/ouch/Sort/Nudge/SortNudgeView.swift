@@ -8,7 +8,7 @@ struct SortNudgeView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
-                Image(systemName: "lightbulb").font(Theme.symbol(Theme.Icon.lg)).foregroundStyle(Theme.accentInk)
+                Image(systemName: "lightbulb").font(Theme.symbol(Theme.Icon.large)).foregroundStyle(Theme.accentInk)
                     .breatheEffect().frame(width: 16)
                 Text("Workspace \(model.workspace) is packed").font(Theme.heading()).oneLine()
                 Spacer(minLength: 4)
@@ -22,7 +22,7 @@ struct SortNudgeView: View {
             }
             .padding(.top, 10).padding(.bottom, 12)
             HStack(spacing: 4) {
-                OButton("Sort windows", variant: .primary, shortcut: model.keys, action: model.sort)
+                OButton("Open Overview", variant: .primary, shortcut: model.keys, action: model.sort)
                 OButton("Not now", variant: .ghost, action: model.later)
                 Spacer(minLength: 4)
                 Button("No more tips", action: model.never).buttonStyle(.plain)
@@ -31,7 +31,7 @@ struct SortNudgeView: View {
         }
         .frame(width: 276)
         .padding(.horizontal, 6).padding(.top, 4).padding(.bottom, 2)
-        .surface(.md, caret: .top(model.caret - Self.inset.leading))
+        .surface(.medium, caret: .top(model.caret - Self.inset.leading))
         .padding(Self.inset)
         .fixedSize()
         .font(Theme.body())
