@@ -11,6 +11,22 @@ open build/ouch.app
 
 For fast rebuilds while you work, run `./build.sh --dev`. It makes a debug build in a few seconds, not about a minute. Do not ship it.
 
+## Lint
+
+Install SwiftLint before you work on the code.
+
+```sh
+brew install swiftlint
+```
+
+Run it from the repo root.
+
+```sh
+swiftlint
+```
+
+The config is in `.swiftlint.yml`. The `lint` workflow runs SwiftLint on each push and pull request.
+
 To install a beta build to `/Applications/Ouch.app` and open it, run `./install.sh`. Add `--stable` to skip the beta channel marker.
 
 Testers install with one command. The script is [website/public/install.sh](website/public/install.sh). The website serves it at `https://ouch.perwko.com/install.sh`. Without a flag it installs the latest stable release. With `--beta` it installs the latest beta:

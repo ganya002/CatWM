@@ -1,0 +1,33 @@
+included:
+  - Sources
+  - Tests
+excluded:
+  - build
+  - .build
+  - website
+disabled_rules:
+  - identifier_name
+  - type_name
+  - line_length
+  - file_length
+  - function_body_length
+  - type_body_length
+  - cyclomatic_complexity
+  - function_parameter_count
+  - large_tuple
+  - nesting
+  - force_cast
+  - trailing_comma
+  - implicit_optional_initialization
+  - multiple_closures_with_trailing_closure
+  - switch_case_alignment
+  - statement_position
+  - vertical_parameter_alignment
+  - void_function_in_ternary
+  - optional_data_string_conversion
+  - control_statement
+  - trailing_whitespace
+  - inclusive_language
+  - is_disjoint
+  - for_where
+  - unused_closure_parameter
