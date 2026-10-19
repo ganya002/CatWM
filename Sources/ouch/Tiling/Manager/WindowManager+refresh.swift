@@ -27,9 +27,7 @@ extension WindowManager {
                 if wasMinimized && !w.minimized { unminimized.append(id) }
             }
         }
-        if config.virtualWorkspaces, !restoringTemplate, !unminimized.isEmpty, let here = currentWorkspace {
-            for id in unminimized where workspaceOf[id] != here { model.assign(id, to: here) }
-        }
+        claimForCurrentWorkspace(unminimized)
         var present = Set<CGWindowID>()
         var fresh: [Window] = []
         var titles: [CGWindowID: String?] = [:]
@@ -68,6 +66,10 @@ extension WindowManager {
         }
         timing.checkpoint("observe")
         present.formUnion(workspaceMoves.filter { windows[$0] != nil })
+        restoredEarly = restoredEarly.filter { id, since in
+            windows[id]?.minimized == false && !onScreenIDs.contains(id) && Date().timeIntervalSince(since) < Self.restoreHold
+        }
+        present.formUnion(restoredEarly.keys)
 
         let z = Dictionary(onScreen.enumerated().map { ($1.id, $0) }, uniquingKeysWith: { a, _ in a })
         let arrivals = fresh.sorted(by: { (z[$0.id] ?? 0) < (z[$1.id] ?? 0) })

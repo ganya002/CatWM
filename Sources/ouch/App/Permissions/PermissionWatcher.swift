@@ -14,6 +14,10 @@ final class PermissionWatcher {
         guard timer == nil else { return }
         granted = Self.check()
         timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in self?.tick() }
+        DistributedNotificationCenter.default().addObserver(
+            forName: Notification.Name("com.apple.accessibility.api"), object: nil, queue: .main) { [weak self] _ in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { self?.tick() }
+        }
     }
 
     func subscribe(_ f: @escaping (_ granted: Set<Permission>, _ changed: Set<Permission>) -> Void) {

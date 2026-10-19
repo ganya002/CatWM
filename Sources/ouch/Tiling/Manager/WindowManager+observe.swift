@@ -62,8 +62,12 @@ extension WindowManager {
             observeFocus(element)
             FocusDim.shared.update()
             onChange?()
+        case kAXWindowMiniaturizedNotification:
+            windowMinimizeChanged(element, minimized: true)
+        case kAXWindowDeminiaturizedNotification:
+            windowMinimizeChanged(element, minimized: false)
         case kAXWindowCreatedNotification:
-            for delay in [0.05, 0.3, 1.0] {
+            for delay in [0, 0.3, 1.0] {
                 DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in self?.scheduleRefresh() }
             }
         default:
