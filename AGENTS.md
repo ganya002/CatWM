@@ -25,7 +25,7 @@ The app source is in `Sources/ouch/`. Each folder has one job:
 - `Onboarding/`: the intro, welcome card, tour, permission step and practice.
 - `Overlays/`: the HUD, the mode effect and the quick-action menu.
 - `Settings/`: the settings window, its pages and search.
-- `Sort/`: the Sort plan, session and panel.
+- `Sort/`: the Overview plan, session and panel.
 - `Templates/`: saved workspace templates and their restore.
 - `Tiling/`: the window manager, layouts, focus dimming, animation, desktops and drag input.
 - `UI/`: theme tokens, controls, menus, panels and the Design Gallery.
@@ -36,7 +36,7 @@ The app source is in `Sources/ouch/`. Each folder has one job:
 - **cursor** means the macOS cursor.
 - **workspace** means an Ouch workspace, not a macOS Desktop.
 - **window mode** means a mode where single keys control windows. A global shortcut enters it, and keys with no bind are ignored. In the config it is the `window` submap.
-- **overview** means the Sort menu. Sort is the old name.
+- **overview** means the Sort menu. Sort is the old name, and the code folder and types still use it.
 - **fullscreen** means Ouch fullscreen: one window fills the screen, and Ouch still manages it.
 - **maximised** means macOS native full screen: the window gets a Desktop of its own and leaves the tiling.
 - **bind** means a key combination that runs a dispatcher. It is a `bind = …` line in the config.
