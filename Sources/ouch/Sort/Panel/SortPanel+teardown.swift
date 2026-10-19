@@ -75,7 +75,7 @@ extension SortPanel {
         guard wm.undoSort() else { return }
         let screen = toast?.screen
         dismissToast()
-        HUD.shared.show("Sort undone", on: screen)
+        HUD.shared.show("Overview changes undone", on: screen)
     }
 
     func showToast(_ text: String, on screen: NSScreen?) {

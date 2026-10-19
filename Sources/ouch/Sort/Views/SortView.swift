@@ -36,7 +36,7 @@ struct SortView: View {
     private func header(_ plan: SortPlan) -> some View {
         let n = plan.items.count
         return HStack(spacing: 12) {
-            (Text("Sort ")
+            (Text("Overview · ")
                 + Text("\(n)").font(Theme.body(22, .medium)).foregroundColor(Theme.accentInk)
                 + Text(n == 1 ? " window" : " windows"))
                 .textStyle(.title).oneLine().fixedSize()

@@ -39,7 +39,7 @@ final class TutorialLesson: Lesson {
         chapter("workspaces", "Workspaces", [Steps.visit(c), Steps.back(c), Steps.neighbours(c), Steps.workspaceDrill(c), Steps.send(c)])
         chapter("global", "Global keys", [Steps.modeOff(c), Steps.global(c)])
         chapter("displays", "Displays", [Steps.monitor(c)])
-        chapter("sort", "Sorting", Steps.sortTry(c))
+        chapter("sort", "Overview", Steps.sortTry(c))
         chapter("done", "Done", [Steps.summary(c, title: "That's every key")])
         for (i, ch) in chapters.enumerated() { plan += ch.steps.map { (i, $0) } }
         if let saved = Self.paused, let i = chapters.firstIndex(where: { $0.id == saved.id }),

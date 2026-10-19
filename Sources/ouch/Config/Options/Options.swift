@@ -81,14 +81,14 @@ enum Options {
             .documented("bool", "")
             .setting(.windows, "windows.stay", "Stay on this workspace when closing a window", keywords: "close jump", advanced: true, section: "Workspaces", enabled: { $0.virtualWorkspaces }),
         .choice("sort-strategy", \.sortStrategy, noun: "sort strategy")
-            .documented(nil, "the grouping Sort Windows opens with")
-            .note("Sort Windows: the grouping it opens with (task, app, focus or none), and how many windows one\n"
-                + "workspace holds before Ouch offers to sort them (0 turns the offer off).")
-            .setting(.windows, "windows.sortStrategy", "Sort windows by", help: "How the Sort Windows panel groups them when it opens",
+            .documented(nil, "the grouping Overview opens with")
+            .note("Overview: the grouping it opens with (task, app, focus or none), and how many windows one\n"
+                + "workspace holds before Ouch offers Overview (0 turns the offer off).")
+            .setting(.windows, "windows.sortStrategy", "Overview groups windows by", help: "How the Overview panel groups them when it opens",
                      keywords: "group organize task app focus panel", section: "Workspaces", enabled: { $0.virtualWorkspaces }),
         .number("sort-nudge", \.sortNudge, valid: 0...100, make: { Int($0) }, text: { "\($0)" }, number: { Double($0) })
-            .documented("0–100 (whole number)", "windows on one workspace before Ouch offers to sort them; `0` turns the offer off")
-            .setting(.windows, "windows.sortNudge", "Suggest sorting a crowded workspace", help: "A tip under the menu bar icon, at most once a day",
+            .documented("0–100 (whole number)", "windows on one workspace before Ouch offers Overview; `0` turns the offer off")
+            .setting(.windows, "windows.sortNudge", "Suggest Overview for a crowded workspace", help: "A tip under the menu bar icon, at most once a day",
                      keywords: "tip packed many windows organize", range: 3...20, section: "Workspaces", enabled: { $0.virtualWorkspaces }),
 
         .bool("keyboard-help", \.keyboardHelp)
@@ -150,11 +150,11 @@ enum Options {
                      keywords: "spring overshoot", advanced: true, range: 0...1, section: "Curve", enabled: { $0.animate && $0.animationCurve.usesBounce }),
 
         .choice("panel-animation", \.panelAnimation, noun: "panel animation")
-            .documented(nil, "how Sort Windows and keyboard help come and go; `tile` follows the animation curve; `ouch panelfx <style>` previews")
+            .documented(nil, "how Overview and keyboard help come and go; `tile` follows the animation curve; `ouch panelfx <style>` previews")
             .section("panels and window mode")
-            .note("How Sort Windows and keyboard help come and go: rise, pop, focus, tile or draw.")
-            .setting(.motion, "motion.panels", "Panel animation", help: "How Sort Windows and keyboard help come and go",
-                     keywords: "sort windows keyboard help rise pop focus tile draw open appear", advanced: true, section: "Panels and window mode"),
+            .note("How Overview and keyboard help come and go: rise, pop, focus, tile or draw.")
+            .setting(.motion, "motion.panels", "Panel animation", help: "How Overview and keyboard help come and go",
+                     keywords: "overview sort windows keyboard help rise pop focus tile draw open appear", advanced: true, section: "Panels and window mode"),
         .choice("mode-effect", \.modeEffect, noun: "mode effect")
             .documented(nil, "visual while window mode is on; `ouch modefx <style>` previews")
             .note("The screen-edge effect while window mode is on: draw, ripple, corners or none.")

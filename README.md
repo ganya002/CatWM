@@ -23,7 +23,7 @@ On first launch, a short intro plays, then a welcome card asks for **Accessibili
 
 The menu bar has two lessons on the same practice windows:
 
-- **Keyboard Tutorial…** is the long one: chapters (window mode, focus, moving, the main pane, layouts, zoom and float, workspaces, global keys, displays, sorting), each followed by drills you answer from memory. **Pause** remembers the chapter; the menu then reads **Resume Tutorial…**.
+- **Keyboard Tutorial…** is the long one: chapters (window mode, focus, moving, the main pane, layouts, zoom and float, workspaces, global keys, displays, overview), each followed by drills you answer from memory. **Pause** remembers the chapter; the menu then reads **Resume Tutorial…**.
 - **Help › Quick Tour** replays the onboarding tour.
 
 After onboarding, small tips turn up once each where they help: beside a Settings pane, above the mode bar, or under the menu bar item after you click a command that has a key. **Help › Show Tips** turns them off and on (turning them on shows them again).

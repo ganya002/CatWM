@@ -22,7 +22,7 @@ struct SortNudgeView: View {
             }
             .padding(.top, 10).padding(.bottom, 12)
             HStack(spacing: 4) {
-                OButton("Sort windows", variant: .primary, shortcut: model.keys, action: model.sort)
+                OButton("Open Overview", variant: .primary, shortcut: model.keys, action: model.sort)
                 OButton("Not now", variant: .ghost, action: model.later)
                 Spacer(minLength: 4)
                 Button("No more tips", action: model.never).buttonStyle(.plain)

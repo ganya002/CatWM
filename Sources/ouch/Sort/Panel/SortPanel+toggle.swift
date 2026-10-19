@@ -9,7 +9,7 @@ extension SortPanel {
         let displays = wm.sortDisplays()
         func hasWindows(_ d: SortDisplay) -> Bool { !d.items.isEmpty || !d.fullscreen.isEmpty }
         guard displays.contains(where: hasWindows) else {
-            HUD.shared.show("No windows to sort", on: nil)
+            HUD.shared.show("No windows to show", on: nil)
             return
         }
         dismissToast()

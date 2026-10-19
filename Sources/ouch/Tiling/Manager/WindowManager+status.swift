@@ -120,7 +120,7 @@ extension WindowManager {
         case "sethomespace": makeCurrentSpaceHome()
         case "sort":
             if config.virtualWorkspaces { SortPanel.shared.toggle() }
-            else { HUD.shared.show("Sorting needs Ouch workspaces", on: currentScreen()?.ns) }
+            else { HUD.shared.show("Overview needs Ouch workspaces", on: currentScreen()?.ns) }
         case "sort-undo": SortPanel.shared.undoApplied()
         default: NSLog("Ouch: unknown dispatcher %@", dispatcher)
         }

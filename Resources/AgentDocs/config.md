@@ -41,8 +41,8 @@ The Settings window writes options in this order. Aliases (after `/`) are read b
 | `blur-radius` | 1–100 (points) | `20` | rounded to whole points. The Settings slider shows 2–60 |
 | `virtual-workspaces` | bool | `true` | true: Ouch workspaces. false: macOS Spaces. See [workspaces.md](workspaces.md) |
 | `stay-on-workspace-after-close` | bool | `true` | |
-| `sort-strategy` | `task` `app` `focus` `none` | `task` | the grouping Sort Windows opens with |
-| `sort-nudge` | 0–100 (whole number) | `5` | windows on one workspace before Ouch offers to sort them; `0` turns the offer off |
+| `sort-strategy` | `task` `app` `focus` `none` | `task` | the grouping Overview opens with |
+| `sort-nudge` | 0–100 (whole number) | `5` | windows on one workspace before Ouch offers Overview; `0` turns the offer off |
 | `keyboard-help` | bool | `true` | on-screen keyboard help in window mode |
 | `keyboard-help-key` | one character | `?` | toggles the keyboard help in window mode |
 | `keyboard-finish` | `auto`, `macbook-pro`, `macbook-air`, `macbook-neo`, `magic-keyboard`, or a finish such as `macbook-pro-space-black` | `auto` | look of the Shortcut Map keyboard |
@@ -51,7 +51,7 @@ The Settings window writes options in this order. Aliases (after `/`) are read b
 | `animation-duration` | seconds, or ms if above 5 | `0.18` | |
 | `animation-curve` | `ease-out` `ease-in-out` `linear` `spring` `bounce` `overshoot` `cubic-bezier(x1, y1, x2, y2)` | `ease-out` | |
 | `animation-bounce` | 0–1 (or 0–100) | `0.5` | liveliness of spring/bounce/overshoot |
-| `panel-animation` | `rise` `pop` `focus` `tile` `draw` | `rise` | how Sort Windows and keyboard help come and go; `tile` follows the animation curve; `ouch panelfx <style>` previews |
+| `panel-animation` | `rise` `pop` `focus` `tile` `draw` | `rise` | how Overview and keyboard help come and go; `tile` follows the animation curve; `ouch panelfx <style>` previews |
 | `mode-effect` | `draw` `ripple` `corners` `none` | `draw` | visual while window mode is on; `ouch modefx <style>` previews |
 | `debug-logging` | bool | `false` | verbose log; prefer `--verbose` |
 | `perf-reports` | bool | `false` | sends repeated slow animations and hangs (numbers and app bundle IDs only) to the developers |
