@@ -38,8 +38,8 @@ struct ActionRow: View {
         .overlay(alignment: .trailing) {
             if hovered, let remove {
                 RemoveButton(help: "Delete \(action.title)", variant: .close, action: remove)
-                    .padding(.trailing, OMenuRowStyle.inset)
-            }
+                    .frame(width: Theme.keycapSize, height: Theme.keycapSize)
+                    .padding(.trailing, OMenuRowStyle.inset)            }
         }
         .opacity(shown || reduceMotion ? 1 : 0)
         .offset(y: shown || reduceMotion ? 0 : -5)
