@@ -10,7 +10,7 @@ struct DesignGalleryView: View {
         HStack {
             VStack(alignment: .leading, spacing: Theme.Space.extraSmall) {
                 Text("Design Gallery").textStyle(.largeTitle).foregroundStyle(Theme.ink)
-                Text("Every token and component, drawn by the real code. Rules: docs/design-system.md")
+                Text("Every token and component, drawn by the real code. Rules: docs/design/design-system.md")
                     .textStyle(.caption).foregroundStyle(Theme.inkMuted)
             }
             Spacer()
