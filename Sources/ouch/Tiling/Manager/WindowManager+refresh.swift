@@ -18,10 +18,17 @@ extension WindowManager {
             let spaces = scanner.desktop.spaces[id] ?? []
             return !spaces.isEmpty && currentSpaces.isDisjoint(with: spaces)
         }
+        var unminimized: [CGWindowID] = []
         for scan in scanner.results.values {
             for (id, found) in scan.found {
-                if let w = windows[id] { accept(found, from: scan, for: w) }
+                guard let w = windows[id] else { continue }
+                let wasMinimized = w.minimized
+                accept(found, from: scan, for: w)
+                if wasMinimized && !w.minimized { unminimized.append(id) }
             }
+        }
+        if config.virtualWorkspaces, !restoringTemplate, !unminimized.isEmpty, let here = currentWorkspace {
+            for id in unminimized where workspaceOf[id] != here { model.assign(id, to: here) }
         }
         var present = Set<CGWindowID>()
         var fresh: [Window] = []
