@@ -13,8 +13,8 @@ struct PresetTile: View {
                 Text(preset.name).font(Theme.body(12.5, selected ? .medium : .regular)).oneLine()
                     .foregroundStyle(selected ? Theme.accentInk : Theme.ink)
                 Spacer(minLength: 0)
-                CurveGraph(curve: preset.animate ? preset.curve : .linear, bounce: preset.bounce, instant: !preset.animate,
-                           lineWidth: 2, color: Theme.accent)
+                CurveGraph(curve: preset.animate ? preset.curve : .linear, bounce: preset.bounce,
+                           instant: !preset.animate, lineWidth: 2, color: Theme.accent)
                     .frame(width: 56, height: 28)
             }
             .padding(.horizontal, 14)
