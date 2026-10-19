@@ -117,6 +117,18 @@ extension SortPlan {
         lanes[i].ids.insert(id, at: at)
     }
 
+    mutating func adopt(_ item: SortItem, inLane i: Int, at index: Int? = nil) {
+        guard lanes.indices.contains(i) else { return }
+        items[item.id] = item
+        place(item.id, inLane: i, at: index)
+    }
+
+    func moves(of ids: Set<CGWindowID>) -> [CGWindowID: String] {
+        var out: [CGWindowID: String] = [:]
+        for lane in lanes { for id in lane.ids where ids.contains(id) { out[id] = lane.ws } }
+        return out
+    }
+
     mutating func markClosing(_ id: CGWindowID) {
         guard !isClosing(id) else { return }
         let from = lane(of: id).flatMap { l in lanes[l].ids.firstIndex(of: id).map { (lanes[l].ws, $0) } }

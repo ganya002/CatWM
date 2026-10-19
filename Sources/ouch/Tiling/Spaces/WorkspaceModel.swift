@@ -10,12 +10,15 @@ struct WorkspaceModel {
     var virtualShown: [String: String] = [:]
     var states: [String: ScreenState] = [:]
     var lastFocused: [String: CGWindowID] = [:]
+    var fullscreenHost: [String: CGWindowID] = [:]
     var focusStamps: [CGWindowID: Int] = [:]
     var focusClock = 0
     var focusOrder: [CGWindowID] = []
     private(set) var shownSet: Set<String> = []
 
     func isShown(_ ws: String?) -> Bool { ws.map(shownSet.contains) ?? false }
+
+    func isFullscreenWorkspace(_ ws: String?) -> Bool { ws.map { fullscreenHost[$0] != nil } ?? false }
 
     mutating func assign(_ id: CGWindowID, to ws: String?) { workspaceOf[id] = ws }
 
@@ -31,12 +34,13 @@ struct WorkspaceModel {
         focusStamps[id] = nil
         focusOrder.removeAll { $0 == id }
         lastFocused = lastFocused.filter { $0.value != id }
+        fullscreenHost = fullscreenHost.filter { $0.value != id }
     }
 
     mutating func show(_ ws: String?, on display: String) { shown[display] = ws }
 
     mutating func resetWorkspaces() {
-        workspaceOf = [:]; monitorOf = [:]; shown = [:]; virtualShown = [:]; states = [:]; lastFocused = [:]
+        workspaceOf = [:]; monitorOf = [:]; shown = [:]; virtualShown = [:]; states = [:]; lastFocused = [:]; fullscreenHost = [:]
     }
 
     mutating func noteFocus(_ id: CGWindowID) {

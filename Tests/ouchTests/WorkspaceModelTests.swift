@@ -60,6 +60,18 @@ import Testing
         #expect(m.workspaceOf.count == 2 && m.workspaceOf[3] == nil)
     }
 
+    @Test func forgettingAWindowReleasesItsFullscreenWorkspace() {
+        var m = WorkspaceModel()
+        let ws = WindowManager.spaceWorkspace(display: "A", space: 5)
+        m.assign(7, to: ws); m.fullscreenHost[ws] = 7
+        #expect(m.isFullscreenWorkspace(ws))
+        m.forget(7)
+        #expect(!m.isFullscreenWorkspace(ws) && m.workspaceOf[7] == nil)
+        m.fullscreenHost[ws] = 8
+        m.resetWorkspaces()
+        #expect(m.fullscreenHost.isEmpty)
+    }
+
     @Test func resetKeepsOrderAndFocusHistory() {
         var m = WorkspaceModel()
         m.assign(1, to: "1"); m.order = [1]; m.noteFocus(1)

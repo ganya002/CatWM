@@ -25,6 +25,7 @@ final class SortModel: ObservableObject {
     var maxRows = 7
     var zones: [SortZone: CGRect] = [:]
     var finish: (String?) -> Void = { _ in }
+    var openFullscreen: (CGWindowID) -> Void = { _ in }
     var revert: () -> Void = {}
     var changed: () -> Void = {}
     weak var scroller: NSScrollView?

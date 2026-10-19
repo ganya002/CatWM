@@ -7,7 +7,8 @@ extension SortPanel {
     func open() {
         guard !isOpen, wm.config.virtualWorkspaces else { return }
         let displays = wm.sortDisplays()
-        guard displays.contains(where: { !$0.items.isEmpty }) else {
+        func hasWindows(_ d: SortDisplay) -> Bool { !d.items.isEmpty || !d.fullscreen.isEmpty }
+        guard displays.contains(where: hasWindows) else {
             HUD.shared.show("No windows to sort", on: nil)
             return
         }
@@ -15,9 +16,10 @@ extension SortPanel {
         SortNudge.shared.dismiss()
         generation += 1
         let screen = OuchPanel.pointerScreen()
-        let start = displays.first { $0.screen == screen && !$0.items.isEmpty } ?? displays.first { !$0.items.isEmpty } ?? displays[0]
+        let start = displays.first { $0.screen == screen && hasWindows($0) } ?? displays.first(where: hasWindows) ?? displays[0]
         wm.beginSort()
         model.finish = { [weak self] ws in self?.finish(goTo: ws, focus: true) }
+        model.openFullscreen = { [weak self] id in self?.finish(opening: id) }
         model.revert = { [weak self] in self?.revert() }
         model.changed = { [weak self] in self?.scheduleLive() }
         active = true
@@ -95,13 +97,14 @@ extension SortPanel {
         wm.revertSort()
     }
 
-    func finish(goTo: String? = nil, focus: Bool = false) {
+    func finish(goTo: String? = nil, focus: Bool = false, opening fullscreen: CGWindowID? = nil) {
         guard active else { return }
         flushLive()
         let done = model.result()
+        let leaving = model.fullscreenMoves()
         let screen = model.currentDisplay?.screen ?? NSScreen.main
         close()
-        wm.finishSort(closing: done.closing, goTo: goTo, focus: focus)
+        wm.finishSort(closing: done.closing, goTo: goTo, focus: focus, opening: fullscreen, leavingFullscreen: leaving)
         guard done.changed else { return wm.dropSortSnapshot() }
         showToast("Sorted into \(done.workspaces) workspace\(done.workspaces == 1 ? "" : "s")"
                   + (done.closing.isEmpty ? "" : ", closed \(done.closing.count)"), on: screen)

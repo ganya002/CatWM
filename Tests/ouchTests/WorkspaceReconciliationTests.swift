@@ -68,4 +68,56 @@ import Testing
         #expect(result.model.workspaceOf[8] == "1")
         #expect(result.visible == [7, 8])
     }
+
+    @Test func fullscreenWindowsJoinTheWorkspaceOfTheirOwnSpace() {
+        var model = WorkspaceModel()
+        model.virtualShown = ["A": "1"]
+        model.monitorOf = ["1": "A"]
+        model.assign(7, to: "1")
+        let facts = WorkspaceObservation(displays: [.init(id: "A", frame: a, space: 1, spaces: [1, 5])],
+                                         frames: [8: a], present: [8], held: [], fullscreen: [7: 5])
+        let result = WorkspaceReconciliation.reconcile(facts, model: model, virtual: true, homeSpace: [:], displayOf: [:])
+        let ws = WindowManager.spaceWorkspace(display: "A", space: 5)
+        #expect(result.model.workspaceOf[7] == ws)
+        #expect(result.model.fullscreenHost[ws] == 7)
+        #expect(result.model.monitorOf[ws] == "A")
+        #expect(result.model.isFullscreenWorkspace(ws))
+        #expect(!result.model.isFullscreenWorkspace("1"))
+        #expect(result.visible == [8])
+        #expect(!result.park.contains(7))
+    }
+
+    @Test func fullscreenWorkspaceIsShownWhileItsSpaceIsCurrent() {
+        var model = WorkspaceModel()
+        model.virtualShown = ["A": "1"]
+        let facts = WorkspaceObservation(displays: [.init(id: "A", frame: a, space: 5, spaces: [1, 5])],
+                                         frames: [:], present: [], held: [], fullscreen: [7: 5])
+        let result = WorkspaceReconciliation.reconcile(facts, model: model, virtual: true, homeSpace: ["A": 1], displayOf: [:])
+        let ws = WindowManager.spaceWorkspace(display: "A", space: 5)
+        #expect(result.model.shown["A"] == ws)
+        #expect(result.model.isShown(result.model.workspaceOf[7]))
+    }
+
+    @Test func leavingFullscreenReturnsTheWindowToTheShownWorkspace() {
+        var model = WorkspaceModel()
+        model.virtualShown = ["A": "1"]
+        model.monitorOf = ["1": "A"]
+        let stale = WindowManager.spaceWorkspace(display: "A", space: 5)
+        model.assign(7, to: stale)
+        model.fullscreenHost[stale] = 7
+        let facts = WorkspaceObservation(displays: [.init(id: "A", frame: a, space: 1, spaces: [1])],
+                                         frames: [7: a], present: [7], held: [])
+        let result = WorkspaceReconciliation.reconcile(facts, model: model, virtual: true, homeSpace: [:], displayOf: [:])
+        #expect(result.model.workspaceOf[7] == "1")
+        #expect(result.model.fullscreenHost.isEmpty)
+        #expect(result.visible == [7])
+    }
+
+    @Test func fullscreenWindowsOnUnknownSpacesStayUnassigned() {
+        let facts = WorkspaceObservation(displays: [.init(id: "A", frame: a, space: 1, spaces: [1])],
+                                         frames: [:], present: [], held: [], fullscreen: [7: 9])
+        let result = WorkspaceReconciliation.reconcile(facts, model: WorkspaceModel(), virtual: true, homeSpace: [:], displayOf: [:])
+        #expect(result.model.workspaceOf[7] == nil)
+        #expect(result.model.fullscreenHost.isEmpty)
+    }
 }
