@@ -35,7 +35,7 @@ extension Steps {
         if let f = b.find(["nativefullscreen"]) { more.append((cap(f), "macOS full screen")) }
         if let f = b.find(["togglefloating"]) { more.append((cap(f), "Float or tile")) }
         var anywhere: [(caps: [String], label: String)] = []
-        if let s = b.find(["sort"], global: true) { anywhere.append((cap(s), "Sort windows")) }
+        if let s = b.find(["sort"], global: true) { anywhere.append((cap(s), "Overview")) }
         if let g = b.find(["workspace"], "1", global: true) { anywhere.append((KeyWords.modLabels(g.mods, long: false) + ["1–0"], "Switch workspace")) }
 
         var summary = Coach.Summary(tutorial: tutorial)

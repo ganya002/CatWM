@@ -17,7 +17,7 @@ struct SortOfferView: View {
             Text("Your workspace is crowded").textStyle(.title)
                 .fixedSize(horizontal: false, vertical: true).padding(.top, 12).padding(.bottom, 4)
             HStack(spacing: 4) {
-                OButton("Sort my windows", variant: .primary, shortcut: ["↩"]) { choose(true) }
+                OButton("Open Overview", variant: .primary, shortcut: ["↩"]) { choose(true) }
                     .keyboardShortcut(.defaultAction)
                 OButton("Keep as is", variant: .ghost) { choose(false) }
             }
