@@ -80,6 +80,7 @@ extension WindowManager {
             return
         }
         noteFocus(item.id)
+        if let window = windows[item.id], showMaximised(window) { return }
         if stepToSpace(of: item.id) {
             DispatchQueue.main.asyncAfter(deadline: .now() + Self.spaceSettle) {
                 if !WindowServerFocus.focus(pid: item.pid, window: item.id) {

@@ -86,16 +86,30 @@ extension WindowManager {
         nativeDesktop.request(.init(workspace: workspace, display: entry.display, space: entry.space))
     }
 
+    func showMaximised(_ window: Window) -> Bool {
+        guard config.virtualWorkspaces, window.fullscreen, let space = Spaces.of(window: window.id).first,
+              let screen = Screen.all().first(where: { Spaces.list(display: $0.uuid)?.ids.contains(space) == true }),
+              Spaces.current(display: screen.uuid) != space else { return false }
+        nativeWorkspaceGeneration += 1
+        configureNativeController(focusing: window, focus: true, quiet: true)
+        nativeDesktop.request(.init(workspace: Self.spaceWorkspace(display: screen.uuid, space: space),
+                                    display: screen.uuid, space: space))
+        return true
+    }
+
     func configureNativeController(focusing preferred: Window?, focus takesFocus: Bool, quiet: Bool) {
         nativeDesktop.prepare = { [weak self] in try await self?.prepareNativeLayout($0) }
         nativeDesktop.settings = .init(duration: config.animate ? config.animationDuration : 0,
                                        curve: config.animationCurve, bounce: config.animationBounce)
         nativeDesktop.onSettled = { [weak self] request, changed in
             guard let self else { return }
-            if changed, let old = self.virtualShown[request.display], old != request.workspace, !self.sortSession {
-                self.previousWorkspace[request.display] = old
+            if self.isVirtual(request.workspace) {
+                if changed, let old = self.virtualShown[request.display], old != request.workspace,
+                   !self.sortSession {
+                    self.previousWorkspace[request.display] = old
+                }
+                self.virtualShown[request.display] = request.workspace
             }
-            self.virtualShown[request.display] = request.workspace
             self.scheduleRefresh(after: 0)
             DispatchQueue.main.async {
                 guard self.nativeDesktop.requested == nil,
