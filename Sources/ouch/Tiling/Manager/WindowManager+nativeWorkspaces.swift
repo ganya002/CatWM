@@ -2,10 +2,13 @@ import AppKit
 
 extension WindowManager {
     func updateNativeCatalog(_ screens: [Screen]) {
-        nativeCatalog.synchronize(screens.map { screen in
-            let list = Spaces.list(display: screen.uuid)
-            return .init(id: screen.uuid, spaces: list.map { info in info.desktops.map { info.ids[$0] } } ?? [])
-        })
+        let displays = screens.compactMap { screen in
+            Spaces.list(display: screen.uuid).map { info in
+                NativeWorkspaceCatalog.Display(id: screen.uuid, spaces: info.desktops.map { info.ids[$0] })
+            }
+        }
+        guard !displays.isEmpty, displays.count == screens.count else { return }
+        nativeCatalog.synchronize(displays)
         for entry in nativeCatalog.entries { monitorOf[entry.name] = entry.display }
         if nativeCatalog.saved != lastNativeCatalogSaved {
             lastNativeCatalogSaved = nativeCatalog.saved
@@ -22,7 +25,9 @@ extension WindowManager {
             let space = Spaces.current(display: screen.uuid)
             let name = nativeCatalog.entry(space: space)?.name
             model.show(name ?? Self.spaceWorkspace(display: screen.uuid, space: space), on: screen.uuid)
-            if let name { virtualShown[screen.uuid] = name }
+            guard let name else { continue }
+            if let old = virtualShown[screen.uuid], old != name, !sortSession { previousWorkspace[screen.uuid] = old }
+            virtualShown[screen.uuid] = name
         }
         func host(_ id: CGWindowID, on space: UInt64) -> String? {
             guard let screen = screens.first(where: {
@@ -55,7 +60,7 @@ extension WindowManager {
         return .init(model: model, homeSpace: [:], displayOf: displayOf, visible: visible, park: [])
     }
 
-    func showNativeWorkspace(_ workspace: String, focusing preferred: Window?, focus takesFocus: Bool) {
+    func showNativeWorkspace(_ workspace: String, focusing preferred: Window?, focus takesFocus: Bool, quiet: Bool) {
         updateNativeCatalog(Screen.all())
         nativeWorkspaceGeneration += 1
         let generation = nativeWorkspaceGeneration
@@ -68,7 +73,7 @@ extension WindowManager {
                         self.nativeWorkspaceGeneration == generation
                     })
                     if self.nativeWorkspaceGeneration == generation {
-                        self.showNativeWorkspace(workspace, focusing: preferred, focus: takesFocus)
+                        self.showNativeWorkspace(workspace, focusing: preferred, focus: takesFocus, quiet: quiet)
                     }
                 } catch is CancellationError { } catch {
                     Log.info("native workspaces: create \(workspace) failed: \(error.localizedDescription)")
@@ -77,17 +82,15 @@ extension WindowManager {
             }
             return
         }
-        let old = nativeCatalog.entry(space: Spaces.current(display: entry.display))?.name
-        if let old, old != workspace { previousWorkspace[entry.display] = old }
-        configureNativeController(focusing: preferred, focus: takesFocus)
+        configureNativeController(focusing: preferred, focus: takesFocus, quiet: quiet)
         nativeDesktop.request(.init(workspace: workspace, display: entry.display, space: entry.space))
     }
 
-    func configureNativeController(focusing preferred: Window?, focus takesFocus: Bool) {
+    func configureNativeController(focusing preferred: Window?, focus takesFocus: Bool, quiet: Bool) {
         nativeDesktop.prepare = { [weak self] in try await self?.prepareNativeLayout($0) }
         nativeDesktop.settings = .init(duration: config.animate ? config.animationDuration : 0,
                                        curve: config.animationCurve, bounce: config.animationBounce)
-        nativeDesktop.onSettled = { [weak self] request in
+        nativeDesktop.onSettled = { [weak self] request, changed in
             guard let self else { return }
             self.scheduleRefresh(after: 0)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
@@ -102,7 +105,7 @@ extension WindowManager {
                         self.focus(window, warp: false)
                     } else { self.parkFocus() }
                 }
-                if !self.quietWorkspaceHUD, self.config.enablesLayoutHUD, self.config.enablesLayoutHUDOnSpaceChange,
+                if changed, !quiet, self.config.enablesLayoutHUD, self.config.enablesLayoutHUDOnSpaceChange,
                    let screen = Screen.all().first(where: { $0.uuid == request.display }) {
                     self.showWorkspaceHUD(request.workspace, on: screen)
                 }
@@ -126,7 +129,7 @@ extension WindowManager {
             guard let name = nativeCatalog.step(from: source.name, by: direction),
                   let target = nativeCatalog.entry(name) else { return }
             nativeGestureSign = Double(direction)
-            configureNativeController(focusing: nil, focus: true)
+            configureNativeController(focusing: nil, focus: true, quiet: false)
             nativeDesktop.beginGesture(.init(workspace: name, display: target.display, space: target.space))
         }
         guard let sign = nativeGestureSign else { return }

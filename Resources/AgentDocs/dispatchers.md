@@ -28,7 +28,7 @@ Used as `bind = MODS, key, <dispatcher>, <args>` or `ouch dispatch <dispatcher> 
 | `reload` | | re-read the config |
 | `submap` | mode name, or `reset` | enter or leave a keybind mode |
 | `switcher` | none or `prev` | window switcher: tap for the last window, hold the modifier to browse every window on every workspace (macOS Desktop) and full-screen Space, type to search. In the list: Tab / Shift+Tab move, Return opens, Esc cancels, `` ` `` shows one app, Cmd+W closes, Cmd+Q quits, Cmd+H hides, Cmd+1…9 opens a row |
-| `sethomespace` | | make the current macOS Desktop the home for workspaces |
+| `sethomespace` | | no effect: each macOS Desktop is a workspace. Old configs can keep it |
 | `exit` | | quit Ouch (parked windows are restored first) |
 
 Unknown dispatchers and bad args are ignored silently; check the log with `ouch dump` or `--verbose`.

@@ -35,8 +35,9 @@ extension WindowManager {
             return
         }
         let from = workspaceOf[window.id]
+        let hadFocus = focusedWindow()?.id == window.id
         workspaceMoves.insert(window.id)
-        animator.cancel(window.id)
+        if Spaces.current(display: target.display) != target.space { animator.cancel(window.id) }
         Spaces.move(window: window.id, to: target.space) { [weak self] moved in
             guard let self else { return }
             self.workspaceMoves.remove(window.id)
@@ -49,7 +50,7 @@ extension WindowManager {
             Log.info("native workspaces: moved window \(window.id) to workspace \(workspace)")
             self.completeNativeMigration(window.id, workspace: workspace)
             self.nativeMembership[window.id] = target.space
-            self.assignWindow(window, toWorkspace: workspace, from: from, display: target.display, follow: follow)
+            self.assignWindow(window, toWorkspace: workspace, from: from, follow: follow, handOffFocus: hadFocus)
             self.scheduleRefresh(after: 0)
         }
     }

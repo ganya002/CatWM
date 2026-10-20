@@ -49,7 +49,6 @@ enum Actions {
             add("Move Window to Display \(name)", .displays, "movewindow", "mon:\(dir)", "arrow.\(arrow).square",
                 focusRequired: true)
         }
-        add("Use This Desktop as Home", .spaces, "sethomespace", "", "house")
         for number in 1...10 {
             add("Workspace \(number)", .spaces, "workspace", "\(number)", "\(number).square",
                 group: "Go to Workspace", short: "Workspace \(number)")

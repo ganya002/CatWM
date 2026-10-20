@@ -6,13 +6,14 @@ extension WindowManager {
         moveNativeWindow(window, to: workspace, follow: follow)
     }
 
-    func assignWindow(_ window: Window, toWorkspace workspace: String, from: String?, display: String, follow: Bool) {
+    func assignWindow(_ window: Window, toWorkspace workspace: String, from: String?, follow: Bool,
+                      handOffFocus: Bool) {
+        let from = from == workspace ? nil : from
         if windows[window.id] == nil {
             windows[window.id] = window
             order.append(window.id)
             watch(window)
         }
-        monitorOf[workspace] = display
         model.assign(window.id, to: workspace)
         lastFocused[workspace] = window.id
         if let from, lastFocused[from] == window.id { lastFocused[from] = nil }
@@ -22,7 +23,7 @@ extension WindowManager {
         } else {
             autoSwitchAfter = Date().addingTimeInterval(0.6)
             refresh()
-            guard isShown(from) else { return }
+            guard handOffFocus, isShown(from) else { return }
             if let next = order.first(where: { workspaceOf[$0] == from && visible.contains($0) })
                 .flatMap({ windows[$0] }) {
                 focus(next)

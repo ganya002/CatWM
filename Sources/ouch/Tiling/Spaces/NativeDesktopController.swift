@@ -13,7 +13,7 @@ final class NativeDesktopController {
     }
     var settings = Settings(duration: 0.18, curve: .easeOut, bounce: 0.5)
     var prepare: (Request) async throws -> Void = { _ in }
-    var onSettled: (Request) -> Void = { _ in }
+    var onSettled: (Request, _ changed: Bool) -> Void = { _, _ in }
     var onIdle: () -> Void = {}
     var onFailure: (String) -> Void = { _ in }
     private(set) var requested: Request?
@@ -72,13 +72,13 @@ final class NativeDesktopController {
         }
         let source = Spaces.current(display: target.display)
         Log.info("native workspaces: \(source) → \(target.space), workspace \(target.workspace)")
-        if source == target.space { onSettled(target); return }
+        if source == target.space { onSettled(target, false); return }
         let busy = "Finish the current macOS Desktop action, then try again"
         try check(!DesktopUI.isBusy(on: screen), busy)
         if let info = Spaces.list(display: target.display), let current = info.current,
            !info.desktops.contains(current) {
             try await leaveNativeFullscreen(target)
-            if Spaces.current(display: target.display) == target.space { onSettled(target) }
+            if Spaces.current(display: target.display) == target.space { onSettled(target, true) }
             return
         }
         guard let list = Spaces.list(display: target.display),
@@ -108,7 +108,7 @@ final class NativeDesktopController {
         DesktopGuardClient.prewarm()
         if let failure { throw failure }
         Log.info("native workspaces: restored transforms after \(target.workspace)")
-        if Spaces.current(display: target.display) == target.space { onSettled(target) }
+        if Spaces.current(display: target.display) == target.space { onSettled(target, true) }
     }
 
     @MainActor private func prepareWhileGuarding(_ target: Request, _ state: DesktopGuard.Context,

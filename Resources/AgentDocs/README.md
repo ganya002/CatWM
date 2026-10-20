@@ -10,7 +10,7 @@ Read in this order:
 | [config.md](config.md) | read or edit `~/.config/ouch/ouch.conf` (every option, value formats) |
 | [keybinds.md](keybinds.md) | write `bind` lines: modifiers, keys, ranges, scroll/swipe, window mode |
 | [dispatchers.md](dispatchers.md) | know what each command does and what args it takes |
-| [workspaces.md](workspaces.md) | understand workspaces, displays and home Desktop |
+| [workspaces.md](workspaces.md) | understand workspaces, displays and macOS Desktops |
 | [troubleshooting.md](troubleshooting.md) | permissions, logs, and common failures |
 
 ## Facts to know first
