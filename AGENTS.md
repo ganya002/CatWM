@@ -11,7 +11,7 @@ These are the things we cant comprimise on, they make us what we are today and t
 
 ## How it works
 
-An event tap (`Hotkeys`) matches each key press against the binds of the active submap and sends the match to `WindowManager.dispatch` (`Tiling/Manager/`). The CLI calls the same `dispatch`. `WindowManager.shared` owns all state: one `Window` for each `CGWindowID`, and a `WorkspaceModel` for workspaces, order and layouts. `AXObserver` notifications and `WindowScanner` (`Tiling/Scan/`) feed `refresh()`. `refresh()` adds and forgets windows, asks `Layout.frames` for the slots, and places the windows. `Animator` (`Tiling/Motion/`) steps the frames at 120 Hz through one `AXWriter` queue for each app. Workspaces are virtual: Ouch parks the windows of hidden workspaces in a screen corner on one home Desktop for each display. `Config.parse` reads `~/.config/ouch/ouch.conf` into binds and `ConfigOption` values. `reload()` applies them, and Settings edits the same file through `ConfigDocument`.
+An event tap (`Hotkeys`) matches each key press against the binds of the active submap and sends the match to `WindowManager.dispatch` (`Tiling/Manager/`). The CLI calls the same `dispatch`. `WindowManager.shared` owns all state: one `Window` for each `CGWindowID`, and a `WorkspaceModel` for workspaces, order and layouts. `AXObserver` notifications and `WindowScanner` (`Tiling/Scan/`) feed `refresh()`. `refresh()` adds and forgets windows, asks `Layout.frames` for the slots, and places the windows. `Animator` (`Tiling/Motion/`) steps the frames at 120 Hz through one `AXWriter` queue for each app. Each workspace is one macOS Desktop. `NativeDesktopController` (`Tiling/Spaces/`) moves the Desktops with the Ouch animation settings. `Config.parse` reads `~/.config/ouch/ouch.conf` into binds and `ConfigOption` values. `reload()` applies them, and Settings edits the same file through `ConfigDocument`.
 
 ## Code map
 
@@ -43,7 +43,7 @@ The app source is in `Sources/ouch/`. Each folder has one job:
 - **bind** means a key combination that runs a dispatcher. It is a `bind = …` line in the config.
 - **dispatcher** means a named command, such as `movefocus` or `workspace`. `WindowManager.dispatch` runs it.
 - **switcher** means the window switcher. `$mod Tab` opens it, and the `switcher` dispatcher runs it.
-- **Desktop** means a macOS Space. The home Desktop is the one where Ouch workspaces live.
+- **Desktop** means a macOS Space. Each normal Desktop is one Ouch workspace.
 
 ## UI
 

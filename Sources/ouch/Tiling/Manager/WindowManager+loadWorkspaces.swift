@@ -95,7 +95,7 @@ extension WindowManager {
         _ workspace: String, focusing preferred: Window? = nil, focus takesFocus: Bool = true
     ) {
         guard config.virtualWorkspaces else { return }
-        showNativeWorkspace(workspace, focusing: preferred, focus: takesFocus)
+        showNativeWorkspace(workspace, focusing: preferred, focus: takesFocus, quiet: quietWorkspaceHUD)
     }
 
     func showWorkspaceHUD(_ workspace: String, on monitor: Screen) {

@@ -29,7 +29,11 @@ extension WindowManager {
         }
     }
 
-    var currentWorkspace: String? { currentScreen().flatMap { virtualShown[$0.uuid] } }
+    var currentWorkspace: String? {
+        guard let screen = currentScreen() else { return nil }
+        if let request = nativeDesktop.requested, request.display == screen.uuid { return request.workspace }
+        return virtualShown[screen.uuid]
+    }
 
     func workspaceSummary() -> WorkspaceSummary {
         guard config.virtualWorkspaces, isStarted else { return WorkspaceSummary(current: nil, all: []) }
@@ -40,9 +44,8 @@ extension WindowManager {
         let names = Set(counts.keys).union(nativeCatalog.entries.map(\.name))
             .union(virtualShown.values).sorted(by: workspaceSort)
         let showing = Set(virtualShown.values)
-        let current = currentScreen().flatMap { virtualShown[$0.uuid] }
         return WorkspaceSummary(
-            current: current,
+            current: currentWorkspace,
             all: names.map { WorkspaceSummary.Entry(name: $0, windows: counts[$0] ?? 0, shown: showing.contains($0)) }
         )
     }
@@ -69,7 +72,7 @@ extension WindowManager {
     func resolveWorkspace(_ raw: String) -> String? {
         let trimmed = raw.trimmingCharacters(in: .whitespaces)
         let lower = trimmed.lowercased()
-        let cur = nativeDesktop.requested?.workspace ?? currentWorkspace ?? "1"
+        let cur = currentWorkspace ?? "1"
         if trimmed.isEmpty { return nil }
         if lower == "previous" { return currentScreen().flatMap { previousWorkspace[$0.uuid] } }
         if lower.hasPrefix("name:") { return String(trimmed.dropFirst(5)) }
@@ -141,14 +144,5 @@ extension WindowManager {
         updateNativeCatalog(Screen.all())
         refresh()
         HUD.shared.show("Ouch controls this Desktop", on: currentScreen()?.nsScreen)
-    }
-
-    var homeSpaceSummary: String {
-        guard config.virtualWorkspaces else { return "" }
-        let names = Screen.all().compactMap { screen -> String? in
-            let current = Spaces.current(display: screen.uuid)
-            return nativeCatalog.entry(space: current).map { "Desktop \($0.name)" }
-        }
-        return names.joined(separator: ", ")
     }
 }
