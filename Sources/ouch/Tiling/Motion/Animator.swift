@@ -29,8 +29,7 @@ final class Animator {
     private var landing: [CGWindowID: (move: Move, number: Int)] = [:]
     private var landings = 0
     private var quietUntil: [CGWindowID: CFTimeInterval] = [:]
-    private var following: [CGWindowID: Move] = [:]
-    private var followRefusals: [CGWindowID: CGSize] = [:]
+    private var following = FollowedMoves()
     private var writers: [pid_t: AXWriter] = [:]
     private var owners: [CGWindowID: pid_t] = [:]
     private var epochs: [CGWindowID: Int] = [:]
@@ -94,8 +93,7 @@ final class Animator {
 
     func cancel(_ id: CGWindowID) {
         epochs[id, default: 0] += 1
-        following[id] = nil
-        followRefusals[id] = nil
+        following.remove(id)
         let item = items.removeValue(forKey: id), landed = landing.removeValue(forKey: id)
         guard let pid = item?.move.window.pid ?? landed?.move.window.pid ?? owners[id] else { return }
         writer(pid).cancel(id)
@@ -142,32 +140,16 @@ final class Animator {
             let id = move.window.id
             if items[id] != nil || landing[id] != nil { cancel(id) }
             owners[id] = move.window.pid
-            following[id] = move
+            following.add(move)
             quietUntil[id] = CACurrentMediaTime() + 0.4
             writer(move.window.pid).follow(move.window, to: move.target) { [weak self] actual in
-                self?.followed(move, actual: actual)
+                guard let self, let minimum = self.following.minimum(after: move, actual: actual) else { return }
+                self.onMinimumSize?(move.window.id, minimum)
             }
         }
     }
 
-    func endFollow() {
-        let moves = Array(following.values)
-        following = [:]
-        followRefusals = [:]
-        moves.forEach(land)
-    }
-
-    private func followed(_ move: Move, actual: CGSize?) {
-        let id = move.window.id, target = move.target.size
-        guard following[id] != nil, let actual else { return }
-        let wider = actual.width > target.width + 1, taller = actual.height > target.height + 1
-        guard wider || taller else { followRefusals[id] = nil; return }
-        if let previous = followRefusals[id], abs(previous.width - actual.width) <= 1,
-           abs(previous.height - actual.height) <= 1 {
-            onMinimumSize?(id, CGSize(width: wider ? actual.width : 0, height: taller ? actual.height : 0))
-        }
-        followRefusals[id] = actual
-    }
+    func endFollow() { following.removeAll().forEach(land) }
 
     func position(_ window: Window, at frame: CGRect) {
         cancel(window.id)

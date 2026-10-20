@@ -15,7 +15,7 @@ extension WindowManager {
     }
 
     func beginDividerDrag(on screen: Screen) {
-        dividerDrag = (screen.uuid, state(for: screen).ratio, nil)
+        dividerDrag = DividerDrag(screen: screen.uuid, startRatio: state(for: screen).ratio)
     }
 
     func moveDivider(on screen: Screen, to position: CGFloat) {
