@@ -19,9 +19,33 @@ final class ModeFX {
 
     var style: Style = .draw
     private let model = ModeFXModel()
-    private var panels: [CGDirectDisplayID: NSPanel] = [:]
+    private var panels: [CGDirectDisplayID: (panel: NSPanel, screen: ModeFXScreen)] = [:]
     private var hideWork: DispatchWorkItem?
     private var demo: [DispatchWorkItem] = []
+    private var observers: [NSObjectProtocol] = []
+
+    private init() {
+        observers = [
+            NSWorkspace.shared.notificationCenter.addObserver(
+                forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main
+            ) { [weak self] _ in
+                self?.reshape()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { self?.reshape() }
+            },
+            NotificationCenter.default.addObserver(
+                forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
+            ) { [weak self] _ in
+                if self?.model.active == true { self?.layoutPanels() }
+            }
+        ]
+    }
+
+    private func reshape() {
+        guard model.active else { return }
+        for screen in NSScreen.screens {
+            if let id = screen.displayID { panels[id]?.screen.update(screen) }
+        }
+    }
 
     func setActive(_ active: Bool) {
         setActive(active, style: style)
@@ -40,7 +64,7 @@ final class ModeFX {
             DispatchQueue.main.async { [weak self] in self?.model.enters += 1 }
         } else {
             model.active = false
-            let work = DispatchWorkItem { [weak self] in self?.panels.values.forEach { $0.orderOut(nil) } }
+            let work = DispatchWorkItem { [weak self] in self?.panels.values.forEach { $0.panel.orderOut(nil) } }
             hideWork = work
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: work)
         }
@@ -90,28 +114,25 @@ final class ModeFX {
         for screen in NSScreen.screens {
             guard let id = screen.displayID else { continue }
             seen.insert(id)
-            let panel = panels[id] ?? makePanel(screen)
-            panels[id] = panel
-            if let host = panel.contentView as? NSHostingView<ModeFXView> { host.rootView = view(for: screen) }
-            panel.setFrame(screen.frame, display: false)
-            panel.orderFrontRegardless()
+            let entry = panels[id] ?? makePanel(screen)
+            panels[id] = entry
+            entry.screen.update(screen)
+            if entry.panel.frame != screen.frame { entry.panel.setFrame(screen.frame, display: false) }
+            if !entry.panel.isVisible {
+                entry.panel.orderFrontRegardless()
+                OverlaySpace.add(entry.panel)
+            }
         }
-        for (id, panel) in panels where !seen.contains(id) {
-            panel.orderOut(nil)
+        for (id, entry) in panels where !seen.contains(id) {
+            entry.panel.orderOut(nil)
             panels[id] = nil
         }
     }
 
-    private func makePanel(_ screen: NSScreen) -> NSPanel {
+    private func makePanel(_ screen: NSScreen) -> (panel: NSPanel, screen: ModeFXScreen) {
+        let state = ModeFXScreen(screen)
         let panel = OuchPanel(role: .fullscreenFX, frame: screen.frame)
-        panel.contentView = NSHostingView(rootView: view(for: screen))
-        return panel
-    }
-
-    private func view(for screen: NSScreen) -> ModeFXView {
-        let shape = ScreenShape.of(screen)
-        return ModeFXView(model: model, radius: shape.topRadius, origin: screen.frame.origin,
-                          notchHalfWidth: shape.notchHalfWidth, notchHeight: shape.notchHeight,
-                          topInset: shape.topInset)
+        panel.contentView = NSHostingView(rootView: ModeFXView(model: model, screen: state))
+        return (panel, state)
     }
 }
