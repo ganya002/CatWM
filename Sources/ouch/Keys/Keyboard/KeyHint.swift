@@ -78,6 +78,7 @@ struct KeyHint: Identifiable, Equatable {
         case "layoutmsg":
             switch argument {
             case "swapwithmaster": return "Swap"
+            case "swapsides": return "Sides"
             case "focusmaster": return "Main"
             case "addmaster": return "Mains +"
             case "removemaster": return "Mains −"

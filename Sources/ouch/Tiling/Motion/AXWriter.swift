@@ -4,6 +4,7 @@ import QuartzCore
 final class AXWriter {
     private enum Operation {
         case step(CGRect), land(CGRect, done: (Bool) -> Void), position(CGPoint, done: (Bool) -> Void)
+        case follow(CGRect, done: (CGSize?) -> Void)
     }
     private struct Pending { let window: Window; let operation: Operation; let epoch: Int }
     struct Stats { var size = Stat(), position = Stat(), land = Stat(), skipped = 0 }
@@ -26,6 +27,10 @@ final class AXWriter {
     func step(_ window: Window, to frame: CGRect) { submit(window, .step(frame)) }
     func land(_ window: Window, at frame: CGRect, done: @escaping (Bool) -> Void) {
         submit(window, .land(frame, done: done))
+    }
+
+    func follow(_ window: Window, to frame: CGRect, done: @escaping (CGSize?) -> Void) {
+        submit(window, .follow(frame, done: done))
     }
 
     func position(_ window: Window, at point: CGPoint, done: @escaping (Bool) -> Void) {
@@ -81,6 +86,7 @@ final class AXWriter {
             if animating.remove(window.id) != nil { EnhancedUI.resume(pid) }
             switch item.operation {
             case let .land(_, done), let .position(_, done): DispatchQueue.main.async { done(false) }
+            case let .follow(_, done): DispatchQueue.main.async { done(nil) }
             case .step: break
             }
             return
@@ -95,6 +101,17 @@ final class AXWriter {
             }
             let positionTime = measure { window.setPosition(frame.origin) }
             lock.withLock { if sizeTime > 0 { stats.size.add(sizeTime) }; stats.position.add(positionTime) }
+        case let .follow(frame, done):
+            var actual: CGSize?
+            if lastSize[window.id] != frame.size {
+                let sizeTime = measure { window.setSize(frame.size) }
+                lastSize[window.id] = frame.size
+                actual = window.frame.size
+                lock.withLock { stats.size.add(sizeTime) }
+            }
+            let positionTime = measure { window.setPosition(frame.origin) }
+            lock.withLock { stats.position.add(positionTime) }
+            DispatchQueue.main.async { done(actual) }
         case let .position(point, done):
             let elapsed = measure { window.setPosition(point) }
             animating.remove(window.id)

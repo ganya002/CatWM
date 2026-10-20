@@ -88,6 +88,10 @@ extension WindowManager {
             ratioChange = nil
             warnTooSmall(id, on: Screen.all().first { $0.uuid == change.screen })
         }
+        if let drag = dividerDrag, let position = drag.position,
+           let screen = Screen.all().first(where: { $0.uuid == drag.screen }) {
+            moveDivider(on: screen, to: position)
+        }
         scheduleRefresh()
     }
 

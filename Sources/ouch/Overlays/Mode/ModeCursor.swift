@@ -26,19 +26,36 @@ final class ModeCursor {
         }
     }
 
+    private var mode = false
+    private var held: NSCursor?
+
     func setActive(_ active: Bool) {
-        guard active != (timer != nil) else { return }
-        if active {
-            setInBackground?(true)
-            NSCursor.arrow.set()
-            let repeating = Timer(timeInterval: 1.0 / 120, repeats: true) { _ in NSCursor.arrow.set() }
-            RunLoop.main.add(repeating, forMode: .common)
-            timer = repeating
-        } else {
+        mode = active
+        apply()
+    }
+
+    func hold(_ cursor: NSCursor?) {
+        held = cursor
+        apply()
+    }
+
+    private var cursor: NSCursor? { held ?? (mode ? .arrow : nil) }
+
+    private func apply() {
+        guard let cursor else {
+            guard timer != nil else { return }
             timer?.invalidate()
             timer = nil
             setInBackground?(false)
             CursorRefresh.soon(after: 0)
+            return
         }
+        if timer == nil {
+            setInBackground?(true)
+            let repeating = Timer(timeInterval: 1.0 / 120, repeats: true) { [weak self] _ in self?.cursor?.set() }
+            RunLoop.main.add(repeating, forMode: .common)
+            timer = repeating
+        }
+        cursor.set()
     }
 }

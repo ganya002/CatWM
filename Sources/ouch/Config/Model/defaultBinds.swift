@@ -31,6 +31,7 @@ bind = , period, splitratio, +0.05
 bind = SHIFT, comma, layoutmsg, addmaster
 bind = SHIFT, period, layoutmsg, removemaster
 bind = , m, layoutmsg, swapwithmaster
+bind = SHIFT, m, layoutmsg, swapsides
 bind = , tab, cyclenext
 bind = SHIFT, tab, cyclenext, prev
 bind = , f, fullscreen

@@ -163,7 +163,9 @@ extension WindowManager {
     func cycleLayout(_ delta: Int) {
         guard let current = context(), !config.layouts.isEmpty else { return }
         let layouts = config.layouts
-        let i = layouts.firstIndex(of: current.state.layout) ?? (delta > 0 ? -1 : 0)
+        let layout = current.state.layout
+        let i = layouts.firstIndex(of: layout) ?? layout.mirrored.flatMap { layouts.firstIndex(of: $0) }
+            ?? (delta > 0 ? -1 : 0)
         setLayout(layouts[((i + delta) % layouts.count + layouts.count) % layouts.count], on: current.screen)
     }
 }

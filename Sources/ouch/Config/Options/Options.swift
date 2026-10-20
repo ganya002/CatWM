@@ -61,6 +61,11 @@ enum Options {
             .setting(.windows, "windows.resizeMain", "Drag window edges to resize the main pane",
                      help: "Resize a tiled window with the mouse, and the main pane follows", keywords: "mouse ratio",
                      section: "Mouse"),
+        .bool("split-handle", \.splitHandle)
+            .documented("bool", "a bar on the main split: drag it to resize, click it to swap the sides")
+            .setting(.windows, "windows.splitHandle", "Split handle",
+                     help: "Drag the bar between the sides to resize. Click it to swap the sides",
+                     keywords: "divider bar grip mouse ratio swap", section: "Mouse"),
         .bool("new-windows-to-main", \.newWindowsToMain)
             .documented("bool", "").aliases("new_is_master")
             .setting(.windows, "windows.newMain", "New windows become main", keywords: "open", advanced: true,

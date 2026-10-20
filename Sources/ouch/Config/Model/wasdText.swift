@@ -18,6 +18,7 @@ bind = , f, fullscreen
 bind = SHIFT, f, nativefullscreen
 bind = , c, togglefloating
 bind = , g, layoutmsg, swapwithmaster
+bind = SHIFT, g, layoutmsg, swapsides
 bind = , space, focusmonitor, +1
 bind = SHIFT, space, movewindow, mon:+1
 bind = , comma, splitratio, -0.05

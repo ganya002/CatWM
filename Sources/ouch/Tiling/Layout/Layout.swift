@@ -111,6 +111,20 @@ enum Layout: String, CaseIterable {
         return out
     }
 
+    var mirrored: Layout? {
+        switch self {
+        case .tall: .tallRight
+        case .tallRight: .tall
+        case .twoPane: .twoPaneRight
+        case .twoPaneRight: .twoPane
+        case .widescreenTall: .widescreenTallRight
+        case .widescreenTallRight: .widescreenTall
+        case .threeColumnLeft: .threeColumnRight
+        case .threeColumnRight: .threeColumnLeft
+        default: nil
+        }
+    }
+
     var ratioAxis: (horizontal: Bool, fromStart: Bool)? {
         switch self {
         case .tall, .widescreenTall, .twoPane, .threeColumnLeft, .bsp: (true, true)
