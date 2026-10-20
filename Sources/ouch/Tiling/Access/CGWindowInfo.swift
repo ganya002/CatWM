@@ -6,8 +6,10 @@ struct CGWindowInfo {
     let pid: pid_t
     let bounds: CGRect
 
-    static func onScreen() -> [CGWindowInfo] {
-        guard let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
+    static func onScreen(
+        options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
+    ) -> [CGWindowInfo] {
+        guard let list = CGWindowListCopyWindowInfo(options, kCGNullWindowID)
             as? [[String: Any]] else { return [] }
         return list.compactMap { info in
             guard (info[kCGWindowLayer as String] as? Int) == 0,

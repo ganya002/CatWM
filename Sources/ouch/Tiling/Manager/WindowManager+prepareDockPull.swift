@@ -25,7 +25,7 @@ extension WindowManager {
             guard candidate.string(kAXSubroleAttribute) == kAXStandardWindowSubrole else { continue }
             let membership = Spaces.of(window: id)
             guard membership.count == 1, let source = membership.first,
-                  desktops.contains(source), !homeSpace.values.contains(source),
+                  desktops.contains(source), source != Spaces.current(display: display.uuid),
                   !workspaceMoves.contains(id), !candidate.flag(kAXMinimizedAttribute),
                   !candidate.flag("AXFullScreen") else { return nil }
             let window = windows[id]

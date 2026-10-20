@@ -38,10 +38,10 @@ extension WindowManager {
             animator.animate([.init(window: window, to: CGRect(origin: origin, size: frame.size), bounds: dst.visible)],
                              duration: config.animate ? config.animationDuration : 0,
                              curve: config.animationCurve, bounce: config.animationBounce)
-            model.assign(window.id, to: shown[dst.uuid])
+            assignManagedWindow(window.id, to: shown[dst.uuid])
             scheduleRefresh()
         } else {
-            model.assign(window.id, to: shown[dst.uuid])
+            assignManagedWindow(window.id, to: shown[dst.uuid])
             refresh()
         }
         focus(window)

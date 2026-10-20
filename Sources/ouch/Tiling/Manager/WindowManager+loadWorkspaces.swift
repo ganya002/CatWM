@@ -4,6 +4,9 @@ extension WindowManager {
     func loadWorkspaces() {
         guard config.virtualWorkspaces else { return }
         let defaults = UserDefaults.standard
+        nativeCatalog.saved = (defaults.dictionary(forKey: "ws.nativeSpaces") ?? [:]).compactMapValues {
+            $0 as? UInt64
+        }
         for (key, value) in defaults.dictionary(forKey: "ws.windows") as? [String: String] ?? [:] {
             if let id = CGWindowID(key) { savedWorkspaceOf[id] = value }
         }
@@ -19,6 +22,7 @@ extension WindowManager {
         for (key, value) in defaults.dictionary(forKey: "ws.floating") as? [String: Bool] ?? [:] {
             if let id = CGWindowID(key) { savedFloating[id] = value }
         }
+        loadNativeMigration(defaults)
         loadWorkspaceLayouts(defaults)
         monitorOf = monitorOf.filter { isVirtual($0.key) }
     }
@@ -88,67 +92,13 @@ extension WindowManager {
     }
 
     func showWorkspace(
-        _ workspace: String, focusing preferred: Window? = nil, focus takesFocus: Bool = true, attempts: Int = 3
+        _ workspace: String, focusing preferred: Window? = nil, focus takesFocus: Bool = true
     ) {
-        let timing = TilingTiming("workspace", windows: windows.count)
-        defer { timing.finish() }
-        let screens = Screen.all()
-        guard let here = currentScreen() ?? screens.first else { return }
-        let monitor = monitorOf[workspace].flatMap { uuid in screens.first { $0.uuid == uuid } } ?? here
-        let leaving = virtualShown[monitor.uuid]
-        if let cur = leaving, cur != workspace { previousWorkspace[monitor.uuid] = cur }
-        monitorOf[workspace] = monitor.uuid
-        virtualShown[monitor.uuid] = workspace
-        autoSwitchAfter = Date().addingTimeInterval(0.6)
-        if !takesFocus, !isOnHomeSpace(monitor) { return }
-        if reachHomeSpace(workspace, leaving: leaving, on: monitor, focusing: preferred, attempts: attempts) {
-            return
-        }
-        let previous = shown[monitor.uuid]
-        let changed = previous != workspace
-        model.show(workspace, on: monitor.uuid)
-        Log.debug("workspaces: showing \(workspace) on \(monitor.nsScreen.localizedName)")
-        if changed, takesFocus, let previous { beginSlide(from: previous, to: workspace, on: monitor) }
-        refresh()
-        timing.checkpoint("refresh")
-        if changed, !quietWorkspaceHUD, config.enablesLayoutHUD, config.enablesLayoutHUDOnSpaceChange {
-            showWorkspaceHUD(workspace, on: monitor)
-        }
-        timing.checkpoint("hud")
-        guard takesFocus else {
-            onChange?()
-            return
-        }
-        focusShownWorkspace(workspace, preferred: preferred, on: monitor)
-        timing.checkpoint("focus")
-        onChange?()
-        timing.checkpoint("notify")
+        guard config.virtualWorkspaces else { return }
+        showNativeWorkspace(workspace, focusing: preferred, focus: takesFocus)
     }
 
-    private func reachHomeSpace(
-        _ workspace: String, leaving: String?, on monitor: Screen, focusing preferred: Window?, attempts: Int
-    ) -> Bool {
-        guard !isOnHomeSpace(monitor), let home = homeSpace[monitor.uuid],
-              let info = Spaces.list(display: monitor.uuid),
-              let index = info.ids.firstIndex(of: home),
-              let desktop = info.desktops.firstIndex(of: index) else { return false }
-        guard attempts > 0 else {
-            Log.info("workspaces: couldn't reach the home Space for \(workspace)")
-            return true
-        }
-        stageHomeSpace(workspace, replacing: leaving, on: monitor, home: home)
-        CGWarpMouseCursorPosition(monitor.center)
-        guard let steps = goToSpace(desktop + 1) else {
-            Log.info("workspaces: can't switch Spaces for \(workspace)")
-            return true
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5 + 0.15 * Double(steps)) { [weak self] in
-            self?.showWorkspace(workspace, focusing: preferred, attempts: attempts - 1)
-        }
-        return true
-    }
-
-    private func showWorkspaceHUD(_ workspace: String, on monitor: Screen) {
+    func showWorkspaceHUD(_ workspace: String, on monitor: Screen) {
         let text = labels[workspace].map { "\(workspace) · \($0)" } ?? workspace
         let layout = state(workspace: workspace).layout
         DispatchQueue.main.async { [weak self] in
@@ -167,39 +117,6 @@ extension WindowManager {
             if config.mouseFollowsFocus { CGWarpMouseCursorPosition(monitor.center) }
             CursorRefresh.soon()
         }
-    }
-
-    func stageHomeSpace(_ workspace: String, replacing old: String?, on screen: Screen, home: UInt64) {
-        guard config.virtualWorkspaces, isVirtual(workspace) else { return }
-        let timing = TilingTiming("stage-home", windows: windows.count)
-        defer { timing.finish() }
-        let screens = Screen.all()
-        func onHome(_ id: CGWindowID) -> Bool { scanner.desktop.spaces[id]?.contains(home) == true }
-        if let old, old != workspace, isVirtual(old) {
-            for id in order where workspaceOf[id] == old && onHome(id) { park(id, screens: screens) }
-        }
-        let arriving = order.filter { id in
-            guard workspaceOf[id] == workspace, let window = windows[id], !window.fullscreen, onHome(id),
-                  !window.minimized,
-                  NSRunningApplication(processIdentifier: window.pid)?.isHidden != true else { return false }
-            return true
-        }
-        for id in arriving where floatsFreely(id) { unpark(floating: id, screens: screens) }
-        let ids = arriving.filter { windows[$0]?.isFloating == false }
-        let screenState = state(workspace: workspace)
-        guard tilingEnabled, !ids.isEmpty, let slots = layoutTargets(ids, screenState, on: screen) else { return }
-        var moves: [Animator.Move] = []
-        for id in ids {
-            guard let window = windows[id], let target = slots[id] else { continue }
-            targets[id] = target
-            if !(animator.destination(id) ?? window.cachedFrame).approxEqual(target) {
-                moves.append(.init(window: window, to: target, bounds: screen.visible))
-            }
-        }
-        animator.animate(moves, duration: 0)
-        Log.debug(
-            "workspaces: staged \(workspace) on the home Space (\(arriving.count) windows, parked \(old ?? "none"))"
-        )
     }
 
     func moveFocusedWindow(to workspace: String, follow: Bool) {

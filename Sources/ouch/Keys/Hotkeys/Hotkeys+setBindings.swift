@@ -23,7 +23,7 @@ extension Hotkeys {
         if tap != nil { return true }
         let mask = CGEventMask(1 << CGEventType.keyDown.rawValue) | CGEventMask(1 << CGEventType.flagsChanged.rawValue)
             | CGEventMask(1 << CGEventType.scrollWheel.rawValue)
-        guard let newTap = CGEvent.tapCreate(tap: .cgSessionEventTap, place: .headInsertEventTap,
+        guard let newTap = CGEvent.tapCreate(tap: .cghidEventTap, place: .headInsertEventTap,
                                              options: .defaultTap, eventsOfInterest: mask, callback: tapCallback,
                                              userInfo: nil) else { return false }
         tap = newTap

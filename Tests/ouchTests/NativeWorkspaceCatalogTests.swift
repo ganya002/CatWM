@@ -1,0 +1,69 @@
+import AppKit
+@testable import ouch
+import Testing
+
+@Suite struct NativeWorkspaceCatalogTests {
+    @Test func adoptsDesktopsAcrossDisplaysWithUniqueNumbers() {
+        var catalog = NativeWorkspaceCatalog()
+        catalog.synchronize([.init(id: "left", spaces: [11, 12]), .init(id: "right", spaces: [21, 22])])
+        #expect(catalog.entry("1") == .init(name: "1", display: "left", space: 11))
+        #expect(catalog.entry("3") == .init(name: "3", display: "right", space: 21))
+        #expect(Set(catalog.entries.map(\.name)).count == 4)
+    }
+
+    @Test func namesFollowDesktopIdentityWhenNativeOrderChanges() {
+        var catalog = NativeWorkspaceCatalog()
+        catalog.synchronize([.init(id: "screen", spaces: [11, 12, 13])])
+        catalog.synchronize([.init(id: "screen", spaces: [13, 11, 12])])
+        #expect(catalog.entry("1")?.space == 11)
+        #expect(catalog.step(from: "3", by: 1) == "1")
+        #expect(catalog.step(from: "3", by: -1) == nil)
+        #expect(catalog.step(from: "2", by: 1) == nil)
+    }
+
+    @Test func removedDesktopDoesNotRenameOtherDesktops() {
+        var catalog = NativeWorkspaceCatalog()
+        catalog.saved = ["1": 11, "2": 12, "3": 13]
+        catalog.synchronize([.init(id: "screen", spaces: [11, 13, 14])])
+        #expect(catalog.entry("3")?.space == 13)
+        #expect(catalog.entry("2")?.space == 14)
+        #expect(catalog.entries.allSatisfy { $0.space != 12 })
+    }
+
+    @Test func newNamedWorkspaceKeepsItsCreatedDesktop() {
+        var catalog = NativeWorkspaceCatalog()
+        catalog.synchronize([.init(id: "screen", spaces: [11, 12])])
+        catalog.bind("writing", to: 13, on: "screen")
+        catalog.synchronize([.init(id: "screen", spaces: [11, 12, 13])])
+        #expect(catalog.entry("writing")?.space == 13)
+        #expect(catalog.entry("1")?.space == 11)
+        #expect(catalog.entry("2")?.space == 12)
+    }
+
+    @Test func corruptDuplicateBindingsCannotCreateDuplicateWorkspaceRows() {
+        var catalog = NativeWorkspaceCatalog()
+        catalog.saved = ["1": 11, "2": 11, "missing": 99]
+        catalog.synchronize([.init(id: "screen", spaces: [0, 11, 12])])
+        #expect(catalog.entries.count == 2)
+        #expect(Set(catalog.entries.map(\.space)) == [11, 12])
+        #expect(catalog.entry("missing") == nil)
+    }
+
+    @Test func ctrlDefaultsRespectConfiguredCommands() {
+        let config = Config.parse("bind = CTRL, 1, layout, floating\nbind = ALT, 2, workspace, 2")
+        let bindings = config.workspaceBindings
+        let ctrlOne = bindings.filter { $0.mods == .maskControl && $0.keyCode == 18 && $0.submap.isEmpty }
+        #expect(ctrlOne.count == 1)
+        #expect(ctrlOne.first?.dispatcher == "layout")
+        #expect(bindings.contains { $0.mods == .maskAlternate && $0.keyCode == 19 })
+        #expect(bindings.contains { $0.mods == .maskControl && $0.keyCode == 29 && $0.arg == "10" })
+        #expect(bindings.contains { $0.mods == .maskControl && $0.keyCode == 123 && $0.arg == "r-1" })
+        #expect(bindings.contains { $0.mods == .maskControl && $0.keyCode == 124 && $0.arg == "r+1" })
+    }
+
+    @Test func unmanagedNativeModeDoesNotInterceptCtrlDefaults() {
+        var config = Config()
+        config.virtualWorkspaces = false
+        #expect(config.workspaceBindings.isEmpty)
+    }
+}
