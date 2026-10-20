@@ -7,7 +7,7 @@ struct ConfigGlyph: View {
     var tint: Color = Theme.ink
 
     var body: some View {
-        if config.isBuiltIn {
+        if config.isBuiltIn, config.symbol == nil {
             Image(nsImage: NSApp.applicationIconImage)
                 .resizable().interpolation(.high)
                 .frame(width: size * 1.7, height: size * 1.7)

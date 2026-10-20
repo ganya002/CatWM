@@ -5,6 +5,7 @@ With `virtual-workspaces = true`, Ouch workspaces use normal macOS Desktops. Ouc
 - Each workspace has one native Desktop. Its name, layout, and last focused window persist between switches.
 - Existing normal Desktops become numbered workspaces. Names stay attached to Desktop IDs when macOS reorders them.
 - Ctrl+1 through Ctrl+9 selects workspace 1 through 9. Ctrl+0 selects workspace 10. Ctrl+Left and Ctrl+Right select the adjacent workspace on the current display.
+- Ctrl+Shift with the same keys moves the focused window to that workspace and follows it.
 - Explicit binds take priority over these defaults. Ouch does not change macOS shortcut preferences.
 - Selecting a workspace that does not exist creates a Desktop through Mission Control. Mission Control opens briefly and then closes.
 - The menu bar shows the current workspace. Click it to select another workspace.
