@@ -1,32 +1,48 @@
 @import "tailwindcss";
 
-@font-face {
-  font-family: "Chillax";
-  src: url("/fonts/Chillax-Light.otf") format("opentype");
-  font-weight: 300;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Chillax";
-  src: url("/fonts/Chillax-Regular.otf") format("opentype");
-  font-weight: 400;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Chillax";
-  src: url("/fonts/Chillax-Medium.otf") format("opentype");
-  font-weight: 500;
-  font-display: swap;
-}
 
 @theme {
-  --font-sans: "Chillax", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--body-font);
+  --font-display: var(--display-font);
   --color-accent: #0a74ff;
   --color-bg: #f4f4f6;
   --color-ink: #1b1b1e;
   --color-muted: #6e6e76;
   --color-field: #ffffff;
   --color-line: #dcdce2;
+}
+
+:root {
+  --display-font: "General Sans", ui-sans-serif, system-ui, sans-serif;
+  --display-weight: 600;
+  --body-font: "Gambetta", ui-serif, Georgia, serif;
+  --body-weight: 400;
+}
+:root[data-pair="2"] {
+  --display-font: "Amulya", ui-sans-serif, system-ui, sans-serif;
+  --display-weight: 700;
+  --body-font: "Synonym", ui-sans-serif, system-ui, sans-serif;
+  --body-weight: 400;
+}
+:root[data-pair="3"] {
+  --display-font: "Excon", ui-sans-serif, system-ui, sans-serif;
+  --display-weight: 500;
+  --body-font: "Ranade", ui-sans-serif, system-ui, sans-serif;
+  --body-weight: 300;
+}
+
+:root[data-pair="4"] {
+  --display-font: "Nunito", ui-sans-serif, system-ui, sans-serif;
+  --display-weight: 800;
+  --body-font: "Supreme", ui-sans-serif, system-ui, sans-serif;
+  --body-weight: 400;
+}
+
+:root[data-pair="5"] {
+  --display-font: "Poppins", ui-sans-serif, system-ui, sans-serif;
+  --display-weight: 600;
+  --body-font: "Hind", ui-sans-serif, system-ui, sans-serif;
+  --body-weight: 400;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -43,4 +59,11 @@
 html,
 body {
   @apply bg-bg font-sans text-ink antialiased;
+  font-weight: var(--body-weight);
+}
+
+h1,
+.font-display {
+  font-family: var(--display-font);
+  font-weight: var(--display-weight);
 }

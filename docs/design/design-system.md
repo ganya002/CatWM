@@ -24,7 +24,7 @@ A change to a token or a component rule is not finished until `Sources/ouch/UI/T
 3. **Two levels, then search.** Menus nest one level, two at most. Deeper items go behind the search field at the top of every menu.
 4. **No boxes around content.** Content sits on the ground. Hairlines separate rows. Only floating things (menus, tips, tour cards, HUD) and the one content pane get a surface. They get depth from the `popover` and `float` elevations, not from borders.
 5. **Chrome is a wash.** Window chrome and sidebars sit on `Theme.wash`: `wash1`, then `background` at 55%, then `wash2`. Items sit on it as pills. The content is one floating rounded pane (`.pane()`, `surface`, radius 14), inset by the popover shadow room on the top, bottom and trailing sides so the shadow fades out on the wash.
-6. **Quiet type, one face.** Chillax everywhere. Weight 400 for text, 500 for emphasis, 300 for large display. Nothing bolder, except the wordmark.
+6. **Two faces.** Supreme for text: Regular for text, Medium for emphasis, Light for light text. Nunito Extra Bold for headings, large display and the wordmark. Nothing else.
 7. **Symbols move with meaning.** An SF Symbol effect always reports something: an action landed, a thing refused, the app is busy, a tip is waiting. Never decoration.
 
 ## Colour
@@ -64,7 +64,7 @@ Labels, captions, buttons, keys and menu rows never wrap. They are one line and 
 
 ```text
 head      lead symbol, kicker, trailing item, close
-title     Chillax title (smaller at small and medium)
+title     Supreme title (smaller at small and medium)
 body      inkMuted body
 keys      large keycaps and live state ("Press it now", then "Nice")
 children  rows, menus, groups

@@ -9,7 +9,7 @@ struct SearchResults: View {
         let results = SettingsIndex.search(settingsUI.search, doc: doc)
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                OPageTitle(crumbs: ["Settings", "Search"], title: "“\(settingsUI.search)”")
+                OPageTitle(crumbs: ["Settings", "Search", "“\(settingsUI.search)”"])
                 if results.isEmpty {
                     Text("Nothing matches. Try another word, like “gaps” or “focus”.")
                         .font(Theme.body(13.5)).foregroundStyle(Theme.inkMuted).oneLine()

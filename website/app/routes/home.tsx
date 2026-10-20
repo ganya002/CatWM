@@ -51,7 +51,7 @@ export default function Home() {
       <header className="py-5">
         <a href="/" className="inline-flex items-center gap-3">
           <img src="/icon.svg" alt="" width={40} height={40} className="size-10" />
-          <span className="text-xl font-medium">ouch</span>
+          <span className="font-display text-xl">ouch</span>
         </a>
       </header>
 

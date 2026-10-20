@@ -34,7 +34,7 @@ extension ShortcutMap {
 
     func header(_ all: [ConfigDocument.KeyAction]) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            OPageTitle(crumbs: ["Settings", "Shortcuts", "Map"], title: "Shortcut Map") {
+            OPageTitle(crumbs: ["Settings", "Shortcuts", "Map"]) {
                 if doc.submaps.count > 1 {
                     OSegmented(title: "Shortcut set",
                                options: doc.submaps.map { ($0, $0.isEmpty ? "Global" : "\($0.capitalized) mode") },
