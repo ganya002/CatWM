@@ -90,7 +90,8 @@ extension MenuModel {
 
     private static func footerItems(_ manager: WindowManager, keys: ShortcutIndex, trusted: Bool) -> [MenuItem] {
         let paused = TutorialLesson.paused
-        return [
+        let news = WhatsNew.shared.hasNews ? [whatsNewItem(dot: true)] : []
+        return news + [
             MenuItem(id: "settings", label: "Settings…", symbol: "gearshape", shortcut: ["⌘", ","],
                      keywords: "preferences options",
                      rotates: true, action: { SettingsWindow.shared.show(pane: nil) }),
@@ -107,8 +108,15 @@ extension MenuModel {
         ]
     }
 
+    private static func whatsNewItem(dot: Bool) -> MenuItem {
+        MenuItem(id: "whats-new", label: "What's New…", symbol: "sparkles",
+                 keywords: "release notes changes features update version catch up", dot: dot,
+                 action: { WhatsNew.shared.show() })
+    }
+
     private static func helpItems(_ manager: WindowManager, keys: ShortcutIndex, trusted: Bool) -> [MenuItem] {
-        [
+        let news = WhatsNew.shared.hasNews ? [] : [whatsNewItem(dot: false)]
+        return [
             MenuItem(id: "map", label: "Shortcut Map", symbol: "keyboard", shortcut: ["⌘", "/"],
                      keywords: "keys overview cheat sheet",
                      action: { SettingsWindow.shared.show(pane: .shortcuts, map: true) }),
@@ -116,7 +124,8 @@ extension MenuModel {
                      enabled: trusted, hidden: true, keywords: "keys overlay cheat sheet window mode",
                      action: { KeyHelp.shared.showFromMenu(preferredMode: keys.modeName) }),
             MenuItem(id: "tour", label: "Quick Tour", symbol: "play.circle", enabled: trusted,
-                     keywords: "learn tutorial onboarding keyboard tour", action: { Onboarding.shared.startTour() }),
+                     keywords: "learn tutorial onboarding keyboard tour", action: { Onboarding.shared.startTour() })
+        ] + news + [
             MenuItem(id: "tutorial-restart", label: "Restart Tutorial", symbol: "arrow.counterclockwise",
                      enabled: trusted, hidden: true, keywords: "learn tutorial start over",
                      action: { Onboarding.shared.startTutorial(fromStart: true) }),

@@ -36,6 +36,8 @@ enum Actions {
                 group: "Use Layout", short: layout.title)
         }
         add("Overview", .window, "sort", "", "square.grid.3x1.below.line.grid.1x2", focusRequired: false)
+        add("Switch Windows", .window, "switcher", "", "rectangle.stack", focusRequired: false)
+        add("Switch Windows Backward", .window, "switcher", "prev", "rectangle.stack", focusRequired: false)
         add("Undo Last Overview Change", .window, "sort-undo", "", "arrow.uturn.backward", focusRequired: false)
         add("Focus Next Display", .displays, "focusmonitor", "+1", "display")
         add("Focus Previous Display", .displays, "focusmonitor", "-1", "display")

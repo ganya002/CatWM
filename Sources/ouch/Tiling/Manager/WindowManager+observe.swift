@@ -181,9 +181,7 @@ extension WindowManager {
         if window.bundleID == "com.apple.finder", isMountedImageWindow(title: title) { return true }
         if isUtilityWindow(window, title: title) { return true }
         if let bundle = window.bundleID {
-            let listed = config.floating.contains { pattern in
-                pattern.hasSuffix("*") ? bundle.hasPrefix(String(pattern.dropLast())) : bundle == pattern
-            }
+            let listed = Config.lists(bundle, in: config.floating)
             if config.floatingIsDenylist ? listed : !listed { return true }
         } else if !config.floatingIsDenylist {
             return true

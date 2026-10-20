@@ -284,7 +284,10 @@ extension WindowManager {
         guard let (raw, gap) = rawSlots(ids, on: screen, screenState, ratio: screenState.ratio) else { return nil }
         let slots = fitMinimums(raw, mins: ids.map { minSizes[$0] }, gap: gap)
         let zoomed = usableRect(screen).pixelAligned
-        return Dictionary(zip(ids, slots).map { id, slot in (id, id == screenState.zoomed ? zoomed : slot) },
+        let bounds = screen.visible
+        return Dictionary(zip(ids, slots).map { id, slot in
+            (id, id == screenState.zoomed ? zoomed : clampToMinimum(slot, min: minSizes[id], bounds: bounds))
+        },
                           uniquingKeysWith: { first, _ in first })
     }
 }

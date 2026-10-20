@@ -5,7 +5,7 @@ import SwiftUI
 struct OptionRows: View {
     private enum CustomRow {
         case floatingMode, sortStrategy, sortNudge, animationDuration, animationCurve, animationBounce
-        case panelAnimation, modeEffect, keyboardFinish
+        case panelAnimation, modeEffect, keyboardFinish, switcherExclude
     }
 
     private static let customRows: [PartialKeyPath<Config>: CustomRow] = [
@@ -17,7 +17,8 @@ struct OptionRows: View {
         \Config.animationBounce: .animationBounce,
         \Config.panelAnimation: .panelAnimation,
         \Config.modeEffect: .modeEffect,
-        \Config.keyboardFinish: .keyboardFinish
+        \Config.keyboardFinish: .keyboardFinish,
+        \Config.switcherExclude: .switcherExclude
     ]
 
     let pane: Pane
@@ -76,6 +77,10 @@ struct OptionRows: View {
         case .panelAnimation: panelAnimationRow
         case .modeEffect: modeEffectRow
         case .keyboardFinish: keyboardFinishRow
+        case .switcherExclude:
+            let info = ConfigOption.at(\Config.switcherExclude).settingInfo
+            AppList(ids: $doc.config.switcherExclude, title: info.label, empty: "They never show in the switcher")
+                .setting(info.id, settingsUI)
         }
     }
 

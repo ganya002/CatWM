@@ -94,6 +94,10 @@ struct ConfigOption {
                text: { String(format: "%g", Double($0)) }, number: { Double($0) })
     }
 
+    static func list(_ key: String, _ path: WritableKeyPath<Config, [String]>) -> Self {
+        Self(key, path, read: { input, _ in (Config.listItems(input), nil) }, text: { $0.joined(separator: ", ") })
+    }
+
     static func choice<V: RawRepresentable & CaseIterable>(_ key: String, _ path: WritableKeyPath<Config, V>,
                                                            noun: String) -> Self
     where V.RawValue == String {

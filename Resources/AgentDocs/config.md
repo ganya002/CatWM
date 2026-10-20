@@ -48,6 +48,9 @@ The Settings window writes options in this order. Aliases (after `/`) are read b
 | `keyboard-help-key` | one character | `?` | toggles the keyboard help in window mode |
 | `keyboard-finish` | `auto`, `macbook-pro`, `macbook-air`, `macbook-neo`, `magic-keyboard`, or a finish such as `macbook-pro-space-black` | `auto` | look of the Shortcut Map keyboard |
 | `cursor-actions` | bool | `true` | in window mode, a dot at the pointer; a tap of the mode modifier opens saved workspace templates and the Save workspace action |
+| `switcher-instant-jump` | bool | `true` | in the window switcher, a search with one prefix match opens that window by itself |
+| `switcher-jump-delay` | milliseconds | `300` | wait before instant jump opens the match; `0` opens it at once |
+| `switcher-exclude` | bundle IDs, comma separated | `` | apps the window switcher never shows; wildcards like com.adobe.* work |
 | `animate` / `animations` | bool | `true` | `animations { enabled = … }` also works |
 | `animation-duration` | seconds, or ms if above 5 | `0.18` | |
 | `animation-curve` | `ease-out` `ease-in-out` `linear` `spring` `bounce` `overshoot` `cubic-bezier(x1, y1, x2, y2)` | `ease-out` | |

@@ -15,6 +15,10 @@ With `virtual-workspaces = true`, Ouch workspaces use normal macOS Desktops. Ouc
 
 Ouch uses its configured animation duration and curve to move whole Desktops. A new request replaces the pending destination. An opposite request can reverse motion before the switch commits. Horizontal Desktop gestures use the same controller for progress, reversal, cancellation, and completion.
 
+## Window switcher
+
+The `switcher` dispatcher lists the windows on every workspace Desktop and on full-screen Desktops. It reads them from the shared window-server observation, so opening it does not query the window server. Choosing a window on another workspace uses the same workspace switch and animation as `workspace`, and that window gets focus when the switch settles. Windows on full-screen Desktops, and every Desktop with `virtual-workspaces = false`, use the macOS focus call, which moves to their Desktop.
+
 ## Overview
 
 Overview includes normal Desktops, including empty ones, and windows on hidden Desktops. Changes to workspace membership apply when overview closes. New workspaces create native Desktops. Removing a workspace requires a different active Desktop and no remaining native windows on the removed Desktop. macOS can refuse a creation, removal, or window transfer. Ouch reports that failure in a HUD.

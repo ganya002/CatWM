@@ -111,6 +111,15 @@ extension Hotkeys {
 
     func reenable() { if let tap { CGEvent.tapEnable(tap: tap, enable: true) } }
 
+    func observe(_ type: CGEventType, _ event: CGEvent) {
+        guard type == .flagsChanged else { tapDown = nil; return }
+        if let onFlagsChanged {
+            let flags = event.flags
+            DispatchQueue.main.async { onFlagsChanged(flags) }
+        }
+        trackModifierTap(event)
+    }
+
     func trackModifierTap(_ event: CGEvent) {
         let mods = event.flags.intersection(Self.tapMods)
         defer { lastMods = mods }

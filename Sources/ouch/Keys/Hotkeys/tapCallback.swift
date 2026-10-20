@@ -10,11 +10,8 @@ func tapCallback(proxy _: CGEventTapProxy, type: CGEventType, event: CGEvent,
         return Hotkeys.shared.handleScroll(event) ? nil : Unmanaged.passUnretained(event)
     }
     guard type == .keyDown || type == .flagsChanged else { return Unmanaged.passUnretained(event) }
-    if type == .flagsChanged, let onFlagsChanged = Hotkeys.shared.onFlagsChanged {
-        let flags = event.flags
-        DispatchQueue.main.async { onFlagsChanged(flags) }
-    }
-    if type == .flagsChanged { Hotkeys.shared.trackModifierTap(event) } else { Hotkeys.shared.tapDown = nil }
+    if let intercept = Hotkeys.shared.intercept, intercept(type, event) { return nil }
+    Hotkeys.shared.observe(type, event)
     if type == .flagsChanged {
         guard event.getIntegerValueField(.keyboardEventKeycode) == Int64(CapsLockChord.keyCode) else {
             return Unmanaged.passUnretained(event)

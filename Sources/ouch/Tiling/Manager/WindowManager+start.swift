@@ -124,6 +124,7 @@ extension WindowManager {
         Hotkeys.shared.handler = { [weak self] binding in self?.dispatch(binding.dispatcher, binding.arg) }
         KeyHelp.shared.install()
         CursorActions.shared.install()
+        Switcher.shared.install()
         nativeGestures.enabled = { [weak self] in
             guard let self else { return false }
             return self.config.virtualWorkspaces && !Hotkeys.shared.paused && !self.sortSession
