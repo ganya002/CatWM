@@ -80,6 +80,14 @@ extension WindowManager {
             return
         }
         noteFocus(item.id)
+        if stepToSpace(of: item.id) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.spaceSettle) {
+                if !WindowServerFocus.focus(pid: item.pid, window: item.id) {
+                    NSRunningApplication(processIdentifier: item.pid)?.activate()
+                }
+            }
+            return
+        }
         if let window = windows[item.id] {
             scanner.run(window.pid) { window.focus() }
         } else if !WindowServerFocus.focus(pid: item.pid, window: item.id) {
@@ -87,7 +95,21 @@ extension WindowManager {
         }
     }
 
-    func closeWindow(_ id: CGWindowID) -> Bool {
+    private static let spaceSettle = 0.6
+
+    private func stepToSpace(of id: CGWindowID) -> Bool {
+        guard let space = Spaces.of(window: id).first else { return false }
+        for screen in Screen.all() {
+            guard let info = Spaces.list(display: screen.uuid), let target = info.ids.firstIndex(of: space),
+                  let cur = info.current, cur != target, let combo = SystemShortcut.step(right: target > cur)
+            else { continue }
+            for _ in 0..<abs(target - cur) { Hotkeys.post(keyCode: combo.keyCode, flags: combo.flags) }
+            return true
+        }
+        return false
+    }
+
+func closeWindow(_ id: CGWindowID) -> Bool {
         guard let window = windows[id] else { return false }
         lastClose = Date()
         window.close()
