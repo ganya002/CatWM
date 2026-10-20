@@ -11,6 +11,7 @@ struct Config {
     var focusFollowsMouseInModeOnly = false
     var mouseSwapsWindows = true
     var mouseResizesWindows = true
+    var splitHandle = true
     var floating: [String] = []
     var floatingIsDenylist = true
     var floatSmallWindows = true

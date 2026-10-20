@@ -161,6 +161,68 @@ import Testing
     }
 }
 
+@Suite struct SplitDividerTests {
+    let screen = CGRect(x: 0, y: 0, width: 1000, height: 600)
+
+    func slots(_ layout: Layout, count: Int, ratio: CGFloat, gap: CGFloat, mainCount: Int = 1) -> [CGRect] {
+        let raw = layout.frames(count: count, in: screen.insetBy(dx: -gap / 2, dy: -gap / 2), ratio: ratio,
+                                mainCount: mainCount) ?? []
+        return raw.map { $0.insetBy(dx: gap / 2, dy: gap / 2) }
+    }
+
+    @Test func sitsInTheGapBetweenMainAndStack() throws {
+        let divider = try #require(SplitDivider(layout: .tall, slots: slots(.tall, count: 3, ratio: 0.6, gap: 10),
+                                                mainCount: 1, in: screen))
+        #expect(divider.vertical)
+        #expect(divider.frame.width == 10)
+        #expect(abs(divider.position - 601) < 0.01)
+        #expect(divider.frame.height == screen.height)
+    }
+
+    @Test func positionGivesBackTheRatio() throws {
+        for layout in [Layout.tall, .tallRight, .wide, .twoPane, .twoPaneRight, .bsp, .widescreenTallRight] {
+            let frames = slots(layout, count: 3, ratio: 0.35, gap: 10)
+            let divider = try #require(SplitDivider(layout: layout, slots: frames, mainCount: 1, in: screen),
+                                       "\(layout)")
+            #expect(abs(divider.ratio(at: divider.position, in: screen, gap: 10) - 0.35) < 0.001, "\(layout)")
+        }
+    }
+
+    @Test func wideSplitsAcrossTheScreen() throws {
+        let divider = try #require(SplitDivider(layout: .wide, slots: slots(.wide, count: 2, ratio: 0.5, gap: 0),
+                                                mainCount: 1, in: screen))
+        #expect(!divider.vertical)
+        #expect(divider.position == 300)
+    }
+
+    @Test func ratioStaysInRange() throws {
+        let divider = try #require(SplitDivider(layout: .tall, slots: slots(.tall, count: 2, ratio: 0.5, gap: 0),
+                                                mainCount: 1, in: screen))
+        #expect(divider.ratio(at: -500, in: screen, gap: 0) == SplitDivider.ratioRange.lowerBound)
+        #expect(divider.ratio(at: 5000, in: screen, gap: 0) == SplitDivider.ratioRange.upperBound)
+    }
+
+    @Test func noDividerWithoutTwoSides() {
+        #expect(SplitDivider(layout: .tall, slots: slots(.tall, count: 1, ratio: 0.5, gap: 0), mainCount: 1,
+                             in: screen) == nil)
+        #expect(SplitDivider(layout: .tall, slots: slots(.tall, count: 2, ratio: 0.5, gap: 0, mainCount: 2),
+                             mainCount: 2, in: screen) == nil)
+        #expect(SplitDivider(layout: .column, slots: slots(.column, count: 3, ratio: 0.5, gap: 0), mainCount: 1,
+                             in: screen) == nil)
+    }
+
+    @Test func mirroringSwapsTheSidesAndKeepsTheSizes() throws {
+        for layout in Layout.allCases {
+            guard let mirrored = layout.mirrored else { continue }
+            #expect(mirrored.mirrored == layout)
+            let before = try #require(layout.frames(count: 3, in: screen, ratio: 0.6, mainCount: 1))
+            let after = try #require(mirrored.frames(count: 3, in: screen, ratio: 0.6, mainCount: 1))
+            #expect(before[0].size == after[0].size, "\(layout)")
+            #expect(before[0].midX == screen.width - after[0].midX, "\(layout)")
+        }
+    }
+}
+
 @Suite struct ClampToMinimumTests {
     let bounds = CGRect(x: 0, y: 0, width: 1000, height: 600)
 

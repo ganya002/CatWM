@@ -51,8 +51,9 @@ extension WindowManager {
         watchCrowding(screens)
         refocusAfterCloseIfNeeded(hasFresh: !observed.fresh.isEmpty)
 
-        guard tilingEnabled else { onChange?(); return }
+        guard tilingEnabled else { SplitHandle.shared.update(); onChange?(); return }
         applyTileMoves(planTileMoves(screens: screens, only: only), instant: instantLayout)
+        SplitHandle.shared.update(instant: instantLayout || dividerDrag != nil)
         timing.checkpoint("apply")
         onChange?()
         timing.checkpoint("notify")
@@ -70,6 +71,10 @@ extension WindowManager {
     private func applyTileMoves(_ planned: PlannedMoves, instant instantLayout: Bool) {
         if !planned.moves.isEmpty {
             Log.debug("tile: moving \(planned.moves.map { "\($0.window.id)→\($0.target)" }.joined(separator: ", "))")
+        }
+        if dividerDrag != nil {
+            animator.follow(planned.instant + planned.moves)
+            return
         }
         animator.animate(planned.instant, duration: 0)
         let animated = !instantLayout && config.animate && planned.moves.count <= Self.maxAnimatedMoves

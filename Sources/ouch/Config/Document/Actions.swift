@@ -28,6 +28,7 @@ enum Actions {
         add("Previous Layout", .layout, "cyclelayout", "prev", "rectangle.2.swap")
         add("Grow Main Pane", .layout, "splitratio", "+0.05", "arrow.left.and.right.square")
         add("Shrink Main Pane", .layout, "splitratio", "-0.05", "arrow.right.and.line.vertical.and.arrow.left")
+        add("Swap Sides", .layout, "layoutmsg", "swapsides", "arrow.left.arrow.right.square")
         add("More Main Windows", .layout, "layoutmsg", "addmaster", "plus.rectangle")
         add("Fewer Main Windows", .layout, "layoutmsg", "removemaster", "minus.rectangle")
         for layout in Layout.allCases {

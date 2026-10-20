@@ -30,6 +30,7 @@ The Settings window writes options in this order. Aliases (after `/`) are read b
 | `focus-follows-mouse-in-mode-only` | bool | `false` | with `focus-follows-mouse` on, hovering focuses a window only while window mode is on |
 | `mouse-swaps-windows` | bool | `true` | drag a tile onto another to swap |
 | `mouse-resizes-windows` | bool | `true` | drag edges to resize |
+| `split-handle` | bool | `true` | a bar on the main split: drag it to resize, click it to swap the sides |
 | `new-windows-to-main` / `new_is_master` | bool | `false` | |
 | `float-small-windows` | bool | `true` | |
 | `window-resize-step` | number | `5` | percent (`5`) or fraction (`0.05`); 1 or more is read as percent |

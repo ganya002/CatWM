@@ -193,6 +193,7 @@ extension WindowManager {
         guard let cmd = parts.first?.lowercased() else { return }
         switch cmd {
         case "swapwithmaster": swapWithMain()
+        case "swapsides": swapSides()
         case "focusmaster": focusMain()
         case "addmaster": changeMainCount(1)
         case "removemaster": changeMainCount(-1)

@@ -29,6 +29,7 @@ final class Animator {
     private var landing: [CGWindowID: (move: Move, number: Int)] = [:]
     private var landings = 0
     private var quietUntil: [CGWindowID: CFTimeInterval] = [:]
+    private var following = FollowedMoves()
     private var writers: [pid_t: AXWriter] = [:]
     private var owners: [CGWindowID: pid_t] = [:]
     private var epochs: [CGWindowID: Int] = [:]
@@ -81,17 +82,18 @@ final class Animator {
     }
 
     func isBusy(_ id: CGWindowID) -> Bool {
-        items[id] != nil || landing[id] != nil || (quietUntil[id] ?? 0) > CACurrentMediaTime()
+        items[id] != nil || landing[id] != nil || following[id] != nil || (quietUntil[id] ?? 0) > CACurrentMediaTime()
     }
 
-    func destination(_ id: CGWindowID) -> CGRect? { items[id]?.move.target ?? landing[id]?.move.target }
-
-    func isMoving(_ id: CGWindowID, to frame: CGRect) -> Bool {
-        (items[id]?.move.target ?? landing[id]?.move.target) == frame
+    func destination(_ id: CGWindowID) -> CGRect? {
+        items[id]?.move.target ?? landing[id]?.move.target ?? following[id]?.target
     }
+
+    func isMoving(_ id: CGWindowID, to frame: CGRect) -> Bool { destination(id) == frame }
 
     func cancel(_ id: CGWindowID) {
         epochs[id, default: 0] += 1
+        following.remove(id)
         let item = items.removeValue(forKey: id), landed = landing.removeValue(forKey: id)
         guard let pid = item?.move.window.pid ?? landed?.move.window.pid ?? owners[id] else { return }
         writer(pid).cancel(id)
@@ -110,6 +112,8 @@ final class Animator {
                 from = running.frame(at: now)
             } else if let landed = landing.removeValue(forKey: id) {
                 from = move.from ?? landed.move.target
+            } else if let followed = following[id] {
+                from = move.from ?? followed.target
             } else {
                 from = move.from ?? move.window.cachedFrame
             }
@@ -130,6 +134,22 @@ final class Animator {
             tick()
         }
     }
+
+    func follow(_ moves: [Move]) {
+        for move in moves {
+            let id = move.window.id
+            if items[id] != nil || landing[id] != nil { cancel(id) }
+            owners[id] = move.window.pid
+            following.add(move)
+            quietUntil[id] = CACurrentMediaTime() + 0.4
+            writer(move.window.pid).follow(move.window, to: move.target) { [weak self] actual in
+                guard let self, let minimum = self.following.minimum(after: move, actual: actual) else { return }
+                self.onMinimumSize?(move.window.id, minimum)
+            }
+        }
+    }
+
+    func endFollow() { following.removeAll().forEach(land) }
 
     func position(_ window: Window, at frame: CGRect) {
         cancel(window.id)

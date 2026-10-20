@@ -8,7 +8,7 @@ Used as `bind = MODS, key, <dispatcher>, <args>` or `ouch dispatch <dispatcher> 
 | `movewindow` / `swapwindow` | `l r u d`, or `mon:l`, `mon:+1`, `mon:0` | move/swap a window in a direction, or to another display |
 | `movewindowtomonitor` | monitor spec | move the window to a display |
 | `cyclenext` / `swapnext` | none or `prev` | cycle focus / swap with the next window |
-| `layoutmsg` | `swapwithmaster`, `focusmaster`, `addmaster`, `removemaster`, `cyclenext`, `cycleprev`, `swapnext`, `swapprev`, `mfact ±0.05`, `orientationnext`, `orientationprev` | layout-specific actions (main pane) |
+| `layoutmsg` | `swapwithmaster`, `swapsides`, `focusmaster`, `addmaster`, `removemaster`, `cyclenext`, `cycleprev`, `swapnext`, `swapprev`, `mfact ±0.05`, `orientationnext`, `orientationprev` | layout-specific actions (main pane) |
 | `splitratio` | `+0.05`, `-0.05`, `exact 0.6` | resize the main split |
 | `togglefloating` | | float/tile the focused window |
 | `fullscreen` | | zoom the focused window |

@@ -119,6 +119,12 @@ final class WindowManager {
     var ffmWork: DispatchWorkItem?
     var minSizes: [CGWindowID: CGSize] = [:]
     var ratioChange: (screen: String, until: Date)?
+    struct DividerDrag {
+        let screen: String
+        let startRatio: CGFloat
+        var position: CGFloat?
+    }
+    var dividerDrag: DividerDrag?
     var refreshDeadline = DispatchTime.distantFuture
     var isStarted = false
     var ignoreMouseUntil = Date.distantPast
