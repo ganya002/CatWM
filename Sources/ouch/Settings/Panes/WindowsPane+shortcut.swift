@@ -18,30 +18,7 @@ extension WindowsPane {
 
             OGroup("Floating") {
                 OptionRows(pane: .windows, section: "Floating", doc: doc, settingsUI: settingsUI)
-                if doc.config.floating.isEmpty {
-                    ORow("No apps yet", description: "Add one that's running, or by bundle ID under Advanced") {
-                        addMenu
-                    }
-                } else {
-                    ForEach(doc.config.floating, id: \.self) { id in
-                        HStack(spacing: 12) {
-                            appIcon(id)
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(appName(id) ?? id).font(Theme.body(14)).oneLine()
-                                if appName(id) != nil {
-                                    Text(id).font(Theme.mono(11, .regular)).foregroundStyle(Theme.inkMuted)
-                                        .oneLine(.middle)
-                                }
-                            }
-                            Spacer(minLength: 0)
-                            RemoveButton(help: "Remove \(appName(id) ?? id)") {
-                                withAnimation(Motion.easeOut) { doc.config.floating.removeAll { $0 == id } }
-                            }
-                        }
-                        .frame(minHeight: 48).padding(.vertical, 6)
-                    }
-                    HStack { Spacer(); addMenu }.padding(.vertical, 10)
-                }
+                AppList(ids: $doc.config.floating, empty: "Add one that's running, or by bundle ID under Advanced")
             }
 
             OGroup("Workspaces") {

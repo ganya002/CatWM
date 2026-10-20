@@ -136,6 +136,7 @@ extension WindowManager {
         case "sethomespace": makeCurrentSpaceHome()
         case "sort": toggleSortCommand()
         case "sort-undo": SortPanel.shared.undoApplied()
+        case "switcher": Switcher.shared.open(backward: arg.lowercased().hasPrefix("prev"))
         default: NSLog("Ouch: unknown dispatcher %@", dispatcher)
         }
     }

@@ -1,0 +1,111 @@
+import AppKit
+
+extension WindowManager {
+    func switcherItems() -> [SwitcherItem] {
+        let timing = TilingTiming("switcher", windows: windows.count)
+        defer { timing.finish() }
+        let apps = Dictionary(NSWorkspace.shared.runningApplications.map { ($0.processIdentifier, $0) },
+                              uniquingKeysWith: { first, _ in first })
+        func item(_ id: CGWindowID, _ pid: pid_t, title: String, workspace: String,
+                  elsewhere: Bool = false) -> SwitcherItem? {
+            guard pid != getpid(), let app = apps[pid], app.activationPolicy == .regular, !app.isHidden,
+                  !(app.bundleIdentifier.map { Config.lists($0, in: config.switcherExclude) } ?? false)
+            else { return nil }
+            return SwitcherItem(id: id, pid: pid, app: app.localizedName ?? "", title: title, workspace: workspace,
+                                elsewhere: elsewhere)
+        }
+        let place = Dictionary(order.enumerated().map { ($1, $0) }, uniquingKeysWith: { first, _ in first })
+        var items = windows.values
+            .filter { present.contains($0.id) && !$0.minimized }
+            .sorted { (place[$0.id] ?? .max, $0.id) < (place[$1.id] ?? .max, $1.id) }
+            .compactMap { item($0.id, $0.pid, title: $0.title ?? "", workspace: switcherWorkspace($0.id)) }
+        timing.checkpoint("here")
+        let listed = Set(items.map(\.id))
+        items += windowsOnOtherSpaces().filter { !listed.contains($0.id) }.compactMap { window in
+            let workspace = window.home ? switcherWorkspace(window.id) : ""
+            return item(window.id, window.pid, title: windows[window.id]?.title ?? window.title,
+                        workspace: workspace.isEmpty ? window.space : workspace, elsewhere: !window.home)
+        }
+        timing.checkpoint("elsewhere")
+        let focused = focusedWindow()?.id
+        let rank = Dictionary(focusOrder.enumerated().map { ($1, $0) }, uniquingKeysWith: { first, _ in first })
+        func rankOf(_ item: SwitcherItem) -> Int { item.id == focused ? -1 : rank[item.id] ?? .max }
+        return items.enumerated().sorted { (rankOf($0.element), $0.offset) < (rankOf($1.element), $1.offset) }
+            .map(\.element)
+    }
+
+    private struct OtherSpaceWindow {
+        let id: CGWindowID
+        let pid: pid_t
+        let title: String
+        let space: String
+        let home: Bool
+    }
+
+    private func windowsOnOtherSpaces() -> [OtherSpaceWindow] {
+        let displays = Screen.all().compactMap { Spaces.list(display: $0.uuid) }
+        let labels = Self.spaceLabels(displays)
+        let current = Set(displays.compactMap { display in display.current.map { display.ids[$0] } })
+        let homes = Set(homeSpace.values)
+        let list = CGWindowListCopyWindowInfo([.optionAll, .excludeDesktopElements], kCGNullWindowID)
+            as? [[String: Any]] ?? []
+        return list.compactMap { info in
+            guard (info[kCGWindowLayer as String] as? Int) == 0,
+                  (info[kCGWindowIsOnscreen as String] as? Bool) != true,
+                  (info[kCGWindowAlpha as String] as? Double ?? 1) > 0,
+                  let number = info[kCGWindowNumber as String] as? Int,
+                  let pid = info[kCGWindowOwnerPID as String] as? Int,
+                  let rawBounds = info[kCGWindowBounds as String] as? [String: Any],
+                  let bounds = CGRect(dictionaryRepresentation: rawBounds as CFDictionary),
+                  bounds.width >= 100, bounds.height >= 60 else { return nil }
+            let id = CGWindowID(number)
+            let spaces = Spaces.of(window: id)
+            guard let space = spaces.first, spaces.count == 1, !current.contains(space),
+                  let label = labels[space] else { return nil }
+            return OtherSpaceWindow(id: id, pid: pid_t(pid), title: info[kCGWindowName as String] as? String ?? "",
+                                    space: label, home: homes.contains(space))
+        }
+    }
+
+    static func spaceLabels(_ displays: [Spaces.DisplaySpaces]) -> [UInt64: String] {
+        var labels: [UInt64: String] = [:]
+        for display in displays {
+            for (index, id) in display.ids.enumerated() where id != 0 {
+                labels[id] = display.desktops.firstIndex(of: index).map { "Desktop \($0 + 1)" } ?? "Full Screen"
+            }
+        }
+        return labels
+    }
+
+    private func switcherWorkspace(_ id: CGWindowID) -> String {
+        guard config.virtualWorkspaces, let workspace = workspaceOf[id], isVirtual(workspace) else { return "" }
+        return labels[workspace].map { "\(workspace) · \($0)" } ?? workspace
+    }
+
+    func switchTo(_ item: SwitcherItem) {
+        if !item.elsewhere, let window = windows[item.id] {
+            if config.virtualWorkspaces, let workspace = workspaceOf[item.id], isVirtual(workspace),
+               !isShown(workspace) {
+                showWorkspace(workspace, focusing: window)
+                return
+            }
+            if visible.contains(item.id) {
+                focus(window)
+                return
+            }
+        }
+        noteFocus(item.id)
+        if let window = windows[item.id] {
+            scanner.run(window.pid) { window.focus() }
+        } else if !WindowServerFocus.focus(pid: item.pid, window: item.id) {
+            NSRunningApplication(processIdentifier: item.pid)?.activate()
+        }
+    }
+
+    func closeWindow(_ id: CGWindowID) -> Bool {
+        guard let window = windows[id] else { return false }
+        lastClose = Date()
+        window.close()
+        return true
+    }
+}

@@ -26,6 +26,7 @@ The app source is in `Sources/ouch/`. Each folder has one job:
 - `Overlays/`: the HUD, the mode effect and the quick-action menu.
 - `Settings/`: the settings window, its pages and search.
 - `Sort/`: the Overview plan, session and panel.
+- `Switcher/`: the window switcher, its search and its panel.
 - `Templates/`: saved workspace templates and their restore.
 - `Tiling/`: the window manager, layouts, focus dimming, animation, desktops and drag input.
 - `UI/`: theme tokens, controls, menus, panels and the Design Gallery.
@@ -41,6 +42,7 @@ The app source is in `Sources/ouch/`. Each folder has one job:
 - **maximised** means macOS native full screen: the window gets a Desktop of its own and leaves the tiling.
 - **bind** means a key combination that runs a dispatcher. It is a `bind = …` line in the config.
 - **dispatcher** means a named command, such as `movefocus` or `workspace`. `WindowManager.dispatch` runs it.
+- **switcher** means the window switcher. `$mod Tab` opens it, and the `switcher` dispatcher runs it.
 - **Desktop** means a macOS Space. The home Desktop is the one where Ouch workspaces live.
 
 ## UI

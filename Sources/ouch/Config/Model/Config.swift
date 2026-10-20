@@ -39,6 +39,9 @@ struct Config {
     var keyboardHelp = true
     var keyboardHelpKey = "?"
     var cursorActions = true
+    var switcherInstantJump = true
+    var switcherJumpDelay = 300
+    var switcherExclude: [String] = []
     var mainMod: CGEventFlags = .maskAlternate
     var keyboardFinish = "auto"
     var bindings: [KeyBinding] = []
@@ -147,13 +150,7 @@ struct Config {
                 if !list.contains(layout) { list.append(layout) }
             }
             if !list.isEmpty { layouts = list }
-        case "floating":
-            var ids: [String] = []
-            for id in value.split(separator: ",").map({ $0.trimmingCharacters(in: .whitespaces) })
-            where !id.isEmpty && !ids.contains(id) {
-                ids.append(id)
-            }
-            floating = ids
+        case "floating": floating = Self.listItems(value)
         case "gaps_in": return needNum { windowMarginSize = $0 * 2 }
         case "screen_padding", "gaps_out":
             return needNum { paddingLeft = $0; paddingRight = $0; paddingTop = $0; paddingBottom = $0 }
@@ -167,6 +164,19 @@ struct Config {
             return option.read(&self, value, rawKey)
         }
         return nil
+    }
+
+    static func listItems(_ value: String) -> [String] {
+        var items: [String] = []
+        for item in value.split(separator: ",").map({ $0.trimmingCharacters(in: .whitespaces) })
+        where !item.isEmpty && !items.contains(item) {
+            items.append(item)
+        }
+        return items
+    }
+
+    static func lists(_ bundle: String, in patterns: [String]) -> Bool {
+        patterns.contains { $0.hasSuffix("*") ? bundle.hasPrefix(String($0.dropLast())) : bundle == $0 }
     }
 
     private mutating func parseBind(_ value: String, repeats: Bool) -> String? {

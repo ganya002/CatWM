@@ -6,6 +6,9 @@ let defaultBinds = """
 # press Cmd+Caps Lock, then single keys, vim style. Esc / i / Return or a mouse click leaves it.
 bind = $mod, 1..0, workspace, 1..10
 bind = $mod, o, sort
+# Tap for the last window, hold to browse every window, type to search:
+bind = $mod, tab, switcher
+bind = $mod SHIFT, tab, switcher, prev
 bind = SUPER, capslock, submap, window
 # Scroll wheel / trackpad scroll while holding the modifier, and trackpad swipes:
 # bind = $mod, mouse_down, workspace, e+1

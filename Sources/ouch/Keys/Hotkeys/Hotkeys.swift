@@ -17,6 +17,7 @@ final class Hotkeys {
     var onEscape: (() -> Bool)?
     var onMenuKey: ((_ code: UInt16, _ flags: CGEventFlags, _ isRepeat: Bool) -> Bool)?
     var onModifierTap: (() -> Void)?
+    var intercept: ((CGEventType, CGEvent) -> Bool)?
     var heldChord: CGEventFlags = []
     var tap: CFMachPort?
     var swipeMonitor: Any?

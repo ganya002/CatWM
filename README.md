@@ -46,6 +46,12 @@ Press ⌥ O to see all windows on all workspaces. Drag a window to a different w
 
 <img src="docs/images/overview.png" width="760" alt="The overview sorts 12 windows into the workspaces Demo 1, Demo 2, Demo 3, Chat and Media">
 
+## Window switcher
+
+Tap ⌥ Tab to go back to the last window. Hold ⌥ to see every window on every workspace and every macOS Desktop, most recent first. Press Tab and ⇧ Tab to move, and release ⌥ to open the window. Type to search app names, window titles and workspaces. When one window matches, it opens by itself. A window on another Desktop or in full screen takes you to its Desktop.
+
+In the list, press ` to show only the windows of the selected app. ⌘ W closes the selected window, ⌘ Q quits its app, ⌘ H hides its app, and ⌘ 1 … ⌘ 9 open a row. Esc closes the list.
+
 ## Make it yours
 
 - **Settings** (⌘, in the menu bar menu) changes layouts, gaps, motion, shortcuts and more.

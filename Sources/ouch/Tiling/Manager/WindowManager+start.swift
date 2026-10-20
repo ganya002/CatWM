@@ -124,6 +124,7 @@ extension WindowManager {
         Hotkeys.shared.handler = { [weak self] binding in self?.dispatch(binding.dispatcher, binding.arg) }
         KeyHelp.shared.install()
         CursorActions.shared.install()
+        Switcher.shared.install()
         if !Hotkeys.shared.start() {
             Log.info("start: could not create the keyboard event tap")
             HUD.shared.show("Keybinds unavailable: grant Accessibility", on: nil)
