@@ -1,6 +1,6 @@
 import AppKit
 
-struct ScreenShape {
+struct ScreenShape: Equatable {
     var topRadius: CGFloat
     var notchHalfWidth: CGFloat
     var notchHeight: CGFloat
