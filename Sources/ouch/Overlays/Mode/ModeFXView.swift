@@ -3,11 +3,7 @@ import SwiftUI
 
 struct ModeFXView: View {
     @ObservedObject var model: ModeFXModel
-    let radius: CGFloat
-    let origin: CGPoint
-    var notchHalfWidth: CGFloat = 0
-    var notchHeight: CGFloat = 0
-    var topInset: CGFloat = 0
+    @ObservedObject var screen: ModeFXScreen
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -20,6 +16,12 @@ struct ModeFXView: View {
         .ignoresSafeArea()
         .allowsHitTesting(false)
     }
+
+    private var radius: CGFloat { screen.shape.topRadius }
+    private var origin: CGPoint { screen.origin }
+    private var notchHalfWidth: CGFloat { screen.shape.notchHalfWidth }
+    private var notchHeight: CGFloat { screen.shape.notchHeight }
+    private var topInset: CGFloat { screen.shape.topInset }
 
     private var shape: UnevenRoundedRectangle {
         UnevenRoundedRectangle(topLeadingRadius: radius, topTrailingRadius: radius, style: .circular)
