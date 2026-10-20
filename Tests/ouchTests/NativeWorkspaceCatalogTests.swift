@@ -59,6 +59,9 @@ import Testing
         #expect(bindings.contains { $0.mods == .maskControl && $0.keyCode == 29 && $0.arg == "10" })
         #expect(bindings.contains { $0.mods == .maskControl && $0.keyCode == 123 && $0.arg == "r-1" })
         #expect(bindings.contains { $0.mods == .maskControl && $0.keyCode == 124 && $0.arg == "r+1" })
+        let move: CGEventFlags = [.maskControl, .maskShift]
+        #expect(bindings.contains { $0.mods == move && $0.keyCode == 18 && $0.dispatcher == "movetoworkspace" })
+        #expect(bindings.contains { $0.mods == move && $0.keyCode == 124 && $0.arg == "r+1" })
     }
 
     @Test func unmanagedNativeModeDoesNotInterceptCtrlDefaults() {
