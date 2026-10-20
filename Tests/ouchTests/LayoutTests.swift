@@ -160,3 +160,34 @@ import Testing
         #expect(frames.map(\.minX) == [0, 200, 700])
     }
 }
+
+@Suite struct ClampToMinimumTests {
+    let bounds = CGRect(x: 0, y: 0, width: 1000, height: 600)
+
+    @Test func aWindowThatFitsKeepsItsSlot() {
+        let slot = CGRect(x: 0, y: 0, width: 500, height: 300)
+        #expect(clampToMinimum(slot, min: CGSize(width: 400, height: 300), bounds: bounds) == slot)
+        #expect(clampToMinimum(slot, min: nil, bounds: bounds) == slot)
+    }
+
+    @Test func aLoneOversizedWindowOverflowsRightAndDown() {
+        let slot = CGRect(x: 100, y: 100, width: 200, height: 200)
+        let frame = clampToMinimum(slot, min: CGSize(width: 400, height: 300), bounds: bounds)
+        #expect(frame == CGRect(x: 100, y: 100, width: 400, height: 300))
+    }
+
+    @Test func theOversizedWindowStaysInsideTheScreen() {
+        let slot = CGRect(x: 800, y: 500, width: 200, height: 100)
+        let frame = clampToMinimum(slot, min: CGSize(width: 400, height: 300), bounds: bounds)
+        #expect(frame == CGRect(x: 600, y: 300, width: 400, height: 300))
+    }
+
+    @Test func aGroupThatCannotFitStillGivesOneStableFrame() {
+        let column = [CGRect(x: 0, y: 0, width: 500, height: 300), CGRect(x: 0, y: 300, width: 500, height: 300)]
+        let mins = [CGSize(width: 100, height: 500), CGSize(width: 100, height: 500)]
+        let slots = fitMinimums(column, mins: mins, gap: 0)
+        let frames = zip(slots, mins).map { clampToMinimum($0, min: $1, bounds: bounds) }
+        #expect(frames == [CGRect(x: 0, y: 0, width: 500, height: 500), CGRect(x: 0, y: 100, width: 500, height: 500)])
+        #expect(zip(frames, mins).map { clampToMinimum($0, min: $1, bounds: bounds) } == frames)
+    }
+}
