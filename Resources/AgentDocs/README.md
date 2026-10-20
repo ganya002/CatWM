@@ -1,6 +1,6 @@
 # Ouch: agent guide
 
-Ouch is a macOS tiling window manager (Amethyst-style layouts, Hyprland-style config and keybinds, animated window movement). It runs as a menu bar app. These files describe the **shipped product**, so an agent can operate and configure it for a user. They don't describe the source code.
+Ouch is a macOS tiling window manager with its own workspaces, a plain-text config and animated window movement. It runs as a menu bar app. These files describe the **shipped product**, so an agent can operate and configure it for a user. They don't describe the source code.
 
 Read in this order:
 
