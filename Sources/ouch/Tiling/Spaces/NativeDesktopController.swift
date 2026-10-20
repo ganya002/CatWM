@@ -54,14 +54,16 @@ final class NativeDesktopController {
         isRunning = true
         Task { @MainActor in
             defer { self.isRunning = false; self.gesture = false; self.onIdle() }
-            do {
-                while let target = self.requested {
+            while let target = self.requested {
+                do {
                     try await self.transition(target)
+                } catch {
                     if self.requested == target { self.requested = nil }
+                    self.gesture = false
+                    self.onFailure(error.localizedDescription)
+                    continue
                 }
-            } catch {
-                self.requested = nil
-                self.onFailure(error.localizedDescription)
+                if self.requested == target { self.requested = nil }
             }
         }
     }
@@ -74,13 +76,14 @@ final class NativeDesktopController {
         Log.info("native workspaces: \(source) → \(target.space), workspace \(target.workspace)")
         if source == target.space { onSettled(target, false); return }
         let busy = "Finish the current macOS Desktop action, then try again"
-        try check(!DesktopUI.isBusy(on: screen), busy)
+        try check(await poll(1, every: 10_000_000) { !DesktopUI.isBusy(on: screen) }, busy)
         if let info = Spaces.list(display: target.display), let current = info.current,
            !info.desktops.contains(current) {
             try await leaveNativeFullscreen(target)
             if Spaces.current(display: target.display) == target.space { onSettled(target, true) }
             return
         }
+        _ = await poll(1, every: 10_000_000) { DesktopUI.isSettled(screen) }
         guard let list = Spaces.list(display: target.display),
               let from = list.ids.firstIndex(of: source), let into = list.ids.firstIndex(of: target.space),
               list.desktops.contains(from), list.desktops.contains(into),
@@ -104,8 +107,10 @@ final class NativeDesktopController {
                 && DesktopBridge.isIdle(display: target.display)
         }
         guard restored else { throw DesktopTransitionError.check("Desktop recovery is still in progress") }
-        try await recovery.finish()
-        DesktopGuardClient.prewarm()
+        Task { @MainActor in
+            try? await recovery.finish()
+            DesktopGuardClient.prewarm()
+        }
         if let failure { throw failure }
         Log.info("native workspaces: restored transforms after \(target.workspace)")
         if Spaces.current(display: target.display) == target.space { onSettled(target, true) }

@@ -92,9 +92,14 @@ extension WindowManager {
                                        curve: config.animationCurve, bounce: config.animationBounce)
         nativeDesktop.onSettled = { [weak self] request, changed in
             guard let self else { return }
+            if changed, let old = self.virtualShown[request.display], old != request.workspace, !self.sortSession {
+                self.previousWorkspace[request.display] = old
+            }
+            self.virtualShown[request.display] = request.workspace
             self.scheduleRefresh(after: 0)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                guard Spaces.current(display: request.display) == request.space else { return }
+            DispatchQueue.main.async {
+                guard self.nativeDesktop.requested == nil,
+                      Spaces.current(display: request.display) == request.space else { return }
                 self.refresh()
                 if takesFocus {
                     let candidates = [preferred?.id, self.lastFocused[request.workspace]].compactMap(\.self)
