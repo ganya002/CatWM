@@ -57,7 +57,11 @@ extension WindowManager {
             if NSEvent.pressedMouseButtons & 1 != 0 {
                 drags[id] = (drags[id] ?? false) || notification == kAXWindowResizedNotification
             } else if !window.isFloating {
-                scheduleRefresh(after: 0.25)
+                if notification == kAXWindowResizedNotification {
+                    adoptNativeZoom(window)
+                } else {
+                    scheduleRefresh(after: 0.25)
+                }
             }
         case kAXFocusedWindowChangedNotification:
             observeFocus(element)
