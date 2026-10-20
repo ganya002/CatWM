@@ -43,3 +43,13 @@ func fitMinimums(_ frames: [CGRect], mins: [CGSize?], gap: CGFloat) -> [CGRect] 
     }
     return out.map(\.pixelAligned)
 }
+
+func clampToMinimum(_ slot: CGRect, min: CGSize?, bounds: CGRect) -> CGRect {
+    guard let min, slot.minX.isFinite, slot.minY.isFinite else { return slot }
+    let width = min.width > slot.width + 1 ? min.width : slot.width
+    let height = min.height > slot.height + 1 ? min.height : slot.height
+    guard width != slot.width || height != slot.height else { return slot }
+    let x = max(bounds.minX, Swift.min(slot.minX, bounds.maxX - width))
+    let y = max(bounds.minY, Swift.min(slot.minY, bounds.maxY - height))
+    return CGRect(x: x, y: y, width: width, height: height).pixelAligned
+}
