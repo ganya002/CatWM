@@ -150,6 +150,27 @@ enum Options {
                      help: "In window mode, tap the mode's modifier to save or open a workspace template",
                      keywords: "cursor mouse menu window mode tap modifier template save", section: "Pointer menu"),
 
+        .bool("switcher-instant-jump", \.switcherInstantJump)
+            .documented("bool", "in the window switcher, a search with one prefix match opens that window by itself")
+            .section("window switcher")
+            .note("The window switcher: tap $mod Tab for the last window, hold it to browse, type to search.\n"
+                + "Instant jump opens a search with one prefix match by itself after the delay (0 opens it at once).")
+            .setting(.windows, "windows.switcherJump", "Instant jump",
+                     help: "A search with one prefix match opens by itself",
+                     keywords: "switcher alt tab search type jump", section: "Switcher"),
+        .number("switcher-jump-delay", \.switcherJumpDelay, valid: 0...2000, make: { Int($0) }, text: { "\($0)" },
+                number: { Double($0) })
+            .documented("milliseconds", "wait before instant jump opens the match; `0` opens it at once")
+            .setting(.windows, "windows.switcherJumpDelay", "Jump delay", help: "0 opens the match at once",
+                     keywords: "switcher instant jump wait milliseconds", range: 0...1000, section: "Switcher",
+                     enabled: { $0.switcherInstantJump }, unit: " ms", width: 180),
+        .list("switcher-exclude", \.switcherExclude)
+            .documented("bundle IDs, comma separated", "apps the window switcher never shows; wildcards like "
+                            + "com.adobe.* work")
+            .note("Bundle IDs the switcher never shows, comma separated (wildcards like com.adobe.* work).")
+            .setting(.windows, "windows.switcherExclude", "Apps the switcher hides",
+                     keywords: "switcher exclude hide ignore apps bundle", section: "Switcher"),
+
         .bool("animate", \.animate)
             .documented("bool", "`animations { enabled = … }` also works").aliases("animations").animation()
             .section("animation")
