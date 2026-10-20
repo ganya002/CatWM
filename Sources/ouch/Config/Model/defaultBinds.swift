@@ -4,7 +4,8 @@ let defaultBinds = """
 # ---- keybinds: bind = MODS, key, dispatcher, args -------------------------
 # Global binds work everywhere. Everything else lives in "window mode" (a Hyprland submap):
 # press Cmd+Caps Lock, then single keys, vim style. Esc / i / Return or a mouse click leaves it.
-bind = $mod, 1..0, workspace, 1..10
+bind = CTRL, 1..0, workspace, 1..10
+bind = CTRL, left|right, workspace, r-1|r+1
 bind = $mod, o, sort
 # Tap for the last window, hold to browse every window, type to search:
 bind = $mod, tab, switcher

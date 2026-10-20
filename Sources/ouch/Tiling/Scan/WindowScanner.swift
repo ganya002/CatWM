@@ -115,8 +115,9 @@ final class WindowScanner {
         dispatchPrecondition(condition: .notOnQueue(.main))
         var scan = AppScan()
         if job.listWindows {
-            for element in axApp(job.pid).elements(kAXWindowsAttribute) {
-                guard let id = element.windowID else { continue }
+            var seen = Set<CGWindowID>()
+            for element in listedElements(axApp(job.pid)) {
+                guard let id = element.windowID, seen.insert(id).inserted else { continue }
                 scan.listed.append(id)
                 AXUIElementSetMessagingTimeout(element, axTimeout)
                 if let known = job.known[id] {
@@ -143,6 +144,13 @@ final class WindowScanner {
             }
         }
         return scan
+    }
+
+    private static func listedElements(_ app: AXUIElement) -> [AXUIElement] {
+        let listed = app.elements(kAXWindowsAttribute)
+        if !listed.isEmpty { return listed }
+        return app.elements(kAXChildrenAttribute)
+            + [app.element(kAXMainWindowAttribute), app.element(kAXFocusedWindowAttribute)].compactMap(\.self)
     }
 
     private static func readKnown(_ window: Window, into scan: inout AppScan) {

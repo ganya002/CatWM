@@ -39,7 +39,7 @@ The Settings window writes options in this order. Aliases (after `/`) are read b
 | `dim-strength` | 0–1 (or 0–100) | `0.3` | how dark; a value above 1 is read as percent |
 | `blur-other-windows` | bool | `false` | blur every window but the focused one; combines with dimming |
 | `blur-radius` | 1–100 (points) | `20` | rounded to whole points. The Settings slider shows 2–60 |
-| `virtual-workspaces` | bool | `true` | true: Ouch workspaces. false: macOS Spaces. See [workspaces.md](workspaces.md) |
+| `virtual-workspaces` | bool | `true` | true: Ouch controls native Desktops. false: macOS controls switching. See [workspaces.md](workspaces.md) |
 | `stay-on-workspace-after-close` | bool | `true` | |
 | `sort-strategy` | `task` `app` `focus` `none` | `task` | the grouping Overview opens with |
 | `sort-nudge` | 0–100 (whole number) | `5` | windows on one workspace before Ouch offers Overview; `0` turns the offer off |

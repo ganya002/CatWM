@@ -116,7 +116,7 @@ extension WindowManager {
     }
 
     private func installInputHandlers() {
-        Hotkeys.shared.setBindings(config.bindings)
+        Hotkeys.shared.setBindings(config.workspaceBindings)
         ModeFX.shared.style = config.modeEffect
         FocusDim.shared.configure(dim: config.dimOtherWindows, strength: config.dimStrength,
                                   blur: config.blurOtherWindows, radius: Int(config.blurRadius))
@@ -125,6 +125,14 @@ extension WindowManager {
         KeyHelp.shared.install()
         CursorActions.shared.install()
         Switcher.shared.install()
+        nativeGestures.enabled = { [weak self] in
+            guard let self else { return false }
+            return self.config.virtualWorkspaces && !Hotkeys.shared.paused && !self.sortSession
+                && !self.nativeCreationBusy
+        }
+        nativeGestures.receive = { [weak self] in self?.handleNativeSwipe($0) }
+        nativeGestures.interrupted = { [weak self] in self?.nativeDesktop.endGesture(commit: false) }
+        nativeGestures.start()
         if !Hotkeys.shared.start() {
             Log.info("start: could not create the keyboard event tap")
             HUD.shared.show("Keybinds unavailable: grant Accessibility", on: nil)
@@ -138,6 +146,7 @@ extension WindowManager {
     }
 
     func reload(showHUD: Bool = true) {
+        nativeDesktop.stop()
         let wasVirtual = config.virtualWorkspaces
         config = Config.load()
         if wasVirtual != config.virtualWorkspaces {
@@ -153,7 +162,7 @@ extension WindowManager {
                                   blur: config.blurOtherWindows, radius: Int(config.blurRadius))
         MacKeyboard.shared.setting = config.keyboardFinish
         config.errors.forEach { Log.info("config: \($0)") }
-        Hotkeys.shared.setBindings(config.bindings)
+        Hotkeys.shared.setBindings(config.workspaceBindings)
         for window in windows.values { window.autoFloating = shouldFloat(window) }
         corrections = [:]
         scheduleRefresh(after: 0)

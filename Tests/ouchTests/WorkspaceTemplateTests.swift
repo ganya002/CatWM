@@ -49,6 +49,7 @@ import Testing
         hotkeys.textInputActive = true
         for code: UInt16 in [1, 18, 36, 53, 123, 124] {
             let event = try #require(CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: true))
+            event.flags = []
             guard case .pass = hotkeys.match(event) else {
                 Issue.record("Template naming intercepted key \(code)")
                 continue
@@ -56,6 +57,7 @@ import Testing
         }
         hotkeys.textInputActive = false
         let event = try #require(CGEvent(keyboardEventSource: nil, virtualKey: 1, keyDown: true))
+        event.flags = []
         guard case .swallow = hotkeys.match(event) else {
             Issue.record("Window mode did not resume after naming")
             return

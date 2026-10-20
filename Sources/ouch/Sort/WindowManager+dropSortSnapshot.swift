@@ -37,13 +37,16 @@ extension WindowManager {
             return SortDisplay(id: screen.uuid, name: screen.nsScreen.localizedName, short: shorts[index],
                                isLaptop: screen.isBuiltin, aspect: screen.frame.width / max(screen.frame.height, 1),
                                screen: screen.nsScreen, items: items, fullscreen: fullscreen,
-                               workspaces: sortWorkspaces(mine, active: active), active: active, taken: taken)
+                               workspaces: sortWorkspaces(mine, active: active, display: screen.uuid),
+                               active: active, taken: taken)
         }
     }
 
-    private func sortWorkspaces(_ mine: [CGWindowID], active: String?) -> [SortWorkspace] {
+    private func sortWorkspaces(_ mine: [CGWindowID], active: String?, display: String) -> [SortWorkspace] {
         var names = Set(mine.compactMap { workspaceOf[$0] })
+        names.formUnion(nativeCatalog.entries.filter { $0.display == display }.map(\.name))
         if let active { names.insert(active) }
+        names.subtract(nativeDroppedWorkspaces)
         return names.sorted(by: workspaceSort).map { name in
             SortWorkspace(name: name, label: labels[name] ?? "",
                           layout: states[name]?.layout ?? config.layouts.first ?? .tall,
@@ -54,6 +57,12 @@ extension WindowManager {
 
     func isSortable(_ id: CGWindowID, screens: [Screen]) -> Bool {
         if present.contains(id) { return true }
+        if config.virtualWorkspaces {
+            guard let window = windows[id], !window.minimized, !window.fullscreen,
+                  NSRunningApplication(processIdentifier: window.pid)?.isHidden != true,
+                  let name = workspaceOf[id], let entry = nativeCatalog.entry(name) else { return false }
+            return scanner.desktop.spaces[id]?.contains(entry.space) == true || nativeMembership[id] == entry.space
+        }
         guard let window = windows[id], !window.minimized, !window.fullscreen,
               NSRunningApplication(processIdentifier: window.pid)?.isHidden != true,
               let uuid = workspaceOf[id].flatMap({ monitorOf[$0] }), let home = homeSpace[uuid],
@@ -77,20 +86,9 @@ extension WindowManager {
     }
 
     func beginSort() {
+        nativeSortNames = []
         sortSnapshot = SortSnapshot(model: model.snapshot(), labels: labels, focused: focusedWindow()?.id)
         sortSession = true
-    }
-
-    func leaveFullscreen(_ id: CGWindowID, to workspace: String) {
-        guard let window = windows[id], window.element.set("AXFullScreen", kCFBooleanFalse) else {
-            Log.info("sort: \(id) refused to leave full screen")
-            return
-        }
-        Log.info("sort: \(id) leaves full screen for workspace \(workspace)")
-        model.assign(id, to: workspace)
-        model.fullscreenHost = model.fullscreenHost.filter { $0.value != id }
-        leavingFullscreen[id] = Date()
-        scheduleRefresh(after: 0.8)
     }
 
     func liveWindowIDs() -> Set<CGWindowID> { Set(windows.keys) }
@@ -108,6 +106,10 @@ extension WindowManager {
                 !kept.contains($0) && (monitorOf[$0] == nil || monitorOf[$0] == apply.display)
             })
         }
+        nativeDroppedWorkspaces.formUnion(gone.values.flatMap(\.self))
+        nativeDroppedWorkspaces.subtract(kept)
+        nativeSortNames.formUnion(kept)
+        nativeSortNames.subtract(nativeDroppedWorkspaces)
         let landing = landSortDisplays(plans, gone: gone, moving: moving, fullscreen: fullscreen)
         for apply in plans { applySortLanes(apply, gone: gone[apply.display] ?? [], fullscreen: fullscreen) }
         order = order.filter { !moving.contains($0) } + planned
@@ -116,7 +118,7 @@ extension WindowManager {
         quietWorkspaceHUD = true
         defer { quietWorkspaceHUD = false }
         for (display, workspace) in landing where virtualShown[display] != workspace {
-            showWorkspace(workspace, focus: false)
+            virtualShown[display] = workspace
         }
         refresh()
     }
@@ -156,8 +158,7 @@ extension WindowManager {
         for id in apply.close where windows[id] != nil { model.assign(id, to: hidden) }
     }
 
-    func finishSort(closing ids: [CGWindowID], goTo: String?, focus: Bool, opening fullscreen: CGWindowID? = nil,
-                    leavingFullscreen moves: [CGWindowID: String] = [:]) {
+    func finishSortAfterNative(closing ids: [CGWindowID], goTo: String?, focus: Bool, opening fullscreen: CGWindowID?) {
         sortSession = false
         guard config.virtualWorkspaces, isStarted else { return releasePending() }
         let closing = ids.filter { windows[$0] != nil }
@@ -166,7 +167,6 @@ extension WindowManager {
         corrections = [:]
         quietWorkspaceHUD = true
         defer { quietWorkspaceHUD = false }
-        for (id, workspace) in moves { leaveFullscreen(id, to: workspace) }
         if let id = fullscreen, let window = windows[id] {
             self.focus(window)
         } else if let workspace = goTo {
@@ -186,5 +186,6 @@ extension WindowManager {
         closingApps.formUnion(closing.compactMap { windows[$0]?.pid })
         releasePending()
         if !closing.isEmpty { closeMarked(closing, attempt: 0) }
+        commitNativeRemovals()
     }
 }

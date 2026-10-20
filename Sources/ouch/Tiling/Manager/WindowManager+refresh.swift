@@ -13,12 +13,16 @@ extension WindowManager {
     }
 
     func refresh(instant instantLayout: Bool = false, placing only: Set<CGWindowID>? = nil) {
-        guard isStarted else { return }
+        guard isStarted, !nativeDesktop.isRunning, !nativeCreationBusy else { return }
         let timing = TilingTiming("refresh", windows: windows.count)
         defer { timing.finish() }
         if scanner.lastScan == 0 { scheduleRefresh(after: 0) }
         let screens = Screen.all()
         guard !screens.isEmpty else { return }
+        if config.virtualWorkspaces {
+            if screens.contains(where: DesktopUI.isBusy) { scheduleRefresh(after: 0.15); return }
+            updateNativeCatalog(screens)
+        }
 
         let onScreen = scanner.desktop.windows
         let onScreenIDs = Set(onScreen.map(\.id))
@@ -40,8 +44,6 @@ extension WindowManager {
         visible = plan.visible
         guard !restoringTemplate else { onChange?(); return }
         if config.virtualWorkspaces {
-            for id in plan.park { park(id, screens: screens) }
-            for id in visible where floatsFreely(id) { unpark(floating: id, screens: screens) }
             saveWorkspaces()
         }
 
@@ -96,14 +98,25 @@ extension WindowManager {
             let spaces = scanner.desktop.spaces[id] ?? []
             return !spaces.isEmpty && currentSpaces.isDisjoint(with: spaces)
         }
+        let nativeSpaces = Set(nativeCatalog.entries.map(\.space))
+        func managed(_ id: CGWindowID) -> Bool {
+            config.virtualWorkspaces && !(scanner.desktop.spaces[id] ?? []).isDisjoint(with: nativeSpaces)
+        }
         var observed = ObservedWindows()
         for app in observedApps {
             let pid = app.pid
-            guard pidsOnScreen.contains(pid), let scan = scanner.results[pid] else { continue }
+            guard let scan = scanner.results[pid], pidsOnScreen.contains(pid) || config.virtualWorkspaces else {
+                continue
+            }
             for id in scan.listed {
-                guard !workspaceMoves.contains(id), onScreenIDs.contains(id), !onOtherSpace(id) else { continue }
+                guard !workspaceMoves.contains(id),
+                      managed(id) || (onScreenIDs.contains(id) && !onOtherSpace(id)) else {
+                    continue
+                }
                 if let window = windows[id] {
-                    if observeKnown(window, id: id, scan: scan) { observed.present.insert(id) }
+                    if observeKnown(window, id: id, scan: scan), onScreenIDs.contains(id) {
+                        observed.present.insert(id)
+                    }
                     continue
                 }
                 guard let found = scan.found[id], !found.frame.isNull else { continue }
@@ -115,7 +128,7 @@ extension WindowManager {
                 windows[id] = window
                 watch(window)
                 observed.fresh.append(window)
-                observed.present.insert(id)
+                if onScreenIDs.contains(id) { observed.present.insert(id) }
             }
         }
         return observed
@@ -158,9 +171,9 @@ extension WindowManager {
 
     private func restoreSavedWorkspace(_ window: Window, titles: [CGWindowID: String?]) {
         if savedOwnerOf[window.id] == owner(window) {
-            if let saved = savedWorkspaceOf[window.id] { model.assign(window.id, to: saved) }
             if let float = savedFloating[window.id] { window.userFloating = .chosen(float) }
         }
+        restoreNativeMigration(window)
         if let practice, window.pid == practice.pid,
            let workspace = titles[window.id].flatMap(\.self).flatMap({ practice.workspaces[$0] }) {
             model.assign(window.id, to: workspace)
@@ -181,7 +194,7 @@ extension WindowManager {
         var planned = PlannedMoves()
         for screen in screens {
             let screenState = state(for: screen)
-            let ids = tiled(on: screen)
+            let ids = tiled(on: screen).filter { !workspaceMoves.contains($0) }
             if let zoomed = screenState.zoomed,
                windows[zoomed]?.isFloating != false || workspaceOf[zoomed] != shown[screen.uuid] {
                 screenState.zoomed = nil

@@ -86,11 +86,12 @@ enum Options {
                      enabled: { $0.enablesLayoutHUD })
     ] + FocusDim.features.flatMap(\.options) + [
         .bool("virtual-workspaces", \.virtualWorkspaces)
-            .documented("bool", "true: Ouch workspaces. false: macOS Spaces. See [workspaces.md](workspaces.md)")
+            .documented("bool", "true: Ouch controls native Desktops. false: macOS controls switching. "
+                + "See [workspaces.md](workspaces.md)")
             .section("workspaces")
-            .note("Ouch's own workspaces (instant, per display) instead of macOS Spaces.")
-            .setting(.windows, "windows.workspaces", "Use Ouch workspaces",
-                     help: "Instant, per-display workspaces instead of macOS Spaces",
+            .note("Ouch controls native Desktops, workspace keys, animation and Overview.")
+            .setting(.windows, "windows.workspaces", "Control macOS Desktops with Ouch",
+                     help: "Ouch controls workspace keys, animation and Overview",
                      keywords: "spaces desktops virtual", section: "Workspaces"),
         .bool("stay-on-workspace-after-close", \.stayOnWorkspaceAfterClose)
             .documented("bool", "")

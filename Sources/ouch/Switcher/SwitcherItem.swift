@@ -6,5 +6,4 @@ struct SwitcherItem: Equatable {
     let app: String
     let title: String
     var workspace = ""
-    var elsewhere = false
 }

@@ -94,7 +94,16 @@ extension WindowManager {
     func swapOrder(_ first: CGWindowID, _ second: CGWindowID) {
         guard let i = order.firstIndex(of: first), let j = order.firstIndex(of: second) else { return }
         order.swapAt(i, j)
+        let firstWorkspace = workspaceOf[first], secondWorkspace = workspaceOf[second]
         model.swapWorkspaces(first, second)
+        if config.virtualWorkspaces, firstWorkspace != secondWorkspace {
+            if let name = secondWorkspace, let window = windows[first] {
+                moveNativeWindow(window, to: name, follow: false)
+            }
+            if let name = firstWorkspace, let window = windows[second] {
+                moveNativeWindow(window, to: name, follow: false)
+            }
+        }
     }
 
     func dispatch(_ dispatcher: String, _ rawArg: String, inMode: Bool = !Hotkeys.shared.submap.isEmpty) {

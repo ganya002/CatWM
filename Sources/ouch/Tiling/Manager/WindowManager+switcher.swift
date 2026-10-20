@@ -6,13 +6,11 @@ extension WindowManager {
         defer { timing.finish() }
         let apps = Dictionary(NSWorkspace.shared.runningApplications.map { ($0.processIdentifier, $0) },
                               uniquingKeysWith: { first, _ in first })
-        func item(_ id: CGWindowID, _ pid: pid_t, title: String, workspace: String,
-                  elsewhere: Bool = false) -> SwitcherItem? {
+        func item(_ id: CGWindowID, _ pid: pid_t, title: String, workspace: String) -> SwitcherItem? {
             guard pid != getpid(), let app = apps[pid], app.activationPolicy == .regular, !app.isHidden,
                   !(app.bundleIdentifier.map { Config.lists($0, in: config.switcherExclude) } ?? false)
             else { return nil }
-            return SwitcherItem(id: id, pid: pid, app: app.localizedName ?? "", title: title, workspace: workspace,
-                                elsewhere: elsewhere)
+            return SwitcherItem(id: id, pid: pid, app: app.localizedName ?? "", title: title, workspace: workspace)
         }
         let place = Dictionary(order.enumerated().map { ($1, $0) }, uniquingKeysWith: { first, _ in first })
         var items = windows.values
@@ -22,9 +20,7 @@ extension WindowManager {
         timing.checkpoint("here")
         let listed = Set(items.map(\.id))
         items += windowsOnOtherSpaces().filter { !listed.contains($0.id) }.compactMap { window in
-            let workspace = window.home ? switcherWorkspace(window.id) : ""
-            return item(window.id, window.pid, title: windows[window.id]?.title ?? window.title,
-                        workspace: workspace.isEmpty ? window.space : workspace, elsewhere: !window.home)
+            item(window.id, window.pid, title: windows[window.id]?.title ?? window.title, workspace: window.space)
         }
         timing.checkpoint("elsewhere")
         let focused = focusedWindow()?.id
@@ -39,14 +35,12 @@ extension WindowManager {
         let pid: pid_t
         let title: String
         let space: String
-        let home: Bool
     }
 
     private func windowsOnOtherSpaces() -> [OtherSpaceWindow] {
         let displays = Screen.all().compactMap { Spaces.list(display: $0.uuid) }
-        let labels = Self.spaceLabels(displays)
+        let names = Self.spaceLabels(displays)
         let current = Set(displays.compactMap { display in display.current.map { display.ids[$0] } })
-        let homes = Set(homeSpace.values)
         let list = CGWindowListCopyWindowInfo([.optionAll, .excludeDesktopElements], kCGNullWindowID)
             as? [[String: Any]] ?? []
         return list.compactMap { info in
@@ -61,9 +55,9 @@ extension WindowManager {
             let id = CGWindowID(number)
             let spaces = Spaces.of(window: id)
             guard let space = spaces.first, spaces.count == 1, !current.contains(space),
-                  let label = labels[space] else { return nil }
+                  let label = workspace(on: space).map(workspaceLabel) ?? names[space] else { return nil }
             return OtherSpaceWindow(id: id, pid: pid_t(pid), title: info[kCGWindowName as String] as? String ?? "",
-                                    space: label, home: homes.contains(space))
+                                    space: label)
         }
     }
 
@@ -79,20 +73,27 @@ extension WindowManager {
 
     private func switcherWorkspace(_ id: CGWindowID) -> String {
         guard config.virtualWorkspaces, let workspace = workspaceOf[id], isVirtual(workspace) else { return "" }
-        return labels[workspace].map { "\(workspace) · \($0)" } ?? workspace
+        return workspaceLabel(workspace)
+    }
+
+    private func workspaceLabel(_ workspace: String) -> String {
+        labels[workspace].map { "\(workspace) · \($0)" } ?? workspace
+    }
+
+    private func workspace(on space: UInt64) -> String? {
+        config.virtualWorkspaces ? nativeCatalog.entry(space: space)?.name : nil
     }
 
     func switchTo(_ item: SwitcherItem) {
-        if !item.elsewhere, let window = windows[item.id] {
-            if config.virtualWorkspaces, let workspace = workspaceOf[item.id], isVirtual(workspace),
-               !isShown(workspace) {
-                showWorkspace(workspace, focusing: window)
-                return
-            }
-            if visible.contains(item.id) {
-                focus(window)
-                return
-            }
+        if let space = Spaces.of(window: item.id).first, let workspace = workspace(on: space),
+           let display = nativeCatalog.entry(workspace)?.display, Spaces.current(display: display) != space {
+            lastFocused[workspace] = item.id
+            showWorkspace(workspace, focusing: windows[item.id])
+            return
+        }
+        if let window = windows[item.id], visible.contains(item.id) {
+            focus(window)
+            return
         }
         noteFocus(item.id)
         if let window = windows[item.id] {

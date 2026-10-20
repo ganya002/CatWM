@@ -50,6 +50,44 @@ enum NativeSpaceMove {
         return true
     }
 
+    private static let synchronousAddress: UnsafeMutableRawPointer? = {
+        let name = "__ZL54_SLSPerformSynchronousBridgedWindowManagementOperation"
+            + "P46SLSSynchronousBridgedWindowManagementOperation"
+        return dlsym(UnsafeMutableRawPointer(bitPattern: -2), String(name.dropFirst())) ?? localSymbol(name)
+    }()
+
+    static func isDisplayIdle(_ display: String) -> Bool {
+        typealias Initialize = @convention(c) (UnsafeMutableRawPointer, Selector, CFString) -> UnsafeMutableRawPointer?
+        typealias Perform = @convention(c) (UnsafeMutableRawPointer) -> Unmanaged<AnyObject>?
+        typealias Read = @convention(c) (AnyObject, Selector) -> Bool
+        let selector = NSSelectorFromString("initWithDisplayIdentifier:")
+        let value = NSSelectorFromString("boolValue")
+        guard let binding, let address = synchronousAddress,
+              let type = NSClassFromString("SLSBridgedManagedDisplayIsAnimatingOperation"),
+              let method = class_getInstanceMethod(type, selector),
+              let allocated = binding.allocate(type, allocate),
+              let operation = unsafeBitCast(method_getImplementation(method), to: Initialize.self)(
+                allocated, selector, display as CFString) else { return false }
+        defer { binding.release(operation, release) }
+        guard let result = unsafeBitCast(address, to: Perform.self)(operation)?.takeUnretainedValue(),
+              let read = class_getInstanceMethod(object_getClass(result), value) else { return false }
+        return !unsafeBitCast(method_getImplementation(read), to: Read.self)(result, value)
+    }
+
+    static func perform(
+        _ name: String, selector nameOfSelector: String,
+        initialize: (UnsafeMutableRawPointer, Selector, IMP) -> UnsafeMutableRawPointer?
+    ) -> Bool {
+        let selector = NSSelectorFromString(nameOfSelector)
+        guard let binding, let type = NSClassFromString(name),
+              let method = class_getInstanceMethod(type, selector),
+              let allocated = binding.allocate(type, allocate),
+              let operation = initialize(allocated, selector, method_getImplementation(method)) else { return false }
+        defer { binding.release(operation, release) }
+        _ = binding.perform(operation)
+        return true
+    }
+
     private static func adding(_ base: UInt, _ amount: UInt) -> UInt? {
         let (value, overflow) = base.addingReportingOverflow(amount)
         return overflow ? nil : value

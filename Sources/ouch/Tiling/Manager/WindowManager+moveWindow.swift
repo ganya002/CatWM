@@ -2,55 +2,8 @@ import AppKit
 
 extension WindowManager {
     func moveWindow(_ window: Window, toWorkspace workspace: String, follow: Bool) {
-        let screens = Screen.all()
-        guard config.virtualWorkspaces, isVirtual(workspace), !workspaceMoves.contains(window.id),
-              let monitor = monitorOf[workspace].flatMap({ uuid in screens.first { $0.uuid == uuid } })
-                ?? currentScreen() ?? screens.first,
-              let home = homeSpace[monitor.uuid], let info = Spaces.list(display: monitor.uuid),
-              info.desktops.contains(where: { info.ids[$0] == home }), !window.isNativeFullscreen else { return }
-        if Spaces.of(window: window.id) == [home] {
-            assignWindow(window, toWorkspace: workspace, from: workspaceOf[window.id], display: monitor.uuid,
-                         follow: follow)
-            return
-        }
-        let known = windows[window.id] != nil, from = workspaceOf[window.id], frame = window.frame
-        workspaceMoves.insert(window.id)
-        autoSwitchAfter = Date().addingTimeInterval(0.7)
-        if !known { windows[window.id] = window; order.append(window.id) }
-        model.assign(window.id, to: workspace)
-        monitorOf[workspace] = monitor.uuid
-        snapNextPlacement.insert(window.id)
-        refresh(instant: true, placing: [window.id])
-        animator.afterPendingWrites { [weak self] in
-            let displayBatch = WindowServerUpdates.shared.begin()
-            let moveStarted = Date()
-            func release() {
-                let held = Int(Date().timeIntervalSince(moveStarted) * 1000)
-                let watchdog = Int(WindowServerUpdates.shared.maximumHold * 1000)
-                let note = held > watchdog ? " (watchdog let go at \(watchdog) ms)" : ""
-                Log.info("workspaces: import of \(window.id) held the display \(held) ms\(note)")
-                displayBatch?.finish()
-            }
-            let waits = self?.isOnHomeSpace(monitor) ?? false
-            Spaces.move(window: window.id, to: home, waitUntilOnScreen: waits) { [weak self] moved in
-                guard let self else { release(); return }
-                workspaceMoves.remove(window.id)
-                guard moved, window.isValid, config.virtualWorkspaces, homeSpace[monitor.uuid] == home else {
-                    Log.info("workspaces: direct move of \(window.id) to \(home) failed")
-                    HUD.shared.show("macOS couldn't move this window", on: monitor.nsScreen)
-                    if known { model.assign(window.id, to: from) } else { forget(window.id) }
-                    if window.isValid, !frame.isNull { window.setFrame(frame) }
-                    refresh()
-                    release()
-                    return
-                }
-                let elapsed = Int(Date().timeIntervalSince(moveStarted) * 1000)
-                Log.info("workspaces: moved \(window.id) to home Desktop in \(elapsed) ms")
-                if !known { watch(window) }
-                release()
-                assignWindow(window, toWorkspace: workspace, from: from, display: monitor.uuid, follow: follow)
-            }
-        }
+        guard config.virtualWorkspaces else { return }
+        moveNativeWindow(window, to: workspace, follow: follow)
     }
 
     func assignWindow(_ window: Window, toWorkspace workspace: String, from: String?, display: String, follow: Bool) {
@@ -100,7 +53,7 @@ extension WindowManager {
             guard let info = Spaces.list(display: screen.uuid) else { return [] }
             return info.desktops.map { info.ids[$0] }
         })
-        let homes = Set(homeSpace.values)
+        let homes = Set(Screen.all().map { Spaces.current(display: $0.uuid) })
         var offDesktop: [pid_t: Set<CGWindowID>] = [:]
         let list = CGWindowListCopyWindowInfo([.optionAll, .excludeDesktopElements], kCGNullWindowID)
             as? [[String: Any]] ?? []

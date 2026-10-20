@@ -110,9 +110,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        WindowManager.shared.isStarted = false
-        WindowManager.shared.restoreHiddenWindows {
-            sender.reply(toApplicationShouldTerminate: true)
+        let manager = WindowManager.shared
+        Hotkeys.shared.paused = true
+        manager.nativeDesktop.stop()
+        Task { @MainActor in
+            _ = await poll(2, every: 10_000_000) { !manager.nativeDesktop.isRunning }
+            manager.isStarted = false
+            manager.restoreHiddenWindows { sender.reply(toApplicationShouldTerminate: true) }
         }
         return .terminateLater
     }

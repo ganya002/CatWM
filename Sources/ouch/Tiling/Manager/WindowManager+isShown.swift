@@ -37,7 +37,8 @@ extension WindowManager {
         for (id, workspace) in workspaceOf where windows[id] != nil && isVirtual(workspace) && !isPending(workspace) {
             counts[workspace, default: 0] += 1
         }
-        let names = Set(counts.keys).union(virtualShown.values).sorted(by: workspaceSort)
+        let names = Set(counts.keys).union(nativeCatalog.entries.map(\.name))
+            .union(virtualShown.values).sorted(by: workspaceSort)
         let showing = Set(virtualShown.values)
         let current = currentScreen().flatMap { virtualShown[$0.uuid] }
         return WorkspaceSummary(
@@ -68,13 +69,13 @@ extension WindowManager {
     func resolveWorkspace(_ raw: String) -> String? {
         let trimmed = raw.trimmingCharacters(in: .whitespaces)
         let lower = trimmed.lowercased()
-        let cur = currentWorkspace ?? "1"
+        let cur = nativeDesktop.requested?.workspace ?? currentWorkspace ?? "1"
         if trimmed.isEmpty { return nil }
         if lower == "previous" { return currentScreen().flatMap { previousWorkspace[$0.uuid] } }
         if lower.hasPrefix("name:") { return String(trimmed.dropFirst(5)) }
         for prefix in ["r", "m", ""] where lower.hasPrefix(prefix + "+") || lower.hasPrefix(prefix + "-") {
             guard let delta = Int(lower.dropFirst(prefix.count).replacingOccurrences(of: "+", with: "")) else { break }
-            return String(max(1, (Int(cur) ?? 1) + delta))
+            return nativeCatalog.step(from: cur, by: delta)
         }
         if lower.hasPrefix("e+") || lower.hasPrefix("e-"),
            let delta = Int(lower.dropFirst(1).replacingOccurrences(of: "+", with: "")) {
@@ -100,6 +101,7 @@ extension WindowManager {
     func syncWorkspaces(screens: [Screen], present: Set<CGWindowID>) -> WorkspaceReconciliation {
         let timing = TilingTiming("reconcile", windows: present.count)
         defer { timing.finish() }
+        if config.virtualWorkspaces { return syncNativeWorkspaces(screens: screens, present: present) }
         let held = movingToSpace || NSEvent.pressedMouseButtons & 1 != 0
         let observation = WorkspaceObservation(
             displays: screens.map {
@@ -136,22 +138,16 @@ extension WindowManager {
 
     func makeCurrentSpaceHome() {
         guard config.virtualWorkspaces else { return }
-        for screen in Screen.all() {
-            homeSpace[screen.uuid] = Spaces.current(display: screen.uuid)
-            if !isVirtual(virtualShown[screen.uuid]) { virtualShown[screen.uuid] = nil }
-        }
-        model.keepWorkspaces(where: isVirtual)
+        updateNativeCatalog(Screen.all())
         refresh()
-        HUD.shared.show("Ouch workspaces live on this Desktop", on: currentScreen()?.nsScreen)
+        HUD.shared.show("Ouch controls this Desktop", on: currentScreen()?.nsScreen)
     }
 
     var homeSpaceSummary: String {
         guard config.virtualWorkspaces else { return "" }
         let names = Screen.all().compactMap { screen -> String? in
-            guard let home = homeSpace[screen.uuid], let info = Spaces.list(display: screen.uuid),
-                  let i = info.ids.firstIndex(of: home),
-                  let desktop = info.desktops.firstIndex(of: i) else { return nil }
-            return "Desktop \(desktop + 1)" + (Screen.all().count > 1 ? " on \(screen.nsScreen.localizedName)" : "")
+            let current = Spaces.current(display: screen.uuid)
+            return nativeCatalog.entry(space: current).map { "Desktop \($0.name)" }
         }
         return names.joined(separator: ", ")
     }

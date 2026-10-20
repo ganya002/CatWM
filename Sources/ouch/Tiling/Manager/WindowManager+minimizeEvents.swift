@@ -5,7 +5,10 @@ extension WindowManager {
 
     func claimForCurrentWorkspace(_ ids: [CGWindowID]) {
         guard config.virtualWorkspaces, !restoringTemplate, let here = currentWorkspace else { return }
-        for id in ids where workspaceOf[id] != here { model.assign(id, to: here) }
+        for id in ids where workspaceOf[id] != here {
+            guard let target = nativeCatalog.entry(here), Spaces.of(window: id).contains(target.space) else { continue }
+            model.assign(id, to: here)
+        }
     }
 
     func windowMinimizeChanged(_ element: AXUIElement, minimized: Bool) {

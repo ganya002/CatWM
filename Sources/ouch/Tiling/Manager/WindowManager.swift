@@ -23,6 +23,18 @@ final class WindowManager {
 
     var windows: [CGWindowID: Window] = [:]
     var observedApps: [(pid: pid_t, bundleID: String?)] = []
+    var lastNativeCatalogSaved: [String: UInt64] = [:]
+    var nativeCatalog = NativeWorkspaceCatalog()
+    let nativeDesktop = NativeDesktopController()
+    let nativeGestures = DesktopGestureTap()
+    var nativeGestureSign: Double?
+    var nativeMigration: [CGWindowID: String] = [:]
+    var nativeCreationBusy = false
+    var nativeWorkspaceGeneration = 0
+    var nativeSortNames: Set<String> = []
+    var nativeDroppedWorkspaces: Set<String> = []
+    var nativeMoveTargets: [CGWindowID: String] = [:]
+    var nativeMembership: [CGWindowID: UInt64] = [:]
     var model = WorkspaceModel()
     var workspaceOf: [CGWindowID: String] { model.workspaceOf }
     var order: [CGWindowID] { get { model.order } set { model.order = newValue } _modify { yield &model.order } }

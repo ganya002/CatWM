@@ -138,8 +138,12 @@ extension WindowManager {
     }
 
     func restoreSort(_ snapshot: SortSnapshot) {
+        nativeDroppedWorkspaces = []
         let saved = snapshot.model
         for (id, workspace) in saved.workspaceOf where windows[id] != nil && !closingNow.contains(id) {
+            if workspaceOf[id] != workspace, let window = windows[id] {
+                moveNativeWindow(window, to: workspace, follow: false)
+            }
             model.assign(id, to: workspace)
         }
         let known = Set(saved.order)
@@ -168,8 +172,10 @@ extension WindowManager {
     }
 
     func tiledCount(in workspace: String) -> Int {
-        order.reduce(0) { total, id in
-            total + (present.contains(id) && workspaceOf[id] == workspace && windows[id]?.isFloating == false ? 1 : 0)
+        let screens = Screen.all()
+        return order.reduce(0) { total, id in
+            total + (workspaceOf[id] == workspace && windows[id]?.isFloating == false
+                && (present.contains(id) || isSortable(id, screens: screens)) ? 1 : 0)
         }
     }
 }

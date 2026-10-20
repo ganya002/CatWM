@@ -2,6 +2,7 @@ import AppKit
 
 extension WindowManager {
     func isOnHomeSpace(_ screen: Screen) -> Bool {
+        if config.virtualWorkspaces { return !Spaces.isFullscreen(display: screen.uuid) }
         guard let home = homeSpace[screen.uuid] else { return true }
         return Spaces.current(display: screen.uuid) == home
     }

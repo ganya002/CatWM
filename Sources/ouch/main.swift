@@ -1,5 +1,9 @@
 import AppKit
 
+if CommandLine.arguments.dropFirst().first == "--native-desktop-guard" {
+    DesktopGuard.run()
+}
+
 if CommandLine.arguments.dropFirst().first == "--write-config-docs" {
     try AgentConfigDocs.write(in: URL(fileURLWithPath: FileManager.default.currentDirectoryPath))
     exit(0)

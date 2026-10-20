@@ -60,7 +60,7 @@ extension WindowManager {
             if floatsFreely(id) {
                 if let dst = screen(containing: window.cachedFrame, in: screens), dst.uuid != src.uuid,
                    let workspace = shown[dst.uuid] {
-                    model.assign(id, to: workspace)
+                    assignManagedWindow(id, to: workspace)
                 }
                 continue
             }
@@ -73,7 +73,7 @@ extension WindowManager {
                let hit = tiled(on: dst).first(where: { $0 != id && targets[$0]?.contains(point) == true }) {
                 swapOrder(id, hit)
             } else if dst.uuid != src.uuid {
-                model.assign(id, to: shown[dst.uuid])
+                assignManagedWindow(id, to: shown[dst.uuid])
             }
         }
         corrections = [:]
