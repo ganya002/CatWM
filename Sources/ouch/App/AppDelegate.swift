@@ -43,6 +43,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Permission.accessibility.request()
         }
         Tips.shared.launched()
+        WhatsNew.shared.launched()
         #if DEBUG
         if CommandLine.arguments.contains("--gallery") { DesignGallery.shared.open() }
         #endif

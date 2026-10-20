@@ -19,7 +19,7 @@ extension Tips {
     func canShow(_ id: String) -> Bool {
         enabled && daysUsed >= Self.minDaysUsed && rested && Onboarding.isDone && !Onboarding.shared.isRunning
             && !seen.contains(id) && settings == nil && global == nil
-            && !SortPanel.shared.isOpen
+            && !SortPanel.shared.isOpen && !WhatsNew.shared.isOpen
     }
 
     func show(_ known: Known) {
