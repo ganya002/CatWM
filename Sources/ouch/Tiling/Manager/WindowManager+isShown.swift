@@ -31,7 +31,9 @@ extension WindowManager {
 
     var currentWorkspace: String? {
         guard let screen = currentScreen() else { return nil }
-        if let request = nativeDesktop.requested, request.display == screen.uuid { return request.workspace }
+        if let request = nativeDesktop.requested, request.display == screen.uuid, isVirtual(request.workspace) {
+            return request.workspace
+        }
         return virtualShown[screen.uuid]
     }
 

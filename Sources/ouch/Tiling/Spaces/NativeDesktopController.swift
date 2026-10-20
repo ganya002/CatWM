@@ -77,16 +77,9 @@ final class NativeDesktopController {
         if source == target.space { onSettled(target, false); return }
         let busy = "Finish the current macOS Desktop action, then try again"
         try check(await poll(1, every: 10_000_000) { !DesktopUI.isBusy(on: screen) }, busy)
-        if let info = Spaces.list(display: target.display), let current = info.current,
-           !info.desktops.contains(current) {
-            try await leaveNativeFullscreen(target)
-            if Spaces.current(display: target.display) == target.space { onSettled(target, true) }
-            return
-        }
         _ = await poll(1, every: 10_000_000) { DesktopUI.isSettled(screen) }
         guard let list = Spaces.list(display: target.display),
               let from = list.ids.firstIndex(of: source), let into = list.ids.firstIndex(of: target.space),
-              list.desktops.contains(from), list.desktops.contains(into),
               DesktopUI.isSettled(screen),
               let sourceState = DesktopBridge.state(source), sourceState.transform == .identity,
               let targetState = DesktopBridge.state(target.space), targetState.transform == .identity else {
@@ -111,7 +104,14 @@ final class NativeDesktopController {
             try? await recovery.finish()
             DesktopGuardClient.prewarm()
         }
-        if let failure { throw failure }
+        if let failure {
+            let maximised = !list.desktops.contains(from) || !list.desktops.contains(into)
+            guard maximised, requested == target, Spaces.current(display: target.display) != target.space else {
+                throw failure
+            }
+            Log.info("native workspaces: \(failure.localizedDescription); swiping to the maximised window")
+            try await swipe(to: target)
+        }
         Log.info("native workspaces: restored transforms after \(target.workspace)")
         if Spaces.current(display: target.display) == target.space { onSettled(target, true) }
     }
@@ -175,7 +175,7 @@ final class NativeDesktopController {
                   "Cannot move the source Desktop")
     }
 
-    @MainActor private func leaveNativeFullscreen(_ target: Request) async throws {
+    @MainActor private func swipe(to target: Request) async throws {
         let deadline = ProcessInfo.processInfo.systemUptime + 5
         func remaining() -> TimeInterval { deadline - ProcessInfo.processInfo.systemUptime }
         while Spaces.current(display: target.display) != target.space {
@@ -183,7 +183,7 @@ final class NativeDesktopController {
             guard remaining() > 0,
                   let list = Spaces.list(display: target.display), let current = list.current,
                   let destination = list.ids.firstIndex(of: target.space) else {
-                throw DesktopTransitionError.check("macOS did not leave the maximised window")
+                throw DesktopTransitionError.check("macOS did not reach the Desktop")
             }
             let source = list.ids[current]
             try check(DesktopSwipe.post(right: destination > current), "Native Desktop navigation is unavailable")
