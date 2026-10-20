@@ -19,8 +19,8 @@ extension WindowManager {
             .compactMap { item($0.id, $0.pid, title: $0.title ?? "", workspace: switcherWorkspace($0.id)) }
         timing.checkpoint("here")
         let listed = Set(items.map(\.id))
-        items += windowsOnOtherSpaces().filter { !listed.contains($0.id) }.compactMap { window in
-            item(window.id, window.pid, title: windows[window.id]?.title ?? window.title, workspace: window.space)
+        items += windowsOnOtherSpaces().filter { !listed.contains($0.info.id) }.compactMap { window in
+            item(window.info.id, window.info.pid, title: windows[window.info.id]?.title ?? "", workspace: window.space)
         }
         timing.checkpoint("elsewhere")
         let focused = focusedWindow()?.id
@@ -30,34 +30,18 @@ extension WindowManager {
             .map(\.element)
     }
 
-    private struct OtherSpaceWindow {
-        let id: CGWindowID
-        let pid: pid_t
-        let title: String
-        let space: String
-    }
-
-    private func windowsOnOtherSpaces() -> [OtherSpaceWindow] {
+    private func windowsOnOtherSpaces() -> [(info: CGWindowInfo, space: String)] {
         let displays = Screen.all().compactMap { Spaces.list(display: $0.uuid) }
         let names = Self.spaceLabels(displays)
         let current = Set(displays.compactMap { display in display.current.map { display.ids[$0] } })
-        let list = CGWindowListCopyWindowInfo([.optionAll, .excludeDesktopElements], kCGNullWindowID)
-            as? [[String: Any]] ?? []
-        return list.compactMap { info in
-            guard (info[kCGWindowLayer as String] as? Int) == 0,
-                  (info[kCGWindowIsOnscreen as String] as? Bool) != true,
-                  (info[kCGWindowAlpha as String] as? Double ?? 1) > 0,
-                  let number = info[kCGWindowNumber as String] as? Int,
-                  let pid = info[kCGWindowOwnerPID as String] as? Int,
-                  let rawBounds = info[kCGWindowBounds as String] as? [String: Any],
-                  let bounds = CGRect(dictionaryRepresentation: rawBounds as CFDictionary),
-                  bounds.width >= 100, bounds.height >= 60 else { return nil }
-            let id = CGWindowID(number)
-            let spaces = Spaces.of(window: id)
-            guard let space = spaces.first, spaces.count == 1, !current.contains(space),
+        let desktop = scanner.desktop
+        let onScreen = Set(desktop.windows.map(\.id))
+        return desktop.allWindows.compactMap { info in
+            guard !onScreen.contains(info.id), info.bounds.width >= 100, info.bounds.height >= 60,
+                  let spaces = desktop.spaces[info.id], spaces.count == 1, let space = spaces.first,
+                  !current.contains(space),
                   let label = workspace(on: space).map(workspaceLabel) ?? names[space] else { return nil }
-            return OtherSpaceWindow(id: id, pid: pid_t(pid), title: info[kCGWindowName as String] as? String ?? "",
-                                    space: label)
+            return (info, label)
         }
     }
 
