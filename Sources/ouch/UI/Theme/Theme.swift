@@ -81,19 +81,19 @@ enum Theme {
         CTFontManagerRegisterFontURLs(fonts as CFArray, .process, true, nil)
     }
 
-    private static let hasChillaxBold = NSFont(name: "Chillax-Bold", size: 12) != nil
-    private static let hasChillax = NSFont(name: "Chillax-Regular", size: 12) != nil
+    private static let hasHeadingFace = NSFont(name: "Nunito-ExtraBold", size: 12) != nil
+    private static let hasBodyFace = NSFont(name: "Supreme-Regular", size: 12) != nil
 
-    private static func chillax(_ weight: Font.Weight) -> String {
+    private static func bodyFace(_ weight: Font.Weight) -> String {
         switch weight {
-        case .ultraLight, .thin, .light: "Chillax-Light"
-        case .regular: "Chillax-Regular"
-        default: "Chillax-Medium"
+        case .ultraLight, .thin, .light: "Supreme-Light"
+        case .regular: "Supreme-Regular"
+        default: "Supreme-Medium"
         }
     }
 
     static func body(_ size: CGFloat = 13.5, _ weight: Font.Weight = .regular) -> Font {
-        hasChillax ? .custom(chillax(weight), size: size) : .system(size: size, weight: weight)
+        hasBodyFace ? .custom(bodyFace(weight), size: size) : .system(size: size, weight: weight)
     }
     static func keys(_ size: CGFloat = 12.5, _ weight: Font.Weight = .regular) -> Font {
         .system(size: size, weight: weight)
@@ -101,15 +101,15 @@ enum Theme {
     static func mono(_ size: CGFloat = 11.5, _ weight: Font.Weight = .medium) -> Font {
         .system(size: size, weight: weight, design: .monospaced)
     }
-    static func heading(_ size: CGFloat = 15) -> Font { body(size, .medium) }
-    static func display(_ size: CGFloat) -> Font { body(size, .light) }
-    static func wordmark(_ size: CGFloat) -> Font {
-        hasChillaxBold ? .custom("Chillax-Bold", size: size) : .system(size: size, weight: .bold)
+    static func heading(_ size: CGFloat = 15) -> Font {
+        hasHeadingFace ? .custom("Nunito-ExtraBold", size: size) : .system(size: size, weight: .semibold)
     }
+    static func display(_ size: CGFloat) -> Font { heading(size) }
+    static func wordmark(_ size: CGFloat) -> Font { heading(size) }
 
     static func nsBody(_ size: CGFloat, weight: NSFont.Weight = .regular) -> NSFont {
-        let name = weight.rawValue < NSFont.Weight.regular.rawValue ? "Chillax-Light"
-            : weight == .regular ? "Chillax-Regular" : "Chillax-Medium"
+        let name = weight.rawValue < NSFont.Weight.regular.rawValue ? "Supreme-Light"
+            : weight == .regular ? "Supreme-Regular" : "Supreme-Medium"
         return NSFont(name: name, size: size) ?? .systemFont(ofSize: size, weight: weight)
     }
 

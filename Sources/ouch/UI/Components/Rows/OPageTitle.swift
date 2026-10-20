@@ -3,11 +3,10 @@ import SwiftUI
 
 struct OPageTitle<Trailing: View>: View {
     let crumbs: [String]
-    let title: String
     @ViewBuilder var trailing: Trailing
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        HStack(alignment: .center, spacing: Theme.Space.small) {
             HStack(spacing: 6) {
                 ForEach(Array(crumbs.enumerated()), id: \.offset) { i, crumb in
                     if i > 0 { Image(systemName: "chevron.right").font(Theme.symbol(Theme.Icon.extraSmall, .semibold)) }
@@ -15,12 +14,10 @@ struct OPageTitle<Trailing: View>: View {
                 }
             }
             .textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine()
-            HStack(alignment: .center, spacing: Theme.Space.small) {
-                Text(title).textStyle(.largeTitle).oneLine()
-                Spacer(minLength: Theme.Space.medium)
-                trailing
-            }
+            Spacer(minLength: Theme.Space.medium)
+            trailing
         }
+        .accessibilityAddTraits(.isHeader)
     }
 }
 
@@ -32,7 +29,7 @@ extension GalleryExamples {
 extension GalleryContent {
     @ViewBuilder var moreControls: some View {
         block("More controls") {
-            OPageTitle(crumbs: ["Settings", "Layout"], title: "Gaps & padding") {
+            OPageTitle(crumbs: ["Settings", "Layout"]) {
                 OButton("Reset", size: .small) {}
             }
             .frame(maxWidth: 560)

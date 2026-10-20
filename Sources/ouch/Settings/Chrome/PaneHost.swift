@@ -62,7 +62,7 @@ struct PaneHost: View {
     }
 
     private var header: some View {
-        OPageTitle(crumbs: ["Settings", settingsUI.pane.rawValue], title: settingsUI.pane.rawValue) {
+        OPageTitle(crumbs: ["Settings", settingsUI.pane.rawValue]) {
             if let kind = settingsUI.pane.configKind {
                 ConfigSelector(kind: kind, library: library, width: 180)
                 ConfigTransferMenu(kind: kind, library: library)
