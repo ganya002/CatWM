@@ -1,30 +1,37 @@
 # Workspaces and displays
 
-Ouch has its own workspaces (like Hyprland/AeroSpace) by default (`virtual-workspaces = true`).
+With `virtual-workspaces = true`, Ouch workspaces use normal macOS Desktops. Ouch controls switching, window transfers, and overview. It does not park hidden windows at a screen edge.
 
-- Each display shows one workspace. A workspace remembers its layout and last focused window.
-- Hidden workspaces' windows are **parked** just off-screen in a corner of their display (macOS won't allow fully off-screen).
-- ⌘-Tab or a Dock click to a window on a hidden workspace switches to that workspace.
-- The menu bar shows ① ② ❸; the filled number is the current one. Click to pick.
-- Workspaces live on one **home Desktop** per display: the macOS Desktop at first launch, or the one chosen in Settings → Windows → Advanced (or `sethomespace`). Other Desktops tile normally; ⌘1–0 from one goes home first. Works best with a single macOS Desktop.
-- When Ouch quits, crashes or is killed, parked windows are restored on-screen (SIGTERM, SIGINT, SIGHUP are handled). Assignments are saved for next launch.
-- `virtual-workspaces = false` uses macOS Spaces instead (see [dispatchers.md](dispatchers.md) for the shortcut requirement).
-- `stay-on-workspace-after-close = true` keeps you where you are after closing a window.
+- Each workspace has one native Desktop. Its name, layout, and last focused window persist between switches.
+- Existing normal Desktops become numbered workspaces. Names stay attached to Desktop IDs when macOS reorders them.
+- Ctrl+1 through Ctrl+9 selects workspace 1 through 9. Ctrl+0 selects workspace 10. Ctrl+Left and Ctrl+Right select the adjacent workspace on the current display.
+- Explicit binds take priority over these defaults. Ouch does not change macOS shortcut preferences.
+- Selecting a workspace that does not exist creates a Desktop through Mission Control. Mission Control opens briefly and then closes.
+- The menu bar shows the current workspace. Click it to select another workspace.
+- Native full screen windows remain on their own Desktops and appear separately in overview.
+- Quitting Ouch leaves windows on their native Desktops. A separate recovery process restores Desktop transforms if Ouch stops during a switch.
+- `virtual-workspaces = false` leaves Desktop switching to macOS. Ouch continues to tile the active Desktop.
+- `stay-on-workspace-after-close = true` keeps you on the current workspace after a window closes.
 
-## Import a window from a macOS Desktop
+Ouch uses its configured animation duration and curve to move whole Desktops. A new request replaces the pending destination. An opposite request can reverse motion before the switch commits. Horizontal Desktop gestures use the same controller for progress, reversal, cancellation, and completion.
 
-On the home Desktop, open the menu bar menu → **Bring Window Here** and select a window. It joins the current Ouch workspace without activating the source Desktop. The menu lists standard, non-minimized windows exposed by Accessibility or previously discovered by Ouch. Hidden apps and native fullscreen windows are excluded.
+## Overview
 
-A plain Dock click on a running app also imports and focuses its preferred native-Desktop window into the Ouch workspace on the Dock's display. Ouch intercepts the click before macOS switches Desktops. Modified clicks, dragging, long presses, hidden apps, minimized/fullscreen windows and apps whose preferred window is already on an Ouch home Desktop keep their usual behavior.
+Overview includes normal Desktops, including empty ones, and windows on hidden Desktops. Changes to workspace membership apply when overview closes. New workspaces create native Desktops. Removing a workspace requires a different active Desktop and no remaining native windows on the removed Desktop. macOS can refuse a creation, removal, or window transfer. Ouch reports that failure in a HUD.
 
-`movetoworkspace` / `movetoworkspacesilent` also accept a focused window on a native Desktop. The silent command leaves that Desktop active. The following command goes to the destination home Desktop once.
+## Move a window between Desktops
 
-The direct import uses a private bridged operation, verified on macOS 27.0.1 with SIP enabled. If macOS refuses it, the assignment is not changed and a HUD reports failure. Ouch does not fall back to visiting the source Desktop. See `docs/internals/native-space-import.md` in the source repository for the standalone GUI-session probe.
+`movetoworkspace` moves the focused window to the requested Desktop and follows it. `movetoworkspacesilent` moves it while keeping the current Desktop active. A missing destination is created first.
 
-## Tiling behaviour worth knowing
+The menu bar's **Bring Window Here** action imports a window from another Desktop. It lists standard windows exposed by Accessibility or previously discovered by Ouch. Hidden apps and native full screen windows are excluded. A plain Dock click can also import an app's preferred window. Modified clicks, dragging, long presses, and minimized or native full screen windows keep normal macOS behavior.
 
-- Windows that can't be resized float automatically. Windows with a minimum size larger than their slot stay on screen, aligned to the slot.
-- Frames are verified after settling and retried once. Windows moved by their own app get a second pass; snap-back gives up after three tries.
-- Windows on other Spaces and minimized windows don't leave holes in the layout.
-- `AXEnhancedUserInterface` (turned on by Magnet, Rectangle, Grammarly, VoiceOver) is switched off while windows move.
-- Ouch's own windows are never tiled (so the keyboard tour uses a helper process for its practice windows).
+Window transfers use a private bridged operation, tested on macOS 27.0.1 with SIP enabled. If macOS refuses a transfer, Ouch reports the failure. No Dock injection or SIP change is required.
+
+## Tiling behavior
+
+- Windows that cannot resize float automatically. A window larger than its slot stays on screen.
+- Hidden Desktop windows and minimized windows do not leave holes in the active layout.
+- Ouch prepares the destination layout before Desktop motion begins.
+- Ouch verifies window frames after placement. Corrections stop after three attempts.
+- Ouch temporarily disables `AXEnhancedUserInterface` while moving windows.
+- Ouch's own windows float. The onboarding tour uses a separate practice process.

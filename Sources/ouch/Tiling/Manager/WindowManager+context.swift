@@ -35,12 +35,12 @@ extension WindowManager {
         let candidates = order.filter(visible.contains).compactMap { windows[$0] }.filter { !$0.isFloating }
         if let next = neighbor(of: window, direction, among: candidates) {
             if let from = screen(of: window), let into = screen(of: next), from.uuid != into.uuid {
-                model.assign(window.id, to: shown[into.uuid])
+                assignManagedWindow(window.id, to: shown[into.uuid])
             } else {
                 swapOrder(window.id, next.id)
             }
         } else if let src = screen(of: window), let dst = screen(from: src, spec: arg(direction), in: Screen.all()) {
-            model.assign(window.id, to: shown[dst.uuid])
+            assignManagedWindow(window.id, to: shown[dst.uuid])
         } else { return }
         refresh()
         focus(window)
@@ -120,7 +120,9 @@ extension WindowManager {
         if window.isFloating {
             targets[window.id] = nil
         } else {
-            if let screen = screen(containing: window.cachedFrame) { model.assign(window.id, to: shown[screen.uuid]) }
+            if let screen = screen(containing: window.cachedFrame) {
+                assignManagedWindow(window.id, to: shown[screen.uuid])
+            }
             corrections[window.id] = nil
         }
         refresh()

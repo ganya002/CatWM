@@ -63,14 +63,6 @@ extension WindowsPane {
                 }
                 OGroup("Workspaces") {
                     OptionRows(pane: .windows, section: "Workspaces", advanced: true, doc: doc, settingsUI: settingsUI)
-                    ORow(WindowsPane.searchHome.title,
-                         description: WindowManager.shared.homeSpaceSummary.isEmpty
-                             ? "The Desktop you're on when Ouch starts"
-                             : "Workspaces live on \(WindowManager.shared.homeSpaceSummary)") {
-                        OButton("Use This Desktop", size: .small) { WindowManager.shared.makeCurrentSpaceHome() }
-                    }
-                    .disabled(!doc.config.virtualWorkspaces)
-                    .setting(WindowsPane.searchHome.id, settingsUI)
                 }
                 AdditionalOptionGroups(pane: .windows, advanced: true, doc: doc, settingsUI: settingsUI)
             }

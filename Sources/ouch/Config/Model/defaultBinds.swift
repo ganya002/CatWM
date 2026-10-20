@@ -4,7 +4,8 @@ let defaultBinds = """
 # ---- keybinds: bind = MODS, key, dispatcher, args -------------------------
 # Global binds work everywhere. Everything else lives in "window mode" (a Hyprland submap):
 # press Cmd+Caps Lock, then single keys, vim style. Esc / i / Return or a mouse click leaves it.
-bind = $mod, 1..0, workspace, 1..10
+bind = CTRL, 1..0, workspace, 1..10
+bind = CTRL, left|right, workspace, r-1|r+1
 bind = $mod, o, sort
 bind = SUPER, capslock, submap, window
 # Scroll wheel / trackpad scroll while holding the modifier, and trackpad swipes:

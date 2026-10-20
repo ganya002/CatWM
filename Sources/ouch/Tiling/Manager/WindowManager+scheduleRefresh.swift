@@ -19,7 +19,8 @@ extension WindowManager {
 
     private func scanAppsAndRefresh() {
         guard isStarted else { return }
-        let pidsOnScreen = Set(scanner.desktop.windows.map(\.pid))
+        let listed = config.virtualWorkspaces ? scanner.desktop.allWindows : scanner.desktop.windows
+        let pidsOnScreen = Set(listed.map(\.pid))
         var known: [pid_t: [CGWindowID: Window]] = [:]
         for window in windows.values { known[window.pid, default: [:]][window.id] = window }
         var jobs: [WindowScanner.Job] = []
