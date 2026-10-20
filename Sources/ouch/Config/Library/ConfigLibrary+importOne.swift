@@ -7,9 +7,8 @@ extension ConfigLibrary {
     func importOne(_ source: SavedConfig, remap: [String: String]) -> (config: SavedConfig, skipped: Int)? {
         var imported = source
         imported.id = UUID().uuidString
-        if imported.symbol == "ouch" || source.isBuiltIn { imported.symbol = nil }
+        if imported.symbol == "ouch" { imported.symbol = nil }
         if let hex = imported.colorHex, Self.color(hex: hex) == nil { imported.colorHex = nil }
-        if source.isBuiltIn { imported.colorHex = nil }
         imported.name = String(imported.name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(60))
         if imported.name.isEmpty { imported.name = "Imported" }
         if imported.kind == .full {

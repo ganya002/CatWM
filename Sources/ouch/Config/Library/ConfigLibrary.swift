@@ -5,30 +5,26 @@ import UniformTypeIdentifiers
 
 final class ConfigLibrary: ObservableObject {
     static let builtInPrefix = "builtin."
-    static let reservedNames: [ConfigKind: [String]] = [
-        .keyboard: ["Vim", "WASD"], .animation: ["Default"], .full: ["Default"]
-    ]
 
     @Published var custom: [SavedConfig] = []
+    @Published var builtIns: [SavedConfig] = []
     @Published var active: [ConfigKind: String] = [:]
     @Published var sheet: ConfigSheet?
 
     let doc: ConfigDocument
-    var builtIns: [SavedConfig] = []
+    let defaults = ConfigLibrary.makeBuiltIns()
     var observer: AnyCancellable?
     var applying = false
 
     static let url = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".config/ouch/configs.json")
 
-    struct Stored: Codable { var custom: [SavedConfig]; var active: [String: String] }
-
-    static let editCopyName = "My config"
+    struct Stored: Codable { var custom: [SavedConfig]; var active: [String: String]; var edited: [SavedConfig]? }
 
     enum Clash { case keepBoth, rename, override, cancel }
 
     init(doc: ConfigDocument) {
         self.doc = doc
-        builtIns = Self.makeBuiltIns()
+        builtIns = defaults
         load()
         observer = doc.objectWillChange
             .debounce(for: .milliseconds(50), scheduler: RunLoop.main)

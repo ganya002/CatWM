@@ -25,7 +25,7 @@ struct ConfigList: View {
     }
 
     private func row(_ config: SavedConfig) -> some View {
-        let ink = configInk(for: config)
+        let ink = configInk(for: config), removal = config.isBuiltIn ? "reset" : "delete"
         return HStack(spacing: 4) {
             Button { library.select(config); dismiss() } label: {
                 HStack(spacing: 8) {
@@ -43,26 +43,33 @@ struct ConfigList: View {
                     .fill(configFill(for: config) ?? (library.isActive(config) ? Theme.accentSoft : .clear)))
             }
             .buttonStyle(OMenuRowStyle(bare: true))
-            if config.isBuiltIn {
-                OIconButton(symbol: "plus", label: "New config based on “\(config.name)”") {
-                    dismiss(); library.sheet = .create(kind: kind, baseID: config.id)
-                }
-            } else {
-                OMenuButton(style: OButtonStyle(variant: .ghost, size: .small, iconOnly: true), items: {
-                    [
-                        MenuItem(id: "edit", label: "Edit Name, Icon and Color…", symbol: "pencil",
-                                 action: { dismiss(); library.sheet = .edit(id: config.id) }),
-                        MenuItem(id: "duplicate", label: "Duplicate", symbol: "plus.square.on.square",
-                                 action: { library.duplicate(config) }),
-                        .sep("s"),
-                        MenuItem(id: "delete", label: "Delete…", symbol: "trash", danger: true,
-                                 action: { confirmDelete(config) })
-                    ]
-                }, label: {
-                    Image(systemName: "ellipsis").font(Theme.symbol())
-                })
-                .tooltip("Edit, duplicate or delete “\(config.name)”")
-                .accessibilityLabel("Edit, duplicate or delete \(config.name)")
+            OMenuButton(style: OButtonStyle(variant: .ghost, size: .small, iconOnly: true), items: {
+                [
+                    MenuItem(id: "edit", label: "Edit Name, Icon and Color…", symbol: "pencil",
+                             action: { dismiss(); library.sheet = .edit(id: config.id) }),
+                    MenuItem(id: "duplicate", label: "Duplicate", symbol: "plus.square.on.square",
+                             action: { library.duplicate(config) }),
+                    .sep("s"),
+                    config.isBuiltIn
+                        ? MenuItem(id: "reset", label: "Reset to Default…", symbol: "arrow.counterclockwise",
+                                   enabled: library.isEdited(config), action: { confirmReset(config) })
+                        : MenuItem(id: "delete", label: "Delete…", symbol: "trash", danger: true,
+                                   action: { confirmDelete(config) })
+                ]
+            }, label: {
+                Image(systemName: "ellipsis").font(Theme.symbol())
+            })
+            .tooltip("Edit, duplicate or \(removal) “\(config.name)”")
+            .accessibilityLabel("Edit, duplicate or \(removal) \(config.name)")
+        }
+    }
+
+    private func confirmReset(_ config: SavedConfig) {
+        dismiss()
+        DispatchQueue.main.async {
+            if ConfigLibrary.confirm("Reset “\(config.name)” to its default?", "Your changes to it can't be restored.",
+                                     yes: "Reset", no: "Cancel") {
+                library.reset(config)
             }
         }
     }

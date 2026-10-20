@@ -22,10 +22,14 @@ struct ConfigSheetView: View {
         }
     }
 
+    private var editedID: String? {
+        if case .edit(let id) = sheet { id } else { nil }
+    }
+
     private var nameProblem: String? {
         let trimmed = model.name.trimmingCharacters(in: .whitespaces)
         if trimmed.isEmpty { return nil }
-        if kinds.contains(where: { library.isReserved(trimmed, kind: $0) }) {
+        if kinds.contains(where: { library.isReserved(trimmed, kind: $0, ignoring: editedID) }) {
             return "That name is built in. Pick another."
         }
         return nil

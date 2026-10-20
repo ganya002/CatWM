@@ -27,9 +27,9 @@ extension ConfigLibrary {
         return "\(base) (\(suffix))"
     }
 
-    func isReserved(_ name: String, kind: ConfigKind) -> Bool {
+    func isReserved(_ name: String, kind: ConfigKind, ignoring id: String? = nil) -> Bool {
         let lower = name.trimmingCharacters(in: .whitespaces).lowercased()
-        return (Self.reservedNames[kind] ?? []).contains { $0.lowercased() == lower }
+        return defaults.contains { $0.kind == kind && $0.id != id && $0.name.lowercased() == lower }
     }
 
     @discardableResult
@@ -43,30 +43,28 @@ extension ConfigLibrary {
         return saved
     }
 
-    func createFromEdit(kinds: [ConfigKind], name: String, symbol: String?, colorHex: String?) {
-        for kind in kinds {
-            let saved = SavedConfig(id: UUID().uuidString, kind: kind, name: uniqueName(name, kind: kind),
-                                    symbol: symbol, colorHex: colorHex, text: extract(kind))
-            custom.append(saved)
-            active[kind] = saved.id
+    func update(id: String, name: String, symbol: String?, colorHex: String?) {
+        guard let kind = config(id: id)?.kind else { return }
+        let name = uniqueName(name, kind: kind, ignoring: id)
+        modify(id) {
+            $0.name = name
+            $0.symbol = symbol
+            $0.colorHex = colorHex
         }
-        refreshLinks()
         save()
     }
 
-    func update(id: String, name: String, symbol: String?, colorHex: String?) {
-        guard let index = custom.firstIndex(where: { $0.id == id }) else { return }
-        custom[index].name = uniqueName(name, kind: custom[index].kind, ignoring: id)
-        custom[index].symbol = symbol
-        custom[index].colorHex = colorHex
-        save()
+    func reset(_ saved: SavedConfig) {
+        guard let original = defaults.first(where: { $0.id == saved.id }),
+              let i = builtIns.firstIndex(where: { $0.id == saved.id }) else { return }
+        builtIns[i] = original
+        if isActive(saved) { select(original) } else { save() }
     }
 
     func duplicate(_ saved: SavedConfig) {
         var copy = saved
         copy.id = UUID().uuidString
         copy.name = uniqueName(saved.name, kind: saved.kind)
-        if saved.isBuiltIn { copy.symbol = nil }
         custom.append(copy)
         save()
     }
@@ -82,7 +80,7 @@ extension ConfigLibrary {
         var bundle = ConfigBundle(config: saved)
         if saved.kind == .full {
             bundle.included = [saved.keyboardID, saved.animationID].compactMap { config(id: $0) }
-                .filter { !$0.isBuiltIn }
+                .filter { !$0.isBuiltIn || isEdited($0) }
         }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]

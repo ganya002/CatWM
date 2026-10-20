@@ -36,6 +36,10 @@ extension ConfigLibrary {
     func load() {
         if let data = try? Data(contentsOf: Self.url), let stored = try? JSONDecoder().decode(Stored.self, from: data) {
             custom = stored.custom
+            for edit in stored.edited ?? [] {
+                guard let i = builtIns.firstIndex(where: { $0.id == edit.id && $0.kind == edit.kind }) else { continue }
+                builtIns[i] = edit
+            }
             for (name, id) in stored.active { if let kind = ConfigKind(rawValue: name) { active[kind] = id } }
         } else {
             if FileManager.default.fileExists(atPath: Self.url.path) {
@@ -50,7 +54,8 @@ extension ConfigLibrary {
 
     func save() {
         let stored = Stored(custom: custom,
-                            active: Dictionary(uniqueKeysWithValues: active.map { ($0.key.rawValue, $0.value) }))
+                            active: Dictionary(uniqueKeysWithValues: active.map { ($0.key.rawValue, $0.value) }),
+                            edited: builtIns.filter(isEdited))
         guard let data = try? JSONEncoder().encode(stored) else { return }
         try? FileManager.default.createDirectory(at: Self.url.deletingLastPathComponent(),
                                                  withIntermediateDirectories: true)
@@ -91,25 +96,32 @@ extension ConfigLibrary {
         custom[i].animationID = active[.animation]
     }
 
+    func modify(_ id: String, _ change: (inout SavedConfig) -> Void) {
+        if let i = builtIns.firstIndex(where: { $0.id == id }) {
+            var config = builtIns[i]
+            change(&config)
+            if config != builtIns[i] { builtIns[i] = config }
+        } else if let i = custom.firstIndex(where: { $0.id == id }) {
+            var config = custom[i]
+            change(&config)
+            if config != custom[i] { custom[i] = config }
+        }
+    }
+
+    func isEdited(_ config: SavedConfig) -> Bool {
+        config.isBuiltIn && defaults.first { $0.id == config.id } != config
+    }
+
     func reconcile() {
         guard !applying else { return }
-        var violated: [ConfigKind] = []
-        var changed = false
+        let before = (builtIns, custom)
         for kind in ConfigKind.allCases {
-            let current = current(kind)
-            let text = extract(kind)
-            if current.isBuiltIn {
-                let matches = kind == .full ? otherSettings(text) == otherSettings(current.text) : text == current.text
-                if !matches { violated.append(kind) }
-            } else if let i = custom.firstIndex(where: { $0.id == current.id }), custom[i].text != text {
-                custom[i].text = text
-                changed = true
-            }
+            let current = current(kind), text = extract(kind)
+            if current.isBuiltIn, kind == .full, otherSettings(text) == otherSettings(current.text) { continue }
+            modify(current.id) { $0.text = text }
         }
-        let before = custom
         refreshLinks()
-        if changed || before != custom { save() }
-        if !violated.isEmpty { createFromEdit(kinds: violated, name: Self.editCopyName, symbol: nil, colorHex: nil) }
+        if before != (builtIns, custom) { save() }
     }
 
     func apply(_ config: SavedConfig) {
