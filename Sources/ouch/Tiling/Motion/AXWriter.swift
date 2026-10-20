@@ -3,7 +3,8 @@ import QuartzCore
 
 final class AXWriter {
     private enum Operation {
-        case step(CGRect), land(CGRect, done: (Bool) -> Void), position(CGPoint, done: (Bool) -> Void)
+        case step((CFTimeInterval) -> CGRect)
+        case land(CGRect, done: (Bool) -> Void), position(CGPoint, done: (Bool) -> Void)
     }
     private struct Pending { let window: Window; let operation: Operation; let epoch: Int }
     struct Stats { var size = Stat(), position = Stat(), land = Stat(), skipped = 0 }
@@ -17,13 +18,14 @@ final class AXWriter {
     private var stats = Stats()
     private var animating: Set<CGWindowID> = []
     private var lastSize: [CGWindowID: CGSize] = [:]
+    private var stepCosts: [CGWindowID: StepCost] = [:]
 
     init(pid: pid_t) {
         self.pid = pid
         queue = DispatchQueue(label: "ouch.ax.\(pid)", qos: .userInteractive)
     }
 
-    func step(_ window: Window, to frame: CGRect) { submit(window, .step(frame)) }
+    func step(_ window: Window, to frame: @escaping (CFTimeInterval) -> CGRect) { submit(window, .step(frame)) }
     func land(_ window: Window, at frame: CGRect, done: @escaping (Bool) -> Void) {
         submit(window, .land(frame, done: done))
     }
@@ -34,7 +36,10 @@ final class AXWriter {
 
     func cancel(_ id: CGWindowID) {
         lock.withLock { pending[id] = nil; epochs[id, default: 0] += 1 }
-        queue.async { [self] in if animating.remove(id) != nil { EnhancedUI.resume(pid) } }
+        queue.async { [self] in
+            lastSize[id] = nil
+            if animating.remove(id) != nil { EnhancedUI.resume(pid) }
+        }
     }
 
     func run(_ work: @escaping () -> Void) { queue.async(execute: work) }
@@ -87,13 +92,15 @@ final class AXWriter {
         }
         if animating.insert(window.id).inserted { EnhancedUI.suspend(pid) }
         switch item.operation {
-        case let .step(frame):
+        case let .step(frameAt):
+            let frame = frameAt(CACurrentMediaTime() + (stepCosts[window.id]?.lead ?? 0))
             var sizeTime = 0.0
             if lastSize[window.id] != frame.size {
                 sizeTime = measure { window.setSize(frame.size) }
                 lastSize[window.id] = frame.size
             }
             let positionTime = measure { window.setPosition(frame.origin) }
+            stepCosts[window.id, default: StepCost()].add(sizeTime + positionTime)
             lock.withLock { if sizeTime > 0 { stats.size.add(sizeTime) }; stats.position.add(positionTime) }
         case let .position(point, done):
             let elapsed = measure { window.setPosition(point) }
@@ -102,8 +109,9 @@ final class AXWriter {
             lock.withLock { stats.position.add(elapsed) }
             DispatchQueue.main.async { done(true) }
         case let .land(frame, done):
-            lastSize[window.id] = nil
-            let elapsed = measure { window.setFrame(frame) }
+            let sized = lastSize.removeValue(forKey: window.id) == frame.size
+            stepCosts[window.id] = nil
+            let elapsed = measure { sized ? window.setPosition(frame.origin) : window.setFrame(frame) }
             animating.remove(window.id)
             EnhancedUI.resume(pid)
             lock.withLock { stats.land.add(elapsed) }

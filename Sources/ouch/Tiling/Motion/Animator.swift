@@ -182,7 +182,7 @@ final class Animator {
                 items[id] = nil
                 land(item.move)
             } else {
-                writer(item.move.window.pid).step(item.move.window, to: item.frame(at: now))
+                writer(item.move.window.pid).step(item.move.window) { item.frame(at: $0) }
             }
         }
         timing.ticks.add(CACurrentMediaTime() - now)
