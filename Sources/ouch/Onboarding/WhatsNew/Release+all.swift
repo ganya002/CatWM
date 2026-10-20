@@ -2,6 +2,19 @@ import AppKit
 
 extension Release {
     static let all = [
+        Release(version: "0.4", features: [
+            Feature(id: "0.4.splitbar", symbol: "rectangle.split.2x1",
+                    title: "Drag the split bar",
+                    text: "Drag the bar between the two sides to resize the main pane. Click it to swap the sides."),
+            Feature(id: "0.4.sendkeys", symbol: "arrow.right.square",
+                    title: "Move a window with Ctrl Shift",
+                    text: "Press Ctrl Shift and a number or an arrow key to send the window to a workspace.",
+                    tour: { Steps.sendGlobal($0).map { [$0] } ?? [] }),
+            Feature(id: "0.4.configs", symbol: "slider.horizontal.3",
+                    title: "Edit the built-in configs",
+                    text: "Change a built-in config and Ouch keeps your edits. No copy is made.",
+                    action: ("Open Shortcuts", { SettingsWindow.shared.show(pane: .shortcuts) }))
+        ]),
         Release(version: "0.3", features: [
             Feature(id: "0.3.switcher", symbol: "rectangle.stack",
                     title: "Switch to any window",
