@@ -4,7 +4,8 @@ extension WindowManager {
     func updateNativeCatalog(_ screens: [Screen]) {
         let displays = screens.compactMap { screen in
             Spaces.list(display: screen.uuid).map { info in
-                NativeWorkspaceCatalog.Display(id: screen.uuid, spaces: info.desktops.map { info.ids[$0] })
+                NativeWorkspaceCatalog.Display(id: screen.uuid, spaces: info.desktops.map { info.ids[$0] },
+                                               current: Spaces.current(display: screen.uuid))
             }
         }
         guard !displays.isEmpty, displays.count == screens.count else { return }
@@ -56,6 +57,7 @@ extension WindowManager {
         for (id, space) in fullscreenSpaces() {
             if let key = host(id, on: space) { model.fullscreenHost[key] = id }
         }
+        releaseEmptyWorkspaces()
         let visible = present.filter { model.isShown(workspaceOf[$0]) }
         return .init(model: model, homeSpace: [:], displayOf: displayOf, visible: visible, park: [])
     }
@@ -64,8 +66,9 @@ extension WindowManager {
         updateNativeCatalog(Screen.all())
         nativeWorkspaceGeneration += 1
         let generation = nativeWorkspaceGeneration
-        guard let entry = nativeCatalog.entry(workspace) else {
-            guard let screen = currentScreen() ?? Screen.all().first else { return }
+        let screen = currentScreen() ?? Screen.all().first
+        guard let entry = nativeCatalog.entry(workspace) ?? screen.flatMap({ bindSpare(workspace, on: $0) }) else {
+            guard let screen else { return }
             nativeDesktop.stop()
             Task { @MainActor in
                 do {
@@ -84,6 +87,33 @@ extension WindowManager {
         }
         configureNativeController(focusing: preferred, focus: takesFocus, quiet: quiet)
         nativeDesktop.request(.init(workspace: workspace, display: entry.display, space: entry.space))
+    }
+
+    func bindSpare(_ name: String, on screen: Screen) -> NativeWorkspaceCatalog.Entry? {
+        guard !name.isEmpty, !isPending(name), isVirtual(name),
+              let space = nativeCatalog.spare(on: screen.uuid) else { return nil }
+        nativeCatalog.bind(name, to: space, on: screen.uuid)
+        updateNativeCatalog(Screen.all())
+        return nativeCatalog.entry(name)
+    }
+
+    private func releaseEmptyWorkspaces() {
+        guard config.removesEmptyWorkspaces, !sortSession, !restoringTemplate, !nativeDesktop.isRunning,
+              nativeDesktop.requested == nil, !nativeCreationBusy, workspaceMoves.isEmpty, nativeMoveTargets.isEmpty,
+              !scanner.desktop.allWindows.isEmpty else { return }
+        let held = Set(workspaceOf.filter { windows[$0.key] != nil }.values).union(virtualShown.values)
+            .union(model.shownSet)
+        let occupied = Set(scanner.desktop.allWindows.compactMap { window in
+            scanner.desktop.spaces[window.id].flatMap { $0.count == 1 ? $0.first : nil }
+        })
+        for entry in nativeCatalog.entries
+        where !held.contains(entry.name) && !occupied.contains(entry.space)
+            && Spaces.current(display: entry.display) != entry.space {
+            nativeCatalog.release(entry.name)
+            states[entry.name] = nil
+            lastFocused[entry.name] = nil
+            Log.info("native workspaces: released empty workspace \(entry.name)")
+        }
     }
 
     func showMaximised(_ window: Window) -> Bool {

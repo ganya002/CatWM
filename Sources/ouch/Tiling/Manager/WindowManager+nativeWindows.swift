@@ -13,7 +13,8 @@ extension WindowManager {
     func moveNativeWindow(_ window: Window, to workspace: String, follow: Bool) {
         updateNativeCatalog(Screen.all())
         guard !window.isNativeFullscreen, !workspaceMoves.contains(window.id) else { return }
-        guard let target = nativeCatalog.entry(workspace) else {
+        guard let target = nativeCatalog.entry(workspace)
+            ?? (currentScreen() ?? Screen.all().first).flatMap({ bindSpare(workspace, on: $0) }) else {
             createWorkspaceThenMove(window, to: workspace, follow: follow)
             return
         }
@@ -92,7 +93,7 @@ extension WindowManager {
         guard current() else { throw CancellationError() }
         guard free else { throw DesktopTransitionError.check("The previous Desktop action did not finish") }
         updateNativeCatalog(Screen.all())
-        if let entry = nativeCatalog.entry(name) { return entry }
+        if let entry = nativeCatalog.entry(name) ?? bindSpare(name, on: screen) { return entry }
         guard !name.isEmpty, !isPending(name), isVirtual(name) else {
             throw DesktopTransitionError.check("This workspace name is unavailable")
         }

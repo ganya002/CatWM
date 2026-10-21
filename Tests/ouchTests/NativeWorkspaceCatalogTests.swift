@@ -49,6 +49,29 @@ import Testing
         #expect(catalog.entry("missing") == nil)
     }
 
+    @Test func releasedDesktopStaysSpareUntilANewWorkspaceTakesIt() {
+        var catalog = NativeWorkspaceCatalog()
+        catalog.synchronize([.init(id: "screen", spaces: [11, 12, 13], current: 11)])
+        catalog.release("3")
+        catalog.synchronize([.init(id: "screen", spaces: [11, 12, 13], current: 11)])
+        #expect(catalog.entry("3") == nil)
+        #expect(catalog.spare(on: "screen") == 13)
+        #expect(catalog.step(from: "2", by: 1) == nil)
+        #expect(catalog.freeNumber() == "3")
+        catalog.bind("mail", to: 13, on: "screen")
+        #expect(catalog.spare(on: "screen") == nil)
+        #expect(catalog.entry("mail")?.space == 13)
+    }
+
+    @Test func spareGetsANameWhenItBecomesTheCurrentDesktop() {
+        var catalog = NativeWorkspaceCatalog()
+        catalog.synchronize([.init(id: "screen", spaces: [11, 12], current: 11)])
+        catalog.release("2")
+        catalog.synchronize([.init(id: "screen", spaces: [11, 12], current: 12)])
+        #expect(catalog.spare(on: "screen") == nil)
+        #expect(catalog.entry("2")?.space == 12)
+    }
+
     @Test func ctrlDefaultsRespectConfiguredCommands() {
         let config = Config.parse("bind = CTRL, 1, layout, floating\nbind = ALT, 2, workspace, 2")
         let bindings = config.workspaceBindings
