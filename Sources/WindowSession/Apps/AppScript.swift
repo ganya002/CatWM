@@ -63,19 +63,26 @@ enum AppScript {
 
     static func run(_ source: String, language: Language, arguments: [String] = [],
                     timeout: TimeInterval) async -> String? {
+        await ExternalCommand.run(URL(fileURLWithPath: "/usr/bin/osascript"),
+                                  ["-l", language.rawValue, "-e", source] + arguments, timeout: timeout)
+    }
+}
+
+enum ExternalCommand {
+    static func run(_ executable: URL, _ arguments: [String], timeout: TimeInterval) async -> String? {
         await Blocking.run(timeout: timeout + 0.5, fallback: nil) {
-            execute(source, language: language, arguments: arguments, timeout: timeout)
+            execute(executable, arguments, timeout: timeout)
         }
     }
 
-    private static func execute(_ source: String, language: Language, arguments: [String],
-                                timeout: TimeInterval) -> String? {
+    private static func execute(_ executable: URL, _ arguments: [String], timeout: TimeInterval) -> String? {
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-        process.arguments = ["-l", language.rawValue, "-e", source] + arguments
+        process.executableURL = executable
+        process.arguments = arguments
         let output = Pipe()
         process.standardOutput = output
         process.standardError = FileHandle.nullDevice
+        process.standardInput = FileHandle.nullDevice
         do { try process.run() } catch { return nil }
         DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + timeout) {
             if process.isRunning { process.terminate() }
@@ -84,5 +91,22 @@ enum AppScript {
         process.waitUntilExit()
         guard process.terminationReason == .exit, process.terminationStatus == 0 else { return nil }
         return String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
+enum AppLaunch {
+    static func open(_ appURL: URL, bundleID: String, arguments: [String]) async -> Bool {
+        let running = !NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).isEmpty
+        guard running, let executable = Bundle(url: appURL)?.executableURL else {
+            return await Launcher.launch(appURL, arguments: arguments)
+        }
+        let process = Process()
+        process.executableURL = executable
+        process.arguments = arguments
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        process.standardInput = FileHandle.nullDevice
+        do { try process.run() } catch { return false }
+        return true
     }
 }

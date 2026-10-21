@@ -50,4 +50,15 @@ import Testing
         window.state = nil
         #expect(WindowMatch.assign([window], candidates: [loading]).isEmpty)
     }
+
+    @Test func aWindowWithSavedTabsWaitsForItsAdapterInsteadOfTakingTheStartupWindow() {
+        var window = saved(1, .zero, title: "Wikipedia")
+        window.state = AppState(tabs: ["https://a.test/", "https://b.test/"])
+        let startup = candidate(30, nil, title: "New tab")
+        #expect(WindowMatch.assign([window], candidates: [startup], awaitingAdapter: [window.id]).isEmpty)
+        #expect(WindowMatch.assign([window], candidates: [startup])[window.id] == 30)
+        let titled = candidate(40, nil, title: "Wikipedia")
+        #expect(WindowMatch.assign([window], candidates: [startup, titled],
+                                   awaitingAdapter: [window.id])[window.id] == 40)
+    }
 }

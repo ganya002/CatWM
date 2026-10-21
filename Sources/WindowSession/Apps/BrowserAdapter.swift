@@ -42,9 +42,15 @@ struct SafariAdapter: AppAdapter {
 }
 
 struct ChromiumAdapter: AppAdapter {
-    let bundleIDs: Set<String> = ["com.google.Chrome", "com.google.Chrome.beta", "com.google.Chrome.canary",
-                                  "org.chromium.Chromium", "com.brave.Browser", "com.microsoft.edgemac",
-                                  "com.vivaldi.Vivaldi", "net.imput.helium"]
+    let bundleIDs: Set<String> = [
+        "com.google.Chrome", "com.google.Chrome.beta", "com.google.Chrome.dev", "com.google.Chrome.canary",
+        "org.chromium.Chromium", "com.brave.Browser", "com.brave.Browser.beta", "com.brave.Browser.nightly",
+        "com.microsoft.edgemac", "com.microsoft.edgemac.Beta", "com.microsoft.edgemac.Dev",
+        "com.microsoft.edgemac.Canary", "com.vivaldi.Vivaldi", "com.vivaldi.Vivaldi.snapshot",
+        "com.operasoftware.Opera", "com.operasoftware.OperaGX", "company.thebrowser.Browser",
+        "company.thebrowser.dia", "ai.perplexity.comet", "com.pushplaylabs.sidekick", "org.chromium.Thorium",
+        "ru.yandex.desktop.yandex-browser", "net.imput.helium"
+    ]
     let captureNeedsAutomation = true
     let restoreNeedsAutomation = true
 

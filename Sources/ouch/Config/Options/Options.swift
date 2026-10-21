@@ -127,7 +127,7 @@ enum Options {
                      help: "In window mode, tap the mode's modifier to save or open a workspace template",
                      keywords: "cursor mouse menu window mode tap modifier template save", section: "Pointer menu"),
         .bool("template-app-scripting", \.templateAppScripting)
-            .documented("bool", "workspace templates also save browser tabs, Terminal and iTerm2 tab folders, "
+            .documented("bool", "workspace templates also save browser tabs, terminal tab folders, "
                             + "Finder folders and code editor projects; macOS asks once for each scripted app")
             .section("templates")
             .note("Templates also save browser tabs, terminal folders, Finder folders and editor projects.\n"
@@ -135,8 +135,8 @@ enum Options {
             .setting(.templates, "templates.appScripting", "Save tabs and folders",
                      help: "Browser tabs, terminal tabs, Finder folders and editor projects. "
                         + "macOS asks once for each app",
-                     keywords: "automation applescript safari chrome browser url terminal iterm finder folder tabs "
-                        + "vscode cursor zed xcode project",
+                     keywords: "automation applescript safari chrome firefox browser url terminal iterm ghostty "
+                        + "kitty wezterm finder folder tabs vscode cursor zed xcode project",
                      section: "Apps"),
 
         .bool("switcher-instant-jump", \.switcherInstantJump)

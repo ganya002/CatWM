@@ -86,7 +86,7 @@ classDiagram
     SavedWindow "1" o-- "0..1" LaunchSpec
 ```
 
-`AppState.tabs` holds one URL for each tab. A browser tab is an `http` or `https` URL. A Terminal tab, an iTerm2 tab or a Finder tab is a `file` URL of a folder. A code editor window has one `file` URL: its project folder, `.code-workspace` file, Xcode project or `Package.swift`.
+`AppState.tabs` holds one URL for each tab. A browser tab is an `http` or `https` URL. A Terminal, iTerm2, Ghostty, kitty or WezTerm tab, or a Finder tab is a `file` URL of a folder. A code editor window has one `file` URL: its project folder, `.code-workspace` file, Xcode project or `Package.swift`.
 
 ## Save a template
 
@@ -244,6 +244,19 @@ Xcode has no recent list that Ouch reads. `ProjectGuess.xcodeProject` walks up f
 ### Terminal tabs
 
 Terminal scripting has no command that makes a tab. For a window with more than one tab, `TerminalGroup.file` writes a temporary window group file (`type = Window Group`, `WindowList`, a `Window Settings` array with `Tab Working Directory URL` and `TabSelected` for each tab), and Ouch opens it with Terminal. Terminal opens one window with all the tabs. The file is deleted after 30 seconds. The tab profile is the Terminal default profile.
+
+### Chromium and Firefox browsers
+
+- Chromium family: one `ChromiumAdapter` reads and opens windows through AppleScript for Chrome, Chromium, Brave, Edge, Vivaldi, Opera, Arc, Dia, Comet and their beta, dev and canary builds. Incognito windows are skipped.
+- Firefox family (Firefox, Zen, LibreWolf, Floorp, Waterfox): Firefox has no scripting interface, so `FirefoxAdapter` reads `sessionstore-backups/recovery.jsonlz4` in the profile. This is a `mozLz40` file: an 8-byte magic, a 4-byte size and one raw LZ4 block, read with `COMPRESSION_LZ4_RAW`. A profile that a running browser holds open has a locked `.parentlock` file. The adapter reads those profiles, or the newest file when none is locked. It needs no Automation permission. Ouch matches a Firefox window by the page title that starts the AX title. Firefox writes the file about every 15 seconds, so a very recent tab change can be missing. Private windows are not in the file.
+- Opening a Firefox window runs `firefox -new-window <url> -new-tab <url>…`. The selected tab is not restored.
+- `AppLaunch.open` passes arguments to the executable of a running app, because `openApplication` ignores arguments for a running app.
+
+### Ghostty, kitty and WezTerm
+
+- Ghostty: the AppleScript dictionary (Ghostty 1.3 and later) gives the folder of the focused terminal of each tab. Opening uses `new window` and `new tab` with a surface configuration.
+- kitty: `kitten @ ls` over a socket in `/tmp` gives the OS windows. `platform_window_id` is the `CGWindowID`, so the match to a window is exact. This needs `allow_remote_control socket-only` and `listen_on unix:/tmp/kitty` in `kitty.conf`. Opening writes a temporary session file (`new_tab`, `cd`, `launch`, `focus`) and starts `kitty --single-instance --session`.
+- WezTerm: `wezterm cli list --format json` gives panes with window, tab and folder. The list has no active tab, so the first tab is the selected one. Opening uses `wezterm cli spawn`.
 
 `WorkingDirectory` finds the folder of a terminal tab without a script. It reads the device of the tty, finds the foreground process group of that tty with `sysctl`, and reads the current folder of that process with `proc_pidinfo`.
 

@@ -21,8 +21,9 @@ public protocol AppAdapter: Sendable {
 }
 
 public enum AppAdapters {
-    public static let all: [any AppAdapter] = [SafariAdapter(), ChromiumAdapter(), TerminalAdapter(),
-                                               ITermAdapter(), FinderAdapter(), CodeEditorAdapter(),
+    public static let all: [any AppAdapter] = [SafariAdapter(), ChromiumAdapter(), FirefoxAdapter(), TerminalAdapter(),
+                                               ITermAdapter(), GhosttyAdapter(), KittyAdapter(),
+                                               WezTermAdapter(), FinderAdapter(), CodeEditorAdapter(),
                                                ZedAdapter(), XcodeAdapter()]
 
     public static func adapter(for bundleID: String) -> (any AppAdapter)? {

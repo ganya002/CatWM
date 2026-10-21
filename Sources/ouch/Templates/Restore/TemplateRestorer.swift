@@ -17,6 +17,7 @@ final class TemplateRestorer {
     private var candidateNotes: [CGWindowID: String] = [:]
     private var scanFound: [String: Int] = [:]
     private var adapterFailed = Set<UUID>()
+    private var adapterRequested = Set<UUID>()
     var initialWindowIDs: Set<CGWindowID>?
 
     init(template: WorkspaceTemplate) { self.template = template }
@@ -91,6 +92,7 @@ final class TemplateRestorer {
             for request in step.requests {
                 try Task.checkCancellation()
                 guard Date() < deadline else { break }
+                adapterRequested.insert(request.savedID)
                 await perform(request, deadline: deadline)
             }
             if !step.keepWaiting, !waitingForMetadata { break }
@@ -119,7 +121,9 @@ final class TemplateRestorer {
                             allowsGenericFallback: candidate.allowsGenericFallback,
                             newlyOpened: isFillable(candidate), frame: candidate.frame)
         }
-        let chosen = WindowMatch.assign(template.windows, candidates: candidates)
+        let awaiting = Set(template.windows.filter { $0.state?.tabs.isEmpty == false }.map(\.id))
+            .subtracting(adapterRequested)
+        let chosen = WindowMatch.assign(template.windows, candidates: candidates, awaitingAdapter: awaiting)
         let windows = Dictionary(found.map { ($0.window.id, $0.window) }, uniquingKeysWith: { current, _ in current })
         var next: [UUID: Window] = [:]
         var invalidated = Set<CGWindowID>()

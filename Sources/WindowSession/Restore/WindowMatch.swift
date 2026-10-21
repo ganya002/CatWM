@@ -42,7 +42,8 @@ public enum WindowMatch {
         !offSpace && !hiddenWorkspace
     }
 
-    public static func assign(_ saved: [SavedWindow], candidates: [WindowCandidate]) -> [UUID: CGWindowID] {
+    public static func assign(_ saved: [SavedWindow], candidates: [WindowCandidate],
+                              awaitingAdapter: Set<UUID> = []) -> [UUID: CGWindowID] {
         let rank = Dictionary(saved.enumerated().sorted { lhs, rhs in
             lhs.element.windowID == rhs.element.windowID ? lhs.offset < rhs.offset
                 : lhs.element.windowID < rhs.element.windowID
@@ -53,7 +54,7 @@ public enum WindowMatch {
             var pairs: [Pair] = []
             for window in saved where result[window.id] == nil {
                 for candidate in candidates where !used.contains(candidate.windowID)
-                    && fits(candidate, window, score: score) {
+                    && fits(candidate, window, score: score, generic: !awaitingAdapter.contains(window.id)) {
                     pairs.append(Pair(window: window, candidate: candidate,
                                       distance: distance(window.frame, candidate.frame)))
                 }
@@ -88,13 +89,14 @@ public enum WindowMatch {
         var distance: CGFloat
     }
 
-    private static func fits(_ candidate: WindowCandidate, _ window: SavedWindow, score: Int) -> Bool {
+    private static func fits(_ candidate: WindowCandidate, _ window: SavedWindow, score: Int,
+                             generic: Bool) -> Bool {
         guard candidate.bundleID == window.bundleID else { return false }
         let candidateScore = Self.score(window, title: candidate.title, document: candidate.document,
                                         windowID: candidate.windowID, launchDate: candidate.launchDate)
         guard candidateScore == score else { return false }
         if score == 0 {
-            guard candidate.allowsGenericFallback else { return false }
+            guard generic, candidate.allowsGenericFallback else { return false }
             if !candidate.newlyOpened, !candidate.title.isEmpty, candidate.title != window.title { return false }
         }
         return true

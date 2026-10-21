@@ -37,7 +37,7 @@ The app source is in `Sources/ouch/`. The `WindowSession` library is in `Sources
 - `AX/`: AX reads that tell a timeout from a missing value, and the window ID of an AX element.
 - `Model/`: `SavedWindow`, `AppState` (tabs and folders) and `LaunchSpec` (URL, arguments, command).
 - `Capture/`: the AX window read for a save, and `CaptureSlot`, which runs one capture at a time with a timeout.
-- `Apps/`: one `AppAdapter` for each app with extra state: browsers, Terminal, iTerm2 and Finder (through scripts), and code editors (through their recent-project files). It also holds the `osascript` runner, the Automation check and `WindowTabs` (background tabs). Add an app here, not in `Templates/`.
+- `Apps/`: one `AppAdapter` for each app with extra state: Chromium browsers, Safari, Terminal, iTerm2, Ghostty and Finder (through scripts), Firefox browsers (through the session file), kitty and WezTerm (through their command line), and code editors (through their recent-project files). It also holds the `osascript` runner, the Automation check and `WindowTabs` (background tabs). Add an app here, not in `Templates/`.
 - `Restore/`: window matching, the open scheduler and the AX reads and the "New Window" menu press used during an open.
 - `Launch/`: `Launcher` (opens an app, file, URL or command) and `LaunchRequest` (the `launch` dispatcher arguments).
 

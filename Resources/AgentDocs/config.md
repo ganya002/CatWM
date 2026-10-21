@@ -50,7 +50,7 @@ The Settings window writes options in this order. Aliases (after `/`) are read b
 | `keyboard-help-key` | one character | `?` | toggles the keyboard help in window mode |
 | `keyboard-finish` | `auto`, `macbook-pro`, `macbook-air`, `macbook-neo`, `magic-keyboard`, or a finish such as `macbook-pro-space-black` | `auto` | look of the Shortcut Map keyboard |
 | `cursor-actions` | bool | `true` | in window mode, a dot at the pointer; a tap of the mode modifier opens saved workspace templates and the Save workspace action |
-| `template-app-scripting` | bool | `false` | workspace templates also save browser tabs, Terminal and iTerm2 tab folders, Finder folders and code editor projects; macOS asks once for each scripted app |
+| `template-app-scripting` | bool | `false` | workspace templates also save browser tabs, terminal tab folders, Finder folders and code editor projects; macOS asks once for each scripted app |
 | `switcher-instant-jump` | bool | `true` | in the window switcher, a search with one prefix match opens that window by itself |
 | `switcher-jump-delay` | milliseconds | `300` | wait before instant jump opens the match; `0` opens it at once |
 | `switcher-exclude` | bundle IDs, comma separated | `` | apps the window switcher never shows; wildcards like com.adobe.* work |
@@ -104,13 +104,13 @@ Settings → **Templates** lists saved workspaces with large screenshot previews
 With `template-app-scripting = true` (Settings → Templates → **Save tabs and folders**), a template also saves:
 
 - the tabs of Safari and Chromium browser windows (Chrome, Brave, Edge, Vivaldi, Helium), but not private or incognito windows
-- the folders of Terminal and iTerm2 tabs
+- the tabs of Firefox, Zen and other Firefox browsers, the folders of Terminal, iTerm2, Ghostty, kitty and WezTerm tabs
 - the folders of each Finder window and its tabs
 - the project of VS Code, Cursor, VSCodium, Windsurf, Zed and Xcode windows
 
-macOS asks once for each scripted app to let Ouch control it. The code editors need no permission: Ouch reads their recent-project files. A background tab of a Terminal or Finder window is saved as a tab of its window, not as a separate window.
+macOS asks once for each scripted app to let Ouch control it. kitty needs remote control: set `allow_remote_control socket-only` and `listen_on unix:/tmp/kitty` in `kitty.conf`. WezTerm needs no setup. The code editors need no permission: Ouch reads their recent-project files. A background tab of a Terminal or Finder window is saved as a tab of its window, not as a separate window.
 
-Opening the template reopens the browser tabs, the iTerm2 tabs and all Terminal tabs (through a temporary Terminal window group). It opens each Finder window at its selected folder, and each editor at its project, so that the editor brings back its own files and panes. If an app does not allow control, Ouch opens the window as before.
+Opening the template reopens the browser tabs, the iTerm2, Ghostty, kitty and WezTerm tabs and all Terminal tabs (through a temporary Terminal window group). It opens each Finder window at its selected folder, and each editor at its project, so that the editor brings back its own files and panes. If an app does not allow control, Ouch opens the window as before.
 
 Each saved window in `templates.json` can have an optional `launch` object that you edit by hand: `"url"` opens a URL or deep link with the app (for example `vscode://file/…` or `slack://channel?…`), `"arguments"` passes launch arguments when Ouch starts the app, and `"command"` runs a shell command with `sh -c` instead of opening a new window. `command` is used first, then saved tabs, then `url`, then the saved document.
 
