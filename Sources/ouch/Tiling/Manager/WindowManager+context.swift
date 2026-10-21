@@ -117,6 +117,7 @@ extension WindowManager {
     func toggleFloating() {
         guard let window = focusedWindow() else { return }
         window.userFloating = .chosen(!window.isFloating)
+        floatZoom[window.id] = nil
         if window.isFloating {
             targets[window.id] = nil
         } else {
@@ -129,9 +130,28 @@ extension WindowManager {
     }
 
     func toggleZoom() {
-        guard let current = context(), let window = current.window, current.ids.contains(window.id) else { return }
+        guard let current = context(), let window = current.window else { return }
+        if floatsFreely(window.id) { return toggleFloatZoom(window) }
+        guard current.ids.contains(window.id) else { return }
         current.state.zoomed = current.state.zoomed == window.id ? nil : window.id
         refresh()
+        focus(window, warp: false)
+    }
+
+    func toggleFloatZoom(_ window: Window) {
+        guard let screen = screen(of: window) else { return }
+        let fill = usableRect(screen).pixelAligned
+        let frame = animator.destination(window.id) ?? window.cachedFrame
+        let target: CGRect
+        if let saved = floatZoom.removeValue(forKey: window.id), frame.approxEqual(fill) {
+            target = saved
+        } else {
+            floatZoom[window.id] = frame
+            target = fill
+        }
+        animator.animate([.init(window: window, to: target, bounds: screen.visible)],
+                         duration: config.animate ? config.animationDuration : 0,
+                         curve: config.animationCurve, bounce: config.animationBounce)
         focus(window, warp: false)
     }
 

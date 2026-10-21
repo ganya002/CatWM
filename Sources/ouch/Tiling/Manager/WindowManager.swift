@@ -89,6 +89,7 @@ final class WindowManager {
     var refocusAfterClose: String?
     var lastClose = Date.distantPast
     var floatFrames: [CGWindowID: CGRect] = [:]
+    var floatZoom: [CGWindowID: CGRect] = [:]
     var savedWorkspaceOf: [CGWindowID: String] = [:]
     var savedOwnerOf: [CGWindowID: String] = [:]
     var savedFloating: [CGWindowID: Bool] = [:]
