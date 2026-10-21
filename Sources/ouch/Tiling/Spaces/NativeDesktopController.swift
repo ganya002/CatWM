@@ -15,6 +15,7 @@ final class NativeDesktopController {
     var prepare: (Request) async throws -> Void = { _ in }
     var onSettled: (Request, _ changed: Bool) -> Void = { _, _ in }
     var onMotion: (Request) -> Void = { _ in }
+    var isForward: (_ source: UInt64, _ target: UInt64) -> Bool? = { _, _ in nil }
     var onIdle: () -> Void = {}
     var onFailure: (String) -> Void = { _ in }
     private(set) var requested: Request?
@@ -98,7 +99,8 @@ final class NativeDesktopController {
         if !wants(target) { try await recovery.finish(); return }
         var failure: Error?
         do {
-            try await compose(state, screen: screen, forward: into > from, target: target, recovery: recovery)
+            let forward = gesture ? into > from : isForward(source, target.space) ?? (into > from)
+            try await compose(state, screen: screen, forward: forward, target: target, recovery: recovery)
         } catch { failure = error }
         state.restore()
         let restored = await poll(1) {
