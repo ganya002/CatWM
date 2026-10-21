@@ -1,10 +1,20 @@
 import CoreGraphics
 
-enum FocusNavigation {
+enum MotionResolver {
     struct Item {
         let id: CGWindowID
         let frame: CGRect
         let screen: String?
+    }
+
+    struct Display {
+        let id: String
+        let frame: CGRect
+    }
+
+    enum Hit: Equatable {
+        case window(CGWindowID)
+        case monitor(String)
     }
 
     struct Relation {
@@ -18,6 +28,15 @@ enum FocusNavigation {
         let id: CGWindowID
         let score: CGFloat
         let edge: CGFloat
+    }
+
+    static func resolve(
+        from item: Item, _ dir: Direction, among candidates: [Item], displays: [Display], stamps: [CGWindowID: Int]
+    ) -> Hit? {
+        if let next = neighbor(of: item, dir, among: candidates, stamps: stamps) { return .window(next) }
+        if let here = displays.first(where: { $0.id == item.screen }),
+           let next = display(from: here, dir, among: displays) { return .monitor(next) }
+        return wrap(from: item, dir, among: candidates, stamps: stamps).map(Hit.window)
     }
 
     static func relation(_ from: CGRect, _ other: CGRect, _ dir: Direction) -> Relation {
@@ -52,10 +71,17 @@ enum FocusNavigation {
         return adjacent.min(by: { $0.score < $1.score })?.id ?? best.id
     }
 
-    static func target(
+    static func display(from here: Display, _ dir: Direction, among displays: [Display]) -> String? {
+        let beyond = displays.compactMap { other -> (String, CGFloat)? in
+            let geometry = relation(here.frame, other.frame, dir)
+            return other.id != here.id && geometry.overlaps && geometry.edge > -2 ? (other.id, geometry.edge) : nil
+        }
+        return beyond.min { $0.1 < $1.1 }?.0
+    }
+
+    static func wrap(
         from item: Item, _ dir: Direction, among candidates: [Item], stamps: [CGWindowID: Int]
     ) -> CGWindowID? {
-        if let next = neighbor(of: item, dir, among: candidates, stamps: stamps) { return next }
         let here = candidates.filter { $0.id != item.id && $0.screen == item.screen }
         let behind = here.compactMap { other -> (CGWindowID, CGFloat)? in
             let geometry = relation(item.frame, other.frame, dir)
@@ -69,8 +95,12 @@ enum FocusNavigation {
         let stack = candidates.filter {
             $0.id == item.id || (hereIDs.contains($0.id) && $0.frame.approxEqual(item.frame, tolerance: 2))
         }
-        guard stack.count > 1, let i = stack.firstIndex(where: { $0.id == item.id }) else { return nil }
+        return cycle(item.id, in: stack.map(\.id), dir)
+    }
+
+    static func cycle(_ id: CGWindowID, in ids: [CGWindowID], _ dir: Direction) -> CGWindowID? {
+        guard ids.count > 1, let i = ids.firstIndex(of: id) else { return nil }
         let delta = dir == .left || dir == .upward ? -1 : 1
-        return stack[((i + delta) % stack.count + stack.count) % stack.count].id
+        return ids[((i + delta) % ids.count + ids.count) % ids.count]
     }
 }

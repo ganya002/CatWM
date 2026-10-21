@@ -13,48 +13,6 @@ extension WindowManager {
         return TilingContext(window: focusedWindow(), screen: screen, state: state(for: screen), ids: tiled(on: screen))
     }
 
-    func moveFocus(_ direction: Direction) {
-        guard let window = focusedWindow() else {
-            if let current = context(), let first = current.ids.first.flatMap({ windows[$0] }) { focus(first) }
-            return
-        }
-        let candidates = order.filter(visible.contains).compactMap { windows[$0] }
-        let screens = Screen.all()
-        let home = screen(of: window, in: screens)
-        if let home, state(for: home).zoomed == window.id {
-            cycleFocus(direction == .left || direction == .upward ? -1 : 1)
-            return
-        }
-        let target = FocusNavigation.target(from: navItem(window, in: screens), direction,
-                                            among: candidates.map { navItem($0, in: screens) }, stamps: focusStamps)
-        if let next = target.flatMap({ windows[$0] }) { focus(next) }
-    }
-
-    func moveWindow(_ direction: Direction) {
-        guard let window = focusedWindow(), !window.isFloating else { return }
-        let candidates = order.filter(visible.contains).compactMap { windows[$0] }.filter { !$0.isFloating }
-        if let next = neighbor(of: window, direction, among: candidates) {
-            if let from = screen(of: window), let into = screen(of: next), from.uuid != into.uuid {
-                assignManagedWindow(window.id, to: shown[into.uuid])
-            } else {
-                swapOrder(window.id, next.id)
-            }
-        } else if let src = screen(of: window), let dst = screen(from: src, spec: arg(direction), in: Screen.all()) {
-            assignManagedWindow(window.id, to: shown[dst.uuid])
-        } else { return }
-        refresh()
-        focus(window)
-    }
-
-    func arg(_ direction: Direction) -> String {
-        switch direction {
-        case .left: "l"
-        case .right: "r"
-        case .upward: "u"
-        case .down: "d"
-        }
-    }
-
     func cycleFocus(_ delta: Int) {
         guard let current = context(), !current.ids.isEmpty else { return }
         let ids = current.ids
