@@ -1,0 +1,24 @@
+import AppKit
+
+extension WindowManager {
+    func moveWindow(_ direction: Direction) {
+        guard let window = focusedWindow(), !window.isFloating else { return }
+        let candidates = order.filter(visible.contains).compactMap { windows[$0] }.filter { !$0.isFloating }
+        if let target = resolve(direction, from: window, among: candidates) { move(window, to: target) }
+    }
+
+    func move(_ window: Window, to target: MotionTarget) {
+        switch target {
+        case let .window(other):
+            if let from = screen(of: window), let into = screen(of: other), from.uuid != into.uuid {
+                assignManagedWindow(window.id, to: shown[into.uuid])
+            } else {
+                swapOrder(window.id, other.id)
+            }
+        case let .monitor(screen):
+            assignManagedWindow(window.id, to: shown[screen.uuid])
+        }
+        refresh()
+        focus(window)
+    }
+}
