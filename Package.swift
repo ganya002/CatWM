@@ -15,9 +15,11 @@ let package = Package(
     ],
     targets: [
         .plugin(name: "CatalogPlugin", capability: .buildTool()),
+        .target(name: "WindowSession", path: "Sources/WindowSession"),
         .executableTarget(
             name: "ouch",
             dependencies: [
+                "WindowSession",
                 .product(name: "Sparkle", package: "Sparkle"),
                 .product(name: "MacKeysCore", package: "mackeys-sdk"),
                 .product(name: "MacKeysUI", package: "mackeys-sdk")
@@ -27,8 +29,14 @@ let package = Package(
             plugins: [.plugin(name: "CatalogPlugin")]
         ),
         .testTarget(
+            name: "WindowSessionTests",
+            dependencies: ["WindowSession"],
+            path: "Tests/WindowSessionTests",
+            swiftSettings: testSettings
+        ),
+        .testTarget(
             name: "ouchTests",
-            dependencies: ["ouch"],
+            dependencies: ["ouch", "WindowSession"],
             path: "Tests/ouchTests",
             swiftSettings: testSettings
         )

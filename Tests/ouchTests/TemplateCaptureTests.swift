@@ -1,19 +1,20 @@
 import AppKit
 @testable import ouch
 import Testing
+@testable import WindowSession
 
 @Suite struct TemplateCaptureTests {
     @Test func minimizedWindowsCanReportADialogSubrole() {
-        #expect(TemplateWindowKind.includes(subrole: kAXStandardWindowSubrole, minimized: false))
-        #expect(TemplateWindowKind.includes(subrole: kAXStandardWindowSubrole, minimized: true))
-        #expect(TemplateWindowKind.includes(subrole: kAXDialogSubrole, minimized: true))
-        #expect(!TemplateWindowKind.includes(subrole: kAXDialogSubrole, minimized: false))
-        #expect(!TemplateWindowKind.includes(subrole: "AXSheet", minimized: true))
-        #expect(!TemplateWindowKind.includes(subrole: nil, minimized: true))
+        #expect(WindowKind.includes(subrole: kAXStandardWindowSubrole, minimized: false))
+        #expect(WindowKind.includes(subrole: kAXStandardWindowSubrole, minimized: true))
+        #expect(WindowKind.includes(subrole: kAXDialogSubrole, minimized: true))
+        #expect(!WindowKind.includes(subrole: kAXDialogSubrole, minimized: false))
+        #expect(!WindowKind.includes(subrole: "AXSheet", minimized: true))
+        #expect(!WindowKind.includes(subrole: nil, minimized: true))
     }
 
     @Test func timeoutReturnsBeforeACaptureThatIgnoresCancellation() async {
-        let slot = TemplateCaptureSlot<Int>()
+        let slot = CaptureSlot<Int>()
         let pause = CapturePause()
         let calls = CaptureCounter()
         defer { pause.release() }
@@ -40,7 +41,7 @@ import Testing
     }
 
     @Test func cancellationReturnsWhileTheCaptureKeepsRunning() async {
-        let slot = TemplateCaptureSlot<Int>()
+        let slot = CaptureSlot<Int>()
         let pause = CapturePause()
         let entered = CaptureFlag()
         defer { pause.release() }
@@ -63,7 +64,7 @@ import Testing
     }
 
     @Test func occupiedSlotDoesNotReuseTheEarlierCapture() async {
-        let slot = TemplateCaptureSlot<Int>()
+        let slot = CaptureSlot<Int>()
         let pause = CapturePause()
         let calls = CaptureCounter()
         defer { pause.release() }
@@ -96,7 +97,7 @@ import Testing
     }
 
     @Test func lateCompletionDoesNotReplaceTheTimedOutResult() async {
-        let slot = TemplateCaptureSlot<Int>()
+        let slot = CaptureSlot<Int>()
         let pause = CapturePause()
         defer { pause.release() }
         let outcome = await slot.run(within: .milliseconds(40)) {
@@ -114,7 +115,7 @@ import Testing
         let first = app(pid: 1)
         let second = app(pid: 2)
         var reads: [pid_t] = []
-        let batch = TemplateWindowWalk.collect(
+        let batch = WindowWalk.collect(
             apps: [first, second],
             budget: 5,
             stop: { false },
@@ -133,7 +134,7 @@ import Testing
     @Test func deadlineAndCancellationStopTheWalkBeforeLaterApps() {
         let apps = [app(pid: 1), app(pid: 2)]
         var expiredReads: [pid_t] = []
-        let expired = TemplateWindowWalk.collect(
+        let expired = WindowWalk.collect(
             apps: apps,
             budget: 0,
             stop: { false },
@@ -145,7 +146,7 @@ import Testing
         #expect(expiredReads.isEmpty)
         #expect(!expired.complete)
         var stoppedReads: [pid_t] = []
-        let stopped = TemplateWindowWalk.collect(
+        let stopped = WindowWalk.collect(
             apps: apps,
             budget: 5,
             stop: { true },
@@ -160,7 +161,7 @@ import Testing
 
     @Test func completeWalkKeepsEveryAppThatResponds() {
         let frozen = Date(timeIntervalSince1970: 10)
-        let batch = TemplateWindowWalk.collect(
+        let batch = WindowWalk.collect(
             apps: [app(pid: 4), app(pid: 9)],
             budget: 5,
             now: { frozen },
@@ -245,8 +246,8 @@ import Testing
     }
 }
 
-private func app(pid: pid_t) -> TemplateAppSnapshot {
-    TemplateAppSnapshot(pid: pid, bundleID: "com.example.\(pid)", name: "App \(pid)", launchDate: nil)
+private func app(pid: pid_t) -> AppSnapshot {
+    AppSnapshot(pid: pid, bundleID: "com.example.\(pid)", name: "App \(pid)", launchDate: nil)
 }
 
 private func observed(
@@ -256,8 +257,8 @@ private func observed(
     minimized: Bool = false,
     fullscreen: Bool = false,
     spaces: [UInt64] = [1]
-) -> TemplateObservedWindow {
-    TemplateObservedWindow(
+) -> ObservedWindow {
+    ObservedWindow(
         pid: 20, bundleID: "com.example.editor", appName: "Editor", title: title,
         document: title == "Draft" ? "file:///tmp/draft.txt" : nil, frame: frame, minimized: minimized,
         fullscreen: fullscreen, resizable: true, windowID: id, launchDate: Date(timeIntervalSince1970: 100),

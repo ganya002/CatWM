@@ -50,6 +50,7 @@ The Settings window writes options in this order. Aliases (after `/`) are read b
 | `keyboard-help-key` | one character | `?` | toggles the keyboard help in window mode |
 | `keyboard-finish` | `auto`, `macbook-pro`, `macbook-air`, `macbook-neo`, `magic-keyboard`, or a finish such as `macbook-pro-space-black` | `auto` | look of the Shortcut Map keyboard |
 | `cursor-actions` | bool | `true` | in window mode, a dot at the pointer; a tap of the mode modifier opens saved workspace templates and the Save workspace action |
+| `template-app-scripting` | bool | `false` | workspace templates also save browser tabs, Terminal and iTerm2 folders and Finder folders; macOS asks once for each app |
 | `switcher-instant-jump` | bool | `true` | in the window switcher, a search with one prefix match opens that window by itself |
 | `switcher-jump-delay` | milliseconds | `300` | wait before instant jump opens the match; `0` opens it at once |
 | `switcher-exclude` | bundle IDs, comma separated | `` | apps the window switcher never shows; wildcards like com.adobe.* work |
@@ -99,6 +100,10 @@ When editing by hand while the app runs, make the edit then run `ouch reload`. I
 ## Workspace templates
 
 Settings → **Templates** lists saved workspaces with large screenshot previews. Click a screenshot to enlarge it. Open, rename, update, or delete a template here. A template stores app identities, document addresses when available, window frames, display sizes, layouts, main-pane ratios and counts, window order, tiling status, and floating, minimized, zoomed, or native full screen states. Templates are stored in `~/.config/ouch/templates.json`, separately from configs. Screenshots are stored in that file. Screen recording access is required to capture them. Saving still works without that access. Update an older template to add a screenshot.
+
+With `template-app-scripting = true` (Settings → Templates → **Save tabs and folders**), a template also saves the tabs of Safari and Chromium browser windows (Chrome, Brave, Edge, Vivaldi, Helium), the folders of Terminal and iTerm2 tabs, and the folder of each Finder window. macOS asks once for each app to let Ouch control it. Opening the template reopens the browser tabs and iTerm2 tabs, and opens Terminal and Finder windows at the saved folder. Terminal reopens only the selected tab. Private and incognito windows are not saved. If an app does not allow control, Ouch opens the window as before.
+
+Each saved window in `templates.json` can have an optional `launch` object that you edit by hand: `"url"` opens a URL or deep link with the app (for example `vscode://file/…` or `slack://channel?…`), `"arguments"` passes launch arguments when Ouch starts the app, and `"command"` runs a shell command with `sh -c` instead of opening a new window. `command` is used first, then saved tabs, then `url`, then the saved document.
 
 In window mode, tap the mode modifier to open quick actions at the pointer. Press **S** to show a name field beside Save. Type the name and press Return to save without opening Settings. The screenshot can finish after the template saves. Escape cancels naming and returns to the action list. Press **1–9** to open a saved template. Hover a template to replace its number with an X. Click the X to delete it without closing the menu. Arrow keys and Return select an action. These actions also work over empty desktop space.
 

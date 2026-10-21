@@ -16,6 +16,7 @@ final class WindowManager {
         }
     }
     var templateHiddenWindows: [CGWindowID: Date] = [:]
+    var pendingLaunches: [PendingLaunch] = []
     var onChange: (() -> Void)?
     var onDispatch: ((_ dispatcher: String, _ arg: String, _ inMode: Bool) -> Void)?
     var onModeChange: ((String) -> Void)?
