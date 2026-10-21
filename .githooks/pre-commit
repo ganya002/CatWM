@@ -5,4 +5,7 @@ script="$root/Tools/check-style.sh"
 if [ ! -f "$script" ]; then
   exit 0
 fi
-exec python3 "$script"
+python3 "$script"
+if [ -x "$root/Tools/swiftlint.sh" ]; then
+  "$root/Tools/swiftlint.sh"
+fi

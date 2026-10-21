@@ -58,8 +58,15 @@ The app source is in `Sources/ouch/`. Each folder has one job:
 - Write commit messages in English: `type(scope): description`. The scope is optional.
 - Upload PR evidence to GitHub. Never commit PR-only screenshots or assets such as .github/pr-assets/.
 - Write the body in this order: the problem in 1-3 sentences, a `## Changes` heading with an unordered list, and a `## Verification` heading that says how you verified the fix.
-- If it is a ui change attach a pre and post image, for motion a video.
-- Watch the pull request until it is merged. Resolve conflicts and fix failing checks and review issues. Verify each reported bug or review issue before you fix it. Fix only a bug that you verified, and do not change code that is not part of it.
+- If it is a ui change attach a pre and post image, for motion a video. If you have no pre image, attach only the post image.
+- Never merge a pull request. Watch it until the developer merges it. Resolve conflicts and fix failing checks and review issues. Verify each reported bug or review issue before you fix it. Fix only a bug that you verified, and do not change code that is not part of it.
+
+## How to work
+
+- Do only what the developer asks. Do not add settings, UI or redesigns that they did not ask for.
+- If a short request has two possible meanings, ask one question before you start.
+- Before you fix a flicker, delay or animation bug, find the cause with a log, a timing or a recording. Change one thing at a time. If two tries fail, stop and report what you found.
+- Do not say a bug is fixed until a test, log or recording shows it.
 
 ## Documentation
 
@@ -72,14 +79,14 @@ Do not commit implementation plans, research notes, or agent scratch files. Keep
 ## Dev
 
 - Build: `./build.sh`. It installs the git hook, runs the style check, builds and makes `build/ouch.app`. Use `./build.sh --dev` for fast debug rebuilds while you work.
-- Lint: `Tools/check-style.sh` must pass. The pre-commit hook, `swift test`, `./build.sh` and the `lint` GitHub Actions workflow run it. Run `swiftlint` too.
+- Lint: `Tools/check-style.sh` must pass. The pre-commit hook, `swift test`, `./build.sh` and the `lint` GitHub Actions workflow run it. `Tools/swiftlint.sh` must pass too. The pre-commit hook and `./build.sh` run it.
 - Test: `swift test`. If you have only the Command Line Tools (no Xcode), add the path to the testing plugin:
 
 ```text
 swift test -Xswiftc -plugin-path -Xswiftc /Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing
 ```
 
-- Visual check: you cannot see the result. Do not build or open the app to check it. End your reply with a clear "Needs visual verification" note. Give the command `./build.sh --dev && open build/ouch.app`, then list each thing the developer must test.
+- Run and verify: you can run the app and check it with the CLI, the log and a screen recording. Do not take focus from the developer, move their windows, or test while another thread uses the Desktop. If you cannot verify a change, end your reply with "Not verified" and list each thing the developer must test.
 - Config docs: after you change an option, run `swift run ouch --write-config-docs`. Read `docs/internals/add-a-setting.md` before you add or change a setting.
 - Log: Ouch writes `~/Library/Logs/ouch.log`. `build/ouch.app/Contents/MacOS/ouch dump` writes the tiling state to it.
 
