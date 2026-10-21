@@ -36,22 +36,45 @@ extension WindowManager {
         }
         let from = workspaceOf[window.id]
         let hadFocus = focusedWindow()?.id == window.id
+        let known = windows[window.id] != nil
+        let frame = window.frame
+        let visibleTarget = Spaces.current(display: target.display) == target.space
         workspaceMoves.insert(window.id)
-        if Spaces.current(display: target.display) != target.space { animator.cancel(window.id) }
-        Spaces.move(window: window.id, to: target.space) { [weak self] moved in
+        if visibleTarget {
+            autoSwitchAfter = Date().addingTimeInterval(0.7)
+            if !known { windows[window.id] = window; order.append(window.id); watch(window) }
+            model.assign(window.id, to: workspace)
+            monitorOf[workspace] = target.display
+            snapNextPlacement.insert(window.id)
+            refresh(instant: true, placing: [window.id])
+        } else {
+            animator.cancel(window.id)
+        }
+        animator.afterPendingWrites { [weak self] in
             guard let self else { return }
-            self.workspaceMoves.remove(window.id)
-            self.nativeMoveTargets[window.id] = nil
-            guard moved, window.isValid else {
-                HUD.shared.show("macOS couldn't move this window", on: self.currentScreen()?.nsScreen)
-                self.scheduleRefresh(after: 0)
-                return
+            let displayBatch = visibleTarget ? WindowServerUpdates.shared.begin() : nil
+            let started = Date()
+            Spaces.move(window: window.id, to: target.space, waitUntilOnScreen: visibleTarget) { [weak self] moved in
+                guard let self else { displayBatch?.finish(); return }
+                workspaceMoves.remove(window.id)
+                nativeMoveTargets[window.id] = nil
+                guard moved || Spaces.of(window: window.id) == [target.space], window.isValid else {
+                    HUD.shared.show("macOS couldn't move this window", on: currentScreen()?.nsScreen)
+                    if visibleTarget {
+                        if known { model.assign(window.id, to: from) } else { forget(window.id) }
+                        if window.isValid, !frame.isNull { window.setFrame(frame) }
+                    }
+                    scheduleRefresh(after: 0)
+                    displayBatch?.finish()
+                    return
+                }
+                let held = Int(Date().timeIntervalSince(started) * 1000)
+                Log.info("native workspaces: moved window \(window.id) to workspace \(workspace) in \(held) ms")
+                displayBatch?.finish()
+                completeNativeMigration(window.id, workspace: workspace)
+                nativeMembership[window.id] = target.space
+                assignWindow(window, toWorkspace: workspace, from: from, follow: follow, handOffFocus: hadFocus)
             }
-            Log.info("native workspaces: moved window \(window.id) to workspace \(workspace)")
-            self.completeNativeMigration(window.id, workspace: workspace)
-            self.nativeMembership[window.id] = target.space
-            self.assignWindow(window, toWorkspace: workspace, from: from, follow: follow, handOffFocus: hadFocus)
-            self.scheduleRefresh(after: 0)
         }
     }
     @MainActor func ensureNativeWorkspace(_ name: String, on screen: Screen,

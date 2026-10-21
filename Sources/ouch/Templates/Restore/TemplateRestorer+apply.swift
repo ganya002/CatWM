@@ -112,7 +112,8 @@ extension TemplateRestorer {
         guard isDesktop else { return false }
         switch TemplatePlacementPlan.desktopMove(membership: Spaces.of(window: window.id), destination: space) {
         case .unavailable:
-            return false
+            guard initialWindowIDs?.contains(window.id) == false else { return false }
+            return await moveTemplateWindow(window, to: space)
         case .move:
             return await moveTemplateWindow(window, to: space)
         case .stay:
@@ -185,7 +186,15 @@ extension TemplateRestorer {
                   let screen = manager.screen(of: window, in: screens) else { return nil }
             return .init(window: window, to: frame, bounds: screen.visible)
         }
-        manager.animator.animate(moves, duration: 0)
+        let config = manager.config
+        let duration = config.animate && config.animationDuration >= 0.01 ? config.animationDuration : 0
+        manager.animator.animate(moves, duration: duration, curve: config.animationCurve,
+                                 bounce: config.animationBounce)
+        if duration > 0 {
+            _ = try await settlePlacement(timeout: duration + 0.6) {
+                moves.allSatisfy { !self.manager.animator.isBusy($0.window.id) }
+            }
+        }
         let placed = Set(moves.map(\.window.pid))
         let waited = TemplatePlacementPlan.writerBarrier(placed: placed, busy: manager.animator.activeWriterPids)
         let writesFinished = await placementWritesFinished(pids: waited)
@@ -260,7 +269,7 @@ extension TemplateRestorer {
             try Task.checkCancellation()
             if check() { return true }
             if Date() >= deadline { return false }
-            try await Task.sleep(for: .milliseconds(60))
+            try await Task.sleep(for: .milliseconds(20))
         }
     }
 
@@ -271,7 +280,7 @@ extension TemplateRestorer {
         while true {
             if finished.isComplete { return finished.claim(true) }
             if Task.isCancelled || Date() >= deadline { return finished.claim(false) }
-            try? await Task.sleep(for: .milliseconds(50))
+            try? await Task.sleep(for: .milliseconds(10))
         }
     }
 
