@@ -243,9 +243,9 @@ final class TemplateRestorer {
         }
         let accepted = await RestoreAX.newWindow(pid: app.processIdentifier, deadline: deadline)
         Log.info("template: new window for \(request.appName) \(accepted ? "accepted" : "refused")")
-        if !accepted {
-            scheduler.noteRefused(request.savedID, appName: request.appName, now: Date())
-        }
+        guard !accepted else { return }
+        Log.info("template: asking \(request.appName) to reopen a window")
+        open(request, adapter: false) { await Launcher.launch(appURL) }
     }
 
     private func open(_ request: RestoreRequest, adapter: Bool, _ opening: @escaping @MainActor () async -> Bool) {

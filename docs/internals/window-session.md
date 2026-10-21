@@ -268,8 +268,11 @@ flowchart TD
     HasState -- No --> Url{"launch.url or document?"}
     Url -- Yes --> Open["Launcher.open(url, withApp:)"]
     Url -- No --> Menu["RestoreAX.newWindow presses New Window or Cmd-N"]
-    Menu -- refused --> Refused
+    Menu -- no such item --> Reopen["Launcher.launch(appURL) sends a reopen, like a Dock click"]
+    Reopen -- fails --> Failed["noteFailed"]
 ```
+
+Some apps, such as Electron apps, have no "New Window" item and no Cmd-N. For these apps, Ouch sends a reopen request to the running app, without bringing it to the front. This is the same request that a Dock click sends, and the app makes a window. The request then stays pending until the window appears.
 
 A failed request can try again after 0.5 seconds. It can try 3 times. A started command or a started open does not try again, so a slow app does not get two windows.
 
