@@ -72,6 +72,12 @@ struct NativeWorkspaceCatalog {
     func entry(space: UInt64) -> Entry? { entries.first { $0.space == space } }
     func entries(on display: String) -> [Entry] { entries.filter { $0.display == display } }
 
+    func successor(of name: String, on display: String) -> UInt64? {
+        guard !perDisplay else { return nil }
+        return entries(on: display).filter { WorkspaceReconciliation.workspaceSort(name, $0.name) }
+            .min { WorkspaceReconciliation.workspaceSort($0.name, $1.name) }?.space
+    }
+
     func step(from name: String, by delta: Int) -> String? {
         guard let source = entry(name) else { return nil }
         let local = entries(on: source.display)

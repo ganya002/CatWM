@@ -28,10 +28,10 @@ struct DesktopLifecycleTests {
                 #expect(screens.map { Spaces.current(display: $0.uuid) } == current)
                 #expect(screens.allSatisfy { !DesktopUI.isBusy(on: $0) })
             } catch {
-                try await DesktopLifecycle.remove(space, on: screen)
+                try await discard(space, on: screen)
                 throw error
             }
-            try await DesktopLifecycle.remove(space, on: screen)
+            try await discard(space, on: screen)
             #expect(screens.map { Spaces.list(display: $0.uuid)?.ids } == original)
             #expect(screens.map { Spaces.current(display: $0.uuid) } == current)
         }
@@ -52,7 +52,7 @@ struct DesktopLifecycleTests {
             let target = try #require(DesktopBridge.state(created.space))
             let context = DesktopGuard.Context(display: screen.uuid, source: current, destination: created.space,
                 sourceOptions: source.options, destinationOptions: target.options, menuBar: state)
-            #expect(DesktopBridge.menuWindows([state.window], on: created.space, add: false))
+            #expect(DesktopBridge.detachMenuWindows([state.window], from: created.space))
             let detached = await poll(1) { Spaces.of(window: state.window).isEmpty }
             #expect(detached)
             context.restore()
@@ -62,10 +62,24 @@ struct DesktopLifecycleTests {
             #expect(Spaces.current(display: screen.uuid) == current)
         } catch {
             saved?.restore()
-            try await DesktopLifecycle.remove(created.space, on: screen)
+            try await discard(created.space, on: screen)
             throw error
         }
-        try await DesktopLifecycle.remove(created.space, on: screen)
+        try await discard(created.space, on: screen)
+        #expect(Spaces.current(display: screen.uuid) == current)
+    }
+
+    @Test func createsADesktopBeforeAnotherDesktop() async throws {
+        _ = NSApplication.shared
+        let screen = try #require(Screen.all().first)
+        let current = Spaces.current(display: screen.uuid)
+        let original = try #require(Spaces.list(display: screen.uuid))
+        let successor = original.ids[try #require(original.desktops.last)]
+        let created = try await DesktopLifecycle.create(on: screen, before: successor)
+        let ids = Spaces.list(display: screen.uuid)?.ids ?? []
+        try await discard(created.space, on: screen)
+        #expect(ids.firstIndex(of: created.space).map { $0 + 1 } == ids.firstIndex(of: successor))
+        #expect(Spaces.list(display: screen.uuid)?.ids == original.ids)
         #expect(Spaces.current(display: screen.uuid) == current)
     }
 
@@ -78,5 +92,13 @@ struct DesktopLifecycleTests {
             }
             #expect(Spaces.current(display: screen.uuid) == space)
         }
+    }
+
+    private func discard(_ space: UInt64, on screen: Screen) async throws {
+        for _ in 0..<20 {
+            if (try? await DesktopLifecycle.remove(space, on: screen)) != nil { return }
+            try await Task.sleep(nanoseconds: 50_000_000)
+        }
+        try await DesktopLifecycle.remove(space, on: screen)
     }
 }

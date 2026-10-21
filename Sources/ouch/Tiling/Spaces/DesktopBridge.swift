@@ -65,13 +65,12 @@ enum DesktopBridge {
         }
     }
 
-    static func menuWindows(_ windows: [CGWindowID], on space: UInt64, add: Bool) -> Bool {
+    static func detachMenuWindows(_ windows: [CGWindowID], from space: UInt64) -> Bool {
         typealias Initialize = @convention(c) (
             UnsafeMutableRawPointer, Selector, CFArray, CFArray
         ) -> UnsafeMutableRawPointer?
         return NativeSpaceMove.perform(
-            add ? "SLSBridgedAddWindowsToSpacesOperation" : "SLSBridgedRemoveWindowsFromSpacesOperation",
-            selector: "initWithWindows:spaces:"
+            "SLSBridgedRemoveWindowsFromSpacesOperation", selector: "initWithWindows:spaces:"
         ) { object, selector, method in
             unsafeBitCast(method, to: Initialize.self)(object, selector, windows as CFArray, [space] as CFArray)
         }

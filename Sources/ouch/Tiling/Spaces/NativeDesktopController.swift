@@ -184,14 +184,16 @@ final class NativeDesktopController {
         async let image = DesktopMenuBarCover.capture(on: screen, source: state.source, target: state.destination)
         let background = await DesktopMenuBar.ready(source: state.source, target: state.destination, screen: screen)
         let panel = await image
-        Log.info("desktop probe: header cover \(panel != nil), background \(background != nil)")
+        if panel == nil {
+            Log.info("native workspaces: no menu bar cover, screen recording \(CGPreflightScreenCaptureAccess())")
+        }
         guard let background else { panel?.close(); return nil }
         do {
             try background.persist()
             var guarded = state
             guarded.menuBar = background
             try await recovery.update(guarded)
-            guard DesktopBridge.menuWindows([background.window], on: background.space, add: false),
+            guard DesktopBridge.detachMenuWindows([background.window], from: background.space),
                   await poll(0.1, every: 1_000_000, until: { Spaces.of(window: background.window).isEmpty }) else {
                 throw DesktopTransitionError.check("Cannot prepare the Desktop background")
             }

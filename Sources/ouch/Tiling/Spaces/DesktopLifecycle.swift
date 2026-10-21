@@ -6,18 +6,19 @@ enum DesktopLifecycle {
         let snapshot: Spaces.Snapshot
     }
 
-    @MainActor static func create(on screen: Screen,
-                                  snapshot supplied: Spaces.Snapshot? = nil) async throws -> Creation {
+    @MainActor static func create(on screen: Screen, snapshot supplied: Spaces.Snapshot? = nil,
+                                  before successor: UInt64? = nil) async throws -> Creation {
         guard DesktopUI.isSettled(screen),
               let before = (supplied ?? Spaces.snapshot())?.list(display: screen.uuid) else {
             throw DesktopTransitionError.check("Finish the current macOS Desktop action first")
         }
+        let index = successor.flatMap { before.ids.firstIndex(of: $0) } ?? before.ids.count
         let started = ProcessInfo.processInfo.systemUptime
         guard let space = DesktopBridge.create() else {
             throw DesktopTransitionError.check("macOS could not create a Desktop")
         }
         do {
-            let snapshot = try await place(space, on: screen, index: Int32(before.ids.count))
+            let snapshot = try await place(space, on: screen, index: index)
             let elapsed = Int((ProcessInfo.processInfo.systemUptime - started) * 1_000)
             Log.info("native workspaces: created Desktop \(space) on \(screen.uuid) in \(elapsed) ms")
             DesktopMenuBar.created(space)
@@ -34,14 +35,14 @@ enum DesktopLifecycle {
     }
 
     @MainActor private static func place(_ space: UInt64, on screen: Screen,
-                                         index: Int32) async throws -> Spaces.Snapshot {
+                                         index: Int) async throws -> Spaces.Snapshot {
         func placed() -> Spaces.Snapshot? {
             guard let snapshot = Spaces.snapshot(), let info = snapshot.list(display: screen.uuid),
-                  let index = info.ids.firstIndex(of: space), info.desktops.contains(index) else { return nil }
+                  info.ids.firstIndex(of: space) == index, info.desktops.contains(index) else { return nil }
             return snapshot
         }
         if let snapshot = placed() { return snapshot }
-        guard DesktopBridge.move(space, to: screen.uuid, index: index) else {
+        guard DesktopBridge.move(space, to: screen.uuid, index: Int32(index)) else {
             throw DesktopTransitionError.check("macOS could not place the Desktop on this display")
         }
         var snapshot: Spaces.Snapshot?
@@ -71,7 +72,7 @@ enum DesktopLifecycle {
         let removed = await poll(1) { Spaces.list(display: screen.uuid)?.ids.contains(space) == false }
         guard removed else { throw DesktopTransitionError.check("macOS did not remove the Desktop") }
         let elapsed = Int((ProcessInfo.processInfo.systemUptime - started) * 1_000)
-        DesktopMenuBar.removed(space)
+        DesktopMenuBar.removed()
         Log.info("native workspaces: removed Desktop \(space) in \(elapsed) ms")
     }
 }

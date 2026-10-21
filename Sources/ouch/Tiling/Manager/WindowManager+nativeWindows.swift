@@ -128,7 +128,8 @@ extension WindowManager {
         }
         nativeCreationBusy = true
         defer { nativeCreationBusy = false; scheduleRefresh(after: 0) }
-        let created = try await DesktopLifecycle.create(on: screen, snapshot: snapshot)
+        let created = try await DesktopLifecycle.create(on: screen, snapshot: snapshot,
+                                                        before: nativeCatalog.successor(of: name, on: screen.uuid))
         if !config.workspacesPerDisplay { nativeCatalog.bind(name, to: created.space, on: screen.uuid) }
         updateNativeCatalog(Screen.all(), snapshot: created.snapshot)
         guard let entry = nativeCatalog.entry(name) else {

@@ -10,7 +10,10 @@ final class DesktopGuard {
         var menuBar: DesktopMenuBar.State?
 
         func restore() {
-            menuBar?.restore()
+            if let menuBar {
+                menuBar.restore()
+                DesktopMenuBarNative.alpha(menuBar.space, -1)
+            }
             let current = Spaces.current(display: display)
             let entries = [(source, sourceOptions), (destination, destinationOptions)]
             _ = DesktopBridge.setVisible(entries.map(\.0).filter { $0 != current }, false)

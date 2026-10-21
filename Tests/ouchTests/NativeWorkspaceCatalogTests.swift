@@ -26,6 +26,17 @@ import Testing
         #expect(WorkspaceKey.display("right/2") == "right")
     }
 
+    @Test func newDesktopGoesBeforeTheNextHigherWorkspace() {
+        var catalog = NativeWorkspaceCatalog()
+        catalog.synchronize([.init(id: "left", spaces: [11, 12, 13]), .init(id: "right", spaces: [21])])
+        catalog.bind("7", to: 13, on: "left")
+        #expect(catalog.successor(of: "5", on: "left") == 13)
+        #expect(catalog.successor(of: "8", on: "left") == nil)
+        #expect(catalog.successor(of: "8", on: "right") == nil)
+        catalog.perDisplay = true
+        #expect(catalog.successor(of: "5", on: "left") == nil)
+    }
+
     @Test func namesFollowDesktopIdentityWhenNativeOrderChanges() {
         var catalog = NativeWorkspaceCatalog()
         catalog.synchronize([.init(id: "screen", spaces: [11, 12, 13])])

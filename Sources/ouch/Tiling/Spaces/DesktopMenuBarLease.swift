@@ -23,7 +23,7 @@ import AppKit
         let batch = WindowServerUpdates.shared.begin()
         defer { batch?.finish() }
         state.restore()
-        _ = DesktopMenuBarNative.alpha(state.space, -1)
+        DesktopMenuBarNative.alpha(state.space, -1)
         panel?.close()
         panel = nil
     }
