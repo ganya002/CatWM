@@ -156,6 +156,11 @@ extension WindowManager {
             }
         }
         nativeDesktop.onMotion = { [weak self] request in self?.placeArrivals(on: request.display) }
+        nativeDesktop.isForward = { [weak self] source, target, desktopOrder in
+            guard let self, let from = self.nativeCatalog.entry(space: source)?.name,
+                  let into = self.nativeCatalog.entry(space: target)?.name else { return desktopOrder }
+            return self.workspaceSort(from, into)
+        }
         nativeDesktop.onIdle = { [weak self] in
             self?.dropFollowMoves()
             self?.scheduleRefresh(after: 0)

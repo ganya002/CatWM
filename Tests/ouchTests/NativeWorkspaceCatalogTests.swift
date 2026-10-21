@@ -16,9 +16,20 @@ import Testing
         catalog.synchronize([.init(id: "screen", spaces: [11, 12, 13])])
         catalog.synchronize([.init(id: "screen", spaces: [13, 11, 12])])
         #expect(catalog.entry("1")?.space == 11)
-        #expect(catalog.step(from: "3", by: 1) == "1")
-        #expect(catalog.step(from: "3", by: -1) == nil)
-        #expect(catalog.step(from: "2", by: 1) == nil)
+        #expect(catalog.step(from: "1", by: 1) == "2")
+        #expect(catalog.step(from: "2", by: 1) == "3")
+        #expect(catalog.step(from: "3", by: 1) == nil)
+        #expect(catalog.step(from: "1", by: -1) == nil)
+    }
+
+    @Test func stepFollowsWorkspaceNumbersNotDesktopOrder() {
+        var catalog = NativeWorkspaceCatalog()
+        catalog.saved = ["1": 11, "2": 14, "3": 12, "10": 13]
+        catalog.synchronize([.init(id: "screen", spaces: [11, 12, 13, 14])])
+        #expect(catalog.step(from: "1", by: 1) == "2")
+        #expect(catalog.step(from: "2", by: 1) == "3")
+        #expect(catalog.step(from: "3", by: 1) == "10")
+        #expect(catalog.step(from: "10", by: -2) == "2")
     }
 
     @Test func removedDesktopDoesNotRenameOtherDesktops() {
