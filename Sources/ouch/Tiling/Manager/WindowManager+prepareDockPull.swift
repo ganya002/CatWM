@@ -121,4 +121,11 @@ extension WindowManager {
         sink.makeKey()
         animator.focusSink(CGWindowID(sink.windowNumber))
     }
+
+    func parkFocus(on screen: Screen) {
+        parkFocus()
+        guard !screen.frame.contains(mouseLocation()) else { return }
+        CGWarpMouseCursorPosition(screen.center)
+        CursorRefresh.soon()
+    }
 }

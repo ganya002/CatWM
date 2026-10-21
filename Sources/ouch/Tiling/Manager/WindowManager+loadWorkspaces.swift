@@ -7,6 +7,7 @@ extension WindowManager {
         nativeCatalog.saved = (defaults.dictionary(forKey: "ws.nativeSpaces") ?? [:]).compactMapValues {
             $0 as? UInt64
         }
+        nativeCatalog.homes = defaults.dictionary(forKey: "ws.nativeDisplays") as? [String: String] ?? [:]
         for (key, value) in defaults.dictionary(forKey: "ws.windows") as? [String: String] ?? [:] {
             if let id = CGWindowID(key) { savedWorkspaceOf[id] = value }
         }
@@ -107,15 +108,13 @@ extension WindowManager {
         }
     }
 
-    private func focusShownWorkspace(_ workspace: String, preferred: Window?, on monitor: Screen) {
-        let candidates = [preferred?.id, lastFocused[workspace]].compactMap(\.self) + order + Array(visible)
-        if let id = candidates.first(where: { visible.contains($0) && workspaceOf[$0] == workspace }),
+    func focusShownWorkspace(_ workspace: String, preferred: Window?, on screen: Screen) {
+        let candidates = [preferred?.id, lastFocused[workspace]].compactMap(\.self) + order
+        if let id = candidates.first(where: { workspaceOf[$0] == workspace && windows[$0]?.minimized == false }),
            let window = windows[id] {
-            focus(window)
+            focus(window, warp: !screen.frame.contains(mouseLocation()))
         } else {
-            parkFocus()
-            if config.mouseFollowsFocus { CGWarpMouseCursorPosition(monitor.center) }
-            CursorRefresh.soon()
+            parkFocus(on: screen)
         }
     }
 
