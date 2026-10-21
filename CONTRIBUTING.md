@@ -25,7 +25,7 @@ Thank you for your help. This page tells you how to set up, check and submit a c
 ## Check your change
 
 - `Tools/check-style.sh` must pass. The pre-commit hook, `swift test`, `./build.sh` and the `lint` GitHub Actions workflow run it.
-- Run `swiftlint`. See [Lint](#lint).
+- Run `Tools/swiftlint.sh`. See [Lint](#lint).
 - Run `swift test`. If you have only the Command Line Tools, add `-Xswiftc -plugin-path -Xswiftc /Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing`.
 - Do not write code comments. The style check rejects them. A deliberate one-off ends with `// style-ok: <reason>` on that line.
 
@@ -43,14 +43,10 @@ swiftlint version
 Run it from the repo root:
 
 ```sh
-swiftlint
+Tools/swiftlint.sh
 ```
 
-If you have only the Command Line Tools (no Xcode), SwiftLint cannot find SourceKit. Give it the toolchain path:
-
-```sh
-TOOLCHAIN_DIR=/Library/Developer/CommandLineTools swiftlint
-```
+The pre-commit hook and `./build.sh` run it too. If you have only the Command Line Tools (no Xcode), the script gives SwiftLint the SourceKit path.
 
 The config is strict: all default rules are on, more opt-in rules are on, and each warning is an error. Comments are not permitted in this repo, so you cannot disable a rule in the code. Fix the code. The `lint` workflow runs SwiftLint 0.65.1 on each push and pull request.
 
