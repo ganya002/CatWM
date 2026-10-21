@@ -85,7 +85,7 @@ enum DesktopMenuBar {
 
     @MainActor static func ready(source: UInt64, target: UInt64, screen: Screen) async -> State? {
         var background: DesktopMenuBarNative.WindowInfo?
-        let ready = await poll(0.1, every: 1_000_000) {
+        let ready = await poll(0.1, every: 250_000) {
             let windows = DesktopMenuBarNative.windows(on: target)
             background = windows.first {
                 isUnderbelly($0) && $0.frame.minY == screen.frame.minY

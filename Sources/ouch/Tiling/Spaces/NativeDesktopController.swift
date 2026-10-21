@@ -194,7 +194,7 @@ final class NativeDesktopController {
             guarded.menuBar = background
             try await recovery.update(guarded)
             guard DesktopBridge.detachMenuWindows([background.window], from: background.space),
-                  await poll(0.1, every: 1_000_000, until: { Spaces.of(window: background.window).isEmpty }) else {
+                  await poll(0.1, every: 250_000, until: { Spaces.of(window: background.window).isEmpty }) else {
                 throw DesktopTransitionError.check("Cannot prepare the Desktop background")
             }
             if panel == nil { _ = DesktopMenuBarNative.alpha(background.space, 0) }

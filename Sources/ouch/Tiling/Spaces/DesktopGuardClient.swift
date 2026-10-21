@@ -7,6 +7,7 @@ import AppKit
     private var retainedReader: FileHandle?
     private var reply = DesktopGuardReply()
     private var launched = false, contextID = 0
+    private var waiting: [CheckedContinuation<Void, Never>] = []
 
     private static var warm: DesktopGuardClient?
 
@@ -80,14 +81,30 @@ import AppKit
     }
 
     private func receive(_ data: Data) {
+        defer { wake() }
         if data.isEmpty { output.fileHandleForReading.readabilityHandler = nil; return }
         reply.receive(String(data: data, encoding: .utf8) ?? "")
     }
 
     private func wait(_ condition: () -> Bool) async throws {
-        guard await poll(3, until: condition) else {
-            throw DesktopTransitionError.check("Desktop restore guard handshake timed out")
+        let deadline = ProcessInfo.processInfo.systemUptime + 3
+        while !condition() {
+            guard ProcessInfo.processInfo.systemUptime < deadline else {
+                throw DesktopTransitionError.check("Desktop restore guard handshake timed out")
+            }
+            await withCheckedContinuation { continuation in
+                waiting.append(continuation)
+                DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(5)) { [weak self] in
+                    MainActor.assumeIsolated { self?.wake() }
+                }
+            }
         }
+    }
+
+    private func wake() {
+        let resumed = waiting
+        waiting = []
+        for continuation in resumed { continuation.resume() }
     }
 }
 

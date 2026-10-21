@@ -11,6 +11,7 @@ enum DesktopLifecycle {
         guard let before = (supplied ?? Spaces.snapshot())?.list(display: screen.uuid) else {
             throw DesktopTransitionError.check("macOS could not read the Desktops")
         }
+        if let current = before.current { DesktopMenuBarCover.begin(on: screen, source: before.ids[current]) }
         let index = successor.flatMap { before.ids.firstIndex(of: $0) } ?? before.ids.count
         let started = ProcessInfo.processInfo.systemUptime
         guard let space = DesktopBridge.create() else {
