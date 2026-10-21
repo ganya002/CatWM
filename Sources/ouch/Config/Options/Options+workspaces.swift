@@ -15,11 +15,10 @@ extension Options {
             .setting(.windows, "windows.stay", "Stay on this workspace when closing a window", keywords: "close jump",
                      advanced: true, section: "Workspaces", enabled: { $0.virtualWorkspaces }),
         .bool("remove-empty-workspaces", \.removesEmptyWorkspaces)
-            .documented("bool", "true: an empty workspace goes away when you leave it, and Ouch keeps its Desktop "
-                + "as a spare so that the next new workspace opens instantly")
+            .documented("bool", "true: an empty workspace and its Desktop go away when you leave it")
             .setting(.windows, "windows.removeEmpty", "Remove empty workspaces when you leave them",
-                     help: "New workspaces then open instantly on the spare Desktop",
-                     keywords: "clean auto delete desktop spare instant", section: "Workspaces",
+                     help: "Removes the empty Desktop too",
+                     keywords: "clean auto delete desktop", section: "Workspaces",
                      enabled: { $0.virtualWorkspaces }),
         .bool("workspaces-per-display", \.workspacesPerDisplay)
             .documented("bool", "true: each display counts its own workspaces from 1, and `workspace 2` selects the "

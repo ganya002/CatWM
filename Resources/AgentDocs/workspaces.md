@@ -5,14 +5,14 @@ With `virtual-workspaces = true`, Ouch workspaces use normal macOS Desktops. Ouc
 - Each workspace has one native Desktop. Its name, layout, and last focused window persist between switches.
 - Existing normal Desktops become numbered workspaces. Names stay attached to Desktop IDs when macOS reorders them.
 - Each display has its own Desktops. By default, workspace numbers are unique across all displays. A workspace on another display opens on that display, and keyboard focus goes to that display.
-- With `workspaces-per-display = true`, workspace N is the Nth macOS Desktop on that display, counted from the left in Mission Control. `workspace 2` and `movetoworkspace 2` use the second Desktop of the current display. A number above the next free one does nothing, so Desktops never have gaps. When you leave an empty workspace that has no used workspace after it, Ouch removes its Desktop after the switch animation ends and has settled for a short time, so Mission Control does not open during the switch. An empty workspace before a used one stays, so workspace numbers never change. If you reorder Desktops in Mission Control, the workspace numbers follow. Overview numbers its columns in the same order, and a column number cannot be typed. Changing this option renumbers all workspaces and clears their names.
+- With `workspaces-per-display = true`, workspace N is the Nth macOS Desktop on that display, counted from the left in Mission Control. `workspace 2` and `movetoworkspace 2` use the second Desktop of the current display. A number above the next free one does nothing, so Desktops never have gaps. When you leave an empty workspace that has no used workspace after it, Ouch removes its Desktop after the switch animation ends, without opening Mission Control. An empty workspace before a used one stays, so workspace numbers never change. If you reorder Desktops in Mission Control, the workspace numbers follow. Overview numbers its columns in the same order, and a column number cannot be typed. Changing this option renumbers all workspaces and clears their names.
 - When a display has no window to focus, Ouch moves the cursor to that display. Then the next bind applies to that display.
 - A disconnected display keeps its workspace names. They come back when the display connects again.
 - Ctrl+1 through Ctrl+9 selects workspace 1 through 9. Ctrl+0 selects workspace 10. Ctrl+Left and Ctrl+Right select the adjacent workspace on the current display.
 - Ctrl+Shift with the same keys moves the focused window to that workspace and follows it.
 - Explicit binds take priority over these defaults. Ouch does not change macOS shortcut preferences.
-- Selecting a workspace that does not exist creates a Desktop through Mission Control. Mission Control opens briefly and then closes. Ouch starts the switch only after Mission Control is closed.
-- When you leave an empty workspace, it goes away. Ouch keeps its Desktop as a spare, and the next new workspace uses the spare at once, with no Mission Control. Set `remove-empty-workspaces = false` to keep empty workspaces.
+- Selecting a workspace that does not exist creates its Desktop on demand, without opening Mission Control. Ouch does not create or keep spare Desktops.
+- When you leave an empty workspace, Ouch removes the workspace and its Desktop. Set `remove-empty-workspaces = false` to keep empty workspaces.
 - With empty workspaces removed, `r+1` from the last workspace opens a new workspace if the current one has windows.
 - The menu bar shows the current workspace. Click it to select another workspace.
 - Native full screen windows remain on their own Desktops and appear separately in overview.
@@ -37,6 +37,8 @@ Overview includes normal Desktops, including empty ones, and windows on hidden D
 The menu bar's **Bring Window Here** action imports a window from another Desktop. It lists standard windows exposed by Accessibility or previously discovered by Ouch. Hidden apps and native full screen windows are excluded. A plain Dock click can also import an app's preferred window. Modified clicks, dragging, long presses, and minimized or native full screen windows keep normal macOS behavior.
 
 Window transfers use a private bridged operation, tested on macOS 27.0.1 with SIP enabled. If macOS refuses a transfer, Ouch reports the failure. No Dock injection or SIP change is required.
+
+Desktop creation and removal use the same bridge. Ouch checks the native Desktop list before it completes either action. A new Desktop is placed on the requested display before the workspace switch starts. If macOS does not provide these operations, Ouch reports the failure.
 
 ## Tiling behavior
 

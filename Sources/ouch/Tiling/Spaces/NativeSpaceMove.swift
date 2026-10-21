@@ -58,20 +58,29 @@ enum NativeSpaceMove {
 
     static func isDisplayIdle(_ display: String) -> Bool {
         typealias Initialize = @convention(c) (UnsafeMutableRawPointer, Selector, CFString) -> UnsafeMutableRawPointer?
-        typealias Perform = @convention(c) (UnsafeMutableRawPointer) -> Unmanaged<AnyObject>?
         typealias Read = @convention(c) (AnyObject, Selector) -> Bool
-        let selector = NSSelectorFromString("initWithDisplayIdentifier:")
         let value = NSSelectorFromString("boolValue")
-        guard let binding, let address = synchronousAddress,
-              let type = NSClassFromString("SLSBridgedManagedDisplayIsAnimatingOperation"),
-              let method = class_getInstanceMethod(type, selector),
-              let allocated = binding.allocate(type, allocate),
-              let operation = unsafeBitCast(method_getImplementation(method), to: Initialize.self)(
-                allocated, selector, display as CFString) else { return false }
-        defer { binding.release(operation, release) }
-        guard let result = unsafeBitCast(address, to: Perform.self)(operation)?.takeUnretainedValue(),
+        let result = performSynchronous("SLSBridgedManagedDisplayIsAnimatingOperation",
+                                        selector: "initWithDisplayIdentifier:") { object, selector, method in
+            unsafeBitCast(method, to: Initialize.self)(object, selector, display as CFString)
+        }
+        guard let result,
               let read = class_getInstanceMethod(object_getClass(result), value) else { return false }
         return !unsafeBitCast(method_getImplementation(read), to: Read.self)(result, value)
+    }
+
+    static func performSynchronous(
+        _ name: String, selector nameOfSelector: String,
+        initialize: (UnsafeMutableRawPointer, Selector, IMP) -> UnsafeMutableRawPointer?
+    ) -> AnyObject? {
+        typealias Perform = @convention(c) (UnsafeMutableRawPointer) -> Unmanaged<AnyObject>?
+        let selector = NSSelectorFromString(nameOfSelector)
+        guard let binding, let address = synchronousAddress, let type = NSClassFromString(name),
+              let method = class_getInstanceMethod(type, selector),
+              let allocated = binding.allocate(type, allocate),
+              let operation = initialize(allocated, selector, method_getImplementation(method)) else { return nil }
+        defer { binding.release(operation, release) }
+        return unsafeBitCast(address, to: Perform.self)(operation)?.takeUnretainedValue()
     }
 
     static func perform(

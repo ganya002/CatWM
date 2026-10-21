@@ -42,16 +42,27 @@ enum Spaces {
         let current: Int?
     }
 
-    static func list(display uuid: String) -> DisplaySpaces? {
+    struct Snapshot {
+        let displays: [[String: Any]]
+
+        func list(display uuid: String) -> DisplaySpaces? {
+            let entry = displays.first { ($0["Display Identifier"] as? String) == uuid }
+                ?? (displays.count == 1 ? displays[0] : nil)
+            guard let entry, let spaces = entry["Spaces"] as? [[String: Any]] else { return nil }
+            let ids = spaces.map { ($0["ManagedSpaceID"] as? UInt64) ?? 0 }
+            let desktops = spaces.indices.filter { (spaces[$0]["type"] as? Int ?? 0) == 0 }
+            let current = (entry["Current Space"] as? [String: Any])?["ManagedSpaceID"] as? UInt64
+            return DisplaySpaces(ids: ids, desktops: desktops, current: current.flatMap { ids.firstIndex(of: $0) })
+        }
+    }
+
+    static func snapshot() -> Snapshot? {
         guard let conn, let copySpaces,
               let arr = copySpaces(conn())?.takeRetainedValue() as? [[String: Any]] else { return nil }
-        let entry = arr.first { ($0["Display Identifier"] as? String) == uuid } ?? (arr.count == 1 ? arr[0] : nil)
-        guard let entry, let spaces = entry["Spaces"] as? [[String: Any]] else { return nil }
-        let ids = spaces.map { ($0["ManagedSpaceID"] as? UInt64) ?? 0 }
-        let desktops = spaces.indices.filter { (spaces[$0]["type"] as? Int ?? 0) == 0 }
-        let cur = (entry["Current Space"] as? [String: Any])?["ManagedSpaceID"] as? UInt64
-        return DisplaySpaces(ids: ids, desktops: desktops, current: cur.flatMap { ids.firstIndex(of: $0) })
+        return Snapshot(displays: arr)
     }
+
+    static func list(display uuid: String) -> DisplaySpaces? { snapshot()?.list(display: uuid) }
 
     static func isFullscreen(display uuid: String) -> Bool {
         guard let spaces = list(display: uuid), let cur = spaces.current else { return false }

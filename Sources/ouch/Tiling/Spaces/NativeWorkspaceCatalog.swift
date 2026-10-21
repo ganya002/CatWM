@@ -12,7 +12,6 @@ struct NativeWorkspaceCatalog {
         var current: UInt64?
     }
     private(set) var entries: [Entry] = []
-    private(set) var spares: [UInt64: String] = [:]
     var saved: [String: UInt64] = [:]
     var homes: [String: String] = [:]
     var perDisplay = false
@@ -21,19 +20,13 @@ struct NativeWorkspaceCatalog {
         if perDisplay { return follow(displays) }
         let live = Set(displays.flatMap(\.spaces).filter { $0 != 0 })
         let connected = Set(displays.map(\.id))
-        let current = Set(displays.compactMap(\.current))
-        spares = displays.reduce(into: [:]) { result, display in
-            for space in display.spaces where spares[space] != nil && !current.contains(space) {
-                result[space] = display.id
-            }
-        }
         saved = saved.filter { live.contains($0.value) || homes[$0.key].map { !connected.contains($0) } == true }
         var assigned = Set<UInt64>()
         saved = saved.sorted { $0.key < $1.key }.reduce(into: [:]) { result, pair in
             if assigned.insert(pair.value).inserted { result[pair.key] = pair.value }
         }
         for display in displays {
-            for space in display.spaces where space != 0 && spares[space] == nil && !saved.values.contains(space) {
+            for space in display.spaces where space != 0 && !saved.values.contains(space) {
                 saved[freeName(on: display.id, in: saved)] = space
             }
         }
@@ -47,7 +40,7 @@ struct NativeWorkspaceCatalog {
     }
 
     private mutating func follow(_ displays: [Display]) {
-        saved = [:]; homes = [:]; spares = [:]
+        saved = [:]; homes = [:]
         entries = displays.flatMap { display in
             display.spaces.filter { $0 != 0 }.enumerated().map { index, space in
                 Entry(name: WorkspaceKey.make(String(index + 1), on: display.id, perDisplay: true),
@@ -62,19 +55,6 @@ struct NativeWorkspaceCatalog {
         homes[name] = display
         entries.removeAll { $0.space == space || $0.name == name }
         entries.append(Entry(name: name, display: display, space: space))
-        spares[space] = nil
-    }
-
-    mutating func release(_ name: String) {
-        guard let entry = entry(name) else { return }
-        saved[name] = nil
-        homes[name] = nil
-        entries.removeAll { $0.name == name }
-        spares[entry.space] = entry.display
-    }
-
-    func spare(on display: String) -> UInt64? {
-        spares.filter { $0.value == display }.keys.min()
     }
 
     func freeNumber(on display: String) -> String {

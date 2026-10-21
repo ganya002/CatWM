@@ -3,21 +3,10 @@ import AppKit
 enum DesktopUI {
     static let owners = ["com.apple.WindowManager", "com.apple.dock"]
 
-    static func missionControlDisplays() -> [AXUIElement] {
-        owners.flatMap { bundle in
-            guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: bundle).first else {
-                return [AXUIElement]()
-            }
-            let root = AXUIElementCreateApplication(app.processIdentifier)
-            AXUIElementSetMessagingTimeout(root, 0.1)
-            return root.elements(kAXChildrenAttribute).flatMap { child -> [AXUIElement] in
-                if child.string("AXIdentifier") == "mc.display" { return [child] }
-                if child.string("AXIdentifier") == "mc" {
-                    return child.elements(kAXChildrenAttribute).filter { $0.string("AXIdentifier") == "mc.display" }
-                }
-                return []
-            }
-        }
+    static func prepare() {
+        DesktopMenuBar.recover()
+        DesktopMenuBarCover.prepare()
+        for screen in Screen.all() { _ = isSettled(screen) }
     }
 
     static func isBusy(on screen: Screen) -> Bool {

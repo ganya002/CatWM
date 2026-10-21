@@ -42,7 +42,7 @@ The Settings window writes options in this order. Aliases (after `/`) are read b
 | `blur-radius` | 1–100 (points) | `20` | rounded to whole points. The Settings slider shows 2–60 |
 | `virtual-workspaces` | bool | `true` | true: Ouch controls native Desktops. false: macOS controls switching. See [workspaces.md](workspaces.md) |
 | `stay-on-workspace-after-close` | bool | `true` | |
-| `remove-empty-workspaces` | bool | `true` | true: an empty workspace goes away when you leave it, and Ouch keeps its Desktop as a spare so that the next new workspace opens instantly |
+| `remove-empty-workspaces` | bool | `true` | true: an empty workspace and its Desktop go away when you leave it |
 | `workspaces-per-display` | bool | `false` | true: each display counts its own workspaces from 1, and `workspace 2` selects the second workspace on the current display. false: workspace numbers are shared by all displays |
 | `sort-strategy` | `task` `app` `focus` `none` | `task` | the grouping Overview opens with |
 | `sort-nudge` | 0–100 (whole number) | `5` | windows on one workspace before Ouch offers Overview; `0` turns the offer off |

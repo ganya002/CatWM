@@ -62,7 +62,8 @@ extension SortPlan {
             lanes[i].workspace = key(String(i + 1))
         }
         guard renamed.contains(where: { $0.key != $0.value }) else { return }
-        geometry = Dictionary(geometry.map { (renamed[$0.key] ?? $0.key, $0.value) }, uniquingKeysWith: { first, _ in first })
+        geometry = Dictionary(geometry.map { (renamed[$0.key] ?? $0.key, $0.value) },
+                              uniquingKeysWith: { first, _ in first })
         origin = origin.mapValues { (renamed[$0.workspace] ?? $0.workspace, $0.at) }
         active = active.map { renamed[$0] ?? $0 }
     }
