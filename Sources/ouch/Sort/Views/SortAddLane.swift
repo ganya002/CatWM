@@ -40,7 +40,7 @@ struct SortAddLane: View {
             .buttonStyle(.plain)
             .disabled(full)
             .onHover { hover.isOn = $0 }
-            .accessibilityLabel("Add workspace \(next ?? "")")
+            .accessibilityLabel("Add workspace \(next.map { WorkspaceKey.number($0) } ?? "")")
             SortLayoutPill(layout: model.nextLayout,
                            next: { model.cycleNextLayout() },
                            previous: { model.cycleNextLayout(by: -1) })
@@ -63,7 +63,7 @@ struct SortAddLane: View {
     }
 
     private func title(_ next: String?) -> String {
-        next.map { "Workspace \($0)" }
+        next.map { "Workspace \(WorkspaceKey.number($0))" }
             ?? (plan.lanes.count >= SortPlan.maxLanes ? "All \(SortPlan.maxLanes) in use" : "None free")
     }
 }
