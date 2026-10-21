@@ -4,7 +4,7 @@ enum WorkspaceKey {
     }
 
     static func display(_ key: String) -> String? {
-        key.contains("/") ? String(key[..<key.lastIndex(of: "/")!]) : nil
+        key.lastIndex(of: "/").map { String(key[..<$0]) }
     }
 
     static func number(_ key: String) -> String {

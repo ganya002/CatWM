@@ -101,7 +101,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if changed.contains(.accessibility) {
             Log.info("Accessibility \(trusted ? "granted" : "revoked")")
             updateIcon()
-            if trusted { PermissionGuide.shared.granted() } else { Permission.accessibility.reset() }
+            if trusted { PermissionGuide.shared.granted(.accessibility) } else { Permission.accessibility.reset() }
         }
     }
 

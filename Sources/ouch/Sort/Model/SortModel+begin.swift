@@ -114,7 +114,8 @@ extension SortModel {
         }
         let workspace = snapshot.key(String(number))
         if snapshot.perDisplay {
-            notice = SortNotice(text: "Workspaces follow the order of your Desktops. Drag a column to reorder.", undo: nil)
+            notice = SortNotice(text: "Workspaces follow the order of your Desktops. Drag a column to reorder.",
+                                undo: nil)
         } else if snapshot.taken.contains(workspace) || reserved().contains(workspace) {
             notice = SortNotice(text: "Workspace \(number) is on another display.", undo: nil)
         } else if let held = snapshot.lanes.first(where: { $0.workspace == workspace }),
