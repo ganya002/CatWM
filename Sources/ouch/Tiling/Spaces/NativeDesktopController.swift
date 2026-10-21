@@ -133,6 +133,7 @@ final class NativeDesktopController {
 
     @MainActor private func compose(_ state: DesktopGuard.Context, screen: Screen, forward desktopOrder: Bool,
                                     target: Request, recovery: DesktopGuardClient) async throws {
+        let fresh = DesktopMenuBar.isFresh(state.destination)
         let menu = try await prepareMenuBar(state, on: screen, recovery: recovery)
         defer { menu?.restore() }
         guard wants(target) else { return }
@@ -145,6 +146,7 @@ final class NativeDesktopController {
         try check(DesktopBridge.setVisible([state.destination], true), "Cannot show the destination Desktop")
         onMotion(target)
         let motion = DesktopMotion(screen: screen.nsScreen)
+        if fresh { try await motion.frames(2) }
         if gesture {
             try await motion.follow(until: { self.gestureEnded }, update: {
                 try self.check(recovery.process.isRunning, "Desktop recovery process stopped")
@@ -173,6 +175,7 @@ final class NativeDesktopController {
                       "Cannot activate the destination Desktop")
             let arrived = await poll(1) { Spaces.current(display: state.display) == state.destination }
             try check(arrived, "macOS did not activate the destination Desktop")
+            DesktopMenuBar.shown(state.destination)
             try await DesktopMenuBar.settle(menu?.state, on: screen)
             await menu?.finish()
         }

@@ -80,7 +80,13 @@ enum DesktopMenuBar {
 
     @MainActor static func needsPreparation(source: UInt64, target: UInt64) -> Bool {
         DesktopMenuBarNative.theme(source) == 1 && DesktopMenuBarNative.theme(target) == 0
-            && uuid(of: target).map(fresh.contains) == true
+            && isFresh(target)
+    }
+
+    @MainActor static func isFresh(_ space: UInt64) -> Bool { uuid(of: space).map(fresh.contains) == true }
+
+    @MainActor static func shown(_ space: UInt64) {
+        if let uuid = uuid(of: space) { fresh.remove(uuid) }
     }
 
     @MainActor static func ready(source: UInt64, target: UInt64, screen: Screen) async -> State? {
