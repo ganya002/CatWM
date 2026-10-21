@@ -35,6 +35,14 @@ final class WindowManager {
     var nativeDroppedWorkspaces: Set<String> = []
     var nativeMoveTargets: [CGWindowID: String] = [:]
     var nativeMembership: [CGWindowID: UInt64] = [:]
+    struct FollowMove {
+        let window: Window
+        let workspace: String
+        let space: UInt64
+        let from: String?
+    }
+    var followMoves: [CGWindowID: FollowMove] = [:]
+    var arrivals: [CGWindowID: CGRect] = [:]
     var model = WorkspaceModel()
     var workspaceOf: [CGWindowID: String] { model.workspaceOf }
     var order: [CGWindowID] { get { model.order } set { model.order = newValue } _modify { yield &model.order } }
