@@ -9,13 +9,10 @@ extension ShortcutMap {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
                 header(all)
-                VStack(alignment: .leading, spacing: 14) {
-                    keyboard(layer).zIndex(1)
-                    legend(all)
-                }
-                .frame(maxWidth: 940)
-                .frame(maxWidth: .infinity)
-                .zIndex(1)
+                keyboard(layer)
+                    .frame(maxWidth: 940)
+                    .frame(maxWidth: .infinity)
+                    .zIndex(1)
                 list(layer)
             }
             .padding(.horizontal, Theme.Space.page).padding(.top, 22).padding(.bottom, 40)
@@ -43,10 +40,15 @@ extension ShortcutMap {
                 OButton("Done", variant: .primary, shortcut: ["⎋"]) { close() }
                     .keyboardShortcut(model.selected == nil ? .cancelAction : nil)
             }
-            HStack(spacing: 14) {
-                modifierToggles
+            HStack(spacing: Theme.Space.medium) {
+                layers(all)
                 Spacer(minLength: 8)
-                combos(all)
+                ViewThatFits(in: .horizontal) {
+                    Text("Click or hold ⌃ ⌥ ⇧ ⌘ to change the layer").fixedSize()
+                    Text("Click a key to edit").fixedSize()
+                    Color.clear.frame(width: 0)
+                }
+                .textStyle(.caption).foregroundStyle(Theme.inkMuted)
             }
             .padding(.top, 14)
         }
@@ -67,16 +69,13 @@ extension ShortcutMap {
         withAnimation(Motion.snap) { settings.showMap = false }
     }
 
-    func combos(_ all: [ConfigDocument.KeyAction]) -> some View {
+    func layers(_ all: [ConfigDocument.KeyAction]) -> some View {
         let counts = Dictionary(grouping: all, by: { $0.flags.rawValue }).mapValues(\.count)
-        let list = counts.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
+        var list = counts.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }.prefix(6)
             .map { (flags: NSEvent.ModifierFlags(rawValue: $0.key), count: $0.value) }
+        if !list.contains(where: { $0.flags == model.flags }) { list.append((model.flags, 0)) }
         return HStack(spacing: 4) {
-            if !list.isEmpty {
-                Text("In use").textStyle(.caption).foregroundStyle(Theme.inkMuted)
-                    .padding(.trailing, Theme.Space.extraSmall)
-            }
-            ForEach(list.prefix(5), id: \.flags.rawValue) { item in
+            ForEach(list, id: \.flags.rawValue) { item in
                 let active = item.flags == model.flags
                 let name = item.flags.isEmpty ? "None" : ConfigDocument.modifierCaps(item.flags).joined()
                 Button {
