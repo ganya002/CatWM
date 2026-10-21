@@ -53,6 +53,7 @@ enum DesktopMenuBarCover {
         guard DesktopMenuBarNative.theme(source) == 1, let image = image(on: screen) else { return }
         let next = Pending(display: screen.id, source: source, image: image, panel: panel(on: screen))
         next.move(to: target)
+        next.panel.orderFrontRegardless()
         pending = next
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
             MainActor.assumeIsolated { if pending === next { discard() } }
@@ -114,6 +115,7 @@ enum DesktopMenuBarCover {
                            width: screen.frame.width, height: height)
         let panel = OuchPanel(role: .fullscreenFX, frame: frame)
         panel.collectionBehavior = [.fullScreenAuxiliary, .ignoresCycle]
+        panel.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.statusWindow)) + 1)
         let view = NSImageView(frame: CGRect(origin: .zero, size: frame.size))
         view.imageScaling = .scaleAxesIndependently
         panel.contentView = view
