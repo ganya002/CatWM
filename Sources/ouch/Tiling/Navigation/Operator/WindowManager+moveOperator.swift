@@ -20,5 +20,8 @@ extension WindowManager {
         }
         refresh()
         focus(window)
+        if case let .window(other) = target, other.pid != window.pid {
+            focusEcho = FocusEcho(id: window.id, other: other.pid)
+        }
     }
 }

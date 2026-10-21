@@ -62,7 +62,12 @@ extension WindowManager {
         }
         notificationObservers.append(center.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
-        ) { [weak self] _ in
+        ) { [weak self] note in
+            let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
+            if let self, let echo = focusEcho, echo.matches(app?.processIdentifier), let window = windows[echo.id] {
+                focus(window, warp: false)
+                return
+            }
             if self?.pendingFocus == nil { self?.animator.cancelFocus() }
             self?.requestFocusObservation()
         })
