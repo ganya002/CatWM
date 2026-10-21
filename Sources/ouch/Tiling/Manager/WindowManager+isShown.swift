@@ -88,8 +88,7 @@ extension WindowManager {
             if let name = nativeCatalog.step(from: cur, by: delta) { return name }
             let occupied = workspaceOf.contains { $0.value == cur && windows[$0.key] != nil }
             let display = nativeCatalog.entry(cur)?.display ?? currentScreen()?.uuid ?? ""
-            return delta > 0 && occupied && config.removesEmptyWorkspaces
-                ? nativeCatalog.freeNumber(on: display) : nil
+            return delta > 0 && occupied && config.removesEmptyWorkspaces ? nativeCatalog.freeNumber(on: display) : nil
         }
         if lower.hasPrefix("e+") || lower.hasPrefix("e-"),
            let delta = Int(lower.dropFirst(1).replacingOccurrences(of: "+", with: "")) {

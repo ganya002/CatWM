@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct TemplatesPane: View {
+    @ObservedObject var doc: ConfigDocument
     @ObservedObject var settingsUI: SettingsUI
     @ObservedObject private var library = TemplateLibrary.shared
 
@@ -27,6 +28,10 @@ struct TemplatesPane: View {
                 }
             }
             .setting(Self.searchSaved.id, settingsUI)
+
+            OGroup("Apps") {
+                OptionRows(pane: .templates, section: "Apps", doc: doc, settingsUI: settingsUI)
+            }
         }
         .sheet(item: $library.preview) { template in
             TemplatePreviewSheet(template: template) { library.preview = nil }

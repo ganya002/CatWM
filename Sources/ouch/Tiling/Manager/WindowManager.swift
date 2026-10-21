@@ -16,6 +16,7 @@ final class WindowManager {
         }
     }
     var templateHiddenWindows: [CGWindowID: Date] = [:]
+    var pendingLaunches: [PendingLaunch] = []
     var onChange: (() -> Void)?
     var onDispatch: ((_ dispatcher: String, _ arg: String, _ inMode: Bool) -> Void)?
     var onModeChange: ((String) -> Void)?
@@ -89,6 +90,7 @@ final class WindowManager {
     var focusCommands: [FocusCommand] = []
     var waitingRefocus: (workspace: String, pid: pid_t)?
     var refocusAfterClose: String?
+var focusEcho: FocusEcho?
     var lastClose = Date.distantPast
     var floatFrames: [CGWindowID: CGRect] = [:]
     var floatZoom: [CGWindowID: CGRect] = [:]

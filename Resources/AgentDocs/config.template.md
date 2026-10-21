@@ -55,6 +55,19 @@ When editing by hand while the app runs, make the edit then run `ouch reload`. I
 
 Settings → **Templates** lists saved workspaces with large screenshot previews. Click a screenshot to enlarge it. Open, rename, update, or delete a template here. A template stores app identities, document addresses when available, window frames, display sizes, layouts, main-pane ratios and counts, window order, tiling status, and floating, minimized, zoomed, or native full screen states. Templates are stored in `~/.config/ouch/templates.json`, separately from configs. Screenshots are stored in that file. Screen recording access is required to capture them. Saving still works without that access. Update an older template to add a screenshot.
 
+With `template-app-scripting = true` (Settings → Templates → **Save tabs and folders**), a template also saves:
+
+- the tabs of Safari and Chromium browser windows (Chrome, Brave, Edge, Vivaldi, Helium), but not private or incognito windows
+- the folders of Terminal and iTerm2 tabs
+- the folders of each Finder window and its tabs
+- the project of VS Code, Cursor, VSCodium, Windsurf, Zed and Xcode windows
+
+macOS asks once for each scripted app to let Ouch control it. The code editors need no permission: Ouch reads their recent-project files. A background tab of a Terminal or Finder window is saved as a tab of its window, not as a separate window.
+
+Opening the template reopens the browser tabs, the iTerm2 tabs and all Terminal tabs (through a temporary Terminal window group). It opens each Finder window at its selected folder, and each editor at its project, so that the editor brings back its own files and panes. If an app does not allow control, Ouch opens the window as before.
+
+Each saved window in `templates.json` can have an optional `launch` object that you edit by hand: `"url"` opens a URL or deep link with the app (for example `vscode://file/…` or `slack://channel?…`), `"arguments"` passes launch arguments when Ouch starts the app, and `"command"` runs a shell command with `sh -c` instead of opening a new window. `command` is used first, then saved tabs, then `url`, then the saved document.
+
 In window mode, tap the mode modifier to open quick actions at the pointer. Press **S** to show a name field beside Save. Type the name and press Return to save without opening Settings. The screenshot can finish after the template saves. Escape cancels naming and returns to the action list. Press **1–9** to open a saved template. Hover a template to replace its number with an X. Click the X to delete it without closing the menu. Arrow keys and Return select an action. These actions also work over empty desktop space.
 
 Quick actions also retain the focus controls: **D** toggles Dim other windows, and **B** toggles Blur other windows.

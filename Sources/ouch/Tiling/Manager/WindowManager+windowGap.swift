@@ -124,15 +124,4 @@ extension WindowManager {
         (!window.isFloating && tilingEnabled ? targets[window.id] : nil)
             ?? animator.destination(window.id) ?? window.cachedFrame
     }
-
-    func navItem(_ window: Window, in screens: [Screen]) -> FocusNavigation.Item {
-        .init(id: window.id, frame: navFrame(window), screen: screen(of: window, in: screens)?.uuid)
-    }
-
-    func neighbor(of window: Window, _ dir: Direction, among candidates: [Window]) -> Window? {
-        let screens = Screen.all()
-        let id = FocusNavigation.neighbor(of: navItem(window, in: screens), dir,
-                                          among: candidates.map { navItem($0, in: screens) }, stamps: focusStamps)
-        return id.flatMap { windows[$0] }
-    }
 }

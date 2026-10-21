@@ -10,17 +10,8 @@ extension WindowManager {
     }
 
     func focusMonitor(_ spec: String) {
-        let screens = Screen.all()
-        guard let src = currentScreen(), let dst = screen(from: src, spec: spec, in: screens) else { return }
-        let topmost = CGWindowInfo.onScreen().first { info in
-            guard visible.contains(info.id), let window = windows[info.id] else { return false }
-            return screen(of: window, in: screens)?.uuid == dst.uuid
-        }
-        if let id = topmost?.id ?? tiled(on: dst).first, let window = windows[id] {
-            focus(window)
-        } else {
-            parkFocus(on: dst)
-        }
+        guard let src = currentScreen(), let dst = screen(from: src, spec: spec, in: Screen.all()) else { return }
+        focus(on: dst)
     }
 
     func moveToMonitor(_ spec: String) {

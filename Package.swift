@@ -11,24 +11,34 @@ let package = Package(
     platforms: [.macOS(.v14)],
     dependencies: [
         .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.8.1"),
-        .package(url: "https://github.com/noxaur/mackeys-sdk.git", from: "0.2.0")
+        .package(url: "https://github.com/noxaur/mackeys-sdk.git", from: "0.2.0"),
+        .package(url: "https://github.com/noxaur/PermissionFlow", branch: "fix/panel-height-wrapping")
     ],
     targets: [
         .plugin(name: "CatalogPlugin", capability: .buildTool()),
+        .target(name: "WindowSession", path: "Sources/WindowSession"),
         .executableTarget(
             name: "ouch",
             dependencies: [
+                "WindowSession",
                 .product(name: "Sparkle", package: "Sparkle"),
                 .product(name: "MacKeysCore", package: "mackeys-sdk"),
-                .product(name: "MacKeysUI", package: "mackeys-sdk")
+                .product(name: "MacKeysUI", package: "mackeys-sdk"),
+                .product(name: "PermissionFlow", package: "PermissionFlow")
             ],
             path: "Sources/ouch",
             linkerSettings: [.unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"])],
             plugins: [.plugin(name: "CatalogPlugin")]
         ),
         .testTarget(
+            name: "WindowSessionTests",
+            dependencies: ["WindowSession"],
+            path: "Tests/WindowSessionTests",
+            swiftSettings: testSettings
+        ),
+        .testTarget(
             name: "ouchTests",
-            dependencies: ["ouch"],
+            dependencies: ["ouch", "WindowSession"],
             path: "Tests/ouchTests",
             swiftSettings: testSettings
         )

@@ -23,7 +23,7 @@ Like `hyprctl`. The command is sent to the running instance through a distribute
 | `poststyle 0\|1\|2` | diagnostics: how synthetic shortcuts are posted |
 | `grabtest` | diagnostics |
 
-`dispatch exec …` is **refused** from the CLI (any process could post that notification). `exec` works only from keybinds.
+`dispatch exec …` and `dispatch launch …` are **refused** from the CLI (any process could post that notification). `exec` and `launch` work only from keybinds.
 
 `docs` is the exception to "sent to the running app": it reads the bundle and prints directly.
 

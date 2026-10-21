@@ -126,6 +126,18 @@ enum Options {
             .setting(.windows, "windows.cursorActions", "Quick actions at the pointer",
                      help: "In window mode, tap the mode's modifier to save or open a workspace template",
                      keywords: "cursor mouse menu window mode tap modifier template save", section: "Pointer menu"),
+        .bool("template-app-scripting", \.templateAppScripting)
+            .documented("bool", "workspace templates also save browser tabs, Terminal and iTerm2 tab folders, "
+                            + "Finder folders and code editor projects; macOS asks once for each scripted app")
+            .section("templates")
+            .note("Templates also save browser tabs, terminal folders, Finder folders and editor projects.\n"
+                + "macOS asks you once for each app to let Ouch control it.")
+            .setting(.templates, "templates.appScripting", "Save tabs and folders",
+                     help: "Browser tabs, terminal tabs, Finder folders and editor projects. "
+                        + "macOS asks once for each app",
+                     keywords: "automation applescript safari chrome browser url terminal iterm finder folder tabs "
+                        + "vscode cursor zed xcode project",
+                     section: "Apps"),
 
         .bool("switcher-instant-jump", \.switcherInstantJump)
             .documented("bool", "in the window switcher, a search with one prefix match opens that window by itself")

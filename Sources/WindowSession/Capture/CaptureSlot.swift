@@ -1,14 +1,14 @@
 import Foundation
 
-enum TemplateSlotOutcome<Value: Sendable>: Sendable {
+public enum SlotOutcome<Value: Sendable>: Sendable {
     case finished(Value)
     case timedOut
     case cancelled
     case busy
 }
 
-extension TemplateSlotOutcome: Equatable where Value: Equatable {
-    static func == (lhs: Self, rhs: Self) -> Bool {
+extension SlotOutcome: Equatable where Value: Equatable {
+    public static func == (lhs: Self, rhs: Self) -> Bool {
         switch (lhs, rhs) {
         case (.timedOut, .timedOut), (.cancelled, .cancelled), (.busy, .busy):
             return true
@@ -20,23 +20,27 @@ extension TemplateSlotOutcome: Equatable where Value: Equatable {
     }
 }
 
-final class TemplateStopFlag: @unchecked Sendable {
+public final class StopFlag: @unchecked Sendable {
     private let lock = NSLock()
     private var stopped = false
 
-    func stop() { lock.withLock { stopped = true } }
-    var isStopped: Bool { lock.withLock { stopped } }
+    public init() {}
+
+    public func stop() { lock.withLock { stopped = true } }
+    public var isStopped: Bool { lock.withLock { stopped } }
 }
 
-final class TemplateCaptureSlot<Value: Sendable>: @unchecked Sendable {
+public final class CaptureSlot<Value: Sendable>: @unchecked Sendable {
     private let lock = NSLock()
     private var active: Task<Value, Never>?
     private var activeID = 0
 
-    var isIdle: Bool { lock.withLock { active == nil } }
+    public init() {}
 
-    func run(within timeout: Duration,
-             operation: @escaping @Sendable () async -> Value) async -> TemplateSlotOutcome<Value> {
+    public var isIdle: Bool { lock.withLock { active == nil } }
+
+    public func run(within timeout: Duration,
+                    operation: @escaping @Sendable () async -> Value) async -> SlotOutcome<Value> {
         guard let task = claim(operation) else { return .busy }
         return await race(task, timeout: timeout)
     }
@@ -66,8 +70,8 @@ final class TemplateCaptureSlot<Value: Sendable>: @unchecked Sendable {
         active = nil
     }
 
-    private func race(_ task: Task<Value, Never>, timeout: Duration) async -> TemplateSlotOutcome<Value> {
-        let gate = OnceGate<TemplateSlotOutcome<Value>>()
+    private func race(_ task: Task<Value, Never>, timeout: Duration) async -> SlotOutcome<Value> {
+        let gate = OnceGate<SlotOutcome<Value>>()
         return await withTaskCancellationHandler {
             await withCheckedContinuation { continuation in
                 gate.install(continuation)

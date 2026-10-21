@@ -31,7 +31,7 @@ struct PaneHost: View {
                     case .general: GeneralPane(doc: doc, settingsUI: settingsUI)
                     case .layout: LayoutPane(doc: doc, settingsUI: settingsUI)
                     case .windows: WindowsPane(doc: doc, settingsUI: settingsUI)
-                    case .templates: TemplatesPane(settingsUI: settingsUI)
+                    case .templates: TemplatesPane(doc: doc, settingsUI: settingsUI)
                     case .motion: MotionPane(doc: doc, settingsUI: settingsUI)
                     case .shortcuts: ShortcutsPane(doc: doc, settingsUI: settingsUI)
                     }

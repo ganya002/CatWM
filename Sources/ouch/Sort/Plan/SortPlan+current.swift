@@ -6,8 +6,8 @@ extension SortPlan {
             SortLane(workspace: $0.name, name: $0.label, layout: $0.layout, ids: $0.ids)
         }
         if lanes.isEmpty {
-            lanes = [SortLane(workspace: WorkspaceKey.make("1", on: display.id, perDisplay: display.perDisplay),
-                              name: "", layout: .tall, ids: [])]
+            let first = WorkspaceKey.make("1", on: display.id, perDisplay: display.perDisplay)
+            lanes = [SortLane(workspace: first, name: "", layout: .tall, ids: [])]
         }
         let items = Dictionary(display.items.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         var plan = SortPlan(display: display.id, items: items,

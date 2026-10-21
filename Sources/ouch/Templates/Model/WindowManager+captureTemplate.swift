@@ -1,4 +1,5 @@
 import AppKit
+import WindowSession
 
 extension WindowManager {
     enum TemplateError: LocalizedError, Equatable {
@@ -17,14 +18,14 @@ extension WindowManager {
     func captureTemplate() async throws -> WorkspaceTemplate {
         try Task.checkCancellation()
         let request = try makeRequest()
-        let stop = TemplateStopFlag()
+        let stop = StopFlag()
         let outcome = await withTaskCancellationHandler {
             await TemplateWindowCapture.slot.run(within: TemplateWindowCapture.backstop) {
                 let apps = request.apps
                 let pid = request.frontmostPID
                 let budget = TemplateWindowCapture.budget
                 return await Task.detached(priority: .userInitiated) {
-                    TemplateAXCapture.collect(apps: apps, frontmostPID: pid, budget: budget, stop: { stop.isStopped })
+                    WindowCapture.collect(apps: apps, frontmostPID: pid, budget: budget, stop: { stop.isStopped })
                 }.value
             }
         } onCancel: {
@@ -40,8 +41,33 @@ extension WindowManager {
             throw TemplateError.busy
         case .finished(let batch):
             guard batch.complete else { throw TemplateError.incomplete }
-            return try finish(batch, facts: request.facts)
+            let template = try finish(batch, facts: request.facts)
+            guard config.templateAppScripting else { return template }
+            return try await withAppStates(template)
         }
+    }
+
+    @MainActor
+    private func withAppStates(_ template: WorkspaceTemplate) async throws -> WorkspaceTemplate {
+        let windows = template.windows.filter { !$0.minimized && !$0.fullscreen }.map {
+            AppStateCapture.Window(id: $0.windowID, bundleID: $0.bundleID, title: $0.title, frame: $0.frame,
+                                   document: $0.document)
+        }
+        let onScreen = Set(TemplateRestorer.windowList(.optionOnScreenOnly).map(\.id))
+        let tabs = WindowTabs.background(windows.filter { AppAdapters.adapter(for: $0.bundleID) != nil },
+                                         onScreen: onScreen)
+        let started = Date()
+        let states = await AppStateCapture.capture(windows.filter { tabs[$0.id] == nil }, consentWait: 30,
+                                                   scriptTimeout: 3)
+        try Task.checkCancellation()
+        var copy = template
+        copy.windows.removeAll { window in tabs[window.windowID].map { states[$0] != nil } ?? false }
+        for index in copy.windows.indices {
+            copy.windows[index].state = states[copy.windows[index].windowID]
+        }
+        Log.info("template: app state for \(states.count) of \(windows.count) windows "
+            + "in \(Int(Date().timeIntervalSince(started) * 1000)) ms")
+        return copy
     }
 
     private func makeRequest() throws -> TemplateCaptureRequest {
@@ -76,17 +102,17 @@ extension WindowManager {
                                          hiddenWorkspaceWindows: hidden, monitorForTiled: monitors,
                                          virtualWorkspaces: config.virtualWorkspaces, knownFloating: knownFloating,
                                          naturalFrames: naturalFrames, fallbackFocus: model.mostRecent(of: visible))
-        let apps = NSWorkspace.shared.runningApplications.compactMap { app -> TemplateAppSnapshot? in
+        let apps = NSWorkspace.shared.runningApplications.compactMap { app -> AppSnapshot? in
             guard app.activationPolicy == .regular, app.processIdentifier != getpid(),
                   let bundleID = app.bundleIdentifier else { return nil }
-            return TemplateAppSnapshot(pid: app.processIdentifier, bundleID: bundleID,
+            return AppSnapshot(pid: app.processIdentifier, bundleID: bundleID,
                                        name: app.localizedName ?? bundleID, launchDate: app.launchDate)
         }
         return TemplateCaptureRequest(facts: facts, apps: apps,
                                       frontmostPID: NSWorkspace.shared.frontmostApplication?.processIdentifier)
     }
 
-    private func finish(_ batch: TemplateWindowBatch, facts: TemplateCaptureFacts) throws -> WorkspaceTemplate {
+    private func finish(_ batch: WindowBatch, facts: TemplateCaptureFacts) throws -> WorkspaceTemplate {
         var batch = batch
         for index in batch.windows.indices {
             let id = batch.windows[index].windowID
@@ -98,7 +124,7 @@ extension WindowManager {
         return try TemplateCaptureAssembler.make(facts: facts, batch: batch)
     }
 
-    private func floatingDecision(_ window: TemplateObservedWindow) -> Bool {
+    private func floatingDecision(_ window: ObservedWindow) -> Bool {
         let title: String? = window.title
         let created = Window(id: window.windowID, element: AXUIElementCreateApplication(window.pid), pid: window.pid,
                              bundleID: window.bundleID)

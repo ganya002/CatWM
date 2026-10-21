@@ -1,6 +1,7 @@
 import AppKit
 @testable import ouch
 import Testing
+@testable import WindowSession
 
 private let bundle = "com.example.editor"
 private let launch = Date(timeIntervalSince1970: 100)
@@ -9,8 +10,8 @@ private func target(
     document: String? = nil,
     bundleID: String = bundle,
     app: String = "Editor"
-) -> TemplateRestoreTarget {
-    TemplateRestoreTarget(id: UUID(), bundleID: bundleID, appName: app, document: document)
+) -> RestoreTarget {
+    RestoreTarget(id: UUID(), bundleID: bundleID, appName: app, document: document)
 }
 
 private func savedWindow(title: String = "Draft", document: String? = nil, windowID: CGWindowID = 42,
@@ -23,21 +24,21 @@ private func savedWindow(title: String = "Draft", document: String? = nil, windo
 }
 
 private func candidate(id: CGWindowID, title: String, document: String? = nil, launchDate: Date? = nil,
-                       fallback: Bool, bundleID: String = bundle) -> TemplateWindowCandidate {
-    TemplateWindowCandidate(windowID: id, bundleID: bundleID, title: title, document: document, launchDate: launchDate,
+                       fallback: Bool, bundleID: String = bundle) -> WindowCandidate {
+    WindowCandidate(windowID: id, bundleID: bundleID, title: title, document: document, launchDate: launchDate,
                             allowsGenericFallback: fallback)
 }
 
-private func warm(_ bundleID: String = bundle) -> [String: TemplateAppState] {
-    [bundleID: TemplateAppState(running: true, finishedLaunching: true, openable: true)]
+private func warm(_ bundleID: String = bundle) -> [String: AppLaunchState] {
+    [bundleID: AppLaunchState(running: true, finishedLaunching: true, openable: true)]
 }
 
 @Suite struct TemplateRestoreTests {
     @Test func moreThanTenWindowsAreAllRequestedInsideTheWait() {
-        var scheduler = TemplateRestoreScheduler()
+        var scheduler = RestoreScheduler()
         let windows = (1...12).map { _ in target(document: "file:///tmp/\(UUID().uuidString).txt") }
         var now = Date(timeIntervalSince1970: 1_000)
-        let deadline = now.addingTimeInterval(TemplateRestoreScheduler.totalWait)
+        let deadline = now.addingTimeInterval(RestoreScheduler.totalWait)
         var requested: [UUID] = []
         while now < deadline {
             let step = scheduler.step(now: now, deadline: deadline, targets: windows, matched: [], apps: warm())
@@ -45,15 +46,15 @@ private func warm(_ bundleID: String = bundle) -> [String: TemplateAppState] {
             #expect(Set(ids).count == ids.count)
             requested.append(contentsOf: ids)
             if Set(requested).count == windows.count { break }
-            now = now.addingTimeInterval(TemplateRestoreScheduler.pollInterval)
+            now = now.addingTimeInterval(RestoreScheduler.pollInterval)
         }
         #expect(Set(requested) == Set(windows.map(\.id)))
         #expect(requested.count == windows.count)
-        #expect(now.timeIntervalSince(Date(timeIntervalSince1970: 1_000)) < TemplateRestoreScheduler.totalWait)
+        #expect(now.timeIntervalSince(Date(timeIntervalSince1970: 1_000)) < RestoreScheduler.totalWait)
     }
 
     @Test func aShortDeadlineStillRequestsEveryRemainingWindow() {
-        var scheduler = TemplateRestoreScheduler()
+        var scheduler = RestoreScheduler()
         let windows = (1...12).map { _ in target() }
         let now = Date(timeIntervalSince1970: 1_000)
         let step = scheduler.step(
@@ -67,19 +68,19 @@ private func warm(_ bundleID: String = bundle) -> [String: TemplateAppState] {
     }
 
     @Test func refusedAndFailedOpensRetryWhileAcceptedOpensStayPending() {
-        var scheduler = TemplateRestoreScheduler()
+        var scheduler = RestoreScheduler()
         let accepted = target(document: "file:///tmp/accepted.txt")
         let refused = target(document: "file:///tmp/refused.txt")
         let failed = target(document: "file:///tmp/failed.txt")
         let windows = [accepted, refused, failed]
         var now = Date(timeIntervalSince1970: 2_000)
-        let deadline = now.addingTimeInterval(TemplateRestoreScheduler.totalWait)
+        let deadline = now.addingTimeInterval(RestoreScheduler.totalWait)
         var tokens: [UUID: UUID] = [:]
         for window in windows {
             let step = scheduler.step(now: now, deadline: deadline, targets: windows, matched: [], apps: warm())
             #expect(step.requests.map(\.savedID) == [window.id])
             tokens[window.id] = step.requests[0].token
-            now = now.addingTimeInterval(TemplateRestoreScheduler.pollInterval)
+            now = now.addingTimeInterval(RestoreScheduler.pollInterval)
         }
         let pending = scheduler.step(now: now, deadline: deadline, targets: windows, matched: [], apps: warm())
         #expect(pending.requests.isEmpty)
@@ -88,33 +89,33 @@ private func warm(_ bundleID: String = bundle) -> [String: TemplateAppState] {
         scheduler.noteFailed(failed.id, token: tokens[failed.id] ?? UUID(), appName: failed.appName, now: now)
         let tooSoon = scheduler.step(now: now, deadline: deadline, targets: windows, matched: [], apps: warm())
         #expect(tooSoon.requests.isEmpty)
-        now = now.addingTimeInterval(TemplateRestoreScheduler.retryDelay)
+        now = now.addingTimeInterval(RestoreScheduler.retryDelay)
         let firstRetry = scheduler.step(now: now, deadline: deadline, targets: windows, matched: [], apps: warm())
         #expect(firstRetry.requests.map(\.savedID) == [refused.id])
-        now = now.addingTimeInterval(TemplateRestoreScheduler.pollInterval)
+        now = now.addingTimeInterval(RestoreScheduler.pollInterval)
         let secondRetry = scheduler.step(now: now, deadline: deadline, targets: windows, matched: [], apps: warm())
         #expect(secondRetry.requests.map(\.savedID) == [failed.id])
-        let stale = scheduler.step(now: now.addingTimeInterval(TemplateRestoreScheduler.retryDelay), deadline: deadline,
+        let stale = scheduler.step(now: now.addingTimeInterval(RestoreScheduler.retryDelay), deadline: deadline,
                                    targets: [accepted], matched: [], apps: warm())
         #expect(stale.requests.isEmpty)
         scheduler.noteFailed(failed.id, token: tokens[failed.id] ?? UUID(), appName: failed.appName,
                              now: now.addingTimeInterval(1))
-        let kept = scheduler.step(now: now.addingTimeInterval(TemplateRestoreScheduler.retryDelay), deadline: deadline,
+        let kept = scheduler.step(now: now.addingTimeInterval(RestoreScheduler.retryDelay), deadline: deadline,
                                   targets: [failed], matched: [], apps: warm())
         #expect(kept.requests.isEmpty)
     }
 
     @Test func duplicateDocumentsAreRequestedOncePerSavedWindow() {
-        var scheduler = TemplateRestoreScheduler()
+        var scheduler = RestoreScheduler()
         let first = target(document: "file:///tmp/draft.txt")
         let second = target(document: "file:///tmp/draft.txt")
         var now = Date(timeIntervalSince1970: 3_000)
-        let deadline = now.addingTimeInterval(TemplateRestoreScheduler.totalWait)
+        let deadline = now.addingTimeInterval(RestoreScheduler.totalWait)
         var requested: [UUID] = []
         while requested.count < 2, now < deadline {
             let step = scheduler.step(now: now, deadline: deadline, targets: [first, second], matched: [], apps: warm())
             requested.append(contentsOf: step.requests.map(\.savedID))
-            now = now.addingTimeInterval(TemplateRestoreScheduler.pollInterval)
+            now = now.addingTimeInterval(RestoreScheduler.pollInterval)
         }
         #expect(requested == [first.id, second.id])
         let extra = scheduler.step(now: now, deadline: deadline, targets: [first, second], matched: [], apps: warm())
@@ -122,11 +123,11 @@ private func warm(_ bundleID: String = bundle) -> [String: TemplateAppState] {
     }
 
     @Test func restoreStopsWhenNoRequestCanProgress() {
-        var scheduler = TemplateRestoreScheduler()
+        var scheduler = RestoreScheduler()
         let missing = target(bundleID: "com.example.missing", app: "Missing")
         let now = Date(timeIntervalSince1970: 4_000)
-        let deadline = now.addingTimeInterval(TemplateRestoreScheduler.totalWait)
-        let absent = TemplateAppState(running: false, finishedLaunching: false, openable: false)
+        let deadline = now.addingTimeInterval(RestoreScheduler.totalWait)
+        let absent = AppLaunchState(running: false, finishedLaunching: false, openable: false)
         let stopped = scheduler.step(
             now: now, deadline: deadline, targets: [missing], matched: [], apps: [missing.bundleID: absent]
         )
@@ -141,15 +142,15 @@ private func warm(_ bundleID: String = bundle) -> [String: TemplateAppState] {
     }
 
     @Test func exhaustedRetriesStopBeforeTheDeadline() {
-        var scheduler = TemplateRestoreScheduler()
+        var scheduler = RestoreScheduler()
         let window = target()
         var now = Date(timeIntervalSince1970: 5_000)
-        let deadline = now.addingTimeInterval(TemplateRestoreScheduler.totalWait)
-        for _ in 0..<TemplateRestoreScheduler.maxAttempts {
+        let deadline = now.addingTimeInterval(RestoreScheduler.totalWait)
+        for _ in 0..<RestoreScheduler.maxAttempts {
             let step = scheduler.step(now: now, deadline: deadline, targets: [window], matched: [], apps: warm())
             #expect(step.requests.map(\.savedID) == [window.id])
             scheduler.noteRefused(window.id, appName: window.appName, now: now)
-            now = now.addingTimeInterval(TemplateRestoreScheduler.retryDelay)
+            now = now.addingTimeInterval(RestoreScheduler.retryDelay)
         }
         let stopped = scheduler.step(now: now, deadline: deadline, targets: [window], matched: [], apps: warm())
         #expect(stopped.requests.isEmpty)
@@ -159,11 +160,11 @@ private func warm(_ bundleID: String = bundle) -> [String: TemplateAppState] {
     }
 
     @Test func aFailedLaunchStopsWaiting() {
-        var scheduler = TemplateRestoreScheduler()
+        var scheduler = RestoreScheduler()
         let window = target()
         let now = Date(timeIntervalSince1970: 6_000)
-        let deadline = now.addingTimeInterval(TemplateRestoreScheduler.totalWait)
-        let apps = [bundle: TemplateAppState(running: false, finishedLaunching: false, openable: true)]
+        let deadline = now.addingTimeInterval(RestoreScheduler.totalWait)
+        let apps = [bundle: AppLaunchState(running: false, finishedLaunching: false, openable: true)]
         let launching = scheduler.step(now: now, deadline: deadline, targets: [window], matched: [], apps: apps)
         #expect(launching.launch == [bundle])
         #expect(launching.keepWaiting)
@@ -179,12 +180,12 @@ private func warm(_ bundleID: String = bundle) -> [String: TemplateAppState] {
 
 @Suite struct TemplateRestoreLaunchTests {
     @Test func coldLaunchSettlesBeforeSyntheticAndDocumentOpens() {
-        var scheduler = TemplateRestoreScheduler()
+        var scheduler = RestoreScheduler()
         let created = target()
         let opened = target(document: "file:///tmp/draft.txt")
         var now = Date(timeIntervalSince1970: 7_000)
-        let deadline = now.addingTimeInterval(TemplateRestoreScheduler.totalWait)
-        var apps = [bundle: TemplateAppState(running: false, finishedLaunching: false, openable: true)]
+        let deadline = now.addingTimeInterval(RestoreScheduler.totalWait)
+        var apps = [bundle: AppLaunchState(running: false, finishedLaunching: false, openable: true)]
         let launching = scheduler.step(
             now: now, deadline: deadline, targets: [created, opened], matched: [], apps: apps
         )
@@ -197,30 +198,30 @@ private func warm(_ bundleID: String = bundle) -> [String: TemplateAppState] {
         #expect(repeatLaunch.launch.isEmpty)
         #expect(repeatLaunch.keepWaiting)
         now = now.addingTimeInterval(1)
-        apps[bundle] = TemplateAppState(running: true, finishedLaunching: false, openable: true)
+        apps[bundle] = AppLaunchState(running: true, finishedLaunching: false, openable: true)
         let starting = scheduler.step(now: now, deadline: deadline, targets: [created, opened], matched: [], apps: apps)
         #expect(starting.requests.isEmpty)
         #expect(starting.keepWaiting)
         now = now.addingTimeInterval(0.2)
-        apps[bundle] = TemplateAppState(running: true, finishedLaunching: true, openable: true)
+        apps[bundle] = AppLaunchState(running: true, finishedLaunching: true, openable: true)
         let settling = scheduler.step(now: now, deadline: deadline, targets: [created, opened], matched: [], apps: apps)
         #expect(settling.requests.isEmpty)
         #expect(settling.keepWaiting)
-        now = now.addingTimeInterval(TemplateRestoreScheduler.launchSettle)
+        now = now.addingTimeInterval(RestoreScheduler.launchSettle)
         let ready = scheduler.step(now: now, deadline: deadline, targets: [created, opened], matched: [], apps: apps)
         #expect(ready.requests.map(\.savedID) == [created.id])
         #expect(ready.requests[0].document == nil)
-        now = now.addingTimeInterval(TemplateRestoreScheduler.pollInterval)
+        now = now.addingTimeInterval(RestoreScheduler.pollInterval)
         let document = scheduler.step(now: now, deadline: deadline, targets: [created, opened], matched: [], apps: apps)
         #expect(document.requests.map(\.savedID) == [opened.id])
         #expect(document.requests[0].document == opened.document)
     }
 
     @Test func aRunningAppIsRequestedImmediately() {
-        var scheduler = TemplateRestoreScheduler()
+        var scheduler = RestoreScheduler()
         let window = target(document: "file:///tmp/draft.txt")
         let now = Date(timeIntervalSince1970: 8_000)
-        let step = scheduler.step(now: now, deadline: now.addingTimeInterval(TemplateRestoreScheduler.totalWait),
+        let step = scheduler.step(now: now, deadline: now.addingTimeInterval(RestoreScheduler.totalWait),
                                   targets: [window], matched: [], apps: warm())
         #expect(step.launch.isEmpty)
         #expect(step.requests.map(\.savedID) == [window.id])
@@ -228,11 +229,11 @@ private func warm(_ bundleID: String = bundle) -> [String: TemplateAppState] {
     }
 
     @Test func aColdAppsDelayedFirstWindowPreventsAnExtraNewWindow() {
-        var scheduler = TemplateRestoreScheduler()
+        var scheduler = RestoreScheduler()
         let window = target()
         let start = Date(timeIntervalSince1970: 25_000)
-        let deadline = start.addingTimeInterval(TemplateRestoreScheduler.totalWait)
-        let cold = [bundle: TemplateAppState(running: false, finishedLaunching: false, openable: true)]
+        let deadline = start.addingTimeInterval(RestoreScheduler.totalWait)
+        let cold = [bundle: AppLaunchState(running: false, finishedLaunching: false, openable: true)]
         let coldStep = scheduler.step(now: start, deadline: deadline, targets: [window], matched: [], apps: cold)
         #expect(coldStep.launch == [bundle])
         #expect(scheduler.step(now: start.addingTimeInterval(0.3), deadline: deadline, targets: [window],
@@ -246,11 +247,11 @@ private func warm(_ bundleID: String = bundle) -> [String: TemplateAppState] {
     }
 
     @Test func launchProgressDelaysOnlyTheInitialSyntheticRequest() {
-        var scheduler = TemplateRestoreScheduler()
+        var scheduler = RestoreScheduler()
         let windows = [target(), target(), target(), target()]
         let start = Date(timeIntervalSince1970: 20_000)
-        let deadline = start.addingTimeInterval(TemplateRestoreScheduler.totalWait)
-        let cold = [bundle: TemplateAppState(running: false, finishedLaunching: false, openable: true)]
+        let deadline = start.addingTimeInterval(RestoreScheduler.totalWait)
+        let cold = [bundle: AppLaunchState(running: false, finishedLaunching: false, openable: true)]
         let coldStep = scheduler.step(now: start, deadline: deadline, targets: windows, matched: [], apps: cold)
         #expect(coldStep.launch == [bundle])
         #expect(scheduler.step(now: start.addingTimeInterval(1), deadline: deadline, targets: windows,
@@ -268,27 +269,27 @@ private func warm(_ bundleID: String = bundle) -> [String: TemplateAppState] {
     }
 
     @Test func separateAppsAreRequestedInTheSamePass() {
-        var scheduler = TemplateRestoreScheduler()
+        var scheduler = RestoreScheduler()
         let editor = target()
         let browser = target(bundleID: "com.example.browser", app: "Browser")
         var apps = warm()
-        apps[browser.bundleID] = TemplateAppState(running: true, finishedLaunching: true, openable: true)
+        apps[browser.bundleID] = AppLaunchState(running: true, finishedLaunching: true, openable: true)
         let now = Date(timeIntervalSince1970: 9_000)
-        let step = scheduler.step(now: now, deadline: now.addingTimeInterval(TemplateRestoreScheduler.totalWait),
+        let step = scheduler.step(now: now, deadline: now.addingTimeInterval(RestoreScheduler.totalWait),
                                   targets: [editor, browser], matched: [], apps: apps)
         #expect(Set(step.requests.map(\.savedID)) == [editor.id, browser.id])
     }
 
     @Test func cancellationStopsNewRequestsAndIgnoresLateErrors() {
-        var scheduler = TemplateRestoreScheduler()
+        var scheduler = RestoreScheduler()
         let window = target(document: "file:///tmp/draft.txt")
         let now = Date(timeIntervalSince1970: 10_000)
-        let deadline = now.addingTimeInterval(TemplateRestoreScheduler.totalWait)
+        let deadline = now.addingTimeInterval(RestoreScheduler.totalWait)
         let started = scheduler.step(now: now, deadline: deadline, targets: [window], matched: [], apps: warm())
         let token = started.requests[0].token
         scheduler.cancel()
         let stopped = scheduler.step(
-            now: now.addingTimeInterval(TemplateRestoreScheduler.retryDelay), deadline: deadline,
+            now: now.addingTimeInterval(RestoreScheduler.retryDelay), deadline: deadline,
             targets: [window], matched: [], apps: warm()
         )
         #expect(stopped.requests.isEmpty)
@@ -309,44 +310,44 @@ private func warm(_ bundleID: String = bundle) -> [String: TemplateAppState] {
         let notes = savedWindow(title: "Notes", document: nil, windowID: 1, launchDate: nil)
         let draft = savedWindow(title: "Draft", document: "file:///tmp/draft.txt", windowID: 42, launchDate: launch)
         let hidden = candidate(id: 42, title: "", fallback: true)
-        let early = TemplateWindowMatch.assign([notes, draft], candidates: [hidden])
+        let early = WindowMatch.assign([notes, draft], candidates: [hidden])
         #expect(early[notes.id] == 42)
         #expect(early[draft.id] == nil)
         let revealed = candidate(id: 42, title: "Draft", document: draft.document, launchDate: launch, fallback: true)
-        let late = TemplateWindowMatch.assign([notes, draft], candidates: [revealed])
+        let late = WindowMatch.assign([notes, draft], candidates: [revealed])
         #expect(late[draft.id] == 42)
         #expect(late[notes.id] == nil)
         let titled = candidate(id: 7, title: "Draft", fallback: true)
-        #expect(TemplateWindowMatch.assign([draft], candidates: [titled])[draft.id] == 7)
+        #expect(WindowMatch.assign([draft], candidates: [titled])[draft.id] == 7)
         let exact = candidate(id: 42, title: "Renamed", document: draft.document, launchDate: launch, fallback: false)
-        #expect(TemplateWindowMatch.assign([draft], candidates: [titled, exact])[draft.id] == 42)
+        #expect(WindowMatch.assign([draft], candidates: [titled, exact])[draft.id] == 42)
     }
 
     @Test func genericFallbackSkipsUnrelatedTitlesAndOtherSpaces() {
         let saved = savedWindow(title: "Draft", document: nil, windowID: 42, launchDate: launch)
         let unrelated = candidate(id: 3, title: "Inbox", fallback: true)
         let otherSpace = candidate(id: 4, title: "", fallback: false)
-        #expect(TemplateWindowMatch.score(saved, title: unrelated.title, document: nil, windowID: unrelated.windowID,
+        #expect(WindowMatch.score(saved, title: unrelated.title, document: nil, windowID: unrelated.windowID,
                                          launchDate: nil) == 0)
-        #expect(TemplateWindowMatch.assign([saved], candidates: [unrelated, otherSpace]).isEmpty)
+        #expect(WindowMatch.assign([saved], candidates: [unrelated, otherSpace]).isEmpty)
         let original = candidate(
             id: 9, title: "Draft", document: nil, launchDate: Date(timeIntervalSince1970: 200), fallback: false
         )
-        #expect(TemplateWindowMatch.assign([saved], candidates: [unrelated, otherSpace, original])[saved.id] == 9)
+        #expect(WindowMatch.assign([saved], candidates: [unrelated, otherSpace, original])[saved.id] == 9)
         let untitled = candidate(id: 5, title: "", fallback: true)
-        #expect(TemplateWindowMatch.assign([saved], candidates: [unrelated, otherSpace, untitled])[saved.id] == 5)
+        #expect(WindowMatch.assign([saved], candidates: [unrelated, otherSpace, untitled])[saved.id] == 5)
         let savedDocument = savedWindow(
             title: "Draft", document: "file:///tmp/draft.txt", windowID: 42, launchDate: launch
         )
         let elsewhere = candidate(id: 8, title: "Notes", document: savedDocument.document, fallback: false)
-        #expect(TemplateWindowMatch.assign([savedDocument], candidates: [unrelated, elsewhere])[savedDocument.id] == 8)
+        #expect(WindowMatch.assign([savedDocument], candidates: [unrelated, elsewhere])[savedDocument.id] == 8)
     }
 
     @Test func oneDocumentWindowIsNotAssignedToTwoSavedWindows() {
         let first = savedWindow(document: "file:///tmp/draft.txt", windowID: 1)
         let second = savedWindow(document: "file:///tmp/draft.txt", windowID: 2)
         let window = candidate(id: 4, title: "Draft", document: "file:///tmp/draft.txt", fallback: false)
-        let assigned = TemplateWindowMatch.assign([first, second], candidates: [window])
+        let assigned = WindowMatch.assign([first, second], candidates: [window])
         #expect(assigned[first.id] == 4)
         #expect(assigned[second.id] == nil)
     }
@@ -355,38 +356,38 @@ private func warm(_ bundleID: String = bundle) -> [String: TemplateAppState] {
         let plain = savedWindow(title: "Draft", document: nil, windowID: 42, launchDate: launch)
         let generic = candidate(id: 1, title: "", fallback: true)
         let title = candidate(id: 2, title: "Draft", fallback: true)
-        #expect(TemplateWindowMatch.assign([plain], candidates: [generic, title])[plain.id] == 2)
+        #expect(WindowMatch.assign([plain], candidates: [generic, title])[plain.id] == 2)
         let saved = savedWindow(title: "Draft", document: "file:///tmp/draft.txt", windowID: 42, launchDate: launch)
         let titled = candidate(id: 2, title: "Draft", fallback: true)
         let document = candidate(id: 3, title: "Other", document: saved.document, fallback: true)
         let exact = candidate(id: 42, title: "Other", document: saved.document, launchDate: launch, fallback: false)
-        #expect(TemplateWindowMatch.assign([saved], candidates: [titled, document])[saved.id] == 3)
-        #expect(TemplateWindowMatch.assign([saved], candidates: [titled, document, exact])[saved.id] == 42)
+        #expect(WindowMatch.assign([saved], candidates: [titled, document])[saved.id] == 3)
+        #expect(WindowMatch.assign([saved], candidates: [titled, document, exact])[saved.id] == 42)
     }
 
     @Test func aMissedScanKeepsThePreviousMatch() {
         let savedID = UUID()
-        let missed = TemplateWindowMatch.retainUnscanned([savedID: 7], assigned: [:], scanned: [])
+        let missed = WindowMatch.retainUnscanned([savedID: 7], assigned: [:], scanned: [])
         #expect(missed[savedID] == 7)
-        let replaced = TemplateWindowMatch.retainUnscanned([savedID: 7], assigned: [savedID: 42], scanned: [7, 42])
+        let replaced = WindowMatch.retainUnscanned([savedID: 7], assigned: [savedID: 42], scanned: [7, 42])
         #expect(replaced[savedID] == 42)
-        let rejected = TemplateWindowMatch.retainUnscanned([savedID: 7], assigned: [:], scanned: [7])
+        let rejected = WindowMatch.retainUnscanned([savedID: 7], assigned: [:], scanned: [7])
         #expect(rejected.isEmpty)
     }
 
     @Test func genericFallbackStaysOnTheCurrentShownWorkspace() {
-        #expect(!TemplateWindowMatch.allowsGenericFallback(offSpace: true, hiddenWorkspace: false))
-        #expect(!TemplateWindowMatch.allowsGenericFallback(offSpace: false, hiddenWorkspace: true))
-        #expect(TemplateWindowMatch.allowsGenericFallback(offSpace: false, hiddenWorkspace: false))
+        #expect(!WindowMatch.allowsGenericFallback(offSpace: true, hiddenWorkspace: false))
+        #expect(!WindowMatch.allowsGenericFallback(offSpace: false, hiddenWorkspace: true))
+        #expect(WindowMatch.allowsGenericFallback(offSpace: false, hiddenWorkspace: false))
     }
 
     @Test func missingCommandModifiersAreNotTreatedAsCommandN() {
-        #expect(!TemplateNewWindowCommand.isPlainCommandN(command: "n", modifiers: nil))
-        #expect(!TemplateNewWindowCommand.isPlainCommandN(command: "N", modifiers: nil))
-        #expect(TemplateNewWindowCommand.isPlainCommandN(command: "n", modifiers: 0))
-        #expect(TemplateNewWindowCommand.isPlainCommandN(command: "N", modifiers: 0))
-        #expect(!TemplateNewWindowCommand.isPlainCommandN(command: "n", modifiers: 1))
-        #expect(!TemplateNewWindowCommand.isPlainCommandN(command: "t", modifiers: 0))
-        #expect(!TemplateNewWindowCommand.isPlainCommandN(command: nil, modifiers: 0))
+        #expect(!NewWindowCommand.isPlainCommandN(command: "n", modifiers: nil))
+        #expect(!NewWindowCommand.isPlainCommandN(command: "N", modifiers: nil))
+        #expect(NewWindowCommand.isPlainCommandN(command: "n", modifiers: 0))
+        #expect(NewWindowCommand.isPlainCommandN(command: "N", modifiers: 0))
+        #expect(!NewWindowCommand.isPlainCommandN(command: "n", modifiers: 1))
+        #expect(!NewWindowCommand.isPlainCommandN(command: "t", modifiers: 0))
+        #expect(!NewWindowCommand.isPlainCommandN(command: nil, modifiers: 0))
     }
 }
