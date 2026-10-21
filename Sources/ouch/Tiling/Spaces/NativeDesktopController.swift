@@ -77,12 +77,17 @@ final class NativeDesktopController {
         if source == target.space { onSettled(target, false); return }
         let busy = "Finish the current macOS Desktop action, then try again"
         try check(await poll(1, every: 10_000_000) { !DesktopUI.isBusy(on: screen) }, busy)
-        _ = await poll(1, every: 10_000_000) { DesktopUI.isSettled(screen) }
-        guard let list = Spaces.list(display: target.display),
-              let from = list.ids.firstIndex(of: source), let into = list.ids.firstIndex(of: target.space),
-              DesktopUI.isSettled(screen),
-              let sourceState = DesktopBridge.state(source), sourceState.transform == .identity,
-              let targetState = DesktopBridge.state(target.space), targetState.transform == .identity else {
+        var list: Spaces.DisplaySpaces?, sourceState: DesktopBridge.State?, targetState: DesktopBridge.State?
+        let ready = await poll(1, every: 10_000_000) {
+            list = Spaces.list(display: target.display)
+            sourceState = DesktopBridge.state(source)
+            targetState = DesktopBridge.state(target.space)
+            return DesktopUI.isSettled(screen) && sourceState?.transform == .identity
+                && targetState?.transform == .identity
+                && list.map { $0.ids.contains(source) && $0.ids.contains(target.space) } == true
+        }
+        guard ready, let list, let from = list.ids.firstIndex(of: source),
+              let into = list.ids.firstIndex(of: target.space), let sourceState, let targetState else {
             throw DesktopTransitionError.check(busy)
         }
         let state = DesktopGuard.Context(display: target.display, source: source, destination: target.space,

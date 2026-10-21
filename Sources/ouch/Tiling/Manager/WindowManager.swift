@@ -119,7 +119,7 @@ final class WindowManager {
     var refreshWork: DispatchWorkItem?
     var ffmWork: DispatchWorkItem?
     var minSizes: [CGWindowID: CGSize] = [:]
-    var menuBarBlocks: Set<String> = []
+    var menuBarHeights: [String: CGFloat] = [:]
     var ratioChange: (screen: String, until: Date)?
     struct DividerDrag {
         let screen: String
