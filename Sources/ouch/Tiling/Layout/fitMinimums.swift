@@ -8,40 +8,50 @@ func fitMinimums(_ frames: [CGRect], mins: [CGSize?], gap: CGFloat) -> [CGRect] 
     func key(_ value: CGFloat) -> String { "\(value.rounded() + 0)" }
     var out = frames
     for vertical in [true, false] {
-        let groups = Dictionary(grouping: out.indices) { i -> String in
-            let frame = out[i]
-            return vertical ? "\(key(frame.minX)):\(key(frame.width))" : "\(key(frame.minY)):\(key(frame.height))"
+        let units = vertical ? out.indices.map { [$0] }
+            : Array(Dictionary(grouping: out.indices) { "\(key(out[$0].minX)):\(key(out[$0].width))" }.values)
+        let groups = Dictionary(grouping: units) { unit -> String in
+            let span = unit.map { out[$0] }.reduce(CGRect.null) { $0.union($1) }
+            return vertical ? "\(key(span.minX)):\(key(span.width))" : "\(key(span.minY)):\(key(span.height))"
         }
-        for idx in groups.values where idx.count > 1 {
-            let sorted = idx.sorted { vertical ? out[$0].minY < out[$1].minY : out[$0].minX < out[$1].minX }
-            let starts = sorted.map { vertical ? out[$0].minY : out[$0].minX }
-            guard Set(starts.map { $0.rounded() }).count == starts.count else { continue }
-            let sizes = sorted.map { vertical ? out[$0].height : out[$0].width }
-            let need = sorted.map { i -> CGFloat in vertical ? (mins[i]?.height ?? 0) : (mins[i]?.width ?? 0) }
-            guard zip(need, sizes).contains(where: { $0 > $1 + 1 }) else { continue }
-            let total = sizes.reduce(0, +)
-            guard need.reduce(0, +) <= total else { continue }
-            var pinned = Set<Int>()
-            var share: CGFloat = 0
-            while true {
-                let free = sorted.indices.filter { !pinned.contains($0) }
-                let left = total - pinned.map { need[$0] }.reduce(0, +)
-                share = free.isEmpty ? 0 : left / CGFloat(free.count)
-                let more = free.filter { need[$0] > share }
-                if more.isEmpty { break }
-                pinned.formUnion(more)
-            }
-            var pos = starts[0]
-            for (position, i) in sorted.enumerated() {
-                let size = pinned.contains(position) ? need[position] : share
-                let frame = out[i]
-                out[i] = vertical ? CGRect(x: frame.minX, y: pos, width: frame.width, height: size)
-                                  : CGRect(x: pos, y: frame.minY, width: size, height: frame.height)
-                pos += size + gap
-            }
+        for group in groups.values where group.count > 1 {
+            fit(group, in: &out, mins: mins, gap: gap, vertical: vertical)
         }
     }
     return out.map(\.pixelAligned)
+}
+
+private func fit(_ group: [[Int]], in out: inout [CGRect], mins: [CGSize?], gap: CGFloat, vertical: Bool) {
+    let sorted = group.sorted { vertical ? out[$0[0]].minY < out[$1[0]].minY : out[$0[0]].minX < out[$1[0]].minX }
+    let starts = sorted.map { vertical ? out[$0[0]].minY : out[$0[0]].minX }
+    let sizes = sorted.map { vertical ? out[$0[0]].height : out[$0[0]].width }
+    guard zip(starts, zip(starts.dropFirst(), sizes)).allSatisfy({ $1.0 >= $0 + $1.1 - 1 }) else { return }
+    let need = sorted.map { unit in
+        unit.map { vertical ? (mins[$0]?.height ?? 0) : (mins[$0]?.width ?? 0) }.max() ?? 0
+    }
+    guard zip(need, sizes).contains(where: { $0 > $1 + 1 }) else { return }
+    let total = sizes.reduce(0, +)
+    guard need.reduce(0, +) <= total else { return }
+    var pinned = Set<Int>()
+    var share: CGFloat = 0
+    while true {
+        let free = sorted.indices.filter { !pinned.contains($0) }
+        let left = total - pinned.map { need[$0] }.reduce(0, +)
+        share = free.isEmpty ? 0 : left / CGFloat(free.count)
+        let more = free.filter { need[$0] > share }
+        if more.isEmpty { break }
+        pinned.formUnion(more)
+    }
+    var pos = starts[0]
+    for (position, unit) in sorted.enumerated() {
+        let size = pinned.contains(position) ? need[position] : share
+        for i in unit {
+            let frame = out[i]
+            out[i] = vertical ? CGRect(x: frame.minX, y: pos, width: frame.width, height: size)
+                              : CGRect(x: pos, y: frame.minY, width: size, height: frame.height)
+        }
+        pos += size + gap
+    }
 }
 
 func clampToMinimum(_ slot: CGRect, min: CGSize?, bounds: CGRect) -> CGRect {
