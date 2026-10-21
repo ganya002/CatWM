@@ -141,12 +141,20 @@ extension WindowManager {
         let now = Date()
         let targets = empty.filter { desktopRemovalFailures[$0.space].map { now.timeIntervalSince($0) > 30 } ?? true }
             .sorted { (Int(WorkspaceKey.number($0.name)) ?? 0) > (Int(WorkspaceKey.number($1.name)) ?? 0) }
-        guard !targets.isEmpty else { return }
-        nativeCreationBusy = true
+        guard !targets.isEmpty, !desktopRemovalScheduled else { return }
+        desktopRemovalScheduled = true
         Task { @MainActor in
+            defer { self.desktopRemovalScheduled = false }
+            try? await Task.sleep(nanoseconds: 700_000_000)
+            guard await poll(5, every: 50_000_000, until: {
+                !self.nativeDesktop.isRunning && self.nativeDesktop.requested == nil && self.workspaceMoves.isEmpty
+                    && self.nativeMoveTargets.isEmpty && !self.nativeCreationBusy
+            }) else { return }
+            nativeCreationBusy = true
             defer { self.nativeCreationBusy = false; self.scheduleRefresh(after: 0) }
             for entry in targets {
-                guard let screen = Screen.all().first(where: { $0.uuid == entry.display }) else { continue }
+                guard let screen = Screen.all().first(where: { $0.uuid == entry.display }),
+                      Spaces.current(display: entry.display) != entry.space else { continue }
                 do {
                     try await DesktopLifecycle.remove(entry.space, on: screen)
                     self.closeGap(after: entry)

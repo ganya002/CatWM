@@ -24,7 +24,8 @@ enum DesktopLifecycle {
                let created = list.desktops.map({ list.ids[$0] }).first(where: { !original.contains($0) }) {
                 dismiss(on: screen)
                 closed = true
-                try await Task.sleep(nanoseconds: 400_000_000)
+                _ = await poll(2, every: 40_000_000) { !DesktopUI.isBusy(on: screen) }
+                try await Task.sleep(nanoseconds: 150_000_000)
                 return created
             }
             try await Task.sleep(nanoseconds: 40_000_000)
