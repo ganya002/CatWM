@@ -62,28 +62,6 @@ extension ShortcutMap {
         return "No shortcut. Click to add one."
     }
 
-    func legend(_ all: [ConfigDocument.KeyAction]) -> some View {
-        let present = Set(all.map { KeyHint($0).group })
-        return HStack(spacing: 16) {
-            ForEach(KeyGroup.allCases.filter(present.contains)) { group in
-                HStack(spacing: 6) {
-                    Circle().fill(group.color).frame(width: 7, height: 7)
-                    Text(group.title).foregroundStyle(Theme.inkMuted).oneLine()
-                }
-                .fixedSize()
-            }
-            Spacer(minLength: 12)
-            ViewThatFits(in: .horizontal) {
-                Text("Hold ⌃ ⌥ ⇧ ⌘ to switch layers, click a key to edit").fixedSize()
-                Text("Click a key to edit").fixedSize()
-                Color.clear.frame(width: 0)
-            }
-            .foregroundStyle(Theme.inkFaint)
-        }
-        .font(Theme.body(12.5))
-        .frame(height: 20)
-    }
-
     func list(_ layer: [ConfigDocument.KeyAction]) -> some View {
         let order = Dictionary(KeyHintKeyboard.keys.enumerated().compactMap { i, key in key.code.map { ($0, i) } },
                                uniquingKeysWith: { first, _ in first })

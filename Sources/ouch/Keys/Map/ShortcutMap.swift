@@ -6,16 +6,6 @@ struct ShortcutMap: View {
     @ObservedObject var settings: SettingsUI
     @StateObject var model = ShortcutMapModel()
 
-    var modifierToggles: some View {
-        OSegmented(title: "Modifiers",
-                   options: ShortcutMapModel.modifiers.map {
-                       OSegmentOption(value: $0.flag.rawValue, label: $0.name, keys: $0.glyph)
-                   },
-                   isOn: { model.flags.contains(NSEvent.ModifierFlags(rawValue: $0)) },
-                   toggle: { model.toggle(NSEvent.ModifierFlags(rawValue: $0)) })
-            .animation(Motion.spring, value: model.flags.rawValue)
-    }
-
     var modeEntry: [String]? {
         guard !model.mode.isEmpty, let action = doc.keyActions(in: "").first(where: {
             $0.row.dispatcher == "submap" && $0.arg.lowercased() == model.mode.lowercased()

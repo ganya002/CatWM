@@ -56,7 +56,7 @@ struct KeyHint: Identifiable, Equatable {
         let (command, argument) = normalized(dispatcher, arg)
         if let hint = PointerActions.hint(command) { return hint }
         let arrows = Direction.hintArrows
-        let back = argument.hasPrefix("prev") || argument.hasPrefix("-") || argument.hasPrefix("e-")
+        let back = ["prev", "-", "e-", "r-", "m-"].contains { argument.hasPrefix($0) }
         func screen(_ target: String) -> String {
             if let arrow = arrows[target] { return "Screen \(arrow)" }
             return target.hasPrefix("-") ? "‹ Screen" : "Screen ›"
