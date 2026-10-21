@@ -24,6 +24,12 @@ extension WindowManager {
         let frame = window.frame
         let visibleTarget = Spaces.current(display: target.display) == target.space
         workspaceMoves.insert(window.id)
+        if follow, !visibleTarget {
+            animator.cancel(window.id)
+            followMoves[window.id] = .init(window: window, workspace: workspace, space: target.space, from: from)
+            showWorkspace(workspace, focusing: window)
+            return
+        }
         if visibleTarget {
             autoSwitchAfter = Date().addingTimeInterval(0.7)
             if !known { windows[window.id] = window; order.append(window.id); watch(window) }
@@ -54,6 +60,28 @@ extension WindowManager {
                 assignWindow(window, toWorkspace: workspace, from: from, follow: follow, handOffFocus: hadFocus)
             }
         }
+    }
+
+    @MainActor func completeFollowMove(_ move: FollowMove) async throws {
+        let id = move.window.id
+        followMoves[id] = nil
+        let moved = await withCheckedContinuation { done in
+            Spaces.move(window: id, to: move.space) { done.resume(returning: $0) }
+        }
+        workspaceMoves.remove(id)
+        guard moved || Spaces.of(window: id) == [move.space], move.window.isValid else {
+            throw DesktopTransitionError.check("macOS couldn't move this window")
+        }
+        Log.info("native workspaces: moved window \(id) to workspace \(move.workspace)")
+        completeNativeMigration(id, workspace: move.workspace)
+        nativeMembership[id] = move.space
+        assignWindow(move.window, toWorkspace: move.workspace, from: move.from, follow: false, handOffFocus: false)
+    }
+
+    func dropFollowMoves() {
+        workspaceMoves.subtract(followMoves.keys)
+        followMoves = [:]
+        arrivals = [:]
     }
 
     private func rollBackNativeMove(_ window: Window, from: String?, known: Bool, frame: CGRect?) {
