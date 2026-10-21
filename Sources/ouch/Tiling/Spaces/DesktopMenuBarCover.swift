@@ -96,8 +96,10 @@ enum DesktopMenuBarCover {
               let list = CGWindowListCopyWindowInfo(.optionOnScreenOnly, kCGNullWindowID) as? [[String: Any]] else {
             return nil
         }
+        let menuLevel = Int(CGWindowLevelForKey(.mainMenuWindow))
         let windows = list.compactMap { info -> UInt32? in
-            guard let bounds = info[kCGWindowBounds as String] as? [String: Any],
+            guard (info[kCGWindowLayer as String] as? Int).map({ $0 >= menuLevel }) == true,
+                  let bounds = info[kCGWindowBounds as String] as? [String: Any],
                   let frame = CGRect(dictionaryRepresentation: bounds as CFDictionary), frame.intersects(rect),
                   let number = info[kCGWindowNumber as String] as? UInt32 else { return nil }
             return number

@@ -108,13 +108,14 @@ enum DesktopMenuBar {
 
     @MainActor static func settle(_ state: State?, on screen: Screen) async throws {
         guard let state, Spaces.current(display: screen.uuid) == state.space else { return }
+        fresh.remove(state.uuid)
+        if DesktopMenuBarNative.theme(state.space) == state.theme { return }
         let started = ProcessInfo.processInfo.systemUptime
         let ready = await poll(1, every: 4_000_000) { DesktopMenuBarNative.theme(state.space) == state.theme }
         let elapsed = Int((ProcessInfo.processInfo.systemUptime - started) * 1_000)
         Log.info("native workspaces: menu bar appearance on Desktop \(state.space) "
             + (ready ? "settled in \(elapsed) ms" : "did not settle"))
         try await DesktopMotion(screen: screen.nsScreen).frames(2)
-        fresh.remove(state.uuid)
     }
 
     static func isUnderbelly(_ info: DesktopMenuBarNative.WindowInfo) -> Bool {

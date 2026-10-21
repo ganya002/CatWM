@@ -22,6 +22,7 @@ import AppKit
         finished = true
         let batch = WindowServerUpdates.shared.begin()
         defer { batch?.finish() }
+        panel?.orderOut(nil)
         state.restore()
         DesktopMenuBarNative.alpha(state.space, -1)
         panel?.close()
