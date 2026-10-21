@@ -142,11 +142,12 @@ extension WindowManager {
                 }
                 self.virtualShown[request.display] = request.workspace
             }
+            self.placeArrivals(on: request.display)
             self.scheduleRefresh(after: 0)
             DispatchQueue.main.async {
                 guard self.nativeDesktop.requested == nil,
                       Spaces.current(display: request.display) == request.space else { return }
-                self.refresh()
+                self.refresh(placing: [])
                 guard let screen = Screen.all().first(where: { $0.uuid == request.display }) else { return }
                 if takesFocus { self.focusShownWorkspace(request.workspace, preferred: preferred, on: screen) }
                 if changed, !quiet, self.config.enablesLayoutHUD, self.config.enablesLayoutHUDOnSpaceChange {
@@ -154,7 +155,11 @@ extension WindowManager {
                 }
             }
         }
-        nativeDesktop.onIdle = { [weak self] in self?.scheduleRefresh(after: 0) }
+        nativeDesktop.onMotion = { [weak self] request in self?.placeArrivals(on: request.display) }
+        nativeDesktop.onIdle = { [weak self] in
+            self?.dropFollowMoves()
+            self?.scheduleRefresh(after: 0)
+        }
         nativeDesktop.onFailure = { [weak self] message in
             Log.info("native workspaces: \(message)")
             HUD.shared.show(message, on: self?.currentScreen()?.nsScreen)
@@ -185,12 +190,35 @@ extension WindowManager {
     }
 
     @MainActor func prepareNativeLayout(_ request: NativeDesktopController.Request) async throws {
-        guard tilingEnabled, let screen = Screen.all().first(where: { $0.uuid == request.display }) else { return }
+        let arriving = followMoves.filter { $0.value.workspace == request.workspace }
+        let screen = Screen.all().first(where: { $0.uuid == request.display })
         let ids = order.filter {
-            workspaceOf[$0] == request.workspace && windows[$0]?.isFloating == false
+            (workspaceOf[$0] == request.workspace || arriving[$0] != nil) && windows[$0]?.isFloating == false
                 && windows[$0]?.minimized == false && windows[$0]?.fullscreen == false
         }
-        guard let slots = layoutTargets(ids, state(workspace: request.workspace), on: screen) else { return }
+        let slots = tilingEnabled ? screen.flatMap { layoutTargets(ids, state(workspace: request.workspace), on: $0) }
+            : nil
+        if let screen, let slots { try await place(ids.filter { arriving[$0] == nil }, in: slots, on: screen) }
+        for move in arriving.values {
+            try await completeFollowMove(move)
+            if let slot = slots?[move.window.id] { arrivals[move.window.id] = slot }
+        }
+    }
+
+    func placeArrivals(on display: String) {
+        let screen = Screen.all().first { $0.uuid == display }
+        let moves = arrivals.compactMap { id, frame -> Animator.Move? in
+            guard let window = windows[id], let screen else { return nil }
+            targets[id] = frame
+            return .init(window: window, to: frame, bounds: screen.visible)
+        }
+        arrivals = [:]
+        animator.animate(moves, duration: config.animate ? config.animationDuration : 0,
+                         curve: config.animationCurve, bounce: config.animationBounce)
+    }
+
+    @MainActor private func place(_ ids: [CGWindowID], in slots: [CGWindowID: CGRect], on screen: Screen) async throws {
+        guard !ids.isEmpty else { return }
         let moves = ids.compactMap { id -> Animator.Move? in
             guard let window = windows[id], let frame = slots[id] else { return nil }
             animator.cancel(id)

@@ -14,6 +14,7 @@ final class NativeDesktopController {
     var settings = Settings(duration: 0.18, curve: .easeOut, bounce: 0.5)
     var prepare: (Request) async throws -> Void = { _ in }
     var onSettled: (Request, _ changed: Bool) -> Void = { _, _ in }
+    var onMotion: (Request) -> Void = { _ in }
     var onIdle: () -> Void = {}
     var onFailure: (String) -> Void = { _ in }
     private(set) var requested: Request?
@@ -138,6 +139,7 @@ final class NativeDesktopController {
         try apply(state, width: width, progress: 0)
         try check(DesktopBridge.willSwitch([state.destination]), "Cannot prepare the destination Desktop")
         try check(DesktopBridge.setVisible([state.destination], true), "Cannot show the destination Desktop")
+        onMotion(target)
         let motion = DesktopMotion(screen: screen.nsScreen)
         if gesture {
             try await motion.follow(until: { self.gestureEnded }, update: {
