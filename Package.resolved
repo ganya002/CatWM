@@ -10,6 +10,15 @@
       }
     },
     {
+      "identity" : "permissionflow",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/noxaur/PermissionFlow",
+      "state" : {
+        "branch" : "fix/panel-height-wrapping",
+        "revision" : "6a1f5e3eb543c2f7d6862d0ecc6baa0cd139abcf"
+      }
+    },
+    {
       "identity" : "sparkle",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/sparkle-project/Sparkle",
