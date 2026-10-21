@@ -78,19 +78,24 @@ final class NativeDesktopController {
         if source == target.space { onSettled(target, false); return }
         let busy = "Finish the current macOS Desktop action, then try again"
         try check(await poll(1, every: 10_000_000) { !DesktopUI.isBusy(on: screen) }, busy)
-        _ = await poll(1, every: 10_000_000) { DesktopUI.isSettled(screen) }
-        guard let list = Spaces.list(display: target.display),
-              let from = list.ids.firstIndex(of: source), let into = list.ids.firstIndex(of: target.space),
-              DesktopUI.isSettled(screen),
-              let sourceState = DesktopBridge.state(source), sourceState.transform == .identity,
-              let targetState = DesktopBridge.state(target.space), targetState.transform == .identity else {
+        var list: Spaces.DisplaySpaces?, sourceState: DesktopBridge.State?, targetState: DesktopBridge.State?
+        let ready = await poll(1, every: 10_000_000) {
+            list = Spaces.list(display: target.display)
+            sourceState = DesktopBridge.state(source)
+            targetState = DesktopBridge.state(target.space)
+            return DesktopUI.isSettled(screen) && sourceState?.transform == .identity
+                && targetState?.transform == .identity
+                && list.map { $0.ids.contains(source) && $0.ids.contains(target.space) } == true
+        }
+        guard ready, let list, let from = list.ids.firstIndex(of: source),
+              let into = list.ids.firstIndex(of: target.space), let sourceState, let targetState else {
             throw DesktopTransitionError.check(busy)
         }
         let state = DesktopGuard.Context(display: target.display, source: source, destination: target.space,
                                          sourceOptions: sourceState.options, destinationOptions: targetState.options)
         let recovery = DesktopGuardClient.acquire()
         try await prepareWhileGuarding(target, state, recovery)
-        if requested != target { try await recovery.finish(); return }
+        if !wants(target) { try await recovery.finish(); return }
         var failure: Error?
         do {
             try await compose(state, screen: screen, forward: into > from, target: target, recovery: recovery)
@@ -107,7 +112,7 @@ final class NativeDesktopController {
         }
         if let failure {
             let maximised = !list.desktops.contains(from) || !list.desktops.contains(into)
-            guard maximised, requested == target, Spaces.current(display: target.display) != target.space else {
+            guard maximised, wants(target), Spaces.current(display: target.display) != target.space else {
                 throw failure
             }
             Log.info("native workspaces: \(failure.localizedDescription); swiping to the maximised window")
@@ -145,10 +150,10 @@ final class NativeDesktopController {
             gesture = false
         }
         while true {
-            let landing = requested == target ? 1.0 : 0.0
+            let landing = wants(target) ? 1.0 : 0.0
             do {
                 try await motion.animate(from: progress, to: landing, with: settings) { value in
-                    guard (self.requested == target ? 1.0 : 0.0) == landing else { throw Retarget.changed }
+                    guard (self.wants(target) ? 1.0 : 0.0) == landing else { throw Retarget.changed }
                     try self.check(recovery.process.isRunning, "Desktop recovery process stopped")
                     progress = value
                     try self.apply(state, width: width, progress: value)
@@ -158,7 +163,7 @@ final class NativeDesktopController {
         }
         try check(Spaces.current(display: state.display) == state.source,
                   "Native navigation interrupted Desktop motion")
-        if requested == target {
+        if wants(target) {
             try check(DesktopBridge.setVisible([state.source], false), "Cannot hide the source Desktop")
             try check(DesktopBridge.setCurrent(display: state.display, space: state.destination),
                       "Cannot activate the destination Desktop")
@@ -168,6 +173,11 @@ final class NativeDesktopController {
     }
 
     private enum Retarget: Error { case changed }
+
+    private func wants(_ target: Request) -> Bool {
+        guard let requested else { return false }
+        return requested == target || requested.display != target.display
+    }
 
     private func apply(_ state: DesktopGuard.Context, width: CGFloat, progress: Double) throws {
         let pose = min(1, max(0, progress))
@@ -181,7 +191,7 @@ final class NativeDesktopController {
         let deadline = ProcessInfo.processInfo.systemUptime + 5
         func remaining() -> TimeInterval { deadline - ProcessInfo.processInfo.systemUptime }
         while Spaces.current(display: target.display) != target.space {
-            if requested != target { return }
+            if !wants(target) { return }
             guard remaining() > 0,
                   let list = Spaces.list(display: target.display), let current = list.current,
                   let destination = list.ids.firstIndex(of: target.space) else {

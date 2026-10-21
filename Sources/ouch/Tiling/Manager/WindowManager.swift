@@ -24,6 +24,7 @@ final class WindowManager {
     var windows: [CGWindowID: Window] = [:]
     var observedApps: [(pid: pid_t, bundleID: String?)] = []
     var lastNativeCatalogSaved: [String: UInt64] = [:]
+    var lastNativeCatalogHomes: [String: String] = [:]
     var nativeCatalog = NativeWorkspaceCatalog()
     let nativeDesktop = NativeDesktopController()
     let nativeGestures = DesktopGestureTap()
@@ -126,6 +127,7 @@ final class WindowManager {
     var refreshWork: DispatchWorkItem?
     var ffmWork: DispatchWorkItem?
     var minSizes: [CGWindowID: CGSize] = [:]
+    var menuBarHeights: [String: CGFloat] = [:]
     var ratioChange: (screen: String, until: Date)?
     struct DividerDrag {
         let screen: String

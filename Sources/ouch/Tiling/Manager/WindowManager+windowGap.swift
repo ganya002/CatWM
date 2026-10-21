@@ -48,6 +48,10 @@ extension WindowManager {
         if config.ignoreMenuBar {
             rect = CGRect(x: rect.minX, y: screen.frame.minY, width: rect.width, height: rect.maxY - screen.frame.minY)
         }
+        if let height = menuBarHeights[screen.uuid], screen.frame.minY + height > rect.minY {
+            let top = screen.frame.minY + height
+            rect = CGRect(x: rect.minX, y: top, width: rect.width, height: rect.maxY - top)
+        }
         if config.disablePaddingOnBuiltinDisplay && screen.isBuiltin { return rect }
         return CGRect(x: rect.minX + config.paddingLeft, y: rect.minY + config.paddingTop,
                       width: rect.width - config.paddingLeft - config.paddingRight,

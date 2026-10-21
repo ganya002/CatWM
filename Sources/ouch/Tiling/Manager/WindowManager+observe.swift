@@ -80,6 +80,16 @@ extension WindowManager {
         }
     }
 
+    func learnMenuBar(_ target: CGRect, _ actual: CGRect) {
+        guard let screen = screen(containing: target) else { return }
+        let height = actual.minY - screen.frame.minY
+        guard height > 0, height <= 60, height > menuBarHeights[screen.uuid] ?? 0 else { return }
+        menuBarHeights[screen.uuid] = height
+        Log.info("\(screen.nsScreen.localizedName) keeps windows \(Int(height)) pt below its top; tiling below it")
+        corrections = [:]
+        refresh()
+    }
+
     func learnMinimum(_ id: CGWindowID, _ size: CGSize) {
         guard size.width.isFinite, size.height.isFinite, abs(size.width) < 1e5, abs(size.height) < 1e5 else { return }
         let old = minSizes[id] ?? .zero
