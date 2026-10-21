@@ -149,7 +149,7 @@ extension WindowManager {
             labels[lane.name] = lane.label.isEmpty ? nil : lane.label
             let laneState = state(workspace: lane.name)
             laneState.layout = lane.layout
-            laneState.zoomed = nil
+            if let zoomed = laneState.zoomed, !lane.ids.contains(zoomed) { laneState.zoomed = nil }
             for id in lane.ids where windows[id] != nil && !fullscreen.contains(id) { model.assign(id, to: lane.name) }
         }
         for name in gone { labels[name] = nil }

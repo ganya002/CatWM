@@ -98,6 +98,7 @@ extension WindowManager {
 
     func focusedWindowState() -> (floating: Bool, fullscreen: Bool)? {
         guard let window = focusedWindow() else { return nil }
+        if floatsFreely(window.id) { return (window.isFloating, floatZoom[window.id] != nil) }
         let zoomed = screen(of: window).map { state(for: $0).zoomed == window.id } ?? false
         return (window.isFloating, zoomed)
     }
