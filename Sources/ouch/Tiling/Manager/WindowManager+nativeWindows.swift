@@ -128,10 +128,16 @@ extension WindowManager {
         }
         nativeCreationBusy = true
         defer { nativeCreationBusy = false; scheduleRefresh(after: 0) }
-        let created = try await DesktopLifecycle.create(on: screen, snapshot: snapshot,
-                                                        before: nativeCatalog.successor(of: name, on: screen.uuid))
-        if !config.workspacesPerDisplay { nativeCatalog.bind(name, to: created.space, on: screen.uuid) }
-        updateNativeCatalog(Screen.all(), snapshot: created.snapshot)
+        let number = Int(WorkspaceKey.number(name)) ?? 0
+        var latest = snapshot
+        repeat {
+            let created = try await DesktopLifecycle.create(on: screen, snapshot: latest,
+                                                            before: nativeCatalog.successor(of: name, on: screen.uuid))
+            if !config.workspacesPerDisplay { nativeCatalog.bind(name, to: created.space, on: screen.uuid) }
+            latest = created.snapshot
+            updateNativeCatalog(Screen.all(), snapshot: latest)
+        } while config.workspacesPerDisplay && nativeCatalog.entry(name) == nil
+            && nativeCatalog.entries(on: screen.uuid).count < number
         guard let entry = nativeCatalog.entry(name) else {
             throw DesktopTransitionError.check("The Desktop disappeared")
         }
