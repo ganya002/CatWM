@@ -11,6 +11,21 @@ import Testing
         #expect(Set(catalog.entries.map(\.name)).count == 4)
     }
 
+    @Test func perDisplayNumbersFollowDesktopOrder() {
+        var catalog = NativeWorkspaceCatalog()
+        catalog.perDisplay = true
+        catalog.synchronize([.init(id: "left", spaces: [11, 12]), .init(id: "right", spaces: [21, 22])])
+        #expect(catalog.entry("left/1")?.space == 11)
+        #expect(catalog.entry("right/1")?.space == 21)
+        #expect(catalog.freeNumber(on: "right") == "right/3")
+        catalog.synchronize([.init(id: "left", spaces: [12, 11]), .init(id: "right", spaces: [22])])
+        #expect(catalog.entry("left/1")?.space == 12)
+        #expect(catalog.entry("right/1")?.space == 22)
+        #expect(catalog.entry("right/2") == nil)
+        #expect(WorkspaceKey.number("right/2") == "2")
+        #expect(WorkspaceKey.display("right/2") == "right")
+    }
+
     @Test func namesFollowDesktopIdentityWhenNativeOrderChanges() {
         var catalog = NativeWorkspaceCatalog()
         catalog.synchronize([.init(id: "screen", spaces: [11, 12, 13])])
@@ -80,7 +95,7 @@ import Testing
         #expect(catalog.entry("3") == nil)
         #expect(catalog.spare(on: "screen") == 13)
         #expect(catalog.step(from: "2", by: 1) == nil)
-        #expect(catalog.freeNumber() == "3")
+        #expect(catalog.freeNumber(on: "screen") == "3")
         catalog.bind("mail", to: 13, on: "screen")
         #expect(catalog.spare(on: "screen") == nil)
         #expect(catalog.entry("mail")?.space == 13)

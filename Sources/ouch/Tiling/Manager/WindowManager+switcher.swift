@@ -61,7 +61,8 @@ extension WindowManager {
     }
 
     private func workspaceLabel(_ workspace: String) -> String {
-        labels[workspace].map { "\(workspace) · \($0)" } ?? workspace
+        let number = workspaceNumber(workspace)
+        return labels[workspace].map { "\(number) · \($0)" } ?? number
     }
 
     private func workspace(on space: UInt64) -> String? {

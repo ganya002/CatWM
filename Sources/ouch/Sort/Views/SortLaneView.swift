@@ -30,19 +30,19 @@ struct SortLaneView: View {
                 }
                 .onSubmit { numberFocus = false }
                 .onChange(of: numberFocus) { _, focused in if !focused { commitNumber() } }
-                .accessibilityLabel("Number for workspace \(lane.workspace)")
+                .accessibilityLabel("Number for workspace \(lane.number)")
         } else {
-            Text(lane.workspace).font(Theme.display(22)).monospacedDigit().tracking(-0.4)
+            Text(lane.number).font(Theme.display(22)).monospacedDigit().tracking(-0.4)
                 .foregroundStyle(filled ? Theme.accentInk : Theme.inkFaint).fixedSize()
                 .contentShape(Rectangle())
                 .onTapGesture(count: 2) { model.finish(lane.workspace) }
                 .onTapGesture {
-                    number.draft = lane.workspace
+                    number.draft = lane.number
                     number.isEditing = true
                     DispatchQueue.main.async { numberFocus = true }
                 }
                 .gesture(carry)
-                .tooltip("Click to change the number, double-click to go to workspace \(lane.workspace)")
+                .tooltip("Click to change the number, double-click to go to workspace \(lane.number)")
         }
     }
 
@@ -59,17 +59,17 @@ struct SortLaneView: View {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 numberView(filled: count > 0)
                 TextField("", text: Binding(get: { lane.name }, set: { model.rename(lane.id, $0) }),
-                          prompt: Text("Workspace \(lane.workspace)").foregroundStyle(Theme.inkFaint))
+                          prompt: Text("Workspace \(lane.number)").foregroundStyle(Theme.inkFaint))
                     .textFieldStyle(.plain).font(Theme.heading())
                     .foregroundStyle(editing ? Theme.accentInk : Theme.ink)
                     .focused($editing)
                     .onSubmit { editing = false }
-                    .accessibilityLabel("Name for workspace \(lane.workspace)")
+                    .accessibilityLabel("Name for workspace \(lane.number)")
                 Text(count > 0 ? "\(count)" : "")
                     .textStyle(.caption).monospacedDigit().foregroundStyle(Theme.inkFaint).fixedSize()
                     .gesture(carry)
                 if model.plan.lanes.count > 1 {
-                    RemoveButton(help: "Remove workspace \(lane.workspace)", variant: .close) {
+                    RemoveButton(help: "Remove workspace \(lane.number)", variant: .close) {
                         withAnimation(Motion.easeOut) { model.removeLane(index) }
                     }
                         .opacity(hover.isOn || editing ? 1 : 0)
@@ -84,7 +84,7 @@ struct SortLaneView: View {
                 .contentShape(Rectangle())
                 .onTapGesture(count: 2) { model.finish(lane.workspace) }
                 .gesture(carry)
-                .tooltip("Double-click to go to workspace \(lane.workspace)")
+                .tooltip("Double-click to go to workspace \(lane.number)")
             SortLayoutPill(layout: lane.layout,
                            next: { model.cycleLayout(of: index) },
                            previous: { model.cycleLayout(of: index, by: -1) })

@@ -9,6 +9,7 @@ extension WindowManager {
             }
         }
         guard !displays.isEmpty, displays.count == screens.count else { return }
+        nativeCatalog.perDisplay = config.workspacesPerDisplay
         nativeCatalog.synchronize(displays)
         for entry in nativeCatalog.entries { monitorOf[entry.name] = entry.display }
         if nativeCatalog.saved != lastNativeCatalogSaved || nativeCatalog.homes != lastNativeCatalogHomes {
@@ -17,6 +18,16 @@ extension WindowManager {
             UserDefaults.standard.set(nativeCatalog.saved, forKey: "ws.nativeSpaces")
             UserDefaults.standard.set(nativeCatalog.homes, forKey: "ws.nativeDisplays")
         }
+    }
+
+    func renumberWorkspaces() {
+        model.resetWorkspaces()
+        nativeCatalog = NativeWorkspaceCatalog()
+        labels = [:]; previousWorkspace = [:]; savedWorkspaceOf = [:]; savedOwnerOf = [:]
+        nativeDroppedWorkspaces = []; nativeSortNames = []
+        sortSnapshot = nil; closingNow = []; closingApps = []
+        SortPanel.shared.abandon()
+        Log.info("workspaces: \(config.workspacesPerDisplay ? "numbered on each display" : "numbered on all displays")")
     }
 
     func syncNativeWorkspaces(screens: [Screen], present: Set<CGWindowID>) -> WorkspaceReconciliation {
@@ -108,14 +119,69 @@ extension WindowManager {
         let occupied = Set(scanner.desktop.allWindows.compactMap { window in
             scanner.desktop.spaces[window.id].flatMap { $0.count == 1 ? $0.first : nil }
         })
-        for entry in nativeCatalog.entries
-        where !held.contains(entry.name) && !occupied.contains(entry.space)
-            && Spaces.current(display: entry.display) != entry.space {
+        let empty = nativeCatalog.entries.filter {
+            !held.contains($0.name) && !occupied.contains($0.space) && Spaces.current(display: $0.display) != $0.space
+        }
+        if config.workspacesPerDisplay {
+            func number(_ entry: NativeWorkspaceCatalog.Entry) -> Int { Int(WorkspaceKey.number(entry.name)) ?? 0 }
+            let kept = nativeCatalog.entries.filter { entry in !empty.contains(entry) }
+            return removeDesktops(empty.filter { entry in
+                !kept.contains { $0.display == entry.display && number($0) > number(entry) }
+            })
+        }
+        for entry in empty {
             nativeCatalog.release(entry.name)
             states[entry.name] = nil
             lastFocused[entry.name] = nil
             Log.info("native workspaces: released empty workspace \(entry.name)")
         }
+    }
+
+    private func removeDesktops(_ empty: [NativeWorkspaceCatalog.Entry]) {
+        let now = Date()
+        let targets = empty.filter { desktopRemovalFailures[$0.space].map { now.timeIntervalSince($0) > 30 } ?? true }
+            .sorted { (Int(WorkspaceKey.number($0.name)) ?? 0) > (Int(WorkspaceKey.number($1.name)) ?? 0) }
+        guard !targets.isEmpty, !desktopRemovalScheduled else { return }
+        desktopRemovalScheduled = true
+        Task { @MainActor in
+            defer { self.desktopRemovalScheduled = false }
+            try? await Task.sleep(nanoseconds: 700_000_000)
+            guard await poll(5, every: 50_000_000, until: {
+                !self.nativeDesktop.isRunning && self.nativeDesktop.requested == nil && self.workspaceMoves.isEmpty
+                    && self.nativeMoveTargets.isEmpty && !self.nativeCreationBusy
+            }) else { return }
+            nativeCreationBusy = true
+            defer { self.nativeCreationBusy = false; self.scheduleRefresh(after: 0) }
+            for entry in targets {
+                guard let screen = Screen.all().first(where: { $0.uuid == entry.display }),
+                      Spaces.current(display: entry.display) != entry.space else { continue }
+                do {
+                    try await DesktopLifecycle.remove(entry.space, on: screen)
+                    self.closeGap(after: entry)
+                    Log.info("native workspaces: removed empty workspace \(entry.name)")
+                } catch {
+                    self.desktopRemovalFailures[entry.space] = Date()
+                    Log.info("native workspaces: could not remove \(entry.name): \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    func closeGap(after removed: NativeWorkspaceCatalog.Entry) {
+        guard let gone = Int(WorkspaceKey.number(removed.name)) else { return }
+        func shifted(_ key: String) -> String {
+            guard WorkspaceKey.display(key) == removed.display, let number = Int(WorkspaceKey.number(key)),
+                  number > gone else { return key }
+            return WorkspaceKey.make(String(number - 1), on: removed.display, perDisplay: true)
+        }
+        func moved<Value>(_ dictionary: [String: Value]) -> [String: Value] {
+            Dictionary(dictionary.filter { $0.key != removed.name }.map { (shifted($0.key), $0.value) },
+                       uniquingKeysWith: { first, _ in first })
+        }
+        states = moved(states)
+        labels = moved(labels)
+        lastFocused = moved(lastFocused)
+        previousWorkspace = moved(previousWorkspace).mapValues(shifted)
     }
 
     func showMaximised(_ window: Window) -> Bool {

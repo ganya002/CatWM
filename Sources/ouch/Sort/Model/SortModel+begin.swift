@@ -107,17 +107,19 @@ extension SortModel {
         let trimmed = text.trimmingCharacters(in: .whitespaces)
         guard let i = snapshot.lanes.firstIndex(where: { $0.id == lane }),
               !trimmed.isEmpty,
-              trimmed != snapshot.lanes[i].workspace else { return }
+              trimmed != snapshot.lanes[i].number else { return }
         guard trimmed.allSatisfy(\.isASCII), let number = Int(trimmed), (1...SortPlan.maxLanes).contains(number) else {
             notice = SortNotice(text: "Workspace numbers run from 1 to \(SortPlan.maxLanes).", undo: nil)
             return
         }
-        let workspace = String(number)
-        if snapshot.taken.contains(workspace) || reserved().contains(workspace) {
-            notice = SortNotice(text: "Workspace \(workspace) is on another display.", undo: nil)
+        let workspace = snapshot.key(String(number))
+        if snapshot.perDisplay {
+            notice = SortNotice(text: "Workspaces follow the order of your Desktops. Drag a column to reorder.", undo: nil)
+        } else if snapshot.taken.contains(workspace) || reserved().contains(workspace) {
+            notice = SortNotice(text: "Workspace \(number) is on another display.", undo: nil)
         } else if let held = snapshot.lanes.first(where: { $0.workspace == workspace }),
                   !held.ids.isEmpty || !held.name.trimmingCharacters(in: .whitespaces).isEmpty {
-            notice = SortNotice(text: "Workspace \(workspace) is in use. Move its windows away first.", undo: nil)
+            notice = SortNotice(text: "Workspace \(number) is in use. Move its windows away first.", undo: nil)
         } else {
             edit { $0.renumberLane(i, to: workspace) }
             reveal = SortReveal(id: 0, lane: lane, token: reveal.token + 1)

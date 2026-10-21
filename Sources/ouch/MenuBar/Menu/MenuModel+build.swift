@@ -45,7 +45,7 @@ extension MenuModel {
             out.append(MenuItem(id: "ws-\(number)", label: "Go to Workspace \(number)",
                                 shortcut: keys.keys("workspace", "\(number)"),
                                 hidden: true, keywords: "switch space desktop",
-                                action: { manager.showWorkspace("\(number)") }))
+                                action: { manager.showWorkspaceNumber("\(number)") }))
         }
         return out
     }

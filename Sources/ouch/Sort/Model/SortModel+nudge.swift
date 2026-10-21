@@ -49,7 +49,7 @@ extension SortModel {
         if hover == id { hover = nil }
         let name = dst.lanes[lane].name.trimmingCharacters(in: .whitespaces)
         changed()
-        let laneName = name.isEmpty ? "workspace \(dst.lanes[lane].workspace)" : name
+        let laneName = name.isEmpty ? "workspace \(dst.lanes[lane].number)" : name
         notice = SortNotice(text: "Moved \(item.title) to \(destination.short), \(laneName).", undo: nil)
     }
 
@@ -89,7 +89,7 @@ extension SortModel {
         let windowID = target()
         if let bind = binds[Self.key(code, mods)], run(bind, on: windowID) { return true }
         if let windowID, mods.isEmpty, let number = Self.digits[code] {
-            send(windowID, toWorkspace: String(number))
+            send(windowID, toWorkspace: plan.key(String(number)))
             return true
         }
         if mods.subtracting(.maskShift).isEmpty, characters == "+" || code == 69 || (characters == "=" && code == 24) {
@@ -164,7 +164,7 @@ extension SortModel {
             return true
         }
         guard let number = Int(arg) else { return false }
-        send(windowID, toWorkspace: String(number))
+        send(windowID, toWorkspace: plan.key(String(number)))
         return true
     }
 }

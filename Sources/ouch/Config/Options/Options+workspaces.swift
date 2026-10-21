@@ -21,6 +21,13 @@ extension Options {
                      help: "New workspaces then open instantly on the spare Desktop",
                      keywords: "clean auto delete desktop spare instant", section: "Workspaces",
                      enabled: { $0.virtualWorkspaces }),
+        .bool("workspaces-per-display", \.workspacesPerDisplay)
+            .documented("bool", "true: each display counts its own workspaces from 1, and `workspace 2` selects the "
+                + "second workspace on the current display. false: workspace numbers are shared by all displays")
+            .setting(.windows, "windows.perDisplay", "Number workspaces on each display",
+                     help: "Each display starts at workspace 1. Off: all displays share one set of numbers",
+                     keywords: "monitor screen display shared separate per", section: "Workspaces",
+                     enabled: { $0.virtualWorkspaces }),
         .choice("sort-strategy", \.sortStrategy, noun: "sort strategy")
             .documented(nil, "the grouping Overview opens with")
             .note("Overview: the grouping it opens with (task, app, focus or none), and how many windows one\n"

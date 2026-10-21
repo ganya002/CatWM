@@ -15,8 +15,10 @@ struct NativeWorkspaceCatalog {
     private(set) var spares: [UInt64: String] = [:]
     var saved: [String: UInt64] = [:]
     var homes: [String: String] = [:]
+    var perDisplay = false
 
     mutating func synchronize(_ displays: [Display]) {
+        if perDisplay { return follow(displays) }
         let live = Set(displays.flatMap(\.spaces).filter { $0 != 0 })
         let connected = Set(displays.map(\.id))
         let current = Set(displays.compactMap(\.current))
@@ -32,9 +34,7 @@ struct NativeWorkspaceCatalog {
         }
         for display in displays {
             for space in display.spaces where space != 0 && spares[space] == nil && !saved.values.contains(space) {
-                var number = 1
-                while saved[String(number)] != nil { number += 1 }
-                saved[String(number)] = space
+                saved[freeName(on: display.id, in: saved)] = space
             }
         }
         entries = displays.flatMap { display in
@@ -44,6 +44,16 @@ struct NativeWorkspaceCatalog {
         }
         for entry in entries { homes[entry.name] = entry.display }
         homes = homes.filter { saved[$0.key] != nil }
+    }
+
+    private mutating func follow(_ displays: [Display]) {
+        saved = [:]; homes = [:]; spares = [:]
+        entries = displays.flatMap { display in
+            display.spaces.filter { $0 != 0 }.enumerated().map { index, space in
+                Entry(name: WorkspaceKey.make(String(index + 1), on: display.id, perDisplay: true),
+                      display: display.id, space: space)
+            }
+        }
     }
 
     mutating func bind(_ name: String, to space: UInt64, on display: String) {
@@ -67,17 +77,24 @@ struct NativeWorkspaceCatalog {
         spares.filter { $0.value == display }.keys.min()
     }
 
-    func freeNumber() -> String {
+    func freeNumber(on display: String) -> String {
+        perDisplay ? WorkspaceKey.make(String(entries(on: display).count + 1), on: display, perDisplay: true)
+            : freeName(on: display, in: saved)
+    }
+
+    private func freeName(on display: String, in taken: [String: UInt64]) -> String {
         var number = 1
-        while entry(String(number)) != nil { number += 1 }
-        return String(number)
+        while taken[WorkspaceKey.make(String(number), on: display, perDisplay: perDisplay)] != nil { number += 1 }
+        return WorkspaceKey.make(String(number), on: display, perDisplay: perDisplay)
     }
 
     func entry(_ name: String) -> Entry? { entries.first { $0.name == name } }
     func entry(space: UInt64) -> Entry? { entries.first { $0.space == space } }
+    func entries(on display: String) -> [Entry] { entries.filter { $0.display == display } }
+
     func step(from name: String, by delta: Int) -> String? {
         guard let source = entry(name) else { return nil }
-        let local = entries.filter { $0.display == source.display }
+        let local = entries(on: source.display)
             .sorted { WorkspaceReconciliation.workspaceSort($0.name, $1.name) }
         guard let index = local.firstIndex(of: source) else { return nil }
         return local.indices.contains(index + delta) ? local[index + delta].name : nil

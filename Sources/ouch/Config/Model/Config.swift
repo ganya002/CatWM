@@ -30,6 +30,7 @@ struct Config {
     var virtualWorkspaces = true
     var stayOnWorkspaceAfterClose = true
     var removesEmptyWorkspaces = true
+    var workspacesPerDisplay = false
     var sortNudge = 5
     var sortStrategy: SortStrategy = .task
     var modeEffect: ModeFX.Style = .draw

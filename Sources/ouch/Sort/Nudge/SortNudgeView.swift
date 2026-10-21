@@ -10,7 +10,7 @@ struct SortNudgeView: View {
             HStack(spacing: 8) {
                 Image(systemName: "lightbulb").font(Theme.symbol(Theme.Icon.large)).foregroundStyle(Theme.accentInk)
                     .breatheEffect().frame(width: 16)
-                Text("Workspace \(model.workspace) is packed").font(Theme.heading()).oneLine()
+                Text("Workspace \(WorkspaceKey.number(model.workspace)) is packed").font(Theme.heading()).oneLine()
                 Spacer(minLength: 4)
                 OIconButton(symbol: "xmark", label: "Close tip", action: model.later).padding(.trailing, -4)
             }

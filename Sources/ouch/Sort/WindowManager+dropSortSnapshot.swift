@@ -38,7 +38,7 @@ extension WindowManager {
                                isLaptop: screen.isBuiltin, aspect: screen.frame.width / max(screen.frame.height, 1),
                                screen: screen.nsScreen, items: items, fullscreen: fullscreen,
                                workspaces: sortWorkspaces(mine, active: active, display: screen.uuid),
-                               active: active, taken: taken)
+                               active: active, taken: taken, perDisplay: config.workspacesPerDisplay)
         }
     }
 
