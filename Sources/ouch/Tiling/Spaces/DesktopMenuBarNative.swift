@@ -22,6 +22,13 @@ enum DesktopMenuBarNative {
     private static let rect: Rect? = symbol("SLSGetScreenRectForWindow")
     private static let appearance: Theme? = symbol("SLSGetMenuAppearanceThemeOnSpace")
     private static let setAlpha: Alpha? = symbol("SLSSetMenuBarSystemOverrideAlpha")
+    private typealias Order = @convention(c) (Int32, CGWindowID, Int32, CGWindowID) -> Int32
+    private static let order: Order? = symbol("SLSOrderWindow")
+
+    static func orderOut(_ window: CGWindowID) {
+        guard let connection, let order else { return }
+        _ = order(connection(), window, 0, 0)
+    }
 
     static func theme(_ space: UInt64) -> Int32? { appearance?(space) }
 

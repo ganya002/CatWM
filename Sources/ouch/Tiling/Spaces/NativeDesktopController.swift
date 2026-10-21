@@ -170,9 +170,12 @@ final class NativeDesktopController {
         try check(Spaces.current(display: state.display) == state.source,
                   "Native navigation interrupted Desktop motion")
         if wants(target) {
+            let batch = WindowServerUpdates.shared.begin()
+            if let menu, DesktopMenuBarNative.theme(state.destination) == menu.state.theme { menu.restore() }
             try check(DesktopBridge.setVisible([state.source], false), "Cannot hide the source Desktop")
             try check(DesktopBridge.setCurrent(display: state.display, space: state.destination),
                       "Cannot activate the destination Desktop")
+            batch?.finish()
             let arrived = await poll(1) { Spaces.current(display: state.display) == state.destination }
             try check(arrived, "macOS did not activate the destination Desktop")
             DesktopMenuBar.shown(state.destination)
