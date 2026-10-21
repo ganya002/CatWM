@@ -159,6 +159,15 @@ import Testing
         #expect(frames.map(\.width) == [200, 500, 200])
         #expect(frames.map(\.minX) == [0, 200, 700])
     }
+
+    @Test func aWideMinimumInAStackWidensTheWholeStack() {
+        let tall = [CGRect(x: 0, y: 0, width: 600, height: 600), CGRect(x: 610, y: 0, width: 290, height: 295),
+                    CGRect(x: 610, y: 305, width: 290, height: 295)]
+        let frames = fitMinimums(tall, mins: [nil, CGSize(width: 400, height: 100), nil], gap: 10)
+        #expect(frames[0] == CGRect(x: 0, y: 0, width: 445, height: 600))
+        #expect(frames[1] == CGRect(x: 455, y: 0, width: 445, height: 295))
+        #expect(frames[2] == CGRect(x: 455, y: 305, width: 445, height: 295))
+    }
 }
 
 @Suite struct SplitDividerTests {
