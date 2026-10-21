@@ -86,7 +86,7 @@ classDiagram
     SavedWindow "1" o-- "0..1" LaunchSpec
 ```
 
-`AppState.tabs` holds one URL for each tab. A browser tab is an `http` or `https` URL. A Terminal tab, an iTerm2 tab or a Finder window is a `file` URL of a folder.
+`AppState.tabs` holds one URL for each tab. A browser tab is an `http` or `https` URL. A Terminal tab, an iTerm2 tab or a Finder tab is a `file` URL of a folder. A code editor window has one `file` URL: its project folder, `.code-workspace` file, Xcode project or `Package.swift`.
 
 ## Save a template
 
@@ -113,19 +113,41 @@ sequenceDiagram
     WM->>AS: make(facts, batch)
     AS-->>WM: WorkspaceTemplate
     alt template-app-scripting is on
-        WM->>SC: capture(windows, consentWait: 30 s, scriptTimeout: 3 s)
+        WM->>WM: WindowTabs.background(windows, onScreen) finds hidden tab windows
+        WM->>SC: capture(visible windows, consentWait: 30 s, scriptTimeout: 3 s)
         par one task for each app with an adapter
-            SC->>AU: access(bundleID, ask: true)
-            AU-->>SC: granted, denied, needsConsent or notRunning
-            SC->>AD: capture(bundleID)
+            opt captureNeedsAutomation
+                SC->>AU: access(bundleID, ask: true)
+                AU-->>SC: granted, denied, needsConsent or notRunning
+            end
+            SC->>AD: capture(bundleID, windows)
             AD-->>SC: ScriptedWindow list
             SC->>SC: attach(scripted, to: windows)
         end
         SC-->>WM: AppState for each window ID
+        WM->>WM: drop hidden tab windows whose visible window got a state
         WM->>WM: set SavedWindow.state
     end
     WM-->>UI: WorkspaceTemplate
 ```
+
+### Background tabs
+
+macOS gives each native tab (Terminal, Finder, TextEdit) its own AX window. Only the selected tab is on screen. A hidden window of an app with an adapter is a background tab when an on-screen window of the same app has the same frame (within 1 point). The adapter saves all tabs in the state of the visible window, so the hidden tab windows are removed from the template. If the visible window gets no state, for example because Automation is off, Ouch keeps the hidden windows.
+
+```mermaid
+flowchart LR
+    W["Windows of apps with an adapter"] --> On{"On screen?"}
+    On -- Yes --> Keep["visible window"]
+    On -- No --> Same{"An on-screen window of the same app has the same frame?"}
+    Same -- No --> Keep2["keep as its own window"]
+    Same -- Yes --> Tab["background tab of that window"]
+    Tab --> Got{"Visible window got an AppState?"}
+    Got -- Yes --> Drop["remove from the template"]
+    Got -- No --> Keep2
+```
+
+Finder scripting lists each tab as a Finder window. `WindowTabs.merged` joins the scripted windows that have the same frame into one state, in front-to-back order, so the front tab is the selected tab.
 
 ### Pair a scripted window with an AX window
 
@@ -147,15 +169,16 @@ flowchart TD
 
 ## App adapters
 
-An adapter reads the state of one app and opens it again. JavaScript for Automation (JXA) reads the state and returns JSON. AppleScript opens the state. `AppScript` runs each script in an `osascript` process. A timer stops the process at the timeout, so an app that does not respond cannot stop Ouch.
+An adapter reads the state of one app and opens it again. For scripted apps, JavaScript for Automation (JXA) reads the state and returns JSON, and AppleScript or a file opens it again. The code editor adapters need no script and no Automation: they read the editor's own recent-project data with `SQLiteRead` (read-only), and they get the AX title, frame and document of each window to choose the project. `AppScript` runs each script in an `osascript` process. A timer stops the process at the timeout, so an app that does not respond cannot stop Ouch.
 
 ```mermaid
 classDiagram
     class AppAdapter {
         <<protocol>>
         Set~String~ bundleIDs
+        Bool captureNeedsAutomation
         Bool restoreNeedsAutomation
-        capture(bundleID, timeout) ScriptedWindow[]
+        capture(bundleID, windows, timeout) ScriptedWindow[]
         restore(state, bundleID, appURL, timeout) Bool
     }
     class SafariAdapter {
@@ -169,23 +192,58 @@ classDiagram
     }
     class TerminalAdapter {
         capture: JXA tab tty, then WorkingDirectory
-        restore: open the selected folder with Terminal
+        restore: one tab opens its folder, more tabs open a temporary window group file
     }
     class ITermAdapter {
         capture: JXA session tty, then WorkingDirectory
         restore: AppleScript new window, tabs and cd
     }
     class FinderAdapter {
-        capture: JXA target folder of each window
-        restore: open the folder with Finder
+        capture: JXA target folder of each tab, merged by frame
+        restore: open the selected folder with Finder
+    }
+    class CodeEditorAdapter {
+        VS Code, Insiders, Cursor, VSCodium, Windsurf
+        capture: recent folders and workspaces in state.vscdb
+        restore: open the project with the editor
+    }
+    class ZedAdapter {
+        capture: workspaces.paths in the Zed db
+        restore: open the project with Zed
+    }
+    class XcodeAdapter {
+        capture: walk up from AXDocument to a project
+        restore: open the project with Xcode
     }
     AppAdapter <|.. SafariAdapter
     AppAdapter <|.. ChromiumAdapter
     AppAdapter <|.. TerminalAdapter
     AppAdapter <|.. ITermAdapter
     AppAdapter <|.. FinderAdapter
+    AppAdapter <|.. CodeEditorAdapter
+    AppAdapter <|.. ZedAdapter
+    AppAdapter <|.. XcodeAdapter
     AppAdapters --> AppAdapter : finds by bundle ID
 ```
+
+### Code editor projects
+
+`ProjectGuess.pick` chooses one project for each editor window from the recent-project list, most recent first.
+
+```mermaid
+flowchart TD
+    Win["Editor window: title and AXDocument"] --> Doc{"AXDocument is a file in a recent project folder?"}
+    Doc -- Yes --> Deep["the deepest such folder"]
+    Doc -- No --> Title{"A part of the title, split at ' — ' and ' - ', is a project name?"}
+    Title -- Yes --> Recent["the most recent such project"]
+    Title -- No --> None["no state"]
+```
+
+Xcode has no recent list that Ouch reads. `ProjectGuess.xcodeProject` walks up from the AXDocument file, at most 12 folders and not past the home folder, to the first folder with an `.xcworkspace`, an `.xcodeproj` or a `Package.swift`.
+
+### Terminal tabs
+
+Terminal scripting has no command that makes a tab. For a window with more than one tab, `TerminalGroup.file` writes a temporary window group file (`type = Window Group`, `WindowList`, a `Window Settings` array with `Tab Working Directory URL` and `TabSelected` for each tab), and Ouch opens it with Terminal. Terminal opens one window with all the tabs. The file is deleted after 30 seconds. The tab profile is the Terminal default profile.
 
 `WorkingDirectory` finds the folder of a terminal tab without a script. It reads the device of the tty, finds the foreground process group of that tty with `sysctl`, and reads the current folder of that process with `proc_pidinfo`.
 

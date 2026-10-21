@@ -55,7 +55,16 @@ When editing by hand while the app runs, make the edit then run `ouch reload`. I
 
 Settings → **Templates** lists saved workspaces with large screenshot previews. Click a screenshot to enlarge it. Open, rename, update, or delete a template here. A template stores app identities, document addresses when available, window frames, display sizes, layouts, main-pane ratios and counts, window order, tiling status, and floating, minimized, zoomed, or native full screen states. Templates are stored in `~/.config/ouch/templates.json`, separately from configs. Screenshots are stored in that file. Screen recording access is required to capture them. Saving still works without that access. Update an older template to add a screenshot.
 
-With `template-app-scripting = true` (Settings → Templates → **Save tabs and folders**), a template also saves the tabs of Safari and Chromium browser windows (Chrome, Brave, Edge, Vivaldi, Helium), the folders of Terminal and iTerm2 tabs, and the folder of each Finder window. macOS asks once for each app to let Ouch control it. Opening the template reopens the browser tabs and iTerm2 tabs, and opens Terminal and Finder windows at the saved folder. Terminal reopens only the selected tab. Private and incognito windows are not saved. If an app does not allow control, Ouch opens the window as before.
+With `template-app-scripting = true` (Settings → Templates → **Save tabs and folders**), a template also saves:
+
+- the tabs of Safari and Chromium browser windows (Chrome, Brave, Edge, Vivaldi, Helium), but not private or incognito windows
+- the folders of Terminal and iTerm2 tabs
+- the folders of each Finder window and its tabs
+- the project of VS Code, Cursor, VSCodium, Windsurf, Zed and Xcode windows
+
+macOS asks once for each scripted app to let Ouch control it. The code editors need no permission: Ouch reads their recent-project files. A background tab of a Terminal or Finder window is saved as a tab of its window, not as a separate window.
+
+Opening the template reopens the browser tabs, the iTerm2 tabs and all Terminal tabs (through a temporary Terminal window group). It opens each Finder window at its selected folder, and each editor at its project, so that the editor brings back its own files and panes. If an app does not allow control, Ouch opens the window as before.
 
 Each saved window in `templates.json` can have an optional `launch` object that you edit by hand: `"url"` opens a URL or deep link with the app (for example `vscode://file/…` or `slack://channel?…`), `"arguments"` passes launch arguments when Ouch starts the app, and `"command"` runs a shell command with `sh -c` instead of opening a new window. `command` is used first, then saved tabs, then `url`, then the saved document.
 

@@ -3,9 +3,11 @@ import Foundation
 
 struct TerminalAdapter: AppAdapter {
     let bundleIDs: Set<String> = ["com.apple.Terminal"]
+    let captureNeedsAutomation = true
     let restoreNeedsAutomation = false
 
-    func capture(bundleID: String, timeout: TimeInterval) async -> [ScriptedWindow] {
+    func capture(bundleID: String, windows _: [AppStateCapture.Window],
+                 timeout: TimeInterval) async -> [ScriptedWindow] {
         let source = ScriptText.frameHelper + """
         function run() {
           const app = Application("\(bundleID)");
@@ -25,16 +27,48 @@ struct TerminalAdapter: AppAdapter {
     }
 
     func restore(_ state: AppState, bundleID _: String, appURL: URL, timeout _: TimeInterval) async -> Bool {
-        guard let current = state.current, let url = URL(string: current), url.isFileURL else { return false }
-        return await Launcher.open(url, withApp: appURL)
+        let folders = state.tabs.compactMap { URL(string: $0) }.filter(\.isFileURL)
+        guard let current = state.current.flatMap({ URL(string: $0) }), current.isFileURL else { return false }
+        guard folders.count > 1 else { return await Launcher.open(current, withApp: appURL) }
+        let profile = UserDefaults(suiteName: "com.apple.Terminal")?.string(forKey: "Default Window Settings")
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("Ouch-\(UUID().uuidString).terminal")
+        guard let data = TerminalGroup.file(folders: folders, selected: folders.firstIndex(of: current) ?? 0,
+                                            profile: profile ?? "Basic"),
+              (try? data.write(to: file)) != nil else { return false }
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 30) {
+            try? FileManager.default.removeItem(at: file)
+        }
+        return await Launcher.open(file, withApp: appURL)
+    }
+}
+
+enum TerminalGroup {
+    static func file(folders: [URL], selected: Int, profile: String) -> Data? {
+        let tabs: [[String: Any]] = folders.enumerated().map { index, folder in
+            [
+                "Tab Settings Name": profile,
+                "Tab Settings": ["name": profile, "type": "Window Settings"],
+                "Tab Working Directory URL": URL(fileURLWithPath: folder.path, isDirectory: true).absoluteString,
+                "Tab Working Directory URL String": URL(fileURLWithPath: folder.path).absoluteString,
+                "TabSelected": index == selected
+            ]
+        }
+        let group: [String: Any] = [
+            "name": "Ouch",
+            "type": "Window Group",
+            "WindowList": [["ShowsTabBar": folders.count > 1, "Window Settings": tabs]]
+        ]
+        return try? PropertyListSerialization.data(fromPropertyList: group, format: .xml, options: 0)
     }
 }
 
 struct ITermAdapter: AppAdapter {
     let bundleIDs: Set<String> = ["com.googlecode.iterm2"]
+    let captureNeedsAutomation = true
     let restoreNeedsAutomation = true
 
-    func capture(bundleID: String, timeout: TimeInterval) async -> [ScriptedWindow] {
+    func capture(bundleID: String, windows _: [AppStateCapture.Window],
+                 timeout: TimeInterval) async -> [ScriptedWindow] {
         let source = ScriptText.frameHelper + """
         function run() {
           const app = Application("\(bundleID)");

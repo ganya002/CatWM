@@ -2,9 +2,11 @@ import Foundation
 
 struct SafariAdapter: AppAdapter {
     let bundleIDs: Set<String> = ["com.apple.Safari", "com.apple.SafariTechnologyPreview"]
+    let captureNeedsAutomation = true
     let restoreNeedsAutomation = true
 
-    func capture(bundleID: String, timeout: TimeInterval) async -> [ScriptedWindow] {
+    func capture(bundleID: String, windows _: [AppStateCapture.Window],
+                 timeout: TimeInterval) async -> [ScriptedWindow] {
         let source = ScriptText.frameHelper + """
         function run() {
           const app = Application("\(bundleID)");
@@ -43,9 +45,11 @@ struct ChromiumAdapter: AppAdapter {
     let bundleIDs: Set<String> = ["com.google.Chrome", "com.google.Chrome.beta", "com.google.Chrome.canary",
                                   "org.chromium.Chromium", "com.brave.Browser", "com.microsoft.edgemac",
                                   "com.vivaldi.Vivaldi", "net.imput.helium"]
+    let captureNeedsAutomation = true
     let restoreNeedsAutomation = true
 
-    func capture(bundleID: String, timeout: TimeInterval) async -> [ScriptedWindow] {
+    func capture(bundleID: String, windows _: [AppStateCapture.Window],
+                 timeout: TimeInterval) async -> [ScriptedWindow] {
         let source = ScriptText.frameHelper + """
         function run() {
           const app = Application("\(bundleID)");

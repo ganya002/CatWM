@@ -2,9 +2,11 @@ import Foundation
 
 struct FinderAdapter: AppAdapter {
     let bundleIDs: Set<String> = ["com.apple.finder"]
+    let captureNeedsAutomation = true
     let restoreNeedsAutomation = false
 
-    func capture(bundleID: String, timeout: TimeInterval) async -> [ScriptedWindow] {
+    func capture(bundleID: String, windows _: [AppStateCapture.Window],
+                 timeout: TimeInterval) async -> [ScriptedWindow] {
         let source = ScriptText.frameHelper + """
         function run() {
           const app = Application("\(bundleID)");
@@ -15,9 +17,9 @@ struct FinderAdapter: AppAdapter {
         }
         """
         let output = await AppScript.run(source, language: .javaScript, timeout: timeout)
-        return ScriptedEntry.decode(output).compactMap { entry in
+        return WindowTabs.merged(ScriptedEntry.decode(output).compactMap { entry in
             entry.window(tabs: entry.tabs.map { URL(string: $0)?.isFileURL == true ? $0 : "" })
-        }
+        })
     }
 
     func restore(_ state: AppState, bundleID _: String, appURL: URL, timeout _: TimeInterval) async -> Bool {

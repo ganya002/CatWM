@@ -14,14 +14,16 @@ public struct ScriptedWindow: Equatable, Sendable {
 
 public protocol AppAdapter: Sendable {
     var bundleIDs: Set<String> { get }
+    var captureNeedsAutomation: Bool { get }
     var restoreNeedsAutomation: Bool { get }
-    func capture(bundleID: String, timeout: TimeInterval) async -> [ScriptedWindow]
+    func capture(bundleID: String, windows: [AppStateCapture.Window], timeout: TimeInterval) async -> [ScriptedWindow]
     func restore(_ state: AppState, bundleID: String, appURL: URL, timeout: TimeInterval) async -> Bool
 }
 
 public enum AppAdapters {
     public static let all: [any AppAdapter] = [SafariAdapter(), ChromiumAdapter(), TerminalAdapter(),
-                                               ITermAdapter(), FinderAdapter()]
+                                               ITermAdapter(), FinderAdapter(), CodeEditorAdapter(),
+                                               ZedAdapter(), XcodeAdapter()]
 
     public static func adapter(for bundleID: String) -> (any AppAdapter)? {
         all.first { $0.bundleIDs.contains(bundleID) }
@@ -45,12 +47,14 @@ public enum AppStateCapture {
         public var bundleID: String
         public var title: String
         public var frame: CGRect
+        public var document: String?
 
-        public init(id: CGWindowID, bundleID: String, title: String, frame: CGRect) {
+        public init(id: CGWindowID, bundleID: String, title: String, frame: CGRect, document: String? = nil) {
             self.id = id
             self.bundleID = bundleID
             self.title = title
             self.frame = frame
+            self.document = document
         }
     }
 
@@ -62,10 +66,11 @@ public enum AppStateCapture {
                 guard let adapter = AppAdapters.adapter(for: bundle) else { continue }
                 let owned = windows.filter { $0.bundleID == bundle }
                 group.addTask {
-                    guard await Automation.access(bundle, ask: true, timeout: consentWait) == .granted else {
+                    if adapter.captureNeedsAutomation,
+                       await Automation.access(bundle, ask: true, timeout: consentWait) != .granted {
                         return [:]
                     }
-                    let scripted = await adapter.capture(bundleID: bundle, timeout: scriptTimeout)
+                    let scripted = await adapter.capture(bundleID: bundle, windows: owned, timeout: scriptTimeout)
                     return attach(scripted, to: owned)
                 }
             }

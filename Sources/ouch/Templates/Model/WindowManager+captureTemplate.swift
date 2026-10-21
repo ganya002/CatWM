@@ -49,13 +49,19 @@ extension WindowManager {
 
     @MainActor
     private func withAppStates(_ template: WorkspaceTemplate) async throws -> WorkspaceTemplate {
-        let windows = template.windows.map {
-            AppStateCapture.Window(id: $0.windowID, bundleID: $0.bundleID, title: $0.title, frame: $0.frame)
+        let windows = template.windows.filter { !$0.minimized && !$0.fullscreen }.map {
+            AppStateCapture.Window(id: $0.windowID, bundleID: $0.bundleID, title: $0.title, frame: $0.frame,
+                                   document: $0.document)
         }
+        let onScreen = Set(TemplateRestorer.windowList(.optionOnScreenOnly).map(\.id))
+        let tabs = WindowTabs.background(windows.filter { AppAdapters.adapter(for: $0.bundleID) != nil },
+                                         onScreen: onScreen)
         let started = Date()
-        let states = await AppStateCapture.capture(windows, consentWait: 30, scriptTimeout: 3)
+        let states = await AppStateCapture.capture(windows.filter { tabs[$0.id] == nil }, consentWait: 30,
+                                                   scriptTimeout: 3)
         try Task.checkCancellation()
         var copy = template
+        copy.windows.removeAll { window in tabs[window.windowID].map { states[$0] != nil } ?? false }
         for index in copy.windows.indices {
             copy.windows[index].state = states[copy.windows[index].windowID]
         }
