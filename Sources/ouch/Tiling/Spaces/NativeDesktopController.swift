@@ -15,7 +15,7 @@ final class NativeDesktopController {
     var prepare: (Request) async throws -> Void = { _ in }
     var onSettled: (Request, _ changed: Bool) -> Void = { _, _ in }
     var onMotion: (Request) -> Void = { _ in }
-    var isForward: (_ source: UInt64, _ target: UInt64) -> Bool? = { _, _ in nil }
+    var isForward: (_ source: UInt64, _ target: UInt64, _ desktopOrder: Bool) -> Bool = { $2 }
     var onIdle: () -> Void = {}
     var onFailure: (String) -> Void = { _ in }
     private(set) var requested: Request?
@@ -99,8 +99,7 @@ final class NativeDesktopController {
         if !wants(target) { try await recovery.finish(); return }
         var failure: Error?
         do {
-            let forward = gesture ? into > from : isForward(source, target.space) ?? (into > from)
-            try await compose(state, screen: screen, forward: forward, target: target, recovery: recovery)
+            try await compose(state, screen: screen, forward: into > from, target: target, recovery: recovery)
         } catch { failure = error }
         state.restore()
         let restored = await poll(1) {
@@ -133,8 +132,9 @@ final class NativeDesktopController {
         if let preparation { try? await recovery.finish(); throw preparation }
     }
 
-    @MainActor private func compose(_ state: DesktopGuard.Context, screen: Screen, forward: Bool,
+    @MainActor private func compose(_ state: DesktopGuard.Context, screen: Screen, forward desktopOrder: Bool,
                                     target: Request, recovery: DesktopGuardClient) async throws {
+        let forward = gesture ? desktopOrder : isForward(state.source, state.destination, desktopOrder)
         let width = screen.frame.width * (forward ? 1 : -1)
         var progress = 0.0
         try check(DesktopBridge.animating(display: state.display, active: true), "Cannot begin Desktop motion")
