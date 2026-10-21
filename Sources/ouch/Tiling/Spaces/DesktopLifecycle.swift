@@ -8,9 +8,8 @@ enum DesktopLifecycle {
 
     @MainActor static func create(on screen: Screen, snapshot supplied: Spaces.Snapshot? = nil,
                                   before successor: UInt64? = nil) async throws -> Creation {
-        guard DesktopUI.isSettled(screen),
-              let before = (supplied ?? Spaces.snapshot())?.list(display: screen.uuid) else {
-            throw DesktopTransitionError.check("Finish the current macOS Desktop action first")
+        guard let before = (supplied ?? Spaces.snapshot())?.list(display: screen.uuid) else {
+            throw DesktopTransitionError.check("macOS could not read the Desktops")
         }
         let index = successor.flatMap { before.ids.firstIndex(of: $0) } ?? before.ids.count
         let started = ProcessInfo.processInfo.systemUptime
@@ -21,7 +20,7 @@ enum DesktopLifecycle {
             let snapshot = try await place(space, on: screen, index: index)
             let elapsed = Int((ProcessInfo.processInfo.systemUptime - started) * 1_000)
             Log.info("native workspaces: created Desktop \(space) on \(screen.uuid) in \(elapsed) ms")
-            DesktopMenuBar.created(space)
+            DesktopMenuBar.created(space, in: snapshot)
             return Creation(space: space, snapshot: snapshot)
         } catch {
             for host in Screen.all() where Spaces.list(display: host.uuid)?.ids.contains(space) == true {

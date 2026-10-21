@@ -7,17 +7,22 @@ enum DesktopMenuBar {
         set { UserDefaults.standard.set(Array(newValue), forKey: freshKey) }
     }
 
-    @MainActor static func created(_ space: UInt64) {
-        guard let uuid = uuid(of: space) else { return }
-        fresh = live(fresh).union([uuid])
+    @MainActor static func created(_ space: UInt64, in snapshot: Spaces.Snapshot) {
+        guard let uuid = uuid(of: space, in: snapshot) else { return }
+        fresh = live(fresh, in: snapshot).union([uuid])
     }
 
-    @MainActor static func removed() { fresh = live(fresh) }
+    @MainActor static func removed() {
+        guard let snapshot = Spaces.snapshot() else { return }
+        fresh = live(fresh, in: snapshot)
+    }
 
-    private static func live(_ uuids: Set<String>) -> Set<String> {
-        let all = Spaces.snapshot()?.displays.lazy.compactMap { $0["Spaces"] as? [[String: Any]] }.joined()
-            .compactMap { $0["uuid"] as? String } ?? []
-        return uuids.intersection(all)
+    private static func spaces(in snapshot: Spaces.Snapshot) -> [[String: Any]] {
+        snapshot.displays.flatMap { $0["Spaces"] as? [[String: Any]] ?? [] }
+    }
+
+    private static func live(_ uuids: Set<String>, in snapshot: Spaces.Snapshot) -> Set<String> {
+        uuids.intersection(spaces(in: snapshot).compactMap { $0["uuid"] as? String })
     }
 
     struct State: Codable {
@@ -110,8 +115,7 @@ enum DesktopMenuBar {
         info.owner == 0 && info.level == CGWindowLevelForKey(.desktopIconWindow) + 1
     }
 
-    private static func uuid(of space: UInt64) -> String? {
-        Spaces.snapshot()?.displays.lazy.compactMap { $0["Spaces"] as? [[String: Any]] }.joined()
-            .first { $0["ManagedSpaceID"] as? UInt64 == space }?["uuid"] as? String
+    private static func uuid(of space: UInt64, in snapshot: Spaces.Snapshot? = Spaces.snapshot()) -> String? {
+        snapshot.flatMap { spaces(in: $0).first { $0["ManagedSpaceID"] as? UInt64 == space }?["uuid"] as? String }
     }
 }
