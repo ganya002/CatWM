@@ -137,7 +137,7 @@ struct WorkspaceReconciliation {
 
     private static func area(_ frame: CGRect) -> CGFloat { frame.isNull ? 0 : frame.width * frame.height }
 
-    private static func workspaceSort(_ first: String, _ second: String) -> Bool {
+    static func workspaceSort(_ first: String, _ second: String) -> Bool {
         switch (Int(first), Int(second)) {
         case let (x?, y?): return x < y
         case (_?, nil): return true

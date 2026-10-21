@@ -134,7 +134,7 @@ final class NativeDesktopController {
 
     @MainActor private func compose(_ state: DesktopGuard.Context, screen: Screen, forward desktopOrder: Bool,
                                     target: Request, recovery: DesktopGuardClient) async throws {
-        let forward = gesture ? desktopOrder : isForward(state.source, state.destination, desktopOrder)
+        let forward = isForward(state.source, state.destination, desktopOrder)
         let width = screen.frame.width * (forward ? 1 : -1)
         var progress = 0.0
         try check(DesktopBridge.animating(display: state.display, active: true), "Cannot begin Desktop motion")
