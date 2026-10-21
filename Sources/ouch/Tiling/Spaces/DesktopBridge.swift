@@ -7,6 +7,75 @@ enum DesktopBridge {
         let options: UInt32
     }
 
+    private static let lifecycleAvailable: Bool = {
+        guard NativeSpaceMove.isAvailable else { return false }
+        return [
+            ("SLSBridgedSpaceCreateOperation", "initWithOptions:values:"),
+            ("SLSBridgedSpaceDestroyOperation", "initWithSpaceID:"),
+            ("SLSBridgedMoveManagedSpaceToDisplayIndexOperation", "initWithSpaceID:displayIdentifier:index:")
+        ].allSatisfy { name, selector in
+            NSClassFromString(name).flatMap { class_getInstanceMethod($0, NSSelectorFromString(selector)) } != nil
+        }
+    }()
+
+    static func create() -> UInt64? {
+        typealias Initialize = @convention(c) (
+            UnsafeMutableRawPointer, Selector, UInt32, CFDictionary
+        ) -> UnsafeMutableRawPointer?
+        typealias Read = @convention(c) (AnyObject, Selector) -> UInt64
+        guard lifecycleAvailable else { return nil }
+        let result = NativeSpaceMove.performSynchronous(
+            "SLSBridgedSpaceCreateOperation", selector: "initWithOptions:values:"
+        ) { object, selector, method in
+            unsafeBitCast(method, to: Initialize.self)(object, selector, 0, [:] as CFDictionary)
+        }
+        let selector = NSSelectorFromString("spaceID")
+        guard let result, let method = class_getInstanceMethod(object_getClass(result), selector) else { return nil }
+        let space = unsafeBitCast(method_getImplementation(method), to: Read.self)(result, selector)
+        return space == 0 ? nil : space
+    }
+
+    static func remove(_ space: UInt64) -> Bool {
+        typealias Initialize = @convention(c) (UnsafeMutableRawPointer, Selector, UInt64) -> UnsafeMutableRawPointer?
+        return NativeSpaceMove.perform("SLSBridgedSpaceDestroyOperation",
+                                       selector: "initWithSpaceID:") { object, selector, method in
+            unsafeBitCast(method, to: Initialize.self)(object, selector, space)
+        }
+    }
+
+    static func move(_ space: UInt64, to display: String, index: Int32) -> Bool {
+        typealias Initialize = @convention(c) (
+            UnsafeMutableRawPointer, Selector, UInt64, CFString, Int32
+        ) -> UnsafeMutableRawPointer?
+        return NativeSpaceMove.perform(
+            "SLSBridgedMoveManagedSpaceToDisplayIndexOperation", selector: "initWithSpaceID:displayIdentifier:index:"
+        ) { object, selector, method in
+            unsafeBitCast(method, to: Initialize.self)(object, selector, space, display as CFString, index)
+        }
+    }
+
+    static func attachMenuWindows(_ windows: [CGWindowID], to space: UInt64) -> Bool {
+        typealias Initialize = @convention(c) (
+            UnsafeMutableRawPointer, Selector, CFArray, UInt64
+        ) -> UnsafeMutableRawPointer?
+        return NativeSpaceMove.perform(
+            "SLSBridgedMoveWindowsToManagedSpaceOperation", selector: "initWithWindows:spaceID:"
+        ) { object, selector, method in
+            unsafeBitCast(method, to: Initialize.self)(object, selector, windows as CFArray, space)
+        }
+    }
+
+    static func detachMenuWindows(_ windows: [CGWindowID], from space: UInt64) -> Bool {
+        typealias Initialize = @convention(c) (
+            UnsafeMutableRawPointer, Selector, CFArray, CFArray
+        ) -> UnsafeMutableRawPointer?
+        return NativeSpaceMove.perform(
+            "SLSBridgedRemoveWindowsFromSpacesOperation", selector: "initWithWindows:spaces:"
+        ) { object, selector, method in
+            unsafeBitCast(method, to: Initialize.self)(object, selector, windows as CFArray, [space] as CFArray)
+        }
+    }
+
     static func state(_ space: UInt64) -> State? {
         typealias Connection = @convention(c) () -> Int32
         typealias Transform = @convention(c) (Int32, UInt64, UnsafeMutablePointer<UInt32>?) -> CGAffineTransform

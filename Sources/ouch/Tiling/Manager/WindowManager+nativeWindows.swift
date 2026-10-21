@@ -13,8 +13,7 @@ extension WindowManager {
     func moveNativeWindow(_ window: Window, to workspace: String, follow: Bool) {
         updateNativeCatalog(Screen.all())
         guard !window.isNativeFullscreen, !workspaceMoves.contains(window.id) else { return }
-        guard let target = nativeCatalog.entry(workspace)
-            ?? (currentScreen() ?? Screen.all().first).flatMap({ bindSpare(workspace, on: $0) }) else {
+        guard !nativeCreationBusy, let target = nativeCatalog.entry(workspace) else {
             createWorkspaceThenMove(window, to: workspace, follow: follow)
             return
         }
@@ -120,16 +119,19 @@ extension WindowManager {
         let free = await poll(5, every: 30_000_000) { !current() || !(nativeCreationBusy || nativeDesktop.isRunning) }
         guard current() else { throw CancellationError() }
         guard free else { throw DesktopTransitionError.check("The previous Desktop action did not finish") }
-        updateNativeCatalog(Screen.all())
-        if let entry = nativeCatalog.entry(name) ?? bindSpare(name, on: screen) { return entry }
+        guard let snapshot = updateNativeCatalog(Screen.all()) else {
+            throw DesktopTransitionError.check("macOS could not read the Desktops")
+        }
+        if let entry = nativeCatalog.entry(name) { return entry }
         guard !name.isEmpty, !isPending(name), isVirtual(name) else {
             throw DesktopTransitionError.check("This workspace name is unavailable")
         }
         nativeCreationBusy = true
         defer { nativeCreationBusy = false; scheduleRefresh(after: 0) }
-        let space = try await DesktopLifecycle.create(on: screen)
-        if !config.workspacesPerDisplay { nativeCatalog.bind(name, to: space, on: screen.uuid) }
-        updateNativeCatalog(Screen.all())
+        let created = try await DesktopLifecycle.create(on: screen, snapshot: snapshot,
+                                                        before: nativeCatalog.successor(of: name, on: screen.uuid))
+        if !config.workspacesPerDisplay { nativeCatalog.bind(name, to: created.space, on: screen.uuid) }
+        updateNativeCatalog(Screen.all(), snapshot: created.snapshot)
         guard let entry = nativeCatalog.entry(name) else {
             throw DesktopTransitionError.check("The Desktop disappeared")
         }
@@ -143,19 +145,20 @@ extension WindowManager {
             guard await poll(5, every: 50_000_000, until: {
                 !self.nativeDesktop.isRunning && !self.nativeCreationBusy && self.workspaceMoves.isEmpty
             }) else { return }
+            self.nativeCreationBusy = true
+            defer { self.nativeCreationBusy = false; self.scheduleRefresh(after: 0) }
             let entries = removed.compactMap { self.nativeCatalog.entry($0) }
                 .sorted { (Int(WorkspaceKey.number($0.name)) ?? 0) > (Int(WorkspaceKey.number($1.name)) ?? 0) }
             for entry in entries {
                 guard let screen = Screen.all().first(where: { $0.uuid == entry.display }) else { continue }
                 do {
-                    try await DesktopLifecycle.remove(entry.space, on: screen)
+                    try await self.removeDesktop(entry.space, on: screen)
                     if self.config.workspacesPerDisplay { self.closeGap(after: entry) }
                 } catch {
                     HUD.shared.show(error.localizedDescription, on: screen.nsScreen)
                 }
             }
             self.nativeDroppedWorkspaces.subtract(removed)
-            self.scheduleRefresh(after: 0)
         }
     }
 }

@@ -7,8 +7,13 @@ final class DesktopGuard {
         let destination: UInt64
         let sourceOptions: UInt32
         let destinationOptions: UInt32
+        var menuBar: DesktopMenuBar.State?
 
         func restore() {
+            if let menuBar {
+                menuBar.restore()
+                DesktopMenuBarNative.alpha(menuBar.space, -1)
+            }
             let current = Spaces.current(display: display)
             let entries = [(source, sourceOptions), (destination, destinationOptions)]
             _ = DesktopBridge.setVisible(entries.map(\.0).filter { $0 != current }, false)
@@ -67,11 +72,14 @@ final class DesktopGuard {
         while let end = input.firstIndex(of: "\n") {
             let message = String(input[..<end])
             input.removeSubrange(...end)
-            if message.hasPrefix("CONTEXT "),
-               let data = Data(base64Encoded: String(message.dropFirst(8))),
-               let decoded = try? JSONDecoder().decode(Context.self, from: data) {
-                context = decoded
-                lease = DesktopGuardLease(now: ProcessInfo.processInfo.systemUptime)
+            if message.hasPrefix("CONTEXT ") {
+                let parts = message.split(separator: " ", maxSplits: 2)
+                if parts.count == 3, let id = Int(parts[1]), let data = Data(base64Encoded: String(parts[2])),
+                   let decoded = try? JSONDecoder().decode(Context.self, from: data),
+                   lease.accept(now: ProcessInfo.processInfo.systemUptime) {
+                    context = decoded
+                    FileHandle.standardOutput.write(Data("CONTEXT_READY \(id)\n".utf8))
+                }
                 continue
             }
             if lease.receive(message, now: ProcessInfo.processInfo.systemUptime) == .finish {
@@ -102,6 +110,12 @@ struct DesktopGuardLease {
     private let timeout: TimeInterval = 1.5
 
     init(now: TimeInterval) { heartbeat = now }
+
+    mutating func accept(now: TimeInterval) -> Bool {
+        guard armed else { return false }
+        heartbeat = now
+        return true
+    }
 
     mutating func receive(_ message: String, now: TimeInterval) -> Action {
         guard armed else { return .none }

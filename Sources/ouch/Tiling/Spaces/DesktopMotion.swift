@@ -21,6 +21,14 @@ import QuartzCore
         }
     }
 
+    func frames(_ count: Int) async throws {
+        var frames = 0
+        try await run(limit: 1, message: "The display stopped before the menu bar settled", fast: true) { _ in
+            frames += 1
+            return frames >= count
+        }
+    }
+
     func follow(until finished: @escaping () -> Bool, update: @escaping () throws -> Void) async throws {
         try await run(limit: 180, message: "The Desktop swipe did not end", fast: false) { _ in
             try update()

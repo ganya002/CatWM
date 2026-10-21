@@ -78,7 +78,6 @@ final class NativeDesktopController {
         Log.info("native workspaces: \(source) → \(target.space), workspace \(target.workspace)")
         if source == target.space { onSettled(target, false); return }
         let busy = "Finish the current macOS Desktop action, then try again"
-        try check(await poll(1, every: 10_000_000) { !DesktopUI.isBusy(on: screen) }, busy)
         var list: Spaces.DisplaySpaces?, sourceState: DesktopBridge.State?, targetState: DesktopBridge.State?
         let ready = await poll(1, every: 10_000_000) {
             list = Spaces.list(display: target.display)
@@ -134,6 +133,10 @@ final class NativeDesktopController {
 
     @MainActor private func compose(_ state: DesktopGuard.Context, screen: Screen, forward desktopOrder: Bool,
                                     target: Request, recovery: DesktopGuardClient) async throws {
+        let fresh = DesktopMenuBar.isFresh(state.destination)
+        let menu = try await prepareMenuBar(state, on: screen, recovery: recovery)
+        defer { menu?.restore() }
+        guard wants(target) else { return }
         let forward = isForward(state.source, state.destination, desktopOrder)
         let width = screen.frame.width * (forward ? 1 : -1)
         var progress = 0.0
@@ -143,6 +146,7 @@ final class NativeDesktopController {
         try check(DesktopBridge.setVisible([state.destination], true), "Cannot show the destination Desktop")
         onMotion(target)
         let motion = DesktopMotion(screen: screen.nsScreen)
+        if fresh { try await motion.frames(2) }
         if gesture {
             try await motion.follow(until: { self.gestureEnded }, update: {
                 try self.check(recovery.process.isRunning, "Desktop recovery process stopped")
@@ -166,12 +170,45 @@ final class NativeDesktopController {
         try check(Spaces.current(display: state.display) == state.source,
                   "Native navigation interrupted Desktop motion")
         if wants(target) {
+            let batch = WindowServerUpdates.shared.begin()
+            if let menu, DesktopMenuBarNative.theme(state.destination) == menu.state.theme { menu.restore() }
             try check(DesktopBridge.setVisible([state.source], false), "Cannot hide the source Desktop")
             try check(DesktopBridge.setCurrent(display: state.display, space: state.destination),
                       "Cannot activate the destination Desktop")
+            batch?.finish()
             let arrived = await poll(1) { Spaces.current(display: state.display) == state.destination }
             try check(arrived, "macOS did not activate the destination Desktop")
+            DesktopMenuBar.shown(state.destination)
+            try await DesktopMenuBar.settle(menu?.state, on: screen)
+            await menu?.finish()
         }
+    }
+
+    @MainActor private func prepareMenuBar(_ state: DesktopGuard.Context, on screen: Screen,
+                                           recovery: DesktopGuardClient) async throws -> DesktopMenuBarLease? {
+        guard DesktopMenuBar.needsPreparation(source: state.source, target: state.destination) else { return nil }
+        async let image = DesktopMenuBarCover.capture(on: screen, source: state.source, target: state.destination)
+        let background = await DesktopMenuBar.ready(source: state.source, target: state.destination, screen: screen)
+        guard let background else { await image?.close(); return nil }
+        do {
+            try background.persist()
+            var guarded = state
+            guarded.menuBar = background
+            try await recovery.update(guarded)
+            guard DesktopBridge.detachMenuWindows([background.window], from: background.space),
+                  await poll(0.1, every: 250_000, until: { Spaces.of(window: background.window).isEmpty }) else {
+                throw DesktopTransitionError.check("Cannot prepare the Desktop background")
+            }
+        } catch {
+            background.restore(); await image?.close()
+            throw error
+        }
+        let panel = await image
+        if panel == nil {
+            Log.info("native workspaces: no menu bar cover, screen recording \(CGPreflightScreenCaptureAccess())")
+        }
+        _ = DesktopMenuBarNative.alpha(background.space, 0)
+        return DesktopMenuBarLease(state: background, panel: panel)
     }
 
     private enum Retarget: Error { case changed }

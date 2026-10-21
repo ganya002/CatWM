@@ -13,7 +13,7 @@ extension WindowManager {
 
     func scanAndRefresh() {
         refreshWork = nil
-        guard isStarted else { return }
+        guard isStarted, !nativeDesktop.isRunning, !nativeCreationBusy else { return }
         scanner.observeDesktop(known: Set(windows.keys)) { [weak self] in self?.scanAppsAndRefresh() }
     }
 

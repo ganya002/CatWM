@@ -30,6 +30,30 @@ import Testing
         #expect(lease.receive("DONE", now: 5.03) == .none)
     }
 
+    @Test func contextUpdateAfterRestoreIsRefused() {
+        var lease = DesktopGuardLease(now: 0)
+        let first = lease.accept(now: 1)
+        #expect(first)
+        #expect(lease.check(now: 2.5) == .restore)
+        let late = lease.accept(now: 2.6)
+        #expect(!late)
+    }
+
+    @Test func contextUpdateAfterCleanExitIsRefused() {
+        var lease = DesktopGuardLease(now: 0)
+        #expect(lease.receive("DONE", now: 0.1) == .finish)
+        let late = lease.accept(now: 0.2)
+        #expect(!late)
+    }
+
+    @Test func acceptedContextExtendsTheLease() {
+        var lease = DesktopGuardLease(now: 0)
+        let accepted = lease.accept(now: 1.4)
+        #expect(accepted)
+        #expect(lease.check(now: 2.8) == .none)
+        #expect(lease.check(now: 2.9) == .restore)
+    }
+
     @Test func unknownMessagesCannotKeepAnUnresponsiveParentAlive() {
         var lease = DesktopGuardLease(now: 0)
         #expect(lease.receive("P", now: 1) == .none)

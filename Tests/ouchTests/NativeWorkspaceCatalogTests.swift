@@ -26,6 +26,17 @@ import Testing
         #expect(WorkspaceKey.display("right/2") == "right")
     }
 
+    @Test func newDesktopGoesBeforeTheNextHigherWorkspace() {
+        var catalog = NativeWorkspaceCatalog()
+        catalog.synchronize([.init(id: "left", spaces: [11, 12, 13]), .init(id: "right", spaces: [21])])
+        catalog.bind("7", to: 13, on: "left")
+        #expect(catalog.successor(of: "5", on: "left") == 13)
+        #expect(catalog.successor(of: "8", on: "left") == nil)
+        #expect(catalog.successor(of: "8", on: "right") == nil)
+        catalog.perDisplay = true
+        #expect(catalog.successor(of: "5", on: "left") == nil)
+    }
+
     @Test func namesFollowDesktopIdentityWhenNativeOrderChanges() {
         var catalog = NativeWorkspaceCatalog()
         catalog.synchronize([.init(id: "screen", spaces: [11, 12, 13])])
@@ -87,27 +98,18 @@ import Testing
         #expect(catalog.entry("missing") == nil)
     }
 
-    @Test func releasedDesktopStaysSpareUntilANewWorkspaceTakesIt() {
+    @Test func desktopKeepsItsNameUntilRemovalIsConfirmed() {
         var catalog = NativeWorkspaceCatalog()
         catalog.synchronize([.init(id: "screen", spaces: [11, 12, 13], current: 11)])
-        catalog.release("3")
         catalog.synchronize([.init(id: "screen", spaces: [11, 12, 13], current: 11)])
-        #expect(catalog.entry("3") == nil)
-        #expect(catalog.spare(on: "screen") == 13)
-        #expect(catalog.step(from: "2", by: 1) == nil)
-        #expect(catalog.freeNumber(on: "screen") == "3")
-        catalog.bind("mail", to: 13, on: "screen")
-        #expect(catalog.spare(on: "screen") == nil)
-        #expect(catalog.entry("mail")?.space == 13)
-    }
-
-    @Test func spareGetsANameWhenItBecomesTheCurrentDesktop() {
-        var catalog = NativeWorkspaceCatalog()
+        #expect(catalog.entry("3")?.space == 13)
+        #expect(catalog.freeNumber(on: "screen") == "4")
         catalog.synchronize([.init(id: "screen", spaces: [11, 12], current: 11)])
-        catalog.release("2")
-        catalog.synchronize([.init(id: "screen", spaces: [11, 12], current: 12)])
-        #expect(catalog.spare(on: "screen") == nil)
-        #expect(catalog.entry("2")?.space == 12)
+        #expect(catalog.entry("3") == nil)
+        #expect(catalog.freeNumber(on: "screen") == "3")
+        catalog.bind("3", to: 14, on: "screen")
+        catalog.synchronize([.init(id: "screen", spaces: [11, 12, 14], current: 11)])
+        #expect(catalog.entry("3")?.space == 14)
     }
 
     @Test func ctrlDefaultsRespectConfiguredCommands() {

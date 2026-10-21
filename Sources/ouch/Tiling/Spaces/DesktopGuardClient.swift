@@ -5,8 +5,9 @@ import AppKit
     private let input = Pipe(), output = Pipe()
     private var heartbeat: Timer?
     private var retainedReader: FileHandle?
-    private var ready = false, acknowledged = false, launched = false
-    private var response = ""
+    private var reply = DesktopGuardReply()
+    private var launched = false, contextID = 0
+    private var waiting: [CheckedContinuation<Void, Never>] = []
 
     private static var warm: DesktopGuardClient?
 
@@ -47,13 +48,21 @@ import AppKit
         heartbeat = timer
         RunLoop.main.add(timer, forMode: .common)
         do {
-            try await wait { self.ready }
-            send("CONTEXT " + (try JSONEncoder().encode(context).base64EncodedString()))
+            try await wait { self.reply.ready }
+            try await update(context)
         } catch {
             heartbeat?.invalidate()
             if process.isRunning { process.terminate() }
             throw error
         }
+    }
+
+    func update(_ context: DesktopGuard.Context) async throws {
+        contextID += 1
+        let id = contextID
+        send("CONTEXT \(id) " + (try JSONEncoder().encode(context).base64EncodedString()))
+        try await wait { self.reply.context >= id || !self.process.isRunning }
+        guard reply.context >= id else { throw DesktopTransitionError.check("Desktop recovery process stopped") }
     }
 
     func finish() async throws {
@@ -63,7 +72,7 @@ import AppKit
             retainedReader = nil
         }
         send("DONE")
-        try await wait { self.acknowledged && !self.process.isRunning }
+        try await wait { self.reply.finished && !self.process.isRunning }
     }
 
     private func send(_ message: String) {
@@ -72,15 +81,45 @@ import AppKit
     }
 
     private func receive(_ data: Data) {
+        defer { wake() }
         if data.isEmpty { output.fileHandleForReading.readabilityHandler = nil; return }
-        response += String(data: data, encoding: .utf8) ?? ""
-        ready = response.contains("READY\n")
-        acknowledged = response.contains("DONE\n")
+        reply.receive(String(data: data, encoding: .utf8) ?? "")
     }
 
     private func wait(_ condition: () -> Bool) async throws {
-        guard await poll(3, until: condition) else {
-            throw DesktopTransitionError.check("Desktop restore guard handshake timed out")
+        let deadline = ProcessInfo.processInfo.systemUptime + 3
+        while !condition() {
+            guard ProcessInfo.processInfo.systemUptime < deadline else {
+                throw DesktopTransitionError.check("Desktop restore guard handshake timed out")
+            }
+            await withCheckedContinuation { continuation in
+                waiting.append(continuation)
+                DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(5)) { [weak self] in
+                    MainActor.assumeIsolated { self?.wake() }
+                }
+            }
+        }
+    }
+
+    private func wake() {
+        let resumed = waiting
+        waiting = []
+        for continuation in resumed { continuation.resume() }
+    }
+}
+
+struct DesktopGuardReply {
+    private(set) var ready = false, finished = false, context = 0
+    private var buffer = ""
+
+    mutating func receive(_ text: String) {
+        buffer += text
+        while let end = buffer.firstIndex(of: "\n") {
+            let line = String(buffer[..<end])
+            buffer.removeSubrange(...end)
+            if line == "READY" { ready = true }
+            if line == "DONE" { finished = true }
+            if line.hasPrefix("CONTEXT_READY "), let id = Int(line.dropFirst(14)) { context = max(context, id) }
         }
     }
 }
