@@ -183,11 +183,7 @@ final class NativeDesktopController {
         guard DesktopMenuBar.needsPreparation(source: state.source, target: state.destination) else { return nil }
         async let image = DesktopMenuBarCover.capture(on: screen, source: state.source, target: state.destination)
         let background = await DesktopMenuBar.ready(source: state.source, target: state.destination, screen: screen)
-        let panel = await image
-        if panel == nil {
-            Log.info("native workspaces: no menu bar cover, screen recording \(CGPreflightScreenCaptureAccess())")
-        }
-        guard let background else { panel?.close(); return nil }
+        guard let background else { await image?.close(); return nil }
         do {
             try background.persist()
             var guarded = state
@@ -197,12 +193,16 @@ final class NativeDesktopController {
                   await poll(0.1, every: 250_000, until: { Spaces.of(window: background.window).isEmpty }) else {
                 throw DesktopTransitionError.check("Cannot prepare the Desktop background")
             }
-            if panel == nil { _ = DesktopMenuBarNative.alpha(background.space, 0) }
-            return DesktopMenuBarLease(state: background, panel: panel)
         } catch {
-            background.restore(); panel?.close()
+            background.restore(); await image?.close()
             throw error
         }
+        let panel = await image
+        if panel == nil {
+            Log.info("native workspaces: no menu bar cover, screen recording \(CGPreflightScreenCaptureAccess())")
+            _ = DesktopMenuBarNative.alpha(background.space, 0)
+        }
+        return DesktopMenuBarLease(state: background, panel: panel)
     }
 
     private enum Retarget: Error { case changed }

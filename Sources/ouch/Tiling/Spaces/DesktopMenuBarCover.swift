@@ -2,13 +2,18 @@ import AppKit
 
 enum DesktopMenuBarCover {
     private typealias Capture = @convention(c) (CGDirectDisplayID, CGRect) -> Unmanaged<CGImage>?
-    private typealias Connection = @convention(c) () -> Int32
+    private typealias Connection = @convention(c) (Int32, UnsafeMutablePointer<Int32>) -> Int32
     private typealias CaptureWindows = @convention(c) (
         Int32, UnsafePointer<UInt32>, Int32, UInt32, CGRect
     ) -> Unmanaged<CFArray>?
     private static let captureImage: Capture? = symbol(
         "CGDisplayCreateImageForRect", in: "/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics")
-    private static let connection: Connection? = symbol("SLSMainConnectionID")
+    private static let newConnection: Connection? = symbol("SLSNewConnection")
+    private static let connection: Int32? = {
+        var connection: Int32 = 0
+        guard let newConnection, newConnection(0, &connection) == 0, connection != 0 else { return nil }
+        return connection
+    }()
     private static let captureWindows: CaptureWindows? = symbol("SLSHWCaptureWindowListInRect")
 
     static func prepare() {
@@ -19,29 +24,56 @@ enum DesktopMenuBarCover {
         }
     }
 
-    private struct Pending {
+    @MainActor private final class Pending {
         let display: CGDirectDisplayID
         let source: UInt64
-        let started: TimeInterval
+        let started = ProcessInfo.processInfo.systemUptime
         let image: Task<CGImage?, Never>
+        let panel: OuchPanel
+        var target: UInt64?
+
+        init(display: CGDirectDisplayID, source: UInt64, image: Task<CGImage?, Never>, panel: OuchPanel) {
+            self.display = display
+            self.source = source
+            self.image = image
+            self.panel = panel
+        }
+
+        var isFresh: Bool { ProcessInfo.processInfo.systemUptime - started < 0.5 }
+
+        func move(to target: UInt64) {
+            self.target = target
+            _ = NativeSpaceMove.move(window: CGWindowID(panel.windowNumber), to: target)
+        }
     }
     @MainActor private static var pending: Pending?
 
-    @MainActor static func begin(on screen: Screen, source: UInt64) {
+    @MainActor static func begin(on screen: Screen, source: UInt64, target: UInt64) {
+        discard()
         guard DesktopMenuBarNative.theme(source) == 1, let image = image(on: screen) else { return }
-        pending = Pending(display: screen.id, source: source, started: ProcessInfo.processInfo.systemUptime,
-                          image: image)
+        let next = Pending(display: screen.id, source: source, image: image, panel: panel(on: screen))
+        next.move(to: target)
+        pending = next
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            MainActor.assumeIsolated { if pending === next { discard() } }
+        }
     }
 
     @MainActor static func capture(on screen: Screen, source: UInt64, target: UInt64) async -> OuchPanel? {
-        let early = pending.flatMap { pending in
-            pending.display == screen.id && pending.source == source
-                && ProcessInfo.processInfo.systemUptime - pending.started < 0.5 ? pending.image : nil
+        guard let early = pending, early.display == screen.id, early.source == source, early.isFresh else {
+            discard()
+            guard let task = image(on: screen), let image = await task.value else { return nil }
+            return await show(image, in: panel(on: screen), screen: screen, source: source, target: target)
         }
         pending = nil
-        guard let task = early ?? image(on: screen), let image = await task.value,
-              Spaces.current(display: screen.uuid) == source else { return nil }
-        return await place(image, height: menuHeight(screen), screen: screen, target: target)
+        if early.target != target { early.move(to: target) }
+        guard let image = await early.image.value else { early.panel.close(); return nil }
+        return await show(image, in: early.panel, screen: screen, source: source, target: target)
+    }
+
+    @MainActor private static func discard() {
+        pending?.panel.close()
+        pending = nil
     }
 
     private static func menuHeight(_ screen: Screen) -> CGFloat {
@@ -71,26 +103,32 @@ enum DesktopMenuBarCover {
         }
         guard !windows.isEmpty else { return nil }
         let images = windows.withUnsafeBufferPointer { buffer in
-            buffer.baseAddress.flatMap { captureWindows(connection(), $0, Int32(buffer.count), 0, rect) }
+            buffer.baseAddress.flatMap { captureWindows(connection, $0, Int32(buffer.count), 0, rect) }
         }
         return (images?.takeRetainedValue() as? [CGImage])?.first
     }
 
-    @MainActor private static func place(_ image: CGImage, height: CGFloat,
-                                         screen: Screen, target: UInt64) async -> OuchPanel? {
+    @MainActor private static func panel(on screen: Screen) -> OuchPanel {
+        let height = menuHeight(screen)
         let frame = CGRect(x: screen.nsScreen.frame.minX, y: screen.nsScreen.frame.maxY - height,
                            width: screen.frame.width, height: height)
         let panel = OuchPanel(role: .fullscreenFX, frame: frame)
         panel.collectionBehavior = [.fullScreenAuxiliary, .ignoresCycle]
         let view = NSImageView(frame: CGRect(origin: .zero, size: frame.size))
-        view.image = NSImage(cgImage: image, size: frame.size)
         view.imageScaling = .scaleAxesIndependently
         panel.contentView = view
+        return panel
+    }
+
+    @MainActor private static func show(_ image: CGImage, in panel: OuchPanel, screen: Screen,
+                                        source: UInt64, target: UInt64) async -> OuchPanel? {
         let window = CGWindowID(panel.windowNumber)
-        guard NativeSpaceMove.move(window: window, to: target),
-              await poll(0.1, every: 250_000, until: { Spaces.of(window: window) == [target] }) else {
-            panel.close(); return nil
+        var placed = Spaces.of(window: window) == [target]
+        if !placed, NativeSpaceMove.move(window: window, to: target) {
+            placed = await poll(0.1, every: 250_000) { Spaces.of(window: window) == [target] }
         }
+        guard placed, Spaces.current(display: screen.uuid) == source else { panel.close(); return nil }
+        (panel.contentView as? NSImageView)?.image = NSImage(cgImage: image, size: panel.frame.size)
         panel.orderFrontRegardless()
         panel.displayIfNeeded()
         CATransaction.flush()

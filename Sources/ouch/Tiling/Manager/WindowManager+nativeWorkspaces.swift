@@ -147,7 +147,7 @@ extension WindowManager {
                 guard let screen = Screen.all().first(where: { $0.uuid == entry.display }),
                       Spaces.current(display: entry.display) != entry.space else { continue }
                 do {
-                    try await DesktopLifecycle.remove(entry.space, on: screen)
+                    try await self.removeDesktop(entry.space, on: screen)
                     if self.config.workspacesPerDisplay {
                         self.closeGap(after: entry)
                     } else {
@@ -160,6 +160,15 @@ extension WindowManager {
                     self.desktopRemovalFailures[entry.space] = Date()
                     Log.info("native workspaces: could not remove \(entry.name): \(error.localizedDescription)")
                 }
+            }
+        }
+    }
+
+    @MainActor func removeDesktop(_ space: UInt64, on screen: Screen) async throws {
+        for attempt in 1... {
+            _ = await poll(1, every: 10_000_000) { DesktopUI.isSettled(screen) }
+            do { return try await DesktopLifecycle.remove(space, on: screen) } catch where attempt < 5 {
+                try await Task.sleep(nanoseconds: 200_000_000)
             }
         }
     }

@@ -152,7 +152,7 @@ extension WindowManager {
             for entry in entries {
                 guard let screen = Screen.all().first(where: { $0.uuid == entry.display }) else { continue }
                 do {
-                    try await DesktopLifecycle.remove(entry.space, on: screen)
+                    try await self.removeDesktop(entry.space, on: screen)
                     if self.config.workspacesPerDisplay { self.closeGap(after: entry) }
                 } catch {
                     HUD.shared.show(error.localizedDescription, on: screen.nsScreen)

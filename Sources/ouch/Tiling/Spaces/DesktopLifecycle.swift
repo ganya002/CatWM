@@ -11,11 +11,13 @@ enum DesktopLifecycle {
         guard let before = (supplied ?? Spaces.snapshot())?.list(display: screen.uuid) else {
             throw DesktopTransitionError.check("macOS could not read the Desktops")
         }
-        if let current = before.current { DesktopMenuBarCover.begin(on: screen, source: before.ids[current]) }
         let index = successor.flatMap { before.ids.firstIndex(of: $0) } ?? before.ids.count
         let started = ProcessInfo.processInfo.systemUptime
         guard let space = DesktopBridge.create() else {
             throw DesktopTransitionError.check("macOS could not create a Desktop")
+        }
+        if let current = before.current {
+            DesktopMenuBarCover.begin(on: screen, source: before.ids[current], target: space)
         }
         do {
             let snapshot = try await place(space, on: screen, index: index)
@@ -59,10 +61,12 @@ enum DesktopLifecycle {
               Spaces.current(display: screen.uuid) != space, DesktopUI.isSettled(screen) else {
             throw DesktopTransitionError.check("This Desktop cannot be removed right now")
         }
-        let occupied = CGWindowInfo.onScreen(options: [.optionAll, .excludeDesktopElements]).contains {
+        let occupant = CGWindowInfo.onScreen(options: [.optionAll, .excludeDesktopElements]).first {
             Spaces.of(window: $0.id) == [space]
         }
-        guard !occupied else {
+        if let occupant {
+            let owner = NSRunningApplication(processIdentifier: occupant.pid)?.bundleIdentifier ?? "\(occupant.pid)"
+            Log.info("native workspaces: window \(occupant.id) of \(owner) is on Desktop \(space)")
             throw DesktopTransitionError.check("Move all windows out of the Desktop before removing it")
         }
         let started = ProcessInfo.processInfo.systemUptime
