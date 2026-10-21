@@ -84,8 +84,9 @@ extension TemplateRestorer {
     func pullNewWindowsHere() {
         guard let initial = initialWindowIDs, let here = currentDesktop() else { return }
         let desktops = desktopSpaces()
-        let pids = Set(template.windows.flatMap {
-            NSRunningApplication.runningApplications(withBundleIdentifier: $0.bundleID).map { Int($0.processIdentifier) }
+        let pids = Set(template.windows.flatMap { saved in
+            NSRunningApplication.runningApplications(withBundleIdentifier: saved.bundleID)
+                .map { Int($0.processIdentifier) }
         })
         for window in Self.windowList(.optionAll) where pids.contains(window.pid) && !initial.contains(window.id)
             && !pulled.contains(window.id) && window.isLargeEnough {
