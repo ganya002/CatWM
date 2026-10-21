@@ -102,6 +102,13 @@ enum Options {
             .documented("bool", "")
             .setting(.windows, "windows.stay", "Stay on this workspace when closing a window", keywords: "close jump",
                      advanced: true, section: "Workspaces", enabled: { $0.virtualWorkspaces }),
+        .bool("remove-empty-workspaces", \.removesEmptyWorkspaces)
+            .documented("bool", "true: an empty workspace goes away when you leave it, and Ouch keeps its Desktop "
+                + "as a spare so that the next new workspace opens instantly")
+            .setting(.windows, "windows.removeEmpty", "Remove empty workspaces when you leave them",
+                     help: "New workspaces then open instantly on the spare Desktop",
+                     keywords: "clean auto delete desktop spare instant", section: "Workspaces",
+                     enabled: { $0.virtualWorkspaces }),
         .choice("sort-strategy", \.sortStrategy, noun: "sort strategy")
             .documented(nil, "the grouping Overview opens with")
             .note("Overview: the grouping it opens with (task, app, focus or none), and how many windows one\n"

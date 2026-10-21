@@ -29,6 +29,7 @@ struct Config {
     var perfReports = false
     var virtualWorkspaces = true
     var stayOnWorkspaceAfterClose = true
+    var removesEmptyWorkspaces = true
     var sortNudge = 5
     var sortStrategy: SortStrategy = .task
     var modeEffect: ModeFX.Style = .draw

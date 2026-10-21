@@ -8,6 +8,8 @@ With `virtual-workspaces = true`, Ouch workspaces use normal macOS Desktops. Ouc
 - Ctrl+Shift with the same keys moves the focused window to that workspace and follows it.
 - Explicit binds take priority over these defaults. Ouch does not change macOS shortcut preferences.
 - Selecting a workspace that does not exist creates a Desktop through Mission Control. Mission Control opens briefly and then closes.
+- When you leave an empty workspace, it goes away. Ouch keeps its Desktop as a spare, and the next new workspace uses the spare at once, with no Mission Control. Set `remove-empty-workspaces = false` to keep empty workspaces.
+- With empty workspaces removed, `r+1` from the last workspace opens a new workspace if the current one has windows.
 - The menu bar shows the current workspace. Click it to select another workspace.
 - Native full screen windows remain on their own Desktops and appear separately in overview.
 - Quitting Ouch leaves windows on their native Desktops. A separate recovery process restores Desktop transforms if Ouch stops during a switch.

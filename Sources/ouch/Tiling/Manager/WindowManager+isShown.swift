@@ -80,7 +80,9 @@ extension WindowManager {
         if lower.hasPrefix("name:") { return String(trimmed.dropFirst(5)) }
         for prefix in ["r", "m", ""] where lower.hasPrefix(prefix + "+") || lower.hasPrefix(prefix + "-") {
             guard let delta = Int(lower.dropFirst(prefix.count).replacingOccurrences(of: "+", with: "")) else { break }
-            return nativeCatalog.step(from: cur, by: delta)
+            if let name = nativeCatalog.step(from: cur, by: delta) { return name }
+            let occupied = workspaceOf.contains { $0.value == cur && windows[$0.key] != nil }
+            return delta > 0 && occupied && config.removesEmptyWorkspaces ? nativeCatalog.freeNumber() : nil
         }
         if lower.hasPrefix("e+") || lower.hasPrefix("e-"),
            let delta = Int(lower.dropFirst(1).replacingOccurrences(of: "+", with: "")) {
