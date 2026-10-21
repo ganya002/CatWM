@@ -3,6 +3,7 @@ set -e
 cd "$(dirname "$0")"
 Tools/install-hooks.sh
 Tools/check-style.sh
+Tools/swiftlint.sh
 CONFIG=release
 if [ "$1" = "--dev" ]; then CONFIG=debug; fi
 if [ "$CONFIG" = "debug" ]; then
