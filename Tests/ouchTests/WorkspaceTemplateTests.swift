@@ -1,6 +1,7 @@
 import AppKit
 @testable import ouch
 import Testing
+@testable import WindowSession
 
 @Suite struct WorkspaceTemplateTests {
     func template() -> WorkspaceTemplate {
@@ -100,10 +101,10 @@ import Testing
 
     @Test func documentMatchRejectsUnrelatedWindowsEvenWithReusedID() {
         let saved = template().windows[0]
-        #expect(TemplateWindowMatch.score(saved, title: "Other", document: "file:///tmp/other.txt", windowID: 42,
+        #expect(WindowMatch.score(saved, title: "Other", document: "file:///tmp/other.txt", windowID: 42,
                                          launchDate: saved.launchDate) == nil)
-        #expect(TemplateWindowMatch.score(saved, title: "Draft", document: nil, windowID: 12, launchDate: nil) == 1)
-        #expect(TemplateWindowMatch.score(
+        #expect(WindowMatch.score(saved, title: "Draft", document: nil, windowID: 12, launchDate: nil) == 1)
+        #expect(WindowMatch.score(
             saved, title: "Renamed", document: saved.document, windowID: 12, launchDate: nil
         ) == 2)
     }
@@ -111,9 +112,9 @@ import Testing
     @Test func reusedWindowIDsNeedTheSameAppLaunch() {
         var saved = template().windows[0]
         saved.document = nil
-        #expect(TemplateWindowMatch.score(saved, title: "Other", document: nil, windowID: 42,
+        #expect(WindowMatch.score(saved, title: "Other", document: nil, windowID: 42,
                                          launchDate: Date(timeIntervalSince1970: 200)) == 0)
-        #expect(TemplateWindowMatch.score(
+        #expect(WindowMatch.score(
             saved, title: "Other", document: nil, windowID: 42, launchDate: saved.launchDate
         ) == 3)
     }

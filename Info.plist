@@ -12,6 +12,7 @@
     <key>LSMinimumSystemVersion</key><string>14.0</string>
     <key>LSUIElement</key><true/>
     <key>NSHighResolutionCapable</key><true/>
+    <key>NSAppleEventsUsageDescription</key><string>Ouch reads and reopens browser tabs, terminal folders and Finder folders when you save or open a workspace template.</string>
     <key>SUFeedURL</key><string>https://api.amore.computer/v1/apps/local.ouch/appcast.xml</string>
     <key>SUPublicEDKey</key><string>OEHHPP5gzJfph4/A3l7EpY7xTnvwUe1QRzHnpJHP8dY=</string>
     <key>SUEnableAutomaticChecks</key><true/>

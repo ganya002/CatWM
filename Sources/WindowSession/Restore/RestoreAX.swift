@@ -1,0 +1,162 @@
+import AppKit
+
+public enum RestoreAX {
+    public struct App: Sendable {
+        public var pid: pid_t
+        public var bundleID: String
+        public var launchDate: Date?
+
+        public init(pid: pid_t, bundleID: String, launchDate: Date?) {
+            self.pid = pid
+            self.bundleID = bundleID
+            self.launchDate = launchDate
+        }
+    }
+
+    public struct Candidate: @unchecked Sendable {
+        public var id: CGWindowID
+        public var element: AXUIElement
+        public var pid: pid_t
+        public var title: String
+        public var document: String?
+        public var launchDate: Date?
+        public var frame: CGRect?
+    }
+
+    public struct Probe: @unchecked Sendable {
+        public var id: CGWindowID
+        public var element: AXUIElement
+
+        public init(id: CGWindowID, element: AXUIElement) {
+            self.id = id
+            self.element = element
+        }
+    }
+
+    public static func invalidated(_ probes: [Probe], deadline: Date) async -> Set<CGWindowID> {
+        await Task.detached(priority: .userInitiated) {
+            var invalid = Set<CGWindowID>()
+            for probe in probes {
+                guard Date() < deadline else { break }
+                var role: CFTypeRef?
+                let status = AXUIElementCopyAttributeValue(probe.element, kAXRoleAttribute as CFString, &role)
+                if status == .invalidUIElement {
+                    invalid.insert(probe.id)
+                }
+            }
+            return invalid
+        }.value
+    }
+
+    public static func read(apps: [App], deadline: Date) async -> [Candidate] {
+        let stop = StopFlag()
+        return await withTaskCancellationHandler {
+            await Task.detached(priority: .userInitiated) {
+                var found: [Candidate] = []
+                func expired() -> Bool { stop.isStopped || Date() >= deadline }
+                for app in apps {
+                    guard !expired() else { break }
+                    for element in axApplication(app.pid).readElements(kAXWindowsAttribute).value ?? [] {
+                        guard !expired() else { break }
+                        switch candidate(element, app: app, expired: expired) {
+                        case .stalled: return found
+                        case .missing: continue
+                        case .value(let window): found.append(window)
+                        }
+                    }
+                }
+                return found
+            }.value
+        } onCancel: { stop.stop() }
+    }
+
+    private static func candidate(_ element: AXUIElement, app: App, expired: () -> Bool) -> AXRead<Candidate> {
+        AXUIElementSetMessagingTimeout(element, axTimeout)
+        let subrole = element.readString(kAXSubroleAttribute).value
+        guard subrole == kAXStandardWindowSubrole || subrole == kAXDialogSubrole,
+              let id = element.windowNumber else { return .missing }
+        guard !expired() else { return .stalled }
+        let minimized = element.readBool(kAXMinimizedAttribute).value ?? false
+        guard WindowKind.includes(subrole: subrole, minimized: minimized) else { return .missing }
+        guard !expired() else { return .stalled }
+        let title = element.readString(kAXTitleAttribute).value ?? ""
+        guard !expired() else { return .stalled }
+        let document = element.readString(kAXDocumentAttribute).value.flatMap(DocumentURL.normalized)
+        guard !expired() else { return .stalled }
+        let frame = element.readFrame().value
+        guard !expired() else { return .stalled }
+        return .value(Candidate(id: id, element: element, pid: app.pid, title: title, document: document,
+                                launchDate: app.launchDate, frame: frame))
+    }
+
+    public static func newWindow(pid: pid_t, deadline: Date) async -> Bool {
+        let stop = StopFlag()
+        return await withTaskCancellationHandler {
+            await Task.detached(priority: .userInitiated) {
+                let end = min(deadline, Date().addingTimeInterval(1.5))
+                func expired() -> Bool { stop.isStopped || Date() >= end }
+                guard !expired(), let bar = axApplication(pid).readElement(kAXMenuBarAttribute).value else {
+                    return false
+                }
+                AXUIElementSetMessagingTimeout(bar, axTimeout)
+                var fallback: AXUIElement?
+                for top in children(bar) {
+                    guard !expired() else { return false }
+                    AXUIElementSetMessagingTimeout(top, axTimeout)
+                    for menu in children(top) {
+                        if case .finished(let result) = scan(menu, expired: expired, fallback: &fallback) {
+                            return result
+                        }
+                    }
+                }
+                guard !expired(), let fallback else { return false }
+                return fallback.press()
+            }.value
+        } onCancel: { stop.stop() }
+    }
+
+    private enum MenuItemCheck {
+        case pressed(Bool)
+        case expired
+        case fallback
+        case skip
+    }
+
+    private enum MenuScan {
+        case finished(Bool)
+        case next
+    }
+
+    private static func children(_ element: AXUIElement) -> [AXUIElement] {
+        element.readElements(kAXChildrenAttribute).value ?? []
+    }
+
+    private static func scan(_ menu: AXUIElement, expired: () -> Bool, fallback: inout AXUIElement?) -> MenuScan {
+        guard !expired() else { return .finished(false) }
+        AXUIElementSetMessagingTimeout(menu, axTimeout)
+        for item in children(menu) {
+            switch check(item, expired: expired) {
+            case .pressed(let success): return .finished(success)
+            case .expired: return .finished(false)
+            case .fallback: fallback = item
+            case .skip: continue
+            }
+        }
+        return .next
+    }
+
+    private static func check(_ item: AXUIElement, expired: () -> Bool) -> MenuItemCheck {
+        guard !expired() else { return .expired }
+        AXUIElementSetMessagingTimeout(item, axTimeout)
+        guard item.readBool(kAXEnabledAttribute).value ?? true, !expired() else { return .skip }
+        if item.readString(kAXTitleAttribute).value == "New Window" {
+            guard !expired() else { return .expired }
+            return .pressed(item.press())
+        }
+        guard !expired() else { return .expired }
+        let command = item.readString(kAXMenuItemCmdCharAttribute).value
+        guard command?.lowercased() == "n", !expired() else { return .skip }
+        let modifiers = item.read(kAXMenuItemCmdModifiersAttribute).value as? Int
+        return NewWindowCommand.isPlainCommandN(command: command, modifiers: modifiers) ? .fallback : .skip
+    }
+}

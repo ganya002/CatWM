@@ -1,4 +1,5 @@
 import AppKit
+import WindowSession
 
 struct WorkspaceTemplate: Codable, Identifiable {
     var id = UUID()
@@ -20,22 +21,7 @@ struct WorkspaceTemplate: Codable, Identifiable {
         var mainCount: Int
     }
 
-    struct SavedWindow: Codable, Identifiable {
-        var id = UUID()
-        var bundleID: String
-        var appName: String
-        var title: String
-        var document: String?
-        var display: String
-        var frame: CGRect
-        var floating: Bool
-        var minimized: Bool
-        var fullscreen: Bool
-        var zoomed: Bool
-        var focused: Bool
-        var windowID: CGWindowID
-        var launchDate: Date?
-    }
+    typealias SavedWindow = WindowSession.SavedWindow
 
     var summary: String {
         "\(windows.count) \(windows.count == 1 ? "window" : "windows") · "

@@ -11,11 +11,11 @@ These are the things we cant comprimise on, they make us what we are today and t
 
 ## How it works
 
-An event tap (`Hotkeys`) matches each key press against the binds of the active submap and sends the match to `WindowManager.dispatch` (`Tiling/Manager/`). The CLI calls the same `dispatch`. `WindowManager.shared` owns all state: one `Window` for each `CGWindowID`, and a `WorkspaceModel` for workspaces, order and layouts. `AXObserver` notifications and `WindowScanner` (`Tiling/Scan/`) feed `refresh()`. `refresh()` adds and forgets windows, asks `Layout.frames` for the slots, and places the windows. `Animator` (`Tiling/Motion/`) steps the frames at 120 Hz through one `AXWriter` queue for each app. Each workspace is one macOS Desktop. `NativeDesktopController` (`Tiling/Spaces/`) moves the Desktops with the Ouch animation settings. `Config.parse` reads `~/.config/ouch/ouch.conf` into binds and `ConfigOption` values. `reload()` applies them, and Settings edits the same file through `ConfigDocument`.
+An event tap (`Hotkeys`) matches each key press against the binds of the active submap and sends the match to `WindowManager.dispatch` (`Tiling/Manager/`). The CLI calls the same `dispatch`. `WindowManager.shared` owns all state: one `Window` for each `CGWindowID`, and a `WorkspaceModel` for workspaces, order and layouts. `AXObserver` notifications and `WindowScanner` (`Tiling/Scan/`) feed `refresh()`. `refresh()` adds and forgets windows, asks `Layout.frames` for the slots, and places the windows. `Animator` (`Tiling/Motion/`) steps the frames at 120 Hz through one `AXWriter` queue for each app. Each workspace is one macOS Desktop. `NativeDesktopController` (`Tiling/Spaces/`) moves the Desktops with the Ouch animation settings. `Config.parse` reads `~/.config/ouch/ouch.conf` into binds and `ConfigOption` values. `reload()` applies them, and Settings edits the same file through `ConfigDocument`. The `WindowSession` module saves and opens app windows: it reads windows through AX, reads browser tabs and folders through app adapters, matches windows to saved windows and opens apps, files and URLs. `Templates/` imports it and adds the Ouch state: workspaces, Desktops, layouts and frames. Read `docs/internals/window-session.md` before you change how windows are saved or opened, or the `launch` dispatcher.
 
 ## Code map
 
-The app source is in `Sources/ouch/`. Each folder has one job:
+The app source is in `Sources/ouch/`. The `WindowSession` library is in `Sources/WindowSession/`. Each folder has one job:
 
 - `App/`: app log, login item, permissions, updates and performance monitor.
 - `Config/`: the config value, the option table, the open config and saved configs.
@@ -27,10 +27,19 @@ The app source is in `Sources/ouch/`. Each folder has one job:
 - `Settings/`: the settings window, its pages and search.
 - `Sort/`: the Overview plan, session and panel.
 - `Switcher/`: the window switcher, its search and its panel.
-- `Templates/`: saved workspace templates and their restore.
+- `Templates/`: saved workspace templates, their library and screenshot, and the Ouch part of their capture and restore (Desktops, layouts, frame placement).
 - `Tiling/`: the window manager, layouts, focus dimming, animation, desktops and drag input.
 - `UI/`: theme tokens, controls, menus, panels and the Design Gallery.
 - `main.swift`: the entry point.
+
+`Sources/WindowSession/` has no Ouch types. Make a type `public` only when the app uses it:
+
+- `AX/`: AX reads that tell a timeout from a missing value, and the window ID of an AX element.
+- `Model/`: `SavedWindow`, `AppState` (tabs and folders) and `LaunchSpec` (URL, arguments, command).
+- `Capture/`: the AX window read for a save, and `CaptureSlot`, which runs one capture at a time with a timeout.
+- `Apps/`: one `AppAdapter` for each app with extra state: browsers, Terminal, iTerm2 and Finder (through scripts), and code editors (through their recent-project files). It also holds the `osascript` runner, the Automation check and `WindowTabs` (background tabs). Add an app here, not in `Templates/`.
+- `Restore/`: window matching, the open scheduler and the AX reads and the "New Window" menu press used during an open.
+- `Launch/`: `Launcher` (opens an app, file, URL or command) and `LaunchRequest` (the `launch` dispatcher arguments).
 
 ## Vocabulary
 
@@ -80,7 +89,7 @@ Do not commit implementation plans, research notes, or agent scratch files. Keep
 
 - Build: `./build.sh`. It installs the git hook, runs the style check, builds and makes `build/ouch.app`. Use `./build.sh --dev` for fast debug rebuilds while you work.
 - Lint: `Tools/check-style.sh` must pass. The pre-commit hook, `swift test`, `./build.sh` and the `lint` GitHub Actions workflow run it. `Tools/swiftlint.sh` must pass too. The pre-commit hook and `./build.sh` run it.
-- Test: `swift test`. If you have only the Command Line Tools (no Xcode), add the path to the testing plugin:
+- Test: `swift test`. It runs `ouchTests` and `WindowSessionTests`. Put a test for a module type in `Tests/WindowSessionTests/`. If you have only the Command Line Tools (no Xcode), add the path to the testing plugin:
 
 ```text
 swift test -Xswiftc -plugin-path -Xswiftc /Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing

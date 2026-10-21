@@ -1,39 +1,6 @@
 import CoreGraphics
 import Foundation
-
-struct TemplateAppSnapshot: Sendable {
-    var pid: pid_t
-    var bundleID: String
-    var name: String
-    var launchDate: Date?
-}
-
-struct TemplateObservedWindow: @unchecked Sendable {
-    var pid: pid_t
-    var bundleID: String
-    var appName: String
-    var title: String
-    var document: String?
-    var frame: CGRect
-    var minimized: Bool
-    var fullscreen: Bool
-    var resizable: Bool
-    var windowID: CGWindowID
-    var launchDate: Date?
-    var spaces: [UInt64] = []
-    var floatingOverride = false
-}
-
-struct TemplateWindowBatch: @unchecked Sendable {
-    var windows: [TemplateObservedWindow]
-    var focusedID: CGWindowID?
-    var complete: Bool
-}
-
-enum TemplateAppRead: @unchecked Sendable {
-    case windows([TemplateObservedWindow])
-    case stalled
-}
+import WindowSession
 
 struct TemplateCaptureFacts: @unchecked Sendable {
     var tilingEnabled: Bool
@@ -51,52 +18,18 @@ struct TemplateCaptureFacts: @unchecked Sendable {
 
 struct TemplateCaptureRequest: @unchecked Sendable {
     var facts: TemplateCaptureFacts
-    var apps: [TemplateAppSnapshot]
+    var apps: [AppSnapshot]
     var frontmostPID: pid_t?
 }
 
 enum TemplateWindowCapture {
     static let budget: TimeInterval = 2
     static let backstop: Duration = .milliseconds(2600)
-    static let slot = TemplateCaptureSlot<TemplateWindowBatch>()
-}
-
-enum TemplateWindowWalk {
-    static func collect(apps: [TemplateAppSnapshot], budget: TimeInterval,
-                        now: @escaping @Sendable () -> Date = { Date() },
-                        stop: @escaping @Sendable () -> Bool = { false },
-                        read: (TemplateAppSnapshot) -> TemplateAppRead) -> TemplateWindowBatch {
-        let deadline = now().addingTimeInterval(budget)
-        func expired() -> Bool { stop() || now() >= deadline }
-        var windows: [TemplateObservedWindow] = []
-        var complete = !expired()
-        if complete {
-            for app in apps {
-                if expired() {
-                    complete = false
-                    break
-                }
-                switch read(app) {
-                case .stalled:
-                    complete = false
-                case .windows(let found):
-                    for window in found {
-                        if expired() {
-                            complete = false
-                            break
-                        }
-                        windows.append(window)
-                    }
-                }
-                if !complete { break }
-            }
-        }
-        return TemplateWindowBatch(windows: windows, focusedID: nil, complete: complete)
-    }
+    static let slot = CaptureSlot<WindowBatch>()
 }
 
 enum TemplateCaptureAssembler {
-    static func make(facts: TemplateCaptureFacts, batch: TemplateWindowBatch) throws -> WorkspaceTemplate {
+    static func make(facts: TemplateCaptureFacts, batch: WindowBatch) throws -> WorkspaceTemplate {
         guard batch.complete else { throw WindowManager.TemplateError.incomplete }
         guard !facts.displays.isEmpty else { throw WindowManager.TemplateError.notReady }
         let focused = batch.focusedID ?? facts.fallbackFocus
