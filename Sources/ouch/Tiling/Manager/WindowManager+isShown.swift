@@ -100,7 +100,6 @@ extension WindowManager {
             return occupied[((i + delta) % occupied.count + occupied.count) % occupied.count]
         }
         if config.workspacesPerDisplay, let number = Int(trimmed), number >= 1, let display = currentScreen()?.uuid {
-            guard number <= nativeCatalog.entries(on: display).count + 1 else { return nil }
             return WorkspaceKey.make(String(number), on: display, perDisplay: true)
         }
         return trimmed
