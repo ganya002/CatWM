@@ -86,3 +86,21 @@ import Testing
         #expect(TemplateWindowMatch.assign([saved], candidates: [candidate]).isEmpty)
     }
 }
+
+@Suite struct TemplateMatchStabilityCapTests {
+    @Test func aWindowWhoseTitleKeepsChangingStopsWaitingAtTheMaximum() {
+        var saved = WorkspaceTemplateTests().template().windows[0]
+        saved.document = nil
+        let start = Date()
+        var stability = TemplateMatchStability()
+        var waiting = true
+        for step in 0...12 {
+            let candidate = TemplateWindowCandidate(windowID: 1, bundleID: saved.bundleID, title: "title \(step)",
+                                                    document: nil, launchDate: nil, allowsGenericFallback: true)
+            waiting = stability.waiting(saved: [saved], candidates: [candidate], assigned: [saved.id: 1],
+                                        now: start.addingTimeInterval(Double(step) * 0.2))
+            if step == 5 { #expect(waiting) }
+        }
+        #expect(!waiting)
+    }
+}

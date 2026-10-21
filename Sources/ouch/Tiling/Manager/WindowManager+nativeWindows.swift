@@ -14,46 +14,77 @@ extension WindowManager {
         updateNativeCatalog(Screen.all())
         guard !window.isNativeFullscreen, !workspaceMoves.contains(window.id) else { return }
         guard let target = nativeCatalog.entry(workspace) else {
-            guard let screen = currentScreen() ?? Screen.all().first else { return }
-            nativeMoveTargets[window.id] = workspace
-            Task { @MainActor in
-                do {
-                    _ = try await self.ensureNativeWorkspace(workspace, on: screen, while: {
-                        self.nativeMoveTargets[window.id] == workspace
-                    })
-                    guard self.nativeMoveTargets[window.id] == workspace, window.isValid else { return }
-                    self.nativeMoveTargets[window.id] = nil
-                    self.moveNativeWindow(window, to: workspace, follow: follow)
-                } catch is CancellationError { } catch {
-                    Log.info("native workspaces: move \(window.id) to \(workspace) failed: "
-                        + error.localizedDescription)
-                    self.nativeMoveTargets[window.id] = nil
-                    HUD.shared.show(error.localizedDescription, on: screen.nsScreen)
-                    self.scheduleRefresh(after: 0)
-                }
-            }
+            createWorkspaceThenMove(window, to: workspace, follow: follow)
             return
         }
         let from = workspaceOf[window.id]
         let hadFocus = focusedWindow()?.id == window.id
+        let known = windows[window.id] != nil
+        let frame = window.frame
+        let visibleTarget = Spaces.current(display: target.display) == target.space
         workspaceMoves.insert(window.id)
-        if Spaces.current(display: target.display) != target.space { animator.cancel(window.id) }
-        Spaces.move(window: window.id, to: target.space) { [weak self] moved in
+        if visibleTarget {
+            autoSwitchAfter = Date().addingTimeInterval(0.7)
+            if !known { windows[window.id] = window; order.append(window.id); watch(window) }
+            model.assign(window.id, to: workspace)
+            monitorOf[workspace] = target.display
+            snapNextPlacement.insert(window.id)
+            refresh(instant: true, placing: [window.id])
+        } else {
+            animator.cancel(window.id)
+        }
+        animator.afterPendingWrites { [weak self] in
             guard let self else { return }
-            self.workspaceMoves.remove(window.id)
-            self.nativeMoveTargets[window.id] = nil
-            guard moved, window.isValid else {
-                HUD.shared.show("macOS couldn't move this window", on: self.currentScreen()?.nsScreen)
-                self.scheduleRefresh(after: 0)
-                return
+            let displayBatch = visibleTarget ? WindowServerUpdates.shared.begin() : nil
+            let started = Date()
+            Spaces.move(window: window.id, to: target.space, waitUntilOnScreen: visibleTarget) { [weak self] moved in
+                guard let self else { displayBatch?.finish(); return }
+                defer { displayBatch?.finish() }
+                workspaceMoves.remove(window.id)
+                nativeMoveTargets[window.id] = nil
+                guard moved || Spaces.of(window: window.id) == [target.space], window.isValid else {
+                    rollBackNativeMove(window, from: from, known: known, frame: visibleTarget ? frame : nil)
+                    return
+                }
+                let held = Int(Date().timeIntervalSince(started) * 1000)
+                Log.info("native workspaces: moved window \(window.id) to workspace \(workspace) in \(held) ms")
+                completeNativeMigration(window.id, workspace: workspace)
+                nativeMembership[window.id] = target.space
+                assignWindow(window, toWorkspace: workspace, from: from, follow: follow, handOffFocus: hadFocus)
             }
-            Log.info("native workspaces: moved window \(window.id) to workspace \(workspace)")
-            self.completeNativeMigration(window.id, workspace: workspace)
-            self.nativeMembership[window.id] = target.space
-            self.assignWindow(window, toWorkspace: workspace, from: from, follow: follow, handOffFocus: hadFocus)
-            self.scheduleRefresh(after: 0)
         }
     }
+
+    private func rollBackNativeMove(_ window: Window, from: String?, known: Bool, frame: CGRect?) {
+        HUD.shared.show("macOS couldn't move this window", on: currentScreen()?.nsScreen)
+        if let frame {
+            if known { model.assign(window.id, to: from) } else { forget(window.id) }
+            if window.isValid, !frame.isNull { window.setFrame(frame) }
+        }
+        scheduleRefresh(after: 0)
+    }
+
+    private func createWorkspaceThenMove(_ window: Window, to workspace: String, follow: Bool) {
+        guard let screen = currentScreen() ?? Screen.all().first else { return }
+        nativeMoveTargets[window.id] = workspace
+        Task { @MainActor in
+            do {
+                _ = try await self.ensureNativeWorkspace(workspace, on: screen, while: {
+                    self.nativeMoveTargets[window.id] == workspace
+                })
+                guard self.nativeMoveTargets[window.id] == workspace, window.isValid else { return }
+                self.nativeMoveTargets[window.id] = nil
+                self.moveNativeWindow(window, to: workspace, follow: follow)
+            } catch is CancellationError { } catch {
+                Log.info("native workspaces: move \(window.id) to \(workspace) failed: "
+                    + error.localizedDescription)
+                self.nativeMoveTargets[window.id] = nil
+                HUD.shared.show(error.localizedDescription, on: screen.nsScreen)
+                self.scheduleRefresh(after: 0)
+            }
+        }
+    }
+
     @MainActor func ensureNativeWorkspace(_ name: String, on screen: Screen,
                                           while current: () -> Bool = { true }) async throws
         -> NativeWorkspaceCatalog.Entry {

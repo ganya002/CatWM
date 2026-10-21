@@ -18,7 +18,10 @@ extension WindowManager {
         lastFocused[workspace] = window.id
         if let from, lastFocused[from] == window.id { lastFocused[from] = nil }
         corrections[window.id] = nil
-        if follow {
+        if follow, isShown(workspace) {
+            refresh()
+            focus(window, warp: false)
+        } else if follow {
             showWorkspace(workspace, focusing: window)
         } else {
             autoSwitchAfter = Date().addingTimeInterval(0.6)

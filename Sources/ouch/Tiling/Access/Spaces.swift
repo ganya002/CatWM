@@ -22,7 +22,7 @@ enum Spaces {
                 }
             }
             guard Date() < deadline else { completion(false); return }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.01, execute: check)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.004, execute: check)
         }
         check()
     }
