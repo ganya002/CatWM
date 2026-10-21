@@ -160,6 +160,7 @@ extension WindowManager {
         for window in arrivals where config.virtualWorkspaces {
             restoreSavedWorkspace(window, titles: observed.titles)
         }
+        if !pendingLaunches.isEmpty { arrivals.forEach(claimLaunch) }
         if config.newWindowsToMain && !firstRun {
             order.insert(contentsOf: arrivals.map(\.id), at: 0)
         } else {

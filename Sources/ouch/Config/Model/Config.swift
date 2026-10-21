@@ -42,6 +42,7 @@ struct Config {
     var keyboardHelp = true
     var keyboardHelpKey = "?"
     var cursorActions = true
+    var templateAppScripting = false
     var switcherInstantJump = true
     var switcherJumpDelay = 300
     var switcherExclude: [String] = []

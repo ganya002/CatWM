@@ -36,7 +36,10 @@ extension WindowManager {
         Log.info("ipc: \(command)")
         switch parts.first {
         case "dispatch" where parts.count >= 2:
-            guard parts[1].lowercased() != "exec" else { Log.info("ipc: exec is only allowed from keybinds"); return }
+            guard !["exec", "launch"].contains(parts[1].lowercased()) else {
+                Log.info("ipc: \(parts[1].lowercased()) is only allowed from keybinds")
+                return
+            }
             dispatch(parts[1].lowercased(), parts.count > 2 ? parts[2] : "")
         case "dump": dumpState()
         case "grabtest": grabTest()
@@ -130,6 +133,7 @@ extension WindowManager {
         case "killactive": lastClose = Date(); focusedWindow()?.close()
         case "minimize": focusedWindow()?.element.set(kAXMinimizedAttribute, kCFBooleanTrue)
         case "exec": exec(arg)
+        case "launch": launchCommand(arg)
         case "focusmonitor": focusMonitor(arg)
         case "movewindowtomonitor": moveToMonitor(arg)
         case "workspace": showWorkspaceCommand(arg)

@@ -1,17 +1,18 @@
 import AppKit
 @testable import ouch
 import Testing
+@testable import WindowSession
 
 @Suite struct TemplateMatchStabilityTests {
     @Test func missingDocumentMetadataGetsTimeToSettle() {
         let saved = WorkspaceTemplateTests().template().windows[0]
-        let candidate = TemplateWindowCandidate(
+        let candidate = WindowCandidate(
             windowID: saved.windowID + 1, bundleID: saved.bundleID, title: saved.title,
             document: nil, launchDate: nil, allowsGenericFallback: true
         )
         let assigned = [saved.id: candidate.windowID]
         let start = Date()
-        var stability = TemplateMatchStability()
+        var stability = MatchStability()
         let waiting1 = stability.waiting(saved: [saved], candidates: [candidate], assigned: assigned, now: start)
         #expect(waiting1)
         let waiting2 = stability.waiting(
@@ -19,18 +20,18 @@ import Testing
         )
         #expect(waiting2)
         let waiting3 = !stability.waiting(saved: [saved], candidates: [candidate], assigned: assigned,
-                                  now: start.addingTimeInterval(TemplateMatchStability.settleTime))
+                                  now: start.addingTimeInterval(MatchStability.settleTime))
         #expect(waiting3)
     }
 
     @Test func aStrongDocumentMatchFinishesWithoutTheRemainingDelay() {
         let saved = WorkspaceTemplateTests().template().windows[0]
-        var candidate = TemplateWindowCandidate(
+        var candidate = WindowCandidate(
             windowID: saved.windowID + 1, bundleID: saved.bundleID, title: saved.title,
             document: nil, launchDate: nil, allowsGenericFallback: true
         )
         let start = Date()
-        var stability = TemplateMatchStability()
+        var stability = MatchStability()
         let waiting4 = stability.waiting(
             saved: [saved], candidates: [candidate], assigned: [saved.id: candidate.windowID], now: start
         )
@@ -46,12 +47,12 @@ import Testing
     @Test func aChangingProvisionalWindowRestartsItsSettlePeriod() {
         var saved = WorkspaceTemplateTests().template().windows[0]
         saved.document = nil
-        let first = TemplateWindowCandidate(windowID: 1, bundleID: saved.bundleID, title: "", document: nil,
+        let first = WindowCandidate(windowID: 1, bundleID: saved.bundleID, title: "", document: nil,
                                              launchDate: nil, allowsGenericFallback: true)
-        let second = TemplateWindowCandidate(windowID: 2, bundleID: saved.bundleID, title: "", document: nil,
+        let second = WindowCandidate(windowID: 2, bundleID: saved.bundleID, title: "", document: nil,
                                               launchDate: nil, allowsGenericFallback: true)
         let start = Date()
-        var stability = TemplateMatchStability()
+        var stability = MatchStability()
         let waiting6 = stability.waiting(
             saved: [saved], candidates: [first], assigned: [saved.id: first.windowID], now: start
         )
@@ -69,21 +70,21 @@ import Testing
 
     @Test func aDestroyedWindowIsNotRetainedAsAMissedScan() {
         let saved = UUID()
-        #expect(TemplateWindowMatch.retainUnscanned([saved: 42], assigned: [:], scanned: []).count == 1)
-        #expect(TemplateWindowMatch.retainUnscanned([saved: 42], assigned: [:], scanned: [], invalidated: [42]).isEmpty)
+        #expect(WindowMatch.retainUnscanned([saved: 42], assigned: [:], scanned: []).count == 1)
+        #expect(WindowMatch.retainUnscanned([saved: 42], assigned: [:], scanned: [], invalidated: [42]).isEmpty)
     }
 
     @Test func aReopenedWindowCanHaveANewTitleWithoutReusingAnUnrelatedOldWindow() {
         var saved = WorkspaceTemplateTests().template().windows[0]
         saved.document = nil
-        var candidate = TemplateWindowCandidate(windowID: saved.windowID + 1, bundleID: saved.bundleID,
+        var candidate = WindowCandidate(windowID: saved.windowID + 1, bundleID: saved.bundleID,
                                                  title: "New session", document: nil, launchDate: nil,
                                                  allowsGenericFallback: true)
-        #expect(TemplateWindowMatch.assign([saved], candidates: [candidate]).isEmpty)
+        #expect(WindowMatch.assign([saved], candidates: [candidate]).isEmpty)
         candidate.newlyOpened = true
-        #expect(TemplateWindowMatch.assign([saved], candidates: [candidate])[saved.id] == candidate.windowID)
+        #expect(WindowMatch.assign([saved], candidates: [candidate])[saved.id] == candidate.windowID)
         candidate.allowsGenericFallback = false
-        #expect(TemplateWindowMatch.assign([saved], candidates: [candidate]).isEmpty)
+        #expect(WindowMatch.assign([saved], candidates: [candidate]).isEmpty)
     }
 }
 
@@ -92,10 +93,10 @@ import Testing
         var saved = WorkspaceTemplateTests().template().windows[0]
         saved.document = nil
         let start = Date()
-        var stability = TemplateMatchStability()
+        var stability = MatchStability()
         var waiting = true
         for step in 0...12 {
-            let candidate = TemplateWindowCandidate(windowID: 1, bundleID: saved.bundleID, title: "title \(step)",
+            let candidate = WindowCandidate(windowID: 1, bundleID: saved.bundleID, title: "title \(step)",
                                                     document: nil, launchDate: nil, allowsGenericFallback: true)
             waiting = stability.waiting(saved: [saved], candidates: [candidate], assigned: [saved.id: 1],
                                         now: start.addingTimeInterval(Double(step) * 0.2))

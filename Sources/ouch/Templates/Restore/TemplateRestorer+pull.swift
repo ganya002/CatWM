@@ -1,6 +1,17 @@
 import AppKit
+import WindowSession
 
 extension TemplateRestorer {
+    struct Found {
+        var window: Window
+        var bundleID: String
+        var title: String
+        var document: String?
+        var launchDate: Date?
+        var allowsGenericFallback: Bool
+        var frame: CGRect?
+    }
+
     struct ListedWindow {
         var id: CGWindowID
         var pid: Int
@@ -9,7 +20,7 @@ extension TemplateRestorer {
         var isLargeEnough: Bool { size.width >= 100 && size.height >= 100 }
     }
 
-    static func windowList(_ options: CGWindowListOption) -> [ListedWindow] {
+    nonisolated static func windowList(_ options: CGWindowListOption) -> [ListedWindow] {
         let list = CGWindowListCopyWindowInfo([options, .excludeDesktopElements], kCGNullWindowID)
             as? [[String: Any]] ?? []
         return list.compactMap { info in
@@ -38,7 +49,7 @@ extension TemplateRestorer {
         }
     }
 
-    func isFillable(_ candidate: TemplateWindowMatch) -> Bool {
+    func isFillable(_ candidate: Found) -> Bool {
         let id = candidate.window.id
         return pulled.contains(id) || (candidate.allowsGenericFallback && manager.workspaceOf[id] == nil)
             || initialWindowIDs.map { !$0.contains(id) } ?? false

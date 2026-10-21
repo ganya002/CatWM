@@ -1,39 +1,66 @@
 import Foundation
 
-struct TemplateRestoreTarget: Equatable {
-    var id: UUID
-    var bundleID: String
-    var appName: String
-    var document: String?
+public struct RestoreTarget: Equatable {
+    public var id: UUID
+    public var bundleID: String
+    public var appName: String
+    public var document: String?
+
+    public init(id: UUID, bundleID: String, appName: String, document: String?) {
+        self.id = id
+        self.bundleID = bundleID
+        self.appName = appName
+        self.document = document
+    }
 }
 
-struct TemplateAppState: Equatable {
-    var running: Bool
-    var finishedLaunching: Bool
-    var openable: Bool
+public struct AppLaunchState: Equatable {
+    public var running: Bool
+    public var finishedLaunching: Bool
+    public var openable: Bool
+
+    public init(running: Bool, finishedLaunching: Bool, openable: Bool) {
+        self.running = running
+        self.finishedLaunching = finishedLaunching
+        self.openable = openable
+    }
 }
 
-struct TemplateRestoreRequest: Equatable {
-    var savedID: UUID
-    var bundleID: String
-    var appName: String
-    var document: String?
-    var token: UUID
+public struct RestoreRequest: Equatable {
+    public var savedID: UUID
+    public var bundleID: String
+    public var appName: String
+    public var document: String?
+    public var token: UUID
+
+    public init(savedID: UUID, bundleID: String, appName: String, document: String?, token: UUID) {
+        self.savedID = savedID
+        self.bundleID = bundleID
+        self.appName = appName
+        self.document = document
+        self.token = token
+    }
 }
 
-struct TemplateRestoreScheduler {
-    static let totalWait: TimeInterval = 15
-    static let pollInterval: TimeInterval = 0.3
-    static let requestGap: TimeInterval = 0.3
-    static let launchSettle: TimeInterval = 0.75
-    static let firstWindowWait: TimeInterval = 3
-    static let retryDelay: TimeInterval = 0.5
-    static let maxAttempts = 3
+public struct RestoreScheduler {
+    public static let totalWait: TimeInterval = 15
+    public static let pollInterval: TimeInterval = 0.3
+    public static let requestGap: TimeInterval = 0.3
+    public static let launchSettle: TimeInterval = 0.75
+    public static let firstWindowWait: TimeInterval = 3
+    public static let retryDelay: TimeInterval = 0.5
+    public static let maxAttempts = 3
 
-    struct Step: Equatable {
-        var launch: [String]
-        var requests: [TemplateRestoreRequest]
-        var keepWaiting: Bool
+    public struct Step: Equatable {
+        public var launch: [String]
+        public var requests: [RestoreRequest]
+        public var keepWaiting: Bool
+
+        public init(launch: [String], requests: [RestoreRequest], keepWaiting: Bool) {
+            self.launch = launch
+            self.requests = requests
+            self.keepWaiting = keepWaiting
+        }
     }
 
     private enum AttemptOutcome {
@@ -68,14 +95,16 @@ struct TemplateRestoreScheduler {
     private var launchFailed: Set<String> = []
     private var lastRequest: [String: Date] = [:]
     private var settledMatches: [String: Set<UUID>] = [:]
-    private(set) var cancelled = false
-    private(set) var failures = Set<String>()
+    public private(set) var cancelled = false
+    public private(set) var failures = Set<String>()
 
-    mutating func cancel() {
+    public init() {}
+
+    public mutating func cancel() {
         cancelled = true
     }
 
-    mutating func noteRefused(_ savedID: UUID, appName: String, now: Date) {
+    public mutating func noteRefused(_ savedID: UUID, appName: String, now: Date) {
         guard !cancelled, var attempt = attempts[savedID], attempt.outcome == .pending else { return }
         attempt.outcome = .refused
         attempt.time = now
@@ -83,7 +112,7 @@ struct TemplateRestoreScheduler {
         if attempt.tries >= Self.maxAttempts { failures.insert(appName) }
     }
 
-    mutating func noteFailed(_ savedID: UUID, token: UUID, appName: String, now: Date) {
+    public mutating func noteFailed(_ savedID: UUID, token: UUID, appName: String, now: Date) {
         guard !cancelled, var attempt = attempts[savedID], attempt.token == token,
               attempt.outcome == .pending else { return }
         attempt.outcome = .failed
@@ -92,24 +121,24 @@ struct TemplateRestoreScheduler {
         if attempt.tries >= Self.maxAttempts { failures.insert(appName) }
     }
 
-    mutating func noteLaunchFailed(_ bundleID: String, appName: String) {
+    public mutating func noteLaunchFailed(_ bundleID: String, appName: String) {
         guard !cancelled else { return }
         launchFailed.insert(bundleID)
         failures.insert(appName)
     }
 
-    mutating func step(now: Date, deadline: Date, targets: [TemplateRestoreTarget], matched: Set<UUID>,
-                       apps: [String: TemplateAppState]) -> Step {
+    public mutating func step(now: Date, deadline: Date, targets: [RestoreTarget], matched: Set<UUID>,
+                              apps: [String: AppLaunchState]) -> Step {
         if cancelled || now >= deadline { return Step(launch: [], requests: [], keepWaiting: false) }
         let pending = targets.filter { !matched.contains($0.id) }
         if pending.isEmpty { return Step(launch: [], requests: [], keepWaiting: false) }
         var launch: [String] = []
-        var requests: [TemplateRestoreRequest] = []
+        var requests: [RestoreRequest] = []
         var keep = false
         for bundle in Set(pending.map(\.bundleID)).sorted() {
             let group = pending.filter { $0.bundleID == bundle }
             guard let appName = group.first?.appName else { continue }
-            let app = apps[bundle] ?? TemplateAppState(running: false, finishedLaunching: false, openable: false)
+            let app = apps[bundle] ?? AppLaunchState(running: false, finishedLaunching: false, openable: false)
             let appMatches = Set(targets.filter { $0.bundleID == bundle && matched.contains($0.id) }.map(\.id))
             if kinds[bundle] == .cold, lastRequest[bundle] == nil, readyAt[bundle] != nil,
                settledMatches[bundle] != appMatches {
@@ -135,7 +164,7 @@ struct TemplateRestoreScheduler {
                     let token = UUID()
                     let tries = (attempts[target.id]?.tries ?? 0) + 1
                     attempts[target.id] = Attempt(outcome: .pending, time: now, tries: tries, token: token)
-                    requests.append(TemplateRestoreRequest(savedID: target.id, bundleID: target.bundleID,
+                    requests.append(RestoreRequest(savedID: target.id, bundleID: target.bundleID,
                                                            appName: target.appName, document: target.document,
                                                            token: token))
                 }
@@ -146,7 +175,7 @@ struct TemplateRestoreScheduler {
         return Step(launch: launch, requests: requests, keepWaiting: keep)
     }
 
-    private mutating func phase(_ bundle: String, app: TemplateAppState, appName: String, now: Date,
+    private mutating func phase(_ bundle: String, app: AppLaunchState, appName: String, now: Date,
                                 awaitingFirstWindow: Bool) -> Phase {
         if !app.running {
             if launchFailed.contains(bundle) || !app.openable { return .giveUp(appName) }
@@ -170,7 +199,7 @@ struct TemplateRestoreScheduler {
         }
     }
 
-    private func admit(_ group: [TemplateRestoreTarget], now: Date, deadline: Date) -> [TemplateRestoreTarget] {
+    private func admit(_ group: [RestoreTarget], now: Date, deadline: Date) -> [RestoreTarget] {
         let fresh = group.filter { attempts[$0.id] == nil }
         let retries = group.filter { canRetry($0.id, now: now) }
         let slots = max(1, Int(deadline.timeIntervalSince(now) / Self.requestGap))
@@ -204,8 +233,8 @@ struct TemplateRestoreScheduler {
     }
 }
 
-enum TemplateNewWindowCommand {
-    static func isPlainCommandN(command: String?, modifiers: Int?) -> Bool {
+public enum NewWindowCommand {
+    public static func isPlainCommandN(command: String?, modifiers: Int?) -> Bool {
         command?.lowercased() == "n" && modifiers == 0
     }
 }

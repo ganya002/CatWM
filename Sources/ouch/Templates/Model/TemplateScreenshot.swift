@@ -1,9 +1,10 @@
 import AppKit
 import ScreenCaptureKit
+import WindowSession
 
 enum TemplateScreenshot {
     static let timeout: Duration = .seconds(4)
-    private static let slot = TemplateCaptureSlot<Data?>()
+    private static let slot = CaptureSlot<Data?>()
 
     static func capture() async -> Data? {
         guard case .finished(let data) = await slot.run(within: timeout, operation: { await take() }) else {
