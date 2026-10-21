@@ -25,6 +25,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         let firstRun = UserDefaults.standard.object(forKey: "didSetUpLaunchAtLogin") == nil
         LoginItem.enableOnFirstLaunch()
+        CommandLineTool.install()
         Onboarding.shared.statusButton = statusItem.button
 
         let watcher = PermissionWatcher.shared
