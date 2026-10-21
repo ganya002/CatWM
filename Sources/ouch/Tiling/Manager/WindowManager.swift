@@ -90,6 +90,7 @@ final class WindowManager {
     var refocusAfterClose: String?
     var lastClose = Date.distantPast
     var floatFrames: [CGWindowID: CGRect] = [:]
+    var floatZoom: [CGWindowID: CGRect] = [:]
     var savedWorkspaceOf: [CGWindowID: String] = [:]
     var savedOwnerOf: [CGWindowID: String] = [:]
     var savedFloating: [CGWindowID: Bool] = [:]
@@ -126,7 +127,6 @@ final class WindowManager {
     var corrections: [CGWindowID: (target: CGRect, count: Int)] = [:]
     var drags: [CGWindowID: Bool] = [:]
     var refreshWork: DispatchWorkItem?
-    var ffmWork: DispatchWorkItem?
     var minSizes: [CGWindowID: CGSize] = [:]
     var menuBarHeights: [String: CGFloat] = [:]
     var ratioChange: (screen: String, until: Date)?

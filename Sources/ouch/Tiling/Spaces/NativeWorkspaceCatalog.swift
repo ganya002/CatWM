@@ -95,6 +95,7 @@ struct NativeWorkspaceCatalog {
     func step(from name: String, by delta: Int) -> String? {
         guard let source = entry(name) else { return nil }
         let local = entries(on: source.display)
+            .sorted { WorkspaceReconciliation.workspaceSort($0.name, $1.name) }
         guard let index = local.firstIndex(of: source) else { return nil }
         return local.indices.contains(index + delta) ? local[index + delta].name : nil
     }

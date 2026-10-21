@@ -15,6 +15,7 @@ final class NativeDesktopController {
     var prepare: (Request) async throws -> Void = { _ in }
     var onSettled: (Request, _ changed: Bool) -> Void = { _, _ in }
     var onMotion: (Request) -> Void = { _ in }
+    var isForward: (_ source: UInt64, _ target: UInt64, _ desktopOrder: Bool) -> Bool = { $2 }
     var onIdle: () -> Void = {}
     var onFailure: (String) -> Void = { _ in }
     private(set) var requested: Request?
@@ -131,8 +132,9 @@ final class NativeDesktopController {
         if let preparation { try? await recovery.finish(); throw preparation }
     }
 
-    @MainActor private func compose(_ state: DesktopGuard.Context, screen: Screen, forward: Bool,
+    @MainActor private func compose(_ state: DesktopGuard.Context, screen: Screen, forward desktopOrder: Bool,
                                     target: Request, recovery: DesktopGuardClient) async throws {
+        let forward = isForward(state.source, state.destination, desktopOrder)
         let width = screen.frame.width * (forward ? 1 : -1)
         var progress = 0.0
         try check(DesktopBridge.animating(display: state.display, active: true), "Cannot begin Desktop motion")

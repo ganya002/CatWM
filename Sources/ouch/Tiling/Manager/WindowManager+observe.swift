@@ -123,7 +123,8 @@ extension WindowManager {
         dirtyFrames.remove(id)
         snapNextPlacement.remove(id)
         model.forget(id)
-        floatFrames[id] = nil; targets[id] = nil; minSizes[id] = nil; corrections[id] = nil; drags[id] = nil
+        floatFrames[id] = nil; floatZoom[id] = nil; targets[id] = nil; minSizes[id] = nil
+        corrections[id] = nil; drags[id] = nil
         displayOf[id] = nil
         closingNow.remove(id)
         visible.remove(id)
