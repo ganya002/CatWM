@@ -14,24 +14,7 @@ extension WindowManager {
         updateNativeCatalog(Screen.all())
         guard !window.isNativeFullscreen, !workspaceMoves.contains(window.id) else { return }
         guard let target = nativeCatalog.entry(workspace) else {
-            guard let screen = currentScreen() ?? Screen.all().first else { return }
-            nativeMoveTargets[window.id] = workspace
-            Task { @MainActor in
-                do {
-                    _ = try await self.ensureNativeWorkspace(workspace, on: screen, while: {
-                        self.nativeMoveTargets[window.id] == workspace
-                    })
-                    guard self.nativeMoveTargets[window.id] == workspace, window.isValid else { return }
-                    self.nativeMoveTargets[window.id] = nil
-                    self.moveNativeWindow(window, to: workspace, follow: follow)
-                } catch is CancellationError { } catch {
-                    Log.info("native workspaces: move \(window.id) to \(workspace) failed: "
-                        + error.localizedDescription)
-                    self.nativeMoveTargets[window.id] = nil
-                    HUD.shared.show(error.localizedDescription, on: screen.nsScreen)
-                    self.scheduleRefresh(after: 0)
-                }
-            }
+            createWorkspaceThenMove(window, to: workspace, follow: follow)
             return
         }
         let from = workspaceOf[window.id]
@@ -56,27 +39,52 @@ extension WindowManager {
             let started = Date()
             Spaces.move(window: window.id, to: target.space, waitUntilOnScreen: visibleTarget) { [weak self] moved in
                 guard let self else { displayBatch?.finish(); return }
+                defer { displayBatch?.finish() }
                 workspaceMoves.remove(window.id)
                 nativeMoveTargets[window.id] = nil
                 guard moved || Spaces.of(window: window.id) == [target.space], window.isValid else {
-                    HUD.shared.show("macOS couldn't move this window", on: currentScreen()?.nsScreen)
-                    if visibleTarget {
-                        if known { model.assign(window.id, to: from) } else { forget(window.id) }
-                        if window.isValid, !frame.isNull { window.setFrame(frame) }
-                    }
-                    scheduleRefresh(after: 0)
-                    displayBatch?.finish()
+                    rollBackNativeMove(window, from: from, known: known, frame: visibleTarget ? frame : nil)
                     return
                 }
                 let held = Int(Date().timeIntervalSince(started) * 1000)
                 Log.info("native workspaces: moved window \(window.id) to workspace \(workspace) in \(held) ms")
-                displayBatch?.finish()
                 completeNativeMigration(window.id, workspace: workspace)
                 nativeMembership[window.id] = target.space
                 assignWindow(window, toWorkspace: workspace, from: from, follow: follow, handOffFocus: hadFocus)
             }
         }
     }
+
+    private func rollBackNativeMove(_ window: Window, from: String?, known: Bool, frame: CGRect?) {
+        HUD.shared.show("macOS couldn't move this window", on: currentScreen()?.nsScreen)
+        if let frame {
+            if known { model.assign(window.id, to: from) } else { forget(window.id) }
+            if window.isValid, !frame.isNull { window.setFrame(frame) }
+        }
+        scheduleRefresh(after: 0)
+    }
+
+    private func createWorkspaceThenMove(_ window: Window, to workspace: String, follow: Bool) {
+        guard let screen = currentScreen() ?? Screen.all().first else { return }
+        nativeMoveTargets[window.id] = workspace
+        Task { @MainActor in
+            do {
+                _ = try await self.ensureNativeWorkspace(workspace, on: screen, while: {
+                    self.nativeMoveTargets[window.id] == workspace
+                })
+                guard self.nativeMoveTargets[window.id] == workspace, window.isValid else { return }
+                self.nativeMoveTargets[window.id] = nil
+                self.moveNativeWindow(window, to: workspace, follow: follow)
+            } catch is CancellationError { } catch {
+                Log.info("native workspaces: move \(window.id) to \(workspace) failed: "
+                    + error.localizedDescription)
+                self.nativeMoveTargets[window.id] = nil
+                HUD.shared.show(error.localizedDescription, on: screen.nsScreen)
+                self.scheduleRefresh(after: 0)
+            }
+        }
+    }
+
     @MainActor func ensureNativeWorkspace(_ name: String, on screen: Screen,
                                           while current: () -> Bool = { true }) async throws
         -> NativeWorkspaceCatalog.Entry {
