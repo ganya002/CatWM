@@ -54,6 +54,19 @@ extension SortPlan {
                      at: lanes.firstIndex { Self.order(workspace, $0.workspace) } ?? lanes.count)
     }
 
+    mutating func followDesktopOrder() {
+        guard perDisplay else { return }
+        var renamed: [String: String] = [:]
+        for i in lanes.indices {
+            renamed[lanes[i].workspace] = key(String(i + 1))
+            lanes[i].workspace = key(String(i + 1))
+        }
+        guard renamed.contains(where: { $0.key != $0.value }) else { return }
+        geometry = Dictionary(geometry.map { (renamed[$0.key] ?? $0.key, $0.value) }, uniquingKeysWith: { first, _ in first })
+        origin = origin.mapValues { (renamed[$0.workspace] ?? $0.workspace, $0.at) }
+        active = active.map { renamed[$0] ?? $0 }
+    }
+
     mutating func renumberLane(_ i: Int, to workspace: String) {
         guard lanes.indices.contains(i) else { return }
         let id = lanes[i].id, old = lanes[i].workspace

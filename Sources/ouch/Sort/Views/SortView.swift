@@ -141,9 +141,9 @@ struct SortView: View {
         if let dragged = model.columnDrag {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(dragged.lane.workspace).font(Theme.display(22)).monospacedDigit().tracking(-0.4)
+                    Text(dragged.lane.number).font(Theme.display(22)).monospacedDigit().tracking(-0.4)
                         .foregroundStyle(Theme.accentInk).fixedSize()
-                    Text(dragged.lane.name.isEmpty ? "Workspace \(dragged.lane.workspace)" : dragged.lane.name)
+                    Text(dragged.lane.name.isEmpty ? "Workspace \(dragged.lane.number)" : dragged.lane.name)
                         .font(Theme.heading()).oneLine()
                 }
                 .padding(.horizontal, 2)

@@ -100,7 +100,8 @@ extension WindowManager {
     }
 
     func showWorkspaceHUD(_ workspace: String, on monitor: Screen) {
-        let text = labels[workspace].map { "\(workspace) · \($0)" } ?? workspace
+        let number = workspaceNumber(workspace)
+        let text = labels[workspace].map { "\(number) · \($0)" } ?? number
         let layout = state(workspace: workspace).layout
         DispatchQueue.main.async { [weak self] in
             guard self?.shown[monitor.uuid] == workspace else { return }

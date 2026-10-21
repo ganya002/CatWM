@@ -8,8 +8,8 @@ struct SortClosedHeader: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Text(group.workspace).font(Theme.display(15)).monospacedDigit().foregroundStyle(Theme.inkFaint).fixedSize()
-            Text(group.name.isEmpty ? "Workspace \(group.workspace)" : group.name).font(Theme.body(13.5, .medium))
+            Text(group.number).font(Theme.display(15)).monospacedDigit().foregroundStyle(Theme.inkFaint).fixedSize()
+            Text(group.name.isEmpty ? "Workspace \(group.number)" : group.name).font(Theme.body(13.5, .medium))
                 .foregroundStyle(Theme.inkMuted).strikethrough(true, color: Theme.danger).oneLine()
             Spacer(minLength: 0)
             Text("\(group.ids.count)").textStyle(.caption).monospacedDigit().foregroundStyle(Theme.inkFaint).fixedSize()
@@ -30,7 +30,7 @@ struct SortClosedHeader: View {
         .onHover { hover.isOn = $0 }
         .onTapGesture { model.reopen(group.id) }
         .tooltip("Click to bring back")
-        .accessibilityLabel("Closed workspace \(group.workspace), \(group.ids.count) windows")
+        .accessibilityLabel("Closed workspace \(group.number), \(group.ids.count) windows")
         .accessibilityAddTraits(.isButton)
     }
 }

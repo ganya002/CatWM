@@ -4,7 +4,14 @@ import SwiftUI
 final class SortModel: ObservableObject {
     @Published var displays: [SortDisplay] = []
     @Published var current = ""
-    @Published var plans: [String: SortPlan] = [:]
+    @Published var plans: [String: SortPlan] = [:] {
+        didSet {
+            for (key, var displayPlan) in plans where displayPlan.perDisplay {
+                displayPlan.followDesktopOrder()
+                if displayPlan.lanes.map(\.workspace) != plans[key]?.lanes.map(\.workspace) { plans[key] = displayPlan }
+            }
+        }
+    }
     @Published var hover: CGWindowID?
     @Published var selected: CGWindowID?
     @Published var notice: SortNotice?

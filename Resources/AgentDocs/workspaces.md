@@ -4,7 +4,8 @@ With `virtual-workspaces = true`, Ouch workspaces use normal macOS Desktops. Ouc
 
 - Each workspace has one native Desktop. Its name, layout, and last focused window persist between switches.
 - Existing normal Desktops become numbered workspaces. Names stay attached to Desktop IDs when macOS reorders them.
-- Each display has its own Desktops. Workspace numbers are unique across all displays. A workspace on another display opens on that display, and keyboard focus goes to that display.
+- Each display has its own Desktops. By default, workspace numbers are unique across all displays. A workspace on another display opens on that display, and keyboard focus goes to that display.
+- With `workspaces-per-display = true`, workspace N is the Nth macOS Desktop on that display, counted from the left in Mission Control. `workspace 2` and `movetoworkspace 2` use the second Desktop of the current display. A number above the next free one does nothing, so Desktops never have gaps. When you leave an empty workspace that has no used workspace after it, Ouch removes its Desktop. An empty workspace before a used one stays, so workspace numbers never change. If you reorder Desktops in Mission Control, the workspace numbers follow. Overview numbers its columns in the same order, and a column number cannot be typed. Changing this option renumbers all workspaces and clears their names.
 - When a display has no window to focus, Ouch moves the cursor to that display. Then the next bind applies to that display.
 - A disconnected display keeps its workspace names. They come back when the display connects again.
 - Ctrl+1 through Ctrl+9 selects workspace 1 through 9. Ctrl+0 selects workspace 10. Ctrl+Left and Ctrl+Right select the adjacent workspace on the current display.

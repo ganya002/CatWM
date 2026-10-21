@@ -5,11 +5,12 @@ extension SortPlan {
         var lanes = display.workspaces.map {
             SortLane(workspace: $0.name, name: $0.label, layout: $0.layout, ids: $0.ids)
         }
-        if lanes.isEmpty { lanes = [SortLane(workspace: "1", name: "", layout: .tall, ids: [])] }
+        if lanes.isEmpty { lanes = [SortLane(workspace: WorkspaceKey.make("1", on: display.id, perDisplay: display.perDisplay), name: "", layout: .tall, ids: [])] }
         let items = Dictionary(display.items.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         var plan = SortPlan(display: display.id, items: items,
                             lanes: lanes, strategy: nil,
                             existing: display.workspaces.map(\.name), taken: display.taken, active: display.active)
+        plan.perDisplay = display.perDisplay
         for workspace in display.workspaces { plan.geometry[workspace.name] = (workspace.ratio, workspace.mainCount) }
         return plan
     }
@@ -22,7 +23,7 @@ extension SortPlan {
     }
 
     static func order(_ lhs: String, _ rhs: String) -> Bool {
-        switch (Int(lhs), Int(rhs)) {
+        switch (Int(WorkspaceKey.number(lhs)), Int(WorkspaceKey.number(rhs))) {
         case let (x?, y?): return x < y
         case (_?, nil): return true
         case (nil, _?): return false
@@ -33,7 +34,7 @@ extension SortPlan {
     func available(avoiding other: Set<String>) -> [String] {
         let used = Set(lanes.map(\.workspace))
         var out: [String] = []
-        for name in existing + (1...10).map(String.init)
+        for name in existing + (1...10).map({ key(String($0)) })
         where !out.contains(name) && !used.contains(name) && !taken.contains(name) && !other.contains(name) {
             out.append(name)
         }
@@ -46,7 +47,7 @@ extension SortPlan {
 
     func title(of lane: Int) -> String {
         let name = lanes[lane].name.trimmingCharacters(in: .whitespaces)
-        return name.isEmpty ? "Workspace \(lanes[lane].workspace)" : name
+        return name.isEmpty ? "Workspace \(lanes[lane].number)" : name
     }
 
     static func layout(forCount count: Int, in layouts: [Layout]) -> Layout {
@@ -75,7 +76,7 @@ extension SortPlan {
         }
         let names = Array(pool.prefix(groups.count)).sorted(by: Self.order)
         lanes = groups.enumerated().map { i, group in
-            SortLane(workspace: i < names.count ? names[i] : existing.first ?? "1", name: group.name,
+            SortLane(workspace: i < names.count ? names[i] : existing.first ?? key("1"), name: group.name,
                      layout: Self.fit(group.layout, group.items.count, layouts), ids: group.items.map(\.id))
         }
         closedLanes = []

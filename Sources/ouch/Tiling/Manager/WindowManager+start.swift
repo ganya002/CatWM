@@ -149,6 +149,7 @@ extension WindowManager {
     func reload(showHUD: Bool = true) {
         nativeDesktop.stop()
         let wasVirtual = config.virtualWorkspaces
+        let wasPerDisplay = config.workspacesPerDisplay
         config = Config.load()
         if wasVirtual != config.virtualWorkspaces {
             if wasVirtual { restoreHiddenWindows() }
@@ -156,6 +157,8 @@ extension WindowManager {
             labels = [:]; sortSnapshot = nil; closingNow = []; closingApps = []
             SortPanel.shared.abandon()
             Log.info("workspaces: \(config.virtualWorkspaces ? "Ouch workspaces" : "macOS Spaces")")
+        } else if wasPerDisplay != config.workspacesPerDisplay {
+            renumberWorkspaces()
         }
         Log.verbose = config.debugLogging || Log.verboseLaunch
         ModeFX.shared.style = config.modeEffect

@@ -121,7 +121,7 @@ extension SortModel {
         let moved = result.moved
         let text = moved > 0
             ? "Removed \(title). Its \(moved) window\(moved == 1 ? "" : "s") moved to "
-                + "\(displayPlan.lanes[result.target].workspace)."
+                + "\(displayPlan.lanes[result.target].number)."
             : "Removed \(title)."
         notice = SortNotice(text: text, undo: (current, before))
     }

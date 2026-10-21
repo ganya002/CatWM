@@ -12,6 +12,7 @@ struct SortDisplay: Identifiable {
     let workspaces: [SortWorkspace]
     let active: String?
     let taken: Set<String>
+    var perDisplay = false
 
     var isSorted: Bool { workspaces.filter { !$0.ids.isEmpty }.count > 1 }
 }

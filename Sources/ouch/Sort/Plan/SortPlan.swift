@@ -16,8 +16,11 @@ struct SortPlan {
     let existing: [String]
     var claimed: Set<String> = []
     let taken: Set<String>
-    let active: String?
+    var active: String?
+    var perDisplay = false
     var geometry: [String: (ratio: CGFloat, mainCount: Int)] = [:]
+
+    func key(_ number: String) -> String { WorkspaceKey.make(number, on: display, perDisplay: perDisplay) }
 
     var activeLane: Int { lanes.firstIndex { $0.workspace == active } ?? 0 }
 

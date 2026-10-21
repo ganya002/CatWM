@@ -128,7 +128,7 @@ extension WindowManager {
         nativeCreationBusy = true
         defer { nativeCreationBusy = false; scheduleRefresh(after: 0) }
         let space = try await DesktopLifecycle.create(on: screen)
-        nativeCatalog.bind(name, to: space, on: screen.uuid)
+        if !config.workspacesPerDisplay { nativeCatalog.bind(name, to: space, on: screen.uuid) }
         updateNativeCatalog(Screen.all())
         guard let entry = nativeCatalog.entry(name) else {
             throw DesktopTransitionError.check("The Desktop disappeared")
@@ -143,10 +143,14 @@ extension WindowManager {
             guard await poll(5, every: 50_000_000, until: {
                 !self.nativeDesktop.isRunning && !self.nativeCreationBusy && self.workspaceMoves.isEmpty
             }) else { return }
-            for name in removed {
-                guard let entry = self.nativeCatalog.entry(name),
-                      let screen = Screen.all().first(where: { $0.uuid == entry.display }) else { continue }
-                do { try await DesktopLifecycle.remove(entry.space, on: screen) } catch {
+            let entries = removed.compactMap { self.nativeCatalog.entry($0) }
+                .sorted { (Int(WorkspaceKey.number($0.name)) ?? 0) > (Int(WorkspaceKey.number($1.name)) ?? 0) }
+            for entry in entries {
+                guard let screen = Screen.all().first(where: { $0.uuid == entry.display }) else { continue }
+                do {
+                    try await DesktopLifecycle.remove(entry.space, on: screen)
+                    if self.config.workspacesPerDisplay { self.closeGap(after: entry) }
+                } catch {
                     HUD.shared.show(error.localizedDescription, on: screen.nsScreen)
                 }
             }

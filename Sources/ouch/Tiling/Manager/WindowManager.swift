@@ -31,6 +31,7 @@ final class WindowManager {
     var nativeGestureSign: Double?
     var nativeMigration: [CGWindowID: String] = [:]
     var nativeCreationBusy = false
+    var desktopRemovalFailures: [UInt64: Date] = [:]
     var nativeWorkspaceGeneration = 0
     var nativeSortNames: Set<String> = []
     var nativeDroppedWorkspaces: Set<String> = []

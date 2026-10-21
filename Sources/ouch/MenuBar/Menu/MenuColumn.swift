@@ -66,7 +66,7 @@ struct MenuColumn: View {
             let highest = summary.all.compactMap { Int($0.name) }.max() ?? 0
             WorkspaceStrip(names: (1...max(9, min(highest, 10))).map(String.init), current: summary.current,
                            occupied: Set(summary.all.filter { $0.windows > 0 }.map(\.name))) { name in
-                WindowManager.shared.showWorkspace(name)
+                WindowManager.shared.showWorkspaceNumber(name)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { model.refresh() }
             }
             .padding(.horizontal, 8).padding(.top, 2).padding(.bottom, 8)

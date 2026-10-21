@@ -6,4 +6,6 @@ struct SortClosedLane: Identifiable {
     var name: String
     var layout: Layout
     var ids: [CGWindowID]
+
+    var number: String { WorkspaceKey.number(workspace) }
 }

@@ -21,7 +21,7 @@ extension WindowManager {
     func isShown(_ workspace: String?) -> Bool { model.isShown(workspace) }
 
     func workspaceSort(_ first: String, _ second: String) -> Bool {
-        switch (Int(first), Int(second)) {
+        switch (Int(WorkspaceKey.number(first)), Int(WorkspaceKey.number(second))) {
         case let (x?, y?): return x < y
         case (_?, nil): return true
         case (nil, _?): return false
@@ -43,12 +43,17 @@ extension WindowManager {
         for (id, workspace) in workspaceOf where windows[id] != nil && isVirtual(workspace) && !isPending(workspace) {
             counts[workspace, default: 0] += 1
         }
-        let names = Set(counts.keys).union(nativeCatalog.entries.map(\.name))
+        var names = Set(counts.keys).union(nativeCatalog.entries.map(\.name))
             .union(virtualShown.values).sorted(by: workspaceSort)
+        if config.workspacesPerDisplay, let display = currentScreen()?.uuid {
+            names = nativeCatalog.entries(on: display).map(\.name)
+        }
         let showing = Set(virtualShown.values)
         return WorkspaceSummary(
-            current: currentWorkspace,
-            all: names.map { WorkspaceSummary.Entry(name: $0, windows: counts[$0] ?? 0, shown: showing.contains($0)) }
+            current: currentWorkspace.map(workspaceNumber),
+            all: names.map {
+                WorkspaceSummary.Entry(name: workspaceNumber($0), windows: counts[$0] ?? 0, shown: showing.contains($0))
+            }
         )
     }
 
@@ -57,7 +62,7 @@ extension WindowManager {
         let shownWorkspace = shown[screen.uuid]
         let workspace: String?
         if config.virtualWorkspaces {
-            workspace = virtualShown[screen.uuid]
+            workspace = virtualShown[screen.uuid].map(workspaceNumber)
         } else if let list = Spaces.list(display: screen.uuid), let cur = list.current,
                   let index = list.desktops.firstIndex(of: cur) {
             workspace = String(index + 1)
@@ -82,7 +87,7 @@ extension WindowManager {
             guard let delta = Int(lower.dropFirst(prefix.count).replacingOccurrences(of: "+", with: "")) else { break }
             if let name = nativeCatalog.step(from: cur, by: delta) { return name }
             let occupied = workspaceOf.contains { $0.value == cur && windows[$0.key] != nil }
-            return delta > 0 && occupied && config.removesEmptyWorkspaces ? nativeCatalog.freeNumber() : nil
+            return delta > 0 && occupied && config.removesEmptyWorkspaces ? nativeCatalog.freeNumber(on: nativeCatalog.entry(cur)?.display ?? currentScreen()?.uuid ?? "") : nil
         }
         if lower.hasPrefix("e+") || lower.hasPrefix("e-"),
            let delta = Int(lower.dropFirst(1).replacingOccurrences(of: "+", with: "")) {
@@ -93,7 +98,17 @@ extension WindowManager {
             let i = occupied.firstIndex(of: cur) ?? 0
             return occupied[((i + delta) % occupied.count + occupied.count) % occupied.count]
         }
+        if config.workspacesPerDisplay, let number = Int(trimmed), number >= 1, let display = currentScreen()?.uuid {
+            guard number <= nativeCatalog.entries(on: display).count + 1 else { return nil }
+            return WorkspaceKey.make(String(number), on: display, perDisplay: true)
+        }
         return trimmed
+    }
+
+    func workspaceNumber(_ workspace: String) -> String { WorkspaceKey.number(workspace) }
+
+    func showWorkspaceNumber(_ number: String) {
+        if let workspace = resolveWorkspace(number) { showWorkspace(workspace) }
     }
 
     func isVirtual(_ workspace: String?) -> Bool { workspace.map { !$0.hasPrefix(Self.spacePrefix) } ?? false }
