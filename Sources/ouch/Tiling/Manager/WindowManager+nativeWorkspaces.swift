@@ -11,9 +11,11 @@ extension WindowManager {
         guard !displays.isEmpty, displays.count == screens.count else { return }
         nativeCatalog.synchronize(displays)
         for entry in nativeCatalog.entries { monitorOf[entry.name] = entry.display }
-        if nativeCatalog.saved != lastNativeCatalogSaved {
+        if nativeCatalog.saved != lastNativeCatalogSaved || nativeCatalog.homes != lastNativeCatalogHomes {
             lastNativeCatalogSaved = nativeCatalog.saved
+            lastNativeCatalogHomes = nativeCatalog.homes
             UserDefaults.standard.set(nativeCatalog.saved, forKey: "ws.nativeSpaces")
+            UserDefaults.standard.set(nativeCatalog.homes, forKey: "ws.nativeDisplays")
         }
     }
 
@@ -145,17 +147,9 @@ extension WindowManager {
                 guard self.nativeDesktop.requested == nil,
                       Spaces.current(display: request.display) == request.space else { return }
                 self.refresh()
-                if takesFocus {
-                    let candidates = [preferred?.id, self.lastFocused[request.workspace]].compactMap(\.self)
-                        + self.order
-                    if let id = candidates.first(where: {
-                        self.workspaceOf[$0] == request.workspace && self.windows[$0]?.minimized == false
-                    }), let window = self.windows[id] {
-                        self.focus(window, warp: false)
-                    } else { self.parkFocus() }
-                }
-                if changed, !quiet, self.config.enablesLayoutHUD, self.config.enablesLayoutHUDOnSpaceChange,
-                   let screen = Screen.all().first(where: { $0.uuid == request.display }) {
+                guard let screen = Screen.all().first(where: { $0.uuid == request.display }) else { return }
+                if takesFocus { self.focusShownWorkspace(request.workspace, preferred: preferred, on: screen) }
+                if changed, !quiet, self.config.enablesLayoutHUD, self.config.enablesLayoutHUDOnSpaceChange {
                     self.showWorkspaceHUD(request.workspace, on: screen)
                 }
             }

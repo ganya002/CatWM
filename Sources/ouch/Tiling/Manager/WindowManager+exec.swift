@@ -19,8 +19,7 @@ extension WindowManager {
         if let id = topmost?.id ?? tiled(on: dst).first, let window = windows[id] {
             focus(window)
         } else {
-            CGWarpMouseCursorPosition(dst.center)
-            CursorRefresh.soon()
+            parkFocus(on: dst)
         }
     }
 

@@ -30,6 +30,18 @@ import Testing
         #expect(catalog.entries.allSatisfy { $0.space != 12 })
     }
 
+    @Test func disconnectedDisplayKeepsItsWorkspaceNames() {
+        var catalog = NativeWorkspaceCatalog()
+        catalog.synchronize([.init(id: "laptop", spaces: [11, 12]), .init(id: "monitor", spaces: [21])])
+        catalog.synchronize([.init(id: "laptop", spaces: [11, 12, 13])])
+        #expect(catalog.entry("3") == nil)
+        #expect(catalog.entry("4")?.space == 13)
+        catalog.synchronize([.init(id: "laptop", spaces: [11, 12, 13]), .init(id: "monitor", spaces: [21])])
+        #expect(catalog.entry("3") == .init(name: "3", display: "monitor", space: 21))
+        catalog.synchronize([.init(id: "laptop", spaces: [11, 12, 13]), .init(id: "monitor", spaces: [22])])
+        #expect(catalog.entry("3")?.space == 22)
+    }
+
     @Test func newNamedWorkspaceKeepsItsCreatedDesktop() {
         var catalog = NativeWorkspaceCatalog()
         catalog.synchronize([.init(id: "screen", spaces: [11, 12])])

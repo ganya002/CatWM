@@ -80,6 +80,14 @@ extension WindowManager {
         }
     }
 
+    func learnMenuBarBlocks(_ target: CGRect, _ actual: CGRect) {
+        guard config.ignoreMenuBar, let screen = screen(containing: target), target.minY < screen.visible.minY,
+              actual.minY >= screen.visible.minY - 1, menuBarBlocks.insert(screen.uuid).inserted else { return }
+        Log.info("\(screen.nsScreen.localizedName) keeps windows below its menu bar; tiling below it")
+        corrections = [:]
+        refresh()
+    }
+
     func learnMinimum(_ id: CGWindowID, _ size: CGSize) {
         guard size.width.isFinite, size.height.isFinite, abs(size.width) < 1e5, abs(size.height) < 1e5 else { return }
         let old = minSizes[id] ?? .zero

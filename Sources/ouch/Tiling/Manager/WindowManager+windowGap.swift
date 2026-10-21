@@ -45,7 +45,7 @@ extension WindowManager {
 
     func usableRect(_ screen: Screen) -> CGRect {
         var rect = screen.visible
-        if config.ignoreMenuBar {
+        if config.ignoreMenuBar, !menuBarBlocks.contains(screen.uuid) {
             rect = CGRect(x: rect.minX, y: screen.frame.minY, width: rect.width, height: rect.maxY - screen.frame.minY)
         }
         if config.disablePaddingOnBuiltinDisplay && screen.isBuiltin { return rect }

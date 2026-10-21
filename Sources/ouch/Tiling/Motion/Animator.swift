@@ -42,6 +42,7 @@ final class Animator {
     private var timing = Timing()
     private var frameRun: FrameRun?
     var onMinimumSize: ((CGWindowID, CGSize) -> Void)?
+    var onTopRefused: ((_ target: CGRect, _ actual: CGRect) -> Void)?
 
     init(makeWriter: @escaping (pid_t) -> AXWriter = AXWriter.init,
          applyFocus: @escaping (Window, () -> Bool) -> Void = { $0.focus(ifCurrent: $1) }) {
@@ -267,10 +268,11 @@ final class Animator {
                 origin.y = max(move.bounds.minY, min(origin.y, move.bounds.maxY - actual.height))
                 window.setPosition(origin)
             }
-            DispatchQueue.main.async {
+            DispatchQueue.main.async { [actual] in
                 guard let self, self.epochs[window.id, default: 0] == epoch else { return }
                 self.quietUntil[window.id] = CACurrentMediaTime() + 0.4
                 if let minimum { self.onMinimumSize?(window.id, minimum) }
+                if !actual.isNull, actual.minY > move.target.minY + 1 { self.onTopRefused?(move.target, actual) }
             }
         }
     }

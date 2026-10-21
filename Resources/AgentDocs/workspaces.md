@@ -4,6 +4,9 @@ With `virtual-workspaces = true`, Ouch workspaces use normal macOS Desktops. Ouc
 
 - Each workspace has one native Desktop. Its name, layout, and last focused window persist between switches.
 - Existing normal Desktops become numbered workspaces. Names stay attached to Desktop IDs when macOS reorders them.
+- Each display has its own Desktops. Workspace numbers are unique across all displays. A workspace on another display opens on that display, and keyboard focus goes to that display.
+- When a display has no window to focus, Ouch moves the cursor to that display. Then the next bind applies to that display.
+- A disconnected display keeps its workspace names. They come back when the display connects again.
 - Ctrl+1 through Ctrl+9 selects workspace 1 through 9. Ctrl+0 selects workspace 10. Ctrl+Left and Ctrl+Right select the adjacent workspace on the current display.
 - Ctrl+Shift with the same keys moves the focused window to that workspace and follows it.
 - Explicit binds take priority over these defaults. Ouch does not change macOS shortcut preferences.
@@ -16,7 +19,7 @@ With `virtual-workspaces = true`, Ouch workspaces use normal macOS Desktops. Ouc
 - `virtual-workspaces = false` leaves Desktop switching to macOS. Ouch continues to tile the active Desktop.
 - `stay-on-workspace-after-close = true` keeps you on the current workspace after a window closes.
 
-Ouch uses its configured animation duration and curve to move whole Desktops. A new request replaces the pending destination. An opposite request can reverse motion before the switch commits. Horizontal Desktop gestures use the same controller for progress, reversal, cancellation, and completion.
+Ouch uses its configured animation duration and curve to move whole Desktops. A new request replaces the pending destination. A request for a different display waits until the current switch is complete. An opposite request can reverse motion before the switch commits. Horizontal Desktop gestures use the same controller for progress, reversal, cancellation, and completion.
 
 ## Window switcher
 
