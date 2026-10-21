@@ -124,7 +124,6 @@ final class WindowManager {
     var corrections: [CGWindowID: (target: CGRect, count: Int)] = [:]
     var drags: [CGWindowID: Bool] = [:]
     var refreshWork: DispatchWorkItem?
-    var ffmWork: DispatchWorkItem?
     var minSizes: [CGWindowID: CGSize] = [:]
     var ratioChange: (screen: String, until: Date)?
     struct DividerDrag {

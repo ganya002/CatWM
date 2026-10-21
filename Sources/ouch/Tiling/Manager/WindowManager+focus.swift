@@ -19,10 +19,7 @@ extension WindowManager {
 
     func mouseMoved() {
         guard focusFollowsMouseNow else { return }
-        ffmWork?.cancel()
-        let work = DispatchWorkItem { [weak self] in self?.focusUnderMouse() }
-        ffmWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.06, execute: work)
+        focusUnderMouse()
     }
 
     private var focusFollowsMouseNow: Bool {
