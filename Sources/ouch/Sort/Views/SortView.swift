@@ -4,13 +4,20 @@ import SwiftUI
 struct SortView: View {
     @ObservedObject var model: SortModel
     let width: CGFloat
-    static var inset: EdgeInsets { EdgeInsets(all: Elevation.float.room) }
+    static var inset: EdgeInsets {
+        EdgeInsets(top: Elevation.float.room, leading: Elevation.float.room, bottom: 0, trailing: Elevation.float.room)
+    }
+
+    private static var shape: UnevenRoundedRectangle {
+        UnevenRoundedRectangle(topLeadingRadius: Theme.Radius.xxl, topTrailingRadius: Theme.Radius.xxl,
+                               style: .continuous)
+    }
 
     var body: some View {
         let plan = model.plan
         let closeCount = CGFloat(plan.close.count + plan.closedLanes.count)
         let closeRows = Int(ceil(closeCount - SortMetrics.closeExtra / SortMetrics.rowHeight))
-        let rows = min(model.maxRows, max(1, ([closeRows] + plan.lanes.map(\.ids.count)).max() ?? 1))
+        let rows = min(model.maxRows, max(SortMetrics.minRows, ([closeRows] + plan.lanes.map(\.ids.count)).max() ?? 1))
         VStack(alignment: .leading, spacing: 0) {
             header(plan)
             HStack(alignment: .top, spacing: 4) {
@@ -18,14 +25,11 @@ struct SortView: View {
                 closeLane(plan, rows: rows)
             }
             .padding(.top, 8).padding(.horizontal, -8)
-            footer(plan)
         }
         .frame(width: width - 40)
         .padding(Density.large.padding)
-        .background {
-            let shape = RoundedRectangle(cornerRadius: Density.large.radius, style: .continuous)
-            shape.fill(Theme.surface).elevation(.float, in: shape)
-        }
+        .padding(.top, Theme.Space.small)
+        .background { Self.shape.fill(Theme.surface).elevation(.float, in: Self.shape) }
         .panelEntrance(model.shown, style: model.motion)
         .padding(Self.inset)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -44,8 +48,8 @@ struct SortView: View {
             Text("Overview · \(count) window\(count == 1 ? "" : "s")")
                 .textStyle(.title).monospacedDigit().oneLine().fixedSize()
             if model.displays.count > 1 { SortDisplays(model: model) }
+            notices(plan)
             Spacer(minLength: 12)
-            SortStrategies(selection: plan.strategy) { model.pick($0) }
         }
         .padding(.bottom, 4)
     }
@@ -97,25 +101,33 @@ struct SortView: View {
         let over = model.over == .close
         let count = plan.close.count
         let shape = RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous)
-        return VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(Image(systemName: "xmark")).font(Theme.display(22)).foregroundStyle(Theme.danger).fixedSize()
-                Text("Close").font(Theme.heading()).foregroundStyle(Theme.ink).oneLine()
-                Text(count > 0 ? "\(count)" : "")
-                    .textStyle(.caption).monospacedDigit().foregroundStyle(Theme.inkFaint).fixedSize()
+        return VStack(alignment: .trailing, spacing: SortMetrics.closeGap) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(Image(systemName: "xmark")).font(Theme.display(22)).foregroundStyle(Theme.danger).fixedSize()
+                    Text("Close").font(Theme.heading()).foregroundStyle(Theme.ink).oneLine()
+                    Text(count > 0 ? "\(count)" : "")
+                        .textStyle(.caption).monospacedDigit().foregroundStyle(Theme.inkFaint).fixedSize()
+                }
+                .padding(.horizontal, 4)
+                SortCloseList(model: model, plan: plan, rows: rows)
             }
-            .padding(.horizontal, 4)
-            SortCloseList(model: model, plan: plan, rows: rows)
+            .padding(.vertical, 8).padding(.horizontal, 4)
+            .frame(width: SortMetrics.lane, alignment: .topLeading)
+            .background(shape.fill(over ? Theme.dangerSoft : Theme.surfaceRaised))
+            .animation(Motion.fadeMedium, value: over)
+            .zone(.close)
+            HStack(spacing: 4) {
+                OButton("Revert", variant: .ghost, size: .small, shortcut: ["esc"]) { model.revert() }
+                OButton("Done", variant: .primary, size: .small, shortcut: ["⏎"]) { model.finish(nil) }
+            }
+            .font(Theme.body(13.5))
         }
-        .padding(.vertical, 8).padding(.horizontal, 4)
-        .frame(width: SortMetrics.lane, alignment: .topLeading)
-        .background(shape.fill(over ? Theme.dangerSoft : Theme.surfaceRaised))
-        .animation(Motion.fadeMedium, value: over)
-        .zone(.close)
+        .frame(width: SortMetrics.lane)
         .padding(.leading, 4).padding(.trailing, 8)
     }
 
-    private func footer(_ plan: SortPlan) -> some View {
+    private func notices(_ plan: SortPlan) -> some View {
         HStack(spacing: 8) {
             if let text = plan.duplicateText {
                 OButton(text, icon: "xmark.circle", variant: .ghost) { model.closeDuplicates() }
@@ -128,15 +140,9 @@ struct SortView: View {
                     }
                 }
             }
-            Spacer(minLength: 8)
-            OButton("Revert", variant: .ghost, shortcut: ["esc"]) { model.revert() }
-            OButton("Done", variant: .primary, shortcut: ["⏎"]) { model.finish(nil) }
         }
         .font(Theme.body(13.5))
         .foregroundStyle(Theme.inkMuted)
-        .padding(.top, 8)
-        .overlay(alignment: .top) { Rectangle().fill(Theme.hairline).frame(height: 1) }
-        .padding(.top, 4)
     }
 
     @ViewBuilder private var columnGhost: some View {
