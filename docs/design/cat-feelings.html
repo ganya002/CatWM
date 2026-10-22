@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cat feelings</title>
+<style>
+  :root { --paper: #EFE7D6; --ink: #141414; --muted: #7a7266; }
+  @media (prefers-color-scheme: dark) { :root { --paper: #121C16; --ink: #EFE7D6; --muted: #8a9a90; } }
+  html, body { margin: 0; height: 100%; background: var(--paper); color: var(--ink); font: 15px/1.4 -apple-system, "Hanken Grotesk", Helvetica, sans-serif; }
+  main { min-height: 100%; display: grid; place-items: center; grid-template-rows: 1fr auto; padding: 24px 16px; box-sizing: border-box; }
+  svg { width: min(70vmin, 512px); height: auto; cursor: pointer; }
+  #label { color: var(--muted); letter-spacing: .08em; text-transform: uppercase; font-size: 12px; min-height: 1.4em; }
+</style>
+</head>
+<body>
+<main>
+  <svg viewBox="0 0 512 512" aria-label="Ouch cat">
+    <defs>
+      <mask id="eyes">
+        <rect width="512" height="512" fill="#fff"/>
+        <g fill="none" stroke="#000" stroke-linecap="round">
+          <path id="l"/><path id="r"/>
+        </g>
+      </mask>
+    </defs>
+    <path d="M 231 42 C 234 31 245 29 250 36 C 268 60 294 90 310 104 C 330 116 356 108 384 92 C 408 78 430 60 444 40 C 449 33 458 38 455 50 C 448 84 438 112 430 136 C 408 206 368 300 356 340 C 348 368 398 408 399 452 C 400 484 372 506 330 506 C 250 508 150 508 96 496 C 60 488 40 450 52 400 C 70 326 167 264 178 226 C 194 165 212 103 231 42 Z" fill="var(--ink)" mask="url(#eyes)"/>
+  </svg>
+  <div id="label"></div>
+</main>
+<script>
+// Each eye: cx, cy, tilt (deg, screen coords), chord, rise (bow up > 0), stroke width.
+const E = {
+  content:  { l: [256,173,-11,42, 9,13], r: [348,191, 19,40, 9,13], hold: 2200 },
+  blink:    { l: [256,175,-11,34, 0,13], r: [348,193, 19,32, 0,13], hold: 110, ease: 90 },
+  alert:    { l: [258,168,  0, 0, 0,24], r: [352,186,  0, 0, 0,24], hold: 1600 },
+  sad:      { l: [256,178,-24,40,-8,13], r: [348,196, 28,38,-8,13], hold: 2000 },
+  annoyed:  { l: [256,176, 24,40, 0,13], r: [350,190, -6,40, 0,13], hold: 2000 },
+  sleepy:   { l: [256,184, -4,40, 4,13], r: [348,198, 10,38, 4,13], hold: 1800 },
+  shut:     { l: [256,186, -4,38, 0,13], r: [348,199, 10,36, 0,13], hold: 900, ease: 600 },
+};
+const SEQ = ['content','blink','content','alert','content','sad','content','annoyed','content','sleepy','shut','sleepy','blink'];
+const LABEL = { content:'content', blink:'', alert:'alert', sad:'sad', annoyed:'annoyed', sleepy:'sleepy', shut:'sleepy' };
+const el = { l: document.getElementById('l'), r: document.getElementById('r'), label: document.getElementById('label') };
+function arc([cx, cy, deg, chord, rise, sw]) {
+  const a = deg * Math.PI / 180, ux = Math.cos(a), uy = Math.sin(a), nx = uy, ny = -ux, h = chord / 2;
+  const p = (t, r) => [cx + ux * t + nx * r, cy + uy * t + ny * r];
+  const [x1, y1] = p(-h, 0), [c1x, c1y] = p(-h * .55, rise * 1.33), [c2x, c2y] = p(h * .55, rise * 1.33), [x2, y2] = p(h, 0);
+  return { d: `M ${x1} ${y1} C ${c1x} ${c1y} ${c2x} ${c2y} ${x2} ${y2}`, sw };
+}
+function draw(pose) {
+  for (const k of ['l', 'r']) { const { d, sw } = arc(pose[k]); el[k].setAttribute('d', d); el[k].setAttribute('stroke-width', sw); }
+}
+const lerp = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+const easeInOut = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+let i = 0, from = E.content, timer;
+function go(name) {
+  const to = E[name], ms = to.ease ?? 280, t0 = performance.now();
+  el.label.textContent = LABEL[name];
+  cancelAnimationFrame(timer);
+  (function step(now) {
+    const t = easeInOut(Math.min(1, (now - t0) / ms));
+    draw({ l: lerp(from.l, to.l, t), r: lerp(from.r, to.r, t) });
+    if (t < 1) timer = requestAnimationFrame(step); else from = to;
+  })(t0);
+  return to.hold;
+}
+let wait;
+function next() { const hold = go(SEQ[i]); i = (i + 1) % SEQ.length; wait = setTimeout(next, hold); }
+const pose = new URLSearchParams(location.search).get('pose');
+if (pose && E[pose]) { draw(E[pose]); el.label.textContent = LABEL[pose]; }
+else { draw(E.content); next(); document.querySelector('svg').addEventListener('click', () => { clearTimeout(wait); next(); }); }
+</script>
+</body>
+</html>
