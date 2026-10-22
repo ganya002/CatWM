@@ -7,13 +7,13 @@
 <p align="center">A simple, modern, and fast tiling window manager for macOS.</p>
 
 <p align="center">
-  <a href="https://ouch.perwko.com"><img src="website/public/demo-poster.jpg" width="760" alt="Ouch tiles a Finder window and two terminal windows side by side"></a>
+  <a href="https://catwm.perwko.com"><img src="website/public/demo-poster.jpg" width="760" alt="Ouch tiles a Finder window and two terminal windows side by side"></a>
 </p>
 
 ## Install
 
 ```sh
-curl -fsSL https://ouch.perwko.com/install.sh | sh -s -- --beta
+curl -fsSL https://catwm.perwko.com/install.sh | sh -s -- --beta
 ```
 
 ## How to use ouch

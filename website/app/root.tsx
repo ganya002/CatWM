@@ -3,6 +3,7 @@ import {
   Links,
   Meta,
   Outlet,
+  redirect,
   Scripts,
   ScrollRestoration,
 } from "react-router";
@@ -24,6 +25,18 @@ export const links: Route.LinksFunction = () => [
     href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap",
   },
 ];
+
+const OLD_HOST = "ouch.perwko.com";
+const HOST = "catwm.perwko.com";
+
+export function loader({ request }: Route.LoaderArgs) {
+  const url = new URL(request.url);
+  if (url.hostname === OLD_HOST) {
+    url.hostname = HOST;
+    throw redirect(url.toString(), 301);
+  }
+  return null;
+}
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (

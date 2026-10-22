@@ -6,8 +6,8 @@ import { Story } from "../catwm/Story";
 import { addSignup } from "../signup.server";
 import type { Route } from "./+types/home";
 
-const SITE = "https://ouch.perwko.com";
-const INSTALL = "curl -fsSL https://ouch.perwko.com/install.sh | sh -s -- --beta";
+const SITE = "https://catwm.perwko.com";
+const INSTALL = "curl -fsSL https://catwm.perwko.com/install.sh | sh -s -- --beta";
 const TAGLINE = "A simple, modern, and fast tiling window manager for macOS.";
 
 export function meta() {
