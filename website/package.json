@@ -7,7 +7,7 @@
     "build": "vp build",
     "check": "vp check",
     "typecheck": "react-router typegen && tsc",
-    "deploy": "void deploy"
+    "deploy": "vp build && wrangler deploy --config build/server/wrangler.json"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
@@ -27,7 +27,8 @@
     "typescript": "^5.9.3",
     "vite": "catalog:",
     "vite-plus": "catalog:",
-    "void": "^0.28.0"
+    "void": "^0.28.0",
+    "wrangler": "4.151.0"
   },
   "devEngines": {
     "packageManager": {

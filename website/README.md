@@ -13,7 +13,7 @@ timing (0.18 s, cubic ease-out). Change the Swift code and the port together.
 
 - React Router 8 (framework mode, SSR)
 - Vite+ (`vp`) for dev, build, format, lint, and type checks
-- Void for deployment to Cloudflare Workers.
+- Wrangler for deployment to Cloudflare Workers. `void.config.ts` still generates the Worker config at build time.
 
 ## Develop
 
@@ -35,11 +35,13 @@ The `deploy-website` GitHub Actions workflow deploys every push to `main` that t
 It needs a `CLOUDFLARE_API_TOKEN` repository secret with Workers Scripts and Workers KV Storage
 edit access on the account, and Workers Routes and DNS edit access on the `perwko.com` zone.
 
+The workflow runs `vp build`, then `wrangler deploy --config build/server/wrangler.json`. `void deploy` is not used: its version tracking failed after the upload and left the Worker rolled back.
+
 To deploy by hand:
 
 ```sh
-vp exec void connect --platform cloudflare
-vp exec void deploy
+wrangler login
+pnpm deploy
 ```
 
 `public/demo.mp4` is a 1920 px H.264 re-encode of the source demo. Workers static assets must be 25 MiB or smaller per file.
