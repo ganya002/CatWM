@@ -1,6 +1,13 @@
-# Ouch website
+# CatWM website
 
-Landing page for Ouch: the demo video, "Public release soon.", and an email signup.
+Landing page for CatWM: the brand lockup over four tiled windows, a scroll story that plays the real
+window manager behaviour (window mode, workspaces, layouts, saved workspaces, overview, CLI), the
+install command and an email signup.
+
+`app/catwm/layout.ts` is a port of the Swift layout and neighbour code. `app/catwm/script.ts` holds the
+state, the dispatcher reducers and the scripted steps. `app/catwm/Story.tsx` builds one GSAP timeline per
+step from them, at the animator's real timing (0.18 s, cubic ease-out). Change the Swift code and the
+port together.
 
 - React Router 8 (framework mode, SSR)
 - Vite+ (`vp`) for dev, build, format, lint, and type checks

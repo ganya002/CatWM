@@ -1,36 +1,35 @@
+import { useState } from "react";
 import { useFetcher } from "react-router";
 
+import { Cat } from "../catwm/Cat";
+import { Story } from "../catwm/Story";
 import { addSignup } from "../signup.server";
 import type { Route } from "./+types/home";
 
 const SITE = "https://ouch.perwko.com";
+const INSTALL = "curl -fsSL https://ouch.perwko.com/install.sh | sh -s -- --beta";
+const TAGLINE = "A simple, modern, and fast tiling window manager for macOS.";
 
 export function meta() {
-  const description = "Ouch for macOS. Public release soon.";
   return [
-    { title: "Ouch" },
-    { name: "description", content: description },
-    { name: "theme-color", content: "#0a74ff" },
+    { title: "CatWM" },
+    { name: "description", content: TAGLINE },
+    { name: "theme-color", content: "#000000" },
 
-    { property: "og:type", content: "video.other" },
-    { property: "og:site_name", content: "Ouch" },
-    { property: "og:title", content: "Ouch" },
-    { property: "og:description", content: description },
+    { property: "og:type", content: "website" },
+    { property: "og:site_name", content: "CatWM" },
+    { property: "og:title", content: "CatWM" },
+    { property: "og:description", content: TAGLINE },
     { property: "og:url", content: SITE },
     { property: "og:image", content: `${SITE}/og.png` },
     { property: "og:image:type", content: "image/png" },
     { property: "og:image:width", content: "1200" },
     { property: "og:image:height", content: "630" },
-    { property: "og:image:alt", content: "Ouch app icon next to a demo of Ouch on macOS." },
-    { property: "og:video", content: `${SITE}/og.mp4` },
-    { property: "og:video:secure_url", content: `${SITE}/og.mp4` },
-    { property: "og:video:type", content: "video/mp4" },
-    { property: "og:video:width", content: "1200" },
-    { property: "og:video:height", content: "630" },
+    { property: "og:image:alt", content: "The CatWM app icon next to tiled windows on macOS." },
 
     { name: "twitter:card", content: "summary_large_image" },
-    { name: "twitter:title", content: "Ouch" },
-    { name: "twitter:description", content: description },
+    { name: "twitter:title", content: "CatWM" },
+    { name: "twitter:description", content: TAGLINE },
     { name: "twitter:image", content: `${SITE}/og.png` },
   ];
 }
@@ -40,63 +39,93 @@ export async function action({ request }: Route.ActionArgs) {
   return addSignup(form.get("email"));
 }
 
-export default function Home() {
+function InstallCommand() {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(INSTALL);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch {
+      setCopied(false);
+    }
+  };
+  return (
+    <div className="command">
+      <code className="command__text">{INSTALL}</code>
+      <button type="button" className="command__copy" onClick={copy} aria-live="polite">
+        {copied ? "Copied" : "Copy"}
+      </button>
+    </div>
+  );
+}
+
+function Hero() {
+  return (
+    <>
+      <h1 className="lockup">
+        <Cat className="lockup__cat" feelings />
+        <span className="lockup__name">CatWM</span>
+      </h1>
+      <div className="hero__pill">
+        <p className="hero__tagline">{TAGLINE}</p>
+        <InstallCommand />
+      </div>
+    </>
+  );
+}
+
+function Signup() {
   const fetcher = useFetcher<typeof action>();
   const busy = fetcher.state !== "idle";
   const done = fetcher.data?.ok === true;
   const error = fetcher.data?.ok === false ? fetcher.data.error : null;
 
+  if (done) return <p className="foot__lead">Thanks. We will email you at release.</p>;
   return (
-    <div className="flex min-h-svh flex-col px-4 sm:px-8">
-      <header className="py-5">
-        <a href="/" className="inline-flex items-center gap-3">
-          <img src="/icon.svg" alt="" width={40} height={40} className="size-10" />
-          <span className="font-display text-xl">ouch</span>
-        </a>
-      </header>
-
-      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center gap-10 pb-16">
-        <video
-          className="w-full rounded-xl shadow-2xl shadow-black/40"
-          src="/demo.mp4"
-          poster="/demo-poster.jpg"
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="metadata"
+    <fetcher.Form method="post" className="signup">
+      <div className="signup__field">
+        <input
+          type="email"
+          name="email"
+          required
+          autoComplete="email"
+          placeholder="you@example.com"
+          aria-label="Email"
+          className="signup__input"
         />
+        <button type="submit" disabled={busy} className="signup__submit">
+          {busy ? "Sending…" : "Email me at release"}
+        </button>
+      </div>
+      {error && <p className="signup__error">{error}</p>}
+    </fetcher.Form>
+  );
+}
 
-        <div className="flex flex-col items-center gap-6 text-center">
-          <h1 className="text-3xl font-normal tracking-tight sm:text-4xl">Public release soon.</h1>
-
-          {done ? (
-            <p className="text-muted">Thanks. We will email you at release.</p>
-          ) : (
-            <fetcher.Form method="post" className="flex w-full max-w-sm flex-col gap-2">
-              <div className="flex rounded-full bg-field p-1 ring-1 ring-line focus-within:ring-accent">
-                <input
-                  type="email"
-                  name="email"
-                  required
-                  autoComplete="email"
-                  placeholder="you@example.com"
-                  aria-label="Email"
-                  className="min-w-0 flex-1 bg-transparent px-4 outline-none placeholder:text-muted"
-                />
-                <button
-                  type="submit"
-                  disabled={busy}
-                  className="rounded-full bg-accent px-5 py-2 font-medium whitespace-nowrap text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-                >
-                  {busy ? "Sending…" : "Notify me"}
-                </button>
-              </div>
-              {error && <p className="text-sm text-red-400">{error}</p>}
-            </fetcher.Form>
-          )}
+export default function Home() {
+  return (
+    <>
+      <Story hero={<Hero />} />
+      <footer className="foot">
+        <h2 className="foot__title">Install the beta</h2>
+        <InstallCommand />
+        <p className="foot__lead">
+          The public release is coming. Leave your email and we will tell you once.
+        </p>
+        <Signup />
+        <div className="foot__links">
+          <a href="https://github.com/noxaur/ouch" className="pill pill--link">
+            GitHub
+          </a>
+          <a
+            href="https://github.com/noxaur/ouch/blob/main/CONTRIBUTING.md"
+            className="pill pill--link"
+          >
+            Contributing
+          </a>
         </div>
-      </main>
-    </div>
+      </footer>
+    </>
   );
 }

@@ -1,69 +1,795 @@
 @import "tailwindcss";
 
-
-@theme {
-  --font-sans: var(--body-font);
-  --font-display: var(--display-font);
-  --color-accent: #0a74ff;
-  --color-bg: #f4f4f6;
-  --color-ink: #1b1b1e;
-  --color-muted: #6e6e76;
-  --color-field: #ffffff;
-  --color-line: #dcdce2;
-}
-
+/* CatWM brand: black ground, white type, four candy hues for the windows.
+   The in-screen components use Palette.catwm, dark. */
 :root {
-  --display-font: "General Sans", ui-sans-serif, system-ui, sans-serif;
-  --display-weight: 600;
-  --body-font: "Gambetta", ui-serif, Georgia, serif;
-  --body-weight: 400;
-}
-:root[data-pair="2"] {
-  --display-font: "Amulya", ui-sans-serif, system-ui, sans-serif;
-  --display-weight: 700;
-  --body-font: "Synonym", ui-sans-serif, system-ui, sans-serif;
-  --body-weight: 400;
-}
-:root[data-pair="3"] {
-  --display-font: "Excon", ui-sans-serif, system-ui, sans-serif;
-  --display-weight: 500;
-  --body-font: "Ranade", ui-sans-serif, system-ui, sans-serif;
-  --body-weight: 300;
-}
+  color-scheme: dark;
+  --black: #000000;
+  --white: #ffffff;
+  --sky: #1fafff;
+  --lemon: #ffea14;
+  --magenta: #ff4ad8;
+  --lime: #9dff1f;
 
-:root[data-pair="4"] {
-  --display-font: "Nunito", ui-sans-serif, system-ui, sans-serif;
-  --display-weight: 800;
-  --body-font: "Supreme", ui-sans-serif, system-ui, sans-serif;
-  --body-weight: 400;
-}
+  --surface: #141414;
+  --raised: #1c1c1c;
+  --sunken: #0a0a0a;
+  --hover: #262626;
+  --hairline: #2a2a2a;
+  --border-control: #6b6b6b;
+  --ink-muted: #a3a3a3;
+  --ink-faint: #8a8a8a;
+  --accent: #1fafff;
+  --accent-soft: #0e2638;
+  --tint: #3a3a3a;
+  --danger: #ff6b5b;
+  --danger-soft: #3d2220;
+  --well: rgba(255, 255, 255, 0.09);
+  --glass: rgba(20, 20, 20, 0.82);
+  --grey: var(--ink-muted);
 
-:root[data-pair="5"] {
-  --display-font: "Poppins", ui-sans-serif, system-ui, sans-serif;
-  --display-weight: 600;
-  --body-font: "Hind", ui-sans-serif, system-ui, sans-serif;
-  --body-weight: 400;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --color-bg: #141416;
-    --color-ink: #f4f4f6;
-    --color-muted: #a8a8b0;
-    --color-field: #222226;
-    --color-line: #34343a;
-  }
+  --display:
+    "Pilcrow Rounded", "Arial Rounded MT Bold", -apple-system, BlinkMacSystemFont, system-ui,
+    sans-serif;
+  --body: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  --sys: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
 }
 
 html,
 body {
-  @apply bg-bg font-sans text-ink antialiased;
-  font-weight: var(--body-weight);
+  margin: 0;
+  background: var(--black);
+  color: var(--white);
+  font-family: var(--body);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
 h1,
-.font-display {
-  font-family: var(--display-font);
-  font-weight: var(--display-weight);
+h2,
+h3 {
+  font-family: var(--display);
+  font-weight: 700;
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--sky);
+  outline-offset: 2px;
+}
+
+/* Lockup: the cat first, then the rounded name, on a black pill. */
+.lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(8px, 1.1vw, 16px);
+  background: var(--black);
+  color: var(--white);
+  border-radius: 999px;
+  padding: clamp(12px, 1.8vw, 26px) clamp(28px, 4.7vw, 68px) clamp(12px, 1.8vw, 26px)
+    clamp(20px, 3vw, 44px);
+  text-decoration: none;
+}
+.lockup__cat {
+  width: clamp(56px, 10.4vw, 150px);
+  height: clamp(56px, 10.4vw, 150px);
+  flex: none;
+}
+.lockup__name {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: clamp(60px, 11.6vw, 168px);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  margin-top: -0.04em;
+}
+.lockup--small {
+  gap: 8px;
+  padding: 6px 16px 6px 10px;
+}
+.lockup--small .lockup__cat {
+  width: 28px;
+  height: 28px;
+}
+.lockup--small .lockup__name {
+  font-size: 22px;
+  margin-top: -2px;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--black);
+  color: var(--white);
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-decoration: none;
+}
+.pill--link {
+  border: 1px solid var(--hairline);
+}
+.pill--link:hover {
+  background: var(--surface);
+}
+
+/* The install command. */
+.command {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 6px 6px 6px 18px;
+  max-width: 100%;
+}
+.command__text {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--white);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.command__copy {
+  flex: none;
+  background: var(--white);
+  color: var(--black);
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font: 600 14px var(--display);
+  cursor: pointer;
+}
+.command__copy:hover {
+  background: var(--sky);
+}
+
+/* Nav: hidden on the hero, shown once the story starts. */
+.nav {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 50;
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* Story: the pinned stage and the captions that scroll over it. */
+.story {
+  position: relative;
+}
+.stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+}
+
+/* The screen. --s scales every in-screen component from points to pixels. */
+.screen {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  isolation: isolate;
+  z-index: 0;
+  --gap: clamp(10px, 1.1vw, 16px);
+  --r: clamp(18px, 2.5vw, 36px);
+  --s: 0.56;
+  font-family: var(--sys);
+}
+.desktops {
+  position: absolute;
+  inset: calc(var(--gap) / 2);
+}
+.slab {
+  position: absolute;
+}
+.slab__face {
+  position: absolute;
+  inset: calc(var(--gap) / 2);
+  border-radius: var(--r);
+}
+
+/* Mode effect, draw: an accent stroke from the top centre down both sides. */
+.modefx {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 40;
+}
+.modefx path {
+  fill: none;
+  stroke: var(--accent);
+  stroke-linecap: round;
+  opacity: 0;
+}
+.modefx__line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+.modefx__head {
+  stroke-dasharray: 0.06 0.94;
+  stroke-dashoffset: 0.06;
+}
+
+/* The macOS cursor, so the quick actions have a pointer to open at. */
+.cursor {
+  position: absolute;
+  left: 46%;
+  top: 40%;
+  width: calc(16px * var(--s) * 1.4);
+  height: calc(22px * var(--s) * 1.4);
+  z-index: 60;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* HUD: floating glass, radius 22, the layout thumbnail above the title. */
+.hud {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(12px * var(--s));
+  padding: calc(20px * var(--s)) calc(24px * var(--s)) calc(16px * var(--s));
+  background: var(--glass);
+  backdrop-filter: blur(calc(18px * var(--s)));
+  -webkit-backdrop-filter: blur(calc(18px * var(--s)));
+  border-radius: calc(22px * var(--s));
+  box-shadow:
+    0 0 0 1px var(--hairline),
+    0 calc(18px * var(--s)) calc(44px * var(--s)) rgba(0, 0, 0, 0.75);
+  color: var(--white);
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.hud[data-plain="1"] {
+  padding-top: calc(16px * var(--s));
+}
+.hud__thumb {
+  width: calc(120px * var(--s));
+  height: calc(75px * var(--s));
+  display: block;
+}
+.hud__text {
+  font: 600 calc(22px * var(--s)) / 1.2 var(--display);
+  letter-spacing: calc(-0.2px * var(--s));
+}
+
+/* Quick actions: a medium surface, 232 wide, at the pointer. */
+.menu {
+  position: absolute;
+  left: calc(46% + 10px * var(--s));
+  top: calc(40% + 10px * var(--s));
+  width: calc(232px * var(--s));
+  box-sizing: content-box;
+  padding: calc(6px * var(--s));
+  background: var(--raised);
+  border-radius: calc(12px * var(--s));
+  box-shadow:
+    0 0 0 1px var(--hairline),
+    0 calc(10px * var(--s)) calc(26px * var(--s)) rgba(0, 0, 0, 0.65);
+  transform-origin: calc(-10px * var(--s)) calc(-10px * var(--s));
+  z-index: 45;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.menu__title {
+  display: flex;
+  align-items: center;
+  min-height: calc(26px * var(--s));
+  padding: 0 calc(10px * var(--s));
+  font: 600 calc(15px * var(--s)) / 1.2 var(--display);
+  color: var(--ink-muted);
+}
+.menu__row {
+  display: flex;
+  align-items: center;
+  gap: calc(10px * var(--s));
+  height: calc(30px * var(--s));
+  padding: 0 calc(10px * var(--s));
+  border-radius: calc(6px * var(--s));
+  font: 400 calc(13.5px * var(--s)) / 1.2 var(--sys);
+  color: var(--white);
+}
+.menu__symbol {
+  width: calc(16px * var(--s));
+  height: calc(13px * var(--s));
+  flex: none;
+  color: var(--ink-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.menu__symbol svg {
+  width: calc(13px * var(--s));
+  height: calc(13px * var(--s));
+}
+.menu__label {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Kbd small: a well tile with inkMuted text. */
+.kbd-small {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: calc(20px * var(--s));
+  height: calc(20px * var(--s));
+  padding: 0 calc(5px * var(--s));
+  box-sizing: border-box;
+  border-radius: calc(4px * var(--s));
+  background: var(--well);
+  color: var(--ink-muted);
+  font: 600 calc(11.5px * var(--s)) / 1 var(--display);
+}
+
+/* Overview: a large glass surface just above the Dock. */
+.overview {
+  position: absolute;
+  left: 50%;
+  bottom: calc(18px * var(--s));
+  translate: -50% 0;
+  width: min(calc(1100px * var(--s)), calc(100% - 32px * var(--s)));
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding: calc(20px * var(--s)) calc(20px * var(--s)) calc(16px * var(--s));
+  background: var(--glass);
+  backdrop-filter: blur(calc(18px * var(--s)));
+  -webkit-backdrop-filter: blur(calc(18px * var(--s)));
+  border-radius: calc(18px * var(--s));
+  box-shadow:
+    0 0 0 1px var(--hairline),
+    0 calc(18px * var(--s)) calc(44px * var(--s)) rgba(0, 0, 0, 0.75);
+  transform-origin: 50% 100%;
+  font: 400 calc(13.5px * var(--s)) / 1.2 var(--sys);
+  color: var(--white);
+  z-index: 50;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.overview__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(12px * var(--s));
+  padding-bottom: calc(4px * var(--s));
+}
+.overview__title {
+  font: 600 calc(22px * var(--s)) / 1.2 var(--display);
+  letter-spacing: calc(-0.2px * var(--s));
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.segmented {
+  display: inline-flex;
+  gap: calc(2px * var(--s));
+  padding: calc(3px * var(--s));
+  border-radius: 999px;
+  background: var(--well);
+}
+.segmented__item {
+  display: inline-flex;
+  align-items: center;
+  height: calc(24px * var(--s));
+  padding: 0 calc(12px * var(--s));
+  border-radius: 999px;
+  font-size: calc(12.5px * var(--s));
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+.segmented__item--on {
+  background: var(--accent);
+  color: var(--black);
+  font-weight: 500;
+}
+.overview__lanes {
+  display: flex;
+  gap: calc(4px * var(--s));
+  padding: calc(8px * var(--s)) 0 calc(6px * var(--s));
+  overflow: hidden;
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px * var(--s)), transparent);
+}
+.lane {
+  width: calc(176px * var(--s));
+  flex: none;
+  box-sizing: border-box;
+  padding: calc(8px * var(--s)) calc(4px * var(--s));
+  display: flex;
+  flex-direction: column;
+  gap: calc(8px * var(--s));
+  border-radius: calc(12px * var(--s));
+}
+.lane__head {
+  display: flex;
+  align-items: baseline;
+  gap: calc(8px * var(--s));
+  padding: 0 calc(4px * var(--s));
+  white-space: nowrap;
+}
+.lane__number {
+  font: 700 calc(22px * var(--s)) / 1 var(--display);
+  letter-spacing: calc(-0.4px * var(--s));
+  font-variant-numeric: tabular-nums;
+}
+.lane__number--empty {
+  color: var(--ink-faint);
+}
+.lane__number--danger {
+  color: var(--danger);
+}
+.lane__name {
+  font: 600 calc(15px * var(--s)) / 1.2 var(--display);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lane__name--placeholder {
+  color: var(--ink-faint);
+}
+.lane__count {
+  font-size: calc(12px * var(--s));
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.lane__thumb {
+  display: block;
+  width: calc(160px * var(--s));
+  height: calc(100px * var(--s));
+  margin: 0 calc(4px * var(--s));
+  background: var(--well);
+  border-radius: calc(8px * var(--s));
+}
+.lane__box {
+  box-sizing: border-box;
+  width: calc(160px * var(--s));
+  height: calc(100px * var(--s));
+  margin: 0 calc(4px * var(--s));
+  border-radius: calc(8px * var(--s));
+  border: 1px dashed rgba(107, 107, 107, 0.6);
+}
+.pill--layout {
+  align-self: flex-start;
+  margin-left: calc(4px * var(--s));
+  gap: calc(6px * var(--s));
+  height: calc(24px * var(--s));
+  padding: 0 calc(10px * var(--s)) 0 calc(7px * var(--s));
+  background: var(--well);
+  color: var(--ink-muted);
+  font: 400 calc(12px * var(--s)) / 1 var(--sys);
+}
+.pill__glyph {
+  width: calc(16px * var(--s));
+  height: calc(14px * var(--s));
+  opacity: 0.8;
+}
+.lane__rows {
+  display: flex;
+  flex-direction: column;
+}
+.lane__row {
+  display: flex;
+  align-items: center;
+  gap: calc(8px * var(--s));
+  height: calc(30px * var(--s));
+  padding: 0 calc(8px * var(--s)) 0 calc(5px * var(--s));
+  border-radius: calc(6px * var(--s));
+  white-space: nowrap;
+}
+.lane__row--selected {
+  background: var(--accent-soft);
+}
+.lane__icon {
+  width: calc(20px * var(--s));
+  height: calc(20px * var(--s));
+  border-radius: calc(4px * var(--s));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--black);
+  font: 500 calc(10.5px * var(--s)) / 1 var(--sys);
+  flex: none;
+}
+.lane__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lane__empty {
+  height: calc(30px * var(--s));
+  border-radius: calc(6px * var(--s));
+  border: 1px dashed rgba(107, 107, 107, 0.5);
+  box-sizing: border-box;
+}
+.lane--add {
+  color: var(--ink-muted);
+}
+.lane--close .lane__name {
+  color: var(--white);
+}
+.lane--close {
+  min-height: calc(140px * var(--s));
+}
+.overview__foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: calc(8px * var(--s));
+  margin-top: calc(8px * var(--s));
+  padding-top: calc(4px * var(--s));
+  border-top: 1px solid var(--hairline);
+}
+.obutton {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(6px * var(--s));
+  height: calc(28px * var(--s));
+  padding: 0 calc(14px * var(--s));
+  border-radius: 999px;
+  font: 500 calc(13px * var(--s)) / 1 var(--sys);
+  white-space: nowrap;
+}
+.obutton kbd {
+  font: 600 calc(12px * var(--s)) / 1 var(--display);
+  opacity: 0.8;
+  margin-right: calc(-4px * var(--s));
+}
+.obutton--ghost {
+  color: var(--ink-muted);
+}
+.obutton--primary {
+  background: var(--accent);
+  color: var(--black);
+}
+
+/* Hero overlay: the lockup and the install pill in the middle of the slabs. */
+.hero {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 16px;
+  pointer-events: none;
+}
+.hero > * {
+  pointer-events: auto;
+}
+.hero__pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  background: var(--black);
+  color: var(--white);
+  border-radius: 32px;
+  padding: 20px 24px;
+  max-width: min(92vw, 640px);
+  text-align: center;
+}
+.hero__tagline {
+  margin: 0;
+  font-size: clamp(16px, 1.4vw, 19px);
+  line-height: 1.4;
+}
+
+/* Captions: one viewport each, scrolling over the stage. */
+.captions {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+.cap {
+  height: 100vh;
+  height: 100svh;
+  position: relative;
+}
+.cap__inner {
+  position: absolute;
+  left: 6vw;
+  width: min(32vw, 440px);
+  top: 50%;
+  translate: 0 -50%;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  pointer-events: auto;
+}
+.cap__title {
+  font-size: clamp(28px, 3vw, 40px);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+.cap__keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.chord {
+  display: inline-flex;
+  gap: 4px;
+}
+
+/* Kbd medium: a surfaceRaised tile, 30 pt, Pilcrow Semibold 13, no border. */
+.key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 8px;
+  box-sizing: border-box;
+  border-radius: 6px;
+  background: var(--raised);
+  color: var(--white);
+  font: 600 13px var(--display);
+}
+.cap__body {
+  margin: 0;
+  color: #d4d4d4;
+  max-width: 38ch;
+}
+.term {
+  margin: 0;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font: 14px/1.5 var(--mono);
+  color: var(--white);
+  white-space: pre-wrap;
+  word-break: break-all;
+  min-height: 45px;
+}
+.term__prompt {
+  color: var(--ink-muted);
+}
+.term__caret {
+  display: inline-block;
+  width: 8px;
+  height: 15px;
+  margin-left: 2px;
+  vertical-align: -2px;
+  background: var(--white);
+  animation: caret 1s steps(2, start) infinite;
+}
+@keyframes caret {
+  to {
+    visibility: hidden;
+  }
+}
+
+@media (max-width: 819px) {
+  .cap__inner {
+    left: 16px;
+    right: 16px;
+    width: auto;
+    top: calc(var(--screen-bottom, 60vh) + 20px);
+    translate: none;
+    gap: 12px;
+  }
+  .cap__title {
+    font-size: 24px;
+  }
+}
+
+/* Footer: install, release news and the links. */
+.foot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  padding: 120px 16px 80px;
+  text-align: center;
+}
+.foot__title {
+  font-size: clamp(32px, 4vw, 48px);
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+.foot__lead {
+  margin: 0;
+  color: var(--ink-muted);
+  max-width: 44ch;
+}
+.signup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 400px;
+}
+.signup__field {
+  display: flex;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 4px;
+}
+.signup__field:focus-within {
+  border-color: var(--sky);
+}
+.signup__input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: var(--white);
+  padding: 0 16px;
+  font: 15px var(--body);
+}
+.signup__input::placeholder {
+  color: var(--ink-muted);
+}
+.signup__submit {
+  background: var(--white);
+  color: var(--black);
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 18px;
+  font: 600 14px var(--display);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.signup__submit:disabled {
+  opacity: 0.6;
+}
+.signup__error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 14px;
+}
+.foot__links {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .term__caret {
+    animation: none;
+  }
 }
