@@ -56,7 +56,11 @@ enum BindRange {
         }
         var args = [arg]
         if dispatcher != "exec", !arg.contains(" "), isRange(arg) {
-            guard let expanded = expand(arg, keys: false) else {
+            let expanded = expand(arg, keys: false)
+            if dispatcher.lowercased() == "launch", arg.contains("://") || expanded?.count != keys.count {
+                return .success(keys.map { ($0, arg) })
+            }
+            guard let expanded else {
                 return .failure(Failure(message: "can't read the range `\(arg)`"))
             }
             args = expanded

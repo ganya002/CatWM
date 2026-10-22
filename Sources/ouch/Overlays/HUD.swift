@@ -51,7 +51,10 @@ final class HUD {
             frame.origin.y = below >= screen.visibleFrame.minY ? below : avoid.maxY - Self.margin + 12
         }
         hud.place(size: frame.size, on: screen, anchor: .origin(frame.origin), inset: EdgeInsets(all: Self.margin))
-        hud.alphaValue = 1
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0
+            hud.animator().alphaValue = 1
+        }
         hud.orderFrontRegardless()
 
         hideWork?.cancel()

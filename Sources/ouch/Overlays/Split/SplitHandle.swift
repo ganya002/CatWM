@@ -10,7 +10,13 @@ final class SplitHandle {
         let animate = !instant && manager.config.animate
             && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         var shown = Set<String>()
-        for screen in Screen.all() {
+        let screens = Screen.all()
+        let present = Set(screens.map(\.uuid))
+        for (uuid, handle) in handles where !present.contains(uuid) {
+            handle.hide()
+            handles[uuid] = nil
+        }
+        for screen in screens {
             guard let divider = manager.splitDivider(on: screen) else { continue }
             shown.insert(screen.uuid)
             let handle = handles[screen.uuid] ?? Handle(screen: screen.uuid)

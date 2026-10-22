@@ -2,14 +2,15 @@ import AppKit
 import SwiftUI
 
 extension Onboarding {
-    static func shouldShow(firstRun: Bool, trusted: Bool) -> Bool {
-        !isDone && (firstRun || !trusted)
+    static func shouldShow(firstRun: Bool, trusted: Bool, done: Bool = isDone, started: Bool = isStarted) -> Bool {
+        !done && (firstRun || !trusted || started)
     }
 
     func start() {
         guard !isRunning else { return }
         firstRun = true
-        let screen = OuchPanel.pointerScreen()
+        UserDefaults.standard.set(true, forKey: Self.startedKey)
+        guard let screen = OuchPanel.pointerScreen() else { return }
         let card = makeWelcome(on: screen)
         guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return showWelcome() }
         let margin = WelcomeView.margin
@@ -22,8 +23,7 @@ extension Onboarding {
     }
 
     func playIntro(_ arrangement: IntroScore.Arrangement = .standard) {
-        guard !isRunning else { return }
-        let screen = OuchPanel.pointerScreen()
+        guard !isRunning, let screen = OuchPanel.pointerScreen() else { return }
         let visible = screen.visibleFrame
         let landing = NSRect(x: visible.midX - 230, y: visible.midY - 200, width: 460, height: 400)
         let intro = Intro(screen: screen, landing: landing, music: arrangement) { [weak self] in self?.intro = nil }

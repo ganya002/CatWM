@@ -15,7 +15,7 @@ Used as `bind = MODS, key, <dispatcher>, <args>` or `ouch dispatch <dispatcher> 
 | `nativefullscreen` | | macOS Full Screen (the green button) for the focused window: it gets a Space of its own and leaves the tiling until it comes back |
 | `killactive` | | close the focused window |
 | `exec` | shell command | run via `sh -c`. Keybinds only; refused from the CLI |
-| `launch` | app name, bundle ID, `.app` path, file path or URL, then optional `workspace=N`, `display=SPEC` (same as `focusmonitor`), `frame=x,y,w,h` (fractions or `%` of the display) | open an app, file or URL (deep links such as `vscode://…` work). With options, Ouch moves the new window to that workspace or display. `frame` floats it at that part of the display. Keybinds only; refused from the CLI |
+| `launch` | app name, bundle ID, `.app` path, file path or URL, then optional `workspace=N`, `display=SPEC` (same as `focusmonitor`), `frame=x,y,w,h` (fractions or `%` of the display) | open an app, file or URL (deep links such as `vscode://…` work). With options, CatWM moves the new window to that workspace or display. `frame` floats it at that part of the display. Keybinds only; refused from the CLI |
 | `focusmonitor` | `l r u d`, `+1`, `-1`, index | focus another display |
 | `workspace` | `N`, `name:foo`, `previous`, `+1`, `-1`, `e+1`, `e-1` | switch workspace (`e±1`: next one that has windows) |
 | `movetoworkspace` | same as `workspace` | move the window and follow it |
@@ -30,7 +30,7 @@ Used as `bind = MODS, key, <dispatcher>, <args>` or `ouch dispatch <dispatcher> 
 | `submap` | mode name, or `reset` | enter or leave a keybind mode |
 | `switcher` | none or `prev` | window switcher: tap for the last window, hold the modifier to browse every window on every workspace (macOS Desktop) and full-screen Space, type to search. In the list: Tab / Shift+Tab move, Return opens, Esc cancels, `` ` `` shows one app, Cmd+W closes, Cmd+Q quits, Cmd+H hides, Cmd+1…9 opens a row |
 | `sethomespace` | | no effect: each macOS Desktop is a workspace. Old configs can keep it |
-| `exit` | | quit Ouch (parked windows are restored first) |
+| `exit` | | quit CatWM (parked windows are restored first) |
 
 Unknown dispatchers and bad args are ignored silently; check the log with `ouch dump` or `--verbose`.
 With `virtual-workspaces = false`, `workspace`/`movetoworkspace` use macOS Spaces and need "Switch to Desktop N" enabled on Ctrl+N in System Settings → Keyboard → Shortcuts → Mission Control.

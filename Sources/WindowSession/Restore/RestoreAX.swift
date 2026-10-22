@@ -48,40 +48,61 @@ public enum RestoreAX {
         }.value
     }
 
-    public static func read(apps: [App], deadline: Date) async -> [Candidate] {
+    public static func read(apps: [App], deadline: Date) async -> (candidates: [Candidate], complete: Bool) {
         let stop = StopFlag()
         return await withTaskCancellationHandler {
             await Task.detached(priority: .userInitiated) {
                 var found: [Candidate] = []
                 func expired() -> Bool { stop.isStopped || Date() >= deadline }
                 for app in apps {
-                    guard !expired() else { break }
-                    for element in axApplication(app.pid).readElements(kAXWindowsAttribute).value ?? [] {
-                        guard !expired() else { break }
+                    guard !expired() else { return (found, false) }
+                    let listed: [AXUIElement]
+                    switch axApplication(app.pid).readElements(kAXWindowsAttribute) {
+                    case .stalled: return (found, false)
+                    case .missing: continue
+                    case .value(let elements): listed = elements
+                    }
+                    for element in listed {
+                        guard !expired() else { return (found, false) }
                         switch candidate(element, app: app, expired: expired) {
-                        case .stalled: return found
+                        case .stalled: return (found, false)
                         case .missing: continue
                         case .value(let window): found.append(window)
                         }
                     }
                 }
-                return found
+                return (found, true)
             }.value
         } onCancel: { stop.stop() }
     }
 
     private static func candidate(_ element: AXUIElement, app: App, expired: () -> Bool) -> AXRead<Candidate> {
         AXUIElementSetMessagingTimeout(element, axTimeout)
-        let subrole = element.readString(kAXSubroleAttribute).value
+        let subrole: String?
+        switch element.readString(kAXSubroleAttribute) {
+        case .stalled: return .stalled
+        case .missing: subrole = nil
+        case .value(let value): subrole = value
+        }
         guard subrole == kAXStandardWindowSubrole || subrole == kAXDialogSubrole,
               let id = element.windowNumber else { return .missing }
         guard !expired() else { return .stalled }
         let minimized = element.readBool(kAXMinimizedAttribute).value ?? false
         guard WindowKind.includes(subrole: subrole, minimized: minimized) else { return .missing }
         guard !expired() else { return .stalled }
-        let title = element.readString(kAXTitleAttribute).value ?? ""
+        let title: String
+        switch element.readString(kAXTitleAttribute) {
+        case .stalled: return .stalled
+        case .missing: title = ""
+        case .value(let value): title = value
+        }
         guard !expired() else { return .stalled }
-        let document = element.readString(kAXDocumentAttribute).value.flatMap(DocumentURL.normalized)
+        let document: String?
+        switch element.readString(kAXDocumentAttribute) {
+        case .stalled: return .stalled
+        case .missing: document = nil
+        case .value(let raw): document = DocumentURL.normalized(raw)
+        }
         guard !expired() else { return .stalled }
         let frame = element.readFrame().value
         guard !expired() else { return .stalled }

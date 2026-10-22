@@ -29,16 +29,16 @@ struct MenuBarTipView: View {
 
     private var title: String {
         switch model.state {
-        case .move: "Keep Ouch in reach"
-        case .good: "Good spot for Ouch"
-        case .hidden: "Ouch is behind the notch"
+        case .move: "Keep CatWM in reach"
+        case .good: "Good spot for CatWM"
+        case .hidden: "CatWM is behind the notch"
         }
     }
 
     private var detail: String? {
         switch model.state {
         case .good: nil
-        case .move: "Items on the left hide first. Move Ouch right in Control Center › Edit Controls."
+        case .move: "Items on the left hide first. Move CatWM right in Control Center › Edit Controls."
         case .hidden: "Move it right, near the clock, in Control Center › Edit Controls."
         }
     }

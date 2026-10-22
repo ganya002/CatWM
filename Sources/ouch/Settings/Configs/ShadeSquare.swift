@@ -22,6 +22,9 @@ struct ShadeSquare: View {
                 color = shade
             })
         }
+        .accessibilityElement()
         .accessibilityLabel("Color shade")
+        .accessibilityValue("Saturation \(Int((color.saturation * 100).rounded())) percent, "
+            + "brightness \(Int((color.brightness * 100).rounded())) percent")
     }
 }

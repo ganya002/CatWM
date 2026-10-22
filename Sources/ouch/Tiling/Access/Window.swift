@@ -24,9 +24,11 @@ final class Window {
         return autoFloating
     }
 
+    static let messagingTimeout: Float = 0.5
+
     init(id: CGWindowID, element: AXUIElement, pid: pid_t, bundleID: String?) {
         self.id = id; self.element = element; self.pid = pid; self.bundleID = bundleID
-        AXUIElementSetMessagingTimeout(element, 0.5)
+        AXUIElementSetMessagingTimeout(element, Self.messagingTimeout)
     }
 
     private let frameLock = NSLock()
@@ -67,6 +69,14 @@ final class Window {
     var isValid: Bool { element.string(kAXRoleAttribute) != nil }
     var isNativeFullscreen: Bool { element.flag("AXFullScreen") }
 
+    func unlessStalled<T>(_ stalled: T, _ read: () -> T) -> T {
+        AXStalls.shared.isStalled(pid) ? stalled : read()
+    }
+    var isValidUnlessStalled: Bool { unlessStalled(false) { isValid } }
+    var fullscreenUnlessStalled: Bool { unlessStalled(false) { isNativeFullscreen } }
+    var minimizedUnlessStalled: Bool { unlessStalled(false) { element.flag(kAXMinimizedAttribute) } }
+    var frameUnlessStalled: CGRect { unlessStalled(.null) { frame } }
+
     func setPosition(_ origin: CGPoint) {
         var point = origin
         if let value = AXValueCreate(.cgPoint, &point), element.set(kAXPositionAttribute, value) {
@@ -102,7 +112,7 @@ final class Window {
         let button = element.element(kAXCloseButtonAttribute)
             ?? element.elements(kAXChildrenAttribute).first { $0.string(kAXSubroleAttribute) == kAXCloseButtonSubrole }
         guard let button else { return "no close button" }
-        let result = AXUIElementPerformAction(button, kAXPressAction as CFString)
+        let result = button.noted { AXUIElementPerformAction(button, kAXPressAction as CFString) }
         return result == .success ? "pressed" : "press failed (AX error \(result.rawValue))"
     }
 

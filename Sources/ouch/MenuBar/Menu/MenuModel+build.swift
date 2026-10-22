@@ -12,7 +12,7 @@ extension MenuModel {
         var out: [MenuItem] = []
 
         if !axGranted {
-            out.append(MenuItem(id: "attention", kind: .attention, label: "Ouch needs Accessibility",
+            out.append(MenuItem(id: "attention", kind: .attention, label: "CatWM needs Accessibility",
                                 keywords: "permission grant",
                                 action: { Permission.accessibility.request() }))
         }
@@ -103,7 +103,7 @@ extension MenuModel {
             MenuItem(id: "help", kind: .sub, label: "Help", symbol: "questionmark.circle",
                      children: helpItems(manager, keys: keys, trusted: trusted), dot: WhatsNew.shared.hasNews),
             .sep("s3"),
-            MenuItem(id: "quit", kind: .footer, label: "Quit Ouch", shortcut: ["⌘", "Q"], keywords: "exit",
+            MenuItem(id: "quit", kind: .footer, label: "Quit CatWM", shortcut: ["⌘", "Q"], keywords: "exit",
                      action: { NSApp.terminate(nil) })
         ]
     }

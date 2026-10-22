@@ -17,12 +17,12 @@ private let getWindow: GetWindowFn? = {
     return unsafeBitCast(address, to: GetWindowFn.self)
 }()
 
-enum AXRead<T> {
+public enum AXRead<T> {
     case value(T)
     case missing
     case stalled
 
-    var value: T? {
+    public var value: T? {
         if case .value(let found) = self { return found }
         return nil
     }
@@ -48,7 +48,7 @@ extension AXUIElement {
         }
     }
 
-    func readString(_ attribute: String) -> AXRead<String> {
+    public func readString(_ attribute: String) -> AXRead<String> {
         cast(read(attribute)) { $0 as? String }
     }
 
@@ -56,7 +56,7 @@ extension AXUIElement {
         cast(read(attribute)) { $0 as? Bool }
     }
 
-    func readElements(_ attribute: String) -> AXRead<[AXUIElement]> {
+    public func readElements(_ attribute: String) -> AXRead<[AXUIElement]> {
         switch read(attribute) {
         case .stalled: return .stalled
         case .missing: return .missing

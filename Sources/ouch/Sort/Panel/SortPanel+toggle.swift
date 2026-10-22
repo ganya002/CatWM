@@ -19,10 +19,10 @@ extension SortPanel {
             HUD.shared.show("No windows to show", on: nil)
             return
         }
+        guard let screen = OuchPanel.pointerScreen() else { return }
         dismissToast()
         SortNudge.shared.dismiss()
         generation += 1
-        let screen = OuchPanel.pointerScreen()
         let start = displays.first { $0.screen == screen && hasWindows($0) }
             ?? displays.first(where: hasWindows) ?? displays[0]
         manager.beginSort()

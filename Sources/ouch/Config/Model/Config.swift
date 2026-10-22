@@ -97,8 +97,8 @@ struct Config {
         var vars: [(String, String)] = []
         var modVar: String?
         var blocks: [String] = []
-        for (index, raw) in text.components(separatedBy: .newlines).enumerated() {
-            var line = stripComment(raw)
+        for (index, raw) in text.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline).enumerated() {
+            var line = stripComment(String(raw))
             line = line.trimmingCharacters(in: .whitespaces)
             if line.hasSuffix("{") {
                 blocks.append(String(line.dropLast()).trimmingCharacters(in: .whitespaces))
@@ -131,7 +131,18 @@ struct Config {
                 config.errors.append("line \(index + 1): \(err)")
             }
         }
+        config.reportEmptySubmaps()
         return config
+    }
+
+    private mutating func reportEmptySubmaps() {
+        let modes = Set(bindings.map(\.submap))
+        for bind in bindings where bind.dispatcher == "submap" && bind.arg.lowercased() != "reset"
+            && !bind.arg.isEmpty && !modes.contains(bind.arg) {
+            let near = modes.first { $0.lowercased() == bind.arg.lowercased() }.map { " (did you mean `\($0)`?)" }
+            let error = "`submap, \(bind.arg)` enters a mode with no binds\(near ?? "")"
+            if !errors.contains(error) { errors.append(error) }
+        }
     }
 
     mutating func apply(_ rawKey: String, _ value: String) -> String? {
@@ -155,19 +166,27 @@ struct Config {
             }
             if !list.isEmpty { layouts = list }
         case "floating": floating = Self.listItems(value)
-        case "gaps_in": return needNum { windowMarginSize = $0 * 2 }
+        case "gaps_in": return needNum { windowMarginSize = Self.clamped($0 * 2, \.windowMarginSize) }
         case "screen_padding", "gaps_out":
-            return needNum { paddingLeft = $0; paddingRight = $0; paddingTop = $0; paddingBottom = $0 }
+            return needNum {
+                let padding = Self.clamped($0, \.paddingLeft)
+                paddingLeft = padding; paddingRight = padding; paddingTop = padding; paddingBottom = padding
+            }
         case "enabled":
             guard fullKey == "animations:enabled" else { return "unknown option `\(rawKey)`" }
             let (enabled, error) = ConfigOption.readBool(value, rawKey)
-            animate = enabled
+            if error == nil { animate = enabled }
             return error
         default:
             guard let option = ConfigOption.named(key) else { return "unknown option `\(rawKey)`" }
             return option.read(&self, value, rawKey)
         }
         return nil
+    }
+
+    private static func clamped(_ value: CGFloat, _ path: WritableKeyPath<Config, CGFloat>) -> CGFloat {
+        guard let valid = ConfigOption.at(path).valid else { return value }
+        return min(CGFloat(valid.upperBound), max(CGFloat(valid.lowerBound), value))
     }
 
     static func listItems(_ value: String) -> [String] {

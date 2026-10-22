@@ -38,8 +38,10 @@ extension WindowManager {
     }
 
     func tiled(on screen: Screen) -> [CGWindowID] {
-        order.filter {
+        let shares = sharesSpaces
+        return order.filter {
             visible.contains($0) && windows[$0]?.isFloating == false && workspaceOf[$0] == shown[screen.uuid]
+                && (!shares || (displayOf[$0] ?? workspaceOf[$0].flatMap { monitorOf[$0] }) == screen.uuid)
         }
     }
 
@@ -48,14 +50,25 @@ extension WindowManager {
         if config.ignoreMenuBar {
             rect = CGRect(x: rect.minX, y: screen.frame.minY, width: rect.width, height: rect.maxY - screen.frame.minY)
         }
-        if let height = menuBarHeights[screen.uuid], screen.frame.minY + height > rect.minY {
+        if let height = menuBarHeights[screen.uuid]?.height(on: screen.visible),
+           screen.frame.minY + height > rect.minY {
             let top = screen.frame.minY + height
             rect = CGRect(x: rect.minX, y: top, width: rect.width, height: rect.maxY - top)
         }
         if config.disablePaddingOnBuiltinDisplay && screen.isBuiltin { return rect }
-        return CGRect(x: rect.minX + config.paddingLeft, y: rect.minY + config.paddingTop,
-                      width: rect.width - config.paddingLeft - config.paddingRight,
-                      height: rect.height - config.paddingTop - config.paddingBottom)
+        return Self.padded(rect, left: config.paddingLeft, right: config.paddingRight,
+                           top: config.paddingTop, bottom: config.paddingBottom)
+    }
+
+    static func padded(_ rect: CGRect, left: CGFloat, right: CGFloat, top: CGFloat, bottom: CGFloat) -> CGRect {
+        func fit(_ start: CGFloat, _ end: CGFloat, in length: CGFloat) -> (CGFloat, CGFloat) {
+            let start = max(0, start), end = max(0, end), total = start + end, room = length / 2
+            guard total > room, total > 0 else { return (start, end) }
+            return (start * room / total, end * room / total)
+        }
+        let (left, right) = fit(left, right, in: rect.width), (top, bottom) = fit(top, bottom, in: rect.height)
+        return CGRect(x: rect.minX + left, y: rect.minY + top,
+                      width: rect.width - left - right, height: rect.height - top - bottom)
     }
 
     func state(for screen: Screen) -> ScreenState {
@@ -83,7 +96,10 @@ extension WindowManager {
     }
 
     func screen(of window: Window, in screens: [Screen] = Screen.all()) -> Screen? {
-        if config.virtualWorkspaces || !window.isFloating,
+        if sharesSpaces {
+            if !window.isFloating, let uuid = displayOf[window.id],
+               let match = screens.first(where: { $0.uuid == uuid }) { return match }
+        } else if config.virtualWorkspaces || !window.isFloating,
            let uuid = workspaceOf[window.id].flatMap({ monitorOf[$0] }),
            let match = screens.first(where: { $0.uuid == uuid }) { return match }
         return screen(containing: animator.destination(window.id) ?? window.cachedFrame, in: screens)

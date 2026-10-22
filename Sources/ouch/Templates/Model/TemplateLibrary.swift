@@ -36,7 +36,7 @@ final class TemplateLibrary: ObservableObject {
         do {
             let stored = try JSONDecoder().decode(Stored.self, from: Data(contentsOf: url))
             guard stored.version == 1 else {
-                readProblem = "This template file needs a newer version of Ouch."
+                readProblem = "This template file needs a newer version of CatWM."
                 error = readProblem
                 return
             }
@@ -44,7 +44,7 @@ final class TemplateLibrary: ObservableObject {
         } catch let problem as NSError
                     where problem.domain == NSCocoaErrorDomain && problem.code == NSFileReadNoSuchFileError {
         } catch {
-            readProblem = "Ouch could not read your templates: \(error.localizedDescription)"
+            readProblem = "CatWM could not read your templates: \(error.localizedDescription)"
             self.error = readProblem
         }
     }
@@ -154,7 +154,7 @@ final class TemplateLibrary: ObservableObject {
             error = nil
             return true
         } catch {
-            self.error = "Ouch could not save your templates: \(error.localizedDescription)"
+            self.error = "CatWM could not save your templates: \(error.localizedDescription)"
             return false
         }
     }

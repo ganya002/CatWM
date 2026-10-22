@@ -4,7 +4,7 @@ import ApplicationServices
 extension AXUIElement {
     func value(_ attr: String) -> CFTypeRef? {
         var result: CFTypeRef?
-        return AXUIElementCopyAttributeValue(self, attr as CFString, &result) == .success ? result : nil
+        return noted { AXUIElementCopyAttributeValue(self, attr as CFString, &result) } == .success ? result : nil
     }
     func string(_ attr: String) -> String? { value(attr) as? String }
     func flag(_ attr: String, default fallback: Bool = false) -> Bool { (value(attr) as? Bool) ?? fallback }
@@ -32,13 +32,22 @@ extension AXUIElement {
 
     @discardableResult
     func set(_ attr: String, _ newValue: CFTypeRef) -> Bool {
-        AXUIElementSetAttributeValue(self, attr as CFString, newValue) == .success
+        noted { AXUIElementSetAttributeValue(self, attr as CFString, newValue) } == .success
     }
     func isSettable(_ attr: String) -> Bool {
         var settable = DarwinBoolean(false)
-        return AXUIElementIsAttributeSettable(self, attr as CFString, &settable) == .success && settable.boolValue
+        return noted { AXUIElementIsAttributeSettable(self, attr as CFString, &settable) } == .success
+            && settable.boolValue
     }
-    func perform(_ action: String) { AXUIElementPerformAction(self, action as CFString) }
+    func perform(_ action: String) { noted { AXUIElementPerformAction(self, action as CFString) } }
+
+    @discardableResult
+    func noted(_ call: () -> AXError) -> AXError {
+        let start = CACurrentMediaTime()
+        let error = call()
+        AXStalls.shared.note(self, error, since: start)
+        return error
+    }
 
     var windowID: CGWindowID? {
         var id: CGWindowID = 0

@@ -34,7 +34,7 @@ struct WelcomeView: View {
                 .animation(.easeIn(duration: 0.22), value: model.landed) // style-ok: drop lands on squish beat
                 .squish(on: model.landed, delay: 0.22)
                 .padding(.top, 4)
-            Text("Welcome to Ouch").textStyle(.largeTitle).oneLine()
+            Text("Welcome to CatWM").textStyle(.largeTitle).oneLine()
                 .padding(.top, 16).padding(.bottom, 8)
             Text("Each button opens System Settings, with steps beside it.")
                 .font(Theme.body(13.5)).lineSpacing(2).foregroundStyle(Theme.inkMuted)
@@ -48,7 +48,7 @@ struct WelcomeView: View {
                                           required: false, detail: "Makes Caps Lock shortcuts instant", primary: false,
                                           action: model.allowInputMonitoring))
                 permission(PermissionItem(granted: model.login, symbol: "power", title: "Open at login",
-                                          required: false, detail: "Starts Ouch when you log in", primary: false,
+                                          required: false, detail: "Starts CatWM when you log in", primary: false,
                                           action: model.allowLogin))
             }
             Spacer(minLength: 24)
@@ -106,7 +106,7 @@ struct WelcomeView: View {
 
     private var keys: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Ouch shortcut guide").textStyle(.largeTitle).oneLine()
+            Text("CatWM shortcut guide").textStyle(.largeTitle).oneLine()
                 .padding(.top, 2).padding(.bottom, 8)
             Text("Like Vim, Photoshop or Blender, it takes some time to learn. Then you work faster.")
                 .font(Theme.body(13.5)).lineSpacing(2).foregroundStyle(Theme.inkMuted)

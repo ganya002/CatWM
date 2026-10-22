@@ -32,7 +32,7 @@ final class Animator {
     private var following = FollowedMoves()
     private var writers: [pid_t: AXWriter] = [:]
     private var owners: [CGWindowID: pid_t] = [:]
-    private var epochs: [CGWindowID: Int] = [:]
+    private var epochs: [CGWindowID: Int] = [:], epochCount = 0
     private let focusLock = NSLock()
     private var focusGeneration = 0
     private var focusQueues: [pid_t: DispatchQueue] = [:]
@@ -93,11 +93,11 @@ final class Animator {
     func isMoving(_ id: CGWindowID, to frame: CGRect) -> Bool { destination(id) == frame }
 
     func cancel(_ id: CGWindowID) {
-        epochs[id, default: 0] += 1
+        nextEpoch(for: id)
         following.remove(id)
         let item = items.removeValue(forKey: id), landed = landing.removeValue(forKey: id)
         guard let pid = item?.move.window.pid ?? landed?.move.window.pid ?? owners[id] else { return }
-        writer(pid).cancel(id)
+        writers[pid]?.cancel(id)
     }
 
     func quiet(_ id: CGWindowID, for seconds: Double = 0.4) {
@@ -230,7 +230,7 @@ final class Animator {
         let id = move.window.id
         landings += 1
         let number = landings
-        let epoch = epochs[id] ?? 0
+        let epoch = epochs[id] ?? nextEpoch(for: id)
         landing[id] = (move, number)
         quietUntil[id] = CACurrentMediaTime() + 0.4
         writer(move.window.pid).land(move.window, at: move.target) { [weak self] wrote in
@@ -275,5 +275,30 @@ final class Animator {
                 if !actual.isNull, actual.minY > move.target.minY + 1 { self.onTopRefused?(move.target, actual) }
             }
         }
+    }
+}
+
+extension Animator {
+    func forget(_ id: CGWindowID) {
+        cancel(id)
+        if let pid = owners.removeValue(forKey: id) { writers[pid]?.forget(id) }
+        epochs[id] = nil
+        quietUntil[id] = nil
+    }
+
+    @discardableResult
+    private func nextEpoch(for id: CGWindowID) -> Int {
+        epochCount += 1
+        epochs[id] = epochCount
+        return epochCount
+    }
+
+    func terminated(_ pid: pid_t) {
+        if let writer = writers.removeValue(forKey: pid) {
+            writer.run { EnhancedUI.terminated(pid) }
+        } else {
+            EnhancedUI.terminated(pid)
+        }
+        focusQueues[pid] = nil
     }
 }

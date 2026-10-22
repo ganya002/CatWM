@@ -20,6 +20,7 @@ final class SettingsUI: ObservableObject {
 
     private let doc: ConfigDocument
     private var monitor: Any?
+    private var resignObserver: NSObjectProtocol?
     private var timer: Timer?
 
     init(doc: ConfigDocument) { self.doc = doc }
@@ -42,7 +43,16 @@ final class SettingsUI: ObservableObject {
         timer = nil
     }
 
-    func refreshStatus() { status = WindowManager.shared.status() }
+    func shortcutMode(in doc: ConfigDocument) -> String { Self.shortcutMode(bindMode, in: doc) }
+
+    static func shortcutMode(_ mode: String, in doc: ConfigDocument) -> String {
+        doc.submaps.contains(mode) ? mode : ""
+    }
+
+    func refreshStatus() {
+        let next = WindowManager.shared.status()
+        if next != status { status = next }
+    }
 
     func open(_ entry: SettingEntry) {
         search = ""
@@ -66,10 +76,19 @@ final class SettingsUI: ObservableObject {
         guard recording != nil else {
             if let monitor { NSEvent.removeMonitor(monitor) }
             monitor = nil
+            if let resignObserver { NotificationCenter.default.removeObserver(resignObserver) }
+            resignObserver = nil
             Hotkeys.shared.paused = false
             return
         }
         Hotkeys.shared.paused = true
+        if resignObserver == nil {
+            resignObserver = NotificationCenter.default.addObserver(
+                forName: NSApplication.didResignActiveNotification, object: nil, queue: .main
+            ) { [weak self] _ in
+                self?.recording = nil
+            }
+        }
         if monitor == nil {
             monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { [weak self] event in
                 guard let self else { return event }

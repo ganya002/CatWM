@@ -3,7 +3,7 @@ import SwiftUI
 
 extension Onboarding {
     func startTutorial(fromStart: Bool = false) {
-        if fromStart { TutorialLesson.forget() }
+        if fromStart, canRun { TutorialLesson.forget() }
         run(TutorialLesson()) { how in
             switch how {
             case .paused:
@@ -17,15 +17,17 @@ extension Onboarding {
         }
     }
 
+    var canRun: Bool { coach == nil && intro == nil && welcome == nil }
+
     func run(_ lesson: Lesson, attempts: Int = 20, then: @escaping (Coach.Ending) -> Void) {
-        guard coach == nil, intro == nil, welcome == nil else { return }
+        guard canRun else { return }
         guard WindowManager.shared.isStarted, Hotkeys.shared.isActive else {
             if attempts > 0 {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
                     self?.run(lesson, attempts: attempts - 1, then: then)
                 }
             } else {
-                HUD.shared.show("Ouch needs Accessibility first", on: nil)
+                HUD.shared.show("CatWM needs Accessibility first", on: nil)
                 MenuBarTip.shared.hide()
                 if firstRun, Permission.accessibility.isGranted {
                     UserDefaults.standard.set(true, forKey: Self.doneKey)
@@ -36,10 +38,10 @@ extension Onboarding {
         }
         Tips.shared.dismissAll()
         if SortPanel.shared.isOpen { SortPanel.shared.revert() }
-        let started = Coach(lesson: lesson, statusButton: statusButton) { [weak self] how in
+        guard let started = Coach(lesson: lesson, statusButton: statusButton, onEnd: { [weak self] how in
             self?.coach = nil
             then(how)
-        }
+        }) else { return }
         coach = started
         started.start()
         if firstRun { MenuBarTip.shared.show() }

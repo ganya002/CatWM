@@ -10,7 +10,7 @@ extension Tips {
     func showPanel(_ tip: Tip) -> Bool {
         let host = OuchHostingView(rootView: TipView(tip: tip, inset: TipView.panelInset))
         let size = host.fittingSize
-        var screen = WindowManager.shared.focusedScreen ?? OuchPanel.pointerScreen()
+        guard var screen = WindowManager.shared.focusedScreen ?? OuchPanel.pointerScreen() else { return false }
         let visible = screen.visibleFrame
         var frame: NSRect
         var caret: Caret

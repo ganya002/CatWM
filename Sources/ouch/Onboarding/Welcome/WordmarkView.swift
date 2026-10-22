@@ -9,7 +9,7 @@ struct WordmarkView: View {
         VStack(spacing: 14) {
             HStack(alignment: .center, spacing: size * 0.12) {
                 CatMascot(feeling: .content).frame(height: size * 0.92).foregroundStyle(.white)
-                Text("Ouch").font(Theme.wordmark(size)).tracking(-size * 0.03).foregroundStyle(.white)
+                Text("CatWM").font(Theme.wordmark(size)).tracking(-size * 0.03).foregroundStyle(.white)
             }
             .legible()
             .squish(on: model.landed, delay: 0.3)

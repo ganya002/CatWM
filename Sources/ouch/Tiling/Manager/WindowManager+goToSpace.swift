@@ -62,7 +62,7 @@ extension WindowManager {
 
     func moveToSpace(_ number: Int) {
         guard !movingToSpace, let window = focusedWindow() else { return }
-        let frame = window.frame
+        let frame = window.frameUnlessStalled
         guard !frame.isNull else { return }
         let points = grabPoints(for: window, frame: frame)
         guard !points.isEmpty else {

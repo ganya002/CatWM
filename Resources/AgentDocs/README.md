@@ -1,12 +1,12 @@
-# Ouch: agent guide
+# CatWM: agent guide
 
-Ouch is a macOS tiling window manager with its own workspaces, a plain-text config and animated window movement. It runs as a menu bar app. These files describe the **shipped product**, so an agent can operate and configure it for a user. They don't describe the source code.
+CatWM is a macOS tiling window manager with its own workspaces, a plain-text config and animated window movement. It runs as a menu bar app. These files describe the **shipped product**, so an agent can operate and configure it for a user. They don't describe the source code.
 
 Read in this order:
 
 | File | Read it to |
 |---|---|
-| [cli.md](cli.md) | control a running Ouch from a shell (`dispatch`, `reload`, `dump`) |
+| [cli.md](cli.md) | control a running CatWM from a shell (`dispatch`, `reload`, `dump`) |
 | [config.md](config.md) | read or edit `~/.config/ouch/ouch.conf` (every option, value formats) |
 | [keybinds.md](keybinds.md) | write `bind` lines: modifiers, keys, ranges, scroll/swipe, window mode |
 | [dispatchers.md](dispatchers.md) | know what each command does and what args it takes |
@@ -19,6 +19,6 @@ Read in this order:
 - The app binary is also the CLI: `Ouch.app/Contents/MacOS/ouch <command>`. A build from this repo lives at `build/ouch.app`.
 - Config file: `~/.config/ouch/ouch.conf` (created on first run). Saved config presets: `~/.config/ouch/configs.json` (managed by the Settings window; don't hand-edit).
 - The Settings window rewrites `ouch.conf`. Comments and layout may change after the user edits settings in the UI.
-- Ouch needs the **Accessibility** permission. Without it nothing is tiled and no keybinds work.
+- CatWM needs the **Accessibility** permission. Without it nothing is tiled and no keybinds work.
 - Default `$mod` is Option (`ALT`), not Command, so app shortcuts keep working.
-- Ouch was previously named Hyprthyst (bundle ID `local.hyprthyst`); settings are migrated once. The bundle ID was `local.ouch`, and is now `local.catwm`.
+- CatWM was previously named Hyprthyst (bundle ID `local.hyprthyst`), then Ouch; settings are migrated once. The bundle ID was `local.ouch`, and is now `local.catwm`.

@@ -12,22 +12,22 @@ enum Options {
             .section("gaps")
             .note("Hyprland names also work: gaps_in = per-window gap, gaps_out = screen padding.")
             .setting(.layout, "layout.gaps", "Gaps between windows", keywords: "margin spacing"),
-        .points("window-margin-size", \.windowMarginSize)
-            .documented("number (points)", "`gaps_in` is accepted and doubled")
+        .points("window-margin-size", \.windowMarginSize, valid: 0...100)
+            .documented("0–100 points", "`gaps_in` is accepted and doubled")
             .setting(.layout, "layout.gapSize", "Gap size", keywords: "margin spacing points", range: 0...60,
                      enabled: { $0.windowMargins }, width: 180),
         .bool("smart-window-margins", \.smartWindowMargins)
             .documented("bool", "no gaps with a single window").aliases("smart-gaps")
             .setting(.layout, "layout.smartGaps", "Smart gaps", help: "No gaps when a window is alone",
                      keywords: "single window no gaps", enabled: { $0.windowMargins }),
-        .points("screen-padding-left", \.paddingLeft)
-            .documented("number (points)", "`screen-padding` or `gaps_out` sets all four sides"),
-        .points("screen-padding-right", \.paddingRight)
-            .documented("number (points)", ""),
-        .points("screen-padding-top", \.paddingTop)
-            .documented("number (points)", ""),
-        .points("screen-padding-bottom", \.paddingBottom)
-            .documented("number (points)", ""),
+        .points("screen-padding-left", \.paddingLeft, valid: 0...500)
+            .documented("0–500 points", "`screen-padding` or `gaps_out` sets all four sides"),
+        .points("screen-padding-right", \.paddingRight, valid: 0...500)
+            .documented("0–500 points", ""),
+        .points("screen-padding-top", \.paddingTop, valid: 0...500)
+            .documented("0–500 points", ""),
+        .points("screen-padding-bottom", \.paddingBottom, valid: 0...500)
+            .documented("0–500 points", ""),
         .bool("disable-padding-on-builtin-display", \.disablePaddingOnBuiltinDisplay)
             .documented("bool", "")
             .setting(.layout, "layout.builtin", "No padding on the built-in display", keywords: "laptop macbook",
@@ -131,7 +131,7 @@ enum Options {
                             + "Finder folders and code editor projects; macOS asks once for each scripted app")
             .section("templates")
             .note("Templates also save browser tabs, terminal folders, Finder folders and editor projects.\n"
-                + "macOS asks you once for each app to let Ouch control it.")
+                + "macOS asks you once for each app to let CatWM control it.")
             .setting(.templates, "templates.appScripting", "Save tabs and folders",
                      help: "Browser tabs, terminal tabs, Finder folders and editor projects. "
                         + "macOS asks once for each app",
@@ -166,8 +166,8 @@ enum Options {
             .note("These also set how windows slide when you switch workspaces.")
             .setting(.motion, "motion.animate", "Animate windows", help: "Windows glide to their new place",
                      keywords: "animation off motion"),
-        .number("animation-duration", \.animationDuration, convert: { $0 > 5 ? $0 / 1000 : $0 }, make: { $0 },
-                text: { String(format: "%g", ($0 * 1000).rounded() / 1000) }, number: { $0 })
+        .number("animation-duration", \.animationDuration, valid: 0...5, convert: { $0 > 5 ? $0 / 1000 : $0 },
+                make: { $0 }, text: { String(format: "%g", ($0 * 1000).rounded() / 1000) }, number: { $0 })
             .documented("seconds, or ms if above 5", "").animation()
             .note("Seconds; a value above 5 is read as milliseconds.")
             .setting(.motion, "motion.duration", "Duration", keywords: "speed time milliseconds animation",

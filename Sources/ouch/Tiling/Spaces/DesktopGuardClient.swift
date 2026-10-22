@@ -42,8 +42,11 @@ import AppKit
 
     func start(_ context: DesktopGuard.Context) async throws {
         try launch()
-        let timer = Timer(timeInterval: 0.25, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.send("PING") }
+        let timer = Timer(timeInterval: 0.25, repeats: true) { [weak self] timer in
+            MainActor.assumeIsolated {
+                guard let self else { return timer.invalidate() }
+                self.send("PING")
+            }
         }
         heartbeat = timer
         RunLoop.main.add(timer, forMode: .common)

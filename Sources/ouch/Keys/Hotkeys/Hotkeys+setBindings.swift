@@ -11,6 +11,10 @@ extension Hotkeys {
     func setSubmap(_ name: String) {
         let target = name.lowercased() == "reset" ? "" : name
         guard target != submap else { return }
+        guard target.isEmpty || tables[target] != nil else {
+            Log.info("submap: `\(target)` has no binds, staying out of it")
+            return
+        }
         submap = target
         modeChord = target.isEmpty ? []
             : CGEventSource.flagsState(.combinedSessionState).intersection(Self.tapMods).subtracting(.maskShift)
@@ -110,6 +114,11 @@ extension Hotkeys {
     }
 
     func reenable() { if let tap { CGEvent.tapEnable(tap: tap, enable: true) } }
+
+    func disable() {
+        if let tap { CGEvent.tapEnable(tap: tap, enable: false) }
+        setSubmap("")
+    }
 
     func observe(_ type: CGEventType, _ event: CGEvent) {
         guard type == .flagsChanged else { tapDown = nil; return }
