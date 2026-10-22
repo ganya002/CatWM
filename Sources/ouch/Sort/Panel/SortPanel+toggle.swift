@@ -74,8 +74,9 @@ extension SortPanel {
 
     func placed(_ size: CGSize) -> NSRect {
         guard let screen else { return .zero }
-        return OuchPanel.frame(size: size, on: screen, anchor: .bottom(18 - SortView.inset.bottom),
-                               inset: EdgeInsets(top: 0, leading: 0, bottom: SortView.inset.bottom, trailing: 0))
+        let frame = OuchPanel.frame(size: size, on: screen, anchor: .bottom(0))
+        return NSRect(x: frame.minX, y: screen.frame.minY, width: frame.width,
+                      height: min(size.height, screen.visibleFrame.maxY - screen.frame.minY))
     }
 
     func queueFit() {

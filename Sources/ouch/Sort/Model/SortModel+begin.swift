@@ -86,14 +86,6 @@ extension SortModel {
         changed()
     }
 
-    func pick(_ choice: SortStrategy) {
-        strategy = choice
-        let other = reserved()
-        edit { $0.sort(by: choice, layouts: layouts, avoiding: other) }
-        selected = nil
-        scrollToStart()
-    }
-
     func closeDuplicates() { edit { $0.closeDuplicates() } }
 
     func rename(_ lane: UUID, _ name: String) {
