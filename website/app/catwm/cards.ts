@@ -105,3 +105,14 @@ export const CARDS: Card[] = [
     ],
   },
 ];
+
+// The last feature card lists the rest by name. The hues repeat in card order.
+const HUES: Hue[] = ["sky", "lemon", "magenta", "lime"];
+export const MORE: { name: string; hue: Hue }[] = [
+  "Window switcher",
+  "Overview",
+  "Saved workspaces",
+  "Quick-action menu",
+  "Focus dimming",
+  "Multiple displays",
+].map((name, i) => ({ name, hue: HUES[i % HUES.length] }));
