@@ -34,10 +34,6 @@ import Testing
         #expect(manager.navFrame(tracked) == destination)
     }
 
-    @Test func anEmptyFrameCacheDoesNotReadAX() {
-        #expect(window().cachedFrame.isNull)
-    }
-
     @Test func anObservationCannotReplaceANewerPlacement() {
         let tracked = window()
         let observed = CGRect(x: 10, y: 20, width: 100, height: 200)

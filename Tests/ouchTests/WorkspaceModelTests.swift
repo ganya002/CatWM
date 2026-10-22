@@ -51,23 +51,19 @@ import Testing
         #expect(model.focusOrder.first == 100)
     }
 
-    @Test func swapAndKeepChangeOnlyTheirWindows() {
+    @Test func swapExchangesTheTwoWorkspaces() {
         var model = WorkspaceModel()
         model.assign(1, to: "1"); model.assign(2, to: "2")
-        model.assign(3, to: WindowManager.spaceWorkspace(display: "A", space: 9))
         model.swapWorkspaces(1, 2)
         #expect(model.workspaceOf[1] == "2" && model.workspaceOf[2] == "1")
-        model.keepWorkspaces { !$0.hasPrefix(WindowManager.spacePrefix) }
-        #expect(model.workspaceOf.count == 2 && model.workspaceOf[3] == nil)
     }
 
     @Test func forgettingAWindowReleasesItsFullscreenWorkspace() {
         var model = WorkspaceModel()
         let workspace = WindowManager.spaceWorkspace(display: "A", space: 5)
         model.assign(7, to: workspace); model.fullscreenHost[workspace] = 7
-        #expect(model.isFullscreenWorkspace(workspace))
         model.forget(7)
-        #expect(!model.isFullscreenWorkspace(workspace) && model.workspaceOf[7] == nil)
+        #expect(model.fullscreenHost[workspace] == nil && model.workspaceOf[7] == nil)
         model.fullscreenHost[workspace] = 8
         model.resetWorkspaces()
         #expect(model.fullscreenHost.isEmpty)

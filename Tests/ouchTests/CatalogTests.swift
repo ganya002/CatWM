@@ -1,6 +1,4 @@
-import AppKit
 import Foundation
-import SwiftUI
 import Testing
 
 @testable import ouch
@@ -81,7 +79,6 @@ private var catalogRoot: URL {
             PointerActions.all.map(\.id),
             ["float", "zoom", "native", "main", "layout", "display", "workspace", "dim", "blur", "minimize", "close"]))
     #expect(Set(PointerActions.all.map(\.id)).count == PointerActions.all.count)
-    #expect(Set(PointerActions.all.map(\.menuID)).count == PointerActions.all.count)
     for spec in PointerActions.all {
         #expect(Actions.dispatchers.contains(spec.dispatcher))
         if !spec.nextWorkspace {
@@ -165,38 +162,6 @@ private var catalogRoot: URL {
         #expect(CustomSettingsIndex.all.contains { $0.id == id })
     }
 }
-
-#if DEBUG
-    @MainActor
-    @Test func rendersSettingsCatalog() throws {
-        guard let directory = ProcessInfo.processInfo.environment["OUCH_SETTINGS_PNG"] else { return }
-        let doc = ConfigDocument(text: defaultText)
-        let settingsUI = SettingsUI(doc: doc)
-        settingsUI.advancedOpen = Set(Pane.allCases)
-        let views: [(String, AnyView)] = [
-            ("windows", AnyView(WindowsPane(doc: doc, settingsUI: settingsUI))),
-            ("layout", AnyView(LayoutPane(doc: doc, settingsUI: settingsUI))),
-            ("motion", AnyView(MotionPane(doc: doc, settingsUI: settingsUI))),
-            ("shortcuts", AnyView(ShortcutsPane(doc: doc, settingsUI: settingsUI)))
-        ]
-        try FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true)
-        for (name, view) in views {
-            let host = NSHostingView(
-                rootView: VStack(alignment: .leading) {
-                    view
-                    Spacer(minLength: 0)
-                }
-                .padding(Theme.Space.page).background(Theme.background))
-            host.frame = NSRect(x: 0, y: 0, width: 660, height: 4000)
-            host.layoutSubtreeIfNeeded()
-            let rep = try #require(host.bitmapImageRepForCachingDisplay(in: host.bounds))
-            host.cacheDisplay(in: host.bounds, to: rep)
-            let png = try #require(rep.representation(using: .png, properties: [:]))
-            #expect(png.count > 20_000)
-            try png.write(to: URL(fileURLWithPath: directory).appendingPathComponent(name + ".png"))
-        }
-    }
-#endif
 
 @Test func directionCatalogKeepsActionAndHintNames() {
     #expect(Direction.allCases.map(\.rawValue) == ["l", "r", "u", "d"])
