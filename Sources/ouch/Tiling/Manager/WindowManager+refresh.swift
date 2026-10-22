@@ -114,8 +114,9 @@ extension WindowManager {
                 continue
             }
             for id in scan.listed {
+                let maximised = scan.fullscreen.contains(id)
                 guard !workspaceMoves.contains(id),
-                      managed(id) || (onScreenIDs.contains(id) && !onOtherSpace(id)) else {
+                      maximised || managed(id) || (onScreenIDs.contains(id) && !onOtherSpace(id)) else {
                     continue
                 }
                 if let window = windows[id] {
@@ -127,13 +128,13 @@ extension WindowManager {
                 guard let found = scan.found[id], !found.frame.isNull else { continue }
                 let window = Window(id: id, element: found.element, pid: pid, bundleID: app.bundleID)
                 accept(found, from: scan, for: window)
-                window.naturalFrame = found.frame
-                window.autoFloating = shouldFloat(window, title: found.title, resizable: found.resizable)
+                if !maximised { window.naturalFrame = found.frame }
+                window.autoFloating = shouldFloat(window, title: found.title, resizable: found.resizable || maximised)
                 observed.titles[id] = found.title
                 windows[id] = window
                 watch(window)
                 observed.fresh.append(window)
-                if onScreenIDs.contains(id) { observed.present.insert(id) }
+                if onScreenIDs.contains(id), !maximised { observed.present.insert(id) }
             }
         }
         return observed
