@@ -17,7 +17,7 @@ enum DesktopMenuBarCover {
     private static let captureWindows: CaptureWindows? = symbol("SLSHWCaptureWindowListInRect")
 
     static func prepare() {
-        guard CGPreflightScreenCaptureAccess(), let captureImage else { return }
+        guard Permission.screenRecording.isGranted, let captureImage else { return }
         let display = CGMainDisplayID()
         DispatchQueue.global(qos: .userInteractive).async {
             _ = captureImage(display, CGRect(x: 0, y: 0, width: 1, height: 1))?.takeRetainedValue()
@@ -83,7 +83,7 @@ enum DesktopMenuBarCover {
 
     @MainActor private static func image(on screen: Screen) -> Task<CGImage?, Never>? {
         let height = menuHeight(screen)
-        guard height > 0, CGPreflightScreenCaptureAccess(), let captureImage else { return nil }
+        guard height > 0, Permission.screenRecording.isGranted, let captureImage else { return nil }
         let id = screen.id, rect = CGRect(x: 0, y: 0, width: screen.frame.width, height: height)
         let global = rect.offsetBy(dx: screen.frame.minX, dy: screen.frame.minY)
         return Task.detached(priority: .userInitiated) {

@@ -14,8 +14,6 @@ enum TemplateScreenshot {
     }
 
     private static func take() async -> Data? {
-        let allowed = await MainActor.run { CGPreflightScreenCaptureAccess() || CGRequestScreenCaptureAccess() }
-        guard allowed else { return nil }
         do {
             let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
             guard let display = content.displays.first(where: { $0.displayID == CGMainDisplayID() })

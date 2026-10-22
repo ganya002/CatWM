@@ -47,6 +47,11 @@ struct WelcomeView: View {
                 permission(PermissionItem(granted: model.inputMonitoring, symbol: "keyboard", title: "Input Monitoring",
                                           required: false, detail: "Makes Caps Lock shortcuts instant", primary: false,
                                           action: model.allowInputMonitoring))
+                permission(PermissionItem(granted: model.screenRecording, symbol: "record.circle",
+                                          title: "Screen Recording", required: false,
+                                          detail: "Takes a picture of each saved template", primary: false,
+                                          action: model.allowScreenRecording,
+                                          test: model.screenTestDone ? nil : model.takeTestImage))
                 permission(PermissionItem(granted: model.login, symbol: "power", title: "Open at login",
                                           required: false, detail: "Starts CatWM when you log in", primary: false,
                                           action: model.allowLogin))
@@ -72,6 +77,7 @@ struct WelcomeView: View {
         let detail: String
         let primary: Bool
         let action: () -> Void
+        var test: (() -> Void)?
     }
 
     private func permission(_ item: PermissionItem) -> some View {
@@ -92,7 +98,10 @@ struct WelcomeView: View {
             }
             Spacer(minLength: 0)
             ZStack(alignment: .leading) {
-                if granted {
+                if granted, let test = item.test {
+                    OButton("Test Image", size: .small, action: test)
+                        .tooltip("Takes one image so macOS asks now, not later")
+                } else if granted {
                     OStatus(kind: .success, text: symbol == "power" ? "On" : "Granted")
                         .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 } else {
