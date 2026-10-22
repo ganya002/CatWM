@@ -192,7 +192,8 @@ extension WindowManager {
     func shouldFloat(_ window: Window, title: String?, resizable: Bool) -> Bool {
         if let practice, window.pid == practice.pid { return false }
         if let bundle = window.bundleID,
-           bundle == Bundle.main.bundleIdentifier || bundle.hasPrefix("local.ouch") || bundle == "local.hyprthyst" {
+           bundle == Bundle.main.bundleIdentifier || bundle.hasPrefix("local.catwm")
+            || bundle.hasPrefix("local.ouch") || bundle == "local.hyprthyst" {
             return true
         }
         if let bundle = window.bundleID, Self.alwaysFloatingApps.contains(bundle) { return true }

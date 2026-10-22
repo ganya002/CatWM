@@ -5,6 +5,10 @@
     "compatibility_date": "2026-02-24",
     "routes": [
       {
+        "pattern": "catwm.perwko.com",
+        "custom_domain": true
+      },
+      {
         "pattern": "ouch.perwko.com",
         "custom_domain": true
       }
@@ -15,21 +19,25 @@
   "resolved": {
     "account_id": "865dded96630ca6a533584a80efad356",
     "compatibility_date": "2026-02-24",
-    "kv_namespaces": [
-      {
-        "binding": "KV",
-        "id": "2e57628adcf34aacbe7bc8b9bfe6a0e1"
-      }
-    ],
-    "name": "ouch-website",
     "routes": [
+      {
+        "pattern": "catwm.perwko.com",
+        "custom_domain": true
+      },
       {
         "pattern": "ouch.perwko.com",
         "custom_domain": true
       }
     ],
     "workers_dev": false,
-    "preview_urls": true
+    "preview_urls": true,
+    "kv_namespaces": [
+      {
+        "binding": "KV",
+        "id": "2e57628adcf34aacbe7bc8b9bfe6a0e1"
+      }
+    ],
+    "name": "ouch-website"
   },
-  "text": "// void:published-traffic:v1:eyJ3b3JrZXJzX2RldiI6ZmFsc2UsInByZXZpZXdfdXJscyI6dHJ1ZSwicm91dGVzIjpbeyJwYXR0ZXJuIjoib3VjaC5wZXJ3a28uY29tIiwiY3VzdG9tX2RvbWFpbiI6dHJ1ZX1dfQ\n{\n  \"account_id\": \"865dded96630ca6a533584a80efad356\",\n  \"compatibility_date\": \"2026-02-24\",\n  \"kv_namespaces\": [\n    {\n      \"binding\": \"KV\",\n      \"id\": \"2e57628adcf34aacbe7bc8b9bfe6a0e1\"\n    }\n  ],\n  \"name\": \"ouch-website\",\n  \"routes\": [\n    {\n      \"pattern\": \"ouch.perwko.com\",\n      \"custom_domain\": true\n    }\n  ],\n  \"workers_dev\": false,\n  \"preview_urls\": true\n}\n"
+  "text": "// void:published-traffic:v1:eyJ3b3JrZXJzX2RldiI6ZmFsc2UsInByZXZpZXdfdXJscyI6dHJ1ZSwicm91dGVzIjpbeyJwYXR0ZXJuIjoiY2F0d20ucGVyd2tvLmNvbSIsImN1c3RvbV9kb21haW4iOnRydWV9LHsicGF0dGVybiI6Im91Y2gucGVyd2tvLmNvbSIsImN1c3RvbV9kb21haW4iOnRydWV9XX0\n{\n  \"account_id\": \"865dded96630ca6a533584a80efad356\",\n  \"compatibility_date\": \"2026-02-24\",\n  \"routes\": [\n    {\n      \"pattern\": \"catwm.perwko.com\",\n      \"custom_domain\": true\n    },\n    {\n      \"pattern\": \"ouch.perwko.com\",\n      \"custom_domain\": true\n    }\n  ],\n  \"workers_dev\": false,\n  \"preview_urls\": true,\n  \"kv_namespaces\": [\n    {\n      \"binding\": \"KV\",\n      \"id\": \"2e57628adcf34aacbe7bc8b9bfe6a0e1\"\n    }\n  ],\n  \"name\": \"ouch-website\"\n}\n"
 }

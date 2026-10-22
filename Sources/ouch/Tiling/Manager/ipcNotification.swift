@@ -1,3 +1,3 @@
 import AppKit
 
-let ipcNotification = Notification.Name("local.ouch.command")
+let ipcNotification = Notification.Name("local.catwm.command")

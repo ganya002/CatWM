@@ -23,7 +23,7 @@ enum Permission: CaseIterable {
 
     func reset() {
         Process.runTool("/usr/bin/tccutil", ["reset", self == .accessibility ? "Accessibility" : "ListenEvent",
-                                             Bundle.main.bundleIdentifier ?? "local.ouch"])
+                                             Bundle.main.bundleIdentifier ?? "local.catwm"])
         PermissionGuide.shared.show(self)
     }
 

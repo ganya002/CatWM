@@ -3,6 +3,7 @@ import {
   Links,
   Meta,
   Outlet,
+  redirect,
   Scripts,
   ScrollRestoration,
 } from "react-router";
@@ -13,22 +14,33 @@ import "./app.css";
 export const links: Route.LinksFunction = () => [
   { rel: "icon", type: "image/svg+xml", href: "/icon.svg" },
   { rel: "apple-touch-icon", href: "/icon.png" },
+  { rel: "preconnect", href: "https://cdn.fontshare.com", crossOrigin: "anonymous" },
+  { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
   {
     rel: "stylesheet",
-    href: "https://api.fontshare.com/v2/css?f[]=general-sans@600&f[]=gambetta@400&f[]=amulya@700&f[]=synonym@400&f[]=excon@500&f[]=ranade@300&f[]=supreme@400&display=swap",
+    href: "https://api.fontshare.com/v2/css?f[]=pilcrow-rounded@600,700&display=swap",
   },
   {
     rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=Nunito:wght@800&family=Poppins:wght@600&family=Hind:wght@400&display=swap",
+    href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap",
   },
 ];
 
-// Font pair to try: 1 General Sans + Gambetta, 2 Amulya + Synonym, 3 Excon + Ranade, 4 Nunito + Supreme, 5 Poppins + Hind.
-const FONT_PAIR = 4;
+const OLD_HOST = "ouch.perwko.com";
+const HOST = "catwm.perwko.com";
+
+export function loader({ request }: Route.LoaderArgs) {
+  const url = new URL(request.url);
+  if (url.hostname === OLD_HOST) {
+    url.hostname = HOST;
+    throw redirect(url.toString(), 301);
+  }
+  return null;
+}
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-pair={FONT_PAIR}>
+    <html lang="en">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />

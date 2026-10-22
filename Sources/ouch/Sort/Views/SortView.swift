@@ -21,7 +21,11 @@ struct SortView: View {
             footer(plan)
         }
         .frame(width: width - 40)
-        .surface(.large, glass: true)
+        .padding(Density.large.padding)
+        .background {
+            let shape = RoundedRectangle(cornerRadius: Density.large.radius, style: .continuous)
+            shape.fill(Theme.surface).elevation(.float, in: shape)
+        }
         .panelEntrance(model.shown, style: model.motion)
         .padding(Self.inset)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -105,7 +109,7 @@ struct SortView: View {
         }
         .padding(.vertical, 8).padding(.horizontal, 4)
         .frame(width: SortMetrics.lane, alignment: .topLeading)
-        .background(shape.fill(over ? Theme.dangerSoft : .clear))
+        .background(shape.fill(over ? Theme.dangerSoft : Theme.surfaceRaised))
         .animation(Motion.fadeMedium, value: over)
         .zone(.close)
         .padding(.leading, 4).padding(.trailing, 8)

@@ -21,4 +21,4 @@ Read in this order:
 - The Settings window rewrites `ouch.conf`. Comments and layout may change after the user edits settings in the UI.
 - CatWM needs the **Accessibility** permission. Without it nothing is tiled and no keybinds work.
 - Default `$mod` is Option (`ALT`), not Command, so app shortcuts keep working.
-- CatWM was previously named Hyprthyst (bundle ID `local.hyprthyst`), then Ouch; settings are migrated once. The current bundle ID is `local.ouch`.
+- CatWM was previously named Hyprthyst (bundle ID `local.hyprthyst`), then Ouch; settings are migrated once. The bundle ID was `local.ouch`, and is now `local.catwm`.

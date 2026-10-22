@@ -18,7 +18,7 @@ struct SortFullscreenLane: View {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Image(systemName: "arrow.up.left.and.arrow.down.right")
                     .font(Theme.symbol(Theme.Icon.extraLarge, .regular))
-                    .foregroundStyle(Theme.accentInk).fixedSize()
+                    .foregroundStyle(Theme.inkMuted).fixedSize()
                 Text(item.app).font(Theme.heading()).foregroundStyle(Theme.ink).oneLine()
             }
             .padding(.horizontal, 4)
@@ -38,7 +38,7 @@ struct SortFullscreenLane: View {
                     .padding(.leading, 5).padding(.trailing, 8)
                     .frame(height: SortMetrics.rowHeight)
                     .background(RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
-                        .fill(lit ? Theme.accentSoft : .clear))
+                        .fill(lit ? Theme.hover : .clear))
                     .contentShape(Rectangle())
                     .onHover { inside in
                         if inside {
@@ -59,6 +59,7 @@ struct SortFullscreenLane: View {
         }
         .padding(.vertical, 8).padding(.horizontal, 4)
         .frame(width: SortMetrics.lane, alignment: .topLeading)
+        .background(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous).fill(Theme.surfaceRaised))
         .opacity(model.drag?.id == item.id ? 0.3 : 1)
     }
 }
