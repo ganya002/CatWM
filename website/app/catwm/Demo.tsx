@@ -66,9 +66,13 @@ export function Demo({ card }: { card: Card }) {
         </g>
       </svg>
       {scene.key && (
-        <kbd className="demo__key" key={`${index}-key`}>
-          {scene.key}
-        </kbd>
+        <div className="demo__key" key={`${index}-key`}>
+          {Array.from(scene.key).map((cap, i) => (
+            <kbd key={i} className="demo__cap">
+              {cap.toUpperCase()}
+            </kbd>
+          ))}
+        </div>
       )}
       {scene.typed && (
         <code className="demo__typed" key={`${index}-typed`}>

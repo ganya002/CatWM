@@ -1,8 +1,8 @@
 import { useState } from "react";
 
-import { Cards } from "../catwm/Cards";
-import { Cat } from "../catwm/Cat";
-import { Stage } from "../catwm/Stage";
+import { Cards } from "~/catwm/Cards.tsx";
+import { Cat } from "~/catwm/Cat";
+import { Stage } from "~/catwm/Stage";
 
 const SITE = "https://catwm.perwko.com";
 const INSTALL = "curl -fsSL https://catwm.perwko.com/install.sh | sh -s -- --beta";
@@ -81,10 +81,7 @@ function Last() {
   return (
     <>
       <h2 className="card__title">Public release soon.</h2>
-      <Install />
-      <a href="https://github.com/noxaur/ouch" className="pill pill--link">
-        GitHub
-      </a>
+      <Install cta />
     </>
   );
 }
