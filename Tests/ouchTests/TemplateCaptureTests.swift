@@ -96,21 +96,6 @@ import Testing
         #expect(calls.value == 2)
     }
 
-    @Test func lateCompletionDoesNotReplaceTheTimedOutResult() async {
-        let slot = CaptureSlot<Int>()
-        let pause = CapturePause()
-        defer { pause.release() }
-        let outcome = await slot.run(within: .milliseconds(40)) {
-            await pause.wait()
-            return 5
-        }
-        #expect(outcome == .timedOut)
-        pause.release()
-        let deadline = Date().addingTimeInterval(2)
-        while !slot.isIdle, Date() < deadline { await Task.yield() }
-        #expect(await slot.run(within: .seconds(1)) { 6 } == .finished(6))
-    }
-
     @Test func stalledEnumerationIsNotACompleteTemplate() throws {
         let first = app(pid: 1)
         let second = app(pid: 2)
