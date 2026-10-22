@@ -1,4 +1,4 @@
-name = "ouch-report-relay"
+name = "catwm-report-relay"
 main = "worker.js"
 compatibility_date = "2025-09-01"
 

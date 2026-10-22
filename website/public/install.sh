@@ -6,10 +6,10 @@ case "${1:-}" in
   "") ;;
   *) echo "Unknown option: $1 (use --beta)" >&2; exit 1 ;;
 esac
-FEED=https://api.amore.computer/v1/apps/local.ouch/appcast.xml
-DEST=/Applications/Ouch.app
+FEED=https://api.amore.computer/v1/apps/local.catwm/appcast.xml
+DEST=/Applications/CatWM.app
 
-[ "$(uname)" = Darwin ] || { echo "Ouch needs macOS." >&2; exit 1; }
+[ "$(uname)" = Darwin ] || { echo "CatWM needs macOS." >&2; exit 1; }
 
 URL=$(curl -fsSL "$FEED" | awk -v want="$CHANNEL" '
   /<item>/ { chan = ""; url = "" }
@@ -26,13 +26,13 @@ fi
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 echo "Downloading $URL"
-curl -fL --progress-bar -o "$TMP/Ouch.zip" "$URL"
-ditto -x -k "$TMP/Ouch.zip" "$TMP/out"
+curl -fL --progress-bar -o "$TMP/CatWM.zip" "$URL"
+ditto -x -k "$TMP/CatWM.zip" "$TMP/out"
 APP=$(find "$TMP/out" -maxdepth 2 -name '*.app' | head -1)
 [ -n "$APP" ] || { echo "No app found in the download." >&2; exit 1; }
 
 pkill -x ouch 2>/dev/null || true
-rm -rf "$DEST"
+rm -rf /Applications/Ouch.app "$DEST"
 ditto "$APP" "$DEST"
 xattr -dr com.apple.quarantine "$DEST" 2>/dev/null || true
 echo "Installed $DEST"
