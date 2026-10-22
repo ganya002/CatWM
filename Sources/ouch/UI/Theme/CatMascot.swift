@@ -17,12 +17,14 @@ struct CatMoves: Equatable {
 struct CatMascot: View {
     var feeling: CatFeeling
     var moves: CatMoves
+    var look: CGVector?
     @State private var puppet: CatPuppet
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    init(feeling: CatFeeling = .content, moves: CatMoves = CatMoves()) {
+    init(feeling: CatFeeling = .content, moves: CatMoves = CatMoves(), look: CGVector? = nil) {
         self.feeling = feeling
         self.moves = moves
+        self.look = look
         _puppet = State(initialValue: CatPuppet(feeling: feeling, at: Date.now.timeIntervalSinceReferenceDate))
     }
 
@@ -39,6 +41,7 @@ struct CatMascot: View {
         .aspectRatio(CatShape.aspectRatio, contentMode: .fit)
         .onChange(of: feeling) { _, next in puppet.show(next, at: Date.now.timeIntervalSinceReferenceDate) }
         .onChange(of: moves) { _, next in puppet.play(next.move, at: Date.now.timeIntervalSinceReferenceDate) }
+        .onChange(of: look) { _, next in puppet.gaze = next }
         .accessibilityHidden(true)
     }
 }

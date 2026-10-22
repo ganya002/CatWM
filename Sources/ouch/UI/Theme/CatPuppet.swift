@@ -8,6 +8,9 @@ struct CatFrame {
 
 final class CatPuppet {
     var idleBlinks = true
+    var gaze: CGVector?
+    private var gazeValue = CGVector.zero
+    private var lastFrame: Double?
     private(set) var feeling: CatFeeling
     private let born: Double
     private var from: CatPose, transitionStart: Double?
@@ -46,6 +49,13 @@ final class CatPuppet {
             nextBlink = now + Double.random(in: 2.4...6.2)
         }
         var motion = CatMotion.idle(at: now - born)
+        let step = min(0.05, now - (lastFrame ?? now))
+        lastFrame = now
+        let target = gaze ?? .zero, ease = 1 - exp(-step * 14)
+        gazeValue.dx += (target.dx - gazeValue.dx) * ease
+        gazeValue.dy += (target.dy - gazeValue.dy) * ease
+        motion.lookX += gazeValue.dx
+        motion.lookY += gazeValue.dy
         if let move, now - moveStart < move.duration {
             let played = move.motion(at: now - moveStart)
             motion.lift = played.lift

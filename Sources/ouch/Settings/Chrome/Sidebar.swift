@@ -6,20 +6,43 @@ struct Sidebar: View {
     @ObservedObject var settingsUI: SettingsUI
     var searchFocused: FocusState<Bool>.Binding
     @ObservedObject private var library = SettingsWindow.shared.library
+    @StateObject private var gaze = Gaze()
+
+    final class Gaze: ObservableObject {
+        @Published var look: CGVector?
+    }
 
     private var version: String { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "" }
 
-    private var feeling: CatFeeling {
+    private var mood: (feeling: CatFeeling, color: Color) {
         let status = settingsUI.status
-        if !status.trusted || !status.keybindsActive { return .alert }
-        return status.tilingEnabled ? .content : .sleepy
+        if doc.saveError != nil { return (.sad, Theme.danger) }
+        if !status.trusted || !status.keybindsActive { return (.alert, Theme.warning) }
+        if doc.problemCount > 0 { return (.annoyed, Theme.warning) }
+        if !status.tilingEnabled { return (.sleepy, Theme.inkMuted) }
+        return (.content, Theme.ink)
+    }
+
+    private static let catCentre = CGPoint(x: 40, y: SettingsWindow.titlebarHeight + 28)
+
+    private func watch(_ phase: HoverPhase) {
+        switch phase {
+        case .active(let point):
+            let dx = max(-1, min(1, (point.x - Self.catCentre.x) / 90))
+            let dy = max(-1, min(1, (point.y - Self.catCentre.y) / 70))
+            gaze.look = CGVector(dx: dx * 0.8, dy: dy * 0.5)
+        case .ended:
+            gaze.look = nil
+        }
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Color.clear.frame(height: SettingsWindow.titlebarHeight)
             HStack(spacing: 10) {
-                CatMascot(feeling: feeling).frame(height: 56).foregroundStyle(Theme.ink)
+                CatMascot(feeling: mood.feeling, look: gaze.look).frame(height: 56)
+                    .foregroundStyle(mood.color)
+                    .animation(Motion.fadeMedium, value: mood.color)
                 Wordmark()
             }
             .padding(.leading, 6).padding(.bottom, 16)
@@ -52,6 +75,7 @@ struct Sidebar: View {
             .padding(.leading, 12).padding(.top, 6)
         }
         .padding(.horizontal, 12).padding(.bottom, 14)
+        .onContinuousHover(coordinateSpace: .local, perform: watch)
     }
 
     private func badge(_ pane: Pane) -> SideItem.Badge? {

@@ -31,9 +31,9 @@ A change to a token or a component rule is not finished until `Sources/ouch/UI/T
 
 One palette, `Palette.catwm`, with a light and a dark theme. It comes from the CatWM brand: a black ground with white type in the dark theme, a white ground with black type in the light theme, and sky as the one accent. The four brand hues (sky, lemon, magenta, lime) are for the website and the brand sheet. Only sky enters the app. Components read semantic tokens only.
 
-- Paint window chrome with `background`. Put the content pane on `surface`. Float menus and tips on `surfaceRaised` (or `glass` where Liquid Glass is not available).
+- Paint window chrome with `background`. Put the content pane on `surface`. Float menus, dropdowns and tips on `surfaceRaised`, flat, with the `popover` elevation. Only the HUD uses glass.
 - Text is `ink`. Secondary text is `inkMuted`. Placeholders are `inkFaint`. Every pair meets 4.5:1 in both themes.
-- Sky is the accent. Use `accent` for one thing per view: the primary button, the switch that is on, the current workspace, the progress bar, the selected layout. Its text is `onAccent`, black in both themes. Accent-coloured text uses `accentInk`, which is darker in the light theme so it meets 4.5:1. Everything else is neutral.
+- Sky is the accent. Use `accent` for one thing per view: the primary button, the switch that is on, the current workspace, the progress bar, the selected layout, a drop target. Its text is `onAccent`, black in both themes. Accent-coloured text uses `accentInk`, which is darker in the light theme so it meets 4.5:1. Everything else is neutral: row symbols, step numbers, workspace numbers in the overview, group titles and page titles are `ink` or `inkMuted`. A selected pill (a rail page, a modifier layer in the shortcut map) is `ink` with `background` text, never `accent`.
 - A hovered or highlighted row is a `hover` fill. Its text keeps its colour. Hover and keyboard highlight never use `accent`.
 - A selected rail item is an `ink` pill with `background` text: white on black in the dark theme, black on white in the light theme. Other items are `inkMuted` text and get a `surface` pill on hover. Rail items have no symbols.
 - Tour cards are plain raised surfaces. They are not filled with `accent`.
@@ -49,7 +49,7 @@ One palette, `Palette.catwm`, with a light and a dark theme. It comes from the C
 - `numeral` 34, weight 300, in `inkMuted`. Step numbers.
 - `title` 22/27, Pilcrow Rounded Semibold. Tour cards, pane titles, the HUD.
 - `heading` 15/20, Pilcrow Rounded Semibold. Group titles in Settings (`sectionTitle`) use it in `ink`. `body` 13.5/19, system font at 400. `body-medium` is `body` at 500. `caption` 12/16. `label` 12/16, weight 500.
-- `kbd` is Pilcrow Rounded Semibold through `Theme.keys`. The face has no modifier glyphs, so the font cascades to the system font for ⌘ ⇧ ⌥ ⌃ ⇥ ↩. `kicker` and `code` use the mono face. `kicker` is the only uppercase text: "STEP 2 OF 6".
+- `kbd` is Pilcrow Rounded Semibold through `Theme.keys`. The face has no modifier glyphs, so the font cascades to the system font for ⌘ ⇧ ⌥ ⌃ ⇥ ↩. `kicker` is Pilcrow Rounded Semibold 12 in `inkMuted`, tracking 0.05 em, and the only uppercase text: "STEP 2 OF 6". `code` uses the mono face.
 
 Labels, captions, buttons, keys and menu rows never wrap. They are one line and truncate with an ellipsis (`.oneLine()`). Only body prose wraps. Keep it to two lines in floating surfaces.
 
@@ -98,7 +98,7 @@ Each entry gives the design intent. The Swift type is in brackets.
 
 **Segmented** [`OSegmented`]. Picks one of two to four options with a sliding thumb. For more than four, use a menu submenu or the layout thumbnail grid.
 
-**Slider** [`OSlider`, `OBarSlider`, `OKnob`]. Sets a number by dragging. `OSlider` has a thin track and a thumb. `OBarSlider` is a pill whose fill is the indicator.
+**Slider** [`OSlider`, `OBarSlider`, `OKnob`]. Sets a number by dragging. `OSlider` has a thin track and a thumb; its value reads at the trailing edge, and nothing floats above the thumb, so it never clips. `OBarSlider` is a pill whose fill is the indicator.
 - A press without movement jumps to the press point and springs there. A drag on the line follows the pointer. A drag on the bar is relative to the grab point, so it never jumps.
 - Only the value rounds to `step`. The fill follows the pointer.
 - Hold Option while dragging for a tenth of the speed.
@@ -114,18 +114,21 @@ Each entry gives the design intent. The Swift type is in brackets.
 
 **Template save row** [`TemplateSaveRow`]. Cursor actions show a name field beside Save and Cancel. Return saves the template. Escape returns to the action list. The menu receives text input while the field is present. Saving does not open Settings. Hovering a saved template replaces its number with an X. Clicking the X deletes the template and keeps the menu open.
 
-**Kbd** [`Kbd`]. Keycaps for a shortcut, a chord or a sequence. Small keycaps (20 pt) go in tooltips, labels and buttons. Menu rows use plain `kbd` text. Medium keycaps (30 pt, raised) go in onboarding key pickers and summaries. Large keycaps (40 pt) go only in coach marks, where the real key press fills them with `accent` and sinks them 2 pt. Order modifiers the macOS way: control, option, shift, command, then the key.
+**Kbd** [`Kbd`]. Keycaps for a shortcut, a chord or a sequence. Small keycaps (20 pt, `well`) go in tooltips, labels and buttons. Menu rows use plain `kbd` text. Medium keycaps (30 pt) go in onboarding key pickers and summaries. Large keycaps (40 pt) go only in coach marks, where the real key press fills them with `accent` and sinks them 2 pt. Medium and large keycaps are flat `surfaceRaised` tiles, with no shadow and no bottom edge. Order modifiers the macOS way: control, option, shift, command, then the key.
 
 **Tooltip** [`OTooltip`, `Tooltip`]. The smallest surface (`extraSmall`). One short phrase in sentence case, with no full stop. Never a button inside. Every icon-only button gets one. A shortcut is one chord at most. It points at its target with a small caret.
 
-**Menu** [`Popup`, `OMenuRow`, `OMenuButton`, `OMenuPicker`]. A dropdown with groups, checks, radios, switches, inline controls and nested submenus, with type-to-search.
-- The status menu root holds five rows: search, Layout, Workspaces, Settings and Help, then the footer with the version and Quit. The workspace strip, Bring Window Here, What's New and the tutorial live one level down, in Workspaces and Help. Search finds them all.
+**Menu** [`Popup`, `OMenuRow`, `OMenuButton`, `OMenuPicker`]. A dropdown with groups, checks, radios, switches, inline controls and nested submenus, with type-to-search. The picker button is an outlined pill (`borderControl`) with the current value in `body-medium` and the up-down chevron.
+- Menu rows carry no symbols. The lead column holds only a check, a radio dot or an app icon. A notification dot sits after the label.
+- The status menu root holds five rows: search, Layout, Workspaces, Settings and Help, then the footer with the version and Quit. The search row is a `well` row at the top. The workspace strip, Bring Window Here, What's New and the tutorial live one level down, in Workspaces and Help. Search finds them all.
 - Nest one level, two at most. Put the current choice of a radio group in the parent row's value.
 - Every actionable row shows its shortcut.
 - Give hidden aliases to commands that live inside a custom control, so search still finds them.
 - Arrow keys, return and escape work. Typing focuses search.
 
-**Settings window** [`SettingsView`, `Sidebar`, `SideItem`, `PaneHost`]. 880 by 620 pt by default, at least 760 by 520, at the normal window level, so it never floats above other windows. The rail is 196 pt: the animated cat mascot at 56 pt beside the 26 pt wordmark, then the search field, then the pages as text pills. The cat is `content` while CatWM runs, `sleepy` while tiling is paused and `alert` while Accessibility or the event tap is missing. The pane shows the page title in `title`, then the groups. The status line at the top of General appears only when Accessibility or the event tap is missing. The only floating pill over the pane carries a save error, the shortcut problem count or skipped config lines.
+**Welcome card and intro** [`WelcomeView`, `WordmarkView`]. The welcome card opens with the cat mascot at 72 pt, not the app icon, above the `display` title. Permission rows use `inkMuted` symbols and the page dots are `ink`. The intro wordmark is the lockup: the cat beside the wordmark, both white, with the tagline below.
+
+**Settings window** [`SettingsView`, `Sidebar`, `SideItem`, `PaneHost`]. 880 by 620 pt by default, at least 760 by 520, at the normal window level, so it never floats above other windows. The rail is 196 pt: the animated cat mascot at 56 pt beside the 26 pt wordmark, then the search field, then the pages as text pills. The cat follows the cursor with its eyes while the cursor is over the rail. Its feeling and colour report the state: `content` in `ink` while CatWM runs, `sleepy` in `inkMuted` while tiling is paused, `annoyed` in `warning` while a shortcut has a problem, `alert` in `warning` while Accessibility or the event tap is missing, and `sad` in `danger` when the config cannot be saved. The pane shows the page title in `title`, then the groups. The status line at the top of General appears only when Accessibility or the event tap is missing. The only floating pill over the pane carries a save error, the shortcut problem count or skipped config lines.
 
 **Command menu**. A menu that opens with the search field first, 360 pt wide. Results group under their top-level parent and show the rest of the path as a breadcrumb. It shares its data with the menu so the two never disagree.
 
