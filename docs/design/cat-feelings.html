@@ -10,7 +10,9 @@
   html, body { margin: 0; height: 100%; background: var(--paper); color: var(--ink); font: 15px/1.4 -apple-system, "Hanken Grotesk", Helvetica, sans-serif; }
   main { min-height: 100%; display: grid; place-items: center; grid-template-rows: 1fr auto; padding: 24px 16px; box-sizing: border-box; }
   svg { width: min(70vmin, 512px); height: auto; cursor: pointer; }
-  #label { color: var(--muted); letter-spacing: .08em; text-transform: uppercase; font-size: 12px; min-height: 1.4em; }
+  #label { color: var(--muted); letter-spacing: .08em; text-transform: uppercase; font-size: 12px; min-height: 1.4em; transition: opacity .16s ease, transform .16s ease; }
+  #label.out { opacity: 0; transform: translateY(3px); }
+  @media (prefers-reduced-motion: reduce) { #label { transition: none; } }
 </style>
 </head>
 <body>
@@ -29,47 +31,220 @@
   <div id="label"></div>
 </main>
 <script>
-// Each eye: cx, cy, tilt (deg, screen coords), chord, rise (bow up > 0), stroke width.
-const E = {
-  content:  { l: [256,173,-11,42, 9,13], r: [348,191, 19,40, 9,13], hold: 2200 },
-  blink:    { l: [256,175,-11,34, 0,13], r: [348,193, 19,32, 0,13], hold: 110, ease: 90 },
-  alert:    { l: [258,168,  0, 0, 0,24], r: [352,186,  0, 0, 0,24], hold: 1600 },
-  sad:      { l: [256,178,-24,40,-8,13], r: [348,196, 28,38,-8,13], hold: 2000 },
-  annoyed:  { l: [256,176, 24,40, 0,13], r: [350,190, -6,40, 0,13], hold: 2000 },
-  sleepy:   { l: [256,184, -4,40, 4,13], r: [348,198, 10,38, 4,13], hold: 1800 },
-  shut:     { l: [256,186, -4,38, 0,13], r: [348,199, 10,36, 0,13], hold: 900, ease: 600 },
+// ─── Feelings: edit this part ─────────────────────────────────────────────
+// URL: ?pose=sad shows one pose, still (for screenshots). ?speed=0.25 plays in slow motion.
+// Console: cat.to('sad'), cat.blink(), cat.blink({ double: true }).
+
+// Each eye is an arc: centre x/y, tilt (deg, screen coords), chord, rise (bow up > 0), stroke width.
+// A pose lists only the fields that differ from BASE. A field is one number for both eyes, or [left, right].
+const BASE = { x: [256, 348], y: [173, 191], tilt: [-11, 19], chord: [42, 40], rise: 9, width: 13 };
+
+// Pose options: spring (a SPRINGS key), lag (ms the right eye follows the left), blinkSpeed (0 = no idle blinks), label.
+const POSES = {
+  content: {},
+  alert:   { x: [258, 352], y: [168, 186], tilt: 0, chord: 0, rise: 0, width: 24, spring: 'snappy' },
+  sad:     { y: [178, 196], tilt: [-24, 28], chord: [40, 38], rise: -8, lag: 60 },
+  annoyed: { x: [256, 350], y: [176, 190], tilt: [24, -6], chord: 40, rise: 0 },
+  sleepy:  { y: [184, 198], tilt: [-4, 10], chord: [40, 38], rise: 4, spring: 'lazy', blinkSpeed: 2.5 },
+  shut:    { y: [186, 199], tilt: [-4, 10], chord: [38, 36], rise: 0, spring: 'lazy', blinkSpeed: 0, label: 'sleepy' },
 };
-const SEQ = ['content','blink','content','alert','content','sad','content','annoyed','content','sleepy','shut','sleepy','blink'];
-const LABEL = { content:'content', blink:'', alert:'alert', sad:'sad', annoyed:'annoyed', sleepy:'sleepy', shut:'sleepy' };
-const el = { l: document.getElementById('l'), r: document.getElementById('r'), label: document.getElementById('label') };
-function arc([cx, cy, deg, chord, rise, sw]) {
-  const a = deg * Math.PI / 180, ux = Math.cos(a), uy = Math.sin(a), nx = uy, ny = -ux, h = chord / 2;
-  const p = (t, r) => [cx + ux * t + nx * r, cy + uy * t + ny * r];
-  const [x1, y1] = p(-h, 0), [c1x, c1y] = p(-h * .55, rise * 1.33), [c2x, c2y] = p(h * .55, rise * 1.33), [x2, y2] = p(h, 0);
-  return { d: `M ${x1} ${y1} C ${c1x} ${c1y} ${c2x} ${c2y} ${x2} ${y2}`, sw };
+
+// stiffness / damping. Damping below 2·√stiffness overshoots.
+const SPRINGS = {
+  smooth: { stiffness: 170, damping: 26 },
+  snappy: { stiffness: 420, damping: 26 },
+  lazy:   { stiffness: 45,  damping: 13.4 },
+};
+
+// [pose, hold ms]. 'blink' is a step too. Idle blinks happen on their own.
+const SCRIPT = [
+  ['content', 2600],
+  ['alert', 1600],
+  ['content', 1400],
+  ['sad', 2200],
+  ['content', 1400],
+  ['annoyed', 2000],
+  ['content', 1400],
+  ['sleepy', 2000],
+  ['shut', 1400],
+  ['sleepy', 600],
+  ['blink', 500],
+  ['content', 0],
+];
+
+// ─── Engine ───────────────────────────────────────────────────────────────
+const FIELDS = ['x', 'y', 'tilt', 'chord', 'rise', 'width'];
+const DEFAULTS = { spring: 'smooth', lag: 24, blinkSpeed: 1 };
+const SUBSTEP = 1 / 240;
+
+function resolvePose(name) {
+  const spec = { ...DEFAULTS, label: name, ...POSES[name] };
+  const eye = side => Object.fromEntries(FIELDS.map(f => {
+    const v = f in spec ? spec[f] : BASE[f];
+    return [f, Array.isArray(v) ? v[side] : v];
+  }));
+  return { ...spec, name, l: eye(0), r: eye(1), spring: SPRINGS[spec.spring] };
 }
-function draw(pose) {
-  for (const k of ['l', 'r']) { const { d, sw } = arc(pose[k]); el[k].setAttribute('d', d); el[k].setAttribute('stroke-width', sw); }
+
+class Spring {
+  constructor(value) { this.value = this.target = value; this.velocity = 0; }
+  step(dt, { stiffness, damping }) {
+    const a = -stiffness * (this.value - this.target) - damping * this.velocity;
+    this.velocity += a * dt;
+    this.value += this.velocity * dt;
+    if (Math.abs(this.velocity) < 0.005 && Math.abs(this.value - this.target) < 0.005) {
+      this.value = this.target; this.velocity = 0; return false;
+    }
+    return true;
+  }
 }
-const lerp = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
-const easeInOut = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-let i = 0, from = E.content, timer;
-function go(name) {
-  const to = E[name], ms = to.ease ?? 280, t0 = performance.now();
-  el.label.textContent = LABEL[name];
-  cancelAnimationFrame(timer);
-  (function step(now) {
-    const t = easeInOut(Math.min(1, (now - t0) / ms));
-    draw({ l: lerp(from.l, to.l, t), r: lerp(from.r, to.r, t) });
-    if (t < 1) timer = requestAnimationFrame(step); else from = to;
-  })(t0);
-  return to.hold;
+
+// Blink envelope in ms: close, hold, open. Returns lid 0 (open) to 1 (shut).
+const BLINK = { close: 70, hold: 40, open: 140 };
+const smooth = t => t * t * (3 - 2 * t);
+function lidAt(t, s) {
+  const c = BLINK.close * s, h = c + BLINK.hold * s, o = h + BLINK.open * s;
+  if (t < 0 || t >= o) return 0;
+  if (t < c) return smooth(t / c);
+  if (t < h) return 1;
+  return 1 - smooth((t - h) / (o - h));
 }
-let wait;
-function next() { const hold = go(SEQ[i]); i = (i + 1) % SEQ.length; wait = setTimeout(next, hold); }
-const pose = new URLSearchParams(location.search).get('pose');
-if (pose && E[pose]) { draw(E[pose]); el.label.textContent = LABEL[pose]; }
-else { draw(E.content); next(); document.querySelector('svg').addEventListener('click', () => { clearTimeout(wait); next(); }); }
+const blinkLength = s => (BLINK.close + BLINK.hold + BLINK.open) * s;
+
+// A shut lid is a flat line. Mixing toward it works from any pose, a dot included.
+function withLid(e, lid) {
+  if (!lid) return e;
+  const shut = { ...e, y: e.y + 2, chord: Math.max(e.chord, 24) * 0.92, rise: e.rise * -0.15, width: Math.min(e.width, 12) };
+  return Object.fromEntries(FIELDS.map(f => [f, e[f] + (shut[f] - e[f]) * lid]));
+}
+
+function arc({ x, y, tilt, chord, rise }) {
+  const a = tilt * Math.PI / 180, ux = Math.cos(a), uy = Math.sin(a), nx = uy, ny = -ux, h = Math.max(0, chord) / 2;
+  const p = (t, r) => `${(x + ux * t + nx * r).toFixed(2)} ${(y + uy * t + ny * r).toFixed(2)}`;
+  return `M ${p(-h, 0)} C ${p(-h * .55, rise * 1.33)} ${p(h * .55, rise * 1.33)} ${p(h, 0)}`;
+}
+
+function createCat({ paths, speed = 1, reduced = false, idleBlinks = true, onPose }) {
+  let pose = resolvePose('content');
+  const eyes = { l: {}, r: {} };
+  for (const k of ['l', 'r']) for (const f of FIELDS) eyes[k][f] = new Spring(pose[k][f]);
+
+  let clock = 0, last = 0, raf = 0, idleTimer = 0;
+  let pending = [];  // { at, side, values }: delayed targets for the right eye
+  let blinks = [];   // { at, s }
+
+  function retarget(side, values) { for (const f of FIELDS) eyes[side][f].target = values[f]; }
+
+  function render() {
+    const lid = blinks.reduce((m, b) => Math.max(m, lidAt(clock - b.at, b.s)), 0);
+    for (const k of ['l', 'r']) {
+      const e = withLid(Object.fromEntries(FIELDS.map(f => [f, eyes[k][f].value])), lid);
+      paths[k].setAttribute('d', arc(e));
+      paths[k].setAttribute('stroke-width', Math.max(0.5, e.width).toFixed(2));
+    }
+  }
+
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000) * speed;
+    last = now; clock += dt * 1000;
+
+    pending = pending.filter(p => (clock >= p.at ? (retarget(p.side, p.values), false) : true));
+    blinks = blinks.filter(b => clock - b.at < blinkLength(b.s));
+
+    let moving = pending.length > 0 || blinks.length > 0;
+    const n = Math.max(1, Math.ceil(dt / SUBSTEP)), h = dt / n;
+    for (const k of ['l', 'r']) for (const f of FIELDS) {
+      const s = eyes[k][f];
+      if (s.value === s.target && s.velocity === 0) continue;
+      let active = false;
+      for (let i = 0; i < n; i++) active = s.step(h, pose.spring);
+      moving ||= active;
+    }
+
+    render();
+    raf = moving ? requestAnimationFrame(frame) : 0;
+  }
+
+  function wake() { if (!raf) { last = performance.now(); raf = requestAnimationFrame(frame); } }
+
+  function scheduleIdleBlink() {
+    clearTimeout(idleTimer);
+    if (!idleBlinks || reduced) return;
+    idleTimer = setTimeout(() => {
+      if (pose.blinkSpeed) blink({ double: Math.random() < 0.18 });
+      else scheduleIdleBlink();
+    }, (2400 + Math.random() * 3800) / speed);
+  }
+
+  function to(name, { instant = reduced } = {}) {
+    pose = resolvePose(name);
+    onPose?.(pose);
+    pending = pending.filter(p => p.side !== 'r');
+    if (instant) {
+      for (const k of ['l', 'r']) for (const f of FIELDS) Object.assign(eyes[k][f], { value: pose[k][f], target: pose[k][f], velocity: 0 });
+      render();
+      return;
+    }
+    retarget('l', pose.l);
+    pending.push({ at: clock + pose.lag, side: 'r', values: pose.r });
+    wake();
+  }
+
+  function blink({ double = false } = {}) {
+    scheduleIdleBlink();
+    if (reduced) return;
+    const s = pose.blinkSpeed || 1;
+    blinks.push({ at: clock, s });
+    if (double) blinks.push({ at: clock + blinkLength(s) + 70, s });
+    wake();
+  }
+
+  render();
+  scheduleIdleBlink();
+  return { to, blink, get pose() { return pose.name; } };
+}
+
+function play(cat, script, { speed = 1 } = {}) {
+  let i = 0, timer = 0;
+  function step() {
+    clearTimeout(timer);
+    const [name, hold] = script[i];
+    i = (i + 1) % script.length;
+    if (name === 'blink') cat.blink(); else cat.to(name);
+    timer = setTimeout(step, hold / speed);
+  }
+  step();
+  return { next: step };
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────
+const params = new URLSearchParams(location.search);
+const still = POSES[params.get('pose')] ? params.get('pose') : null;
+const speed = Number(params.get('speed')) || 1;
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const label = document.getElementById('label');
+let labelTimer;
+function showLabel(text) {
+  if (label.dataset.text === text) return;
+  label.dataset.text = text;
+  clearTimeout(labelTimer);
+  if (reduced || still) { label.textContent = text; return; }
+  label.classList.add('out');
+  labelTimer = setTimeout(() => { label.textContent = text; label.classList.remove('out'); }, 160);
+}
+
+const cat = window.cat = createCat({
+  paths: { l: document.getElementById('l'), r: document.getElementById('r') },
+  speed, reduced, idleBlinks: !still,
+  onPose: p => showLabel(p.label),
+});
+
+if (still) cat.to(still, { instant: true });
+else {
+  const player = play(cat, SCRIPT, { speed });
+  document.querySelector('svg').addEventListener('click', () => player.next());
+}
 </script>
 </body>
 </html>

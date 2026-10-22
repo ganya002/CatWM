@@ -18,6 +18,8 @@ final class GalleryModel: ObservableObject {
     @Published var popover = false
     @Published var moved = false
     @Published var essentialOn = true
+    @Published var catFeeling = CatFeeling.content
+    @Published var catMoves = CatMoves()
 }
 
 #endif
