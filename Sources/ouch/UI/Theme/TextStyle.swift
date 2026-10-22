@@ -12,7 +12,7 @@ enum TextStyle {
         switch self {
         case .largeTitle: Theme.display(40)
         case .title: Theme.heading(22)
-        case .sectionTitle: Theme.body(12, .medium)
+        case .sectionTitle: Theme.heading(15)
         case .caption: Theme.body(12)
         }
     }
@@ -20,7 +20,7 @@ enum TextStyle {
         switch self {
         case .largeTitle: -1
         case .title: -0.2
-        case .sectionTitle: 0.24
+        case .sectionTitle: 0
         case .caption: 0
         }
     }

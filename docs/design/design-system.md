@@ -22,20 +22,20 @@ A change to a token or a component rule is not finished until `Sources/ouch/UI/T
 1. **Show the key.** Every command that a person can click shows its shortcut on the right, set in `Kbd` or `kbd` text. Clicking teaches the keys. It does not replace them.
 2. **One floating surface.** Menus, tooltips, tips, coach marks, the HUD and the welcome card are one component: `.surface(_ density:)`, at five densities. A new floating thing gets a density, never a new look.
 3. **Two levels, then search.** Menus nest one level, two at most. Deeper items go behind the search field at the top of every menu.
-4. **No boxes around content.** Content sits on the ground. Hairlines separate rows. Only floating things (menus, tips, tour cards, HUD) and the one content pane get a surface. They get depth from the `popover` and `float` elevations, not from borders.
-5. **Chrome is flat.** Window chrome and sidebars sit on `Theme.wash`, which is flat: `wash1` and `wash2` equal `background`, black in the dark theme and white in the light theme. Items sit on it as pills. The content is one floating rounded pane (`.pane()`, `surface`, radius 14), inset by the popover shadow room on the top, bottom and trailing sides so the shadow fades out on the ground.
+4. **Containers nest twice, then stop.** In Settings the content pane is one `surface` container on the ground, and each group of rows is one `surfaceRaised` container inside it (`OGroup`). Hairlines separate the rows inside a group. Nothing else gets a box. Floating things (menus, tips, tour cards, HUD) get depth from the `popover` and `float` elevations, not from borders.
+5. **Chrome is flat.** Window chrome and the Settings rail sit on `Theme.wash`, which is flat: `wash1` and `wash2` equal `background`, black in the dark theme and white in the light theme. Items sit on it as pills. The content is one rounded pane without a shadow (`.pane(shadow: false)`, `surface`, radius 14), inset 10 pt on the top, bottom and trailing sides.
 6. **Two faces.** Pilcrow Rounded for the wordmark, display, titles, headings and keycaps: Bold for the wordmark and display, Semibold for the rest. The system font for body text, labels, captions and menu rows. Nothing else.
 7. **Symbols move with meaning.** An SF Symbol effect always reports something: an action landed, a thing refused, the app is busy, a tip is waiting. Never decoration.
 
 ## Colour
 
-One palette, `Palette.catwm`, with a light and a dark theme. It comes from the CatWM brand: a black ground with white type in the dark theme, a white ground with black type in the light theme, and magenta as the one accent. The four brand hues (sky, lemon, magenta, lime) are for the website and the brand sheet. Only magenta enters the app. Components read semantic tokens only.
+One palette, `Palette.catwm`, with a light and a dark theme. It comes from the CatWM brand: a black ground with white type in the dark theme, a white ground with black type in the light theme, and sky as the one accent. The four brand hues (sky, lemon, magenta, lime) are for the website and the brand sheet. Only sky enters the app. Components read semantic tokens only.
 
 - Paint window chrome with `background`. Put the content pane on `surface`. Float menus and tips on `surfaceRaised` (or `glass` where Liquid Glass is not available).
 - Text is `ink`. Secondary text is `inkMuted`. Placeholders are `inkFaint`. Every pair meets 4.5:1 in both themes.
-- Magenta is the accent. Use `accent` for one thing per view: the primary button, the switch that is on, the current workspace, the progress bar, the selected layout. Its text is `onAccent`, black in both themes. Accent-coloured text uses `accentInk`, which is darker in the light theme so it meets 4.5:1. Everything else is neutral.
+- Sky is the accent. Use `accent` for one thing per view: the primary button, the switch that is on, the current workspace, the progress bar, the selected layout. Its text is `onAccent`, black in both themes. Accent-coloured text uses `accentInk`, which is darker in the light theme so it meets 4.5:1. Everything else is neutral.
 - A hovered or highlighted row is a `hover` fill. Its text keeps its colour. Hover and keyboard highlight never use `accent`.
-- A selected sidebar item is a `surface` pill with the `small` elevation, on the wash.
+- A selected rail item is an `ink` pill with `background` text: white on black in the dark theme, black on white in the light theme. Other items are `inkMuted` text and get a `surface` pill on hover. Rail items have no symbols.
 - Tour cards are plain raised surfaces. They are not filled with `accent`.
 - `tint` is for shapes only: layout thumbnails and illustrations. Never text.
 - `success`, `warning` and `danger` always come with a symbol and a word.
@@ -48,7 +48,7 @@ One palette, `Palette.catwm`, with a light and a dark theme. It comes from the C
 - `display` 44/48, Pilcrow Rounded Bold. Welcome title and showcase headlines. One per screen.
 - `numeral` 34, weight 300, in `inkMuted`. Step numbers.
 - `title` 22/27, Pilcrow Rounded Semibold. Tour cards, pane titles, the HUD.
-- `heading` 15/20, Pilcrow Rounded Semibold. `body` 13.5/19, system font at 400. `body-medium` is `body` at 500. `caption` 12/16. `label` 12/16, weight 500.
+- `heading` 15/20, Pilcrow Rounded Semibold. Group titles in Settings (`sectionTitle`) use it in `ink`. `body` 13.5/19, system font at 400. `body-medium` is `body` at 500. `caption` 12/16. `label` 12/16, weight 500.
 - `kbd` is Pilcrow Rounded Semibold through `Theme.keys`. The face has no modifier glyphs, so the font cascades to the system font for ⌘ ⇧ ⌥ ⌃ ⇥ ↩. `kicker` and `code` use the mono face. `kicker` is the only uppercase text: "STEP 2 OF 6".
 
 Labels, captions, buttons, keys and menu rows never wrap. They are one line and truncate with an ellipsis (`.oneLine()`). Only body prose wraps. Keep it to two lines in floating surfaces.
@@ -57,7 +57,7 @@ Labels, captions, buttons, keys and menu rows never wrap. They are one line and 
 
 - The grid is 4 pt: `Theme.Space` 2, 4, 8, 12, 16, 24, 32.
 - Radii nest. The panel radius equals the row radius plus the panel padding: `Radius.large` 12 = `Radius.small` 6 + 6 menu padding. Rows sit concentric inside menus.
-- Rows are 30 pt (`Theme.rowHeight`). Controls are 28 pt (26 small, 36 large). Small keycaps are 20 pt, medium 30 pt, tour keycaps 40 pt. Menus are 272 pt wide, submenus 232 pt, the command menu 360 pt.
+- Rows are 30 pt (`Theme.rowHeight`). Settings rows are at least 44 pt. Controls are 28 pt (26 small, 36 large). Small keycaps are 20 pt, medium 30 pt, tour keycaps 40 pt. Menus are 272 pt wide, submenus 232 pt, the command menu 360 pt.
 
 ## Surface
 
@@ -119,10 +119,13 @@ Each entry gives the design intent. The Swift type is in brackets.
 **Tooltip** [`OTooltip`, `Tooltip`]. The smallest surface (`extraSmall`). One short phrase in sentence case, with no full stop. Never a button inside. Every icon-only button gets one. A shortcut is one chord at most. It points at its target with a small caret.
 
 **Menu** [`Popup`, `OMenuRow`, `OMenuButton`, `OMenuPicker`]. A dropdown with groups, checks, radios, switches, inline controls and nested submenus, with type-to-search.
+- The status menu root holds five rows: search, Layout, Workspaces, Settings and Help, then the footer with the version and Quit. The workspace strip, Bring Window Here, What's New and the tutorial live one level down, in Workspaces and Help. Search finds them all.
 - Nest one level, two at most. Put the current choice of a radio group in the parent row's value.
 - Every actionable row shows its shortcut.
 - Give hidden aliases to commands that live inside a custom control, so search still finds them.
 - Arrow keys, return and escape work. Typing focuses search.
+
+**Settings window** [`SettingsView`, `Sidebar`, `SideItem`, `PaneHost`]. 880 by 620 pt by default, at least 760 by 520, at the normal window level, so it never floats above other windows. The rail is 196 pt: the animated cat mascot at 56 pt beside the 26 pt wordmark, then the search field, then the pages as text pills. The cat is `content` while CatWM runs, `sleepy` while tiling is paused and `alert` while Accessibility or the event tap is missing. The pane shows the page title in `title`, then the groups. The status line at the top of General appears only when Accessibility or the event tap is missing. The only floating pill over the pane carries a save error, the shortcut problem count or skipped config lines.
 
 **Command menu**. A menu that opens with the search field first, 360 pt wide. Results group under their top-level parent and show the rest of the path as a breadcrumb. It shares its data with the menu so the two never disagree.
 

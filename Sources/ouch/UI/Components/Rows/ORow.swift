@@ -31,8 +31,8 @@ struct ORow<Control: View>: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             HStack(spacing: 8) { control }.fixedSize()
         }
-        .frame(minHeight: 48)
-        .padding(.vertical, 8)
+        .frame(minHeight: 44)
+        .padding(.vertical, 4)
     }
 }
 

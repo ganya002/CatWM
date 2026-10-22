@@ -25,7 +25,7 @@ struct PaneHost: View {
     private var content: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                VStack(alignment: .leading, spacing: 30) {
+                VStack(alignment: .leading, spacing: 20) {
                     header
                     switch settingsUI.pane {
                     case .general: GeneralPane(doc: doc, settingsUI: settingsUI)
@@ -36,7 +36,7 @@ struct PaneHost: View {
                     case .shortcuts: ShortcutsPane(doc: doc, settingsUI: settingsUI)
                     }
                 }
-                .padding(.horizontal, Theme.Space.page).padding(.top, 22).padding(.bottom, 64)
+                .padding(.horizontal, 28).padding(.top, 22).padding(.bottom, 40)
                 .frame(maxWidth: 660, alignment: .leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -62,7 +62,10 @@ struct PaneHost: View {
     }
 
     private var header: some View {
-        OPageTitle(crumbs: ["Settings", settingsUI.pane.rawValue]) {
+        HStack(alignment: .center, spacing: Theme.Space.small) {
+            Text(settingsUI.pane.rawValue).textStyle(.title).foregroundStyle(Theme.ink).oneLine()
+                .accessibilityAddTraits(.isHeader)
+            Spacer(minLength: Theme.Space.medium)
             if let kind = settingsUI.pane.configKind {
                 ConfigSelector(kind: kind, library: library, width: 180)
                 ConfigTransferMenu(kind: kind, library: library)

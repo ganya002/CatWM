@@ -11,7 +11,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
     func show(pane: Pane?, map: Bool = false) {
         let wasVisible = window?.isVisible ?? false
         if window == nil {
-            let settingsWindow = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 940, height: 680),
+            let settingsWindow = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 880, height: 620),
                                           styleMask: [.titled, .closable, .miniaturizable, .resizable,
                                                       .fullSizeContentView],
                                           backing: .buffered, defer: false)
@@ -21,9 +21,8 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
             host.sizingOptions = []
             settingsWindow.contentViewController = host
             ArrowCursor.keep(in: host.view)
-            settingsWindow.setContentSize(NSSize(width: 940, height: 680))
-            settingsWindow.contentMinSize = NSSize(width: 840, height: 540)
-            settingsWindow.level = .floating
+            settingsWindow.setContentSize(NSSize(width: 880, height: 620))
+            settingsWindow.contentMinSize = NSSize(width: 760, height: 520)
             settingsWindow.clearTitlebar(hiding: [.zoomButton])
             settingsWindow.collectionBehavior.insert(.fullScreenNone)
             settingsWindow.delegate = self

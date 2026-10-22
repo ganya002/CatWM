@@ -30,7 +30,7 @@ enum Theme {
         return dark ? hex(pair.dark, pair.darkAlpha) : hex(pair.light, pair.lightAlpha)
     }
     static func rgb(_ value: UInt32, _ alpha: CGFloat = 1) -> Color { Color(nsColor: hex(value, alpha)) }
-    static let iconAccent = hex(0xFF4AD8, 1)
+    static let iconAccent = hex(0x1FAFFF, 1)
 
     static let background = token(\.background)
     static let surface = token(\.surface)
