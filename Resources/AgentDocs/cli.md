@@ -10,7 +10,7 @@ $OUCH dump
 
 Ouch links itself as `ouch` in `/usr/local/bin` (or `~/.local/bin` if that is not writable) when the installed app starts. Then `ouch dispatch …` works from any shell.
 
-Like `hyprctl`. The command is sent to the running instance through a distributed notification (`local.ouch.command`), and the process exits immediately with status 0. Nothing is printed except for `dump`.
+Like `hyprctl`. The command is sent to the running instance through a distributed notification (`local.catwm.command`), and the process exits immediately with status 0. Nothing is printed except for `dump`.
 
 ## Commands
 

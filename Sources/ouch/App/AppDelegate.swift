@@ -75,15 +75,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func migrateLegacyDefaults() {
         let defaults = UserDefaults.standard
-        guard !defaults.bool(forKey: "migratedFromHyprthyst") else { return }
-        defaults.set(true, forKey: "migratedFromHyprthyst")
-        guard let old = defaults.persistentDomain(forName: "local.hyprthyst") else { return }
-        for (key, value) in old where defaults.object(forKey: key) == nil
-            && !key.hasPrefix("NSWindow Frame")
-            && key != "didSetUpLaunchAtLogin" {
-            defaults.set(value, forKey: key)
+        guard !defaults.bool(forKey: "migratedLegacyDefaults") else { return }
+        defaults.set(true, forKey: "migratedLegacyDefaults")
+        for domain in ["local.ouch", "local.hyprthyst"] {
+            guard let old = defaults.persistentDomain(forName: domain) else { continue }
+            for (key, value) in old where defaults.object(forKey: key) == nil
+                && !key.hasPrefix("NSWindow Frame")
+                && key != "didSetUpLaunchAtLogin" {
+                defaults.set(value, forKey: key)
+            }
+            Log.info("migrated \(old.count) settings from \(domain)")
         }
-        Log.info("migrated \(old.count) settings from Hyprthyst")
     }
 
     private func permissionsChecked(_ granted: Set<Permission>, _ changed: Set<Permission>) {
