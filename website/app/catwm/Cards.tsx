@@ -3,8 +3,9 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { type CSSProperties, type ReactNode, useRef } from "react";
 
-import { CARDS } from "./cards";
+import { CARDS, MORE } from "./cards";
 import { Demo } from "./Demo";
+import { WINDOWS } from "./script";
 import { usePulse } from "./usePulse";
 
 // The feature cards. Each one sticks at the top, and as the next one rises
@@ -65,10 +66,31 @@ export function Cards({ last }: { last: ReactNode }) {
           </div>
         </section>
       ))}
+      <section className="card card--more" style={{ "--i": CARDS.length + 1 } as CSSProperties}>
+        <div className="card__inner">
+          <div className="card__copy">
+            <h2 className="card__title">And much more.</h2>
+            <a className="more__link" href="/features">
+              See all features
+            </a>
+          </div>
+          <ul className="more">
+            {MORE.map((item) => (
+              <li
+                key={item.name}
+                className="more__item"
+                style={{ "--dot": WINDOWS[item.hue].color } as CSSProperties}
+              >
+                {item.name}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
       <section
         ref={lastCard}
         className="card card--last"
-        style={{ "--i": CARDS.length + 1 } as CSSProperties}
+        style={{ "--i": CARDS.length + 2 } as CSSProperties}
       >
         <div className="pulse" data-pulse aria-hidden="true" />
         <div className="card__inner card__inner--center">{last}</div>
