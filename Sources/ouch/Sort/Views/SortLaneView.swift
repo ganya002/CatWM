@@ -21,7 +21,7 @@ struct SortLaneView: View {
         if number.isEditing {
             TextField("", text: $number.draft)
                 .textFieldStyle(.plain).font(Theme.display(22)).monospacedDigit().tracking(-0.4)
-                .foregroundStyle(Theme.accentInk)
+                .foregroundStyle(Theme.ink)
                 .frame(width: 32)
                 .focused($numberFocus)
                 .onChange(of: number.draft) { _, draft in
@@ -33,7 +33,7 @@ struct SortLaneView: View {
                 .accessibilityLabel("Number for workspace \(lane.number)")
         } else {
             Text(lane.number).font(Theme.display(22)).monospacedDigit().tracking(-0.4)
-                .foregroundStyle(filled ? Theme.accentInk : Theme.inkFaint).fixedSize()
+                .foregroundStyle(filled ? Theme.ink : Theme.inkFaint).fixedSize()
                 .contentShape(Rectangle())
                 .onTapGesture(count: 2) { model.finish(lane.workspace) }
                 .onTapGesture {
@@ -61,7 +61,7 @@ struct SortLaneView: View {
                 TextField("", text: Binding(get: { lane.name }, set: { model.rename(lane.id, $0) }),
                           prompt: Text("Workspace \(lane.number)").foregroundStyle(Theme.inkFaint))
                     .textFieldStyle(.plain).font(Theme.heading())
-                    .foregroundStyle(editing ? Theme.accentInk : Theme.ink)
+                    .foregroundStyle(Theme.ink)
                     .focused($editing)
                     .onSubmit { editing = false }
                     .accessibilityLabel("Name for workspace \(lane.number)")

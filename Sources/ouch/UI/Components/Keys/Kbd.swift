@@ -36,16 +36,7 @@ struct Kbd: View {
                 .background {
                     let shape = RoundedRectangle(cornerRadius: large ? Theme.Radius.medium : Theme.Radius.small,
                                                  style: .continuous)
-                    if pressed {
-                        shape.fill(Theme.accent)
-                    } else {
-                        shape.fill(onAccent ? Theme.onAccent : Theme.surface)
-                            .overlay(alignment: .bottom) {
-                                shape.fill(Theme.surfaceSunken).frame(height: large ? 3 : 2)
-                                    .mask(shape)
-                            }
-                            .elevation(.small, in: shape)
-                    }
+                    shape.fill(pressed ? Theme.accent : onAccent ? Theme.onAccent : Theme.surfaceRaised)
                 }
                 .offset(y: pressed ? 2 : 0)
                 .animation(Motion.fade, value: pressed)

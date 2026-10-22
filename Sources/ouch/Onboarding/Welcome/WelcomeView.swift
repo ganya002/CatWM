@@ -28,12 +28,12 @@ struct WelcomeView: View {
 
     private var permissions: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 72, height: 72)
+            CatMascot(feeling: .content).frame(height: 72).foregroundStyle(Theme.ink)
                 .offset(y: model.landed || reduceMotion ? 0 : -28)
                 .opacity(model.landed ? 1 : 0)
                 .animation(.easeIn(duration: 0.22), value: model.landed) // style-ok: drop lands on squish beat
                 .squish(on: model.landed, delay: 0.22)
-                .padding(.leading, -6).padding(.vertical, -6)
+                .padding(.top, 4)
             Text("Welcome to Ouch").textStyle(.largeTitle).oneLine()
                 .padding(.top, 16).padding(.bottom, 8)
             Text("Each button opens System Settings, with steps beside it.")
@@ -79,14 +79,14 @@ struct WelcomeView: View {
         return HStack(spacing: 12) {
             Image(systemName: granted && symbol == "lock" ? "lock.open" : symbol)
                 .font(Theme.symbol(Theme.Icon.large))
-                .foregroundStyle(Theme.accentInk)
+                .foregroundStyle(Theme.inkMuted)
                 .contentTransition(.symbolEffect(.replace))
                 .frame(width: 22)
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 6) {
                     Text(item.title).font(Theme.body(14)).oneLine()
                     Text(required ? "Required" : "Optional").font(Theme.body(11.5, .medium))
-                        .foregroundStyle(required ? Theme.accentInk : Theme.inkMuted).oneLine()
+                        .foregroundStyle(required ? Theme.ink : Theme.inkMuted).oneLine()
                 }
                 Text(item.detail).textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine()
             }
@@ -133,7 +133,7 @@ struct WelcomeView: View {
     private func dots(_ current: Int) -> some View {
         HStack(spacing: 6) {
             ForEach(0..<2, id: \.self) { i in
-                Capsule().fill(i == current ? Theme.accent : Theme.inkFaint.opacity(0.45))
+                Capsule().fill(i == current ? Theme.ink : Theme.inkFaint.opacity(0.45))
                     .frame(width: i == current ? 16 : 6, height: 6)
             }
         }

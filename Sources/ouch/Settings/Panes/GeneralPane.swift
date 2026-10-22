@@ -9,7 +9,9 @@ struct GeneralPane: View {
     var body: some View {
         let status = settingsUI.status
         VStack(alignment: .leading, spacing: 30) {
-            StatusHero(settingsUI: settingsUI).setting(GeneralPane.searchStatus.id, settingsUI)
+            if !(status.trusted && status.keybindsActive) {
+                StatusHero(settingsUI: settingsUI).setting(GeneralPane.searchStatus.id, settingsUI)
+            }
 
             OGroup("Startup") {
                 OSwitchRow(GeneralPane.searchLogin.title, isOn: loginBinding)

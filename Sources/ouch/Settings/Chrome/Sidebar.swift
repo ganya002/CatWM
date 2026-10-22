@@ -6,48 +6,76 @@ struct Sidebar: View {
     @ObservedObject var settingsUI: SettingsUI
     var searchFocused: FocusState<Bool>.Binding
     @ObservedObject private var library = SettingsWindow.shared.library
+    @StateObject private var gaze = Gaze()
+
+    final class Gaze: ObservableObject {
+        @Published var look: CGVector?
+    }
 
     private var version: String { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "" }
 
+    private var mood: (feeling: CatFeeling, color: Color) {
+        let status = settingsUI.status
+        if doc.saveError != nil { return (.sad, Theme.danger) }
+        if !status.trusted || !status.keybindsActive { return (.alert, Theme.warning) }
+        if doc.problemCount > 0 { return (.annoyed, Theme.warning) }
+        if !status.tilingEnabled { return (.sleepy, Theme.inkMuted) }
+        return (.content, Theme.ink)
+    }
+
+    private static let catCentre = CGPoint(x: 40, y: SettingsWindow.titlebarHeight + 28)
+
+    private func watch(_ phase: HoverPhase) {
+        switch phase {
+        case .active(let point):
+            let dx = max(-1, min(1, (point.x - Self.catCentre.x) / 90))
+            let dy = max(-1, min(1, (point.y - Self.catCentre.y) / 70))
+            gaze.look = CGVector(dx: dx * 0.8, dy: dy * 0.5)
+        case .ended:
+            gaze.look = nil
+        }
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: 2) {
             Color.clear.frame(height: SettingsWindow.titlebarHeight)
-            OSearchField(placeholder: "Search settings", text: $settingsUI.search, shortcut: ["⌘", "K"],
+            HStack(spacing: 10) {
+                CatMascot(feeling: mood.feeling, look: gaze.look).frame(height: 56)
+                    .foregroundStyle(mood.color)
+                    .animation(Motion.fadeMedium, value: mood.color)
+                Wordmark()
+            }
+            .padding(.leading, 6).padding(.bottom, 16)
+            OSearchField(placeholder: "Search", text: $settingsUI.search, shortcut: ["⌘", "K"],
                          focus: searchFocused) {
                 if let first = SettingsIndex.search(settingsUI.search, doc: doc).first { settingsUI.open(first) }
             }
-            .background(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous)
-                .fill(Theme.surface.opacity(0.6)))
-            .padding(.bottom, 14)
-            VStack(spacing: 2) {
-                ForEach(Pane.allCases) { pane in
-                    SideItem(pane: pane, selected: pane == settingsUI.pane && settingsUI.search.isEmpty,
-                             badge: badge(pane)) {
-                        withAnimation(Motion.fade) {
-                            settingsUI.search = ""
-                            settingsUI.showMap = false
-                            settingsUI.pane = pane
-                        }
+            .background(Capsule().fill(Theme.surface))
+            .padding(.bottom, 10)
+            ForEach(Pane.allCases) { pane in
+                SideItem(pane: pane, selected: pane == settingsUI.pane && settingsUI.search.isEmpty,
+                         badge: badge(pane)) {
+                    withAnimation(Motion.fade) {
+                        settingsUI.search = ""
+                        settingsUI.showMap = false
+                        settingsUI.pane = pane
                     }
                 }
             }
             Spacer(minLength: 12)
-            VStack(alignment: .leading, spacing: 8) {
-                OSectionHeader("Config", tone: Theme.inkMuted).padding(.leading, 10)
-                HStack(spacing: 4) {
-                    ConfigSelector(kind: .full, library: library)
-                    ConfigTransferMenu(kind: .full, library: library)
-                }
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Wordmark()
-                    Text(version).font(Theme.body(11.5)).foregroundStyle(Theme.inkMuted).oneLine()
-                    Spacer(minLength: 0)
-                    FeedbackButton()
-                }
-                .padding(.leading, 10).padding(.top, 6)
+            HStack(spacing: 4) {
+                ConfigSelector(kind: .full, library: library)
+                ConfigTransferMenu(kind: .full, library: library)
             }
+            HStack(spacing: 8) {
+                Text(version).textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine()
+                Spacer(minLength: 0)
+                FeedbackButton()
+            }
+            .padding(.leading, 12).padding(.top, 6)
         }
-        .padding(.leading, 10).padding(.trailing, 6).padding(.bottom, 12)
+        .padding(.horizontal, 12).padding(.bottom, 14)
+        .onContinuousHover(coordinateSpace: .local, perform: watch)
     }
 
     private func badge(_ pane: Pane) -> SideItem.Badge? {

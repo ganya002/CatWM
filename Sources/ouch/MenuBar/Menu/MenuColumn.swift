@@ -12,7 +12,8 @@ struct MenuColumn: View {
                 OSearchField(placeholder: "Search commands…", text: $model.query, focus: $searchFocused) {
                     model.runHighlighted()
                 }
-                .frame(height: 38)
+                .background(RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous).fill(Theme.well))
+                .padding(.bottom, Theme.Space.xxs)
                 .onAppear { DispatchQueue.main.async { searchFocused = true } }
                 .onChange(of: model.query) { _, query in
                     model.path = []

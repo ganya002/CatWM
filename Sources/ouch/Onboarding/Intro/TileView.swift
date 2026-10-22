@@ -7,20 +7,20 @@ final class TileView: NSView {
     private var dots: [CALayer] = []
     private let main: Bool
 
-    private static let blue = Theme.iconBlue
+    private static let accent = Theme.iconAccent
 
     init(frame: NSRect, main: Bool) {
         self.main = main
         super.init(frame: frame)
         wantsLayer = true
         card.backgroundColor = main
-            ? Self.blue.withAlphaComponent(0.92).cgColor
+            ? Self.accent.withAlphaComponent(0.92).cgColor
             : NSColor(white: 1, alpha: 0.13).cgColor
         card.borderColor = NSColor(white: 1, alpha: main ? 0.5 : 0.38).cgColor
         card.borderWidth = 1
         card.cornerRadius = 14
         card.cornerCurve = .continuous
-        card.shadowColor = (main ? Self.blue : .black).cgColor
+        card.shadowColor = (main ? Self.accent : .black).cgColor
         card.shadowOpacity = main ? 0.35 : 0.25
         card.shadowRadius = 24
         card.shadowOffset = CGSize(width: 0, height: -16)

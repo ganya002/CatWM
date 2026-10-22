@@ -10,7 +10,7 @@ struct Wordmark: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        Text("Ouch").font(Theme.wordmark(19))
+        Text("Ouch").font(Theme.wordmark(26)).tracking(-0.5)
             .rotationEffect(.degrees(model.hover && !reduceMotion ? -6 : 0), anchor: .bottomLeading)
             .squish(on: model.bumps)
             .animation(Motion.snap, value: model.hover)

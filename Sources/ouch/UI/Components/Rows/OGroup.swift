@@ -15,9 +15,12 @@ struct OGroup<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let title {
-                OSectionHeader(title).padding(.bottom, Theme.Space.extraSmall)
+                OSectionHeader(title).padding(.bottom, Theme.Space.small)
             }
             _VariadicView.Tree(Separated()) { content }
+                .padding(.horizontal, Theme.Space.large)
+                .background(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous)
+                    .fill(Theme.surfaceRaised))
             if let footer {
                 Text(footer).textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine()
                     .padding(.top, Theme.Space.small)

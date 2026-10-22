@@ -37,10 +37,8 @@ struct SortView: View {
     private func header(_ plan: SortPlan) -> some View {
         let count = plan.items.count
         return HStack(spacing: 12) {
-            (Text("Overview · ")
-                + Text("\(count)").font(Theme.body(22, .medium)).foregroundColor(Theme.accentInk)
-                + Text(count == 1 ? " window" : " windows"))
-                .textStyle(.title).oneLine().fixedSize()
+            Text("Overview · \(count) window\(count == 1 ? "" : "s")")
+                .textStyle(.title).monospacedDigit().oneLine().fixedSize()
             if model.displays.count > 1 { SortDisplays(model: model) }
             Spacer(minLength: 12)
             SortStrategies(selection: plan.strategy) { model.pick($0) }
@@ -142,7 +140,7 @@ struct SortView: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(dragged.lane.number).font(Theme.display(22)).monospacedDigit().tracking(-0.4)
-                        .foregroundStyle(Theme.accentInk).fixedSize()
+                        .foregroundStyle(Theme.ink).fixedSize()
                     Text(dragged.lane.name.isEmpty ? "Workspace \(dragged.lane.number)" : dragged.lane.name)
                         .font(Theme.heading()).oneLine()
                 }

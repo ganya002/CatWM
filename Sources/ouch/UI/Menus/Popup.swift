@@ -49,7 +49,7 @@ final class Popup: NSObject, NSWindowDelegate {
 
     func popover<Content: View>(from anchor: NSRect, onClose: (() -> Void)? = nil,
                                 @ViewBuilder content: () -> Content) {
-        let host = NSHostingView(rootView: content().surface(.medium, glass: true).padding(Self.margin)
+        let host = NSHostingView(rootView: content().surface(.medium).padding(Self.margin)
             .font(Theme.body()).foregroundStyle(Theme.ink).tint(Theme.accent))
         let size = host.fittingSize
         let screen = NSScreen.screens.first { $0.frame.intersects(anchor) } ?? NSScreen.main ?? NSScreen.screens[0]

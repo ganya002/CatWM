@@ -3,10 +3,10 @@ import SwiftUI
 
 struct OSectionHeader: View {
     let title: String
-    var tone: Color = Theme.accentInk
+    var tone: Color = Theme.ink
     var dot: Color?
 
-    init(_ title: String, tone: Color = Theme.accentInk, dot: Color? = nil) {
+    init(_ title: String, tone: Color = Theme.ink, dot: Color? = nil) {
         self.title = title; self.tone = tone; self.dot = dot
     }
 

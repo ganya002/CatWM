@@ -12,11 +12,10 @@ struct SettingsView: View {
     var body: some View {
         HStack(spacing: 0) {
             Sidebar(doc: doc, settingsUI: settingsUI, searchFocused: $searchFocused)
-                .frame(width: 228)
+                .frame(width: 196)
             PaneHost(doc: doc, settingsUI: settingsUI)
-                .pane()
-                .padding(EdgeInsets(top: Elevation.popover.room, leading: 0,
-                                    bottom: Elevation.popover.room, trailing: Elevation.popover.room))
+                .pane(shadow: false)
+                .padding(EdgeInsets(top: 10, leading: 0, bottom: 10, trailing: 10))
         }
         .sheet(item: $templates.draft) { TemplateSheet(template: $0, library: templates) }
         .sheet(isPresented: $feedback.isOpen) { FeedbackSheet(feedback: feedback) }

@@ -21,7 +21,7 @@ struct OSlider: View {
             track
             Text(format(value))
                 .font(Theme.body(13, .medium)).monospacedDigit().oneLine().fixedSize()
-                .foregroundStyle(slider.dragging ? Theme.accentInk : Theme.inkMuted)
+                .foregroundStyle(slider.dragging ? Theme.ink : Theme.inkMuted)
                 .frame(minWidth: 56, alignment: .trailing)
         }
         .opacity(enabled ? 1 : 0.45)
@@ -85,16 +85,6 @@ struct OSlider: View {
             Circle().fill(Theme.accent).frame(width: 6, height: 6).scaleEffect(slider.dragging ? 1 : 0)
         }
         .scaleEffect(slider.dragging ? 1.2 : slider.hovering ? 1.08 : 1)
-        .overlay(alignment: .top) {
-            Text(format(value)).font(Theme.body(11.5, .medium)).monospacedDigit().oneLine()
-                .foregroundStyle(Theme.surface)
-                .padding(.horizontal, Theme.Space.small).padding(.vertical, 3)
-                .background(RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous).fill(Theme.ink))
-                .fixedSize()
-                .offset(y: -30)
-                .opacity(slider.dragging ? 1 : 0)
-                .scaleEffect(slider.dragging ? 1 / 1.2 : 0.85, anchor: .bottom)
-        }
         .animation(Motion.spring, value: slider.dragging)
         .animation(Motion.fade, value: slider.hovering)
     }

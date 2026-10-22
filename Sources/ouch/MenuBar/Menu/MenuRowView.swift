@@ -6,7 +6,6 @@ struct MenuRowView: View {
     let item: MenuItem
     let level: Int
     var crumb: String?
-    @StateObject private var spins = Flag()
 
     var body: some View {
         let highlighted = model.highlight[level] == item.id
@@ -16,11 +15,10 @@ struct MenuRowView: View {
             if item.kind == .sub {
                 withAnimation(Motion.easeOut) { model.path = Array(model.path.prefix(level)) + [item.id] }
             } else {
-                if item.rotates { spins.isOn.toggle() }
                 model.run(item)
             }
         } lead: {
-            lead(muted: muted)
+            lead()
         } label: {
             if item.kind == .footer {
                 Text("Ouch \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "")")
@@ -28,6 +26,7 @@ struct MenuRowView: View {
             } else {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(item.label).oneLine().layoutPriority(1)
+                    if item.dot { NotificationDot() }
                     if let crumb, !crumb.isEmpty {
                         Text(crumb).textStyle(.caption).foregroundStyle(muted).oneLine()
                     } else if let value = item.value {
@@ -65,24 +64,20 @@ struct MenuRowView: View {
         .accessibilityAddTraits(item.checked ? .isSelected : [])
     }
 
-    @ViewBuilder private func lead(muted: Color) -> some View {
+    @ViewBuilder private func lead() -> some View {
         switch item.kind {
         case .check:
             Image(systemName: "checkmark").font(Theme.symbol(Theme.Icon.small, .bold))
-                .foregroundStyle(Theme.accentInk)
+                .foregroundStyle(Theme.ink)
                 .opacity(item.checked ? 1 : 0)
                 .drawOnEffect(isActive: item.checked)
         case .radio:
-            Circle().fill(Theme.accentInk).frame(width: 7, height: 7).opacity(item.checked ? 1 : 0)
+            Circle().fill(Theme.ink).frame(width: 7, height: 7).opacity(item.checked ? 1 : 0)
         case .footer:
             Color.clear
         default:
             if let image = item.image {
                 Image(nsImage: image).resizable().interpolation(.high).frame(width: 16, height: 16)
-            } else if let symbol = item.symbol {
-                let image = Image(systemName: symbol).font(Theme.symbol()).foregroundStyle(muted)
-                Group { if item.rotates { image.rotateEffect(value: spins.isOn) } else { image } }
-                    .overlay(alignment: .topTrailing) { if item.dot { NotificationDot().offset(x: 3, y: -2) } }
             }
         }
     }

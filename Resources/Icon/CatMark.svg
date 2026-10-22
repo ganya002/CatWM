@@ -1,9 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <title>Ouch cat</title>
+  <title>CatWM cat</title>
   <defs>
     <mask id="eyes">
       <rect width="512" height="512" fill="#fff"/>
-      <g fill="none" stroke="#000" stroke-width="13" stroke-linecap="round"><path d="M 255.4 163.7 C 261.8 157.6 274.8 156.8 280.5 157.1"/><path d="M 356.4 165.7 C 365.2 164.4 376.3 171.2 380.8 174.7"/></g>
+      <g fill="none" stroke="#000" stroke-width="13" stroke-linecap="round">
+        <path d="M 235.4 177.0 C 242.4 163.5 265.1 159.0 276.6 169.0"/>
+        <path d="M 329.1 184.5 C 341.5 176.1 362.3 183.3 366.9 197.5"/>
+      </g>
     </mask>
   </defs>
   <path d="M 231 42 C 234 31 245 29 250 36 C 268 60 294 90 310 104 C 330 116 356 108 384 92 C 408 78 430 60 444 40 C 449 33 458 38 455 50 C 448 84 438 112 430 136 C 408 206 368 300 356 340 C 348 368 398 408 399 452 C 400 484 372 506 330 506 C 250 508 150 508 96 496 C 60 488 40 450 52 400 C 70 326 167 264 178 226 C 194 165 212 103 231 42 Z" fill="currentColor" mask="url(#eyes)"/>

@@ -17,14 +17,15 @@ struct OMenuPicker<T: Hashable>: View {
                          action: { binding.wrappedValue = option.value })
             }
         }, label: {
-            HStack(spacing: 6) {
-                Text(options.first { $0.value == selection }?.label ?? "").font(Theme.body(13)).oneLine()
+            HStack(spacing: 8) {
+                Text(options.first { $0.value == selection }?.label ?? "").font(Theme.body(13, .medium)).oneLine()
                 Image(systemName: "chevron.up.chevron.down").font(Theme.symbol(Theme.Icon.extraSmall, .semibold))
                     .foregroundStyle(Theme.inkMuted)
             }
             .foregroundStyle(Theme.ink)
-            .padding(.horizontal, 12).frame(height: Theme.controlHeight)
-            .background(Capsule().fill(lit ? Theme.wellHover : Theme.well))
+            .padding(.leading, 12).padding(.trailing, 8).frame(height: Theme.controlHeight)
+            .background(Capsule().fill(lit ? Theme.well : .clear))
+            .overlay(Capsule().strokeBorder(Theme.borderControl, lineWidth: 1))
             .contentShape(Capsule())
         })
         .fixedSize()
