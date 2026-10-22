@@ -1,69 +1,543 @@
 @import "tailwindcss";
 
-
-@theme {
-  --font-sans: var(--body-font);
-  --font-display: var(--display-font);
-  --color-accent: #0a74ff;
-  --color-bg: #f4f4f6;
-  --color-ink: #1b1b1e;
-  --color-muted: #6e6e76;
-  --color-field: #ffffff;
-  --color-line: #dcdce2;
-}
-
+/* CatWM brand: black ground, white type, four candy hues for the windows.
+   The in-screen components use Palette.catwm, dark. */
 :root {
-  --display-font: "General Sans", ui-sans-serif, system-ui, sans-serif;
-  --display-weight: 600;
-  --body-font: "Gambetta", ui-serif, Georgia, serif;
-  --body-weight: 400;
-}
-:root[data-pair="2"] {
-  --display-font: "Amulya", ui-sans-serif, system-ui, sans-serif;
-  --display-weight: 700;
-  --body-font: "Synonym", ui-sans-serif, system-ui, sans-serif;
-  --body-weight: 400;
-}
-:root[data-pair="3"] {
-  --display-font: "Excon", ui-sans-serif, system-ui, sans-serif;
-  --display-weight: 500;
-  --body-font: "Ranade", ui-sans-serif, system-ui, sans-serif;
-  --body-weight: 300;
-}
+  color-scheme: dark;
+  --black: #000000;
+  --white: #ffffff;
+  --sky: #1fafff;
+  --lemon: #ffea14;
+  --magenta: #ff4ad8;
+  --lime: #9dff1f;
 
-:root[data-pair="4"] {
-  --display-font: "Nunito", ui-sans-serif, system-ui, sans-serif;
-  --display-weight: 800;
-  --body-font: "Supreme", ui-sans-serif, system-ui, sans-serif;
-  --body-weight: 400;
-}
+  --surface: #141414;
+  --raised: #1c1c1c;
+  --sunken: #0a0a0a;
+  --hover: #262626;
+  --hairline: #2a2a2a;
+  --border-control: #6b6b6b;
+  --ink-muted: #a3a3a3;
+  --ink-faint: #8a8a8a;
+  --accent: #1fafff;
+  --accent-soft: #0e2638;
+  --tint: #3a3a3a;
+  --danger: #ff6b5b;
+  --danger-soft: #3d2220;
+  --well: rgba(255, 255, 255, 0.09);
+  --glass: rgba(20, 20, 20, 0.82);
+  --grey: var(--ink-muted);
 
-:root[data-pair="5"] {
-  --display-font: "Poppins", ui-sans-serif, system-ui, sans-serif;
-  --display-weight: 600;
-  --body-font: "Hind", ui-sans-serif, system-ui, sans-serif;
-  --body-weight: 400;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --color-bg: #141416;
-    --color-ink: #f4f4f6;
-    --color-muted: #a8a8b0;
-    --color-field: #222226;
-    --color-line: #34343a;
-  }
+  --display:
+    "Pilcrow Rounded", "Arial Rounded MT Bold", -apple-system, BlinkMacSystemFont, system-ui,
+    sans-serif;
+  --body: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  --sys: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
 }
 
 html,
 body {
-  @apply bg-bg font-sans text-ink antialiased;
-  font-weight: var(--body-weight);
+  margin: 0;
+  background: var(--black);
+  color: var(--white);
+  font-family: var(--body);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
 h1,
-.font-display {
-  font-family: var(--display-font);
-  font-weight: var(--display-weight);
+h2,
+h3 {
+  font-family: var(--display);
+  font-weight: 700;
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--sky);
+  outline-offset: 2px;
+}
+
+/* Lockup: the cat first, then the rounded name, on a black pill. */
+.lockup {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(8px, 1.1vw, 16px);
+  background: var(--black);
+  color: var(--white);
+  border-radius: 999px;
+  padding: clamp(12px, 1.8vw, 26px) clamp(28px, 4.7vw, 68px) clamp(12px, 1.8vw, 26px)
+    clamp(20px, 3vw, 44px);
+  text-decoration: none;
+}
+.lockup__cat {
+  width: clamp(56px, 10.4vw, 150px);
+  height: clamp(56px, 10.4vw, 150px);
+  flex: none;
+}
+
+/* The cat: click it to spin it. */
+.cat {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.cat__face {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.lockup__name {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: clamp(60px, 11.6vw, 168px);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  margin-top: -0.04em;
+}
+.lockup--small {
+  gap: 8px;
+  padding: 6px 16px 6px 10px;
+}
+.lockup--small .lockup__cat {
+  width: 28px;
+  height: 28px;
+}
+.lockup--small .lockup__name {
+  font-size: 22px;
+  margin-top: -2px;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--black);
+  color: var(--white);
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-decoration: none;
+}
+.pill--link {
+  border: 1px solid var(--hairline);
+}
+.pill--link:hover {
+  background: var(--surface);
+}
+
+/* The stage: one screen. The windows fill it, the lockup sits on them, the keys below. */
+/* The deck: the stage sticks at the top, and each card slides over the one before. */
+.deck {
+  position: relative;
+  background: var(--black);
+}
+
+.stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  min-height: 640px;
+  overflow: hidden;
+  transform-origin: 50% 40%;
+  --s: 0.56;
+}
+
+/* The screen. --s scales every in-screen component from points to pixels. */
+.screen {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  isolation: isolate;
+  z-index: 0;
+  --gap: clamp(10px, 1.1vw, 16px);
+  --r: clamp(18px, 2.5vw, 36px);
+  font-family: var(--sys);
+}
+.slab {
+  position: absolute;
+  will-change: left, top, width, height, transform;
+}
+.slab__face {
+  position: absolute;
+  inset: calc(var(--gap) / 2);
+  border-radius: var(--r);
+}
+
+/* HUD: floating glass, radius 22, the layout thumbnail above the title. It answers
+   the keys, so it sits above them rather than under the lockup. */
+.hud {
+  position: absolute;
+  left: 50%;
+  bottom: 84px;
+  translate: -50% 0;
+  z-index: 50;
+  font-family: var(--sys);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(12px * var(--s));
+  padding: calc(20px * var(--s)) calc(24px * var(--s)) calc(16px * var(--s));
+  background: var(--glass);
+  backdrop-filter: blur(calc(18px * var(--s)));
+  -webkit-backdrop-filter: blur(calc(18px * var(--s)));
+  border-radius: calc(22px * var(--s));
+  box-shadow:
+    0 0 0 1px var(--hairline),
+    0 calc(18px * var(--s)) calc(44px * var(--s)) rgba(0, 0, 0, 0.75);
+  color: var(--white);
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.hud[data-plain="1"] {
+  padding-top: calc(16px * var(--s));
+}
+.hud__thumb {
+  width: calc(120px * var(--s));
+  height: calc(75px * var(--s));
+  display: block;
+}
+.hud__text {
+  font: 600 calc(22px * var(--s)) / 1.2 var(--display);
+  letter-spacing: calc(-0.2px * var(--s));
+}
+
+/* Hero overlay: the lockup and the pill in the middle of the windows. */
+.hero {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 16px 16px 96px;
+  pointer-events: none;
+}
+.hero > * {
+  pointer-events: auto;
+}
+
+/* The pulse: a veil over the whole stage that a circle from the button reveals. */
+.pulse {
+  position: absolute;
+  inset: 0;
+  z-index: 51;
+  opacity: 0;
+  pointer-events: none;
+  will-change: clip-path, opacity;
+}
+
+/* Install: one button. It sits above the pulse,
+   with a thick ring that turns into a band of the four hues and a glow while the pulse is on. */
+.install {
+  position: relative;
+  z-index: 52;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.install__button {
+  position: relative;
+  isolation: isolate;
+  background: none;
+  color: var(--black);
+  border: 0;
+  border-radius: 999px;
+  padding: 0;
+  font: 700 clamp(16px, 1.4vw, 19px) / 1 var(--display);
+  cursor: pointer;
+  box-shadow: 0 0 0 6px var(--black);
+  --spin: 0deg;
+}
+/* The fill lives on the label layer, above the ring. Both labels share one cell,
+   so the button keeps the size of the longer one. */
+.install__labels {
+  position: relative;
+  display: grid;
+  padding: 14px 28px;
+  border-radius: 999px;
+  background: var(--white);
+}
+.install__label {
+  grid-area: 1 / 1;
+  visibility: hidden;
+}
+.install__label[data-shown] {
+  visibility: visible;
+}
+@property --spin {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes ring-turn {
+  to {
+    --spin: 360deg;
+  }
+}
+.install__button::before,
+.install__button::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 999px;
+  background: conic-gradient(
+    from var(--spin),
+    var(--sky),
+    var(--lemon),
+    var(--magenta),
+    var(--lime),
+    var(--sky)
+  );
+  opacity: 0;
+  transition: opacity 0.35s ease-out;
+  z-index: -1;
+}
+.install__button::after {
+  inset: -14px;
+  filter: blur(22px);
+}
+.install__button.is-lit,
+.install__button:hover {
+  box-shadow: 0 0 0 6px transparent;
+}
+.install__button:hover {
+  animation: ring-turn 2.4s linear infinite;
+}
+.install__button.is-lit::before,
+.install__button:hover::before {
+  opacity: 1;
+}
+.install__button.is-lit::after,
+.install__button:hover::after {
+  opacity: 0.9;
+}
+/* While the pulse plays, the whole button is in the band, not only the ring. */
+.install__button.is-lit .install__labels {
+  background: transparent;
+}
+
+/* The keys: press them on the keyboard or tap them. */
+.keys {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 20px;
+  z-index: 3;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+}
+.keys__group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px 6px 6px;
+  border-radius: 999px;
+  background: var(--black);
+}
+.keys__label {
+  margin-left: 6px;
+  font: 500 13px/1 var(--body);
+  color: var(--ink-muted);
+}
+.chord {
+  display: inline-flex;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  border-radius: 8px;
+}
+.chord + .chord {
+  margin-left: 4px;
+}
+
+.key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 8px;
+  box-sizing: border-box;
+  border-radius: 6px;
+  background: var(--raised);
+  color: var(--white);
+  font: 600 13px var(--display);
+}
+
+/* Cards: one hue each, title and one line beside a small display. */
+/* Cards: one hue each. GSAP scales and dims the page behind as the next rises. */
+.card {
+  position: sticky;
+  top: 0;
+  z-index: var(--i);
+  height: 100vh;
+  height: 100svh;
+  min-height: 640px;
+  transform-origin: 50% 40%;
+  will-change: transform, filter;
+  background: var(--card, var(--black));
+  color: var(--black);
+  border-radius: clamp(24px, 3vw, 44px) clamp(24px, 3vw, 44px) 0 0;
+  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.35);
+}
+.card--last {
+  color: var(--white);
+}
+.card__inner {
+  height: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: clamp(24px, 5vw, 64px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(24px, 4vw, 64px);
+}
+.card__inner--center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 24px;
+}
+.card__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.card__title {
+  font-size: clamp(40px, 5vw, 72px);
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+.card__line {
+  margin: 0;
+  font-size: clamp(17px, 1.6vw, 22px);
+  line-height: 1.35;
+  max-width: 28ch;
+  text-wrap: balance;
+}
+
+/* The small display inside a card. */
+.demo {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  width: 100%;
+  background: var(--black);
+  border-radius: clamp(16px, 2vw, 28px);
+  overflow: hidden;
+  font-family: var(--sys);
+}
+.demo__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.demo__desktops {
+  transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.demo__tile {
+  fill: #2a2a2a;
+  transition:
+    x 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+    y 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+    width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+    height 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+    fill 0.3s ease-out,
+    opacity 0.3s ease-out;
+}
+.demo__tile[data-focused] {
+  fill: var(--card);
+}
+.demo__key,
+.demo__typed {
+  position: absolute;
+  left: 50%;
+  bottom: 7%;
+  translate: -50% 0;
+  background: rgba(20, 20, 20, 0.85);
+  color: var(--white);
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px var(--hairline);
+  white-space: nowrap;
+  animation: demo-pop 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.demo__key {
+  min-width: 2.4em;
+  padding: 0.35em 0.7em;
+  text-align: center;
+  font: 600 clamp(14px, 1.6vw, 22px) / 1.3 var(--display);
+}
+.demo__typed {
+  padding: 0.5em 0.9em;
+  font: clamp(12px, 1.2vw, 15px) / 1.4 var(--mono);
+}
+.demo__prompt {
+  color: var(--ink-muted);
+}
+@keyframes demo-pop {
+  from {
+    opacity: 0;
+    translate: -50% 6px;
+  }
+}
+
+@media (max-width: 820px) {
+  .card__inner {
+    grid-template-columns: 1fr;
+    align-content: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero {
+    padding-bottom: 120px;
+  }
+  .hud {
+    bottom: 128px;
+  }
+  .keys__label {
+    display: none;
+  }
+  .keys__group {
+    padding: 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo__tile,
+  .demo__desktops,
+  .demo__key,
+  .demo__typed {
+    transition: none;
+    animation: none;
+  }
 }
