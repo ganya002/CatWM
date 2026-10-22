@@ -1,6 +1,6 @@
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 
-import { type Card, DEMO } from "./cards";
+import { type Card, DEMO } from "./features";
 
 // A small display that loops a card's scenes. The tiles are SVG rects, so a
 // move is geometry, not layout. It runs only while on screen.

@@ -3,7 +3,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { type CSSProperties, type ReactNode, useRef } from "react";
 
-import { CARDS } from "./cards";
+import { CARDS } from "./features";
 import { Demo } from "./Demo";
 
 // The feature cards. Each one sticks at the top, and as the next one rises
