@@ -3,7 +3,7 @@ import CoreText
 import SwiftUI
 
 enum Theme {
-    static var palette = Palette.ouch
+    static var palette = Palette.catwm
 
     static func isDark(_ appearance: NSAppearance) -> Bool {
         appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
@@ -30,7 +30,7 @@ enum Theme {
         return dark ? hex(pair.dark, pair.darkAlpha) : hex(pair.light, pair.lightAlpha)
     }
     static func rgb(_ value: UInt32, _ alpha: CGFloat = 1) -> Color { Color(nsColor: hex(value, alpha)) }
-    static let iconBlue = hex(0x0A74FF, 1)
+    static let iconAccent = hex(0xFF4AD8, 1)
 
     static let background = token(\.background)
     static let surface = token(\.surface)
@@ -81,36 +81,38 @@ enum Theme {
         CTFontManagerRegisterFontURLs(fonts as CFArray, .process, true, nil)
     }
 
-    private static let hasHeadingFace = NSFont(name: "Nunito-ExtraBold", size: 12) != nil
-    private static let hasBodyFace = NSFont(name: "Supreme-Regular", size: 12) != nil
+    private static let brandSemibold = "PilcrowRounded-Semibold"
+    private static let brandBold = "PilcrowRounded-Bold"
+    private static let hasBrandFace = NSFont(name: brandSemibold, size: 12) != nil
+        && NSFont(name: brandBold, size: 12) != nil
 
-    private static func bodyFace(_ weight: Font.Weight) -> String {
-        switch weight {
-        case .ultraLight, .thin, .light: "Supreme-Light"
-        case .regular: "Supreme-Regular"
-        default: "Supreme-Medium"
-        }
-    }
+    private static let keysDescriptor = NSFontDescriptor(fontAttributes: [
+        .name: brandSemibold,
+        .cascadeList: [NSFont.systemFont(ofSize: 12, weight: .semibold).fontDescriptor]
+    ])
 
     static func body(_ size: CGFloat = 13.5, _ weight: Font.Weight = .regular) -> Font {
-        hasBodyFace ? .custom(bodyFace(weight), size: size) : .system(size: size, weight: weight)
+        .system(size: size, weight: weight)
     }
     static func keys(_ size: CGFloat = 12.5, _ weight: Font.Weight = .regular) -> Font {
-        .system(size: size, weight: weight)
+        guard hasBrandFace, let font = NSFont(descriptor: keysDescriptor, size: size) else {
+            return .system(size: size, weight: weight)
+        }
+        return Font(font)
     }
     static func mono(_ size: CGFloat = 11.5, _ weight: Font.Weight = .medium) -> Font {
         .system(size: size, weight: weight, design: .monospaced)
     }
     static func heading(_ size: CGFloat = 15) -> Font {
-        hasHeadingFace ? .custom("Nunito-ExtraBold", size: size) : .system(size: size, weight: .semibold)
+        hasBrandFace ? .custom(brandSemibold, size: size) : .system(size: size, weight: .semibold)
     }
-    static func display(_ size: CGFloat) -> Font { heading(size) }
-    static func wordmark(_ size: CGFloat) -> Font { heading(size) }
+    static func display(_ size: CGFloat) -> Font {
+        hasBrandFace ? .custom(brandBold, size: size) : .system(size: size, weight: .bold)
+    }
+    static func wordmark(_ size: CGFloat) -> Font { display(size) }
 
     static func nsBody(_ size: CGFloat, weight: NSFont.Weight = .regular) -> NSFont {
-        let name = weight.rawValue < NSFont.Weight.regular.rawValue ? "Supreme-Light"
-            : weight == .regular ? "Supreme-Regular" : "Supreme-Medium"
-        return NSFont(name: name, size: size) ?? .systemFont(ofSize: size, weight: weight)
+        .systemFont(ofSize: size, weight: weight)
     }
 
     enum Icon {

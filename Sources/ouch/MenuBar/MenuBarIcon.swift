@@ -31,7 +31,7 @@ enum MenuBarIcon {
         parts.append(Part(width: glyphSize.width, gapAfter: shown.isEmpty ? 0 : 5) { x in
             let rect = CGRect(x: x, y: (height - glyphSize.height) / 2,
                               width: glyphSize.width, height: glyphSize.height)
-            drawLayout(layout, color: mode.isEmpty ? .labelColor : .systemBlue, in: rect)
+            drawLayout(layout, color: mode.isEmpty ? .labelColor : Theme.ns(\.accent), in: rect)
         })
         for (i, pid) in shown.enumerated() {
             let icon = self.icon(for: pid)

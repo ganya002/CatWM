@@ -23,17 +23,17 @@ A change to a token or a component rule is not finished until `Sources/ouch/UI/T
 2. **One floating surface.** Menus, tooltips, tips, coach marks, the HUD and the welcome card are one component: `.surface(_ density:)`, at five densities. A new floating thing gets a density, never a new look.
 3. **Two levels, then search.** Menus nest one level, two at most. Deeper items go behind the search field at the top of every menu.
 4. **No boxes around content.** Content sits on the ground. Hairlines separate rows. Only floating things (menus, tips, tour cards, HUD) and the one content pane get a surface. They get depth from the `popover` and `float` elevations, not from borders.
-5. **Chrome is a wash.** Window chrome and sidebars sit on `Theme.wash`: `wash1`, then `background` at 55%, then `wash2`. Items sit on it as pills. The content is one floating rounded pane (`.pane()`, `surface`, radius 14), inset by the popover shadow room on the top, bottom and trailing sides so the shadow fades out on the wash.
-6. **Two faces.** Supreme for text: Regular for text, Medium for emphasis, Light for light text. Nunito Extra Bold for headings, large display and the wordmark. Nothing else.
+5. **Chrome is flat.** Window chrome and sidebars sit on `Theme.wash`, which is flat: `wash1` and `wash2` equal `background`, black in the dark theme and white in the light theme. Items sit on it as pills. The content is one floating rounded pane (`.pane()`, `surface`, radius 14), inset by the popover shadow room on the top, bottom and trailing sides so the shadow fades out on the ground.
+6. **Two faces.** Pilcrow Rounded for the wordmark, display, titles, headings and keycaps: Bold for the wordmark and display, Semibold for the rest. The system font for body text, labels, captions and menu rows. Nothing else.
 7. **Symbols move with meaning.** An SF Symbol effect always reports something: an action landed, a thing refused, the app is busy, a tip is waiting. Never decoration.
 
 ## Colour
 
-One palette, `Palette.ouch`, with a light and a dark theme. It comes from the app icon: graphite ground, the electric blue of the main window as accent, the cool greys of the white windows as tint. Components read semantic tokens only.
+One palette, `Palette.catwm`, with a light and a dark theme. It comes from the CatWM brand: a black ground with white type in the dark theme, a white ground with black type in the light theme, and magenta as the one accent. The four brand hues (sky, lemon, magenta, lime) are for the website and the brand sheet. Only magenta enters the app. Components read semantic tokens only.
 
-- Paint window chrome with the wash. Put the content pane on `surface`. Float menus and tips on `surfaceRaised` (or `glass` where Liquid Glass is not available).
+- Paint window chrome with `background`. Put the content pane on `surface`. Float menus and tips on `surfaceRaised` (or `glass` where Liquid Glass is not available).
 - Text is `ink`. Secondary text is `inkMuted`. Placeholders are `inkFaint`. Every pair meets 4.5:1 in both themes.
-- Blue is an accent. Use `accent` for one thing per view: the primary button, the switch that is on, the current workspace, the progress bar, the selected layout. Its text is `onAccent`. Everything else is neutral.
+- Magenta is the accent. Use `accent` for one thing per view: the primary button, the switch that is on, the current workspace, the progress bar, the selected layout. Its text is `onAccent`, black in both themes. Accent-coloured text uses `accentInk`, which is darker in the light theme so it meets 4.5:1. Everything else is neutral.
 - A hovered or highlighted row is a `hover` fill. Its text keeps its colour. Hover and keyboard highlight never use `accent`.
 - A selected sidebar item is a `surface` pill with the `small` elevation, on the wash.
 - Tour cards are plain raised surfaces. They are not filled with `accent`.
@@ -44,11 +44,12 @@ One palette, `Palette.ouch`, with a light and a dark theme. It comes from the ap
 
 ## Type
 
-- `display` 44/46, weight 300. Welcome title and showcase headlines. One per screen.
+- `wordmark` Pilcrow Rounded Bold, tracking -0.03 em. `Theme.wordmark`.
+- `display` 44/48, Pilcrow Rounded Bold. Welcome title and showcase headlines. One per screen.
 - `numeral` 34, weight 300, in `inkMuted`. Step numbers.
-- `title` 22/27, weight 400. Tour cards, pane titles, the HUD. Emphasise one word at 500.
-- `heading` 15/20, weight 500. `body` 13.5/19, weight 400. `body-medium` is `body` at 500. `caption` 12/16. `label` 12/16, weight 500.
-- `kbd`, `kicker` and `code` use the mono face. `kicker` is the only uppercase text: "STEP 2 OF 6".
+- `title` 22/27, Pilcrow Rounded Semibold. Tour cards, pane titles, the HUD.
+- `heading` 15/20, Pilcrow Rounded Semibold. `body` 13.5/19, system font at 400. `body-medium` is `body` at 500. `caption` 12/16. `label` 12/16, weight 500.
+- `kbd` is Pilcrow Rounded Semibold through `Theme.keys`. The face has no modifier glyphs, so the font cascades to the system font for ⌘ ⇧ ⌥ ⌃ ⇥ ↩. `kicker` and `code` use the mono face. `kicker` is the only uppercase text: "STEP 2 OF 6".
 
 Labels, captions, buttons, keys and menu rows never wrap. They are one line and truncate with an ellipsis (`.oneLine()`). Only body prose wraps. Keep it to two lines in floating surfaces.
 
@@ -64,7 +65,7 @@ Labels, captions, buttons, keys and menu rows never wrap. They are one line and 
 
 ```text
 head      lead symbol, kicker, trailing item, close
-title     Supreme title (smaller at small and medium)
+title     title in Pilcrow Rounded Semibold (smaller at small and medium)
 body      inkMuted body
 keys      large keycaps and live state ("Press it now", then "Nice")
 children  rows, menus, groups
@@ -170,4 +171,4 @@ Short, second person, sentence case. No exclamation marks, except "Nice". Name t
 
 ## Assets
 
-The app icon and wordmark are in `Resources/Icon` and `Resources/Fonts`. The wordmark uses `Theme.wordmark`.
+The app icon and wordmark are in `Resources/Icon` and `Resources/Fonts`. The wordmark uses `Theme.wordmark`. `AppIcon` is the dark appearance, the white cat on black, and the bundle icon. `AppIcon-Light` is the light appearance, the black cat on white. macOS 26 can switch between the two from one Icon Composer `.icon` file compiled by `actool`. The build does not do that yet, so the dark icon shows in both appearances. `CatMark.svg` is the cat alone, filled with `currentColor`.
