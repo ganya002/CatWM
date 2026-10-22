@@ -37,5 +37,5 @@ cp Resources/ThirdPartyNotices.txt "$APP/Contents/Resources/"
 SPARKLE=$(find .build/artifacts -type d -name Sparkle.framework -path '*macos-arm64_x86_64*' | head -1)
 ditto "$SPARKLE" "$APP/Contents/Frameworks/Sparkle.framework"
 codesign --force --deep --sign - "$APP/Contents/Frameworks/Sparkle.framework"
-codesign --force --sign - -r='designated => identifier "local.ouch"' "$APP"
+codesign --force --sign - -r='designated => identifier "local.catwm"' "$APP"
 echo "Built $APP"
