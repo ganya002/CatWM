@@ -127,7 +127,7 @@ final class WindowScanner {
                 if element.flag("AXFullScreen") { scan.fullscreen.insert(id) }
                 if element.flag(kAXMinimizedAttribute) { scan.minimized.insert(id) }
                 guard element.string(kAXSubroleAttribute) == kAXStandardWindowSubrole,
-                      !scan.minimized.contains(id), !scan.fullscreen.contains(id) else { continue }
+                      !scan.minimized.contains(id) else { continue }
                 scan.found[id] = Found(element: element, frame: element.frame,
                                        title: element.string(kAXTitleAttribute),
                                        resizable: element.isSettable(kAXSizeAttribute))
