@@ -32,8 +32,9 @@ jobs:
           cache: pnpm
           cache-dependency-path: website/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - run: pnpm vp check
+      # typecheck runs react-router typegen first, and vp check needs those types.
       - run: pnpm typecheck
+      - run: pnpm vp check
       - run: pnpm vp exec void deploy --platform cloudflare
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
