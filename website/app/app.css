@@ -11,10 +11,9 @@
   --magenta: #ff4ad8;
   --lime: #9dff1f;
 
-  --surface: #141414;
-  --raised: #1c1c1c;
   --sunken: #0a0a0a;
   --hover: #262626;
+  --raised: #1c1c1c;
   --hairline: #2a2a2a;
   --border-control: #6b6b6b;
   --ink-muted: #a3a3a3;
@@ -25,7 +24,6 @@
   --danger: #ff6b5b;
   --danger-soft: #3d2220;
   --well: rgba(255, 255, 255, 0.09);
-  --glass: rgba(20, 20, 20, 0.82);
   --grey: var(--ink-muted);
 
   --display:
@@ -119,27 +117,7 @@ a {
   margin-top: -2px;
 }
 
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  background: var(--black);
-  color: var(--white);
-  border-radius: 999px;
-  padding: 8px 16px;
-  font-size: 15px;
-  font-weight: 500;
-  line-height: 1.2;
-  text-decoration: none;
-}
-.pill--link {
-  border: 1px solid var(--hairline);
-}
-.pill--link:hover {
-  background: var(--surface);
-}
-
-/* The stage: one screen. The windows fill it, the lockup sits on them, the keys below. */
+/* The stage: one screen. The windows fill it, the lockup sits on them. */
 /* The deck: the stage sticks at the top, and each card slides over the one before. */
 .deck {
   position: relative;
@@ -178,46 +156,6 @@ a {
   border-radius: var(--r);
 }
 
-/* HUD: floating glass, radius 22, the layout thumbnail above the title. It answers
-   the keys, so it sits above them rather than under the lockup. */
-.hud {
-  position: absolute;
-  left: 50%;
-  bottom: 84px;
-  translate: -50% 0;
-  z-index: 50;
-  font-family: var(--sys);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: calc(12px * var(--s));
-  padding: calc(20px * var(--s)) calc(24px * var(--s)) calc(16px * var(--s));
-  background: var(--glass);
-  backdrop-filter: blur(calc(18px * var(--s)));
-  -webkit-backdrop-filter: blur(calc(18px * var(--s)));
-  border-radius: calc(22px * var(--s));
-  box-shadow:
-    0 0 0 1px var(--hairline),
-    0 calc(18px * var(--s)) calc(44px * var(--s)) rgba(0, 0, 0, 0.75);
-  color: var(--white);
-  white-space: nowrap;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-.hud[data-plain="1"] {
-  padding-top: calc(16px * var(--s));
-}
-.hud__thumb {
-  width: calc(120px * var(--s));
-  height: calc(75px * var(--s));
-  display: block;
-}
-.hud__text {
-  font: 600 calc(22px * var(--s)) / 1.2 var(--display);
-  letter-spacing: calc(-0.2px * var(--s));
-}
-
 /* Hero overlay: the lockup and the pill in the middle of the windows. */
 .hero {
   position: absolute;
@@ -227,7 +165,7 @@ a {
   align-items: center;
   justify-content: center;
   gap: 20px;
-  padding: 16px 16px 96px;
+  padding: 16px;
   pointer-events: none;
 }
 .hero > * {
@@ -239,6 +177,7 @@ a {
   position: absolute;
   inset: 0;
   z-index: 51;
+  border-radius: inherit;
   opacity: 0;
   pointer-events: none;
   will-change: clip-path, opacity;
@@ -275,6 +214,7 @@ a {
   padding: 14px 28px;
   border-radius: 999px;
   background: var(--white);
+  transition: background-color 0.25s ease-out;
 }
 .install__label {
   grid-area: 1 / 1;
@@ -285,7 +225,42 @@ a {
 }
 @property --spin {
   syntax: "<angle>";
-  inherits: false;
+  inherits: true;
+  initial-value: 0deg;
+}
+@property --o1 {
+  syntax: "<angle>";
+  inherits: true;
+  initial-value: 0deg;
+}
+@property --o2 {
+  syntax: "<angle>";
+  inherits: true;
+  initial-value: 100deg;
+}
+@property --o3 {
+  syntax: "<angle>";
+  inherits: true;
+  initial-value: 200deg;
+}
+@property --o4 {
+  syntax: "<angle>";
+  inherits: true;
+  initial-value: 290deg;
+}
+@property --on {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+@property --breath-a {
+  syntax: "<angle>";
+  inherits: true;
+  initial-value: 0deg;
+}
+@property --breath-b {
+  syntax: "<angle>";
+  inherits: true;
   initial-value: 0deg;
 }
 @keyframes ring-turn {
@@ -293,99 +268,111 @@ a {
     --spin: 360deg;
   }
 }
+@keyframes o1 {
+  to {
+    --o1: 360deg;
+  }
+}
+@keyframes o2 {
+  to {
+    --o2: 360deg;
+  }
+}
+@keyframes o3 {
+  to {
+    --o3: 360deg;
+  }
+}
+@keyframes o4 {
+  to {
+    --o4: 360deg;
+  }
+}
+@keyframes breath-a {
+  to {
+    --breath-a: 360deg;
+  }
+}
+@keyframes breath-b {
+  to {
+    --breath-b: 360deg;
+  }
+}
+/* The ring is an aura of the four hues, leaning green. Each colour orbits at its own speed and swells and shrinks on out-of-step waves, so the mix wanders like noise. The glow behind it
+   breathes: two sines with periods that do not divide each other, so it drifts like noise. */
+.install__button {
+  --on: 0;
+  --aura:
+    radial-gradient(
+      ellipse calc(34% + 8% * sin(var(--breath-a) + 0deg))
+        calc(3.2 * (34% + 8% * sin(var(--breath-a) + 0deg))) at
+        calc(50% + (42% + 8% * sin(var(--breath-b) + 0deg)) * cos(var(--o1) + var(--spin)))
+        calc(50% + 46% * sin(var(--o1) + var(--spin))),
+      var(--sky),
+      transparent
+    ),
+    radial-gradient(
+      ellipse calc(30% + 8% * sin(var(--breath-a) + 120deg))
+        calc(3.4 * (30% + 8% * sin(var(--breath-a) + 120deg))) at
+        calc(50% + (42% + 8% * sin(var(--breath-b) + 120deg)) * cos(var(--o2) + var(--spin)))
+        calc(50% + 46% * sin(var(--o2) + var(--spin))),
+      var(--magenta),
+      transparent
+    ),
+    radial-gradient(
+      ellipse calc(130% + 28% * sin(var(--breath-a) + 240deg))
+        calc(2.5 * (130% + 28% * sin(var(--breath-a) + 240deg))) at
+        calc(50% + (42% + 8% * sin(var(--breath-b) + 240deg)) * cos(var(--o3) + var(--spin)))
+        calc(50% + 46% * sin(var(--o3) + var(--spin))),
+      var(--lime),
+      transparent
+    ),
+    radial-gradient(
+      ellipse calc(30% + 8% * sin(var(--breath-a) + 60deg))
+        calc(3.4 * (30% + 8% * sin(var(--breath-a) + 60deg))) at
+        calc(50% + (42% + 8% * sin(var(--breath-b) + 60deg)) * cos(var(--o4) + var(--spin)))
+        calc(50% + 46% * sin(var(--o4) + var(--spin))),
+      var(--lemon),
+      transparent
+    );
+  --breath: calc(0.9 + 0.15 * sin(var(--breath-a)) + 0.1 * sin(var(--breath-b)));
+  transition:
+    --on 0.35s ease-out,
+    box-shadow 0.35s ease-out;
+}
 .install__button::before,
 .install__button::after {
   content: "";
   position: absolute;
   inset: -6px;
   border-radius: 999px;
-  background: conic-gradient(
-    from var(--spin),
-    var(--sky),
-    var(--lemon),
-    var(--magenta),
-    var(--lime),
-    var(--sky)
-  );
-  opacity: 0;
-  transition: opacity 0.35s ease-out;
+  background-color: var(--lime);
+  background-image: var(--aura);
+  opacity: var(--on);
   z-index: -1;
 }
 .install__button::after {
-  inset: -14px;
-  filter: blur(22px);
+  inset: -22px;
+  filter: blur(30px);
+  opacity: calc(var(--on) * var(--breath));
+  scale: calc(0.96 + 0.12 * var(--breath));
 }
 .install__button.is-lit,
 .install__button:hover {
+  --on: 1;
   box-shadow: 0 0 0 6px transparent;
+  animation:
+    o1 7.3s linear infinite,
+    o2 9.1s linear infinite reverse,
+    o3 13.7s linear infinite,
+    o4 5.9s linear infinite reverse,
+    breath-a 3.1s linear infinite,
+    breath-b 4.7s linear infinite;
 }
-.install__button:hover {
-  animation: ring-turn 2.4s linear infinite;
-}
-.install__button.is-lit::before,
-.install__button:hover::before {
-  opacity: 1;
-}
-.install__button.is-lit::after,
-.install__button:hover::after {
-  opacity: 0.9;
-}
-/* While the pulse plays, the whole button is in the band, not only the ring. */
+/* While the pulse plays, the whole button is in the one band, not only the ring. The same
+   aura shows through the middle. Its four colour blobs orbit the centre, so nothing sweeps fast there. */
 .install__button.is-lit .install__labels {
-  background: transparent;
-}
-
-/* The keys: press them on the keyboard or tap them. */
-.keys {
-  position: absolute;
-  left: 16px;
-  right: 16px;
-  bottom: 20px;
-  z-index: 3;
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 8px 10px;
-}
-.keys__group {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 12px 6px 6px;
-  border-radius: 999px;
-  background: var(--black);
-}
-.keys__label {
-  margin-left: 6px;
-  font: 500 13px/1 var(--body);
-  color: var(--ink-muted);
-}
-.chord {
-  display: inline-flex;
-  gap: 4px;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: inherit;
-  cursor: pointer;
-  border-radius: 8px;
-}
-.chord + .chord {
-  margin-left: 4px;
-}
-
-.key {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 30px;
-  height: 30px;
-  padding: 0 8px;
-  box-sizing: border-box;
-  border-radius: 6px;
-  background: var(--raised);
-  color: var(--white);
-  font: 600 13px var(--display);
+  background-color: transparent;
 }
 
 /* Cards: one hue each, title and one line beside a small display. */
@@ -409,11 +396,11 @@ a {
 }
 .card__inner {
   height: 100%;
-  max-width: 1200px;
+  max-width: 1440px;
   margin: 0 auto;
   padding: clamp(24px, 5vw, 64px);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
   align-items: center;
   gap: clamp(24px, 4vw, 64px);
 }
@@ -451,6 +438,8 @@ a {
   position: relative;
   aspect-ratio: 16 / 10;
   width: 100%;
+  container-type: inline-size;
+  --u: calc(100cqw / 660);
   background: var(--black);
   border-radius: clamp(16px, 2vw, 28px);
   overflow: hidden;
@@ -477,28 +466,42 @@ a {
 .demo__tile[data-focused] {
   fill: var(--card);
 }
+/* A pressed key is the tooltip: one raised tile per key, no pill behind it. The typed
+   command is one pill. Both sit on surfaceRaised with popover elevation. --u is 1 px at 660 px wide. */
 .demo__key,
 .demo__typed {
   position: absolute;
   left: 50%;
   bottom: 7%;
   translate: -50% 0;
-  background: rgba(20, 20, 20, 0.85);
   color: var(--white);
-  border-radius: 10px;
-  box-shadow: 0 0 0 1px var(--hairline);
   white-space: nowrap;
   animation: demo-pop 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .demo__key {
-  min-width: 2.4em;
-  padding: 0.35em 0.7em;
-  text-align: center;
-  font: 600 clamp(14px, 1.6vw, 22px) / 1.3 var(--display);
+  display: flex;
+  gap: calc(8 * var(--u));
+}
+.demo__cap,
+.demo__typed {
+  background: var(--raised);
+  box-shadow:
+    0 0 0 1px var(--hairline),
+    0 calc(15 * var(--u)) calc(39 * var(--u)) rgba(0, 0, 0, 0.65);
+}
+.demo__cap {
+  display: grid;
+  place-items: center;
+  min-width: calc(48 * var(--u));
+  height: calc(48 * var(--u));
+  padding: 0 calc(12 * var(--u));
+  border-radius: calc(14 * var(--u));
+  font: 600 calc(24 * var(--u)) / 1 var(--display);
 }
 .demo__typed {
-  padding: 0.5em 0.9em;
-  font: clamp(12px, 1.2vw, 15px) / 1.4 var(--mono);
+  padding: calc(8 * var(--u)) calc(14 * var(--u));
+  border-radius: calc(12 * var(--u));
+  font: calc(18 * var(--u)) / calc(30 * var(--u)) var(--mono);
 }
 .demo__prompt {
   color: var(--ink-muted);
@@ -517,22 +520,8 @@ a {
   }
 }
 
-@media (max-width: 640px) {
-  .hero {
-    padding-bottom: 120px;
-  }
-  .hud {
-    bottom: 128px;
-  }
-  .keys__label {
-    display: none;
-  }
-  .keys__group {
-    padding: 6px;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
+  .install__button,
   .demo__tile,
   .demo__desktops,
   .demo__key,

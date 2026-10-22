@@ -8,15 +8,6 @@ export type LayoutName = "tall" | "wide" | "fullscreen" | "bsp" | "column";
 // Config.layouts default: the order `n` and `p` cycle through.
 export const LAYOUT_CYCLE: LayoutName[] = ["tall", "wide", "fullscreen", "bsp", "column"];
 
-// Layout.title, shown by the HUD on a layout change.
-export const LAYOUT_TITLE: Record<LayoutName, string> = {
-  tall: "Tall",
-  wide: "Wide",
-  fullscreen: "Fullscreen",
-  bsp: "Binary Space Partitioning",
-  column: "Column",
-};
-
 export function rows(r: Rect, n: number): Rect[] {
   const h = r.h / n;
   return Array.from({ length: n }, (_, i) => ({ x: r.x, y: r.y + h * i, w: r.w, h }));

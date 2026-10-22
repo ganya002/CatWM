@@ -5,12 +5,15 @@ import { type CSSProperties, type ReactNode, useRef } from "react";
 
 import { CARDS } from "./cards";
 import { Demo } from "./Demo";
+import { usePulse } from "./usePulse";
 
 // The feature cards. Each one sticks at the top, and as the next one rises
 // the page behind it recedes: it scales down and dims while the new page
 // slides over it.
 export function Cards({ last }: { last: ReactNode }) {
   const root = useRef<HTMLDivElement>(null);
+  const lastCard = useRef<HTMLElement>(null);
+  usePulse(lastCard, "#fff");
 
   useGSAP(
     () => {
@@ -62,7 +65,12 @@ export function Cards({ last }: { last: ReactNode }) {
           </div>
         </section>
       ))}
-      <section className="card card--last" style={{ "--i": CARDS.length + 1 } as CSSProperties}>
+      <section
+        ref={lastCard}
+        className="card card--last"
+        style={{ "--i": CARDS.length + 1 } as CSSProperties}
+      >
+        <div className="pulse" data-pulse aria-hidden="true" />
         <div className="card__inner card__inner--center">{last}</div>
       </section>
     </div>

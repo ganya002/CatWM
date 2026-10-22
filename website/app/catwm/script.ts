@@ -2,7 +2,6 @@
 // follows the matching dispatcher in Sources/ouch/Tiling/Manager.
 
 import {
-  LAYOUT_TITLE,
   type Direction,
   type LayoutName,
   type Rect,
@@ -136,7 +135,3 @@ export const ATTRACT: { key: KeyId; after: number }[] = [
   { key: "n", after: 2.6 },
   { key: "t", after: 3.4 },
 ];
-
-export function hudTitle(s: State): string {
-  return s.tiling ? LAYOUT_TITLE[s.layout] : "Floating";
-}
