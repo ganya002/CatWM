@@ -18,7 +18,7 @@ struct ORow<Control: View>: View {
     var body: some View {
         HStack(spacing: 12) {
             if let symbol {
-                Image(systemName: symbol).font(Theme.symbol(Theme.Icon.large)).foregroundStyle(Theme.accentInk)
+                Image(systemName: symbol).font(Theme.symbol(Theme.Icon.large)).foregroundStyle(Theme.inkMuted)
                     .frame(width: 18)
             }
             VStack(alignment: .leading, spacing: 1) {

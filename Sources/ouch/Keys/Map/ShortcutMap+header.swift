@@ -15,7 +15,7 @@ extension ShortcutMap {
                     .zIndex(1)
                 list(layer)
             }
-            .padding(.horizontal, Theme.Space.page).padding(.top, 22).padding(.bottom, 40)
+            .padding(.horizontal, 28).padding(.top, 22).padding(.bottom, 40)
         }
         .onAppear {
             model.mode = doc.submaps.contains(settings.bindMode) ? settings.bindMode : ""
@@ -31,7 +31,10 @@ extension ShortcutMap {
 
     func header(_ all: [ConfigDocument.KeyAction]) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            OPageTitle(crumbs: ["Settings", "Shortcuts", "Map"]) {
+            HStack(alignment: .center, spacing: Theme.Space.small) {
+                Text("Shortcut map").textStyle(.title).foregroundStyle(Theme.ink).oneLine()
+                    .accessibilityAddTraits(.isHeader)
+                Spacer(minLength: Theme.Space.medium)
                 if doc.submaps.count > 1 {
                     OSegmented(title: "Shortcut set",
                                options: doc.submaps.map { ($0, $0.isEmpty ? "Global" : "\($0.capitalized) mode") },
@@ -86,11 +89,11 @@ extension ShortcutMap {
                     HStack(spacing: 5) {
                         Text(name).font(Theme.keys(12, .medium))
                         Text("\(item.count)").font(Theme.body(11.5)).monospacedDigit()
-                            .foregroundStyle(active ? Theme.onAccent.opacity(0.8) : Theme.inkMuted)
+                            .foregroundStyle(active ? Theme.background.opacity(0.7) : Theme.inkMuted)
                     }
-                    .foregroundStyle(active ? Theme.onAccent : Theme.ink)
+                    .foregroundStyle(active ? Theme.background : Theme.ink)
                     .padding(.horizontal, 10).frame(height: 26)
-                    .background(Capsule().fill(active ? Theme.accent : Theme.well))
+                    .background(Capsule().fill(active ? Theme.ink : Theme.well))
                     .contentShape(Capsule())
                 }
                 .buttonStyle(PressScale())
