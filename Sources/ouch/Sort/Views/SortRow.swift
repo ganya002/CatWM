@@ -14,7 +14,7 @@ struct SortRow: View {
             .padding(.leading, indented ? 19 : 5).padding(.trailing, 8)
             .frame(height: SortMetrics.rowHeight)
             .background(RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
-                .fill(closing ? (pointed ? Theme.hover : .clear) : lit ? Theme.accentSoft : .clear))
+                .fill((closing ? pointed : lit) ? Theme.hover : .clear))
             .overlay(alignment: .trailing) {
                 if pointed && model.drag == nil {
                     RemoveButton(help: closing ? "Bring back" : "Close window", variant: closing ? .restore : .close) {

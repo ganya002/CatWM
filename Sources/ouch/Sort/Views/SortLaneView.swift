@@ -94,7 +94,7 @@ struct SortLaneView: View {
         .padding(.vertical, 8).padding(.horizontal, 4)
         .frame(width: SortMetrics.lane, alignment: .topLeading)
         .background(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous)
-            .fill(over ? Theme.accentSoft : .clear))
+            .fill(over ? Theme.accentSoft : Theme.surfaceRaised))
         .opacity(model.columnDrag?.lane.id == lane.id ? 0.3 : 1)
         .overlay(alignment: .leading) { slotBar(model.columnSlot == index).offset(x: -3.5) }
         .overlay(alignment: .trailing) {
