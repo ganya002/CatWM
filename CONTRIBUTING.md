@@ -13,7 +13,7 @@ Thank you for your help. This page tells you how to set up, check and submit a c
 - `./build.sh --dev` makes a fast debug build in `build/ouch.app`. Use it while you work. It takes a few seconds, not approximately a minute.
 - `./build.sh` makes a release build. Do not ship a `--dev` build.
 - `open build/ouch.app` starts the app.
-- `./install.sh` installs a beta build to `/Applications/Ouch.app` and opens it. Add `--stable` to remove the beta channel marker.
+- `./install.sh` installs a beta build to `/Applications/CatWM.app` and opens it. Add `--stable` to remove the beta channel marker.
 - The app is ad-hoc signed. Each rebuild cancels its Accessibility permission. Ouch shows ⚠️ in the menu bar and opens Settings. Click **Reset Permission**, then turn Ouch on again.
 
 ### Launch arguments
@@ -109,4 +109,4 @@ The build number comes from the commit count, so you only change `CFBundleShortV
 
 For early-access betas, `./beta.sh "What changed"` publishes to the beta channel and does not change the version. The build number is the commit count and the version is `0.2-beta.<build>`. Beta builds start with beta updates on. Without a Developer ID certificate, it ships an unsigned ZIP. Testers must permit it one time in System Settings → Privacy & Security → **Open Anyway**.
 
-The install script for testers is [website/public/install.sh](website/public/install.sh). The website serves it at `https://ouch.perwko.com/install.sh`.
+The install script for testers is [website/public/install.sh](website/public/install.sh). The website serves it at `https://catwm.perwko.com/install.sh`.
