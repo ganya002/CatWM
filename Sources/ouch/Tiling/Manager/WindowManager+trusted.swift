@@ -1,14 +1,14 @@
 import AppKit
 
 extension WindowManager {
-    struct ScreenStatus {
+    struct ScreenStatus: Equatable {
         var uuid: String
         var name: String
         var layout: Layout
         var workspace: String
     }
 
-    struct Status {
+    struct Status: Equatable {
         var trusted: Bool
         var keybindsActive: Bool
         var running: Bool

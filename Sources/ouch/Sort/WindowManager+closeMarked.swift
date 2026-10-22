@@ -1,40 +1,42 @@
 import AppKit
+import WindowSession
 
 extension WindowManager {
     func closeMarked(_ ids: [CGWindowID], attempt: Int) {
         var pressed: [CGWindowID] = []
         for id in ids {
-            guard let window = windows[id], window.isValid else { continue }
+            guard let window = windows[id], window.isValidUnlessStalled else { continue }
             let name = NSRunningApplication(processIdentifier: window.pid)?.bundleIdentifier ?? "pid \(window.pid)"
             lastClose = Date()
             var outcome = window.close()
             if outcome != "pressed", attempt > 0, focusedWindow()?.id == id {
                 outcome += window.closeFromMenu() ? ", menu Close Window chosen" : ", no menu item"
             }
-            Log.info("sort: close \(id) \(name) frame=\(window.frame) try \(attempt + 1): \(outcome)")
+            Log.info("sort: close \(id) \(name) frame=\(window.cachedFrame) try \(attempt + 1): \(outcome)")
             pressed.append(id)
         }
         guard !pressed.isEmpty else { return stopClosing(ids) }
         if attempt >= 2 {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
                 guard let self else { return }
-                self.forceClose(pressed.filter { self.windows[$0]?.isValid == true })
+                self.forceClose(pressed.filter { self.windows[$0]?.isValidUnlessStalled == true })
                 self.stopClosing(ids)
             }
             return
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
             guard let self else { return }
-            var left = pressed.filter { self.windows[$0]?.isValid == true }
+            var left = pressed.filter { self.windows[$0]?.isValidUnlessStalled == true }
             Log.info("sort: \(pressed.count - left.count) of \(pressed.count) closed after try \(attempt + 1)")
-            let forced = self.forceClose(left.filter { self.windows[$0].map { !Self.hasSheet($0) } ?? false })
+            let sheeted = Set(left.filter { self.windows[$0].map(Self.hasSheet) ?? false })
+            let forced = self.forceClose(left.filter { !sheeted.contains($0) })
             left.removeAll { forced.contains($0) }
             if !forced.isEmpty {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
                     self?.stopClosing(Array(forced))
                 }
             }
-            stopClosing(ids.filter { !forced.contains($0) })
+            stopClosing(Self.shownAfterTry(ids, left: left, forced: forced, sheeted: sheeted))
             guard !left.isEmpty else { return }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
                 self?.closeMarked(left, attempt: attempt + 1)
@@ -45,11 +47,19 @@ extension WindowManager {
     @discardableResult
     func forceClose(_ ids: [CGWindowID]) -> Set<CGWindowID> {
         var forced: Set<CGWindowID> = []
+        let closing = Set(ids)
+        var live: [CGWindowID: Bool] = [:]
+        func isLive(_ window: Window) -> Bool {
+            if let known = live[window.id] { return known }
+            let answer = window.isValidUnlessStalled
+            live[window.id] = answer
+            return answer
+        }
         for id in ids {
-            guard let window = windows[id], window.isValid else { continue }
+            guard let window = windows[id], isLive(window) else { continue }
             let hasSheet = Self.hasSheet(window)
             let others = windows.values.contains {
-                $0.pid == window.pid && $0.id != id && $0.isValid && !ids.contains($0.id)
+                $0.pid == window.pid && $0.id != id && !closing.contains($0.id) && isLive($0)
             }
             let name = NSRunningApplication(processIdentifier: window.pid)?.bundleIdentifier ?? "pid \(window.pid)"
             if hasSheet || others {
@@ -64,8 +74,46 @@ extension WindowManager {
         return forced
     }
 
+    static func shownAfterTry(_ ids: [CGWindowID], left: [CGWindowID], forced: Set<CGWindowID>,
+                              sheeted: Set<CGWindowID>) -> [CGWindowID] {
+        ids.filter { !forced.contains($0) && (sheeted.contains($0) || !left.contains($0)) }
+    }
+
+    static func reportsNoWindows(_ error: AXError, _ value: CFTypeRef?) -> Bool {
+        switch error {
+        case .success: (value as? [AXUIElement])?.isEmpty == true
+        case .noValue: true
+        default: false
+        }
+    }
+
+    private static func hasNoWindows(_ pid: pid_t) -> Bool {
+        guard !AXStalls.shared.isStalled(pid) else { return reportsNoWindows(.cannotComplete, nil) }
+        var value: CFTypeRef?
+        let app = AXUIElementCreateApplication(pid)
+        let error = app.noted { AXUIElementCopyAttributeValue(app, kAXWindowsAttribute as CFString, &value) }
+        return reportsNoWindows(error, value)
+    }
+
     static func hasSheet(_ window: Window) -> Bool {
-        window.element.elements(kAXChildrenAttribute).contains { $0.string(kAXRoleAttribute) == kAXSheetRole }
+        guard !AXStalls.shared.isStalled(window.pid) else { return mayShowSheet(.stalled) }
+        switch window.element.readElements(kAXChildrenAttribute) {
+        case .stalled: return mayShowSheet(.stalled)
+        case .missing: return mayShowSheet(.missing)
+        case .value(let children): return mayShowSheet(.value(children.map { $0.readString(kAXRoleAttribute) }))
+        }
+    }
+
+    static func mayShowSheet(_ roles: AXRead<[AXRead<String>]>) -> Bool {
+        switch roles {
+        case .stalled: return true
+        case .missing: return false
+        case .value(let roles):
+            return roles.contains {
+                if case .stalled = $0 { return true }
+                return $0.value == kAXSheetRole
+            }
+        }
     }
 
     func stopClosing(_ ids: [CGWindowID]) {
@@ -84,15 +132,14 @@ extension WindowManager {
                 closingApps.remove(pid)
                 continue
             }
-            let known = windows.values.contains { $0.pid == pid && $0.isValid }
-            guard !known, AXUIElementCreateApplication(pid).elements(kAXWindowsAttribute).isEmpty else { continue }
+            let known = windows.values.contains { $0.pid == pid && $0.isValidUnlessStalled }
+            guard !known, Self.hasNoWindows(pid) else { continue }
             closingApps.remove(pid)
             let name = app.bundleIdentifier ?? "pid \(pid)"
             Log.info("sort: \(name) has no windows left; quitting it")
             app.terminate()
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                guard !app.isTerminated,
-                      AXUIElementCreateApplication(pid).elements(kAXWindowsAttribute).isEmpty else { return }
+                guard !app.isTerminated, Self.hasNoWindows(pid) else { return }
                 Log.info("sort: \(name) didn't quit; force quitting it")
                 app.forceTerminate()
             }

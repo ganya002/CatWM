@@ -8,7 +8,7 @@ $OUCH reload
 $OUCH dump
 ```
 
-Ouch links itself as `ouch` in `/usr/local/bin` (or `~/.local/bin` if that is not writable) when the installed app starts. Then `ouch dispatch …` works from any shell.
+CatWM links itself as `ouch` in `/usr/local/bin` (or `~/.local/bin` if that is not writable) when the installed app starts. Then `ouch dispatch …` works from any shell.
 
 Like `hyprctl`. The command is sent to the running instance through a distributed notification (`local.catwm.command`), and the process exits immediately with status 0. Nothing is printed except for `dump`.
 
@@ -17,7 +17,7 @@ Like `hyprctl`. The command is sent to the running instance through a distribute
 | Command | Effect |
 |---|---|
 | `dispatch <name> [args]` | run a dispatcher, same as a keybind would. See [dispatchers.md](dispatchers.md). Name is case-insensitive. |
-| `docs` | print the folder of bundled agent docs (works without Ouch running; exit 1 if missing) |
+| `docs` | print the folder of bundled agent docs (works without CatWM running; exit 1 if missing) |
 | `reload` | re-read `ouch.conf` and rebind keys. Errors go to the log; a HUD shows "Config reloaded" or the error count. |
 | `dump` | write tiling state to `~/Library/Logs/ouch.log` (prints only the log path) |
 | `modefx draw\|ripple\|corners\|none\|all` | preview a window-mode effect |

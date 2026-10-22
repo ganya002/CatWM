@@ -36,15 +36,15 @@ For visual verification, run:
 
 Check these cases:
 
-1. Open at least 50 windows quickly. Check that Ouch remains responsive.
+1. Open at least 50 windows quickly. Check that CatWM remains responsive.
 2. Switch workspaces repeatedly while one app does not respond. Check floating windows and tiled windows.
 3. Restore the busy app. Check that its delayed results do not replace newer placements.
 4. Drag and resize a floating window. Check focus navigation and monitor moves.
 5. Close the focused window. Check that focus returns to the most recent window in that workspace.
-6. Quit Ouch with hidden workspaces. Check that parked windows return to the screen.
+6. Quit CatWM with hidden workspaces. Check that parked windows return to the screen.
 
 Run `swift test` for snapshot revision checks, a blocked-app scan with 50 responsive windows, scan invalidation and workspace reconciliation replay.
 
-Local check on 2026-10-17 used a debug build with verbose logging. A temporary AppKit app created 50 windows quickly. Ouch managed 54 windows in total. With the test app suspended by `SIGSTOP`, six workspace command handlers took 5.3–12.5 ms. Refresh took 1.1–4.8 ms during those switches. Ouch remained running. These measurements describe that run. They are not a worst-case guarantee. The test app and its temporary workspace data were removed after the check.
+Local check on 2026-10-17 used a debug build with verbose logging. A temporary AppKit app created 50 windows quickly. CatWM managed 54 windows in total. With the test app suspended by `SIGSTOP`, six workspace command handlers took 5.3–12.5 ms. Refresh took 1.1–4.8 ms during those switches. CatWM remained running. These measurements describe that run. They are not a worst-case guarantee. The test app and its temporary workspace data were removed after the check.
 
-After the review fixes, validation passed 176 tests with `swift test --no-parallel`. Parallel runs intermittently failed the existing `staleScreenshotAfterUpdateDoesNotReplaceNewerWindows` test. IPC Quit completed in 157 ms after the termination callback fix, and Ouch restarted successfully.
+After the review fixes, validation passed 176 tests with `swift test --no-parallel`. Parallel runs intermittently failed the existing `staleScreenshotAfterUpdateDoesNotReplaceNewerWindows` test. IPC Quit completed in 157 ms after the termination callback fix, and CatWM restarted successfully.

@@ -19,6 +19,10 @@ final class FocusReader {
         }
     }
 
+    func terminated(_ pid: pid_t) { queues[pid] = nil }
+
+    var queueCount: Int { queues.count }
+
     private static func read(_ pid: pid_t) -> Result {
         dispatchPrecondition(condition: .notOnQueue(.main))
         var value: CFTypeRef?

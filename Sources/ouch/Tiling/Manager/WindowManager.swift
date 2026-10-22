@@ -131,7 +131,12 @@ var focusEcho: FocusEcho?
     var drags: [CGWindowID: Bool] = [:]
     var refreshWork: DispatchWorkItem?
     var minSizes: [CGWindowID: CGSize] = [:]
-    var menuBarHeights: [String: CGFloat] = [:]
+    struct MenuBarFloor {
+        let height: CGFloat
+        let visible: CGRect
+        func height(on visible: CGRect) -> CGFloat? { visible == self.visible ? height : nil }
+    }
+    var menuBarHeights: [String: MenuBarFloor] = [:]
     var ratioChange: (screen: String, until: Date)?
     struct DividerDrag {
         let screen: String

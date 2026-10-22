@@ -105,6 +105,13 @@ final class WindowScanner {
         busy[pid] = nil
     }
 
+    func terminated(_ pid: pid_t) {
+        forget(pid)
+        queues[pid] = nil
+    }
+
+    var queueCount: Int { queues.count }
+
     func run(_ pid: pid_t, _ work: @escaping () -> Void) {
         let queue = queues[pid] ?? DispatchQueue(label: "ouch.scan.\(pid)", qos: .userInitiated)
         queues[pid] = queue

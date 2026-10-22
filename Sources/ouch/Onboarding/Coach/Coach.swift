@@ -92,12 +92,12 @@ final class Coach {
         .max { $0.1 < $1.1 }?.0
     }
 
-    init(lesson: Lesson, statusButton: NSStatusBarButton?, onEnd: @escaping (Ending) -> Void) {
+    init?(lesson: Lesson, statusButton: NSStatusBarButton?, onEnd: @escaping (Ending) -> Void) {
+        guard let screen = NSScreen.screens.first(where: { $0.frame.contains(NSEvent.mouseLocation) })
+            ?? NSScreen.main ?? NSScreen.screens.first else { return nil }
         self.lesson = lesson
         self.statusButton = statusButton
         self.onEnd = onEnd
-        screen = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) }
-            ?? NSScreen.main
-            ?? NSScreen.screens[0]
+        self.screen = screen
     }
 }

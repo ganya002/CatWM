@@ -122,7 +122,7 @@ extension ConfigLibrary {
     func importFile(_ url: URL, only kind: ConfigKind? = nil) {
         guard let data = try? Data(contentsOf: url),
               let bundle = try? JSONDecoder().decode(ConfigBundle.self, from: data), bundle.app == "ouch" else {
-            Self.alert("Not a config file", "“\(url.lastPathComponent)” isn't an Ouch config.")
+            Self.alert("Not a config file", "“\(url.lastPathComponent)” isn't a CatWM config.")
             return
         }
         if let kind, bundle.config.kind != kind {
@@ -135,7 +135,10 @@ extension ConfigLibrary {
         var skipped = 0
         var added: [SavedConfig] = []
         for source in bundle.included + [bundle.config] {
-            guard let result = importOne(source, remap: remap) else { return }
+            guard let result = importOne(source, remap: remap) else {
+                if !added.isEmpty { save() }
+                return
+            }
             remap[source.id] = result.config.id
             skipped += result.skipped
             added.append(result.config)

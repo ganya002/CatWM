@@ -113,6 +113,7 @@ extension SortModel {
             return
         }
         let workspace = snapshot.key(String(number))
+        guard workspace != snapshot.lanes[i].workspace else { return }
         if snapshot.perDisplay {
             notice = SortNotice(text: "Workspaces follow the order of your Desktops. Drag a column to reorder.",
                                 undo: nil)

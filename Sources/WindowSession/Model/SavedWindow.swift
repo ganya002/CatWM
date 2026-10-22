@@ -52,6 +52,12 @@ public struct AppState: Codable, Equatable, Sendable {
     }
 
     public var current: String? { tabs.indices.contains(selected) ? tabs[selected] : tabs.first }
+
+    func kept(_ keep: (String) -> Bool) -> (tabs: [String], selected: Int) {
+        let indices = tabs.indices.filter { keep(tabs[$0]) }
+        let target = tabs.indices.contains(selected) ? selected : 0
+        return (indices.map { tabs[$0] }, indices.firstIndex(of: target) ?? 0)
+    }
 }
 
 public struct LaunchSpec: Codable, Equatable, Sendable {

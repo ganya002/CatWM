@@ -44,7 +44,7 @@ final class Tooltip {
     private func show(over view: NSView, text: String, chords: [[String]]) {
         guard let window = view.window, window.isVisible else { return }
         let rect = window.convertToScreen(view.convert(view.bounds, to: nil))
-        let screen = window.screen ?? NSScreen.main ?? NSScreen.screens[0]
+        guard let screen = window.screen ?? NSScreen.main ?? NSScreen.screens.first else { return }
         let visible = screen.visibleFrame, margin = Self.margin
 
         let measure = NSHostingView(rootView: OTooltip(text: text, chords: chords, caret: .none))

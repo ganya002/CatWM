@@ -111,8 +111,11 @@ extension WindowManager {
 
     func focusShownWorkspace(_ workspace: String, preferred: Window?, on screen: Screen) {
         let candidates = [preferred?.id, lastFocused[workspace]].compactMap(\.self) + order
-        if let id = candidates.first(where: { workspaceOf[$0] == workspace && windows[$0]?.minimized == false }),
-           let window = windows[id] {
+        if let id = candidates.first(where: { id in
+            workspaceOf[id] == workspace && windows[id].map { window in
+                !window.minimized && NSRunningApplication(processIdentifier: window.pid)?.isHidden != true
+            } == true
+        }), let window = windows[id] {
             focus(window, warp: !screen.frame.contains(mouseLocation()))
         } else {
             parkFocus(on: screen)

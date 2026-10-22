@@ -14,12 +14,12 @@ struct ColorPopover: View {
                            colors: stride(from: 0.0, through: 1.0, by: 1.0 / 6).map {
                                Color(hue: $0, saturation: 1, brightness: 1)
                            },
-                           knob: Color(hue: model.color.hue, saturation: 1, brightness: 1))
+                           knob: Color(hue: model.color.hue, saturation: 1, brightness: 1), label: "Hue")
             GradientSlider(value: Binding(get: { model.color.alpha }, set: { update { $0.alpha = $1 }($0) }),
                            colors: [model.color.color.opacity(0),
                                     Color(hue: model.color.hue, saturation: model.color.saturation,
                                           brightness: model.color.brightness)],
-                           knob: model.color.color, checker: true)
+                           knob: model.color.color, checker: true, label: "Opacity")
             HStack(spacing: 8) {
                 OTextField(placeholder: "#RRGGBB, rgb() or hsl()", text: $model.colorText, mono: true,
                            onSubmit: applyText)
@@ -43,6 +43,7 @@ struct ColorPopover: View {
 
     private func applyText() {
         guard let color = HSBA(text: model.colorText) else { NSSound.beep(); return }
-        model.set(color: color)
+        let current = model.color
+        model.set(color: color.hexRGB == current.hexRGB && model.hasColor ? current : color)
     }
 }

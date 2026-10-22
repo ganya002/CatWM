@@ -79,9 +79,11 @@ extension WindowManager {
             CFRunLoopRemoveSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(obs), .defaultMode)
         }
         observers[pid] = nil
-        scanner.forget(pid)
+        scanner.terminated(pid)
         observing.removeValue(forKey: pid)
         windows.values.filter { $0.pid == pid }.forEach { self.forget($0.id) }
+        animator.terminated(pid)
+        focusReader.terminated(pid)
         scheduleRefresh()
     }
 
@@ -99,6 +101,19 @@ extension WindowManager {
         notificationObservers.append(NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
         ) { [weak self] _ in self?.scheduleRefresh(after: 0.4) })
+        observeLock()
+    }
+
+    private func observeLock() {
+        let leave: (Notification) -> Void = { _ in
+            if !Hotkeys.shared.submap.isEmpty { Hotkeys.shared.setSubmap("") }
+        }
+        for name in [NSWorkspace.screensDidSleepNotification, NSWorkspace.sessionDidResignActiveNotification] {
+            notificationObservers.append(NSWorkspace.shared.notificationCenter.addObserver(
+                forName: name, object: nil, queue: .main, using: leave))
+        }
+        notificationObservers.append(DistributedNotificationCenter.default().addObserver(
+            forName: Notification.Name("com.apple.screenIsLocked"), object: nil, queue: .main, using: leave))
     }
 
     private func installEventMonitors() {
@@ -139,17 +154,9 @@ extension WindowManager {
         }
         nativeGestures.receive = { [weak self] in self?.handleNativeSwipe($0) }
         nativeGestures.interrupted = { [weak self] in self?.nativeDesktop.endGesture(commit: false) }
-        nativeGestures.start()
-        if !Hotkeys.shared.start() {
-            Log.info("start: could not create the keyboard event tap")
-            HUD.shared.show("Keybinds unavailable: grant Accessibility", on: nil)
-        }
+        startKeyboardTap()
         dockWindowPull.prepare = { [weak self] point in self?.prepareDockPull(at: point) }
-        if dockWindowPull.start() {
-            dockArea.refresh()
-        } else {
-            Log.info("Dock window import: mouse event tap unavailable")
-        }
+        startMouseTaps(logFailure: true)
     }
 
     func reload(showHUD: Bool = true) {

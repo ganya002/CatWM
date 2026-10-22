@@ -82,7 +82,7 @@ final class MenuBarTip {
     }
 
     private func locate() -> Placement {
-        let focused: NSScreen? = OuchPanel.pointerScreen()
+        let focused = OuchPanel.pointerScreen()
         guard let window = statusButton?.window, window.occlusionState.contains(.visible),
               let itemScreen = NSScreen.screens.first(where: {
                   $0.frame.contains(NSPoint(x: window.frame.midX, y: window.frame.midY))

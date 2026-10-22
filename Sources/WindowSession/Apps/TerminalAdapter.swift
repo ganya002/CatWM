@@ -27,12 +27,13 @@ struct TerminalAdapter: AppAdapter {
     }
 
     func restore(_ state: AppState, bundleID _: String, appURL: URL, timeout _: TimeInterval) async -> Bool {
-        let folders = state.tabs.compactMap { URL(string: $0) }.filter(\.isFileURL)
+        let (tabs, selected) = state.kept { URL(string: $0)?.isFileURL == true }
+        let folders = tabs.compactMap { URL(string: $0) }
         guard let current = state.current.flatMap({ URL(string: $0) }), current.isFileURL else { return false }
         guard folders.count > 1 else { return await Launcher.open(current, withApp: appURL) }
         let profile = UserDefaults(suiteName: "com.apple.Terminal")?.string(forKey: "Default Window Settings")
-        let file = FileManager.default.temporaryDirectory.appendingPathComponent("Ouch-\(UUID().uuidString).terminal")
-        guard let data = TerminalGroup.file(folders: folders, selected: folders.firstIndex(of: current) ?? 0,
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("CatWM-\(UUID().uuidString).terminal")
+        guard let data = TerminalGroup.file(folders: folders, selected: selected,
                                             profile: profile ?? "Basic"),
               (try? data.write(to: file)) != nil else { return false }
         DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 30) {
@@ -54,7 +55,7 @@ enum TerminalGroup {
             ]
         }
         let group: [String: Any] = [
-            "name": "Ouch",
+            "name": "CatWM",
             "type": "Window Group",
             "WindowList": [["ShowsTabBar": folders.count > 1, "Window Settings": tabs]]
         ]
@@ -89,9 +90,9 @@ struct ITermAdapter: AppAdapter {
     }
 
     func restore(_ state: AppState, bundleID: String, appURL _: URL, timeout: TimeInterval) async -> Bool {
-        let paths = state.tabs.compactMap { URL(string: $0) }.filter(\.isFileURL).map(\.path)
+        let (tabs, selected) = state.kept { URL(string: $0)?.isFileURL == true }
+        let paths = tabs.compactMap { URL(string: $0)?.path }
         guard !paths.isEmpty else { return false }
-        let selected = state.current.flatMap { URL(string: $0)?.path }.flatMap { paths.firstIndex(of: $0) } ?? 0
         let source = """
         on run argv
           tell application id "\(bundleID)"

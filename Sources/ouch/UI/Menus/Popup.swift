@@ -27,7 +27,8 @@ final class Popup: NSObject, NSWindowDelegate {
         model.rebuild()
         let width = max(minWidth, MenuItem.fitWidth(model.items))
 
-        let screen = NSScreen.screens.first { $0.frame.intersects(anchor) } ?? NSScreen.main ?? NSScreen.screens[0]
+        guard let screen = NSScreen.screens.first(where: { $0.frame.intersects(anchor) })
+            ?? NSScreen.main ?? NSScreen.screens.first else { return }
         let visible = screen.visibleFrame, margin = Self.margin
         let subs = 2 * (Theme.submenuWidth + 48)
         let left = min(max(anchor.minX - 4, visible.minX + 8), visible.maxX - width - 8)
@@ -52,7 +53,8 @@ final class Popup: NSObject, NSWindowDelegate {
         let host = NSHostingView(rootView: content().surface(.medium).padding(Self.margin)
             .font(Theme.body()).foregroundStyle(Theme.ink).tint(Theme.accent))
         let size = host.fittingSize
-        let screen = NSScreen.screens.first { $0.frame.intersects(anchor) } ?? NSScreen.main ?? NSScreen.screens[0]
+        guard let screen = NSScreen.screens.first(where: { $0.frame.intersects(anchor) })
+            ?? NSScreen.main ?? NSScreen.screens.first else { return }
         let visible = screen.visibleFrame, margin = Self.margin
         let x = min(max(anchor.minX - 4 - margin, visible.minX + 8 - margin), visible.maxX - size.width + margin - 8)
         let fitsBelow = anchor.minY - 4 - (size.height - 2 * margin) > visible.minY

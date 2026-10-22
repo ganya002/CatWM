@@ -20,15 +20,15 @@ Now `WindowManager.resolve` is the only place with motion rules. Every operator 
 
 ## Vim comparison
 
-Vim keeps three things separate: the key table, motions that move the cursor, and `do_pending_operator()`, which applies an operator to the range a motion produced. Ouch copies only the split between motion and operator.
+Vim keeps three things separate: the key table, motions that move the cursor, and `do_pending_operator()`, which applies an operator to the range a motion produced. CatWM copies only the split between motion and operator.
 
-Ouch does not copy the key sequence (`d` then `w`). The modifier is held with the key, so `Hotkeys.match` stays a stateless table lookup. A pending-operator state would add counts, timeouts and a stuck-state risk. The hot path of an event tap that handles every key press must stay simple and fast. The chord gives the same composition without that cost.
+CatWM does not copy the key sequence (`d` then `w`). The modifier is held with the key, so `Hotkeys.match` stays a stateless table lookup. A pending-operator state would add counts, timeouts and a stuck-state risk. The hot path of an event tap that handles every key press must stay simple and fast. The chord gives the same composition without that cost.
 
 ## Resolver rules
 
 `MotionResolver` holds the pure geometry. `resolve` applies the rules in this order and stops at the first match:
 
-1. **Ouch fullscreen.** A fullscreen window has no spatial neighbor. The resolver cycles through the tiled windows on its screen. Left and up go back. Right and down go forward.
+1. **CatWM fullscreen.** A fullscreen window has no spatial neighbor. The resolver cycles through the tiled windows on its screen. Left and up go back. Right and down go forward.
 2. **Neighbor.** The nearest window in that direction on any screen. Windows that overlap on the other axis rank first. Among windows at the same edge, the most recently focused one wins.
 3. **Monitor.** The next monitor in that direction.
 4. **Wrap.** The far end of the row or column on the current screen. If all windows share one frame (a stack), cycle through the stack.
@@ -62,7 +62,7 @@ Move uses `swapOrder`, so it is a swap and not a rotation. At the bottom edge, t
 
 ## Focus echo after a swap
 
-Some apps make themselves frontmost when Ouch moves their window. We saw this with tldraw: about 10 ms after a swap, tldraw became frontmost. Ouch read this as a user switch, dropped the pending focus, and the next press moved the wrong window. Wrap did not cause this. A plain neighbor swap shows the same trace.
+Some apps make themselves frontmost when CatWM moves their window. We saw this with tldraw: about 10 ms after a swap, tldraw became frontmost. CatWM read this as a user switch, dropped the pending focus, and the next press moved the wrong window. Wrap did not cause this. A plain neighbor swap shows the same trace.
 
 After a swap with a window of another app, `move` stores a `FocusEcho` for 0.4 s. It holds the moved window and the pid of the other app. If that app activates in that time, the activation observer in `WindowManager+start.swift` focuses the moved window again and skips the normal handling. An activation of any other app, or an activation after 0.4 s, is handled as before.
 
