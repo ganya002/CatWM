@@ -87,7 +87,7 @@ final class KeyHelp {
 
     private func show(mode: String, reason: KeyHelpModel.Reason) {
         orderOutWork?.cancel()
-        let screen = WindowManager.shared.focusedScreen ?? OuchPanel.pointerScreen()
+        guard let screen = WindowManager.shared.focusedScreen ?? OuchPanel.pointerScreen() else { return }
         let wasShown = model.shown
         Tips.shared.markSeen(.keyHelp)
         model.load(mode: mode, binds: WindowManager.shared.config.bindings, chord: chordMods, reason: reason,

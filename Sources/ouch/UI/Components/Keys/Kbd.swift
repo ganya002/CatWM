@@ -15,7 +15,12 @@ struct Kbd: View {
         HStack(spacing: size == .large ? 6 : size == .medium ? Theme.Space.extraSmall : Theme.Space.xxs) {
             ForEach(Array(keys.enumerated()), id: \.offset) { _, key in cap(key) }
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(keys.map { Self.spoken[$0] ?? $0 }.joined(separator: " "))
     }
+
+    private static let spoken = ["⌘": "Command", "⌥": "Option", "⇧": "Shift", "⌃": "Control", "↩": "Return",
+                                 "⇥": "Tab", "⎋": "Escape", "⌫": "Delete", "⇪": "Caps Lock", "␣": "Space"]
 
     @ViewBuilder private func cap(_ key: String) -> some View {
         if size == .small {

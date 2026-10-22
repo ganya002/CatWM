@@ -14,9 +14,9 @@ struct StatusHero: View {
                               color: live ? Theme.success : Theme.warning, size: 52)
                     .squish(on: live, when: live)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(!status.trusted ? "Ouch needs Accessibility access"
+                    Text(!status.trusted ? "CatWM needs Accessibility access"
                          : !status.tilingEnabled ? "Tiling is paused"
-                         : status.keybindsActive ? "Ouch is running" : "Keyboard shortcuts aren't active")
+                         : status.keybindsActive ? "CatWM is running" : "Keyboard shortcuts aren't active")
                         .textStyle(.title).oneLine()
                         .contentTransition(.opacity)
                     Text(status.trusted
@@ -35,7 +35,7 @@ struct StatusHero: View {
             if !status.trusted {
                 VStack(alignment: .leading, spacing: 8) {
                     OStep(number: 1, text: "Click **Grant Access**. A guide appears next to System Settings.")
-                    OStep(number: 2, text: "Turn on Ouch in the list.")
+                    OStep(number: 2, text: "Turn on CatWM in the list.")
                     OStep(number: 3, text: "Still not working after a rebuild? "
                         + "Click **Reset Permission**, then turn it on again.")
                 }

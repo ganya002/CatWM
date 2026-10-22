@@ -93,10 +93,10 @@ final class OuchPanel: NSPanel {
         return true
     }
 
-    static func pointerScreen() -> NSScreen { screen(at: NSEvent.mouseLocation) }
+    static func pointerScreen() -> NSScreen? { screen(at: NSEvent.mouseLocation) }
 
-    static func screen(at point: NSPoint) -> NSScreen {
-        NSScreen.screens.first { $0.frame.contains(point) } ?? NSScreen.main ?? NSScreen.screens[0]
+    static func screen(at point: NSPoint) -> NSScreen? {
+        NSScreen.screens.first { $0.frame.contains(point) } ?? NSScreen.main ?? NSScreen.screens.first
     }
 
     enum Anchor {

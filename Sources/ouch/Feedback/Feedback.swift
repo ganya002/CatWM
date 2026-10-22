@@ -30,7 +30,7 @@ final class Feedback: ObservableObject {
             guard let self else { return }
             sending = false
             guard success else { return failed = true }
-            text = ""
+            if text.trimmingCharacters(in: .whitespacesAndNewlines) == body { text = "" }
             isOpen = false
             HUD.shared.show("Feedback sent", on: nil)
         }
@@ -46,7 +46,7 @@ final class Feedback: ObservableObject {
         guard let endpoint else { return done(false) }
         let summary = CrashSummary(crash)
         let title = "Crash: " + (summary?.headline ?? crash.lastPathComponent)
-        let body = "Ouch crashed\(summary.map { " at \($0.time)" } ?? ""). Sent on its own after the restart."
+        let body = "CatWM crashed\(summary.map { " at \($0.time)" } ?? ""). Sent on its own after the restart."
         post(Report(title: title, body: body, log: Log.beforeLaunch(), crash: crash), to: endpoint, done: done)
     }
 
@@ -124,7 +124,7 @@ final class Feedback: ObservableObject {
         var lines = [
             "# Environment",
             "",
-            "- Ouch \(version)",
+            "- CatWM \(version)",
             "- macOS \(system)",
             "- Mac: \(hardwareModel()), \(arch())",
             "- Displays: \(displays.joined(separator: "; "))",

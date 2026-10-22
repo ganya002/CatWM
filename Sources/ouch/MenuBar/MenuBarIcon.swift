@@ -64,7 +64,7 @@ enum MenuBarIcon {
 
     private static func icon(for pid: pid_t) -> NSImage? {
         if let cached = iconCache[pid] { return cached }
-        let icon = NSRunningApplication(processIdentifier: pid)?.icon
+        guard let icon = NSRunningApplication(processIdentifier: pid)?.icon else { return nil }
         iconCache[pid] = icon
         return icon
     }

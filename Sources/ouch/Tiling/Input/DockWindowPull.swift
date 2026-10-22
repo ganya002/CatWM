@@ -31,6 +31,14 @@ final class DockWindowPull {
         return true
     }
 
+    var isInstalled: Bool { tap != nil }
+
+    func setEnabled(_ enabled: Bool) {
+        guard let tap else { return }
+        if !enabled { giveBackClick() }
+        CGEvent.tapEnable(tap: tap, enable: enabled)
+    }
+
     func handle(_ type: CGEventType, _ event: CGEvent) -> Bool {
         guard event.getIntegerValueField(.eventSourceUserData) != Self.replayMarker else { return false }
         switch type {

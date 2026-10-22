@@ -23,7 +23,7 @@ extension TemplateRestorer {
 
         let exitingDisplays = unhide(pairs, screens: screens, restoreHidden: &restoreHidden)
         _ = try await settlePlacement(timeout: 3) {
-            pairs.allSatisfy { !$0.1.isNativeFullscreen && !$0.1.element.flag(kAXMinimizedAttribute) } &&
+            pairs.allSatisfy { !$0.1.fullscreenUnlessStalled && !$0.1.minimizedUnlessStalled } &&
                 exitingDisplays.allSatisfy { !Spaces.isFullscreen(display: $0) }
         }
         pairs = dropStillHidden(pairs, restoreHidden: &restoreHidden)
@@ -207,11 +207,11 @@ extension TemplateRestorer {
         }
         _ = try await settlePlacement(timeout: 0.8) {
             ready.filter { $0.0.floating || !self.template.tilingEnabled }.allSatisfy { _, window in
-                frames[window.id].map { window.frame.approxEqual($0, tolerance: 8) } ?? true
+                frames[window.id].map { window.frameUnlessStalled.approxEqual($0, tolerance: 8) } ?? true
             }
         }
         for (saved, window) in ready where saved.floating || !template.tilingEnabled {
-            if let target = frames[window.id], !window.frame.approxEqual(target, tolerance: 8) {
+            if let target = frames[window.id], !window.frameUnlessStalled.approxEqual(target, tolerance: 8) {
                 failures.insert(saved.appName)
             }
         }
@@ -232,14 +232,14 @@ extension TemplateRestorer {
         }
         _ = try await settlePlacement(timeout: 3) {
             ready.allSatisfy { saved, window in
-                (!saved.minimized || window.element.flag(kAXMinimizedAttribute)) &&
-                    (!saved.fullscreen || saved.minimized || window.isNativeFullscreen)
+                (!saved.minimized || window.minimizedUnlessStalled) &&
+                    (!saved.fullscreen || saved.minimized || window.fullscreenUnlessStalled)
             }
         }
         for (saved, window) in ready where saved.minimized || saved.fullscreen {
             let confirmed = saved.minimized
-                ? window.element.flag(kAXMinimizedAttribute)
-                : window.isNativeFullscreen
+                ? window.minimizedUnlessStalled
+                : window.fullscreenUnlessStalled
             if confirmed {
                 manager.templateHiddenWindows[window.id] = Date()
             } else {

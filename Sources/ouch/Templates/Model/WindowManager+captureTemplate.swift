@@ -8,8 +8,8 @@ extension WindowManager {
             switch self {
             case .notReady: "Grant Accessibility access before you save or open a template."
             case .empty: "Open a window in this workspace before you save a template."
-            case .incomplete: "Ouch could not read every window in time, so this template was not saved."
-            case .busy: "Ouch is still reading another workspace, so this template was not saved."
+            case .incomplete: "CatWM could not read every window in time, so this template was not saved."
+            case .busy: "CatWM is still reading another workspace, so this template was not saved."
             }
         }
     }

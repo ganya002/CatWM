@@ -114,7 +114,11 @@ extension WindowManager {
 func closeWindow(_ id: CGWindowID) -> Bool {
         guard let window = windows[id] else { return false }
         lastClose = Date()
-        window.close()
+        scanner.run(window.pid) { window.close() }
         return true
+    }
+
+    func minimize(_ window: Window) {
+        scanner.run(window.pid) { window.element.set(kAXMinimizedAttribute, kCFBooleanTrue) }
     }
 }

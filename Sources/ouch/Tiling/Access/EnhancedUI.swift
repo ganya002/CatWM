@@ -28,6 +28,13 @@ enum EnhancedUI {
         if hold.wasOn { axApp(pid).set(attr, kCFBooleanTrue) }
     }
 
+    static func terminated(_ pid: pid_t) {
+        tableLock.withLock {
+            held[pid] = nil
+            locks[pid] = nil
+        }
+    }
+
     private static func lock(_ pid: pid_t) -> NSLock {
         tableLock.withLock {
             if let existing = locks[pid] { return existing }

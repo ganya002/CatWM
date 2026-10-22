@@ -4,7 +4,7 @@ Hyprland syntax: `key = value`, `$var = value`, `# comments`, `bind = …` lines
 
 Apply changes with `ouch reload`, the menu bar's reload button, or by saving through Settings.
 
-Booleans accept `true yes on 1` and `false no off 0`. Any other value is an error: Ouch logs it and the option becomes false. A bad number or name is also an error, and the option keeps its earlier value (the default, if no earlier line sets it). Numbers outside the range in the table are clamped to that range.
+Booleans accept `true yes on 1` and `false no off 0`. Any other value is an error: CatWM logs it and the option becomes false. A bad number or name is also an error, and the option keeps its earlier value (the default, if no earlier line sets it). Numbers outside the range in the table are clamped to that range.
 
 ## Options
 
@@ -17,12 +17,12 @@ The Settings window writes options in this order. Aliases (after `/`) are read b
 | `floating` | comma list of bundle IDs | empty (first run: System Settings, Calculator) | apps that float (or the only ones that tile, see next). Wildcards such as `com.adobe.*` work |
 | `floating-is-blacklist` | bool | `true` | true: listed apps float. false: only listed apps are tiled |
 | `window-margins` | bool | `true` | gaps between windows |
-| `window-margin-size` | number (points) | `10` | `gaps_in` is accepted and doubled |
+| `window-margin-size` | 0–100 points | `10` | `gaps_in` is accepted and doubled |
 | `smart-window-margins` / `smart-gaps` | bool | `false` | no gaps with a single window |
-| `screen-padding-left` | number (points) | `10` | `screen-padding` or `gaps_out` sets all four sides |
-| `screen-padding-right` | number (points) | `10` | |
-| `screen-padding-top` | number (points) | `10` | |
-| `screen-padding-bottom` | number (points) | `10` | |
+| `screen-padding-left` | 0–500 points | `10` | `screen-padding` or `gaps_out` sets all four sides |
+| `screen-padding-right` | 0–500 points | `10` | |
+| `screen-padding-top` | 0–500 points | `10` | |
+| `screen-padding-bottom` | 0–500 points | `10` | |
 | `disable-padding-on-builtin-display` | bool | `false` | |
 | `ignore-menu-bar` | bool | `false` | tile over the menu bar area |
 | `mouse-follows-focus` | bool | `false` | |
@@ -40,12 +40,12 @@ The Settings window writes options in this order. Aliases (after `/`) are read b
 | `dim-strength` | 0–1 (or 0–100) | `0.3` | how dark; a value above 1 is read as percent |
 | `blur-other-windows` | bool | `false` | blur every window but the focused one; combines with dimming |
 | `blur-radius` | 1–100 (points) | `20` | rounded to whole points. The Settings slider shows 2–60 |
-| `virtual-workspaces` | bool | `true` | true: Ouch controls native Desktops. false: macOS controls switching. See [workspaces.md](workspaces.md) |
+| `virtual-workspaces` | bool | `true` | true: CatWM controls native Desktops. false: macOS controls switching. See [workspaces.md](workspaces.md) |
 | `stay-on-workspace-after-close` | bool | `true` | |
 | `remove-empty-workspaces` | bool | `true` | true: an empty workspace and its Desktop go away when you leave it |
 | `workspaces-per-display` | bool | `false` | true: each display counts its own workspaces from 1, and `workspace 2` selects the second workspace on the current display. false: workspace numbers are shared by all displays |
 | `sort-strategy` | `task` `app` `focus` `none` | `task` | the grouping Overview opens with |
-| `sort-nudge` | 0–100 (whole number) | `5` | windows on one workspace before Ouch offers Overview; `0` turns the offer off |
+| `sort-nudge` | 0–100 (whole number) | `5` | windows on one workspace before CatWM offers Overview; `0` turns the offer off |
 | `keyboard-help` | bool | `true` | on-screen keyboard help in window mode |
 | `keyboard-help-key` | one character | `?` | toggles the keyboard help in window mode |
 | `keyboard-finish` | `auto`, `macbook-pro`, `macbook-air`, `macbook-neo`, `magic-keyboard`, or a finish such as `macbook-pro-space-black` | `auto` | look of the Shortcut Map keyboard |
@@ -108,14 +108,14 @@ With `template-app-scripting = true` (Settings → Templates → **Save tabs and
 - the folders of each Finder window and its tabs
 - the project of VS Code, Cursor, VSCodium, Windsurf, Zed and Xcode windows
 
-macOS asks once for each scripted app to let Ouch control it. The code editors need no permission: Ouch reads their recent-project files. A background tab of a Terminal or Finder window is saved as a tab of its window, not as a separate window.
+macOS asks once for each scripted app to let CatWM control it. The code editors need no permission: CatWM reads their recent-project files. A background tab of a Terminal or Finder window is saved as a tab of its window, not as a separate window.
 
-Opening the template reopens the browser tabs, the iTerm2 tabs and all Terminal tabs (through a temporary Terminal window group). It opens each Finder window at its selected folder, and each editor at its project, so that the editor brings back its own files and panes. If an app does not allow control, Ouch opens the window as before.
+Opening the template reopens the browser tabs, the iTerm2 tabs and all Terminal tabs (through a temporary Terminal window group). It opens each Finder window at its selected folder, and each editor at its project, so that the editor brings back its own files and panes. If an app does not allow control, CatWM opens the window as before.
 
-Each saved window in `templates.json` can have an optional `launch` object that you edit by hand: `"url"` opens a URL or deep link with the app (for example `vscode://file/…` or `slack://channel?…`), `"arguments"` passes launch arguments when Ouch starts the app, and `"command"` runs a shell command with `sh -c` instead of opening a new window. `command` is used first, then saved tabs, then `url`, then the saved document.
+Each saved window in `templates.json` can have an optional `launch` object that you edit by hand: `"url"` opens a URL or deep link with the app (for example `vscode://file/…` or `slack://channel?…`), `"arguments"` passes launch arguments when CatWM starts the app, and `"command"` runs a shell command with `sh -c` instead of opening a new window. `command` is used first, then saved tabs, then `url`, then the saved document.
 
 In window mode, tap the mode modifier to open quick actions at the pointer. Press **S** to show a name field beside Save. Type the name and press Return to save without opening Settings. The screenshot can finish after the template saves. Escape cancels naming and returns to the action list. Press **1–9** to open a saved template. Hover a template to replace its number with an X. Click the X to delete it without closing the menu. Arrow keys and Return select an action. These actions also work over empty desktop space.
 
 Quick actions also retain the focus controls: **D** toggles Dim other windows, and **B** toggles Blur other windows.
 
-Restore reuses matching windows in the current workspace, opens missing apps or supplied documents, and requests new windows from apps that support them. Missing displays use available displays. Frames scale to fit. Existing extra windows stay open. Tabs, unsaved work, and other internal app state are not saved. Ouch reports windows that it cannot open or position.
+Restore reuses matching windows in the current workspace, opens missing apps or supplied documents, and requests new windows from apps that support them. Missing displays use available displays. Frames scale to fit. Existing extra windows stay open. Tabs, unsaved work, and other internal app state are not saved. CatWM reports windows that it cannot open or position.

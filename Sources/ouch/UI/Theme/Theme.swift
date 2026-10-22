@@ -16,7 +16,16 @@ enum Theme {
 
     static func ns(_ token: KeyPath<Palette, Palette.Pair>) -> NSColor {
         NSColor(name: nil) { appearance in
-            let pair = palette[keyPath: token]
+            let workspace = NSWorkspace.shared
+            var pair = palette[keyPath: token]
+            if workspace.accessibilityDisplayShouldIncreaseContrast {
+                if token == \.hairline { pair = palette.borderControl }
+                if token == \.inkFaint { pair = palette.inkMuted }
+            }
+            if workspace.accessibilityDisplayShouldReduceTransparency, token == \.glass {
+                pair.lightAlpha = 1
+                pair.darkAlpha = 1
+            }
             return isDark(appearance) ? hex(pair.dark, pair.darkAlpha) : hex(pair.light, pair.lightAlpha)
         }
     }

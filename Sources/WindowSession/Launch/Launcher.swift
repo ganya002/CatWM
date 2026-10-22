@@ -12,9 +12,9 @@ public struct LaunchRequest: Equatable, Sendable {
     public var frame: CGRect?
 
     public init?(_ text: String) {
-        var words = text.split(whereSeparator: \.isWhitespace).map(String.init)
-        while words.count > 1, let last = words.last, let equals = last.firstIndex(of: "="),
-              Self.keys.contains(last[..<equals].lowercased()) {
+        var rest = Self.trimmed(Substring(text))
+        while let space = rest.lastIndex(where: \.isWhitespace), case let last = rest[rest.index(after: space)...],
+              let equals = last.firstIndex(of: "="), Self.keys.contains(last[..<equals].lowercased()) {
             let value = String(last[last.index(after: equals)...])
             guard !value.isEmpty else { return nil }
             switch last[..<equals].lowercased() {
@@ -24,13 +24,19 @@ public struct LaunchRequest: Equatable, Sendable {
                 guard let rect = Self.unitRect(value) else { return nil }
                 frame = rect
             }
-            words.removeLast()
+            rest = Self.trimmed(rest[..<space])
         }
-        target = words.joined(separator: " ")
+        target = String(rest)
         guard !target.isEmpty else { return nil }
     }
 
     static let keys: Set<String> = ["workspace", "display", "frame"]
+
+    private static func trimmed(_ text: Substring) -> Substring {
+        guard let start = text.firstIndex(where: { !$0.isWhitespace }),
+              let end = text.lastIndex(where: { !$0.isWhitespace }) else { return "" }
+        return text[start...end]
+    }
 
     public var placesWindow: Bool { workspace != nil || display != nil || frame != nil }
 

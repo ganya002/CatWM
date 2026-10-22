@@ -21,7 +21,7 @@ struct MenuRowView: View {
             lead()
         } label: {
             if item.kind == .footer {
-                Text("Ouch \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "")")
+                Text("CatWM \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "")")
                     .textStyle(.caption).foregroundStyle(muted).oneLine()
             } else {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -61,6 +61,7 @@ struct MenuRowView: View {
                                    value: item.kind == .sub ? [item.id: geo.frame(in: .named("menu"))] : [:])
         })
         .accessibilityLabel(item.label)
+        .accessibilityValue(item.value ?? "")
         .accessibilityAddTraits(item.checked ? .isSelected : [])
     }
 

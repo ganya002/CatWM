@@ -26,6 +26,7 @@ extension SortModel {
     }
 
     func startEdgeTimer() {
+        edgeTimer?.invalidate()
         let timer = Timer(timeInterval: 1 / 60, repeats: true) { [weak self] _ in self?.edgeScroll() }
         RunLoop.main.add(timer, forMode: .common)
         edgeTimer = timer

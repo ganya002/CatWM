@@ -11,7 +11,7 @@ struct ShortcutsPane: View {
     }
 
     private func matches(_ row: BindRow) -> Bool {
-        guard row.submap == settingsUI.bindMode else { return false }
+        guard row.submap == settingsUI.shortcutMode(in: doc) else { return false }
         guard !settingsUI.shortcutFilter.isEmpty else { return true }
         let query = settingsUI.shortcutFilter.lowercased()
         return [doc.title(row), row.dispatcher, row.args, row.key, doc.prettyShortcut(row).joined()].contains {
@@ -28,7 +28,9 @@ struct ShortcutsPane: View {
                 if doc.submaps.count > 1 {
                     OSegmented(title: "Shortcut set",
                                options: doc.submaps.map { ($0, $0.isEmpty ? "Global" : "\($0.capitalized) mode") },
-                               selection: $settingsUI.bindMode)
+                               selection: Binding(
+                                   get: { settingsUI.shortcutMode(in: doc) },
+                                   set: { settingsUI.bindMode = $0 }))
                         .tooltip("Global shortcuts work everywhere. "
                             + "Mode shortcuts only work in the mode, so single keys are fine.")
                 }
@@ -109,8 +111,9 @@ struct ShortcutsPane: View {
     }
 
     private func add(_ dispatcher: String, _ args: String, key: String = "", expand: Bool = false) {
-        let row = BindRow(mods: settingsUI.bindMode.isEmpty ? doc.modVarName : "", key: key, dispatcher: dispatcher,
-                          args: args, submap: settingsUI.bindMode)
+        let mode = settingsUI.shortcutMode(in: doc)
+        let row = BindRow(mods: mode.isEmpty ? doc.modVarName : "", key: key, dispatcher: dispatcher,
+                          args: args, submap: mode)
         doc.binds.append(row)
         if expand { settingsUI.expanded.insert(row.id) }
         settingsUI.shortcutFilter = ""

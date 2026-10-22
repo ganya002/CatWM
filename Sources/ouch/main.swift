@@ -35,6 +35,7 @@ if let cmd = cliArgs.first, ipcCommands.contains(cmd) {
     exit(0)
 }
 
+signal(SIGPIPE, SIG_IGN)
 var signalSources: [DispatchSourceSignal] = []
 for sig in [SIGTERM, SIGINT, SIGHUP] {
     signal(sig, SIG_IGN)
@@ -42,6 +43,7 @@ for sig in [SIGTERM, SIGINT, SIGHUP] {
     source.setEventHandler {
         WindowManager.shared.isStarted = false
         WindowManager.shared.restoreHiddenWindows {
+            CapsLockChord.shared.restore()
             CrashWatch.cleanExit()
             exit(0)
         }

@@ -17,8 +17,8 @@ extension WindowManager {
             }
         }
         let i = screens.firstIndex { $0.uuid == source.uuid } ?? 0
-        if spec.hasPrefix("+") || spec.hasPrefix("-"), let delta = Int(spec) {
-            return screens[((i + delta) % screens.count + screens.count) % screens.count]
+        if spec.hasPrefix("+") || spec.hasPrefix("-"), let delta = Int(spec), !screens.isEmpty {
+            return screens[((i + delta % screens.count) % screens.count + screens.count) % screens.count]
         }
         if let index = Int(spec), screens.indices.contains(index) { return screens[index] }
         return nil

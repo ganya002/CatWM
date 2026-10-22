@@ -6,13 +6,20 @@ extension WindowManager {
         guard isStarted, config.virtualWorkspaces, !sortSession, dockArea.contains(point), Spaces.canMoveWindows,
               let display = Screen.all().first(where: { $0.frame.contains(point) }),
               isOnHomeSpace(display), let workspace = virtualShown[display.uuid],
-              let app = dockApplication(at: point) else { return nil }
+              let app = dockApplication(at: point),
+              !AXStalls.shared.isStalled(app.processIdentifier) else { return nil }
         let appElement = AXUIElementCreateApplication(app.processIdentifier)
         AXUIElementSetMessagingTimeout(appElement, 0.03)
-        let candidates = [appElement.element(kAXFocusedWindowAttribute), appElement.element(kAXMainWindowAttribute)]
-            .compactMap(\.self)
-            + focusOrder.compactMap { windows[$0] }.filter { $0.pid == app.processIdentifier }.map(\.element)
-            + appElement.elements(kAXWindowsAttribute)
+        var focused: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(appElement, kAXFocusedWindowAttribute as CFString, &focused)
+            != .cannotComplete else { return nil }
+        let known = focusOrder.compactMap { windows[$0] }.filter { $0.pid == app.processIdentifier }.map(\.element)
+        defer { known.forEach { AXUIElementSetMessagingTimeout($0, Window.messagingTimeout) } }
+        let focusedWindow = focused.flatMap {
+            CFGetTypeID($0) == AXUIElementGetTypeID() ? unsafeDowncast($0, to: AXUIElement.self) : nil
+        }
+        let candidates = [focusedWindow, appElement.element(kAXMainWindowAttribute)]
+            .compactMap(\.self) + known + appElement.elements(kAXWindowsAttribute)
         let desktops = Set(Screen.all().flatMap { screen -> [UInt64] in
             guard let info = Spaces.list(display: screen.uuid) else { return [] }
             return info.desktops.map { info.ids[$0] }

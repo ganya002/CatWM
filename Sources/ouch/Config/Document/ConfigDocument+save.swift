@@ -27,7 +27,7 @@ extension ConfigDocument {
     func serialize(includeKeyboard: Bool = true, includeAnimation: Bool = true) -> String {
         func esc(_ text: String) -> String { text.replacingOccurrences(of: "#", with: "##") }
         var out = [
-            "# Ouch config. Written by the Settings window; editing by hand is fine too.",
+            "# CatWM config. Written by the Settings window; editing by hand is fine too.",
             "# SUPER = Command, ALT = Option, CTRL = Control.",
             ""
         ]

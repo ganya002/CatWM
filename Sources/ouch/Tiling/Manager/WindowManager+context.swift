@@ -114,25 +114,34 @@ extension WindowManager {
     }
 
     func toggleNativeFullscreen() {
-        guard let app = NSWorkspace.shared.frontmostApplication,
-              let element = focusedWindow()?.element
-                ?? axApp(app.processIdentifier).element(kAXFocusedWindowAttribute) else { return }
-        let isOn = element.flag("AXFullScreen")
-        let done: Bool
-        if element.isSettable("AXFullScreen") {
-            done = element.set("AXFullScreen", isOn ? kCFBooleanFalse : kCFBooleanTrue)
-        } else if let button = element.element("AXFullScreenButton") ?? element.element(kAXZoomButtonAttribute) {
-            done = AXUIElementPerformAction(button, kAXPressAction as CFString) == .success
-        } else {
-            done = false
+        guard let app = NSWorkspace.shared.frontmostApplication else { return }
+        let pid = app.processIdentifier
+        let known = focusedWindow()?.element
+        scanner.run(pid) { [weak self] in
+            guard let element = known ?? axApp(pid).element(kAXFocusedWindowAttribute) else { return }
+            let isOn = element.flag("AXFullScreen")
+            let done: Bool
+            if element.isSettable("AXFullScreen") {
+                done = element.set("AXFullScreen", isOn ? kCFBooleanFalse : kCFBooleanTrue)
+            } else if let button = element.element("AXFullScreenButton") ?? element.element(kAXZoomButtonAttribute) {
+                done = AXUIElementPerformAction(button, kAXPressAction as CFString) == .success
+            } else {
+                done = false
+            }
+            let id = element.windowID
+            DispatchQueue.main.async {
+                self?.finishNativeFullscreen(id, app: app.bundleIdentifier, wasOn: isOn, done: done)
+            }
         }
-        let windowName = element.windowID.map(String.init) ?? "?"
+    }
+
+    private func finishNativeFullscreen(_ id: CGWindowID?, app: String?, wasOn isOn: Bool, done: Bool) {
         Log.info(
-            "native fullscreen \(isOn ? "off" : "on") for \(windowName) \(app.bundleIdentifier ?? ""): "
+            "native fullscreen \(isOn ? "off" : "on") for \(id.map(String.init) ?? "?") \(app ?? ""): "
                 + (done ? "ok" : "refused")
         )
         guard done else { return }
-        if let id = element.windowID, !isOn {
+        if let id, !isOn {
             for screen in Screen.all() where state(for: screen).zoomed == id { state(for: screen).zoomed = nil }
         }
         scheduleRefresh(after: 0.8)

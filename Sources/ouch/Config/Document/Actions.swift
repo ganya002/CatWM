@@ -72,7 +72,7 @@ enum Actions {
         add("Toggle Tiling", .app, "toggletiling", "", "power")
         add("Retile Windows", .app, "retile", "", "arrow.clockwise")
         add("Reload Config", .app, "reload", "", "arrow.triangle.2.circlepath")
-        add("Quit Ouch", .app, "exit", "", "xmark.circle")
+        add("Quit CatWM", .app, "exit", "", "xmark.circle")
         for spec in PointerActions.all.sorted(by: { $0.actionOrder < $1.actionOrder }) where spec.includeInActions {
             if let before = spec.actionBefore, let index = actions.firstIndex(where: { $0.id == before }) {
                 actions.insert(spec.action, at: index)

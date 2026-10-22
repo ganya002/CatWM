@@ -6,6 +6,7 @@ struct GradientSlider: View {
     let colors: [Color]
     let knob: Color
     var checker = false
+    var label = "Slider"
 
     var body: some View {
         GeometryReader { geo in
@@ -29,5 +30,15 @@ struct GradientSlider: View {
             })
         }
         .frame(height: 18)
+        .accessibilityElement()
+        .accessibilityLabel(label)
+        .accessibilityValue("\(Int((value * 100).rounded())) percent")
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: value = min(value + 0.05, 1)
+            case .decrement: value = max(value - 0.05, 0)
+            @unknown default: break
+            }
+        }
     }
 }

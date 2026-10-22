@@ -12,6 +12,11 @@ extension WindowManager {
         }
         guard !displays.isEmpty, displays.count == screens.count else { return nil }
         nativeCatalog.perDisplay = config.workspacesPerDisplay
+        let shared = SharedSpaces.isOn(displays: screens.count)
+        if shared != nativeCatalog.sharedSpaces {
+            nativeCatalog.sharedSpaces = shared
+            if shared { Log.info("native workspaces: displays share one Space; each display tiles its own windows") }
+        }
         nativeCatalog.synchronize(displays)
         for entry in nativeCatalog.entries { monitorOf[entry.name] = entry.display }
         if nativeCatalog.saved != lastNativeCatalogSaved || nativeCatalog.homes != lastNativeCatalogHomes {
@@ -38,14 +43,8 @@ extension WindowManager {
         MainActor.assumeIsolated { DesktopGuardClient.prewarm() }
         let displays = Set(screens.map(\.uuid))
         shown = shown.filter { displays.contains($0.key) }
-        for screen in screens {
-            let space = Spaces.current(display: screen.uuid)
-            let name = nativeCatalog.entry(space: space)?.name
-            model.show(name ?? Self.spaceWorkspace(display: screen.uuid, space: space), on: screen.uuid)
-            guard let name else { continue }
-            if let old = virtualShown[screen.uuid], old != name, !sortSession { previousWorkspace[screen.uuid] = old }
-            virtualShown[screen.uuid] = name
-        }
+        virtualShown = virtualShown.filter { displays.contains($0.key) }
+        showCurrentWorkspaces(screens)
         func host(_ id: CGWindowID, on space: UInt64) -> String? {
             guard let screen = screens.first(where: {
                 Spaces.list(display: $0.uuid)?.ids.contains(space) == true
@@ -64,7 +63,7 @@ extension WindowManager {
             }
             if let entry = nativeCatalog.entries.first(where: { membership.contains($0.space) }) {
                 model.assign(id, to: entry.name)
-                displayOf[id] = entry.display
+                displayOf[id] = sharesSpaces ? sharedDisplay(of: window, in: screens) ?? entry.display : entry.display
             } else if window.fullscreen, let space = membership.first {
                 _ = host(id, on: space)
             }
@@ -76,6 +75,31 @@ extension WindowManager {
         releaseEmptyWorkspaces()
         let visible = present.filter { model.isShown(workspaceOf[$0]) }
         return .init(model: model, homeSpace: [:], displayOf: displayOf, visible: visible, park: [])
+    }
+
+    var sharesSpaces: Bool { config.virtualWorkspaces && nativeCatalog.sharedSpaces }
+
+    private func showCurrentWorkspaces(_ screens: [Screen]) {
+        let spaces = screens.map { Spaces.current(display: $0.uuid) }
+        let current = zip(screens, spaces).map { screen, space in
+            (display: screen.uuid, space: nativeCatalog.sharedSpaces ? spaces[0] : space)
+        }
+        let names = nativeCatalog.shown(current)
+        for (display, space) in current {
+            let name = names[display]
+            model.show(name ?? Self.spaceWorkspace(display: display, space: space), on: display)
+            guard let name else { continue }
+            if let old = virtualShown[display], old != name, !sortSession { previousWorkspace[display] = old }
+            virtualShown[display] = name
+        }
+    }
+
+    func sharedDisplay(of window: Window, in screens: [Screen]) -> String? {
+        let id = window.id
+        return SharedSpaces.display(
+            of: window.cachedFrame, kept: displayOf[id], target: targets[id],
+            settling: drags[id] != nil || corrections[id] != nil || animator.isBusy(id),
+            in: screens.map { (id: $0.uuid, frame: $0.frame) })
     }
 
     func showNativeWorkspace(_ workspace: String, focusing preferred: Window?, focus takesFocus: Bool, quiet: Bool) {
@@ -151,8 +175,7 @@ extension WindowManager {
                     if self.config.workspacesPerDisplay {
                         self.closeGap(after: entry)
                     } else {
-                        self.states[entry.name] = nil
-                        self.lastFocused[entry.name] = nil
+                        self.forgetRemovedWorkspace(entry.name)
                     }
                     self.desktopRemovalFailures[entry.space] = nil
                     Log.info("native workspaces: removed empty workspace \(entry.name)")
@@ -171,6 +194,12 @@ extension WindowManager {
                 try await Task.sleep(nanoseconds: 200_000_000)
             }
         }
+    }
+
+    func forgetRemovedWorkspace(_ name: String) {
+        states[name] = nil
+        lastFocused[name] = nil
+        labels[name] = nil
     }
 
     func closeGap(after removed: NativeWorkspaceCatalog.Entry) {
@@ -268,18 +297,28 @@ extension WindowManager {
 
     @MainActor func prepareNativeLayout(_ request: NativeDesktopController.Request) async throws {
         let arriving = followMoves.filter { $0.value.workspace == request.workspace }
-        let screen = Screen.all().first(where: { $0.uuid == request.display })
+        let shownApps = Set(observedApps.map(\.pid))
         let ids = order.filter {
-            (workspaceOf[$0] == request.workspace || arriving[$0] != nil) && windows[$0]?.isFloating == false
+            (workspaceOf[$0] == request.workspace || arriving[$0] != nil)
+                && windows[$0].map { shownApps.contains($0.pid) && !$0.isFloating } == true
                 && windows[$0]?.minimized == false && windows[$0]?.fullscreen == false
         }
-        let slots = tilingEnabled ? screen.flatMap { layoutTargets(ids, state(workspace: request.workspace), on: $0) }
-            : nil
-        if let screen, let slots { try await place(ids.filter { arriving[$0] == nil }, in: slots, on: screen) }
+        var slots: [CGWindowID: CGRect] = [:]
+        for (screen, group) in layoutGroups(ids, on: request.display) where tilingEnabled {
+            guard let placed = layoutTargets(group, state(workspace: request.workspace), on: screen) else { continue }
+            slots.merge(placed) { first, _ in first }
+            try await place(group.filter { arriving[$0] == nil }, in: placed, on: screen)
+        }
         for move in arriving.values {
             try await completeFollowMove(move)
-            if let slot = slots?[move.window.id] { arrivals[move.window.id] = slot }
+            if let slot = slots[move.window.id] { arrivals[move.window.id] = slot }
         }
+    }
+
+    func layoutGroups(_ ids: [CGWindowID], on display: String) -> [(screen: Screen, ids: [CGWindowID])] {
+        let screens = Screen.all()
+        guard sharesSpaces else { return screens.filter { $0.uuid == display }.map { ($0, ids) } }
+        return screens.map { screen in (screen, ids.filter { (displayOf[$0] ?? display) == screen.uuid }) }
     }
 
     func placeArrivals(on display: String) {

@@ -56,7 +56,7 @@ extension ConfigDocument {
         formatter.dateFormat = "yyyy-MM-dd-HHmm"
         let url = Config.url.deletingLastPathComponent()
             .appendingPathComponent("keybinds-backup-\(formatter.string(from: Date())).conf")
-        let backup = "# Ouch keybind backup, \(Date())\n" + keyboardText()
+        let backup = "# CatWM keybind backup, \(Date())\n" + keyboardText()
         return (try? backup.write(to: url, atomically: true, encoding: .utf8)) != nil ? url : nil
     }
 

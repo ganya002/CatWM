@@ -30,6 +30,10 @@ extension WindowManager {
                              curve: config.animationCurve, bounce: config.animationBounce)
             assignManagedWindow(window.id, to: shown[dst.uuid])
             scheduleRefresh()
+        } else if sharesSpaces {
+            displayOf[window.id] = dst.uuid
+            corrections[window.id] = nil
+            refresh()
         } else {
             assignManagedWindow(window.id, to: shown[dst.uuid])
             refresh()

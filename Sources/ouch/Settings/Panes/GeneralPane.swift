@@ -17,7 +17,7 @@ struct GeneralPane: View {
                 OSwitchRow(GeneralPane.searchLogin.title, isOn: loginBinding)
                     .setting(GeneralPane.searchLogin.id, settingsUI)
                 if status.loginNeedsApproval {
-                    ORow("Waiting for approval", description: "Allow Ouch in Login Items",
+                    ORow("Waiting for approval", description: "Allow CatWM in Login Items",
                          symbol: "exclamationmark.triangle.fill") {
                         OButton("Open Login Items", size: .small) { LoginItem.openSettings() }
                     }

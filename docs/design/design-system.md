@@ -1,8 +1,8 @@
-# Ouch design system
+# CatWM design system
 
-This file is the rule set for every surface that Ouch draws: the menu bar menu, Settings, onboarding, tips and the HUD.
+This file is the rule set for every surface that CatWM draws: the menu bar menu, Settings, onboarding, tips and the HUD.
 
-Source: the Ouch design system artifact, https://claude.ai/artifact/GY1GAH7xBUwAzBP1B9mtfY.
+Source: the CatWM design system artifact, https://claude.ai/artifact/GY1GAH7xBUwAzBP1B9mtfY.
 
 ## Visual reference and editing
 
@@ -140,7 +140,7 @@ Each entry gives the design intent. The Swift type is in brackets.
 
 **Workspace strip** [`WorkspaceStrip`]. Workspaces as pills. The current one is `accent` with `onAccent` text. Workspaces with windows are `ink` at 500. Empty ones are `inkFaint` at 400. Both meet 4.5:1.
 
-**Cat** [`CatSymbol`, `CatFeeling`]. The Ouch cat, filled with the foreground style. A feeling sets the eyes: content, alert, sad, annoyed, sleepy or shut. A change of feeling morphs the eyes with the spring of the new feeling. `CatSymbol.image(_:height:)` gives a template `NSImage` for AppKit. The eye geometry is the same as in `docs/design/cat-feelings.html`.
+**Cat** [`CatSymbol`, `CatFeeling`]. The CatWM cat, filled with the foreground style. A feeling sets the eyes: content, alert, sad, annoyed, sleepy or shut. A change of feeling morphs the eyes with the spring of the new feeling. `CatSymbol.image(_:height:)` gives a template `NSImage` for AppKit. The eye geometry is the same as in `docs/design/cat-feelings.html`.
 
 **Cat mascot** [`CatMascot`, `CatMoves`]. The flat cat with life. The eyes sit on an imaginary sphere around the head, so a look turns the face: the eyes slide, get thin near the edge and go out of view behind it. The cat breathes, looks around a little and blinks at random times. `moves.play(.hop)`, `.spin`, `.wiggle` or `.look` plays a move once. The moves are keyframe tracks in `CatMotion.swift`. Use the mascot only where the cat is the subject, such as onboarding or About. Use `CatSymbol` everywhere else. With reduce motion, the mascot is a still `CatSymbol`.
 

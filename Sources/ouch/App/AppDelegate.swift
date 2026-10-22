@@ -10,7 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Theme.registerFonts()
         let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         self.statusItem = statusItem
-        statusItem.button?.image = NSImage(systemSymbolName: "rectangle.split.3x1", accessibilityDescription: "Ouch")
+        statusItem.button?.image = NSImage(systemSymbolName: "rectangle.split.3x1", accessibilityDescription: "CatWM")
         statusItem.button?.target = self
         statusItem.button?.action = #selector(toggleMenu)
         statusItem.button?.sendAction(on: [.leftMouseDown, .rightMouseDown])
@@ -70,6 +70,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         for app in others where !app.isTerminated {
             Log.info("launch: force-quitting previous instance \(app.processIdentifier)")
             app.forceTerminate()
+            CrashWatch.cleanExit()
         }
     }
 
@@ -93,14 +94,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Log.info("Input Monitoring \(monitoring ? "granted" : "revoked")")
             if monitoring { PermissionGuide.shared.granted(.inputMonitoring) }
         }
-        if trusted && !WindowManager.shared.isStarted {
+        let manager = WindowManager.shared
+        if trusted && !manager.isStarted {
             Log.info("Accessibility granted")
-            WindowManager.shared.start()
-        } else if trusted && !Hotkeys.shared.isActive {
-            Hotkeys.shared.restart()
+            manager.start()
+        } else if trusted {
+            if !Hotkeys.shared.isActive { Hotkeys.shared.restart() }
+            manager.startMouseTaps()
         }
         if changed.contains(.accessibility) {
             Log.info("Accessibility \(trusted ? "granted" : "revoked")")
+            if manager.isStarted {
+                manager.setInputTaps(enabled: trusted)
+                if !trusted { HUD.shared.show("Keybinds off: Accessibility was turned off", on: nil) }
+            }
             updateIcon()
             if trusted { PermissionGuide.shared.granted(.accessibility) } else { Permission.accessibility.reset() }
         }
@@ -144,7 +151,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         button.attributedTitle = NSAttributedString(string: "")
         guard trusted, let state = WindowManager.shared.menuBarState() else {
             button.image = NSImage(systemSymbolName: trusted ? "rectangle.split.3x1" : "exclamationmark.triangle",
-                                   accessibilityDescription: "Ouch")
+                                   accessibilityDescription: "CatWM")
             return
         }
         MenuBarIcon.pruneIcons(keeping: Set(state.pids))
@@ -160,8 +167,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         updates.target = self
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Close Window", action: #selector(closeWindow), keyEquivalent: "w").target = self
-        appMenu.addItem(withTitle: "Quit Ouch", action: #selector(quitOrCloseWindow), keyEquivalent: "q").target = self
-        main.addItem(withTitle: "Ouch", action: nil, keyEquivalent: "").submenu = appMenu
+        appMenu.addItem(withTitle: "Quit CatWM", action: #selector(quitOrCloseWindow), keyEquivalent: "q").target = self
+        main.addItem(withTitle: "CatWM", action: nil, keyEquivalent: "").submenu = appMenu
         let edit = NSMenu(title: "Edit")
         edit.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
         edit.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "Z")

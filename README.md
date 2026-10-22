@@ -1,13 +1,13 @@
 <p align="center">
-  <img src="website/public/icon.png" width="96" alt="Ouch app icon">
+  <img src="website/public/icon.png" width="96" alt="CatWM app icon">
 </p>
 
-<h1 align="center">Ouch</h1>
+<h1 align="center">CatWM</h1>
 
 <p align="center">A simple, modern, and fast tiling window manager for macOS.</p>
 
 <p align="center">
-  <a href="https://ouch.perwko.com"><img src="website/public/demo-poster.jpg" width="760" alt="Ouch tiles a Finder window and two terminal windows side by side"></a>
+  <a href="https://ouch.perwko.com"><img src="website/public/demo-poster.jpg" width="760" alt="CatWM tiles a Finder window and two terminal windows side by side"></a>
 </p>
 
 ## Install

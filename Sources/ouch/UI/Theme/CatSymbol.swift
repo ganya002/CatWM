@@ -67,7 +67,7 @@ struct CatSymbol: View {
             return true
         }
         image.isTemplate = true
-        image.accessibilityDescription = "Ouch"
+        image.accessibilityDescription = "CatWM"
         return image
     }
 }

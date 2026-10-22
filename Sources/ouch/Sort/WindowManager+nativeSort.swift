@@ -39,15 +39,15 @@ extension WindowManager {
     @MainActor func leaveFullscreen(_ id: CGWindowID, to workspace: String) async {
         guard let window = windows[id], let screen = Screen.all().first(where: {
             $0.uuid == monitorOf[workspace]
-        }), window.element.set("AXFullScreen", kCFBooleanFalse) else {
+        }), window.unlessStalled(false, { window.element.set("AXFullScreen", kCFBooleanFalse) }) else {
             Log.info("sort: \(id) refused to leave full screen")
             return
         }
         workspaceMoves.insert(id)
         defer { workspaceMoves.remove(id); scheduleRefresh(after: 0) }
         let deadline = ProcessInfo.processInfo.systemUptime + 5
-        func leaving() -> Bool { window.isNativeFullscreen || !DesktopUI.isSettled(screen) }
-        guard await poll(5, every: 50_000_000, until: { !leaving() || !window.isValid }), !leaving() else {
+        func leaving() -> Bool { window.fullscreenUnlessStalled || !DesktopUI.isSettled(screen) }
+        guard await poll(5, every: 50_000_000, until: { !leaving() || !window.isValidUnlessStalled }), !leaving() else {
             HUD.shared.show("macOS did not finish leaving full screen", on: screen.nsScreen)
             return
         }
@@ -59,7 +59,7 @@ extension WindowManager {
                     Spaces.move(window: id, to: target.space) { continuation.resume(returning: $0) }
                 }
                 if !moved { try await Task.sleep(nanoseconds: 100_000_000) }
-            } while !moved && window.isValid && ProcessInfo.processInfo.systemUptime < deadline
+            } while !moved && window.isValidUnlessStalled && ProcessInfo.processInfo.systemUptime < deadline
             guard moved else { throw DesktopTransitionError.check("macOS couldn't move this window") }
             nativeMembership[id] = target.space
             model.assign(id, to: workspace)
