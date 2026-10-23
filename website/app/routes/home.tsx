@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Cards } from "~/catwm/Cards.tsx";
 import { Cat } from "~/catwm/Cat";
@@ -35,10 +35,14 @@ export function meta() {
 // One button. It copies the install command, then says what to do with it.
 function Install({ cta = false }: { cta?: boolean }) {
   const [copied, setCopied] = useState(false);
+  const timer = useRef<number>(0);
+  useEffect(() => () => window.clearTimeout(timer.current), []);
   const copy = async () => {
+    window.clearTimeout(timer.current);
     try {
       await navigator.clipboard.writeText(INSTALL);
       setCopied(true);
+      timer.current = window.setTimeout(() => setCopied(false), 10_000);
     } catch {
       setCopied(false);
     }
@@ -57,7 +61,7 @@ function Install({ cta = false }: { cta?: boolean }) {
             Install the beta
           </span>
           <span className="install__label" data-shown={copied || undefined}>
-            Paste in Terminal
+            Copied to clipboard
           </span>
         </span>
       </button>

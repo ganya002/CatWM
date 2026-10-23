@@ -7,6 +7,7 @@ import { CARDS, MORE } from "./cards";
 import { Demo } from "./Demo";
 import { WINDOWS } from "./script";
 import { usePulse } from "./usePulse";
+import { PulseVeil } from "./PulseVeil";
 
 // A notch on the top edge of the first card, with an arrow. It peeks above the hero
 // and rides up with the card. The card colour fills it from the bottom up as the page
@@ -42,7 +43,12 @@ function ScrollHint() {
       aria-label="Scroll down"
       onClick={(e) => {
         const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        e.currentTarget.closest(".card")?.scrollIntoView({ behavior: still ? "auto" : "smooth" });
+        // The cards are sticky, and iOS WebKit measures a sticky element at its stuck spot, so
+        // scrollIntoView lands wrong there. The list that holds the cards does not stick.
+        const list = e.currentTarget.closest(".card")?.parentElement;
+        if (!list) return;
+        const top = list.getBoundingClientRect().top + window.scrollY;
+        window.scrollTo({ top, behavior: still ? "auto" : "smooth" });
       }}
     >
       <span className="scroll-hint__base">{layer}</span>
@@ -57,7 +63,7 @@ function ScrollHint() {
 export function Cards({ last }: { last: ReactNode }) {
   const root = useRef<HTMLDivElement>(null);
   const lastCard = useRef<HTMLElement>(null);
-  usePulse(lastCard, "#fff");
+  usePulse(lastCard, "#fff", "#000");
 
   useGSAP(
     () => {
@@ -136,7 +142,7 @@ export function Cards({ last }: { last: ReactNode }) {
         className="card card--last"
         style={{ "--i": CARDS.length + 2 } as CSSProperties}
       >
-        <div className="pulse" data-pulse aria-hidden="true" />
+        <PulseVeil />
         <div className="card__inner card__inner--center">{last}</div>
       </section>
     </div>
