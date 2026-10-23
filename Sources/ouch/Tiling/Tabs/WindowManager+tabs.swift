@@ -4,6 +4,7 @@ extension WindowManager {
     static let tabTitleBand: CGFloat = 44
     static let minimizeHold: TimeInterval = 2
     static let tabHoverDelay: TimeInterval = 0.4
+    static let tabDragSlack: CGFloat = 40
 
     var tabs: TabGroups { model.tabs }
 
@@ -155,8 +156,10 @@ extension WindowManager {
         guard let group = tabs.group(of: window.id), group.active == window.id, let slot = targets[window.id],
               !window.cachedFrame.isNull else { return }
         let offset = CGVector(dx: window.cachedFrame.minX - slot.minX, dy: window.cachedFrame.minY - slot.minY)
+        let travelled = abs(offset.dx) + abs(offset.dy)
         for member in group.members where member != window.id {
-            guard let tab = windows[member], !tab.minimized, !tab.isFloating else { continue }
+            guard let tab = windows[member], !tab.minimized, !tab.isFloating,
+                  tab.pid != window.pid || travelled > Self.tabDragSlack else { continue }
             animator.position(tab, at: slot.offsetBy(dx: offset.dx, dy: offset.dy))
         }
         TabStrips.shared.shift(group.id, by: offset)
