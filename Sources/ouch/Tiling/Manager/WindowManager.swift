@@ -71,6 +71,7 @@ final class WindowManager {
     var workspaceMoves: Set<CGWindowID> = []
     var snapNextPlacement: Set<CGWindowID> = []
     var restoredEarly: [CGWindowID: Date] = [:]
+    var minimizingTabs: Set<Int> = []
     var present: Set<CGWindowID> = []
     var leavingFullscreen: [CGWindowID: Date] = [:]
     struct PendingFocus {
@@ -116,7 +117,6 @@ var focusEcho: FocusEcho?
     var autoSwitchAfter = Date.distantPast
     var lastSavedWorkspaces = ""
     var savedTabs: [SavedTabs] = []
-    var collapsedTabs: Int?
     var savedTabsUntil = Date.distantPast
     var lastSavedTabs: [String]?
     var focusSink: NSWindow?

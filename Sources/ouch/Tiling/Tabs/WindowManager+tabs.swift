@@ -2,6 +2,7 @@ import AppKit
 
 extension WindowManager {
     static let tabTitleBand: CGFloat = 44
+    static let minimizeHold: TimeInterval = 2
 
     var tabs: TabGroups { model.tabs }
 
@@ -86,11 +87,8 @@ extension WindowManager {
     }
 
     func followTabFocus(_ id: CGWindowID?) {
-        let collapse = id.flatMap { tabs.group(of: $0)?.id }
-        let collapsing = collapse != collapsedTabs
-        collapsedTabs = collapse
         guard let id, let group = tabs.group(of: id), group.active != id, visible.contains(id) else {
-            if collapsing { refresh() } else { TabStrips.shared.update() }
+            TabStrips.shared.update()
             return
         }
         activateTab(id, previous: group.active)
@@ -109,6 +107,30 @@ extension WindowManager {
         }
     }
 
+    func minimizeTabs(_ members: [CGWindowID]) {
+        guard let group = members.first.flatMap(tabs.group(of:)) else { return }
+        minimizingTabs.insert(group.id)
+        TabStrips.shared.update(instant: true)
+        group.members.compactMap { windows[$0] }.forEach(minimize)
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.minimizeHold) { [weak self] in
+            self?.minimizingTabs.remove(group.id)
+            TabStrips.shared.update()
+        }
+    }
+
+    func restoreTabGroup(of id: CGWindowID) {
+        guard let group = tabs.group(of: id) else { return }
+        if group.active != id, windows[group.active]?.minimized == true {
+            model.activateTab(id)
+        } else if tabs.isBehind(id), let active = windows[group.active], !active.minimized {
+            scanner.run(active.pid) { active.element.perform(kAXRaiseAction) }
+        }
+        for member in group.members where member != id {
+            guard let window = windows[member], window.minimized else { continue }
+            scanner.run(window.pid) { window.element.set(kAXMinimizedAttribute, kCFBooleanFalse) }
+        }
+    }
+
     func tabStack(behind id: CGWindowID) -> [CGWindowID] {
         guard let group = tabs.group(of: id), group.active == id else { return [] }
         return group.members.filter {
@@ -116,9 +138,19 @@ extension WindowManager {
         }
     }
 
+    func stackTabs(_ tiles: [CGWindowID: CGRect]) -> [CGWindowID: CGRect] {
+        var slots: [CGWindowID: CGRect] = [:]
+        for (id, tile) in tiles {
+            let slot = belowTabStrip(tile, for: id)
+            let behind = tabs.group(of: id)?.members.filter { $0 != id && windows[$0]?.isFloating == false } ?? []
+            for member in [id] + behind { slots[member] = slot }
+        }
+        return slots
+    }
+
     func belowTabStrip(_ slot: CGRect, for id: CGWindowID) -> CGRect {
         guard let group = tabs.group(of: id),
-              group.id != collapsedTabs || TabStripReveal.shared.isRevealed else { return slot }
+              !config.autoHideTabStrip || TabStripReveal.shared.revealed == group.id else { return slot }
         let inset = TabStrip.height
         return CGRect(x: slot.minX, y: slot.minY + inset, width: slot.width, height: max(0, slot.height - inset))
     }

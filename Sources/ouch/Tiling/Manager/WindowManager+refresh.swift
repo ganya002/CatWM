@@ -99,6 +99,7 @@ extension WindowManager {
             }
         }
         claimForCurrentWorkspace(unminimized)
+        unminimized.forEach(restoreTabGroup)
     }
 
     private func observeWindows(screens: [Screen], onScreen: [CGWindowInfo]) -> ObservedWindows {

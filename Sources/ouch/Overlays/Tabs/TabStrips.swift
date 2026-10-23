@@ -12,20 +12,22 @@ final class TabStrips {
         let animate = !instant && manager.config.animate && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         let focused = manager.focusedWindow()?.id
         var placed = Set<Int>()
-        var collapsed: CGRect?
+        var hidden: [TabStripReveal.Target] = []
         if manager.tilingEnabled {
             for screen in Screen.all() {
                 for id in manager.tiled(on: screen) {
                     guard let group = manager.tabs.group(of: id), let target = manager.targets[id],
-                          !placed.contains(group.id) else { continue }
+                          !placed.contains(group.id), !manager.minimizingTabs.contains(group.id) else { continue }
                     placed.insert(group.id)
                     let strip = strips[group.id] ?? Strip()
                     strips[group.id] = strip
-                    if group.id == manager.collapsedTabs {
-                        let revealed = TabStripReveal.shared.isRevealed
+                    if manager.config.autoHideTabStrip, let window = manager.windows[group.active] {
+                        let revealed = TabStripReveal.shared.revealed == group.id
                         let top = revealed ? TabStrip.height : 0
-                        collapsed = CGRect(x: target.minX, y: target.minY - top,
-                                           width: target.width, height: target.height + top)
+                        hidden.append(.init(group: group.id, slot: CGRect(x: target.minX, y: target.minY - top,
+                                                                          width: target.width,
+                                                                          height: target.height + top),
+                                            window: window))
                         if !revealed {
                             strip.hide()
                             continue
@@ -37,7 +39,7 @@ final class TabStrips {
                 }
             }
         }
-        TabStripReveal.shared.watch(collapsed)
+        TabStripReveal.shared.watch(hidden)
         let live = Set(manager.tabs.groups.filter { !manager.model.isShown(manager.workspaceOf[$0.active]) }.map(\.id))
         for (key, strip) in strips where !placed.contains(key) {
             if manager.tilingEnabled, live.contains(key) { continue }
@@ -166,15 +168,18 @@ private final class TabStripInput: NSView {
 
     private var press: Press?
     private let host: NSView
-    let lights = TrafficLights(buttons: .close)
+    let lights = TrafficLights(buttons: TabStrip.lights)
 
     init(model: TabStripModel) {
         self.model = model
         host = NSHostingView(rootView: TabStripView(model: model))
         super.init(frame: .zero)
         addSubview(host)
-        lights.onAction = { [weak self] _ in
-            self?.model.tabs.forEach { _ = WindowManager.shared.closeWindow($0.id) }
+        lights.onAction = { [weak self] light in
+            let manager = WindowManager.shared
+            let ids = self?.model.tabs.map(\.id) ?? []
+            if light == .minimize { return manager.minimizeTabs(ids) }
+            ids.forEach { _ = manager.closeWindow($0) }
         }
         addSubview(lights)
     }
@@ -185,9 +190,8 @@ private final class TabStripInput: NSView {
     override func layout() {
         super.layout()
         host.frame = bounds
-        let size = TrafficLights.size(for: .close)
-        lights.frame = NSRect(origin: NSPoint(x: ((TabStrip.lead - size.width) / 2).rounded(),
-                                              y: ((bounds.height - size.height) / 2).rounded()), size: size)
+        let size = TrafficLights.size(for: TabStrip.lights)
+        lights.frame = NSRect(origin: NSPoint(x: TabStrip.lightsInset, y: TabStrip.lightsInset), size: size)
     }
 
     override func acceptsFirstMouse(for _: NSEvent?) -> Bool { true }

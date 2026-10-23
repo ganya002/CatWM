@@ -299,15 +299,16 @@ extension WindowManager {
         let arriving = followMoves.filter { $0.value.workspace == request.workspace }
         let shownApps = Set(observedApps.map(\.pid))
         let ids = order.filter {
-            (workspaceOf[$0] == request.workspace || arriving[$0] != nil)
+            (workspaceOf[$0] == request.workspace || arriving[$0] != nil) && !tabs.isBehind($0)
                 && windows[$0].map { shownApps.contains($0.pid) && !$0.isFloating } == true
                 && windows[$0]?.minimized == false && windows[$0]?.fullscreen == false
         }
         var slots: [CGWindowID: CGRect] = [:]
         for (screen, group) in layoutGroups(ids, on: request.display) where tilingEnabled {
-            guard let placed = layoutTargets(group, state(workspace: request.workspace), on: screen) else { continue }
+            guard let tiles = layoutTargets(group, state(workspace: request.workspace), on: screen) else { continue }
+            let placed = stackTabs(tiles)
             slots.merge(placed) { first, _ in first }
-            try await place(group.filter { arriving[$0] == nil }, in: placed, on: screen)
+            try await place(placed.keys.filter { arriving[$0] == nil }, in: placed, on: screen)
         }
         for move in arriving.values {
             try await completeFollowMove(move)
