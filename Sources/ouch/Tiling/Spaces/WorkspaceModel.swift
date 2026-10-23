@@ -14,17 +14,26 @@ struct WorkspaceModel {
     var focusStamps: [CGWindowID: Int] = [:]
     var focusClock = 0
     var focusOrder: [CGWindowID] = []
+    var tabs = TabGroups()
     private(set) var shownSet: Set<String> = []
 
     func isShown(_ workspace: String?) -> Bool { workspace.map(shownSet.contains) ?? false }
 
-    mutating func assign(_ id: CGWindowID, to workspace: String?) { workspaceOf[id] = workspace }
+    mutating func assign(_ id: CGWindowID, to workspace: String?) {
+        if workspaceOf[id] != workspace,
+           tabs.group(of: id)?.members.contains(where: { $0 != id && workspaceOf[$0] != workspace }) == true {
+            leaveTab(id)
+        }
+        workspaceOf[id] = workspace
+    }
 
     mutating func swapWorkspaces(_ first: CGWindowID, _ second: CGWindowID) {
+        if workspaceOf[first] != workspaceOf[second] { leaveTab(first); leaveTab(second) }
         (workspaceOf[first], workspaceOf[second]) = (workspaceOf[second], workspaceOf[first])
     }
 
     mutating func forget(_ id: CGWindowID) {
+        leaveTab(id)
         workspaceOf[id] = nil
         order.removeAll { $0 == id }
         focusStamps[id] = nil
@@ -37,7 +46,7 @@ struct WorkspaceModel {
 
     mutating func resetWorkspaces() {
         workspaceOf = [:]; monitorOf = [:]; shown = [:]; virtualShown = [:]
-        states = [:]; lastFocused = [:]; fullscreenHost = [:]
+        states = [:]; lastFocused = [:]; fullscreenHost = [:]; tabs = TabGroups()
     }
 
     mutating func noteFocus(_ id: CGWindowID) {

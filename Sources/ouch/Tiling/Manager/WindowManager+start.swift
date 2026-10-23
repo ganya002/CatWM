@@ -118,6 +118,10 @@ extension WindowManager {
 
     private func installEventMonitors() {
         NSEvent.addGlobalMonitorForEvents(matching: .leftMouseUp) { [weak self] _ in self?.mouseUp() }
+        NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDragged) { [weak self] _ in
+            guard let self, !self.drags.isEmpty else { return }
+            self.updateTabDropHint()
+        }
         NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
             self?.cancelFocusRequest()
             if !Hotkeys.shared.submap.isEmpty { Hotkeys.shared.setSubmap("") }

@@ -34,6 +34,7 @@ extension WindowManager {
         if confirmsRequest, pendingFocus?.executed == true { pendingFocus = nil }
         if let id, windows[id] == nil { scheduleRefresh(after: 0.1) }
         followFocus()
+        followTabFocus(id)
         if let waiting = waitingRefocus {
             waitingRefocus = nil
             if waiting.pid == pid { refocusRecent(on: waiting.workspace) }

@@ -51,9 +51,13 @@ extension WindowManager {
         watchCrowding(screens)
         refocusAfterCloseIfNeeded(hasFresh: !observed.fresh.isEmpty)
 
-        guard tilingEnabled else { SplitHandle.shared.update(); onChange?(); return }
+        settleTabs()
+        guard tilingEnabled else {
+            SplitHandle.shared.update(); TabStrips.shared.update(); onChange?(); return
+        }
         applyTileMoves(planTileMoves(screens: screens, only: only), instant: instantLayout)
         SplitHandle.shared.update(instant: instantLayout || dividerDrag != nil)
+        TabStrips.shared.update(instant: instantLayout || dividerDrag != nil)
         timing.checkpoint("apply")
         onChange?()
         timing.checkpoint("notify")
@@ -211,11 +215,14 @@ extension WindowManager {
                 continue
             }
             for id in ids {
-                guard let target = slots[id] else { continue }
-                targets[id] = target
-                if let only, !only.contains(id) { continue }
-                guard let window = windows[id] else { continue }
-                planMove(window, to: target, on: screen, screens: screens, into: &planned)
+                guard let slot = slots[id] else { continue }
+                let target = belowTabStrip(slot, for: id)
+                for member in [id] + tabStack(behind: id) {
+                    targets[member] = target
+                    if let only, !only.contains(member) { continue }
+                    guard let window = windows[member] else { continue }
+                    planMove(window, to: target, on: screen, screens: screens, into: &planned)
+                }
             }
         }
         return planned
@@ -284,11 +291,11 @@ extension WindowManager {
 
     func layoutTargets(_ ids: [CGWindowID], _ screenState: ScreenState, on screen: Screen) -> [CGWindowID: CGRect]? {
         guard let (raw, gap) = rawSlots(ids, on: screen, screenState, ratio: screenState.ratio) else { return nil }
-        let slots = fitMinimums(raw, mins: ids.map { minSizes[$0] }, gap: gap)
+        let slots = fitMinimums(raw, mins: ids.map(slotMinimum), gap: gap)
         let zoomed = usableRect(screen).pixelAligned
         let bounds = screen.visible
         return Dictionary(zip(ids, slots).map { id, slot in
-            (id, id == screenState.zoomed ? zoomed : clampToMinimum(slot, min: minSizes[id], bounds: bounds))
+            (id, id == screenState.zoomed ? zoomed : clampToMinimum(slot, min: slotMinimum(id), bounds: bounds))
         },
                           uniquingKeysWith: { first, _ in first })
     }

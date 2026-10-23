@@ -36,7 +36,7 @@ extension WindowManager {
         scanner.run(window.pid) {
             for name in [kAXUIElementDestroyedNotification, kAXWindowMiniaturizedNotification,
                          kAXWindowDeminiaturizedNotification, kAXWindowMovedNotification,
-                         kAXWindowResizedNotification] {
+                         kAXWindowResizedNotification, kAXTitleChangedNotification] {
                 AXObserverAddNotification(obs, window.element, name as CFString, nil)
             }
         }
@@ -67,6 +67,8 @@ extension WindowManager {
             observeFocus(element)
             FocusDim.shared.update()
             onChange?()
+        case kAXTitleChangedNotification:
+            tabTitleChanged(element)
         case kAXWindowMiniaturizedNotification:
             windowMinimizeChanged(element, minimized: true)
         case kAXWindowDeminiaturizedNotification:

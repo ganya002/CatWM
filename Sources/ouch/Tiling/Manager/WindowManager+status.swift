@@ -80,6 +80,10 @@ extension WindowManager {
                 )
             }
         }
+        for group in tabs.groups {
+            let members = group.members.map { $0 == group.active ? "[\($0)]" : "\($0)" }
+            lines.append("  tabs \(members.joined(separator: " "))")
+        }
         for id in visible {
             guard let window = windows[id], window.isFloating else { continue }
             lines.append("  floating \(id) \(window.bundleID ?? "") \(window.frame)")
@@ -150,6 +154,7 @@ extension WindowManager {
         case "sort": toggleSortCommand()
         case "sort-undo": SortPanel.shared.undoApplied()
         case "switcher": Switcher.shared.open(backward: arg.lowercased().hasPrefix("prev"))
+        case "moveintogroup", "moveoutofgroup", "changegroupactive": tabCommand(dispatcher, arg)
         default: NSLog("Ouch: unknown dispatcher %@", dispatcher)
         }
     }

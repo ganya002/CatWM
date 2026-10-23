@@ -41,6 +41,7 @@ extension WindowManager {
         let shares = sharesSpaces
         return order.filter {
             visible.contains($0) && windows[$0]?.isFloating == false && workspaceOf[$0] == shown[screen.uuid]
+                && !model.tabs.isBehind($0)
                 && (!shares || (displayOf[$0] ?? workspaceOf[$0].flatMap { monitorOf[$0] }) == screen.uuid)
         }
     }

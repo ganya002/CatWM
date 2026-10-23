@@ -39,6 +39,7 @@ extension WindowManager {
     }
 
     func mouseUp() {
+        TabDropHint.shared.hide()
         guard !drags.isEmpty, !movingToSpace else { drags = [:]; return }
         let finished = drags
         drags = [:]
@@ -54,6 +55,10 @@ extension WindowManager {
         let screens = Screen.all()
         for (id, resized) in finished {
             guard let window = windows[id], let src = screen(of: window, in: screens) else { continue }
+            if !resized, finished.count == 1, holds(window, at: point), let host = tabDropTarget(for: id, at: point) {
+                joinTab(id, onto: host)
+                return
+            }
             if floatsFreely(id) {
                 if let dst = screen(containing: window.cachedFrame, in: screens), dst.uuid != src.uuid,
                    let workspace = shown[dst.uuid] {
