@@ -52,6 +52,81 @@ import Testing
         #expect(manager.tabs.group(of: 3)?.active == 2)
     }
 
+    @Test @MainActor func aLiftedTabJoinsAWindowOnlyAfterAHoverOverItsBody() {
+        guard let screen = Screen.all().first else { return }
+        let manager = manager(on: screen, windows: [1, 2, 3, 4])
+        manager.model.joinTab(2, onto: 1)
+        manager.model.joinTab(4, onto: 1)
+        let slot = CGRect(x: screen.visible.minX + 600, y: screen.visible.minY + 40, width: 500, height: 500)
+        let body = CGPoint(x: slot.midX, y: slot.midY)
+        manager.targets[3] = slot
+        manager.draggedTab = 2
+        manager.tabHover = (3, true)
+        manager.dropTab(2, at: body)
+        #expect(manager.tabs.group(of: 3)?.members.contains(2) == true)
+        #expect(manager.tabs.group(of: 1)?.members == [1, 4])
+        manager.draggedTab = 4
+        manager.tabHover = (3, false)
+        manager.dropTab(4, at: body)
+        #expect(manager.tabs.group(of: 3)?.members.contains(4) == false)
+    }
+
+    @Test @MainActor func aLiftedTabHeldOverItsOwnGroupStaysInIt() {
+        guard let screen = Screen.all().first else { return }
+        let manager = manager(on: screen, windows: [1, 2, 3])
+        manager.model.joinTab(2, onto: 1)
+        manager.model.joinTab(3, onto: 1)
+        let slot = CGRect(x: screen.visible.minX + 600, y: screen.visible.minY + 40, width: 500, height: 500)
+        manager.targets[1] = slot
+        manager.draggedTab = 2
+        manager.tabHover = (1, true)
+        #expect(manager.settledTabHover(for: 2, at: CGPoint(x: slot.midX, y: slot.midY)) == 1)
+        manager.dropTab(2, at: CGPoint(x: slot.midX, y: slot.midY))
+        #expect(manager.tabs.group(of: 1)?.members.sorted() == [1, 2, 3])
+        manager.tabHover = (1, true)
+        #expect(manager.settledTabHover(for: 2, at: CGPoint(x: slot.midX, y: slot.midY)) == 1)
+        #expect(manager.settledTabHover(for: 1, at: CGPoint(x: slot.midX, y: slot.midY)) == nil)
+    }
+
+    @Test @MainActor func aHiddenTabStaysPutWhileTheActiveTabCoversIt() throws {
+        guard let screen = Screen.all().first else { return }
+        let manager = manager(on: screen, windows: [1, 2])
+        let tab = try #require(manager.windows[2])
+        let slot = CGRect(x: 100, y: 68, width: 500, height: 600)
+        #expect(!manager.covered(tab, by: slot))
+        tab.remember(slot)
+        #expect(manager.covered(tab, by: CGRect(x: 100, y: 38, width: 500, height: 630)))
+        #expect(!manager.covered(tab, by: CGRect(x: 100, y: 98, width: 500, height: 570)))
+        #expect(!manager.covered(tab, by: CGRect(x: 700, y: 68, width: 500, height: 600)))
+    }
+
+    @Test @MainActor func escapeOnlyActsWhileADropShows() {
+        guard let screen = Screen.all().first else { return }
+        let manager = manager(on: screen, windows: [1, 2])
+        #expect(!manager.cancelTabDrop())
+        manager.drags[2] = false
+        #expect(!manager.cancelTabDrop())
+        manager.drags = [:]
+        manager.draggedTab = 2
+        #expect(!manager.cancelTabDrop())
+        #expect(!manager.tabDropCancelled)
+    }
+
+    @Test @MainActor func aCancelledDropLeavesTheLiftedTabOutOfAnyGroup() {
+        guard let screen = Screen.all().first else { return }
+        let manager = manager(on: screen, windows: [1, 2, 3])
+        manager.model.joinTab(2, onto: 1)
+        let slot = CGRect(x: screen.visible.minX + 600, y: screen.visible.minY + 40, width: 500, height: 500)
+        manager.targets[3] = slot
+        manager.draggedTab = 2
+        manager.tabHover = (3, true)
+        manager.tabDropCancelled = true
+        manager.dropTab(2, at: CGPoint(x: slot.midX, y: slot.minY + 10))
+        #expect(manager.tabs.group(of: 2) == nil)
+        #expect(manager.tabs.group(of: 3) == nil)
+        #expect(!manager.tabDropCancelled)
+    }
+
     @Test @MainActor func aGroupNeedsRoomForItsLargestTabAndItsStrip() {
         guard let screen = Screen.all().first else { return }
         let manager = manager(on: screen, windows: [1, 2])

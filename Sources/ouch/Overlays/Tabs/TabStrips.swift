@@ -66,6 +66,13 @@ final class TabStrips {
         return strips[group]?.endPreview(of: id).map { (group, $0) }
     }
 
+    var isPreviewing: Bool { previewing != nil }
+
+    func restack() {
+        let stack = Strip.stack()
+        strips.values.forEach { $0.restack(in: stack) }
+    }
+
     func shift(_ group: Int, by offset: CGVector) {
         strips[group]?.shift(by: offset)
     }
@@ -76,7 +83,9 @@ final class TabStrips {
         private let view: TabStripInput
         private var target: NSRect?
         private var anchor: CGWindowID = 0
+        private var members: [CGWindowID] = []
         private var hidden = false
+        private var gliding: Timer?
 
         init() {
             view = TabStripInput(model: model)
@@ -100,24 +109,22 @@ final class TabStrips {
                 let wasVisible = panel.isVisible
                 target = frame
                 if wasVisible, duration > 0 {
-                    NSAnimationContext.runAnimationGroup { context in
-                        context.duration = duration
-                        context.timingFunction = Motion.Curve.easeOut
-                        panel.animator().setFrame(frame, display: true)
-                    }
+                    glide(to: frame, duration: duration)
                 } else {
+                    stopGlide()
                     panel.setFrame(frame, display: true)
                 }
                 if !wasVisible || panel.alphaValue < 1 {
                     if !wasVisible { panel.alphaValue = 0 }
                     NSAnimationContext.runAnimationGroup { context in
-                        context.duration = Theme.medium
+                        context.duration = TabStrip.fade(Theme.medium)
                         context.timingFunction = Motion.Curve.easeOut
                         panel.animator().alphaValue = 1
                     }
                 }
             }
-            panel.order(.below, relativeTo: Int(Self.lowest(of: group)))
+            members = group.members
+            restack(in: Self.stack(), else: group.active)
             if anchor != group.active || !wasOnSpace(of: group.active) { moveToSpace(of: group.active) }
             anchor = group.active
         }
@@ -134,7 +141,7 @@ final class TabStrips {
             if !model.tabs.contains(where: { $0.id == window.id }) {
                 let step = max(0, width - TabStrip.lead) / CGFloat(model.tabs.count + 1)
                 let wanted = step > 0 ? Int(((x - TabStrip.lead) / step).rounded(.down)) : 0
-                withAnimation(Motion.snap) {
+                withAnimation(TabStrip.motion) {
                     model.tabs.insert(.init(id: window.id, title: Self.title(of: window), pid: window.pid),
                                       at: min(model.tabs.count, max(0, wanted)))
                 }
@@ -147,7 +154,7 @@ final class TabStrips {
             let grab = x - step / 2
             let wanted = min(model.tabs.count - 1, max(0, Int(((grab - TabStrip.lead) / step).rounded())))
             if wanted != from {
-                withAnimation(Motion.snap) {
+                withAnimation(TabStrip.motion) {
                     model.tabs.move(fromOffsets: [from], toOffset: wanted > from ? wanted + 1 : wanted)
                 }
             }
@@ -156,7 +163,7 @@ final class TabStrips {
 
         func endPreview(of id: CGWindowID) -> Int? {
             guard let index = model.tabs.firstIndex(where: { $0.id == id }) else { return nil }
-            withAnimation(Motion.snap) {
+            withAnimation(TabStrip.motion) {
                 model.tabs.remove(at: index)
                 model.dragged = nil
                 model.dragShift = 0
@@ -166,6 +173,7 @@ final class TabStrips {
 
         func shift(by offset: CGVector) {
             guard let target, panel.isVisible else { return }
+            stopGlide()
             panel.setFrameOrigin(NSPoint(x: target.minX + offset.dx, y: target.minY - offset.dy))
         }
 
@@ -174,7 +182,7 @@ final class TabStrips {
             hidden = true
             view.cancelDrag()
             NSAnimationContext.runAnimationGroup({ context in
-                context.duration = Theme.medium
+                context.duration = TabStrip.fade(Theme.medium)
                 context.timingFunction = Motion.Curve.easeOut
                 panel.animator().alphaValue = 0
             }, completionHandler: { [weak self] in
@@ -184,7 +192,30 @@ final class TabStrips {
             })
         }
 
+        private func glide(to frame: NSRect, duration: Double) {
+            stopGlide()
+            let from = panel.frame, start = CACurrentMediaTime(), config = WindowManager.shared.config
+            let timer = Timer(timeInterval: 1.0 / 120.0, repeats: true) { [weak self] timer in
+                guard let self else { return timer.invalidate() }
+                let time = (CACurrentMediaTime() - start) / duration
+                let eased = CGFloat(config.animationCurve.progress(time, bounce: config.animationBounce))
+                self.panel.setFrame(NSRect(x: from.minX + (frame.minX - from.minX) * eased,
+                                           y: from.minY + (frame.minY - from.minY) * eased,
+                                           width: from.width + (frame.width - from.width) * eased,
+                                           height: frame.height).integral, display: true)
+                if time >= 1 { self.stopGlide() }
+            }
+            RunLoop.main.add(timer, forMode: .common)
+            gliding = timer
+        }
+
+        private func stopGlide() {
+            gliding?.invalidate()
+            gliding = nil
+        }
+
         func close() {
+            stopGlide()
             view.cancelDrag()
             panel.orderOut(nil)
             target = nil
@@ -204,10 +235,18 @@ final class TabStrips {
             }
         }
 
-        private static func lowest(of group: TabGroups.Group) -> CGWindowID {
+        func restack(in stack: [CGWindowID], else fallback: CGWindowID? = nil) {
+            guard target != nil, !hidden, let top = stack.first(where: members.contains) ?? fallback else { return }
+            let mine = CGWindowID(panel.windowNumber)
+            guard let index = stack.firstIndex(of: top) else { return panel.order(.below, relativeTo: Int(top)) }
+            let under = stack[(index + 1)...].first { $0 != mine }
+            if under == nil || stack.dropFirst(index + 1).first == mine { return }
+            panel.order(.above, relativeTo: Int(under ?? 0))
+        }
+
+        static func stack() -> [CGWindowID] {
             let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
-            let ids = (list as? [[String: Any]] ?? []).compactMap { $0[kCGWindowNumber as String] as? CGWindowID }
-            return ids.last(where: group.members.contains) ?? group.active
+            return (list as? [[String: Any]] ?? []).compactMap { $0[kCGWindowNumber as String] as? CGWindowID }
         }
 
         private static func title(of window: Window) -> String {

@@ -59,6 +59,7 @@ extension WindowManager {
             let id = window.id
             observeFrame(window)
             if NSEvent.pressedMouseButtons & 1 != 0 {
+                if drags.isEmpty { tabDropCancelled = false }
                 drags[id] = (drags[id] ?? false) || notification == kAXWindowResizedNotification
             } else if !window.isFloating {
                 if notification == kAXWindowResizedNotification {

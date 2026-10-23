@@ -19,6 +19,19 @@ import Testing
         #expect(completed.wait(timeout: .now() + 2) == .success)
     }
 
+    @Test @MainActor func aLiftFollowsTheCursorOnTheSetCurve() {
+        let animator = Animator()
+        let window = Window(id: 9, element: AXUIElementCreateApplication(-1), pid: -1, bundleID: nil)
+        let held = CGRect(x: 100, y: 100, width: 400, height: 300)
+        #expect(!animator.retarget(window, to: held))
+        animator.animate([.init(window: window, to: held, bounds: held, from: .zero.insetBy(dx: -1, dy: -1))],
+                         duration: 5, curve: .spring, bounce: 0.3)
+        #expect(animator.retarget(window, to: held.offsetBy(dx: 40, dy: 0)))
+        #expect(animator.isBusy(window.id))
+        animator.cancel(window.id)
+        #expect(!animator.retarget(window, to: held))
+    }
+
     @Test func cancellingAQueuedVerificationPreventsItsWrite() async {
         let writer = AXWriter(pid: getpid())
         let release = DispatchSemaphore(value: 0)

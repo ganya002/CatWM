@@ -1,4 +1,5 @@
 import AppKit
+import Carbon.HIToolbox
 
 func tapCallback(proxy _: CGEventTapProxy, type: CGEventType, event: CGEvent,
                  refcon _: UnsafeMutableRawPointer?) -> Unmanaged<CGEvent>? {
@@ -11,6 +12,10 @@ func tapCallback(proxy _: CGEventTapProxy, type: CGEventType, event: CGEvent,
     }
     guard type == .keyDown || type == .flagsChanged else { return Unmanaged.passUnretained(event) }
     if let intercept = Hotkeys.shared.intercept, intercept(type, event) { return nil }
+    if type == .keyDown, event.getIntegerValueField(.keyboardEventKeycode) == Int64(kVK_Escape),
+       WindowManager.shared.cancelTabDrop() {
+        return nil
+    }
     Hotkeys.shared.observe(type, event)
     if type == .flagsChanged {
         guard event.getIntegerValueField(.keyboardEventKeycode) == Int64(CapsLockChord.keyCode) else {

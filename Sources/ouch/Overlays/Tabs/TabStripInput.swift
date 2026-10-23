@@ -4,6 +4,7 @@ import SwiftUI
 
 final class TabStripInput: NSView {
     private static let dragThreshold: CGFloat = 3
+    private static let liftSlack: CGFloat = 5
 
     let model: TabStripModel
     private struct Press {
@@ -102,7 +103,7 @@ final class TabStripInput: NSView {
             model.dragged = press.id
             model.hovered = nil
         }
-        let lifted = !bounds.contains(local(event))
+        let lifted = !bounds.insetBy(dx: 0, dy: -Self.liftSlack).contains(local(event))
         if lifted {
             WindowManager.shared.dragTab(press.id, grab: press.hold, to: mouseLocation())
         } else if model.lifted {
@@ -115,7 +116,7 @@ final class TabStripInput: NSView {
         guard step > 0 else { return }
         let wanted = min(model.tabs.count - 1, max(0, Int(((x - TabStrip.lead) / step).rounded())))
         if wanted != from, !lifted {
-            withAnimation(Motion.snap) {
+            withAnimation(TabStrip.motion) {
                 model.tabs.move(fromOffsets: [from], toOffset: wanted > from ? wanted + 1 : wanted)
             }
         }
@@ -125,7 +126,7 @@ final class TabStripInput: NSView {
 
     private func lift(_ id: CGWindowID, _ lifted: Bool, at x: CGFloat) {
         model.lifted = lifted
-        withAnimation(Motion.snap) {
+        withAnimation(TabStrip.motion) {
             if lifted, let from = model.tabs.firstIndex(where: { $0.id == id }) {
                 liftedTab = model.tabs.remove(at: from)
             } else if !lifted, let tab = liftedTab {
@@ -145,7 +146,7 @@ final class TabStripInput: NSView {
         if model.dragged != nil {
             let lifted = model.lifted
             let index = model.tabs.firstIndex { $0.id == press.id }
-            withAnimation(Motion.snap) {
+            withAnimation(TabStrip.motion) {
                 model.dragged = nil
                 model.dragShift = 0
                 model.lifted = false
