@@ -250,8 +250,7 @@ final class Animator {
         quietUntil[window.id] = CACurrentMediaTime() + 0.4
         writer(window.pid).run(for: window.id) { [weak self] isCurrent in
             var actual = window.frame
-            guard isCurrent(), !window.placementSuspended, !window.isNativeFullscreen,
-                  !window.element.flag(kAXMinimizedAttribute),
+            guard isCurrent(), !window.placementSuspended, !WindowPlacementState.blocksPlacement(window.element),
                   !actual.isNull, !actual.approxEqual(move.target, tolerance: 2) else { return }
             EnhancedUI.suspend(window.pid)
             defer { EnhancedUI.resume(window.pid) }

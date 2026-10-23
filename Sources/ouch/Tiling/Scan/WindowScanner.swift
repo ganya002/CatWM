@@ -6,6 +6,14 @@ final class WindowScanner {
         let pid: pid_t
         let listWindows: Bool
         let known: [CGWindowID: Window]
+        let fullscreen: Set<CGWindowID>
+        let minimized: Set<CGWindowID>
+
+        init(pid: pid_t, listWindows: Bool, known: [CGWindowID: Window]) {
+            self.pid = pid; self.listWindows = listWindows; self.known = known
+            fullscreen = Set(known.values.filter(\.fullscreen).map(\.id))
+            minimized = Set(known.values.filter(\.minimized).map(\.id))
+        }
     }
 
     struct Found {
@@ -23,24 +31,35 @@ final class WindowScanner {
         var fullscreen: Set<CGWindowID> = []
         var minimized: Set<CGWindowID> = []
         var gone: Set<CGWindowID> = []
+
+        func hasNewWindows(comparedTo known: [CGWindowID: Window]) -> Bool {
+            found.contains { known[$0.key] == nil && !$0.value.frame.isNull }
+        }
     }
 
     static let deadline = 0.25
 
     private(set) var results: [pid_t: AppScan] = [:]
     private(set) var desktop = WindowServerObservation()
+    private(set) var applications: [RunningApplicationSnapshot] = []
     private var observingDesktop = false
     private var pendingDesktop: (known: Set<CGWindowID>, done: () -> Void)?
     private let readDesktop: (Set<CGWindowID>) -> WindowServerObservation
+    private let readApplications: () -> [RunningApplicationSnapshot]
     private(set) var lastScan: CFTimeInterval = 0
     private var busy: [pid_t: UUID] = [:]
     private var queues: [pid_t: DispatchQueue] = [:]
-    private let read: (Job) -> AppScan
+    private let read: (Job, (AppScan) -> Void) -> AppScan
+    private let scanDeadline: TimeInterval
 
-    init(read: @escaping (Job) -> AppScan = WindowScanner.read,
-         readDesktop: @escaping (Set<CGWindowID>) -> WindowServerObservation = WindowServerObservation.read) {
+    init(read: @escaping (Job, (AppScan) -> Void) -> AppScan = WindowScanner.read,
+         readDesktop: @escaping (Set<CGWindowID>) -> WindowServerObservation = WindowServerObservation.read,
+         readApplications: @escaping () -> [RunningApplicationSnapshot] = RunningApplicationSnapshot.read,
+         deadline: TimeInterval = WindowScanner.deadline) {
         self.read = read
         self.readDesktop = readDesktop
+        self.readApplications = readApplications
+        scanDeadline = deadline
     }
 
     func observeDesktop(known: Set<CGWindowID>, done: @escaping () -> Void) {
@@ -49,11 +68,13 @@ final class WindowScanner {
             return
         }
         observingDesktop = true
-        DispatchQueue.global(qos: .userInitiated).async { [weak self, readDesktop] in
+        DispatchQueue.global(qos: .userInitiated).async { [weak self, readDesktop, readApplications] in
             let observation = readDesktop(known)
+            let applications = readApplications()
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.desktop = observation
+                self.applications = applications
                 self.observingDesktop = false
                 let pending = self.pendingDesktop
                 self.pendingDesktop = nil
@@ -63,13 +84,22 @@ final class WindowScanner {
         }
     }
 
-    func scan(_ jobs: [Job], done: @escaping () -> Void, late: @escaping () -> Void) {
+    func scan(_ jobs: [Job], done: @escaping () -> Void, updated: @escaping () -> Void) {
         lastScan = CACurrentMediaTime()
         let running = Set(jobs.map(\.pid))
         for pid in results.keys where !running.contains(pid) { forget(pid) }
         let asked = jobs.filter { busy[$0.pid] == nil }
         var waiting = asked.count
         var finished = false
+        var updateQueued = false
+        func publish() {
+            guard !updateQueued else { return }
+            updateQueued = true
+            DispatchQueue.main.async {
+                updateQueued = false
+                if !finished { updated() }
+            }
+        }
         func finish() {
             guard !finished else { return }
             finished = true
@@ -81,7 +111,11 @@ final class WindowScanner {
             busy[job.pid] = token
             run(job.pid) { [weak self, read] in
                 let start = CACurrentMediaTime()
-                let scan = read(job)
+                let scan = read(job) { discovery in
+                    self?.acceptDiscovery(discovery, pid: job.pid, token: token) {
+                        if finished { updated() } else { publish() }
+                    }
+                }
                 let elapsed = CACurrentMediaTime() - start
                 DispatchQueue.main.async {
                     guard let self else { return }
@@ -91,13 +125,23 @@ final class WindowScanner {
                         self.results[job.pid] = scan
                         Log.debug(String(format: "scan: pid %d windows %d %.1fms",
                                          job.pid, scan.listed.count, elapsed * 1000))
-                        if finished { late() }
+                        if finished {
+                            updated()
+                        } else if waiting > 0, scan.hasNewWindows(comparedTo: job.known) { publish() }
                     }
                     if waiting == 0 { finish() }
                 }
             }
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + Self.deadline) { finish() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + scanDeadline) { finish() }
+    }
+
+    private func acceptDiscovery(_ scan: AppScan, pid: pid_t, token: UUID, notify: @escaping () -> Void) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.busy[pid] == token else { return }
+            self.results[pid] = scan
+            notify()
+        }
     }
 
     func forget(_ pid: pid_t) {
@@ -116,56 +160,5 @@ final class WindowScanner {
         let queue = queues[pid] ?? DispatchQueue(label: "ouch.scan.\(pid)", qos: .userInitiated)
         queues[pid] = queue
         queue.async(execute: work)
-    }
-
-    private static func read(_ job: Job) -> AppScan {
-        dispatchPrecondition(condition: .notOnQueue(.main))
-        var scan = AppScan()
-        if job.listWindows {
-            var seen = Set<CGWindowID>()
-            for element in listedElements(axApp(job.pid)) {
-                guard let id = element.windowID, seen.insert(id).inserted else { continue }
-                scan.listed.append(id)
-                AXUIElementSetMessagingTimeout(element, axTimeout)
-                if let known = job.known[id] {
-                    readKnown(known, into: &scan)
-                    continue
-                }
-                if element.flag("AXFullScreen") { scan.fullscreen.insert(id) }
-                if element.flag(kAXMinimizedAttribute) { scan.minimized.insert(id) }
-                guard element.string(kAXSubroleAttribute) == kAXStandardWindowSubrole,
-                      !scan.minimized.contains(id) else { continue }
-                scan.found[id] = Found(element: element, frame: element.frame,
-                                       title: element.string(kAXTitleAttribute),
-                                       resizable: element.isSettable(kAXSizeAttribute))
-            }
-        }
-        let listed = Set(scan.listed)
-        for (id, window) in job.known where !listed.contains(id) {
-            var role: CFTypeRef?
-            let result = AXUIElementCopyAttributeValue(window.element, kAXRoleAttribute as CFString, &role)
-            if result == .invalidUIElement {
-                scan.gone.insert(id)
-            } else if result == .success {
-                readKnown(window, into: &scan)
-            }
-        }
-        return scan
-    }
-
-    private static func listedElements(_ app: AXUIElement) -> [AXUIElement] {
-        let listed = app.elements(kAXWindowsAttribute)
-        if !listed.isEmpty { return listed }
-        return app.elements(kAXChildrenAttribute)
-            + [app.element(kAXMainWindowAttribute), app.element(kAXFocusedWindowAttribute)].compactMap(\.self)
-    }
-
-    private static func readKnown(_ window: Window, into scan: inout AppScan) {
-        let revision = window.frameRevision
-        if window.isNativeFullscreen { scan.fullscreen.insert(window.id) }
-        if window.element.flag(kAXMinimizedAttribute) { scan.minimized.insert(window.id) }
-        scan.found[window.id] = Found(element: window.element, frame: window.element.frame,
-                                      title: window.element.string(kAXTitleAttribute),
-                                      resizable: window.element.isSettable(kAXSizeAttribute), frameRevision: revision)
     }
 }

@@ -1,12 +1,61 @@
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { type CSSProperties, type ReactNode, useRef } from "react";
+import { type CSSProperties, type ReactNode, useEffect, useRef } from "react";
 
 import { CARDS, MORE } from "./cards";
 import { Demo } from "./Demo";
 import { WINDOWS } from "./script";
 import { usePulse } from "./usePulse";
+import { PulseVeil } from "./PulseVeil";
+
+// A notch on the top edge of the first card, with an arrow. It peeks above the hero
+// and rides up with the card. The card colour fills it from the bottom up as the page
+// scrolls, so it fills as fast as the visitor scrolls.
+function ScrollHint() {
+  const root = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const el = root.current;
+    if (!el) return;
+    const update = () =>
+      el.style.setProperty("--fill", String(Math.min(1, window.scrollY / el.offsetHeight)));
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    return () => window.removeEventListener("scroll", update);
+  }, []);
+
+  const layer = (
+    <>
+      <svg className="scroll-hint__notch" viewBox="0 0 220 76" aria-hidden="true">
+        <path d="M0 72C20 72 35 67 42 48A72 72 0 0 1 178 48C185 67 200 72 220 72V76H0Z" />
+      </svg>
+      <svg className="scroll-hint__arrow" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 4v15M5 12l7 7 7-7" />
+      </svg>
+    </>
+  );
+
+  return (
+    <button
+      ref={root}
+      type="button"
+      className="scroll-hint"
+      aria-label="Scroll down"
+      onClick={(e) => {
+        const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        // The cards are sticky, and iOS WebKit measures a sticky element at its stuck spot, so
+        // scrollIntoView lands wrong there. The list that holds the cards does not stick.
+        const list = e.currentTarget.closest(".card")?.parentElement;
+        if (!list) return;
+        const top = list.getBoundingClientRect().top + window.scrollY;
+        window.scrollTo({ top, behavior: still ? "auto" : "smooth" });
+      }}
+    >
+      <span className="scroll-hint__base">{layer}</span>
+      <span className="scroll-hint__fill">{layer}</span>
+    </button>
+  );
+}
 
 // The feature cards. Each one sticks at the top, and as the next one rises
 // the page behind it recedes: it scales down and dims while the new page
@@ -14,7 +63,7 @@ import { usePulse } from "./usePulse";
 export function Cards({ last }: { last: ReactNode }) {
   const root = useRef<HTMLDivElement>(null);
   const lastCard = useRef<HTMLElement>(null);
-  usePulse(lastCard, "#fff");
+  usePulse(lastCard, "#fff", "#000");
 
   useGSAP(
     () => {
@@ -57,6 +106,7 @@ export function Cards({ last }: { last: ReactNode }) {
           className="card"
           style={{ "--card": card.color, "--i": i + 1 } as CSSProperties}
         >
+          {i === 0 && <ScrollHint />}
           <div className="card__inner">
             <div className="card__copy">
               <h2 className="card__title">{card.title}</h2>
@@ -92,7 +142,7 @@ export function Cards({ last }: { last: ReactNode }) {
         className="card card--last"
         style={{ "--i": CARDS.length + 2 } as CSSProperties}
       >
-        <div className="pulse" data-pulse aria-hidden="true" />
+        <PulseVeil />
         <div className="card__inner card__inner--center">{last}</div>
       </section>
     </div>

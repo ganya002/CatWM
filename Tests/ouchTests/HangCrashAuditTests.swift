@@ -4,7 +4,7 @@ import Testing
 
 @Suite struct HangCrashAuditTests {
     @Test func aTerminatedAppReleasesItsScanAndFocusQueues() {
-        let scanner = WindowScanner(read: { _ in .init() }, readDesktop: { _ in WindowServerObservation() })
+        let scanner = WindowScanner(read: { _, _ in .init() }, readDesktop: { _ in WindowServerObservation() })
         scanner.run(-41) {}
         scanner.run(-42) {}
         scanner.terminated(-41)

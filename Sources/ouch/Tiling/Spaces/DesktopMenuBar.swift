@@ -49,7 +49,8 @@ enum DesktopMenuBar {
             }
             if isRestored { clear(); return }
             guard Spaces.of(window: window).isEmpty else { return }
-            let replacement = DesktopMenuBarNative.windows(on: space).contains {
+            let replacement = DesktopMenuBarNative.windows(
+                on: space, levels: [CGWindowLevelForKey(.desktopIconWindow) + 1]).contains {
                 $0.id != window && DesktopMenuBar.isUnderbelly($0)
             }
             if replacement { clear(); return }
@@ -92,7 +93,9 @@ enum DesktopMenuBar {
     @MainActor static func ready(source: UInt64, target: UInt64, screen: Screen) async -> State? {
         var background: DesktopMenuBarNative.WindowInfo?
         let ready = await poll(0.1, every: 250_000) {
-            let windows = DesktopMenuBarNative.windows(on: target)
+            let windows = DesktopMenuBarNative.windows(on: target, levels: [
+                CGWindowLevelForKey(.desktopIconWindow) + 1, CGWindowLevelForKey(.desktopWindow) - 1
+            ])
             background = windows.first {
                 isUnderbelly($0) && $0.frame.minY == screen.frame.minY
                     && $0.frame.width == screen.frame.width && Spaces.of(window: $0.id) == [target]
@@ -106,12 +109,15 @@ enum DesktopMenuBar {
         return State(window: background.id, space: target, uuid: uuid, theme: theme)
     }
 
-    @MainActor static func settle(_ state: State?, on screen: Screen) async throws {
-        guard let state, Spaces.current(display: screen.uuid) == state.space else { return }
+    @MainActor static func settle(_ state: State?, on screen: Screen, while current: () -> Bool) async throws {
+        guard current(), let state, Spaces.current(display: screen.uuid) == state.space else { return }
         fresh.remove(state.uuid)
         if DesktopMenuBarNative.theme(state.space) == state.theme { return }
         let started = ProcessInfo.processInfo.systemUptime
-        let ready = await poll(1, every: 4_000_000) { DesktopMenuBarNative.theme(state.space) == state.theme }
+        let ready = await poll(1, every: 4_000_000, while: current) {
+            DesktopMenuBarNative.theme(state.space) == state.theme
+        }
+        guard current() else { return }
         let elapsed = Int((ProcessInfo.processInfo.systemUptime - started) * 1_000)
         Log.info("native workspaces: menu bar appearance on Desktop \(state.space) "
             + (ready ? "settled in \(elapsed) ms" : "did not settle"))

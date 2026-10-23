@@ -91,6 +91,7 @@ extension WindowManager {
         guard let current = context(), let window = current.window else { return }
         if floatsFreely(window.id) { return toggleFloatZoom(window) }
         guard current.ids.contains(window.id) else { return }
+        tilingRecovery.zoomed[workspaceKey(for: current.screen)] = nil
         current.state.zoomed = current.state.zoomed == window.id ? nil : window.id
         refresh()
         focus(window, warp: false)

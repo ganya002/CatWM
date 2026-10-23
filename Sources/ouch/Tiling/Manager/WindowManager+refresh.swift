@@ -18,16 +18,20 @@ extension WindowManager {
         defer { timing.finish() }
         if scanner.lastScan == 0 { scheduleRefresh(after: 0) }
         let screens = Screen.all()
+        timing.checkpoint("screens")
         guard !screens.isEmpty else { return }
         if config.virtualWorkspaces {
-            if screens.contains(where: DesktopUI.isBusy) { scheduleRefresh(after: 0.15); return }
+            if DesktopUI.isBusy(on: screens) { scheduleRefresh(after: 0.15); return }
+            timing.checkpoint("desktop UI")
             updateNativeCatalog(screens)
+            timing.checkpoint("catalog")
         }
 
         let onScreen = scanner.desktop.windows
         let onScreenIDs = Set(onScreen.map(\.id))
         let firstRun = windows.isEmpty
         updateKnownWindows()
+        timing.checkpoint("known windows")
         var observed = observeWindows(screens: screens, onScreen: onScreen)
         timing.checkpoint("observe")
         observed.present.formUnion(workspaceMoves.filter { windows[$0] != nil })
@@ -43,9 +47,8 @@ extension WindowManager {
         let plan = syncWorkspaces(screens: screens, present: observed.present)
         visible = plan.visible
         guard !restoringTemplate else { onChange?(); return }
-        if config.virtualWorkspaces {
-            saveWorkspaces()
-        }
+        restoreTilingRecovery(observed.fresh)
+        saveWorkspaces()
 
         timing.checkpoint("workspaces")
         watchCrowding(screens)
@@ -54,6 +57,7 @@ extension WindowManager {
         restoreTabs()
         settleTabs()
         saveTabs()
+        saveTilingRecovery()
         guard tilingEnabled else {
             SplitHandle.shared.update(); TabStrips.shared.update(); onChange?(); return
         }

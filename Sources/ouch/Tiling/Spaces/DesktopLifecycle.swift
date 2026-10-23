@@ -16,13 +16,18 @@ enum DesktopLifecycle {
         guard let space = DesktopBridge.create() else {
             throw DesktopTransitionError.check("macOS could not create a Desktop")
         }
+        let created = ProcessInfo.processInfo.systemUptime
         if let current = before.current {
             DesktopMenuBarCover.begin(on: screen, source: before.ids[current], target: space)
         }
+        let covered = ProcessInfo.processInfo.systemUptime
         do {
             let snapshot = try await place(space, on: screen, index: index)
-            let elapsed = Int((ProcessInfo.processInfo.systemUptime - started) * 1_000)
-            Log.info("native workspaces: created Desktop \(space) on \(screen.uuid) in \(elapsed) ms")
+            let placed = ProcessInfo.processInfo.systemUptime
+            Log.info(String(format: "native workspaces: created Desktop %llu on %@ in %.1f ms "
+                + "(SkyLight %.1f ms, cover %.1f ms, placement %.1f ms)",
+                space, screen.uuid, (placed - started) * 1_000, (created - started) * 1_000,
+                (covered - created) * 1_000, (placed - covered) * 1_000))
             DesktopMenuBar.created(space, in: snapshot)
             return Creation(space: space, snapshot: snapshot)
         } catch {
@@ -61,13 +66,13 @@ enum DesktopLifecycle {
               Spaces.current(display: screen.uuid) != space, DesktopUI.isSettled(screen) else {
             throw DesktopTransitionError.check("This Desktop cannot be removed right now")
         }
-        let occupant = CGWindowInfo.onScreen(options: [.optionAll, .excludeDesktopElements]).first {
-            Spaces.of(window: $0.id) == [space]
-        }
+        let windows = CGWindowInfo.onScreen(options: [.optionAll, .excludeDesktopElements])
+        let memberships = WindowServerQuery.memberships(for: Set(windows.map(\.id)))
+        let occupant = windows.first { memberships[$0.id] == [space] }
         if let occupant {
             let owner = NSRunningApplication(processIdentifier: occupant.pid)?.bundleIdentifier ?? "\(occupant.pid)"
             Log.info("native workspaces: window \(occupant.id) of \(owner) is on Desktop \(space)")
-            throw DesktopTransitionError.check("Move all windows out of the Desktop before removing it")
+            throw DesktopTransitionError.occupied
         }
         let started = ProcessInfo.processInfo.systemUptime
         guard DesktopBridge.remove(space) else {

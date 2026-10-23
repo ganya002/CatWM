@@ -25,6 +25,7 @@ extension WindowManager {
         }
         loadNativeMigration(defaults)
         loadWorkspaceLayouts(defaults)
+        loadTilingRecovery(defaults: defaults)
         monitorOf = monitorOf.filter { isVirtual($0.key) }
     }
 

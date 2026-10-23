@@ -2,8 +2,12 @@ import AppKit
 
 extension WindowManager {
     func observe(_ app: NSRunningApplication) {
-        let pid = app.processIdentifier
-        guard app.activationPolicy == .regular, pid != getpid(), observers[pid] == nil else { return }
+        guard app.activationPolicy == .regular else { return }
+        observe(pid: app.processIdentifier)
+    }
+
+    func observe(pid: pid_t) {
+        guard pid != getpid(), observers[pid] == nil else { return }
         guard observing[pid] == nil else { return }
         let token = UUID()
         observing[pid] = token
@@ -74,8 +78,11 @@ extension WindowManager {
         case kAXWindowDeminiaturizedNotification:
             windowMinimizeChanged(element, minimized: false)
         case kAXWindowCreatedNotification:
-            for delay in [0, 0.3, 1.0] {
-                DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in self?.scheduleRefresh() }
+            scheduleRefresh(after: 0)
+            for delay in [0.3, 1.0] {
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                    self?.scheduleRefresh(after: 0)
+                }
             }
         default:
             scheduleRefresh()
@@ -113,6 +120,7 @@ extension WindowManager {
     }
 
     func forget(_ id: CGWindowID) {
+        tilingRecovery.forget(id)
         animator.forget(id)
         templateHiddenWindows[id] = nil
         let focused = focusClock > 0 && focusStamps[id] == focusClock

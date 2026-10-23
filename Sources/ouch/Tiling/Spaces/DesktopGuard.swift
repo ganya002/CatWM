@@ -29,6 +29,7 @@ final class DesktopGuard {
     }
 
     private var context: Context?
+    private var contextID = 0
     private var watch: DispatchSourceProcess?
     private var timeout: DispatchSourceTimer?
     private var lease = DesktopGuardLease(now: ProcessInfo.processInfo.systemUptime)
@@ -57,13 +58,11 @@ final class DesktopGuard {
     static func run() -> Never {
         let arguments = CommandLine.arguments
         guard arguments.count == 3, let parent = pid_t(arguments[2]), parent > 1 else { exit(1) }
-        let app = NSApplication.shared
-        app.setActivationPolicy(.accessory)
         guard Spaces.canMoveWindows else { exit(1) }
         let guardProcess = DesktopGuard(parent: parent)
         FileHandle.standardOutput.write(Data("READY\n".utf8))
         if kill(parent, 0) != 0 { guardProcess.check(parentExited: true) }
-        withExtendedLifetime(guardProcess) { app.run() }
+        withExtendedLifetime(guardProcess) { CFRunLoopRun() }
         exit(0)
     }
 
@@ -78,8 +77,21 @@ final class DesktopGuard {
                    let decoded = try? JSONDecoder().decode(Context.self, from: data),
                    lease.accept(now: ProcessInfo.processInfo.systemUptime) {
                     context = decoded
+                    contextID = id
                     FileHandle.standardOutput.write(Data("CONTEXT_READY \(id)\n".utf8))
                 }
+                continue
+            }
+            if message.hasPrefix("RESTORE "), let id = Int(message.dropFirst(8)), id == contextID,
+               let context, lease.accept(now: ProcessInfo.processInfo.systemUptime) {
+                context.restore()
+                FileHandle.standardOutput.write(Data("RESTORE_SUBMITTED \(id)\n".utf8))
+                continue
+            }
+            if message.hasPrefix("RELEASE "), let id = Int(message.dropFirst(8)), id == contextID,
+               lease.accept(now: ProcessInfo.processInfo.systemUptime) {
+                context = nil
+                FileHandle.standardOutput.write(Data("RELEASED \(id)\n".utf8))
                 continue
             }
             if lease.receive(message, now: ProcessInfo.processInfo.systemUptime) == .finish {

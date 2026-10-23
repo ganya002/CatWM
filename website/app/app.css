@@ -26,9 +26,10 @@
   --well: rgba(255, 255, 255, 0.09);
   --grey: var(--ink-muted);
 
-  --display:
+  --logo:
     "Pilcrow Rounded", "Arial Rounded MT Bold", -apple-system, BlinkMacSystemFont, system-ui,
     sans-serif;
+  --display: "Alpino", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   --body: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
   --sys: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, monospace;
@@ -97,7 +98,7 @@ a {
   height: 100%;
 }
 .lockup__name {
-  font-family: var(--display);
+  font-family: var(--logo);
   font-weight: 700;
   font-size: clamp(60px, 11.6vw, 168px);
   line-height: 1;
@@ -232,6 +233,78 @@ a {
   pointer-events: auto;
 }
 
+/* Scroll hint: a black notch on top of the first card, with an arrow.
+   A copy in the card colour fills it from the bottom up, set by --fill from the scroll.
+   The notch reaches 4 units into the card, and the black copy is cut where the fill is,
+   so no edge of the black shows as a line at the card top. */
+.scroll-hint {
+  position: absolute;
+  bottom: calc(100% - var(--w) * 4 / 220);
+  left: 50%;
+  z-index: 3;
+  --w: clamp(150px, 15vw, 220px);
+  width: var(--w);
+  aspect-ratio: 220 / 76;
+  translate: -50% 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--white);
+  cursor: pointer;
+  --fill: 0;
+}
+.scroll-hint__notch {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: var(--black);
+}
+.scroll-hint__base {
+  position: absolute;
+  inset: 0;
+  clip-path: inset(0 0 max(0px, calc(var(--fill) * (100% + 1px) - 1px)) 0);
+}
+.scroll-hint__fill {
+  position: absolute;
+  inset: 0;
+  color: var(--black);
+  clip-path: inset(calc((1 - var(--fill)) * 100%) 0 0 0);
+}
+.scroll-hint__fill .scroll-hint__notch {
+  fill: var(--card);
+}
+.scroll-hint__arrow {
+  position: absolute;
+  left: 50%;
+  bottom: 22.3%;
+  width: 22%;
+  height: auto;
+  translate: -50% 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: translate 0.18s cubic-bezier(0.33, 1, 0.68, 1);
+}
+.scroll-hint:hover .scroll-hint__arrow {
+  translate: -50% 3px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .scroll-hint__arrow {
+    animation: scroll-hint-bob 1.8s ease-in-out infinite;
+  }
+}
+@keyframes scroll-hint-bob {
+  50% {
+    transform: translateY(5px);
+  }
+}
+.scroll-hint:focus-visible {
+  outline-offset: -6px;
+}
+
 /* The pulse: a veil over the whole stage that a circle from the button reveals. */
 .pulse {
   position: absolute;
@@ -241,6 +314,21 @@ a {
   opacity: 0;
   pointer-events: none;
   will-change: clip-path, opacity;
+}
+
+/* One line of big text in the middle of the veil. */
+.pulse__text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  margin: 0;
+  font: 700 clamp(22px, 6vw, 108px) / 1 var(--display);
+  letter-spacing: -0.025em;
+  font-kerning: normal;
+  -webkit-font-smoothing: antialiased;
+  text-box: trim-both cap alphabetic;
+  white-space: nowrap;
 }
 
 /* Install: one button. It sits above the pulse,
@@ -261,7 +349,7 @@ a {
   border: 0;
   border-radius: 999px;
   padding: 0;
-  font: 700 clamp(16px, 1.4vw, 19px) / 1 var(--display);
+  font: 700 clamp(16px, 1.4vw, 19px) / 1 var(--body);
   cursor: pointer;
   box-shadow: 0 0 0 6px var(--black);
   --spin: 0deg;
@@ -568,7 +656,7 @@ a {
     opacity 0.3s ease-out;
 }
 .demo__tile[data-focused] {
-  fill: var(--card);
+  fill: var(--black);
 }
 /* A pressed key is the tooltip: one raised tile per key, no pill behind it. The typed
    command is one pill. Both sit on surfaceRaised with popover elevation. --u is 1 px at 660 px wide. */

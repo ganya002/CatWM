@@ -37,5 +37,31 @@ import Testing
         reply.receive("\n")
         #expect(reply.finished)
     }
+
+    @Test func aReleaseNeedsItsCompleteMatchingGeneration() {
+        var reply = DesktopGuardReply()
+        reply.receive("READY\nCONTEXT_READY 1\nRELEA")
+        #expect(reply.released == -1)
+        reply.receive("SED 1")
+        #expect(reply.released == -1)
+        reply.receive("\nCONTEXT_READY 2\nRELEASED 0\n")
+        #expect(reply.context == 2)
+        #expect(reply.released == 1)
+        reply.receive("RELEASED 2\nRELEASED x\n")
+        #expect(reply.released == 2)
+    }
+
+    @Test func restorationNeedsACompleteAcknowledgementForTheCurrentContext() {
+        var reply = DesktopGuardReply()
+        reply.receive("RESTORE_SUBMITTED\nRESTORE_SUBMITTED x\nRESTORE_SUB")
+        #expect(reply.restoreSubmitted == -1)
+        reply.receive("MITTED 1")
+        #expect(reply.restoreSubmitted == -1)
+        reply.receive("\nCONTEXT_READY 2\nRESTORE_SUBMITTED 0\n")
+        #expect(reply.restoreSubmitted == 1 && reply.restoreSubmitted < reply.context)
+        reply.receive("RESTORE_SUBMITTED 2\nRESTORE_SUBMITTED 1\n")
+        #expect(reply.restoreSubmitted == 2)
+        #expect(reply.released == -1 && !reply.finished)
+    }
 }
 #endif
