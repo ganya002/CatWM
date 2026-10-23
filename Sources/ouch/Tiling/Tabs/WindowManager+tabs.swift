@@ -86,8 +86,11 @@ extension WindowManager {
     }
 
     func followTabFocus(_ id: CGWindowID?) {
+        let collapse = id.flatMap { tabs.group(of: $0)?.id }
+        let collapsing = collapse != collapsedTabs
+        collapsedTabs = collapse
         guard let id, let group = tabs.group(of: id), group.active != id, visible.contains(id) else {
-            TabStrips.shared.update()
+            if collapsing { refresh() } else { TabStrips.shared.update() }
             return
         }
         activateTab(id, previous: group.active)
@@ -114,7 +117,8 @@ extension WindowManager {
     }
 
     func belowTabStrip(_ slot: CGRect, for id: CGWindowID) -> CGRect {
-        guard tabs.isGrouped(id) else { return slot }
+        guard let group = tabs.group(of: id),
+              group.id != collapsedTabs || TabStripReveal.shared.isRevealed else { return slot }
         let inset = TabStrip.height
         return CGRect(x: slot.minX, y: slot.minY + inset, width: slot.width, height: max(0, slot.height - inset))
     }

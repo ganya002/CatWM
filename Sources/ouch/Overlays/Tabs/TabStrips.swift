@@ -12,6 +12,7 @@ final class TabStrips {
         let animate = !instant && manager.config.animate && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         let focused = manager.focusedWindow()?.id
         var placed = Set<Int>()
+        var collapsed: CGRect?
         if manager.tilingEnabled {
             for screen in Screen.all() {
                 for id in manager.tiled(on: screen) {
@@ -20,11 +21,23 @@ final class TabStrips {
                     placed.insert(group.id)
                     let strip = strips[group.id] ?? Strip()
                     strips[group.id] = strip
-                    strip.show(group, above: target, focused: focused.map(group.members.contains) ?? false,
+                    if group.id == manager.collapsedTabs {
+                        let revealed = TabStripReveal.shared.isRevealed
+                        let top = revealed ? TabStrip.height : 0
+                        collapsed = CGRect(x: target.minX, y: target.minY - top,
+                                           width: target.width, height: target.height + top)
+                        if !revealed {
+                            strip.hide()
+                            continue
+                        }
+                    }
+                    strip.show(group, above: target,
+                               focused: focused.map(group.members.contains) ?? false,
                                duration: animate ? manager.config.animationDuration : 0)
                 }
             }
         }
+        TabStripReveal.shared.watch(collapsed)
         let live = Set(manager.tabs.groups.filter { !manager.model.isShown(manager.workspaceOf[$0.active]) }.map(\.id))
         for (key, strip) in strips where !placed.contains(key) {
             if manager.tilingEnabled, live.contains(key) { continue }
@@ -39,6 +52,7 @@ final class TabStrips {
         private let view: TabStripInput
         private var target: NSRect?
         private var anchor: CGWindowID = 0
+        private var hidden = false
 
         init() {
             view = TabStripInput(model: model)
@@ -46,6 +60,7 @@ final class TabStrips {
         }
 
         func show(_ group: TabGroups.Group, above slot: CGRect, focused: Bool, duration: Double) {
+            hidden = false
             let manager = WindowManager.shared
             let tabs = group.members.compactMap { id in
                 manager.windows[id].map { window in
@@ -57,7 +72,7 @@ final class TabStrips {
             if model.focused != focused { model.focused = focused }
             view.lights.isActive = focused
             let frame = Self.frame(above: slot)
-            if frame != target || !panel.isVisible {
+            if frame != target || !panel.isVisible || panel.alphaValue < 1 {
                 let wasVisible = panel.isVisible
                 target = frame
                 if wasVisible, duration > 0 {
@@ -69,8 +84,8 @@ final class TabStrips {
                 } else {
                     panel.setFrame(frame, display: true)
                 }
-                if !wasVisible {
-                    panel.alphaValue = 0
+                if !wasVisible || panel.alphaValue < 1 {
+                    if !wasVisible { panel.alphaValue = 0 }
                     NSAnimationContext.runAnimationGroup { context in
                         context.duration = Theme.medium
                         context.timingFunction = Motion.Curve.easeOut
@@ -81,6 +96,21 @@ final class TabStrips {
             panel.order(.below, relativeTo: Int(Self.lowest(of: group)))
             if anchor != group.active || !wasOnSpace(of: group.active) { moveToSpace(of: group.active) }
             anchor = group.active
+        }
+
+        func hide() {
+            guard panel.isVisible, !hidden else { return }
+            hidden = true
+            view.cancelDrag()
+            NSAnimationContext.runAnimationGroup({ context in
+                context.duration = Theme.medium
+                context.timingFunction = Motion.Curve.easeOut
+                panel.animator().alphaValue = 0
+            }, completionHandler: { [weak self] in
+                guard let self, self.hidden else { return }
+                self.panel.orderOut(nil)
+                self.target = nil
+            })
         }
 
         func close() {

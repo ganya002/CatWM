@@ -32,6 +32,16 @@ import Testing
         #expect(manager.belowTabStrip(slot, for: 2) == slot)
     }
 
+    @Test @MainActor func aFocusedGroupFillsItsWholeSlot() {
+        guard let screen = Screen.all().first else { return }
+        let manager = manager(on: screen, windows: [1, 2])
+        manager.model.joinTab(2, onto: 1)
+        let slot = CGRect(x: 0, y: 40, width: 800, height: 600)
+        #expect(manager.belowTabStrip(slot, for: 2).minY == slot.minY + TabStrip.height)
+        manager.collapsedTabs = manager.tabs.group(of: 2)?.id
+        #expect(manager.belowTabStrip(slot, for: 2) == slot)
+    }
+
     @Test @MainActor func aGroupNeedsRoomForItsLargestTabAndItsStrip() {
         guard let screen = Screen.all().first else { return }
         let manager = manager(on: screen, windows: [1, 2])

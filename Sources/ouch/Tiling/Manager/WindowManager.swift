@@ -116,6 +116,7 @@ var focusEcho: FocusEcho?
     var autoSwitchAfter = Date.distantPast
     var lastSavedWorkspaces = ""
     var savedTabs: [SavedTabs] = []
+    var collapsedTabs: Int?
     var savedTabsUntil = Date.distantPast
     var lastSavedTabs: [String]?
     var focusSink: NSWindow?
