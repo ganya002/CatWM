@@ -20,7 +20,8 @@ extension WindowManager {
             let ready = back.filter { workspace != nil && workspaceOf[$0] == workspace }
             guard ready.count == saved.members.count || late else { return false }
             guard ready.count > 1 else { return true }
-            model.restoreTabs(ready, active: saved.active)
+            let focused = focusedWindow()?.id
+            model.restoreTabs(ready, active: focused.flatMap { ready.contains($0) ? $0 : nil } ?? saved.active)
             Log.info("tabs: restored the tabs \(ready.map(String.init).joined(separator: " "))")
             return true
         }

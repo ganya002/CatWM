@@ -140,6 +140,8 @@ Each entry gives the design intent. The Swift type is in brackets.
 
 **Layout picker and thumb** [`LayoutPicker`]. Picks a layout from a grid of thumbnails. The hovered layout's name and description show on one line below. Thumbnails carry no labels, so nothing wraps. Panes are `tint`. The main pane is a darker neutral. A selected main pane is `accent`. Use the app's own layout descriptions as tooltips.
 
+**Tab strip** [`TabStripView`, `TabStrips`]. Sits on the top edge of a tab group, the full width of the tile, flat on `background` with `pane` top corners. The red close light at the leading edge closes every window in the group. Only the active tab has a fill: `hover` while the group has focus, `surface` when it does not. The fill goes from the bottom of the strip to the top and slides to the next tab with `Motion.snap`. Other tabs have no fill, `inkMuted` text and a `hairline` between them. A hovered tab gets `ink` text and its close button. Each tab fills the full strip height, so the whole tab is the hit target.
+
 **Workspace strip** [`WorkspaceStrip`]. Workspaces as pills. The current one is `accent` with `onAccent` text. Workspaces with windows are `ink` at 500. Empty ones are `inkFaint` at 400. Both meet 4.5:1.
 
 **Cat** [`CatSymbol`, `CatFeeling`]. The CatWM cat, filled with the foreground style. A feeling sets the eyes: content, alert, sad, annoyed, sleepy or shut. A change of feeling morphs the eyes with the spring of the new feeling. `CatSymbol.image(_:height:)` gives a template `NSImage` for AppKit. The eye geometry is the same as in `docs/design/cat-feelings.html`.
