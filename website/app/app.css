@@ -233,14 +233,17 @@ a {
 }
 
 /* Scroll hint: a black notch on top of the first card, with an arrow.
-   A copy in the card colour fills it from the bottom up, set by --fill from the scroll. */
+   A copy in the card colour fills it from the bottom up, set by --fill from the scroll.
+   The notch reaches 4 units into the card, and the black copy is cut where the fill is,
+   so no edge of the black shows as a line at the card top. */
 .scroll-hint {
   position: absolute;
-  bottom: calc(100% - 1px);
+  bottom: calc(100% - var(--w) * 4 / 220);
   left: 50%;
   z-index: 3;
-  width: clamp(150px, 15vw, 220px);
-  aspect-ratio: 220 / 72;
+  --w: clamp(150px, 15vw, 220px);
+  width: var(--w);
+  aspect-ratio: 220 / 76;
   translate: -50% 0;
   padding: 0;
   border: 0;
@@ -256,6 +259,11 @@ a {
   height: 100%;
   fill: var(--black);
 }
+.scroll-hint__base {
+  position: absolute;
+  inset: 0;
+  clip-path: inset(0 0 max(0px, calc(var(--fill) * 100% - 1px)) 0);
+}
 .scroll-hint__fill {
   position: absolute;
   inset: 0;
@@ -268,7 +276,7 @@ a {
 .scroll-hint__arrow {
   position: absolute;
   left: 50%;
-  bottom: 18%;
+  bottom: 22.3%;
   width: 22%;
   height: auto;
   translate: -50% 0;

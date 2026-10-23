@@ -25,8 +25,8 @@ function ScrollHint() {
 
   const layer = (
     <>
-      <svg className="scroll-hint__notch" viewBox="0 0 220 72" aria-hidden="true">
-        <path d="M0 72C20 72 35 67 42 48A72 72 0 0 1 178 48C185 67 200 72 220 72Z" />
+      <svg className="scroll-hint__notch" viewBox="0 0 220 76" aria-hidden="true">
+        <path d="M0 72C20 72 35 67 42 48A72 72 0 0 1 178 48C185 67 200 72 220 72V76H0Z" />
       </svg>
       <svg className="scroll-hint__arrow" viewBox="0 0 24 24" aria-hidden="true">
         <path d="M12 4v15M5 12l7 7 7-7" />
@@ -45,7 +45,7 @@ function ScrollHint() {
         e.currentTarget.closest(".card")?.scrollIntoView({ behavior: still ? "auto" : "smooth" });
       }}
     >
-      {layer}
+      <span className="scroll-hint__base">{layer}</span>
       <span className="scroll-hint__fill">{layer}</span>
     </button>
   );
