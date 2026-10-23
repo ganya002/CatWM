@@ -40,7 +40,7 @@ extension WindowManager {
         } else {
             animator.cancel(window.id)
         }
-        animator.afterPendingWrites { [weak self] in
+        animator.afterPendingWrites(pids: [window.pid]) { [weak self] in
             guard let self else { return }
             let displayBatch = visibleTarget ? WindowServerUpdates.shared.begin() : nil
             let started = Date()

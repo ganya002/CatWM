@@ -41,4 +41,26 @@ import Testing
         #expect(snapshot.list(display: "right") == nil)
         #expect(snapshot.list(display: "unknown") == nil)
     }
+
+    @Test func fullscreenTilesAndWallSpacesKeepTheirManagedDesktopIdentity() {
+        let fullscreen: [String: Any] = [
+            "ManagedSpaceID": UInt64(396), "id64": UInt64(396),
+            "WallSpace": ["id64": UInt64(397), "ManagedSpaceID": UInt64(396)],
+            "TileLayoutManager": ["TileSpaces": [
+                ["id64": UInt64(398), "ManagedSpaceID": UInt64(396)], ["id64": UInt64(399)]
+            ]]
+        ]
+        let snapshot = Spaces.Snapshot(displays: [
+            ["Spaces": [space(4), fullscreen]], ["Spaces": [space(21)]]
+        ])
+        #expect(snapshot.managedSpaceIDs == [4: 4, 21: 21, 396: 396, 397: 396, 398: 396, 399: 396])
+    }
+
+    @Test func malformedSpaceIdentitiesDoNotInventAnAlias() {
+        let snapshot = Spaces.Snapshot(displays: [["Spaces": [
+            ["id64": UInt64(9)], ["ManagedSpaceID": UInt64(0), "id64": UInt64(10)],
+            ["ManagedSpaceID": UInt64(11), "id64": UInt64(0)]
+        ]]])
+        #expect(snapshot.managedSpaceIDs == [11: 11])
+    }
 }

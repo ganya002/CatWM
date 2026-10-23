@@ -3,11 +3,12 @@ import ScreenCaptureKit
 
 enum ScreenRecording {
     private static let testDoneKey = "screenRecordingTestDone"
+    private static let permissionLock = NSLock()
     private static var grantedLive = false
     private static var checking = false
     static var watching = false
 
-    static var isGranted: Bool { grantedLive || CGPreflightScreenCaptureAccess() }
+    static var isGranted: Bool { permissionLock.withLock { grantedLive } || CGPreflightScreenCaptureAccess() }
     static var isTestDone: Bool { UserDefaults.standard.bool(forKey: testDoneKey) }
 
     static func refresh() {
@@ -15,9 +16,10 @@ enum ScreenRecording {
         checking = true
         Task { @MainActor in
             let content = try? await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
-            grantedLive = content != nil
+            let granted = content != nil
+            permissionLock.withLock { grantedLive = granted }
             checking = false
-            if grantedLive { watching = false }
+            if granted { watching = false }
         }
     }
 

@@ -43,6 +43,15 @@ import Testing
         #expect(manager.belowTabStrip(slot, for: 2) == slot)
     }
 
+    @Test @MainActor func aDroppedGroupJoinsAsAWhole() {
+        guard let screen = Screen.all().first else { return }
+        let manager = manager(on: screen, windows: [1, 2, 3])
+        manager.model.joinTab(2, onto: 1)
+        manager.joinTabs(of: 2, onto: 3)
+        #expect(manager.tabs.group(of: 3)?.members.sorted() == [1, 2, 3])
+        #expect(manager.tabs.group(of: 3)?.active == 2)
+    }
+
     @Test @MainActor func aGroupNeedsRoomForItsLargestTabAndItsStrip() {
         guard let screen = Screen.all().first else { return }
         let manager = manager(on: screen, windows: [1, 2])

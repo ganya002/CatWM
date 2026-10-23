@@ -24,6 +24,7 @@ extension WindowManager {
 
     func setLayout(_ layout: Layout, on screen: Screen) {
         let screenState = state(for: screen)
+        tilingRecovery.zoomed[workspaceKey(for: screen)] = nil
         screenState.layout = layout
         screenState.zoomed = nil
         corrections = [:]

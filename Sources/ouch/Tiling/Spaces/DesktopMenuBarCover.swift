@@ -17,9 +17,14 @@ enum DesktopMenuBarCover {
     private static let captureWindows: CaptureWindows? = symbol("SLSHWCaptureWindowListInRect")
 
     static func prepare() {
-        guard Permission.screenRecording.isGranted, let captureImage else { return }
         let display = CGMainDisplayID()
+        DispatchQueue.main.async {
+            MainActor.assumeIsolated {
+                if let screen = Screen.all().first { prewarm(on: screen) }
+            }
+        }
         DispatchQueue.global(qos: .userInteractive).async {
+            guard Permission.screenRecording.isGranted, let captureImage else { return }
             _ = captureImage(display, CGRect(x: 0, y: 0, width: 1, height: 1))?.takeRetainedValue()
         }
     }
@@ -42,18 +47,23 @@ enum DesktopMenuBarCover {
         var isFresh: Bool { ProcessInfo.processInfo.systemUptime - started < 0.5 }
 
         func move(to target: UInt64) {
+            guard self.target != target else { return }
             self.target = target
             _ = NativeSpaceMove.move(window: CGWindowID(panel.windowNumber), to: target)
         }
     }
     @MainActor private static var pending: Pending?
+    @MainActor private static var spare: OuchPanel?
 
     @MainActor static func begin(on screen: Screen, source: UInt64, target: UInt64) {
+        if let pending, pending.display == screen.id, pending.source == source, pending.isFresh {
+            pending.move(to: target)
+            return
+        }
         discard()
         guard DesktopMenuBarNative.theme(source) == 1, let image = image(on: screen) else { return }
         let next = Pending(display: screen.id, source: source, image: image, panel: panel(on: screen))
         next.move(to: target)
-        next.panel.orderFrontRegardless()
         pending = next
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
             MainActor.assumeIsolated { if pending === next { discard() } }
@@ -68,12 +78,13 @@ enum DesktopMenuBarCover {
         }
         pending = nil
         if early.target != target { early.move(to: target) }
-        guard let image = await early.image.value else { early.panel.close(); return nil }
+        guard let image = await early.image.value else { recycle(early.panel); return nil }
         return await show(image, in: early.panel, screen: screen, source: source, target: target)
     }
 
     @MainActor private static func discard() {
-        pending?.panel.close()
+        pending?.image.cancel()
+        recycle(pending?.panel)
         pending = nil
     }
 
@@ -83,11 +94,12 @@ enum DesktopMenuBarCover {
 
     @MainActor private static func image(on screen: Screen) -> Task<CGImage?, Never>? {
         let height = menuHeight(screen)
-        guard height > 0, Permission.screenRecording.isGranted, let captureImage else { return nil }
+        guard height > 0, let captureImage else { return nil }
         let id = screen.id, rect = CGRect(x: 0, y: 0, width: screen.frame.width, height: height)
         let global = rect.offsetBy(dx: screen.frame.minX, dy: screen.frame.minY)
         return Task.detached(priority: .userInitiated) {
-            windowsImage(in: global) ?? captureImage(id, rect)?.takeRetainedValue()
+            guard !Task.isCancelled, Permission.screenRecording.isGranted, !Task.isCancelled else { return nil }
+            return windowsImage(in: global) ?? captureImage(id, rect)?.takeRetainedValue()
         }
     }
 
@@ -111,10 +123,36 @@ enum DesktopMenuBarCover {
         return (images?.takeRetainedValue() as? [CGImage])?.first
     }
 
-    @MainActor private static func panel(on screen: Screen) -> OuchPanel {
+    private static func panelFrame(on screen: Screen) -> CGRect {
         let height = menuHeight(screen)
-        let frame = CGRect(x: screen.nsScreen.frame.minX, y: screen.nsScreen.frame.maxY - height,
-                           width: screen.frame.width, height: height)
+        return CGRect(x: screen.nsScreen.frame.minX, y: screen.nsScreen.frame.maxY - height,
+                      width: screen.frame.width, height: height)
+    }
+
+    @MainActor static func prewarm(on screen: Screen) {
+        guard spare == nil, menuHeight(screen) > 0 else { return }
+        spare = makePanel(frame: panelFrame(on: screen))
+    }
+
+    @MainActor static func panel(on screen: Screen) -> OuchPanel {
+        let frame = panelFrame(on: screen)
+        guard let ready = spare else { return makePanel(frame: frame) }
+        spare = nil
+        if ready.frame != frame { ready.setFrame(frame, display: false) }
+        return ready
+    }
+
+    @MainActor static func recycle(_ panel: OuchPanel?) {
+        guard let panel else { return }
+        if panel.isVisible {
+            DesktopMenuBarNative.orderOut(CGWindowID(panel.windowNumber))
+            panel.orderOut(nil)
+        }
+        (panel.contentView as? NSImageView)?.image = nil
+        if spare == nil || spare === panel { spare = panel } else { panel.close() }
+    }
+
+    @MainActor private static func makePanel(frame: CGRect) -> OuchPanel {
         let panel = OuchPanel(role: .fullscreenFX, frame: frame)
         panel.collectionBehavior = [.fullScreenAuxiliary, .ignoresCycle]
         panel.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.statusWindow)) + 1)
@@ -131,7 +169,7 @@ enum DesktopMenuBarCover {
         if !placed, NativeSpaceMove.move(window: window, to: target) {
             placed = await poll(0.1, every: 250_000) { Spaces.of(window: window) == [target] }
         }
-        guard placed, Spaces.current(display: screen.uuid) == source else { panel.close(); return nil }
+        guard placed, Spaces.current(display: screen.uuid) == source else { recycle(panel); return nil }
         (panel.contentView as? NSImageView)?.image = NSImage(cgImage: image, size: panel.frame.size)
         panel.orderFrontRegardless()
         panel.displayIfNeeded()

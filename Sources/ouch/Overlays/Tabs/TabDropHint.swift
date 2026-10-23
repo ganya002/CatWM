@@ -4,7 +4,7 @@ import SwiftUI
 final class TabDropHint {
     static let shared = TabDropHint()
 
-    private let panel = OuchPanel(role: .overlay(.floating, clickThrough: true))
+    private let panel = OuchPanel(role: .overlay(.normal, clickThrough: true))
     private let model = Model()
     private var target: NSRect?
     private var hiding = false
@@ -33,8 +33,8 @@ final class TabDropHint {
         if appearing {
             panel.setFrame(frame, display: true)
             panel.alphaValue = 0
-            panel.orderFrontRegardless()
         }
+        panel.order(.below, relativeTo: Int(window.id))
         NSAnimationContext.runAnimationGroup { context in
             context.duration = Theme.fast
             context.timingFunction = Motion.Curve.easeOut

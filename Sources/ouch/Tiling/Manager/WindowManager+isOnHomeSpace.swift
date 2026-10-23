@@ -124,6 +124,7 @@ extension WindowManager {
         let screens = Screen.all()
         guard !screens.isEmpty else { deliver(); return }
         saveWorkspaces()
+        saveTilingRecovery()
         for (id, window) in windows {
             let frame = animator.destination(id) ?? window.cachedFrame
             animator.cancel(id)

@@ -97,6 +97,7 @@ extension WindowManager {
                 self.frameReads[window.id] = nil
                 guard self.windows[window.id] === window else { return }
                 if !self.animator.isBusy(window.id) { window.remember(frame, ifRevision: revision, readAt: readAt) }
+                if self.drags[window.id] == false { self.dragTabGroup(window) }
                 if self.dirtyFrames.remove(window.id) != nil { self.observeFrame(window) }
             }
         }

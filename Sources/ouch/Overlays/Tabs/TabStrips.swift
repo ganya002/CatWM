@@ -5,6 +5,7 @@ import SwiftUI
 final class TabStrips {
     static let shared = TabStrips()
     private var strips: [Int: Strip] = [:]
+    private var previewing: Int?
 
     func update(instant: Bool = false) {
         let manager = WindowManager.shared
@@ -46,6 +47,27 @@ final class TabStrips {
             strip.close()
             strips[key] = nil
         }
+    }
+
+    func preview(_ window: Window, at point: CGPoint) -> Bool {
+        let hit = strips.first { key, strip in
+            WindowManager.shared.tabs.groups.first { $0.id == key }?.members.contains(window.id) == false
+                && strip.contains(point)
+        }
+        if let previewing, previewing != hit?.key { _ = strips[previewing]?.endPreview(of: window.id) }
+        previewing = hit?.key
+        hit?.value.preview(window, at: point)
+        return hit != nil
+    }
+
+    func endPreview(of id: CGWindowID) -> (group: Int, index: Int)? {
+        guard let group = previewing else { return nil }
+        previewing = nil
+        return strips[group]?.endPreview(of: id).map { (group, $0) }
+    }
+
+    func shift(_ group: Int, by offset: CGVector) {
+        strips[group]?.shift(by: offset)
     }
 
     private final class Strip {
@@ -100,6 +122,53 @@ final class TabStrips {
             anchor = group.active
         }
 
+        func contains(_ point: CGPoint) -> Bool {
+            let primaryHeight = NSScreen.screens.first?.frame.height ?? 0
+            return panel.isVisible && panel.alphaValue > 0
+                && panel.frame.contains(NSPoint(x: point.x, y: primaryHeight - point.y))
+        }
+
+        func preview(_ window: Window, at point: CGPoint) {
+            let x = point.x - panel.frame.minX
+            let width = panel.frame.width
+            if !model.tabs.contains(where: { $0.id == window.id }) {
+                let step = max(0, width - TabStrip.lead) / CGFloat(model.tabs.count + 1)
+                let wanted = step > 0 ? Int(((x - TabStrip.lead) / step).rounded(.down)) : 0
+                withAnimation(Motion.snap) {
+                    model.tabs.insert(.init(id: window.id, title: Self.title(of: window), pid: window.pid),
+                                      at: min(model.tabs.count, max(0, wanted)))
+                }
+                model.dragged = window.id
+                model.hovered = nil
+            }
+            guard let from = model.tabs.firstIndex(where: { $0.id == window.id }) else { return }
+            let step = model.tabWidth(in: width)
+            guard step > 0 else { return }
+            let grab = x - step / 2
+            let wanted = min(model.tabs.count - 1, max(0, Int(((grab - TabStrip.lead) / step).rounded())))
+            if wanted != from {
+                withAnimation(Motion.snap) {
+                    model.tabs.move(fromOffsets: [from], toOffset: wanted > from ? wanted + 1 : wanted)
+                }
+            }
+            model.dragShift = grab - model.slotX(wanted, width: width)
+        }
+
+        func endPreview(of id: CGWindowID) -> Int? {
+            guard let index = model.tabs.firstIndex(where: { $0.id == id }) else { return nil }
+            withAnimation(Motion.snap) {
+                model.tabs.remove(at: index)
+                model.dragged = nil
+                model.dragShift = 0
+            }
+            return index
+        }
+
+        func shift(by offset: CGVector) {
+            guard let target, panel.isVisible else { return }
+            panel.setFrameOrigin(NSPoint(x: target.minX + offset.dx, y: target.minY - offset.dy))
+        }
+
         func hide() {
             guard panel.isVisible, !hidden else { return }
             hidden = true
@@ -151,162 +220,5 @@ final class TabStrips {
             return NSRect(x: slot.minX + TabStrip.inset, y: primaryHeight - slot.minY,
                           width: max(0, slot.width - TabStrip.inset * 2), height: TabStrip.height).integral
         }
-    }
-}
-
-private final class TabStripInput: NSView {
-    private static let dragThreshold: CGFloat = 3
-    private static let liftDistance: CGFloat = 24
-
-    let model: TabStripModel
-    private struct Press {
-        let point: CGPoint
-        let id: CGWindowID
-        let grab: CGFloat
-        let onClose: Bool
-    }
-
-    private var press: Press?
-    private let host: NSView
-    let lights = TrafficLights(buttons: TabStrip.lights)
-
-    init(model: TabStripModel) {
-        self.model = model
-        host = NSHostingView(rootView: TabStripView(model: model))
-        super.init(frame: .zero)
-        addSubview(host)
-        lights.onAction = { [weak self] light in
-            let manager = WindowManager.shared
-            let ids = self?.model.tabs.map(\.id) ?? []
-            if light == .minimize { return manager.minimizeTabs(ids) }
-            ids.forEach { _ = manager.closeWindow($0) }
-        }
-        addSubview(lights)
-    }
-
-    @available(*, unavailable)
-    required init?(coder _: NSCoder) { nil }
-
-    override func layout() {
-        super.layout()
-        host.frame = bounds
-        let size = TrafficLights.size(for: TabStrip.lights)
-        lights.frame = NSRect(origin: NSPoint(x: TabStrip.lightsInset, y: TabStrip.lightsInset), size: size)
-    }
-
-    override func acceptsFirstMouse(for _: NSEvent?) -> Bool { true }
-
-    override func hitTest(_ point: NSPoint) -> NSView? {
-        let local = convert(point, from: superview)
-        if lights.frame.contains(local) { return lights }
-        return bounds.contains(local) ? self : nil
-    }
-
-    override func updateTrackingAreas() {
-        super.updateTrackingAreas()
-        trackingAreas.forEach(removeTrackingArea)
-        let options: NSTrackingArea.Options = [.mouseEnteredAndExited, .mouseMoved, .activeAlways, .inVisibleRect]
-        addTrackingArea(NSTrackingArea(rect: .zero, options: options, owner: self))
-    }
-
-    override func mouseMoved(with event: NSEvent) { hover(event) }
-    override func mouseEntered(with event: NSEvent) { hover(event) }
-
-    override func mouseExited(with _: NSEvent) {
-        guard model.dragged == nil else { return }
-        model.hovered = nil
-        model.closeHovered = false
-    }
-
-    private func local(_ event: NSEvent) -> CGPoint {
-        let point = convert(event.locationInWindow, from: nil)
-        return CGPoint(x: point.x, y: bounds.height - point.y)
-    }
-
-    private func hover(_ event: NSEvent) {
-        guard model.dragged == nil else { return }
-        let point = local(event)
-        guard let index = model.index(at: point.x, width: bounds.width) else {
-            model.hovered = nil
-            return
-        }
-        let id = model.tabs[index].id
-        if model.hovered != id { model.hovered = id }
-        let onClose = model.closeRect(index, width: bounds.width).contains(point)
-        if model.closeHovered != onClose { model.closeHovered = onClose }
-    }
-
-    override func mouseDown(with event: NSEvent) {
-        let point = local(event)
-        guard let index = model.index(at: point.x, width: bounds.width) else { return }
-        let onClose = model.closeRect(index, width: bounds.width).contains(point)
-        press = Press(point: NSEvent.mouseLocation, id: model.tabs[index].id,
-                      grab: point.x - model.slotX(index, width: bounds.width), onClose: onClose)
-    }
-
-    override func mouseDragged(with event: NSEvent) {
-        guard let press, !press.onClose else { return }
-        let now = NSEvent.mouseLocation
-        if model.dragged == nil {
-            guard hypot(now.x - press.point.x, now.y - press.point.y) >= Self.dragThreshold else { return }
-            model.dragged = press.id
-            model.hovered = nil
-        }
-        let lifted = abs(now.y - press.point.y) > Self.liftDistance
-        if model.lifted != lifted { model.lifted = lifted }
-        let x = local(event).x - press.grab
-        guard let from = model.tabs.firstIndex(where: { $0.id == press.id }) else { return }
-        let step = model.tabWidth(in: bounds.width)
-        guard step > 0 else { return }
-        let wanted = min(model.tabs.count - 1, max(0, Int(((x - TabStrip.lead) / step).rounded())))
-        if wanted != from, !lifted {
-            withAnimation(Motion.snap) {
-                model.tabs.move(fromOffsets: [from], toOffset: wanted > from ? wanted + 1 : wanted)
-            }
-        }
-        let index = model.tabs.firstIndex { $0.id == press.id } ?? from
-        model.dragShift = x - model.slotX(index, width: bounds.width)
-    }
-
-    override func mouseUp(with event: NSEvent) {
-        guard let press else { return }
-        self.press = nil
-        let manager = WindowManager.shared
-        if model.dragged != nil {
-            let lifted = model.lifted
-            let index = model.tabs.firstIndex { $0.id == press.id }
-            withAnimation(Motion.snap) {
-                model.dragged = nil
-                model.dragShift = 0
-                model.lifted = false
-            }
-            if lifted {
-                manager.untab(press.id, droppedAt: mouseLocation())
-            } else if let index {
-                manager.reorderTab(press.id, to: index)
-            }
-            hover(event)
-            return
-        }
-        let point = local(event)
-        if press.onClose, let index = model.index(at: point.x, width: bounds.width), model.tabs[index].id == press.id,
-           model.closeRect(index, width: bounds.width).contains(point) {
-            _ = manager.closeWindow(press.id)
-        } else if !press.onClose {
-            manager.selectTab(press.id)
-        }
-    }
-
-    override func otherMouseUp(with event: NSEvent) {
-        guard event.buttonNumber == 2, let index = model.index(at: local(event).x, width: bounds.width) else { return }
-        _ = WindowManager.shared.closeWindow(model.tabs[index].id)
-    }
-
-    func cancelDrag() {
-        press = nil
-        model.dragged = nil
-        model.dragShift = 0
-        model.lifted = false
-        model.hovered = nil
     }
 }
