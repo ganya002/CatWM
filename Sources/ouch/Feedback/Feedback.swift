@@ -130,6 +130,7 @@ final class Feedback: ObservableObject {
             "- Displays: \(displays.joined(separator: "; "))",
             "- Accessibility: \(Permission.accessibility.isGranted ? "granted" : "not granted")",
             "- Input Monitoring: \(Permission.inputMonitoring.isGranted ? "granted" : "not granted")",
+            "- Screen Recording: \(Permission.screenRecording.isGranted ? "granted" : "not granted")",
             "- Window manager running: \(WindowManager.shared.isStarted ? "yes" : "no")",
             "- Sent: \(date)"
         ]

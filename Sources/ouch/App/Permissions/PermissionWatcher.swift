@@ -26,6 +26,7 @@ final class PermissionWatcher {
     }
 
     private func tick() {
+        ScreenRecording.refresh()
         let now = Self.check()
         let changed = now.symmetricDifference(granted)
         granted = now

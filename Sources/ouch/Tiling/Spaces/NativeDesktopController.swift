@@ -205,7 +205,7 @@ final class NativeDesktopController {
         }
         let panel = await image
         if panel == nil {
-            Log.info("native workspaces: no menu bar cover, screen recording \(CGPreflightScreenCaptureAccess())")
+            Log.info("native workspaces: no menu bar cover, screen recording \(Permission.screenRecording.isGranted)")
         }
         _ = DesktopMenuBarNative.alpha(background.space, 0)
         return DesktopMenuBarLease(state: background, panel: panel)
