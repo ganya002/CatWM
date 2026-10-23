@@ -155,12 +155,28 @@ extension WindowManager {
               !window.cachedFrame.isNull else { return }
         let offset = CGVector(dx: window.cachedFrame.minX - slot.minX, dy: window.cachedFrame.minY - slot.minY)
         let travelled = abs(offset.dx) + abs(offset.dy)
-        for member in group.members where member != window.id {
+        let screens = Screen.all()
+        for member in group.members where member != window.id && !parkedTabs.contains(member) {
             guard let tab = windows[member], !tab.minimized, !tab.isFloating,
                   tab.pid != window.pid || travelled > Self.tabDragSlack else { continue }
-            animator.position(tab, at: slot.offsetBy(dx: offset.dx, dy: offset.dy))
+            parkedTabs.insert(member)
+            cornerPark(member, screens: screens)
         }
-        TabStrips.shared.shift(group.id, by: offset)
+        let top = screen(of: window, in: screens)?.visible.minY ?? slot.minY
+        TabStripFollow.shared.follow(group.id, at: offset, lowest: top - slot.minY)
+    }
+
+    func settleParkedTabs() {
+        TabStripFollow.shared.end()
+        guard !parkedTabs.isEmpty else { return }
+        let parked = parkedTabs
+        parkedTabs = []
+        refresh()
+        let actives = Set(parked.compactMap { tabs.group(of: $0)?.active }).compactMap { windows[$0] }
+        animator.afterPendingWrites(pids: Set(parked.compactMap { windows[$0]?.pid })) { [weak self] in
+            guard let self else { return }
+            for active in actives { scanner.run(active.pid) { active.element.perform(kAXRaiseAction) } }
+        }
     }
 
     func dragTab(_ id: CGWindowID, grab: CGPoint, to point: CGPoint) {

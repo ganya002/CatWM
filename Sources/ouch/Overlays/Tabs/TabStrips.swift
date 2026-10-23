@@ -85,6 +85,7 @@ final class TabStrips {
         private var anchor: CGWindowID = 0
         private var members: [CGWindowID] = []
         private var hidden = false
+        private var shifted = false
         private var gliding: Timer?
 
         init() {
@@ -105,9 +106,10 @@ final class TabStrips {
             if model.focused != focused { model.focused = focused }
             view.lights.isActive = focused
             let frame = Self.frame(above: slot)
-            if frame != target || !panel.isVisible || panel.alphaValue < 1 {
+            if frame != target || shifted || !panel.isVisible || panel.alphaValue < 1 {
                 let wasVisible = panel.isVisible
                 target = frame
+                shifted = false
                 if wasVisible, duration > 0 {
                     glide(to: frame, duration: duration)
                 } else {
@@ -174,6 +176,7 @@ final class TabStrips {
         func shift(by offset: CGVector) {
             guard let target, panel.isVisible else { return }
             stopGlide()
+            shifted = true
             panel.setFrameOrigin(NSPoint(x: target.minX + offset.dx, y: target.minY - offset.dy))
         }
 

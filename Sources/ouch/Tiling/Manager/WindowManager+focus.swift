@@ -48,14 +48,20 @@ extension WindowManager {
         trackTabHover(nil)
         if let previewed, let id = drags.first?.key, drags.count == 1, !movingToSpace {
             drags = [:]
-            return dropIntoStrip(id, group: previewed.group, at: previewed.index)
+            dropIntoStrip(id, group: previewed.group, at: previewed.index)
+            return settleParkedTabs()
         }
-        guard !drags.isEmpty, !movingToSpace else { drags = [:]; return }
+        guard !drags.isEmpty, !movingToSpace else {
+            drags = [:]
+            return settleParkedTabs()
+        }
         let finished = drags
         drags = [:]
         let dragged = finished.keys.compactMap { windows[$0] }
         readFrames(dragged) { [weak self] in
-            guard let self, NSEvent.pressedMouseButtons & 1 == 0, !self.movingToSpace else { return }
+            guard let self else { return }
+            defer { self.settleParkedTabs() }
+            guard NSEvent.pressedMouseButtons & 1 == 0, !self.movingToSpace else { return }
             self.finishMouseDrag(finished, at: point, hovered: hovered, joins: joins)
         }
     }
