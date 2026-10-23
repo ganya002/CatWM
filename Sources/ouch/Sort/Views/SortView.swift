@@ -17,7 +17,8 @@ struct SortView: View {
         let plan = model.plan
         let closeCount = CGFloat(plan.close.count + plan.closedLanes.count)
         let closeRows = Int(ceil(closeCount - SortMetrics.closeExtra / SortMetrics.rowHeight))
-        let rows = min(model.maxRows, max(SortMetrics.minRows, ([closeRows] + plan.lanes.map(\.ids.count)).max() ?? 1))
+        let tallest = ([closeRows] + plan.lanes.map(plan.rowCount)).max() ?? 1
+        let rows = min(model.maxRows, max(SortMetrics.minRows, tallest))
         VStack(alignment: .leading, spacing: 0) {
             header(plan)
             HStack(alignment: .top, spacing: 4) {
@@ -170,15 +171,32 @@ struct SortView: View {
 
     @ViewBuilder private var ghost: some View {
         if let dragged = model.drag {
-            SortRowFace(item: dragged.item, closing: dragged.closing)
-                .padding(.leading, 5).padding(.trailing, 8)
-                .frame(width: 168, height: SortMetrics.rowHeight)
-                .background(RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
-                    .fill(Theme.surfaceRaised)
-                    .elevation(.popover, in: RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)))
-                .keepInside(CGPoint(x: dragged.location.x - dragged.grab.width,
+            VStack(spacing: 0) {
+                if dragged.group.isEmpty {
+                    SortRowFace(item: dragged.item, closing: dragged.closing)
+                        .padding(.leading, 5).padding(.trailing, 8)
+                        .frame(height: SortMetrics.rowHeight)
+                } else {
+                    SortTabHeaderFace(count: dragged.group.count)
+                        .padding(.leading, 5).padding(.trailing, 8)
+                        .frame(height: SortMetrics.rowHeight)
+                    ForEach(dragged.group) { item in
+                        SortRowFace(item: item, closing: false)
+                            .padding(.leading, SortMetrics.tabIndent).padding(.trailing, 8)
+                            .frame(height: SortMetrics.rowHeight)
+                            .background(alignment: .leading) {
+                                SortTabBracket(last: item.id == dragged.group.last?.id)
+                            }
+                    }
+                }
+            }
+            .frame(width: 168)
+            .background(RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
+                .fill(Theme.surfaceRaised)
+                .elevation(.popover, in: RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)))
+            .keepInside(CGPoint(x: dragged.location.x - dragged.grab.width,
                                 y: dragged.location.y - dragged.grab.height))
-                .allowsHitTesting(false)
+            .allowsHitTesting(false)
         }
     }
 }

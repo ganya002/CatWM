@@ -66,6 +66,11 @@ enum Options {
             .setting(.windows, "windows.splitHandle", "Split handle",
                      help: "Drag the bar between the sides to resize. Click it to swap the sides",
                      keywords: "divider bar grip mouse ratio swap", section: "Mouse"),
+        .bool("auto-hide-tab-strip", \.autoHideTabStrip)
+            .documented("bool", "hide each tab strip until the pointer reaches the top of its window")
+            .setting(.windows, "windows.autoHideTabStrip", "Auto-hide tab strip",
+                     help: "Tab groups hide their tabs. Move the pointer to the window top to show them",
+                     keywords: "tabs group bar strip hide collapse reveal", section: "Tab groups"),
         .bool("new-windows-to-main", \.newWindowsToMain)
             .documented("bool", "").aliases("new_is_master")
             .setting(.windows, "windows.newMain", "New windows become main", keywords: "open", advanced: true,

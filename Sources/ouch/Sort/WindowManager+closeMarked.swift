@@ -187,12 +187,15 @@ extension WindowManager {
     func restoreSort(_ snapshot: SortSnapshot) {
         nativeDroppedWorkspaces = []
         let saved = snapshot.model
+        var moves: [CGWindowID: String] = [:]
         for (id, workspace) in saved.workspaceOf where windows[id] != nil && !closingNow.contains(id) {
             if workspaceOf[id] != workspace, let window = windows[id] {
                 moveNativeWindow(window, to: workspace, follow: false)
             }
-            model.assign(id, to: workspace)
+            moves[id] = workspace
         }
+        model.assign(moves)
+        restoreSortTabs(saved.tabs)
         let known = Set(saved.order)
         order = saved.order.filter { windows[$0] != nil } + order.filter { !known.contains($0) }
         monitorOf = saved.monitorOf
@@ -216,6 +219,15 @@ extension WindowManager {
             showWorkspace(workspace, focus: false)
         }
         refresh()
+    }
+
+    private func restoreSortTabs(_ saved: TabGroups) {
+        for group in saved.groups {
+            let members = group.members.filter { windows[$0] != nil && workspaceOf[$0] == workspaceOf[group.active] }
+            guard members.count > 1, tabs.group(of: members[0])?.members != members else { continue }
+            members.forEach { model.leaveTab($0) }
+            model.restoreTabs(members, active: group.active)
+        }
     }
 
     func tiledCount(in workspace: String) -> Int {

@@ -94,7 +94,7 @@ final class AXWriter {
 
     private func apply(_ item: Pending) {
         let window = item.window
-        if window.placementSuspended || window.isNativeFullscreen || window.element.flag(kAXMinimizedAttribute) {
+        if window.placementSuspended || WindowPlacementState.blocksPlacement(window.element) {
             if animating.remove(window.id) != nil { EnhancedUI.resume(pid) }
             switch item.operation {
             case let .land(_, done), let .position(_, done): DispatchQueue.main.async { done(false) }

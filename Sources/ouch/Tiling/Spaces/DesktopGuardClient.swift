@@ -68,14 +68,32 @@ import AppKit
         guard reply.context >= id else { throw DesktopTransitionError.check("Desktop recovery process stopped") }
     }
 
+    func restore() async throws {
+        let id = contextID
+        send("RESTORE \(id)")
+        try await wait { self.reply.restoreSubmitted >= id || !self.process.isRunning }
+        guard reply.restoreSubmitted >= id else {
+            throw DesktopTransitionError.check("Desktop recovery process stopped")
+        }
+    }
+
     func finish() async throws {
-        defer {
-            heartbeat?.invalidate()
+        let id = contextID
+        send("RELEASE \(id)")
+        try await wait { self.reply.released >= id || !self.process.isRunning }
+        guard reply.released >= id, process.isRunning else {
+            throw DesktopTransitionError.check("Desktop recovery process stopped")
+        }
+        heartbeat?.invalidate()
+        heartbeat = nil
+        if Self.warm?.process.isRunning != true {
+            Self.warm = self
+        } else if Self.warm !== self {
+            send("DONE")
+            try await wait { self.reply.finished && !self.process.isRunning }
             output.fileHandleForReading.readabilityHandler = nil
             retainedReader = nil
         }
-        send("DONE")
-        try await wait { self.reply.finished && !self.process.isRunning }
     }
 
     private func send(_ message: String) {
@@ -113,6 +131,8 @@ import AppKit
 
 struct DesktopGuardReply {
     private(set) var ready = false, finished = false, context = 0
+    private(set) var released = -1
+    private(set) var restoreSubmitted = -1
     private var buffer = ""
 
     mutating func receive(_ text: String) {
@@ -123,6 +143,10 @@ struct DesktopGuardReply {
             if line == "READY" { ready = true }
             if line == "DONE" { finished = true }
             if line.hasPrefix("CONTEXT_READY "), let id = Int(line.dropFirst(14)) { context = max(context, id) }
+            if line.hasPrefix("RELEASED "), let id = Int(line.dropFirst(9)) { released = max(released, id) }
+            if line.hasPrefix("RESTORE_SUBMITTED "), let id = Int(line.dropFirst(18)) {
+                restoreSubmitted = max(restoreSubmitted, id)
+            }
         }
     }
 }

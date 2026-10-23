@@ -39,21 +39,34 @@ extension WindowManager {
     }
 
     func mouseUp() {
+        TabDropHint.shared.hide()
+        let point = mouseLocation()
+        let hovered = drags.count == 1 ? drags.first.flatMap { settledTabHover(for: $0.key, at: point) } : nil
+        let previewed = drags.first.flatMap { TabStrips.shared.endPreview(of: $0.key) }
+        trackTabHover(nil)
+        if let previewed, let id = drags.first?.key, drags.count == 1, !movingToSpace {
+            drags = [:]
+            return dropIntoStrip(id, group: previewed.group, at: previewed.index)
+        }
         guard !drags.isEmpty, !movingToSpace else { drags = [:]; return }
         let finished = drags
         drags = [:]
         let dragged = finished.keys.compactMap { windows[$0] }
-        let point = mouseLocation()
         readFrames(dragged) { [weak self] in
             guard let self, NSEvent.pressedMouseButtons & 1 == 0, !self.movingToSpace else { return }
-            self.finishMouseDrag(finished, at: point)
+            self.finishMouseDrag(finished, at: point, hovered: hovered)
         }
     }
 
-    private func finishMouseDrag(_ finished: [CGWindowID: Bool], at point: CGPoint) {
+    private func finishMouseDrag(_ finished: [CGWindowID: Bool], at point: CGPoint, hovered: CGWindowID?) {
         let screens = Screen.all()
         for (id, resized) in finished {
             guard let window = windows[id], let src = screen(of: window, in: screens) else { continue }
+            let band = holds(window, at: point) ? tabDropTarget(for: id, at: point) : nil
+            if !resized, finished.count == 1, let host = band ?? hovered {
+                joinTabs(of: id, onto: host)
+                return
+            }
             if floatsFreely(id) {
                 if let dst = screen(containing: window.cachedFrame, in: screens), dst.uuid != src.uuid,
                    let workspace = shown[dst.uuid] {
@@ -70,7 +83,7 @@ extension WindowManager {
                let hit = tiled(on: dst).first(where: { $0 != id && targets[$0]?.contains(point) == true }) {
                 swapOrder(id, hit)
             } else if dst.uuid != src.uuid {
-                assignManagedWindow(id, to: shown[dst.uuid])
+                assignTabs(of: id, to: shown[dst.uuid])
             }
         }
         corrections = [:]

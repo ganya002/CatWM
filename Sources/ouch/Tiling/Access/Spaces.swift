@@ -10,21 +10,13 @@ enum Spaces {
     static func move(window id: CGWindowID, to target: UInt64, waitUntilOnScreen: Bool = false,
                      completion: @escaping (Bool) -> Void) {
         guard target != 0, canMoveWindows else { completion(false); return }
-        if of(window: id) == [target] { completion(true); return }
-        guard NativeSpaceMove.move(window: id, to: target) else { completion(false); return }
-        let deadline = Date().addingTimeInterval(0.5)
-        func check() {
-            if of(window: id) == [target] {
+        let move = WindowSpaceMove(
+            membership: { of(window: id) }, submit: { NativeSpaceMove.move(window: id, to: target) },
+            isOnScreen: {
                 let info = CGWindowListCopyWindowInfo(.optionIncludingWindow, id) as? [[String: Any]]
-                if !waitUntilOnScreen || info?.first?[kCGWindowIsOnscreen as String] as? Bool == true {
-                    completion(true)
-                    return
-                }
-            }
-            guard Date() < deadline else { completion(false); return }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.004, execute: check)
-        }
-        check()
+                return info?.first?[kCGWindowIsOnscreen as String] as? Bool == true
+            })
+        move.run(to: target, waitUntilOnScreen: waitUntilOnScreen, completion: completion)
     }
 
     private typealias ConnFn = @convention(c) () -> Int32
@@ -44,6 +36,25 @@ enum Spaces {
 
     struct Snapshot {
         let displays: [[String: Any]]
+
+        var managedSpaceIDs: [UInt64: UInt64] {
+            var found: [UInt64: UInt64] = [:]
+            func add(_ space: [String: Any], parent: UInt64? = nil) {
+                guard let managed = space["ManagedSpaceID"] as? UInt64 ?? parent, managed != 0 else { return }
+                found[managed] = managed
+                if let raw = space["id64"] as? UInt64, raw != 0 { found[raw] = managed }
+            }
+            for display in displays {
+                for space in display["Spaces"] as? [[String: Any]] ?? [] {
+                    add(space)
+                    let parent = space["ManagedSpaceID"] as? UInt64
+                    if let wall = space["WallSpace"] as? [String: Any] { add(wall, parent: parent) }
+                    let layout = space["TileLayoutManager"] as? [String: Any]
+                    for tile in layout?["TileSpaces"] as? [[String: Any]] ?? [] { add(tile, parent: parent) }
+                }
+            }
+            return found
+        }
 
         func list(display uuid: String) -> DisplaySpaces? {
             let entry = displays.first { ($0["Display Identifier"] as? String) == uuid }

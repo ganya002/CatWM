@@ -6,7 +6,7 @@ extension WindowManager {
             if let current = context(), let first = current.ids.first.flatMap({ windows[$0] }) { focus(first) }
             return
         }
-        let candidates = order.filter(visible.contains).compactMap { windows[$0] }
+        let candidates = order.filter { visible.contains($0) && !tabs.isBehind($0) }.compactMap { windows[$0] }
         if let target = resolve(direction, from: window, among: candidates) { focus(target) }
     }
 

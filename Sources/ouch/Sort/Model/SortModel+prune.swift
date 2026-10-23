@@ -19,12 +19,22 @@ extension SortModel {
 
     func target() -> CGWindowID? { hover ?? selected }
 
-    func place(_ id: CGWindowID, inLane i: Int, at index: Int? = nil) {
+    func place(_ id: CGWindowID, inLane i: Int, at index: Int? = nil, tabs: Bool = false) {
         if let item = unplacedFullscreen(id) {
             edit { $0.adopt(item, inLane: i, at: index) }
+        } else if tabs {
+            edit { $0.placeTabs(id, inLane: i) }
         } else {
-            edit { $0.place(id, inLane: i, at: index) }
+            edit {
+                $0.untab(id)
+                $0.place(id, inLane: i, at: index)
+            }
         }
+        show(id)
+    }
+
+    func joinTabs(_ id: CGWindowID, onto target: CGWindowID) {
+        edit { $0.joinTabs(id, onto: target) }
         show(id)
     }
 

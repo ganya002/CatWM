@@ -60,5 +60,19 @@ import Testing
         #expect(lease.receive("UNKNOWN", now: 1.4) == .none)
         #expect(lease.check(now: 1.5) == .restore)
     }
+
+    @Test func aReusedGuardStillRecoversAfterAParentCrash() {
+        var lease = DesktopGuardLease(now: 0)
+        for transaction in 1...100 {
+            let started = lease.accept(now: Double(transaction))
+            let released = lease.accept(now: Double(transaction) + 0.1)
+            #expect(started && released)
+        }
+        let started = lease.accept(now: 200)
+        #expect(started)
+        #expect(lease.check(now: 200.01, parentExited: true) == .restore)
+        let late = lease.accept(now: 200.02)
+        #expect(!late)
+    }
 }
 #endif

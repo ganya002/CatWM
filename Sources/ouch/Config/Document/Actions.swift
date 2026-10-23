@@ -19,11 +19,19 @@ enum Actions {
         add("Focus Next Window", .focus, "cyclenext", "", "arrow.forward")
         add("Focus Previous Window", .focus, "cyclenext", "prev", "arrow.backward")
         add("Focus Main Window", .focus, "layoutmsg", "focusmaster", "star")
+        add("Next Tab", .focus, "changegroupactive", "f", "chevron.right.2")
+        add("Previous Tab", .focus, "changegroupactive", "b", "chevron.left.2")
         for direction in Direction.allCases {
             let dir = direction.rawValue, name = direction.title, arrow = direction.symbolName
             add("Move Window \(name)", .move, "movewindow", dir, "arrow.\(arrow).square")
         }
         add("Swap With Next Window", .move, "swapnext", "", "arrow.left.arrow.right")
+        for direction in Direction.allCases {
+            let dir = direction.rawValue, name = direction.title
+            add("Add Window to Tabs \(name)", .move, "moveintogroup", dir, "rectangle.stack.badge.plus",
+                group: "Add Window to Tabs", short: name)
+        }
+        add("Remove Window From Tabs", .move, "moveoutofgroup", "", "rectangle.stack.badge.minus")
         add("Swap With Previous Window", .move, "swapnext", "prev", "arrow.right.arrow.left")
         add("Previous Layout", .layout, "cyclelayout", "prev", "rectangle.2.swap")
         add("Grow Main Pane", .layout, "splitratio", "+0.05", "arrow.left.and.right.square")

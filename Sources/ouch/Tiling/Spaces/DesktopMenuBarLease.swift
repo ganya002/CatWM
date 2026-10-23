@@ -26,7 +26,7 @@ import AppKit
         panel?.orderOut(nil)
         state.restore()
         DesktopMenuBarNative.alpha(state.space, -1)
-        panel?.close()
+        DesktopMenuBarCover.recycle(panel)
         panel = nil
     }
 }

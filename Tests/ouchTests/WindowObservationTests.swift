@@ -74,7 +74,7 @@ import Testing
 
     @Test @MainActor func aSlowAppDoesNotBlockTheMainQueueOrOtherApps() async {
         let release = DispatchSemaphore(value: 0)
-        let scanner = WindowScanner { job in
+        let scanner = WindowScanner { job, _ in
             #expect(!Thread.isMainThread)
             if job.pid == 1, !Thread.isMainThread { release.wait() }
             var scan = WindowScanner.AppScan()
@@ -84,7 +84,7 @@ import Testing
         var mainQueueRan = false
         let jobs = [1, 2].map { WindowScanner.Job(pid: $0, listWindows: true, known: [:]) }
         await withCheckedContinuation { continuation in
-            scanner.scan(jobs, done: { continuation.resume() }, late: {})
+            scanner.scan(jobs, done: { continuation.resume() }, updated: {})
             DispatchQueue.main.async { mainQueueRan = true }
         }
         #expect(mainQueueRan)
@@ -97,28 +97,53 @@ import Testing
 
     @Test @MainActor func repeatedScansDoNotQueueMoreWorkForABusyApp() async {
         let release = DispatchSemaphore(value: 0)
-        let scanner = WindowScanner { _ in
+        let scanner = WindowScanner { _, _ in
             _ = release.wait(timeout: .now() + 3)
             return WindowScanner.AppScan()
         }
         let jobs = [WindowScanner.Job(pid: 1, listWindows: true, known: [:])]
-        scanner.scan(jobs, done: {}, late: {})
+        scanner.scan(jobs, done: {}, updated: {})
         var completions = 0
-        for _ in 0..<50 { scanner.scan(jobs, done: { completions += 1 }, late: {}) }
+        for _ in 0..<50 { scanner.scan(jobs, done: { completions += 1 }, updated: {}) }
         #expect(completions == 50)
+        release.signal()
+        await drain(scanner, pid: 1)
+    }
+
+    @Test @MainActor func aNewWindowDoesNotWaitForAnotherAppsScan() async {
+        let release = DispatchSemaphore(value: 0)
+        let tracked = window()
+        let scanner = WindowScanner(read: { job, _ in
+            if job.pid == 1 { _ = release.wait(timeout: .now() + 60) }
+            var scan = WindowScanner.AppScan()
+            if job.pid == 2 {
+                scan.listed = [tracked.id]
+                scan.found[tracked.id] = .init(element: tracked.element,
+                    frame: CGRect(x: 10, y: 20, width: 300, height: 200), title: nil, resizable: true)
+            }
+            return scan
+        }, deadline: 60)
+        var updates = 0, completed = false
+        scanner.scan([1, 2].map { .init(pid: $0, listWindows: true, known: [:]) },
+                     done: { completed = true }, updated: { updates += 1 })
+        await drain(scanner, pid: 2)
+        await withCheckedContinuation { continuation in DispatchQueue.main.async { continuation.resume() } }
+        #expect(scanner.results[2]?.found[tracked.id] != nil)
+        #expect(updates == 1)
+        #expect(!completed)
         release.signal()
         await drain(scanner, pid: 1)
     }
 
     @Test @MainActor func terminationDiscardsAnInFlightScan() async {
         let release = DispatchSemaphore(value: 0)
-        let scanner = WindowScanner { _ in
+        let scanner = WindowScanner { _, _ in
             _ = release.wait(timeout: .now() + 3)
             var scan = WindowScanner.AppScan()
             scan.listed = [7]
             return scan
         }
-        scanner.scan([.init(pid: 1, listWindows: true, known: [:])], done: {}, late: {})
+        scanner.scan([.init(pid: 1, listWindows: true, known: [:])], done: {}, updated: {})
         scanner.forget(1)
         release.signal()
         await drain(scanner, pid: 1)

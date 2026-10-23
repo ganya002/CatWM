@@ -2,18 +2,21 @@ import AppKit
 import SwiftUI
 
 extension SortModel {
-    func dragChanged(_ item: SortItem, _ value: DragGesture.Value) {
+    func dragChanged(_ item: SortItem, _ value: DragGesture.Value, group: Bool = false) {
         if drag == nil {
             let start = value.startLocation
-            let origin = zones[.row(item.id)]?.origin ?? CGPoint(x: start.x - 80, y: start.y - 15)
+            let key: SortZone = group ? .tabs(item.id) : .row(item.id)
+            let origin = zones[key]?.origin ?? CGPoint(x: start.x - 80, y: start.y - 15)
+            let members = group ? plan.tabs(of: item.id).filter { plan.lane(of: $0) != nil } : []
             drag = SortDrag(item: item, closing: plan.isClosing(item.id), location: value.location,
                             grab: CGSize(width: min(max(start.x - origin.x, 0), 160),
-                                         height: min(max(start.y - origin.y, 0), SortMetrics.rowHeight)))
+                                         height: min(max(start.y - origin.y, 0), SortMetrics.rowHeight)),
+                            group: members.compactMap { plan.items[$0] })
             hover = item.id
             startEdgeTimer()
         }
         drag?.location = value.location
-        let zone = zone(at: value.location)
+        let zone = dropZone(at: value.location)
         let source = plan.lane(of: item.id).map { SortZone.lane(plan.lanes[$0].id) }
             ?? (plan.isClosing(item.id) ? .close : nil)
         let landable: Bool = {
@@ -23,6 +26,16 @@ extension SortModel {
         }()
         let next = zone == source || (zone == .add && nextName == nil) || !landable ? nil : zone
         if over != next { over = next }
+    }
+
+    func dropZone(at point: CGPoint) -> SortZone? {
+        guard let drag else { return zone(at: point) }
+        for (zone, frame) in zones where frame.contains(point) {
+            guard case .tabs(let lead) = zone, drag.group.isEmpty, unplacedFullscreen(drag.id) == nil,
+                  !plan.tabs(of: lead).contains(drag.id) else { continue }
+            return zone
+        }
+        return zone(at: point)
     }
 
     func startEdgeTimer() {
@@ -36,19 +49,21 @@ extension SortModel {
         edgeTimer?.invalidate()
         edgeTimer = nil
         guard let ended = drag else { return }
-        let landing = zone(at: ended.location)
+        let landing = dropZone(at: ended.location)
         drag = nil
         over = nil
         hover = nil
         let unplaced = unplacedFullscreen(ended.id) != nil
+        let ids = ended.group.isEmpty ? [ended.id] : ended.group.map(\.id)
         switch landing {
-        case .display(let uuid): if !unplaced { moveToDisplay(ended.id, uuid) }
-        case .close: if !unplaced, !plan.isClosing(ended.id) { markClosing(ended.id) }
+        case .display(let uuid): if !unplaced { moveToDisplay(ids, uuid) }
+        case .close: if !unplaced { ids.filter { !plan.isClosing($0) }.forEach(markClosing) }
+        case .tabs(let lead): joinTabs(ended.id, onto: lead)
         case .add:
-            if let new = addLane(focus: false) { place(ended.id, inLane: new) }
+            if let new = addLane(focus: false) { place(ended.id, inLane: new, tabs: !ended.group.isEmpty) }
         case .lane(let id):
             if let i = plan.lanes.firstIndex(where: { $0.id == id }), plan.lane(of: ended.id) != i {
-                place(ended.id, inLane: i)
+                place(ended.id, inLane: i, tabs: !ended.group.isEmpty)
             }
         default: break
         }

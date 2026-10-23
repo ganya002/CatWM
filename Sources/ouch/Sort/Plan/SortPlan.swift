@@ -19,6 +19,7 @@ struct SortPlan {
     var active: String?
     var perDisplay = false
     var geometry: [String: (ratio: CGFloat, mainCount: Int)] = [:]
+    var tabs: [[CGWindowID]] = []
 
     func key(_ number: String) -> String { WorkspaceKey.make(number, on: display, perDisplay: perDisplay) }
 

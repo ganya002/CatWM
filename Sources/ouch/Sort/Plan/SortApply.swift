@@ -5,4 +5,5 @@ struct SortApply {
     var lanes: [SortApplyLane]
     var close: [CGWindowID]
     var dropped: [String]
+    var tabs: [[CGWindowID]] = []
 }

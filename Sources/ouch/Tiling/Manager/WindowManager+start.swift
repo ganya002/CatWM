@@ -5,6 +5,7 @@ extension WindowManager {
         guard !isStarted else { return }
         isStarted = true
         loadWorkspaces()
+        loadTabs()
         if config.virtualWorkspaces { DesktopUI.prepare() }
         Log.verbose = config.debugLogging || Log.verboseLaunch
         Log.info(
@@ -44,9 +45,7 @@ extension WindowManager {
         ) { [weak self] notification in
             guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
             else { return }
-            for delay in [0.3, 1.0, 2.5] {
-                DispatchQueue.main.asyncAfter(deadline: .now() + delay) { self?.observe(app); self?.scheduleRefresh() }
-            }
+            self?.applicationLaunched(app)
         })
         notificationObservers.append(center.addObserver(
             forName: NSWorkspace.didTerminateApplicationNotification, object: nil, queue: .main
@@ -72,6 +71,17 @@ extension WindowManager {
             if self?.pendingFocus == nil { self?.animator.cancelFocus() }
             self?.requestFocusObservation()
         })
+    }
+
+    func applicationLaunched(_ app: NSRunningApplication) {
+        observe(app)
+        scheduleRefresh(after: 0)
+        for delay in [0.3, 1.0, 2.5] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                self?.observe(app)
+                self?.scheduleRefresh()
+            }
+        }
     }
 
     private func applicationTerminated(_ pid: pid_t) {
@@ -118,6 +128,10 @@ extension WindowManager {
 
     private func installEventMonitors() {
         NSEvent.addGlobalMonitorForEvents(matching: .leftMouseUp) { [weak self] _ in self?.mouseUp() }
+        NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDragged) { [weak self] _ in
+            guard let self, !self.drags.isEmpty else { return }
+            self.updateTabDropHint()
+        }
         NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
             self?.cancelFocusRequest()
             if !Hotkeys.shared.submap.isEmpty { Hotkeys.shared.setSubmap("") }
@@ -165,6 +179,7 @@ extension WindowManager {
         let wasPerDisplay = config.workspacesPerDisplay
         config = Config.load()
         if wasVirtual != config.virtualWorkspaces {
+            tilingRecovery = TilingRecovery()
             if wasVirtual { restoreHiddenWindows() }
             model.resetWorkspaces()
             labels = [:]; sortSnapshot = nil; closingNow = []; closingApps = []

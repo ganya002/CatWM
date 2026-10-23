@@ -27,6 +27,15 @@ extension SortModel {
         show(id)
     }
 
+    func moveToDisplay(_ ids: [CGWindowID], _ uuid: String) {
+        ids.forEach { moveToDisplay($0, uuid) }
+        guard ids.count > 1, var dst = plans[uuid] else { return }
+        ids.forEach { dst.untab($0) }
+        dst.tabs.append(ids)
+        dst.keepTabsTogether()
+        plans[uuid] = dst
+    }
+
     func moveToDisplay(_ id: CGWindowID, _ uuid: String) {
         guard uuid != current,
               var src = plans[current],
@@ -34,15 +43,17 @@ extension SortModel {
               let destination = display(uuid) else { return }
         ensurePlan(uuid, grouped: false)
         guard var dst = plans[uuid] else { return }
+        let lane = dst.activeLane
+        src.untab(id)
         src.detach(id)
         src.items[id] = nil
+        dst.untab(id)
+        dst.items[id] = item
+        dst.place(id, inLane: lane)
         src.touched = true
         src.pending = true
-        dst.items[id] = item
         dst.touched = true
         dst.pending = true
-        let lane = dst.activeLane
-        dst.place(id, inLane: lane)
         plans[current] = src
         plans[uuid] = dst
         if selected == id { selected = nil }

@@ -24,6 +24,7 @@ extension WindowManager {
 
     func setLayout(_ layout: Layout, on screen: Screen) {
         let screenState = state(for: screen)
+        tilingRecovery.zoomed[workspaceKey(for: screen)] = nil
         screenState.layout = layout
         screenState.zoomed = nil
         corrections = [:]
@@ -79,6 +80,10 @@ extension WindowManager {
                         + "actual=\(window.frame) \(matches ? "OK" : "MISMATCH")"
                 )
             }
+        }
+        for group in tabs.groups {
+            let members = group.members.map { $0 == group.active ? "[\($0)]" : "\($0)" }
+            lines.append("  tabs \(members.joined(separator: " "))")
         }
         for id in visible {
             guard let window = windows[id], window.isFloating else { continue }
@@ -150,6 +155,7 @@ extension WindowManager {
         case "sort": toggleSortCommand()
         case "sort-undo": SortPanel.shared.undoApplied()
         case "switcher": Switcher.shared.open(backward: arg.lowercased().hasPrefix("prev"))
+        case "moveintogroup", "moveoutofgroup", "changegroupactive": tabCommand(dispatcher, arg)
         default: NSLog("Ouch: unknown dispatcher %@", dispatcher)
         }
     }

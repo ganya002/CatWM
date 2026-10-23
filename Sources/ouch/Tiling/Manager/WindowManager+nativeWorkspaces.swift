@@ -1,4 +1,5 @@
 import AppKit
+import QuartzCore
 
 extension WindowManager {
     @discardableResult
@@ -29,6 +30,7 @@ extension WindowManager {
     }
 
     func renumberWorkspaces() {
+        tilingRecovery.zoomed = [:]
         model.resetWorkspaces()
         nativeCatalog = NativeWorkspaceCatalog()
         labels = [:]; previousWorkspace = [:]; savedWorkspaceOf = [:]; savedOwnerOf = [:]
@@ -103,6 +105,7 @@ extension WindowManager {
     }
 
     func showNativeWorkspace(_ workspace: String, focusing preferred: Window?, focus takesFocus: Bool, quiet: Bool) {
+        let requestedAt = CACurrentMediaTime()
         updateNativeCatalog(Screen.all())
         nativeWorkspaceGeneration += 1
         let generation = nativeWorkspaceGeneration
@@ -118,7 +121,7 @@ extension WindowManager {
                     if self.nativeWorkspaceGeneration == generation {
                         self.configureNativeController(focusing: preferred, focus: takesFocus, quiet: quiet)
                         self.nativeDesktop.request(.init(workspace: workspace, display: entry.display,
-                                                         space: entry.space))
+                                                         space: entry.space), since: requestedAt)
                     }
                 } catch is CancellationError { } catch {
                     Log.info("native workspaces: create \(workspace) failed: \(error.localizedDescription)")
@@ -128,7 +131,8 @@ extension WindowManager {
             return
         }
         configureNativeController(focusing: preferred, focus: takesFocus, quiet: quiet)
-        nativeDesktop.request(.init(workspace: workspace, display: entry.display, space: entry.space))
+        nativeDesktop.request(.init(workspace: workspace, display: entry.display, space: entry.space),
+                              since: requestedAt)
     }
 
     private func releaseEmptyWorkspaces() {
@@ -187,10 +191,15 @@ extension WindowManager {
         }
     }
 
-    @MainActor func removeDesktop(_ space: UInt64, on screen: Screen) async throws {
+    @MainActor func removeDesktop(
+        _ space: UInt64, on screen: Screen,
+        remove: (UInt64, Screen) async throws -> Void = DesktopLifecycle.remove
+    ) async throws {
         for attempt in 1... {
             _ = await poll(1, every: 10_000_000) { DesktopUI.isSettled(screen) }
-            do { return try await DesktopLifecycle.remove(space, on: screen) } catch where attempt < 5 {
+            do { return try await remove(space, screen) } catch DesktopTransitionError.occupied {
+                throw DesktopTransitionError.occupied
+            } catch where attempt < 5 {
                 try await Task.sleep(nanoseconds: 200_000_000)
             }
         }
@@ -214,6 +223,7 @@ extension WindowManager {
                        uniquingKeysWith: { first, _ in first })
         }
         states = moved(states)
+        tilingRecovery.zoomed = moved(tilingRecovery.zoomed)
         labels = moved(labels)
         lastFocused = moved(lastFocused)
         previousWorkspace = moved(previousWorkspace).mapValues(shifted)
@@ -295,19 +305,37 @@ extension WindowManager {
         }
     }
 
-    @MainActor func prepareNativeLayout(_ request: NativeDesktopController.Request) async throws {
+    @MainActor func prepareNativeLayout(
+        _ request: NativeDesktopController.Request,
+        readFrames: (Set<CGWindowID>) -> [CGWindowID: CGRect]? = { WindowServerQuery.frames(for: $0) }
+    ) async throws {
         let arriving = followMoves.filter { $0.value.workspace == request.workspace }
         let shownApps = Set(observedApps.map(\.pid))
-        let ids = order.filter {
+        let eligible = order.filter {
             (workspaceOf[$0] == request.workspace || arriving[$0] != nil)
                 && windows[$0].map { shownApps.contains($0.pid) && !$0.isFloating } == true
                 && windows[$0]?.minimized == false && windows[$0]?.fullscreen == false
         }
+        let eligibleIDs = Set(eligible)
+        let ids = eligible.filter { id in
+            guard let group = tabs.group(of: id) else { return true }
+            let active = eligibleIDs.contains(group.active) ? group.active
+                : group.members.first(where: eligibleIDs.contains)
+            return active == id
+        }
         var slots: [CGWindowID: CGRect] = [:]
         for (screen, group) in layoutGroups(ids, on: request.display) where tilingEnabled {
             guard let placed = layoutTargets(group, state(workspace: request.workspace), on: screen) else { continue }
-            slots.merge(placed) { first, _ in first }
-            try await place(group.filter { arriving[$0] == nil }, in: placed, on: screen)
+            let expanded = group.flatMap { id -> [(CGWindowID, CGRect)] in
+                guard let slot = placed[id] else { return [] }
+                let frame = belowTabStrip(slot, for: id)
+                let peers = tabs.group(of: id)?.members.filter { $0 != id && eligibleIDs.contains($0) } ?? []
+                return ([id] + peers).map { ($0, frame) }
+            }
+            let frames = Dictionary(uniqueKeysWithValues: expanded)
+            slots.merge(frames) { first, _ in first }
+            try await place(expanded.map(\.0).filter { arriving[$0] == nil }, in: frames, on: screen,
+                            readFrames: readFrames)
         }
         for move in arriving.values {
             try await completeFollowMove(move)
@@ -333,7 +361,8 @@ extension WindowManager {
                          curve: config.animationCurve, bounce: config.animationBounce)
     }
 
-    @MainActor private func place(_ ids: [CGWindowID], in slots: [CGWindowID: CGRect], on screen: Screen) async throws {
+    @MainActor private func place(_ ids: [CGWindowID], in slots: [CGWindowID: CGRect], on screen: Screen,
+                                  readFrames: (Set<CGWindowID>) -> [CGWindowID: CGRect]?) async throws {
         guard !ids.isEmpty else { return }
         let moves = ids.compactMap { id -> Animator.Move? in
             guard let window = windows[id], let frame = slots[id] else { return nil }
@@ -341,10 +370,18 @@ extension WindowManager {
             targets[id] = frame
             return .init(window: window, to: frame, bounds: screen.visible)
         }
-        animator.animate(moves, duration: 0)
-        var finished = false
-        animator.afterPendingWrites { finished = true }
-        guard await poll(1, until: { finished }) else {
+        let pids = Set(moves.map(\.window.pid))
+        guard await animator.waitForPendingWrites(pids: pids) else {
+            throw DesktopTransitionError.check("Windows are still preparing for the Desktop switch")
+        }
+        let actual = readFrames(Set(moves.map(\.window.id))) ?? [:]
+        let changed = moves.filter {
+            !$0.window.cachedFrame.approxEqual($0.target, tolerance: 1)
+                || actual[$0.window.id]?.approxEqual($0.target, tolerance: 1) != true
+        }
+        guard !changed.isEmpty else { return }
+        animator.animate(changed, duration: 0)
+        guard await animator.waitForPendingWrites(pids: Set(changed.map(\.window.pid))) else {
             throw DesktopTransitionError.check("Windows are still preparing for the Desktop switch")
         }
     }

@@ -20,6 +20,7 @@ extension WindowManager {
         window.observedAt = Date()
         guard !minimized else { return scheduleRefresh(after: 0) }
         claimForCurrentWorkspace([window.id])
+        restoreTabGroup(of: window.id)
         restoredEarly[window.id] = Date()
         snapNextPlacement.insert(window.id)
         refresh(instant: true, placing: [window.id])

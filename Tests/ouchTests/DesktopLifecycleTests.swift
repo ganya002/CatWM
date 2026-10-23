@@ -5,6 +5,41 @@ import Testing
 @MainActor
 @Suite(.enabled(if: ProcessInfo.processInfo.environment["OUCH_TEST_DESKTOP_LIFECYCLE"] == "1"), .serialized)
 struct DesktopLifecycleTests {
+    @Test func aPreparedCoverMovesWhileHiddenAndDisplaysAfterCapture() async throws {
+        _ = NSApplication.shared
+        let screen = try #require(Screen.all().first)
+        let current = Spaces.current(display: screen.uuid)
+        let original = Spaces.list(display: screen.uuid)?.ids
+        let focus = NSWorkspace.shared.frontmostApplication?.processIdentifier
+        try #require(DesktopMenuBarNative.theme(current) == 1)
+        try #require(CGPreflightScreenCaptureAccess())
+        DesktopMenuBarCover.prewarm(on: screen)
+        let prepared = DesktopMenuBarCover.panel(on: screen)
+        DesktopMenuBarCover.recycle(prepared)
+        let created = try await DesktopLifecycle.create(on: screen)
+        var captured: OuchPanel?
+        do {
+            let moved = await poll(0.2, every: 1_000_000) {
+                Spaces.of(window: CGWindowID(prepared.windowNumber)) == [created.space]
+            }
+            #expect(moved && !prepared.isVisible)
+            captured = await DesktopMenuBarCover.capture(on: screen, source: current, target: created.space)
+            let panel = try #require(captured)
+            #expect(panel === prepared && panel.isVisible)
+            #expect(Spaces.of(window: CGWindowID(panel.windowNumber)) == [created.space])
+            DesktopMenuBarCover.recycle(panel)
+            captured = nil
+        } catch {
+            DesktopMenuBarCover.recycle(captured)
+            try await discard(created.space, on: screen)
+            throw error
+        }
+        try await discard(created.space, on: screen)
+        #expect(Spaces.current(display: screen.uuid) == current)
+        #expect(Spaces.list(display: screen.uuid)?.ids == original)
+        #expect(NSWorkspace.shared.frontmostApplication?.processIdentifier == focus)
+    }
+
     @Test func createsAndRemovesOnEachDisplayWithoutChangingTheActiveDesktop() async throws {
         _ = NSApplication.shared
         let screens = Screen.all()

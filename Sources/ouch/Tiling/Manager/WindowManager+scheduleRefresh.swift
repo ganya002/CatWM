@@ -18,24 +18,23 @@ extension WindowManager {
     }
 
     private func scanAppsAndRefresh() {
-        guard isStarted else { return }
+        guard isStarted, !nativeDesktop.isRunning, !nativeCreationBusy else { return }
         let listed = config.virtualWorkspaces ? scanner.desktop.allWindows : scanner.desktop.windows
         let pidsOnScreen = Set(listed.map(\.pid))
         var known: [pid_t: [CGWindowID: Window]] = [:]
         for window in windows.values { known[window.pid, default: [:]][window.id] = window }
         var jobs: [WindowScanner.Job] = []
-        let applications = NSWorkspace.shared.runningApplications.filter { $0.processIdentifier != getpid() }
-        observedApps = applications.filter { $0.activationPolicy == .regular && !$0.isHidden }
-            .map { ($0.processIdentifier, $0.bundleIdentifier) }
+        let applications = scanner.applications
+        observedApps = applications.filter { $0.regular && !$0.hidden }.map { ($0.pid, $0.bundleID) }
         for app in applications {
-            observe(app)
-            let pid = app.processIdentifier
-            let list = app.activationPolicy == .regular && !app.isHidden && pidsOnScreen.contains(pid)
+            let pid = app.pid
+            if app.regular { observe(pid: pid) }
+            let list = app.regular && !app.hidden && pidsOnScreen.contains(pid)
             guard list || known[pid] != nil else { continue }
             jobs.append(.init(pid: pid, listWindows: list, known: known[pid] ?? [:]))
         }
         let refresh: () -> Void = { [weak self] in self?.refresh() }
-        scanner.scan(jobs, done: refresh, late: refresh)
+        scanner.scan(jobs, done: refresh, updated: refresh)
     }
 
     func finishTemplateRestore() {

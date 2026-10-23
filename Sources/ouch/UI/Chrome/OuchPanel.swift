@@ -10,6 +10,7 @@ final class OuchPanel: NSPanel {
         case pointer
         case overlay(NSWindow.Level, clickThrough: Bool)
         case card(NSWindow.Level)
+        case attached
     }
 
     let role: Role
@@ -52,6 +53,10 @@ final class OuchPanel: NSPanel {
         case let .card(windowLevel):
             level = windowLevel
             collectionBehavior = base
+        case .attached:
+            level = .normal
+            collectionBehavior = [.transient, .ignoresCycle]
+            animationBehavior = .none
         }
     }
 

@@ -2,17 +2,24 @@ import AppKit
 import SwiftUI
 
 struct SortRow: View {
+    enum Tab {
+        case middle
+        case last
+    }
+
     @ObservedObject var model: SortModel
     let item: SortItem
     let closing: Bool
     var indented = false
+    var tab: Tab?
 
     var body: some View {
         let pointed = model.hover == item.id
         let lit = pointed || model.selected == item.id
         SortRowFace(item: item, closing: closing)
-            .padding(.leading, indented ? 19 : 5).padding(.trailing, 8)
+            .padding(.leading, tab != nil ? SortMetrics.tabIndent : indented ? 19 : 5).padding(.trailing, 8)
             .frame(height: SortMetrics.rowHeight)
+            .background(alignment: .leading) { if let tab { SortTabBracket(last: tab == .last) } }
             .background(RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
                 .fill((closing ? pointed : lit) ? Theme.hover : .clear))
             .overlay(alignment: .trailing) {
@@ -24,7 +31,7 @@ struct SortRow: View {
                     .transition(.opacity)
                 }
             }
-            .opacity(model.drag?.id == item.id ? 0.3 : 1)
+            .opacity(model.drag?.carries(item.id) == true ? 0.3 : 1)
             .contentShape(Rectangle())
             .zone(.row(item.id))
             .onHover { inside in
@@ -40,5 +47,29 @@ struct SortRow: View {
                 .onEnded { _ in model.dragEnded() })
             .tooltip(closing ? "Click to bring back" : "")
             .accessibilityLabel("\(item.title), \(item.app)")
+    }
+}
+
+struct SortTabBracket: View {
+    let last: Bool
+
+    var body: some View {
+        Path { path in
+            let x: CGFloat = 15
+            let mid = SortMetrics.rowHeight / 2
+            let bend = Theme.Radius.small
+            let end = SortMetrics.tabIndent - Theme.Space.extraSmall
+            path.move(to: CGPoint(x: x, y: 0))
+            path.addLine(to: CGPoint(x: x, y: mid - bend))
+            path.addQuadCurve(to: CGPoint(x: x + bend, y: mid), control: CGPoint(x: x, y: mid))
+            path.addLine(to: CGPoint(x: end, y: mid))
+            if !last {
+                path.move(to: CGPoint(x: x, y: mid - bend))
+                path.addLine(to: CGPoint(x: x, y: SortMetrics.rowHeight))
+            }
+        }
+        .stroke(Theme.borderControl.opacity(0.5),
+                style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
+        .frame(width: SortMetrics.tabIndent, height: SortMetrics.rowHeight)
     }
 }

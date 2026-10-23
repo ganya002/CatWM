@@ -8,6 +8,7 @@ final class WindowManager {
     var restoringTemplate = false {
         didSet {
             if restoringTemplate {
+                tilingRecovery = TilingRecovery()
                 refreshWork?.cancel()
                 refreshWork = nil
                 refreshDeadline = .distantFuture
@@ -71,6 +72,7 @@ final class WindowManager {
     var workspaceMoves: Set<CGWindowID> = []
     var snapNextPlacement: Set<CGWindowID> = []
     var restoredEarly: [CGWindowID: Date] = [:]
+    var minimizingTabs: Set<Int> = []
     var present: Set<CGWindowID> = []
     var leavingFullscreen: [CGWindowID: Date] = [:]
     struct PendingFocus {
@@ -115,6 +117,11 @@ var focusEcho: FocusEcho?
     var crowdWork: DispatchWorkItem?
     var autoSwitchAfter = Date.distantPast
     var lastSavedWorkspaces = ""
+    var tilingRecovery = TilingRecovery()
+    var lastSavedTilingRecovery = TilingRecovery()
+    var savedTabs: [SavedTabs] = []
+    var savedTabsUntil = Date.distantPast
+    var lastSavedTabs: [String]?
     var focusSink: NSWindow?
     var visible: Set<CGWindowID> = []
     var targets: [CGWindowID: CGRect] = [:]
@@ -129,6 +136,10 @@ var focusEcho: FocusEcho?
     var observers: [pid_t: AXObserver] = [:]
     var corrections: [CGWindowID: (target: CGRect, count: Int)] = [:]
     var drags: [CGWindowID: Bool] = [:]
+    var tabHover: (host: CGWindowID, settled: Bool)?
+    var tabHoverWork: DispatchWorkItem?
+    var draggedTab: CGWindowID?
+    var tabLiftEnd: CFTimeInterval = 0
     var refreshWork: DispatchWorkItem?
     var minSizes: [CGWindowID: CGSize] = [:]
     struct MenuBarFloor {

@@ -115,9 +115,12 @@ extension SortPlan {
         if let i = close.firstIndex(of: id) {
             let j = i + delta
             if close.indices.contains(j) { close.swapAt(i, j) }
-        } else if let laneIndex = lane(of: id), let i = lanes[laneIndex].ids.firstIndex(of: id) {
-            let j = i + delta
-            if lanes[laneIndex].ids.indices.contains(j) { lanes[laneIndex].ids.swapAt(i, j) }
+        } else if let laneIndex = lane(of: id) {
+            var blocks = tabBlocks(lanes[laneIndex].ids)
+            guard let i = blocks.firstIndex(where: { $0.contains(id) }),
+                  blocks.indices.contains(i + delta) else { return }
+            blocks.swapAt(i, i + delta)
+            lanes[laneIndex].ids = blocks.flatMap(\.self)
         }
     }
 

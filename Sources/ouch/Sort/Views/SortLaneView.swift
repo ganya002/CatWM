@@ -46,6 +46,8 @@ struct SortLaneView: View {
         }
     }
 
+    private func lead(of id: CGWindowID) -> CGWindowID? { model.plan.tabs(of: id).first(where: lane.ids.contains) }
+
     private func commitNumber() {
         guard number.isEditing else { return }
         number.isEditing = false
@@ -77,7 +79,8 @@ struct SortLaneView: View {
                 }
             }
             .padding(.horizontal, 4)
-            SortThumb(layout: lane.layout, ids: lane.ids, lit: model.hover ?? model.selected,
+            SortThumb(layout: lane.layout, ids: model.plan.tiles(lane.ids),
+                      lit: (model.hover ?? model.selected).flatMap(lead),
                       ratio: model.plan.geometry[lane.workspace]?.ratio ?? 0.5,
                       mainCount: model.plan.geometry[lane.workspace]?.mainCount ?? 1)
                 .padding(.horizontal, 4)

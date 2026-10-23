@@ -12,6 +12,7 @@ struct Config {
     var mouseSwapsWindows = true
     var mouseResizesWindows = true
     var splitHandle = true
+    var autoHideTabStrip = false
     var floating: [String] = []
     var floatingIsDenylist = true
     var floatSmallWindows = true
