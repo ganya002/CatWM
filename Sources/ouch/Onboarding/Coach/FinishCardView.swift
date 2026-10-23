@@ -31,9 +31,9 @@ struct FinishCardView: View {
     private var title: Text {
         let parts = model.title.split(separator: "*", omittingEmptySubsequences: false)
         return parts.enumerated().reduce(Text("")) { text, part in
-            text + Text(part.element).font(Theme.body(34, part.offset.isMultiple(of: 2) ? .light : .medium))
+            text + Text(part.element).foregroundColor(part.offset.isMultiple(of: 2) ? Theme.inkMuted : Theme.ink)
         }
-        .tracking(-0.68)
+        .font(Theme.display(30)).tracking(-0.6)
     }
 
     private var mode: some View {

@@ -11,7 +11,7 @@ struct SortAddLane: View {
         let next = model.nextName
         let full = next == nil
         let drop = model.over == .add
-        let over = drop || (hover.isOn && !full)
+        let hovered = hover.isOn && !full
         let box = RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous)
         VStack(alignment: .leading, spacing: 8) {
             Button { withAnimation(Motion.easeOut) { _ = model.addLane(focus: true) } } label: {
@@ -20,13 +20,13 @@ struct SortAddLane: View {
                         Text("+").font(Theme.display(22)).fixedSize()
                         Text(title(next)).font(Theme.heading()).oneLine()
                     }
-                    .foregroundStyle(hover.isOn && !full ? Theme.ink : Theme.inkMuted)
+                    .foregroundStyle(hovered ? Theme.ink : Theme.inkMuted)
                     .padding(.horizontal, 4)
                     ZStack {
                         box.fill(drop ? Theme.accentSoft : .clear)
-                        box.strokeBorder(over ? Theme.accent : Theme.borderControl,
+                        box.strokeBorder(drop ? Theme.accent : Theme.borderControl,
                                          style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
-                            .opacity(over ? 1 : 0.6)
+                            .opacity(drop || hovered ? 1 : 0.6)
                         if drop {
                             Image(systemName: "plus").font(Theme.symbol(Theme.Icon.extraLarge, .regular))
                                 .foregroundStyle(Theme.accentInk)
@@ -40,7 +40,7 @@ struct SortAddLane: View {
             .buttonStyle(.plain)
             .disabled(full)
             .onHover { hover.isOn = $0 }
-            .accessibilityLabel("Add workspace \(next ?? "")")
+            .accessibilityLabel("Add workspace \(next.map { WorkspaceKey.number($0) } ?? "")")
             SortLayoutPill(layout: model.nextLayout,
                            next: { model.cycleNextLayout() },
                            previous: { model.cycleNextLayout(by: -1) })
@@ -50,7 +50,7 @@ struct SortAddLane: View {
         .padding(.vertical, 8).padding(.horizontal, 4)
         .frame(width: SortMetrics.lane, alignment: .topLeading)
         .background(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous)
-            .fill(over ? Theme.accentSoft : .clear))
+            .fill(drop ? Theme.accentSoft : hovered ? Theme.surfaceRaised : .clear))
         .overlay {
             if drop {
                 RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous)
@@ -58,12 +58,12 @@ struct SortAddLane: View {
             }
         }
         .opacity(full ? 0.45 : 1)
-        .animation(Motion.fadeMedium, value: over)
+        .animation(Motion.fadeMedium, value: drop || hovered)
         .zone(.add)
     }
 
     private func title(_ next: String?) -> String {
-        next.map { "Workspace \($0)" }
+        next.map { "Workspace \(WorkspaceKey.number($0))" }
             ?? (plan.lanes.count >= SortPlan.maxLanes ? "All \(SortPlan.maxLanes) in use" : "None free")
     }
 }

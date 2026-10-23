@@ -15,6 +15,7 @@ struct NativeWorkspaceCatalog {
     var saved: [String: UInt64] = [:]
     var homes: [String: String] = [:]
     var perDisplay = false
+    var sharedSpaces = false
 
     mutating func synchronize(_ displays: [Display]) {
         if perDisplay { return follow(displays) }
@@ -71,6 +72,16 @@ struct NativeWorkspaceCatalog {
     func entry(_ name: String) -> Entry? { entries.first { $0.name == name } }
     func entry(space: UInt64) -> Entry? { entries.first { $0.space == space } }
     func entries(on display: String) -> [Entry] { entries.filter { $0.display == display } }
+
+    func shown(_ current: [(display: String, space: UInt64)]) -> [String: String] {
+        var claimed = Set<String>()
+        return current.reduce(into: [:]) { result, item in
+            guard let name = entry(space: item.space)?.name, sharedSpaces || claimed.insert(name).inserted else {
+                return
+            }
+            result[item.display] = name
+        }
+    }
 
     func successor(of name: String, on display: String) -> UInt64? {
         guard !perDisplay else { return nil }

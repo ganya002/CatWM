@@ -56,12 +56,12 @@ extension WhatsNew {
         model.caret = nil
         let inset = WhatsNewView.inset
         guard let button = Onboarding.shared.statusButton?.window?.frame else {
-            let screen = OuchPanel.pointerScreen()
+            guard let screen = OuchPanel.pointerScreen() else { return }
             panel.setFrame(OuchPanel.frame(size: host.fittingSize, on: screen, anchor: .center(dy: -12), inset: inset),
                            display: false)
             return
         }
-        let screen = OuchPanel.screen(at: NSPoint(x: button.midX, y: button.midY))
+        guard let screen = OuchPanel.screen(at: NSPoint(x: button.midX, y: button.midY)) else { return }
         let visible = screen.visibleFrame
         let size = host.fittingSize
         let card = NSSize(width: size.width - inset.leading - inset.trailing,

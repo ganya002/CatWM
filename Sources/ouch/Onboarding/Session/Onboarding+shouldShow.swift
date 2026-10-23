@@ -2,16 +2,18 @@ import AppKit
 import SwiftUI
 
 extension Onboarding {
-    static func shouldShow(firstRun: Bool, trusted: Bool) -> Bool {
-        !isDone && (firstRun || !trusted)
+    static func shouldShow(firstRun: Bool, trusted: Bool, done: Bool = isDone, started: Bool = isStarted) -> Bool {
+        !done && (firstRun || !trusted || started)
     }
 
     func start() {
         guard !isRunning else { return }
+        let resuming = Self.isStarted && !CommandLine.arguments.contains("--onboarding")
         firstRun = true
-        let screen = OuchPanel.pointerScreen()
+        UserDefaults.standard.set(true, forKey: Self.startedKey)
+        guard let screen = OuchPanel.pointerScreen() else { return }
         let card = makeWelcome(on: screen)
-        guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return showWelcome() }
+        guard !resuming, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return showWelcome() }
         let margin = WelcomeView.margin
         let intro = Intro(screen: screen, landing: card.frame.insetBy(dx: margin, dy: margin)) { [weak self] in
             self?.intro = nil
@@ -22,8 +24,7 @@ extension Onboarding {
     }
 
     func playIntro(_ arrangement: IntroScore.Arrangement = .standard) {
-        guard !isRunning else { return }
-        let screen = OuchPanel.pointerScreen()
+        guard !isRunning, let screen = OuchPanel.pointerScreen() else { return }
         let visible = screen.visibleFrame
         let landing = NSRect(x: visible.midX - 230, y: visible.midY - 200, width: 460, height: 400)
         let intro = Intro(screen: screen, landing: landing, music: arrangement) { [weak self] in self?.intro = nil }
@@ -36,6 +37,14 @@ extension Onboarding {
         welcomeModel.style = KeyStyle.current
         welcomeModel.allowAccessibility = { Permission.accessibility.request() }
         welcomeModel.allowInputMonitoring = { Permission.inputMonitoring.request() }
+        welcomeModel.allowScreenRecording = { Permission.screenRecording.request() }
+        welcomeModel.takeTestImage = { [weak self] in
+            Task { @MainActor in
+                guard await ScreenRecording.takeTestImage() else { return }
+                self?.welcomeModel.screenTestDone = true
+                self?.welcome?.makeKeyAndOrderFront(nil)
+            }
+        }
         welcomeModel.allowLogin = { [weak self] in
             LoginItem.set(true)
             if !LoginItem.isEnabled {
@@ -75,6 +84,9 @@ extension Onboarding {
         if welcomeModel.accessibility != accessibility { welcomeModel.accessibility = accessibility }
         let inputMonitoring = Permission.inputMonitoring.isGranted
         if welcomeModel.inputMonitoring != inputMonitoring { welcomeModel.inputMonitoring = inputMonitoring }
+        let screenRecording = Permission.screenRecording.isGranted, screenTestDone = ScreenRecording.isTestDone
+        if welcomeModel.screenRecording != screenRecording { welcomeModel.screenRecording = screenRecording }
+        if welcomeModel.screenTestDone != screenTestDone { welcomeModel.screenTestDone = screenTestDone }
         if welcomeModel.login != login { welcomeModel.login = login }
         if login, openedLoginItems {
             openedLoginItems = false

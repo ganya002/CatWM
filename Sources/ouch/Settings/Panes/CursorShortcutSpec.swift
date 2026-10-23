@@ -4,14 +4,12 @@ struct CursorShortcutSpec: Identifiable {
     let id: String
     let action: Action
     let title: String
-    var menuIdentity: String?
     var menuLabel: String?
     var menuDispatcher: String?
     var menuArgs: String?
     var actionBefore: String?
     var actionOrder = 0
     var includeInActions = true
-    var menuID: String { menuIdentity ?? id }
     var menuTitle: String { menuLabel ?? title }
     var dispatcher: String { menuDispatcher ?? action.dispatcher }
     var args: String { menuArgs ?? action.args }
@@ -49,7 +47,7 @@ enum PointerActions {
                            action: Action(title: "Toggle macOS Full Screen", category: .window,
                                           dispatcher: "nativefullscreen", args: "",
                                           symbol: "arrow.up.left.and.down.right.and.arrow.up.right.and.down.left"),
-                           title: "Native Full Screen", menuIdentity: "nativefullscreen", actionBefore: "sort ",
+                           title: "Native Full Screen", actionBefore: "sort ",
                            hint: "Max", selected: { $0.nativeFullscreen }),
         CursorShortcutSpec(id: "main",
                            action: Action(title: "Swap With Main Window", category: .move, dispatcher: "layoutmsg",

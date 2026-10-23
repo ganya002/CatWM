@@ -33,7 +33,7 @@ extension CursorActions {
     func place(menu panel: NSPanel, at point: CGPoint) {
         let margin = CursorActionsView.margin, gap: CGFloat = 10
         let size = CursorActionsView.menuSize(for: model.actions, editing: model.templateDraft != nil)
-        let screen = OuchPanel.screen(at: point)
+        guard let screen = OuchPanel.screen(at: point) else { return }
         let visible = screen.visibleFrame
         var x = point.x + gap, top = point.y - gap
         if x + size.width > visible.maxX { x = point.x - gap - size.width }

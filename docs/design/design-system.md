@@ -1,8 +1,8 @@
-# Ouch design system
+# CatWM design system
 
-This file is the rule set for every surface that Ouch draws: the menu bar menu, Settings, onboarding, tips and the HUD.
+This file is the rule set for every surface that CatWM draws: the menu bar menu, Settings, onboarding, tips and the HUD.
 
-Source: the Ouch design system artifact, https://claude.ai/artifact/GY1GAH7xBUwAzBP1B9mtfY.
+Source: the CatWM design system artifact, https://claude.ai/artifact/GY1GAH7xBUwAzBP1B9mtfY.
 
 ## Visual reference and editing
 
@@ -22,20 +22,20 @@ A change to a token or a component rule is not finished until `Sources/ouch/UI/T
 1. **Show the key.** Every command that a person can click shows its shortcut on the right, set in `Kbd` or `kbd` text. Clicking teaches the keys. It does not replace them.
 2. **One floating surface.** Menus, tooltips, tips, coach marks, the HUD and the welcome card are one component: `.surface(_ density:)`, at five densities. A new floating thing gets a density, never a new look.
 3. **Two levels, then search.** Menus nest one level, two at most. Deeper items go behind the search field at the top of every menu.
-4. **No boxes around content.** Content sits on the ground. Hairlines separate rows. Only floating things (menus, tips, tour cards, HUD) and the one content pane get a surface. They get depth from the `popover` and `float` elevations, not from borders.
-5. **Chrome is a wash.** Window chrome and sidebars sit on `Theme.wash`: `wash1`, then `background` at 55%, then `wash2`. Items sit on it as pills. The content is one floating rounded pane (`.pane()`, `surface`, radius 14), inset by the popover shadow room on the top, bottom and trailing sides so the shadow fades out on the wash.
-6. **Two faces.** Supreme for text: Regular for text, Medium for emphasis, Light for light text. Nunito Extra Bold for headings, large display and the wordmark. Nothing else.
+4. **Containers nest twice, then stop.** In Settings the content pane is one `surface` container on the ground, and each group of rows is one `surfaceRaised` container inside it (`OGroup`). Hairlines separate the rows inside a group. Nothing else gets a box. Floating things (menus, tips, tour cards, HUD) get depth from the `popover` and `float` elevations, not from borders.
+5. **Chrome is flat.** Window chrome and the Settings rail sit on `Theme.wash`, which is flat: `wash1` and `wash2` equal `background`, black in the dark theme and white in the light theme. Items sit on it as pills. The content is one rounded pane without a shadow (`.pane(shadow: false)`, `surface`, radius 14), inset 10 pt on the top, bottom and trailing sides.
+6. **Two faces.** Pilcrow Rounded for the wordmark, display, titles, headings and keycaps: Bold for the wordmark and display, Semibold for the rest. The system font for body text, labels, captions and menu rows. Nothing else.
 7. **Symbols move with meaning.** An SF Symbol effect always reports something: an action landed, a thing refused, the app is busy, a tip is waiting. Never decoration.
 
 ## Colour
 
-One palette, `Palette.ouch`, with a light and a dark theme. It comes from the app icon: graphite ground, the electric blue of the main window as accent, the cool greys of the white windows as tint. Components read semantic tokens only.
+One palette, `Palette.catwm`, with a light and a dark theme. It comes from the CatWM brand: a black ground with white type in the dark theme, a white ground with black type in the light theme, and sky as the one accent. The four brand hues (sky, lemon, magenta, lime) are for the website and the brand sheet. Only sky enters the app. Components read semantic tokens only.
 
-- Paint window chrome with the wash. Put the content pane on `surface`. Float menus and tips on `surfaceRaised` (or `glass` where Liquid Glass is not available).
+- Paint window chrome with `background`. Put the content pane on `surface`. Float menus, dropdowns and tips on `surfaceRaised`, flat, with the `popover` elevation. Only the HUD uses glass.
 - Text is `ink`. Secondary text is `inkMuted`. Placeholders are `inkFaint`. Every pair meets 4.5:1 in both themes.
-- Blue is an accent. Use `accent` for one thing per view: the primary button, the switch that is on, the current workspace, the progress bar, the selected layout. Its text is `onAccent`. Everything else is neutral.
+- Sky is the accent. Use `accent` for one thing per view: the primary button, the switch that is on, the current workspace, the progress bar, the selected layout, a drop target. Its text is `onAccent`, black in both themes. Accent-coloured text uses `accentInk`, which is darker in the light theme so it meets 4.5:1. Everything else is neutral: row symbols, step numbers, workspace numbers in the overview, group titles and page titles are `ink` or `inkMuted`. A selected pill (a rail page, a modifier layer in the shortcut map) is `ink` with `background` text, never `accent`.
 - A hovered or highlighted row is a `hover` fill. Its text keeps its colour. Hover and keyboard highlight never use `accent`.
-- A selected sidebar item is a `surface` pill with the `small` elevation, on the wash.
+- A selected rail item is an `ink` pill with `background` text: white on black in the dark theme, black on white in the light theme. Other items are `inkMuted` text and get a `surface` pill on hover. Rail items have no symbols.
 - Tour cards are plain raised surfaces. They are not filled with `accent`.
 - `tint` is for shapes only: layout thumbnails and illustrations. Never text.
 - `success`, `warning` and `danger` always come with a symbol and a word.
@@ -44,11 +44,12 @@ One palette, `Palette.ouch`, with a light and a dark theme. It comes from the ap
 
 ## Type
 
-- `display` 44/46, weight 300. Welcome title and showcase headlines. One per screen.
+- `wordmark` Pilcrow Rounded Bold, tracking -0.03 em. `Theme.wordmark`.
+- `display` 44/48, Pilcrow Rounded Bold. Welcome title and showcase headlines. One per screen.
 - `numeral` 34, weight 300, in `inkMuted`. Step numbers.
-- `title` 22/27, weight 400. Tour cards, pane titles, the HUD. Emphasise one word at 500.
-- `heading` 15/20, weight 500. `body` 13.5/19, weight 400. `body-medium` is `body` at 500. `caption` 12/16. `label` 12/16, weight 500.
-- `kbd`, `kicker` and `code` use the mono face. `kicker` is the only uppercase text: "STEP 2 OF 6".
+- `title` 22/27, Pilcrow Rounded Semibold. Tour cards, pane titles, the HUD.
+- `heading` 15/20, Pilcrow Rounded Semibold. Group titles in Settings (`sectionTitle`) use it in `ink`. `body` 13.5/19, system font at 400. `body-medium` is `body` at 500. `caption` 12/16. `label` 12/16, weight 500.
+- `kbd` is Pilcrow Rounded Semibold through `Theme.keys`. The face has no modifier glyphs, so the font cascades to the system font for ⌘ ⇧ ⌥ ⌃ ⇥ ↩. `kicker` is Pilcrow Rounded Semibold 12 in `inkMuted`, tracking 0.05 em, and the only uppercase text: "STEP 2 OF 6". `code` uses the mono face.
 
 Labels, captions, buttons, keys and menu rows never wrap. They are one line and truncate with an ellipsis (`.oneLine()`). Only body prose wraps. Keep it to two lines in floating surfaces.
 
@@ -56,7 +57,7 @@ Labels, captions, buttons, keys and menu rows never wrap. They are one line and 
 
 - The grid is 4 pt: `Theme.Space` 2, 4, 8, 12, 16, 24, 32.
 - Radii nest. The panel radius equals the row radius plus the panel padding: `Radius.large` 12 = `Radius.small` 6 + 6 menu padding. Rows sit concentric inside menus.
-- Rows are 30 pt (`Theme.rowHeight`). Controls are 28 pt (26 small, 36 large). Small keycaps are 20 pt, medium 30 pt, tour keycaps 40 pt. Menus are 272 pt wide, submenus 232 pt, the command menu 360 pt.
+- Rows are 30 pt (`Theme.rowHeight`). Settings rows are at least 44 pt. Controls are 28 pt (26 small, 36 large). Small keycaps are 20 pt, medium 30 pt, tour keycaps 40 pt. Menus are 272 pt wide, submenus 232 pt, the command menu 360 pt.
 
 ## Surface
 
@@ -64,7 +65,7 @@ Labels, captions, buttons, keys and menu rows never wrap. They are one line and 
 
 ```text
 head      lead symbol, kicker, trailing item, close
-title     Supreme title (smaller at small and medium)
+title     title in Pilcrow Rounded Semibold (smaller at small and medium)
 body      inkMuted body
 keys      large keycaps and live state ("Press it now", then "Nice")
 children  rows, menus, groups
@@ -97,7 +98,7 @@ Each entry gives the design intent. The Swift type is in brackets.
 
 **Segmented** [`OSegmented`]. Picks one of two to four options with a sliding thumb. For more than four, use a menu submenu or the layout thumbnail grid.
 
-**Slider** [`OSlider`, `OBarSlider`, `OKnob`]. Sets a number by dragging. `OSlider` has a thin track and a thumb. `OBarSlider` is a pill whose fill is the indicator.
+**Slider** [`OSlider`, `OBarSlider`, `OKnob`]. Sets a number by dragging. `OSlider` has a thin track and a thumb; its value reads at the trailing edge, and nothing floats above the thumb, so it never clips. `OBarSlider` is a pill whose fill is the indicator.
 - A press without movement jumps to the press point and springs there. A drag on the line follows the pointer. A drag on the bar is relative to the grab point, so it never jumps.
 - Only the value rounds to `step`. The fill follows the pointer.
 - Hold Option while dragging for a tenth of the speed.
@@ -113,15 +114,23 @@ Each entry gives the design intent. The Swift type is in brackets.
 
 **Template save row** [`TemplateSaveRow`]. Cursor actions show a name field beside Save and Cancel. Return saves the template. Escape returns to the action list. The menu receives text input while the field is present. Saving does not open Settings. Hovering a saved template replaces its number with an X. Clicking the X deletes the template and keeps the menu open.
 
-**Kbd** [`Kbd`]. Keycaps for a shortcut, a chord or a sequence. Small keycaps (20 pt) go in tooltips, labels and buttons. Menu rows use plain `kbd` text. Medium keycaps (30 pt, raised) go in onboarding key pickers and summaries. Large keycaps (40 pt) go only in coach marks, where the real key press fills them with `accent` and sinks them 2 pt. Order modifiers the macOS way: control, option, shift, command, then the key.
+**Kbd** [`Kbd`]. Keycaps for a shortcut, a chord or a sequence. Small keycaps (20 pt, `well`) go in tooltips, labels and buttons. Menu rows use plain `kbd` text. Medium keycaps (30 pt) go in onboarding key pickers and summaries. Large keycaps (40 pt) go only in coach marks, where the real key press fills them with `accent` and sinks them 2 pt. Medium and large keycaps are flat `surfaceRaised` tiles, with no shadow and no bottom edge. Order modifiers the macOS way: control, option, shift, command, then the key.
 
 **Tooltip** [`OTooltip`, `Tooltip`]. The smallest surface (`extraSmall`). One short phrase in sentence case, with no full stop. Never a button inside. Every icon-only button gets one. A shortcut is one chord at most. It points at its target with a small caret.
 
-**Menu** [`Popup`, `OMenuRow`, `OMenuButton`, `OMenuPicker`]. A dropdown with groups, checks, radios, switches, inline controls and nested submenus, with type-to-search.
+**Menu** [`Popup`, `OMenuRow`, `OMenuButton`, `OMenuPicker`]. A dropdown with groups, checks, radios, switches, inline controls and nested submenus, with type-to-search. The picker button is an outlined pill (`borderControl`) with the current value in `body-medium` and the up-down chevron.
+- Menu rows carry no symbols. The lead column holds only a check, a radio dot or an app icon. A notification dot sits after the label.
+- The status menu root holds five rows: search, Layout, Workspaces, Settings and Help, then the footer with the version and Quit. The search row is a `well` row at the top. The workspace strip, Bring Window Here, What's New and the tutorial live one level down, in Workspaces and Help. Search finds them all.
 - Nest one level, two at most. Put the current choice of a radio group in the parent row's value.
 - Every actionable row shows its shortcut.
 - Give hidden aliases to commands that live inside a custom control, so search still finds them.
 - Arrow keys, return and escape work. Typing focuses search.
+
+**Welcome card and intro** [`WelcomeView`, `WordmarkView`]. The welcome card opens with the cat mascot at 72 pt, not the app icon, above the `display` title. Permission rows use `inkMuted` symbols and the page dots are `ink`. The intro wordmark is the lockup: the cat beside the wordmark, both white, with the tagline below.
+
+**Settings window** [`SettingsView`, `Sidebar`, `SideItem`, `PaneHost`]. 880 by 620 pt by default, at least 760 by 520, at the normal window level, so it never floats above other windows. The rail is 196 pt: the animated cat mascot at 56 pt beside the 26 pt wordmark, then the search field, then the pages as text pills. The cat follows the cursor with its eyes while the cursor is over the rail. Its feeling and colour report the state: `content` in `ink` while CatWM runs, `sleepy` in `inkMuted` while tiling is paused, `annoyed` in `warning` while a shortcut has a problem, `alert` in `warning` while Accessibility or the event tap is missing, and `sad` in `danger` when the config cannot be saved. The pane shows the page title in `title`, then the groups. The status line at the top of General appears only when Accessibility or the event tap is missing. The only floating pill over the pane carries a save error, the shortcut problem count or skipped config lines.
+
+**Overview** [`SortView`]. A flat `surface` panel with the `float` elevation, not glass. Each workspace, the Close lane and each full screen window is a `surfaceRaised` container. The add lane is a dashed slot. A hovered or selected window row is a `hover` fill, and its window in the thumbnail is `ink`. Only a drop target uses `accent` (`accentSoft` fill, `dangerSoft` on Close). The layout pill is an outlined pill, like the picker.
 
 **Command menu**. A menu that opens with the search field first, 360 pt wide. Results group under their top-level parent and show the rest of the path as a breadcrumb. It shares its data with the menu so the two never disagree.
 
@@ -132,6 +141,10 @@ Each entry gives the design intent. The Swift type is in brackets.
 **Layout picker and thumb** [`LayoutPicker`]. Picks a layout from a grid of thumbnails. The hovered layout's name and description show on one line below. Thumbnails carry no labels, so nothing wraps. Panes are `tint`. The main pane is a darker neutral. A selected main pane is `accent`. Use the app's own layout descriptions as tooltips.
 
 **Workspace strip** [`WorkspaceStrip`]. Workspaces as pills. The current one is `accent` with `onAccent` text. Workspaces with windows are `ink` at 500. Empty ones are `inkFaint` at 400. Both meet 4.5:1.
+
+**Cat** [`CatSymbol`, `CatFeeling`]. The CatWM cat, filled with the foreground style. A feeling sets the eyes: content, alert, sad, annoyed, sleepy or shut. A change of feeling morphs the eyes with the spring of the new feeling. `CatSymbol.image(_:height:)` gives a template `NSImage` for AppKit. The eye geometry is the same as in `docs/design/cat-feelings.html`.
+
+**Cat mascot** [`CatMascot`, `CatMoves`]. The flat cat with life. The eyes sit on an imaginary sphere around the head, so a look turns the face: the eyes slide, get thin near the edge and go out of view behind it. The cat breathes, looks around a little and blinks at random times. `moves.play(.hop)`, `.spin`, `.wiggle` or `.look` plays a move once. The moves are keyframe tracks in `CatMotion.swift`. Use the mascot only where the cat is the subject, such as onboarding or About. Use `CatSymbol` everywhere else. With reduce motion, the mascot is a still `CatSymbol`.
 
 ## Symbols
 
@@ -166,4 +179,4 @@ Short, second person, sentence case. No exclamation marks, except "Nice". Name t
 
 ## Assets
 
-The app icon and wordmark are in `Resources/Icon` and `Resources/Fonts`. The wordmark uses `Theme.wordmark`.
+The app icon and wordmark are in `Resources/Icon` and `Resources/Fonts`. The wordmark uses `Theme.wordmark`. `AppIcon` is the dark appearance, the white cat on black, and the bundle icon. `AppIcon-Light` is the light appearance, the black cat on white. macOS 26 can switch between the two from one Icon Composer `.icon` file compiled by `actool`. The build does not do that yet, so the dark icon shows in both appearances. `CatMark.svg` is the cat alone, filled with `currentColor`.

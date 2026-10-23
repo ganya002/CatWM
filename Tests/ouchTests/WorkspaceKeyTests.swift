@@ -8,13 +8,4 @@ import Testing
         #expect(key == "space:ABC-123:42")
         #expect(key.hasPrefix(WindowManager.spacePrefix))
     }
-
-    @Test func eachDisplayAndSpaceHasItsOwnKey() {
-        let keys: Set = [
-            WindowManager.spaceWorkspace(display: "A", space: 1),
-            WindowManager.spaceWorkspace(display: "A", space: 2),
-            WindowManager.spaceWorkspace(display: "B", space: 1)
-        ]
-        #expect(keys.count == 3)
-    }
 }

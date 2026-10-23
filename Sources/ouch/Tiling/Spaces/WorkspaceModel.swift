@@ -18,15 +18,11 @@ struct WorkspaceModel {
 
     func isShown(_ workspace: String?) -> Bool { workspace.map(shownSet.contains) ?? false }
 
-    func isFullscreenWorkspace(_ workspace: String?) -> Bool { workspace.map { fullscreenHost[$0] != nil } ?? false }
-
     mutating func assign(_ id: CGWindowID, to workspace: String?) { workspaceOf[id] = workspace }
 
     mutating func swapWorkspaces(_ first: CGWindowID, _ second: CGWindowID) {
         (workspaceOf[first], workspaceOf[second]) = (workspaceOf[second], workspaceOf[first])
     }
-
-    mutating func keepWorkspaces(where keep: (String) -> Bool) { workspaceOf = workspaceOf.filter { keep($0.value) } }
 
     mutating func forget(_ id: CGWindowID) {
         workspaceOf[id] = nil

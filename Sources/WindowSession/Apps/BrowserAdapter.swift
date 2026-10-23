@@ -93,9 +93,8 @@ struct ChromiumAdapter: AppAdapter {
 
 enum BrowserScript {
     static func restore(_ source: String, state: AppState, timeout: TimeInterval) async -> Bool {
-        let tabs = state.tabs.filter(isOpenable)
+        let (tabs, selected) = state.kept(isOpenable)
         guard !tabs.isEmpty else { return false }
-        let selected = state.current.flatMap { tabs.firstIndex(of: $0) } ?? 0
         let output = await AppScript.run(source, language: .appleScript,
                                          arguments: [String(selected + 1)] + tabs, timeout: timeout)
         return output != nil

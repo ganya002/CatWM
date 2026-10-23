@@ -15,7 +15,12 @@ struct Kbd: View {
         HStack(spacing: size == .large ? 6 : size == .medium ? Theme.Space.extraSmall : Theme.Space.xxs) {
             ForEach(Array(keys.enumerated()), id: \.offset) { _, key in cap(key) }
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(keys.map { Self.spoken[$0] ?? $0 }.joined(separator: " "))
     }
+
+    private static let spoken = ["⌘": "Command", "⌥": "Option", "⇧": "Shift", "⌃": "Control", "↩": "Return",
+                                 "⇥": "Tab", "⎋": "Escape", "⌫": "Delete", "⇪": "Caps Lock", "␣": "Space"]
 
     @ViewBuilder private func cap(_ key: String) -> some View {
         if size == .small {
@@ -36,16 +41,7 @@ struct Kbd: View {
                 .background {
                     let shape = RoundedRectangle(cornerRadius: large ? Theme.Radius.medium : Theme.Radius.small,
                                                  style: .continuous)
-                    if pressed {
-                        shape.fill(Theme.accent)
-                    } else {
-                        shape.fill(onAccent ? Theme.onAccent : Theme.surface)
-                            .overlay(alignment: .bottom) {
-                                shape.fill(Theme.surfaceSunken).frame(height: large ? 3 : 2)
-                                    .mask(shape)
-                            }
-                            .elevation(.small, in: shape)
-                    }
+                    shape.fill(pressed ? Theme.accent : onAccent ? Theme.onAccent : Theme.surfaceRaised)
                 }
                 .offset(y: pressed ? 2 : 0)
                 .animation(Motion.fade, value: pressed)

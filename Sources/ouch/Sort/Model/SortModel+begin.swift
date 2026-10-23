@@ -86,14 +86,6 @@ extension SortModel {
         changed()
     }
 
-    func pick(_ choice: SortStrategy) {
-        strategy = choice
-        let other = reserved()
-        edit { $0.sort(by: choice, layouts: layouts, avoiding: other) }
-        selected = nil
-        scrollToStart()
-    }
-
     func closeDuplicates() { edit { $0.closeDuplicates() } }
 
     func rename(_ lane: UUID, _ name: String) {
@@ -113,6 +105,7 @@ extension SortModel {
             return
         }
         let workspace = snapshot.key(String(number))
+        guard workspace != snapshot.lanes[i].workspace else { return }
         if snapshot.perDisplay {
             notice = SortNotice(text: "Workspaces follow the order of your Desktops. Drag a column to reorder.",
                                 undo: nil)

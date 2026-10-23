@@ -5,7 +5,10 @@ final class Onboarding {
     static let shared = Onboarding()
     static let doneKey = "didOnboard"
 
+    static let startedKey = "onboardingStarted"
+
     static var isDone: Bool { UserDefaults.standard.bool(forKey: doneKey) }
+    static var isStarted: Bool { UserDefaults.standard.bool(forKey: startedKey) }
 
     weak var statusButton: NSStatusBarButton? {
         didSet { MenuBarTip.shared.statusButton = statusButton }

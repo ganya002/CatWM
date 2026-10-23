@@ -95,14 +95,22 @@ extension WindowManager {
             let occupied = Set(workspaceOf.values).union(virtualShown.values)
                 .filter { isVirtual($0) && !isPending($0) }
                 .sorted(by: workspaceSort)
-            guard !occupied.isEmpty else { return nil }
-            let i = occupied.firstIndex(of: cur) ?? 0
-            return occupied[((i + delta) % occupied.count + occupied.count) % occupied.count]
+            return Self.step(occupied, from: cur, by: delta, sortedBy: workspaceSort)
         }
         if config.workspacesPerDisplay, let number = Int(trimmed), number >= 1, let display = currentScreen()?.uuid {
             return WorkspaceKey.make(String(number), on: display, perDisplay: true)
         }
         return trimmed
+    }
+
+    static func step(_ sorted: [String], from current: String, by delta: Int,
+                     sortedBy before: (String, String) -> Bool) -> String? {
+        guard !sorted.isEmpty else { return nil }
+        let index = sorted.firstIndex(of: current) ?? {
+            let next = sorted.firstIndex { before(current, $0) } ?? sorted.count
+            return delta > 0 ? next - 1 : next
+        }()
+        return sorted[((index + delta) % sorted.count + sorted.count) % sorted.count]
     }
 
     func workspaceNumber(_ workspace: String) -> String { WorkspaceKey.number(workspace) }
@@ -162,6 +170,6 @@ extension WindowManager {
         guard config.virtualWorkspaces else { return }
         updateNativeCatalog(Screen.all())
         refresh()
-        HUD.shared.show("Ouch controls this Desktop", on: currentScreen()?.nsScreen)
+        HUD.shared.show("CatWM controls this Desktop", on: currentScreen()?.nsScreen)
     }
 }

@@ -7,9 +7,12 @@ struct WordmarkView: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            Text("Ouch").font(Theme.wordmark(size)).foregroundStyle(.white)
-                .legible()
-                .squish(on: model.landed, delay: 0.3)
+            HStack(alignment: .center, spacing: size * 0.12) {
+                CatMascot(feeling: .content).frame(height: size * 0.92).foregroundStyle(.white)
+                Text("CatWM").font(Theme.wordmark(size)).tracking(-size * 0.03).foregroundStyle(.white)
+            }
+            .legible()
+            .squish(on: model.landed, delay: 0.3)
             tagline(max(16, min(22, size / 6)))
                 .foregroundStyle(Color.white.opacity(0.92))
                 .legible(strong: true)

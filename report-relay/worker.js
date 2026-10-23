@@ -32,7 +32,7 @@ export default {
     try {
       const sections = []
       for (const f of files) sections.push(await section(f))
-      const description = [body, "", "---", version ? `Ouch ${version}` : "", "", ...sections].join("\n")
+      const description = [body, "", "---", version ? `CatWM ${version}` : "", "", ...sections].join("\n")
       const input = { teamId: env.LINEAR_TEAM_ID, title, description }
       if (env.LINEAR_LABEL_ID) input.labelIds = [env.LINEAR_LABEL_ID]
       const r = await linear(env, `mutation($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { identifier } } }`, { input })
@@ -65,7 +65,7 @@ async function perf(req, env) {
   const app = p.app && typeof p.app === "object" ? word(p.app.bundle, 120) : ""
   const tags = Array.isArray(p.tags) ? p.tags.slice(0, 6).map((t) => word(t, 20)).join(", ") : ""
   const line = [
-    `Ouch ${word(p.version, 20)}`, `macOS ${word(p.os, 10)}`, word(p.hardware, 30), `${num(p.hz, 500)} Hz`,
+    `CatWM ${word(p.version, 20)}`, `macOS ${word(p.os, 10)}`, word(p.hardware, 30), `${num(p.hz, 500)} Hz`,
     `${num(p.displays, 20)} display(s)`, `curve ${word(p.curve, 60)} ${num(p.durationMs, 5000)}ms`,
     p.hangMs > 0 ? `hang ${num(p.hangMs, 600000)}ms` : `p95 ${num(p.p95Ms, 100000)}ms, ${Math.round(num(p.slowShare, 1) * 100)}% slow frames over ${num(p.frames, 100000)}`,
     app ? `app ${app}: ${num(p.app.stepMs, 100000)}ms per AX step, ${Math.round(num(p.app.skipped, 1) * 100)}% skipped` : "",
@@ -88,7 +88,7 @@ async function perf(req, env) {
       }
       return json({ id: issue.identifier, duplicate: true })
     }
-    const input = { teamId: env.LINEAR_TEAM_ID, title, description: `Filed automatically by Ouch.\n\n${line}` }
+    const input = { teamId: env.LINEAR_TEAM_ID, title, description: `Filed automatically by CatWM.\n\n${line}` }
     const labels = [env.LINEAR_LABEL_ID, env.LINEAR_PERF_LABEL_ID].filter(Boolean)
     if (labels.length) input.labelIds = labels
     const r = await linear(env, `mutation($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { identifier } } }`, { input })

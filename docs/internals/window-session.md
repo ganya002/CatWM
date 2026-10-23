@@ -1,6 +1,6 @@
 # Window session
 
-The `WindowSession` module saves and opens app windows. The app imports it with `import WindowSession`. The module does not know about Ouch workspaces, layouts or Desktops. The code in `Sources/ouch/Templates/` uses the module and changes the Ouch state.
+The `WindowSession` module saves and opens app windows. The app imports it with `import WindowSession`. The module does not know about CatWM workspaces, layouts or Desktops. The code in `Sources/ouch/Templates/` uses the module and changes the CatWM state.
 
 ## Module map
 
@@ -133,7 +133,7 @@ sequenceDiagram
 
 ### Background tabs
 
-macOS gives each native tab (Terminal, Finder, TextEdit) its own AX window. Only the selected tab is on screen. A hidden window of an app with an adapter is a background tab when an on-screen window of the same app has the same frame (within 1 point). The adapter saves all tabs in the state of the visible window, so the hidden tab windows are removed from the template. If the visible window gets no state, for example because Automation is off, Ouch keeps the hidden windows.
+macOS gives each native tab (Terminal, Finder, TextEdit) its own AX window. Only the selected tab is on screen. A hidden window of an app with an adapter is a background tab when an on-screen window of the same app has the same frame (within 1 point). The adapter saves all tabs in the state of the visible window, so the hidden tab windows are removed from the template. If the visible window gets no state, for example because Automation is off, CatWM keeps the hidden windows.
 
 ```mermaid
 flowchart LR
@@ -169,7 +169,7 @@ flowchart TD
 
 ## App adapters
 
-An adapter reads the state of one app and opens it again. For scripted apps, JavaScript for Automation (JXA) reads the state and returns JSON, and AppleScript or a file opens it again. The code editor adapters need no script and no Automation: they read the editor's own recent-project data with `SQLiteRead` (read-only), and they get the AX title, frame and document of each window to choose the project. `AppScript` runs each script in an `osascript` process. A timer stops the process at the timeout, so an app that does not respond cannot stop Ouch.
+An adapter reads the state of one app and opens it again. For scripted apps, JavaScript for Automation (JXA) reads the state and returns JSON, and AppleScript or a file opens it again. The code editor adapters need no script and no Automation: they read the editor's own recent-project data with `SQLiteRead` (read-only), and they get the AX title, frame and document of each window to choose the project. `AppScript` runs each script in an `osascript` process. A timer stops the process at the timeout, so an app that does not respond cannot stop CatWM.
 
 ```mermaid
 classDiagram
@@ -239,11 +239,11 @@ flowchart TD
     Title -- No --> None["no state"]
 ```
 
-Xcode has no recent list that Ouch reads. `ProjectGuess.xcodeProject` walks up from the AXDocument file, at most 12 folders and not past the home folder, to the first folder with an `.xcworkspace`, an `.xcodeproj` or a `Package.swift`.
+Xcode has no recent list that CatWM reads. `ProjectGuess.xcodeProject` walks up from the AXDocument file, at most 12 folders and not past the home folder, to the first folder with an `.xcworkspace`, an `.xcodeproj` or a `Package.swift`.
 
 ### Terminal tabs
 
-Terminal scripting has no command that makes a tab. For a window with more than one tab, `TerminalGroup.file` writes a temporary window group file (`type = Window Group`, `WindowList`, a `Window Settings` array with `Tab Working Directory URL` and `TabSelected` for each tab), and Ouch opens it with Terminal. Terminal opens one window with all the tabs. The file is deleted after 30 seconds. The tab profile is the Terminal default profile.
+Terminal scripting has no command that makes a tab. For a window with more than one tab, `TerminalGroup.file` writes a temporary window group file (`type = Window Group`, `WindowList`, a `Window Settings` array with `Tab Working Directory URL` and `TabSelected` for each tab), and CatWM opens it with Terminal. Terminal opens one window with all the tabs. The file is deleted after 30 seconds. The tab profile is the Terminal default profile.
 
 ### Chromium and Firefox browsers
 
@@ -343,7 +343,7 @@ flowchart TD
     Reopen -- fails --> Failed["noteFailed"]
 ```
 
-Some apps, such as Electron apps, have no "New Window" item and no Cmd-N. For these apps, Ouch sends a reopen request to the running app, without bringing it to the front. This is the same request that a Dock click sends, and the app makes a window. The request then stays pending until the window appears.
+Some apps, such as Electron apps, have no "New Window" item and no Cmd-N. For these apps, CatWM sends a reopen request to the running app, without bringing it to the front. This is the same request that a Dock click sends, and the app makes a window. The request then stays pending until the window appears.
 
 A failed request can try again after 0.5 seconds. It can try 3 times. A started command or a started open does not try again, so a slow app does not get two windows.
 
@@ -366,7 +366,7 @@ stateDiagram-v2
     GiveUp --> [*]
 ```
 
-The 3-second wait lets an app bring back its own windows (macOS Resume) before Ouch opens new ones. `WindowMatch` then pairs those windows with the saved windows.
+The 3-second wait lets an app bring back its own windows (macOS Resume) before CatWM opens new ones. `WindowMatch` then pairs those windows with the saved windows.
 
 ### Match windows
 

@@ -28,13 +28,13 @@ struct WelcomeView: View {
 
     private var permissions: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 72, height: 72)
+            CatMascot(feeling: .content).frame(height: 72).foregroundStyle(Theme.ink)
                 .offset(y: model.landed || reduceMotion ? 0 : -28)
                 .opacity(model.landed ? 1 : 0)
                 .animation(.easeIn(duration: 0.22), value: model.landed) // style-ok: drop lands on squish beat
                 .squish(on: model.landed, delay: 0.22)
-                .padding(.leading, -6).padding(.vertical, -6)
-            Text("Welcome to Ouch").textStyle(.largeTitle).oneLine()
+                .padding(.top, 4)
+            Text("Welcome to CatWM").textStyle(.largeTitle).oneLine()
                 .padding(.top, 16).padding(.bottom, 8)
             Text("Each button opens System Settings, with steps beside it.")
                 .font(Theme.body(13.5)).lineSpacing(2).foregroundStyle(Theme.inkMuted)
@@ -47,8 +47,13 @@ struct WelcomeView: View {
                 permission(PermissionItem(granted: model.inputMonitoring, symbol: "keyboard", title: "Input Monitoring",
                                           required: false, detail: "Makes Caps Lock shortcuts instant", primary: false,
                                           action: model.allowInputMonitoring))
+                permission(PermissionItem(granted: model.screenRecording, symbol: "record.circle",
+                                          title: "Screen Recording", required: false,
+                                          detail: "Takes a picture of each saved template", primary: false,
+                                          action: model.allowScreenRecording,
+                                          test: model.screenTestDone ? nil : model.takeTestImage))
                 permission(PermissionItem(granted: model.login, symbol: "power", title: "Open at login",
-                                          required: false, detail: "Starts Ouch when you log in", primary: false,
+                                          required: false, detail: "Starts CatWM when you log in", primary: false,
                                           action: model.allowLogin))
             }
             Spacer(minLength: 24)
@@ -72,6 +77,7 @@ struct WelcomeView: View {
         let detail: String
         let primary: Bool
         let action: () -> Void
+        var test: (() -> Void)?
     }
 
     private func permission(_ item: PermissionItem) -> some View {
@@ -79,20 +85,23 @@ struct WelcomeView: View {
         return HStack(spacing: 12) {
             Image(systemName: granted && symbol == "lock" ? "lock.open" : symbol)
                 .font(Theme.symbol(Theme.Icon.large))
-                .foregroundStyle(Theme.accentInk)
+                .foregroundStyle(Theme.inkMuted)
                 .contentTransition(.symbolEffect(.replace))
                 .frame(width: 22)
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 6) {
                     Text(item.title).font(Theme.body(14)).oneLine()
                     Text(required ? "Required" : "Optional").font(Theme.body(11.5, .medium))
-                        .foregroundStyle(required ? Theme.accentInk : Theme.inkMuted).oneLine()
+                        .foregroundStyle(required ? Theme.ink : Theme.inkMuted).oneLine()
                 }
                 Text(item.detail).textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine()
             }
             Spacer(minLength: 0)
             ZStack(alignment: .leading) {
-                if granted {
+                if granted, let test = item.test {
+                    OButton("Test Image", size: .small, action: test)
+                        .tooltip("Takes one image so macOS asks now, not later")
+                } else if granted {
                     OStatus(kind: .success, text: symbol == "power" ? "On" : "Granted")
                         .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 } else {
@@ -106,7 +115,7 @@ struct WelcomeView: View {
 
     private var keys: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Ouch shortcut guide").textStyle(.largeTitle).oneLine()
+            Text("CatWM shortcut guide").textStyle(.largeTitle).oneLine()
                 .padding(.top, 2).padding(.bottom, 8)
             Text("Like Vim, Photoshop or Blender, it takes some time to learn. Then you work faster.")
                 .font(Theme.body(13.5)).lineSpacing(2).foregroundStyle(Theme.inkMuted)
@@ -133,7 +142,7 @@ struct WelcomeView: View {
     private func dots(_ current: Int) -> some View {
         HStack(spacing: 6) {
             ForEach(0..<2, id: \.self) { i in
-                Capsule().fill(i == current ? Theme.accent : Theme.inkFaint.opacity(0.45))
+                Capsule().fill(i == current ? Theme.ink : Theme.inkFaint.opacity(0.45))
                     .frame(width: i == current ? 16 : 6, height: 6)
             }
         }

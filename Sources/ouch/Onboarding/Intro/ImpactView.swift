@@ -25,7 +25,7 @@ final class ImpactView: NSView {
         flash.add(blink, forKey: "blink")
 
         let reach = hypot(max(center.x, bounds.width - center.x), max(center.y, bounds.height - center.y)) * 1.1
-        for (i, (color, width)) in [(NSColor.white, 3.0), (Theme.iconBlue, 10.0)].enumerated() {
+        for (i, (color, width)) in [(NSColor.white, 3.0), (Theme.iconAccent, 10.0)].enumerated() {
             let ring = CAShapeLayer()
             let circle = CGRect(x: -reach, y: -reach, width: reach * 2, height: reach * 2)
             ring.path = CGPath(ellipseIn: circle, transform: nil)

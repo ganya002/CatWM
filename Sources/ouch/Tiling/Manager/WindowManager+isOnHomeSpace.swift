@@ -26,9 +26,9 @@ extension WindowManager {
         return right
     }
 
-    private func monitorScreen(of id: CGWindowID, in screens: [Screen]) -> Screen {
+    private func monitorScreen(of id: CGWindowID, in screens: [Screen]) -> Screen? {
         workspaceOf[id].flatMap { monitorOf[$0] }.flatMap { uuid in screens.first { $0.uuid == uuid } }
-            ?? screens[0]
+            ?? screens.first
     }
 
     func park(_ id: CGWindowID, screens: [Screen]) {
@@ -36,7 +36,7 @@ extension WindowManager {
         let frame = animator.destination(id) ?? window.cachedFrame
         guard !frame.isNull, !isParked(frame, screens) else { return }
         if let slide, slide.outgoing.contains(id) {
-            let screen = monitorScreen(of: id, in: screens)
+            guard let screen = monitorScreen(of: id, in: screens) else { return }
             let x = slide.forward ? screen.frame.minX - frame.width + 1 : screen.frame.maxX - 1
             let edge = CGRect(x: x, y: frame.minY, width: frame.width, height: frame.height)
             guard !frame.approxEqual(edge, tolerance: 2), !animator.isMoving(id, to: edge) else { return }
@@ -51,8 +51,7 @@ extension WindowManager {
     }
 
     private func cornerPark(_ id: CGWindowID, screens: [Screen]) {
-        guard let window = windows[id] else { return }
-        let screen = monitorScreen(of: id, in: screens)
+        guard let window = windows[id], let screen = monitorScreen(of: id, in: screens) else { return }
         let size = (animator.destination(id) ?? window.cachedFrame).size
         let frame = CGRect(origin: parkingSpot(size: size, on: screen, screens), size: size)
         guard !animator.isMoving(id, to: frame) else { return }
@@ -73,7 +72,7 @@ extension WindowManager {
             floatFrames[id] = nil
             return
         }
-        let screen = screen(of: window, in: screens) ?? screens[0]
+        guard let screen = screen(of: window, in: screens) ?? screens.first else { return }
         var rect = floatFrames.removeValue(forKey: id) ?? targets[id]
             ?? CGRect(x: screen.visible.midX - frame.width / 2, y: screen.visible.midY - frame.height / 2,
                       width: frame.width, height: frame.height)
@@ -129,7 +128,7 @@ extension WindowManager {
             let frame = animator.destination(id) ?? window.cachedFrame
             animator.cancel(id)
             guard isParked(frame, screens) else { continue }
-            let screen = screen(of: window, in: screens) ?? screens[0]
+            guard let screen = screen(of: window, in: screens) ?? screens.first else { continue }
             var rect = floatFrames[id] ?? targets[id]
                 ?? CGRect(x: screen.visible.midX - frame.width / 2, y: screen.visible.midY - frame.height / 2,
                           width: frame.width, height: frame.height)

@@ -4,26 +4,48 @@ import PermissionFlow
 enum Permission: CaseIterable {
     case accessibility
     case inputMonitoring
+    case screenRecording
 
     var isGranted: Bool {
         switch self {
         case .accessibility: AXIsProcessTrusted()
         case .inputMonitoring: IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) == kIOHIDAccessTypeGranted
+        case .screenRecording: ScreenRecording.isGranted
         }
     }
 
-    var title: String { self == .accessibility ? "Accessibility" : "Input Monitoring" }
+    var title: String {
+        switch self {
+        case .accessibility: "Accessibility"
+        case .inputMonitoring: "Input Monitoring"
+        case .screenRecording: "Screen & System Audio Recording"
+        }
+    }
 
-    var pane: PermissionFlowPane { self == .accessibility ? .accessibility : .inputMonitoring }
+    var pane: PermissionFlowPane {
+        switch self {
+        case .accessibility: .accessibility
+        case .inputMonitoring: .inputMonitoring
+        case .screenRecording: .screenRecording
+        }
+    }
+
+    private var tccService: String {
+        switch self {
+        case .accessibility: "Accessibility"
+        case .inputMonitoring: "ListenEvent"
+        case .screenRecording: "ScreenCapture"
+        }
+    }
 
     func request() {
         guard !isGranted else { return }
+        if self == .screenRecording { ScreenRecording.watching = true }
         PermissionGuide.shared.show(self)
     }
 
     func reset() {
-        Process.runTool("/usr/bin/tccutil", ["reset", self == .accessibility ? "Accessibility" : "ListenEvent",
-                                             Bundle.main.bundleIdentifier ?? "local.ouch"])
+        Process.runTool("/usr/bin/tccutil", ["reset", tccService, Bundle.main.bundleIdentifier ?? "local.catwm"])
         PermissionGuide.shared.show(self)
     }
 

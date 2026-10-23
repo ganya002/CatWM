@@ -47,6 +47,13 @@ final class AXWriter {
         }
     }
 
+    func forget(_ id: CGWindowID) {
+        queue.async { [self] in
+            stepCosts[id] = nil
+            lock.withLock { epochs[id] = nil }
+        }
+    }
+
     func run(_ work: @escaping () -> Void) { queue.async(execute: work) }
 
     func run(for id: CGWindowID, _ work: @escaping (_ isCurrent: () -> Bool) -> Void) {

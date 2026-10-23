@@ -9,7 +9,11 @@ struct SearchResults: View {
         let results = SettingsIndex.search(settingsUI.search, doc: doc)
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                OPageTitle(crumbs: ["Settings", "Search", "“\(settingsUI.search)”"])
+                HStack(alignment: .firstTextBaseline, spacing: Theme.Space.small) {
+                    Text("Search").textStyle(.title).foregroundStyle(Theme.ink).oneLine()
+                    Text("“\(settingsUI.search)”").font(Theme.body(15)).foregroundStyle(Theme.inkMuted).oneLine()
+                }
+                .accessibilityAddTraits(.isHeader)
                 if results.isEmpty {
                     Text("Nothing matches. Try another word, like “gaps” or “focus”.")
                         .font(Theme.body(13.5)).foregroundStyle(Theme.inkMuted).oneLine()
@@ -27,7 +31,7 @@ struct SearchResults: View {
                     }
                 }
             }
-            .padding(.horizontal, Theme.Space.page).padding(.top, 22).padding(.bottom, 40)
+            .padding(.horizontal, 28).padding(.top, 22).padding(.bottom, 40)
             .frame(maxWidth: 660, alignment: .leading)
             .frame(maxWidth: .infinity, alignment: .leading)
         }

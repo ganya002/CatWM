@@ -53,6 +53,7 @@ struct BindRowView: View {
                     RemoveButton(help: "Delete shortcut") {
                         withAnimation(Motion.easeOut) { doc.binds.removeAll { $0.id == rowID } }
                         settingsUI.expanded.remove(rowID)
+                        if settingsUI.recording == rowID { settingsUI.recording = nil }
                     }
                 }
                 if editorOpen {

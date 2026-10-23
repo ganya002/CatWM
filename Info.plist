@@ -2,8 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleIdentifier</key><string>local.ouch</string>
-    <key>CFBundleName</key><string>Ouch</string>
+    <key>CFBundleIdentifier</key><string>local.catwm</string>
+    <key>CFBundleName</key><string>CatWM</string>
     <key>CFBundleExecutable</key><string>ouch</string>
     <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundlePackageType</key><string>APPL</string>
@@ -13,9 +13,9 @@
     <key>LSUIElement</key><true/>
     <key>NSHighResolutionCapable</key><true/>
     <key>NSAppleEventsUsageDescription</key><string>Ouch reads and reopens browser tabs, terminal folders and Finder folders when you save or open a workspace template.</string>
-    <key>SUFeedURL</key><string>https://api.amore.computer/v1/apps/local.ouch/appcast.xml</string>
-    <key>SUPublicEDKey</key><string>OEHHPP5gzJfph4/A3l7EpY7xTnvwUe1QRzHnpJHP8dY=</string>
+    <key>SUFeedURL</key><string>https://api.amore.computer/v1/apps/local.catwm/appcast.xml</string>
+    <key>SUPublicEDKey</key><string>gPiZ83bJDg2xZ9JF+2NgdBD0qKwhpZ80kyCpDBTVg+o=</string>
     <key>SUEnableAutomaticChecks</key><true/>
-    <key>OuchReportURL</key><string>https://ouch-report-relay.nox-heights.workers.dev/report</string>
+    <key>OuchReportURL</key><string>https://catwm-report-relay.nox-heights.workers.dev/report</string>
 </dict>
 </plist>

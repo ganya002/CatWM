@@ -91,8 +91,7 @@ import Testing
         #expect(result.model.workspaceOf[7] == workspace)
         #expect(result.model.fullscreenHost[workspace] == 7)
         #expect(result.model.monitorOf[workspace] == "A")
-        #expect(result.model.isFullscreenWorkspace(workspace))
-        #expect(!result.model.isFullscreenWorkspace("1"))
+        #expect(result.model.fullscreenHost["1"] == nil)
         #expect(result.visible == [8])
         #expect(!result.park.contains(7))
     }

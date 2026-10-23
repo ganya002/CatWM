@@ -10,6 +10,7 @@ final class TemplateRestorer {
     var scheduler = RestoreScheduler()
     private var matchStability = MatchStability()
     private var waitingForMetadata = false
+    private var stalledBundles = Set<String>()
     var earlyRestored = Set<CGWindowID>()
     var pulled = Set<CGWindowID>()
     var pullOrigins: [CGWindowID: UInt64] = [:]
@@ -82,7 +83,8 @@ final class TemplateRestorer {
             try await matchWindows(deadline: deadline)
             prepareMatchedEarly()
             let now = Date()
-            let step = scheduler.step(now: now, deadline: deadline, targets: targets,
+            let step = scheduler.step(now: now, deadline: deadline,
+                                      targets: targets.filter { !stalledBundles.contains($0.bundleID) },
                                       matched: Set(matched.keys), apps: appStates())
             for bundle in step.launch {
                 try Task.checkCancellation()
@@ -95,10 +97,11 @@ final class TemplateRestorer {
                 adapterRequested.insert(request.savedID)
                 await perform(request, deadline: deadline)
             }
-            if !step.keepWaiting, !waitingForMetadata { break }
+            let stalled = Self.waitsOnStall(targets, matched: Set(matched.keys), stalled: stalledBundles)
+            if !step.keepWaiting, !waitingForMetadata, !stalled { break }
             let remaining = deadline.timeIntervalSince(Date())
             if remaining <= 0 { break }
-            let interval = step.keepWaiting ? RestoreScheduler.pollInterval : Self.settlePollInterval
+            let interval = step.keepWaiting || stalled ? RestoreScheduler.pollInterval : Self.settlePollInterval
             let pause = min(interval, remaining)
             try await Task.sleep(for: .milliseconds(max(1, Int(pause * 1000))))
         }
@@ -155,7 +158,8 @@ final class TemplateRestorer {
         let apps = NSRunningApplication.runningApplications(withBundleIdentifier: bundle).map {
             RestoreAX.App(pid: $0.processIdentifier, bundleID: bundle, launchDate: $0.launchDate)
         }
-        let raw = await RestoreAX.read(apps: apps, deadline: min(deadline, Date().addingTimeInterval(1.5)))
+        let (raw, complete) = await RestoreAX.read(apps: apps, deadline: min(deadline, Date().addingTimeInterval(1.5)))
+        if complete { stalledBundles.remove(bundle) } else { stalledBundles.insert(bundle) }
         let spaces = Set(Screen.all().map { Spaces.current(display: $0.uuid) })
         if scanLogged.insert(bundle).inserted || !raw.isEmpty && scanFound[bundle] != raw.count {
             scanFound[bundle] = raw.count
@@ -182,18 +186,6 @@ final class TemplateRestorer {
                                frame: candidate.frame))
         }
         return found
-    }
-
-    private func appStates() -> [String: AppLaunchState] {
-        var states: [String: AppLaunchState] = [:]
-        for bundle in Set(template.windows.map(\.bundleID)) {
-            let running = NSRunningApplication.runningApplications(withBundleIdentifier: bundle)
-            states[bundle] = AppLaunchState(
-                running: !running.isEmpty,
-                finishedLaunching: running.contains(where: \.isFinishedLaunching),
-                openable: NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundle) != nil)
-        }
-        return states
     }
 
     private func launch(_ bundleID: String) {
@@ -261,5 +253,23 @@ final class TemplateRestorer {
             if adapter { self.adapterFailed.insert(savedID) }
             self.scheduler.noteFailed(savedID, token: token, appName: appName, now: Date())
         }
+    }
+}
+
+extension TemplateRestorer {
+    func appStates() -> [String: AppLaunchState] {
+        var states: [String: AppLaunchState] = [:]
+        for bundle in Set(template.windows.map(\.bundleID)) {
+            let running = NSRunningApplication.runningApplications(withBundleIdentifier: bundle)
+            states[bundle] = AppLaunchState(
+                running: !running.isEmpty,
+                finishedLaunching: running.contains(where: \.isFinishedLaunching),
+                openable: NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundle) != nil)
+        }
+        return states
+    }
+
+    static func waitsOnStall(_ targets: [RestoreTarget], matched: Set<UUID>, stalled: Set<String>) -> Bool {
+        targets.contains { !matched.contains($0.id) && stalled.contains($0.bundleID) }
     }
 }

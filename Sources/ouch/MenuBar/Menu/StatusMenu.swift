@@ -18,7 +18,7 @@ final class StatusMenu: NSObject, NSWindowDelegate {
 
     func open() {
         guard let button, let buttonWindow = button.window, !isOpen else { return }
-        let screen = buttonWindow.screen ?? NSScreen.main ?? NSScreen.screens[0]
+        guard let screen = buttonWindow.screen ?? NSScreen.main ?? NSScreen.screens.first else { return }
         model.reset()
         model.rebuild()
         model.close = { [weak self] in self?.close() }

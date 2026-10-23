@@ -101,10 +101,10 @@ extension WindowManager {
         model.swapWorkspaces(first, second)
         if config.virtualWorkspaces, firstWorkspace != secondWorkspace {
             if let name = secondWorkspace, let window = windows[first] {
-                moveNativeWindow(window, to: name, follow: false)
+                moveNativeWindow(window, to: name, follow: false, from: firstWorkspace)
             }
             if let name = firstWorkspace, let window = windows[second] {
-                moveNativeWindow(window, to: name, follow: false)
+                moveNativeWindow(window, to: name, follow: false, from: secondWorkspace)
             }
         }
     }
@@ -130,8 +130,8 @@ extension WindowManager {
         case "togglefloating": toggleFloating()
         case "fullscreen": toggleZoom()
         case "nativefullscreen": toggleNativeFullscreen()
-        case "killactive": lastClose = Date(); focusedWindow()?.close()
-        case "minimize": focusedWindow()?.element.set(kAXMinimizedAttribute, kCFBooleanTrue)
+        case "killactive": lastClose = Date(); _ = focusedWindow().map { closeWindow($0.id) }
+        case "minimize": if let window = focusedWindow() { minimize(window) }
         case "exec": exec(arg)
         case "launch": launchCommand(arg)
         case "focusmonitor": focusMonitor(arg)
@@ -172,7 +172,7 @@ extension WindowManager {
         if config.virtualWorkspaces {
             SortPanel.shared.toggle()
         } else {
-            HUD.shared.show("Overview needs Ouch workspaces", on: currentScreen()?.nsScreen)
+            HUD.shared.show("Overview needs CatWM workspaces", on: currentScreen()?.nsScreen)
         }
     }
 

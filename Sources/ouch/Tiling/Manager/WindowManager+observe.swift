@@ -83,8 +83,9 @@ extension WindowManager {
     func learnMenuBar(_ target: CGRect, _ actual: CGRect) {
         guard let screen = screen(containing: target) else { return }
         let height = actual.minY - screen.frame.minY
-        guard height > 0, height <= 60, height > menuBarHeights[screen.uuid] ?? 0 else { return }
-        menuBarHeights[screen.uuid] = height
+        guard height > 0, height <= 60,
+              height > menuBarHeights[screen.uuid]?.height(on: screen.visible) ?? 0 else { return }
+        menuBarHeights[screen.uuid] = MenuBarFloor(height: height, visible: screen.visible)
         Log.info("\(screen.nsScreen.localizedName) keeps windows \(Int(height)) pt below its top; tiling below it")
         corrections = [:]
         refresh()
@@ -110,7 +111,7 @@ extension WindowManager {
     }
 
     func forget(_ id: CGWindowID) {
-        animator.cancel(id)
+        animator.forget(id)
         templateHiddenWindows[id] = nil
         if !restoringTemplate, focusClock > 0, focusStamps[id] == focusClock { refocusAfterClose = workspaceOf[id] }
         if pendingFocus?.id == id { cancelFocusRequest() }
@@ -126,6 +127,8 @@ extension WindowManager {
         floatFrames[id] = nil; floatZoom[id] = nil; targets[id] = nil; minSizes[id] = nil
         corrections[id] = nil; drags[id] = nil
         displayOf[id] = nil
+        nativeMoveTargets[id] = nil
+        nativeMembership[id] = nil
         closingNow.remove(id)
         visible.remove(id)
     }
@@ -189,7 +192,8 @@ extension WindowManager {
     func shouldFloat(_ window: Window, title: String?, resizable: Bool) -> Bool {
         if let practice, window.pid == practice.pid { return false }
         if let bundle = window.bundleID,
-           bundle == Bundle.main.bundleIdentifier || bundle.hasPrefix("local.ouch") || bundle == "local.hyprthyst" {
+           bundle == Bundle.main.bundleIdentifier || bundle.hasPrefix("local.catwm")
+            || bundle.hasPrefix("local.ouch") || bundle == "local.hyprthyst" {
             return true
         }
         if let bundle = window.bundleID, Self.alwaysFloatingApps.contains(bundle) { return true }

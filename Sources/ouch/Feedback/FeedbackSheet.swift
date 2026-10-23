@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct FeedbackSheet: View {
@@ -27,8 +28,8 @@ struct FeedbackSheet: View {
     }
 
     private var disclosure: String {
-        "This includes your description, Ouch's recent logs, your config and your Mac's setup. "
-            + "We use these to fix problems and improve Ouch."
+        "This includes your description, CatWM's recent logs, your config and your Mac's setup. "
+            + "We use these to fix problems and improve CatWM."
     }
 
     private var sendTitle: String {
@@ -43,6 +44,15 @@ struct FeedbackSheet: View {
             .foregroundStyle(Theme.ink)
             .scrollContentBackground(.hidden)
             .focused($focused)
+            .onKeyPress(.tab) {
+                let window = NSApp.keyWindow
+                if NSEvent.modifierFlags.contains(.shift) {
+                    window?.selectPreviousKeyView(nil)
+                } else {
+                    window?.selectNextKeyView(nil)
+                }
+                return .handled
+            }
             .padding(.horizontal, 6).padding(.vertical, 8)
             .frame(height: 120)
             .background(shape.fill(Theme.well))

@@ -9,13 +9,15 @@ struct GeneralPane: View {
     var body: some View {
         let status = settingsUI.status
         VStack(alignment: .leading, spacing: 30) {
-            StatusHero(settingsUI: settingsUI).setting(GeneralPane.searchStatus.id, settingsUI)
+            if !(status.trusted && status.keybindsActive) {
+                StatusHero(settingsUI: settingsUI).setting(GeneralPane.searchStatus.id, settingsUI)
+            }
 
             OGroup("Startup") {
                 OSwitchRow(GeneralPane.searchLogin.title, isOn: loginBinding)
                     .setting(GeneralPane.searchLogin.id, settingsUI)
                 if status.loginNeedsApproval {
-                    ORow("Waiting for approval", description: "Allow Ouch in Login Items",
+                    ORow("Waiting for approval", description: "Allow CatWM in Login Items",
                          symbol: "exclamationmark.triangle.fill") {
                         OButton("Open Login Items", size: .small) { LoginItem.openSettings() }
                     }

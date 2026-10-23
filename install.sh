@@ -3,8 +3,8 @@ set -e
 cd "$(dirname "$0")"
 [ "${1:-}" = "--stable" ] || export OUCH_CHANNEL=beta
 ./build.sh
-DEST=/Applications/Ouch.app
-rm -rf "$DEST"
+DEST=/Applications/CatWM.app
+rm -rf /Applications/Ouch.app "$DEST"
 ditto build/ouch.app "$DEST"
 echo "Installed $DEST"
 open "$DEST"

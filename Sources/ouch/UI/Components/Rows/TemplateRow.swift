@@ -28,10 +28,14 @@ struct TemplateRow: View {
             }
             ORow(name, description: summary) {
                 OButton("Open", icon: "arrow.up.forward.app", size: .small, action: open)
+                    .accessibilityLabel("Open \(name)")
                 OIconButton(symbol: "pencil", label: "Rename template", action: rename)
+                    .accessibilityLabel("Rename \(name)")
                 OIconButton(symbol: "arrow.triangle.2.circlepath", label: "Update workspace and screenshot",
                             action: update)
+                    .accessibilityLabel("Update \(name)")
                 OIconButton(symbol: "trash", label: "Delete template", variant: .ghostDanger, action: delete)
+                    .accessibilityLabel("Delete \(name)")
             }
         }
         .padding(.vertical, Theme.Space.small)

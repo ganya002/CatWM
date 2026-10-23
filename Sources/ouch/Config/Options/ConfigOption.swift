@@ -69,8 +69,10 @@ struct ConfigOption {
     }
 
     static func bool(_ key: String, _ path: WritableKeyPath<Config, Bool>) -> Self {
-        Self(key, path, read: { input, raw in let (value, error) = readBool(input, raw); return (value, error) },
-             text: { $0 ? "true" : "false" })
+        Self(key, path, read: { input, raw in
+            let (value, error) = readBool(input, raw)
+            return (error == nil ? value : nil, error)
+        }, text: { $0 ? "true" : "false" })
     }
 
     static func number<V>(_ key: String, _ path: WritableKeyPath<Config, V>, valid: ClosedRange<Double>? = nil,

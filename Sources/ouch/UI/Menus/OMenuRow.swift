@@ -9,6 +9,7 @@ struct OMenuRow<Lead: View, Label: View, Trailing: View>: View {
     @ViewBuilder var lead: Lead
     @ViewBuilder var label: Label
     @ViewBuilder var trailing: Trailing
+    @AccessibilityFocusState private var voiceOverFocus: Bool
 
     init(highlight: MenuRowHighlight = .followsHover, open: Bool = false, danger: Bool = false,
          action: @escaping () -> Void, @ViewBuilder lead: () -> Lead, @ViewBuilder label: () -> Label,
@@ -29,6 +30,10 @@ struct OMenuRow<Lead: View, Label: View, Trailing: View>: View {
             .foregroundStyle(danger ? Theme.danger : Theme.ink)
         }
         .buttonStyle(OMenuRowStyle(highlight: highlight, open: open, danger: danger))
+        .accessibilityFocused($voiceOverFocus)
+        .onChange(of: highlight) { _, new in
+            if new == .fixed(true) { voiceOverFocus = true }
+        }
     }
 }
 

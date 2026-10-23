@@ -1,4 +1,4 @@
 import AppKit
 import SwiftUI
 
-let hyprlandBlue = Theme.rgb(0x33CCFF)
+let hyprlandBlue = Theme.rgb(0x1FAFFF)

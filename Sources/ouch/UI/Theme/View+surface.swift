@@ -7,9 +7,11 @@ extension View {
         modifier(SurfaceModifier(density: density, glass: glass, caret: caret))
     }
 
-    func pane() -> some View {
+    func pane(shadow: Bool = true) -> some View {
         let shape = RoundedRectangle(cornerRadius: Theme.Radius.pane, style: .continuous)
-        return clipShape(shape).background(shape.fill(Theme.surface).elevation(.popover, in: shape))
+        return clipShape(shape).background {
+            if shadow { shape.fill(Theme.surface).elevation(.popover, in: shape) } else { shape.fill(Theme.surface) }
+        }
     }
 }
 

@@ -28,6 +28,15 @@ final class DesktopGestureTap {
         CGEvent.tapEnable(tap: tap, enable: true)
     }
 
+    func setEnabled(_ enabled: Bool) {
+        guard let tap else { return }
+        if !enabled && tracking {
+            tracking = false
+            interrupted()
+        }
+        CGEvent.tapEnable(tap: tap, enable: enabled)
+    }
+
     private func handle(_ type: CGEventType, _ event: CGEvent) -> Unmanaged<CGEvent>? {
         let pass = Unmanaged.passUnretained(event)
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {

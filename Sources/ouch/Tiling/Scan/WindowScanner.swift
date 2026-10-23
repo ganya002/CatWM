@@ -105,6 +105,13 @@ final class WindowScanner {
         busy[pid] = nil
     }
 
+    func terminated(_ pid: pid_t) {
+        forget(pid)
+        queues[pid] = nil
+    }
+
+    var queueCount: Int { queues.count }
+
     func run(_ pid: pid_t, _ work: @escaping () -> Void) {
         let queue = queues[pid] ?? DispatchQueue(label: "ouch.scan.\(pid)", qos: .userInitiated)
         queues[pid] = queue
@@ -127,7 +134,7 @@ final class WindowScanner {
                 if element.flag("AXFullScreen") { scan.fullscreen.insert(id) }
                 if element.flag(kAXMinimizedAttribute) { scan.minimized.insert(id) }
                 guard element.string(kAXSubroleAttribute) == kAXStandardWindowSubrole,
-                      !scan.minimized.contains(id), !scan.fullscreen.contains(id) else { continue }
+                      !scan.minimized.contains(id) else { continue }
                 scan.found[id] = Found(element: element, frame: element.frame,
                                        title: element.string(kAXTitleAttribute),
                                        resizable: element.isSettable(kAXSizeAttribute))

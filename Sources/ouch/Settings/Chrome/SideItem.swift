@@ -17,17 +17,12 @@ struct SideItem: View {
         Button {
             action()
         } label: {
-            HStack(spacing: 10) {
-                Image(systemName: pane.icon)
-                    .font(Theme.symbol(Theme.Icon.large))
-                    .foregroundStyle(selected ? Theme.accentInk : Theme.inkMuted)
-                    .frame(width: 18)
-                Text(pane.rawValue).font(Theme.body(13.5, selected ? .medium : .regular)).oneLine()
+            HStack(spacing: 8) {
+                Text(pane.rawValue).font(Theme.body(13.5, selected ? .semibold : .medium)).oneLine()
                 Spacer(minLength: 0)
                 switch badge {
                 case .attention:
-                    Image(systemName: "exclamationmark.triangle.fill").font(Theme.symbol(Theme.Icon.small, .regular))
-                        .foregroundStyle(Theme.warning)
+                    Circle().fill(Theme.warning).frame(width: 8, height: 8)
                         .accessibilityLabel("Needs attention")
                 case .count(let count):
                     Text("\(count)").font(Theme.body(11, .medium)).foregroundStyle(Theme.danger)
@@ -38,16 +33,9 @@ struct SideItem: View {
                     EmptyView()
                 }
             }
-            .foregroundStyle(Theme.ink)
-            .padding(.horizontal, 10).frame(height: 34)
-            .background {
-                let shape = RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous)
-                if selected {
-                    shape.fill(Theme.surface).elevation(.small, in: shape)
-                } else {
-                    shape.fill(Theme.surface.opacity(model.hover ? 0.55 : 0))
-                }
-            }
+            .foregroundStyle(selected ? Theme.background : model.hover ? Theme.ink : Theme.inkMuted)
+            .padding(.horizontal, 12).frame(height: Theme.rowHeight)
+            .background(Capsule().fill(selected ? Theme.ink : Theme.surface.opacity(model.hover ? 1 : 0)))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

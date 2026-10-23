@@ -12,7 +12,7 @@ extension MenuModel {
         var out: [MenuItem] = []
 
         if !axGranted {
-            out.append(MenuItem(id: "attention", kind: .attention, label: "Ouch needs Accessibility",
+            out.append(MenuItem(id: "attention", kind: .attention, label: "CatWM needs Accessibility",
                                 keywords: "permission grant",
                                 action: { Permission.accessibility.request() }))
         }
@@ -23,17 +23,24 @@ extension MenuModel {
                             keywords: "enable disable pause toggle",
                             keepOpen: true, action: { manager.toggleTiling() }))
 
-        let workspaceName = state?.workspace.map { "Workspace \($0)" } ?? "Desktop"
-        out.append(.label("where", layout.map { "\(workspaceName) · \($0.title)" } ?? workspaceName))
-        out += workspaceItems(manager, keys: keys, trusted: trusted)
-        out.append(.sep("s1"))
-
         out.append(layoutMenu(manager, keys: keys, trusted: trusted, layout: layout))
-        if let bring = bringWindowMenu(manager, trusted: trusted) { out.append(bring) }
-
-        out.append(.sep("s2"))
+        if let workspaces = workspacesMenu(manager, keys: keys, trusted: trusted, state: state) {
+            out.append(workspaces)
+        }
+        out.append(.sep("s1"))
         out += footerItems(manager, keys: keys, trusted: trusted)
         return out
+    }
+
+    private static func workspacesMenu(_ manager: WindowManager, keys: ShortcutIndex, trusted: Bool,
+                                       state: MenuBarState?) -> MenuItem? {
+        guard manager.config.virtualWorkspaces && trusted else { return nil }
+        var children = workspaceItems(manager, keys: keys, trusted: trusted)
+        if let bring = bringWindowMenu(manager, trusted: trusted) { children.append(bring) }
+        let count = manager.workspaceSummary().all.count
+        let value = state?.workspace.map { "\($0) of \(count)" }
+        return MenuItem(id: "workspaces-menu", kind: .sub, label: "Workspaces", symbol: "square.on.square",
+                        value: value, keywords: "switch space desktop", width: 276, children: children)
     }
 
     private static func workspaceItems(_ manager: WindowManager, keys: ShortcutIndex, trusted: Bool) -> [MenuItem] {
@@ -89,21 +96,14 @@ extension MenuModel {
     }
 
     private static func footerItems(_ manager: WindowManager, keys: ShortcutIndex, trusted: Bool) -> [MenuItem] {
-        let paused = TutorialLesson.paused
-        let news = WhatsNew.shared.hasNews ? [whatsNewItem(dot: true)] : []
-        return news + [
+        [
             MenuItem(id: "settings", label: "Settings…", symbol: "gearshape", shortcut: ["⌘", ","],
                      keywords: "preferences options",
                      rotates: true, action: { SettingsWindow.shared.show(pane: nil) }),
-            MenuItem(id: "tutorial", label: paused == nil ? "Keyboard Tutorial…" : "Resume Tutorial…",
-                     symbol: "graduationcap",
-                     value: paused?.name, enabled: trusted,
-                     keywords: "learn practice drill keys lessons onboarding help",
-                     action: { Onboarding.shared.startTutorial() }),
             MenuItem(id: "help", kind: .sub, label: "Help", symbol: "questionmark.circle",
-                     children: helpItems(manager, keys: keys, trusted: trusted)),
+                     children: helpItems(manager, keys: keys, trusted: trusted), dot: WhatsNew.shared.hasNews),
             .sep("s3"),
-            MenuItem(id: "quit", kind: .footer, label: "Quit Ouch", shortcut: ["⌘", "Q"], keywords: "exit",
+            MenuItem(id: "quit", kind: .footer, label: "Quit CatWM", shortcut: ["⌘", "Q"], keywords: "exit",
                      action: { NSApp.terminate(nil) })
         ]
     }
@@ -115,8 +115,14 @@ extension MenuModel {
     }
 
     private static func helpItems(_ manager: WindowManager, keys: ShortcutIndex, trusted: Bool) -> [MenuItem] {
-        let news = WhatsNew.shared.hasNews ? [] : [whatsNewItem(dot: false)]
-        return [
+        let paused = TutorialLesson.paused
+        let news = [whatsNewItem(dot: WhatsNew.shared.hasNews)]
+        return news + [
+            MenuItem(id: "tutorial", label: paused == nil ? "Keyboard Tutorial…" : "Resume Tutorial…",
+                     symbol: "graduationcap",
+                     value: paused?.name, enabled: trusted,
+                     keywords: "learn practice drill keys lessons onboarding help",
+                     action: { Onboarding.shared.startTutorial() }),
             MenuItem(id: "map", label: "Shortcut Map", symbol: "keyboard", shortcut: ["⌘", "/"],
                      keywords: "keys overview cheat sheet",
                      action: { SettingsWindow.shared.show(pane: .shortcuts, map: true) }),
@@ -124,8 +130,7 @@ extension MenuModel {
                      enabled: trusted, hidden: true, keywords: "keys overlay cheat sheet window mode",
                      action: { KeyHelp.shared.showFromMenu(preferredMode: keys.modeName) }),
             MenuItem(id: "tour", label: "Quick Tour", symbol: "play.circle", enabled: trusted,
-                     keywords: "learn tutorial onboarding keyboard tour", action: { Onboarding.shared.startTour() })
-        ] + news + [
+                     keywords: "learn tutorial onboarding keyboard tour", action: { Onboarding.shared.startTour() }),
             MenuItem(id: "tutorial-restart", label: "Restart Tutorial", symbol: "arrow.counterclockwise",
                      enabled: trusted, hidden: true, keywords: "learn tutorial start over",
                      action: { Onboarding.shared.startTutorial(fromStart: true) }),

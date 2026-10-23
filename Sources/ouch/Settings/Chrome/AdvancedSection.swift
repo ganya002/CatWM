@@ -20,7 +20,7 @@ struct AdvancedSection<Content: View>: View {
                         .rotationEffect(.degrees(open ? 90 : 0))
                     Rectangle().fill(Theme.hairline).frame(height: 1).padding(.leading, 6)
                 }
-                .foregroundStyle(open ? Theme.accentInk : Theme.inkMuted)
+                .foregroundStyle(open ? Theme.ink : Theme.inkMuted)
                 .frame(height: 24)
                 .contentShape(Rectangle())
             }

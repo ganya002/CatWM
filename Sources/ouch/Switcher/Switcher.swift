@@ -184,8 +184,8 @@ final class Switcher {
     }
 
     private func layout() {
-        guard let panel, active else { return }
-        let screen = WindowManager.shared.focusedScreen ?? OuchPanel.pointerScreen()
+        guard let panel, active,
+              let screen = WindowManager.shared.focusedScreen ?? OuchPanel.pointerScreen() else { return }
         let size = SwitcherView.size(rows: model.results.count)
         let tallest = OuchPanel.frame(size: SwitcherView.size(rows: SwitcherView.visibleRows), on: screen,
                                       anchor: .center(dy: screen.visibleFrame.height / 10))

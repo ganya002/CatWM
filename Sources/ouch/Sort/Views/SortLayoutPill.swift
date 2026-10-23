@@ -16,7 +16,8 @@ struct SortLayoutPill: View {
             }
             .foregroundStyle(hover.isOn ? Theme.ink : Theme.inkMuted)
             .padding(.leading, 7).padding(.trailing, 10).frame(height: 24)
-            .background(Capsule().fill(hover.isOn ? Theme.wellHover : Theme.well))
+            .background(Capsule().fill(hover.isOn ? Theme.well : .clear))
+            .overlay(Capsule().strokeBorder(Theme.borderControl, lineWidth: 1))
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)

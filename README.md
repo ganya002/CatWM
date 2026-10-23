@@ -1,74 +1,77 @@
 <p align="center">
-  <img src="website/public/icon.png" width="96" alt="Ouch app icon">
+  <img src="website/public/icon.png" width="96" alt="CatWM app icon">
 </p>
 
-<h1 align="center">Ouch</h1>
+<h1 align="center">CatWM</h1>
 
-<p align="center">A simple, fast tiling window manager for macOS.</p>
+<p align="center">A simple, modern, and fast tiling window manager for macOS.</p>
 
 <p align="center">
-  <a href="https://ouch.perwko.com"><img src="website/public/demo-poster.jpg" width="760" alt="Ouch tiles a Finder window and two terminal windows side by side"></a>
+  <a href="https://catwm.perwko.com"><img src="website/public/demo-poster.jpg" width="760" alt="CatWM tiles a Finder window and two terminal windows side by side"></a>
 </p>
 
 ## Install
 
 ```sh
-curl -fsSL https://ouch.perwko.com/install.sh | sh
+curl -fsSL https://catwm.perwko.com/install.sh | sh -s -- --beta
 ```
 
-For beta releases, add `-s -- --beta`. Ouch updates itself. Give it the **Accessibility** permission when it asks.
+## How to use ouch
 
-## Window mode
+The central concept of ouch is "Window mode", think of it as Vim's visual mode, the build mode in a game, or the tool keys in a drawing app. You enter it with `⌘ + tab`. This is where you can move windows, displays, change layouts and more.
 
-Press ⌘ Caps Lock. Then single keys control your windows. Press Esc or click to leave. Keys with no bind do nothing, so you cannot type into an app by accident.
+Here is a overview of what key binds are available within window mode. (This is openable by pressing `?` within window mode)
 
-<img src="docs/images/window-mode.png" width="680" alt="The window mode keyboard help. H J K L move focus, 1 to 10 go to a workspace">
+<p align="center">
+  <img src="docs/assets/readme/window-mode-keys.png" width="760" alt="The keys available in window mode">
+  <img src="docs/assets/readme/window-mode-keys-shift.png" width="760" alt="The keys available in window mode while shift is held">
+</p>
 
-The keyboard help shows each key that has a bind. To use WASD, select it in Settings → Shortcuts.
+### Workspaces
 
-## Workspaces
+Unlike all the other macOS tilers I've ever seen, ouch uses native spaces. This works well because ouch uses SkyLight, the private macOS interface that Mission Control uses. It lets ouch create and switch Desktops and move windows between them.
 
-Each display has its own workspaces. Press ⌥ 1 … ⌥ 0 to change workspace, or click the numbers in the menu bar.
+<p align="center">
+  <img src="docs/assets/readme/workspaces.webp" width="760" alt="Switching macOS Desktops with ouch workspaces">
+</p>
 
-<img src="docs/images/workspaces.jpg" width="760" alt="Ouch goes to workspace 1, Demo 1, and shows its layout in the centre of the screen">
+### Layouts
 
-## Layouts
+Every workspace has its own layout. Press `p` or `n` in window mode to cycle through them: tall, wide, columns, two pane, binary space partitioning, floating and more.
 
-Each display has its own layout. In window mode, press N and P to change the layout.
+<p align="center">
+  <img src="docs/assets/readme/layouts.webp" width="760" alt="Cycling through layouts in window mode">
+</p>
 
-<img src="docs/images/layouts.gif" width="640" alt="Windows move between slots, then the layout changes to fullscreen, floating and tall">
+### Save workspaces
 
-Layouts: `tall`, `wide`, `bsp`, `column`, `row`, `middle-wide`, `two-pane`, `3column-middle`, `fullscreen`, `floating` and more.
+Quickly save and open workspaces, including some of the apps state.
 
-## Overview
+<p align="center">
+  <img src="docs/assets/readme/templates.webp" width="760" alt="Saving and opening a workspace template">
+</p>
+<sub>We are currently working on adding adapters to save more app states, in this example you can see that we restore the active tab in helium. And that is the limit with chromium browsers for now.</sub>
 
-Press ⌥ O to see all windows on all workspaces. Drag a window to a different workspace, or let Ouch sort them by task or by app.
+### Overview
 
-<img src="docs/images/overview.png" width="760" alt="The overview sorts 12 windows into the workspaces Demo 1, Demo 2, Demo 3, Chat and Media">
+Reorder your windows without dealing with the native macOS fuss.
 
-## Window switcher
+<p align="center">
+  <img src="docs/assets/readme/overview.webp" width="760" alt="Reordering windows in the overview">
+</p>
 
-Tap ⌥ Tab to go back to the last window. Hold ⌥ to see every window on every workspace and full-screen Space, most recent first. Press Tab and ⇧ Tab to move, and release ⌥ to open the window. Type to search app names, window titles and workspaces. When one window matches, it opens by itself. A window on another workspace switches to that workspace with the Ouch animation.
+### Callable via cli
 
-In the list, press ` to show only the windows of the selected app. ⌘ W closes the selected window, ⌘ Q quits its app, ⌘ H hides its app, and ⌘ 1 … ⌘ 9 open a row. Esc closes the list.
+Agents (and humans) can call ouch via cli. Every bind is a dispatcher, and the cli runs the same ones.
 
-## Make it yours
-
-- **Settings** (⌘, in the menu bar menu) changes layouts, gaps, motion, shortcuts and more.
-- **Config file:** `~/.config/ouch/ouch.conf`. Settings edits the same file.
-
+```sh
+ouch dispatch workspace 2
+ouch dispatch movefocus l
 ```
-$mod = SUPER                                 # use Command as the main key
-bind = $mod, 1..0, workspace, 1..10
-bind = $mod, mouse_down, workspace, e+1      # scroll to the next workspace
-```
 
-Reference: [options](Resources/AgentDocs/config.md) · [binds](Resources/AgentDocs/keybinds.md) · [dispatchers](Resources/AgentDocs/dispatchers.md) · [workspaces](Resources/AgentDocs/workspaces.md) · [command line](Resources/AgentDocs/cli.md) · [troubleshooting](Resources/AgentDocs/troubleshooting.md)
-
-## Feedback
-
-Click the ladybug button in Settings. Ouch shows you all that it sends.
+<sub>We do not plan to add full support if any for urls (ouch://), if we do this anyone can close windows and etc.</sub>
 
 ## Contributing
 
-To build Ouch, run the tests or make a release, read [CONTRIBUTING.md](CONTRIBUTING.md).
+Thank you for being interested in my project!
+Please read [CONTRIBUTING.md](CONTRIBUTING.md).

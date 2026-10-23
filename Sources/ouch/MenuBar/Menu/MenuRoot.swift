@@ -44,7 +44,7 @@ struct MenuRoot: View {
     private func column(_ level: Int, width: CGFloat) -> some View {
         MenuColumn(model: model, level: level)
             .frame(width: width)
-            .surface(.medium, glass: true)
+            .surface(.medium)
             .background(GeometryReader { geo in
                 Color.clear.preference(key: ColumnHeightKey.self, value: [level: geo.size.height])
             })
