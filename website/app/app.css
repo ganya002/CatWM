@@ -262,7 +262,7 @@ a {
 .scroll-hint__base {
   position: absolute;
   inset: 0;
-  clip-path: inset(0 0 max(0px, calc(var(--fill) * 100% - 1px)) 0);
+  clip-path: inset(0 0 max(0px, calc(var(--fill) * (100% + 1px) - 1px)) 0);
 }
 .scroll-hint__fill {
   position: absolute;
