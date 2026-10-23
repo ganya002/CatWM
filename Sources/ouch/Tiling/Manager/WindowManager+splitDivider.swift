@@ -6,7 +6,7 @@ extension WindowManager {
         let screenState = state(for: screen)
         guard screenState.zoomed == nil else { return nil }
         let ids = splitIDs(on: screen)
-        let slots = ids.compactMap { targets[$0] }
+        let slots = ids.compactMap(splitSlot)
         guard slots.count == ids.count,
               let divider = SplitDivider(layout: screenState.layout, slots: slots, mainCount: screenState.mainCount,
                                          in: usableRect(screen)),
@@ -73,7 +73,13 @@ extension WindowManager {
         swapSides(on: screen)
     }
 
-    private func splitIDs(on screen: Screen) -> [CGWindowID] {
+    private func splitSlot(_ id: CGWindowID) -> CGRect? {
+        guard corrections[id] != nil, !animator.isBusy(id), let window = windows[id],
+              !window.cachedFrame.isNull else { return targets[id] }
+        return window.cachedFrame
+    }
+
+    func splitIDs(on screen: Screen) -> [CGWindowID] {
         tiled(on: screen).filter { !workspaceMoves.contains($0) }
     }
 }
