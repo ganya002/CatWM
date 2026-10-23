@@ -17,10 +17,12 @@ let package = Package(
     targets: [
         .plugin(name: "CatalogPlugin", capability: .buildTool()),
         .target(name: "WindowSession", path: "Sources/WindowSession"),
+        .target(name: "NativeTrafficLight", path: "Sources/native-traffic-light"),
         .executableTarget(
             name: "ouch",
             dependencies: [
                 "WindowSession",
+                "NativeTrafficLight",
                 .product(name: "Sparkle", package: "Sparkle"),
                 .product(name: "MacKeysCore", package: "mackeys-sdk"),
                 .product(name: "MacKeysUI", package: "mackeys-sdk"),
@@ -34,6 +36,12 @@ let package = Package(
             name: "WindowSessionTests",
             dependencies: ["WindowSession"],
             path: "Tests/WindowSessionTests",
+            swiftSettings: testSettings
+        ),
+        .testTarget(
+            name: "NativeTrafficLightTests",
+            dependencies: ["NativeTrafficLight"],
+            path: "Tests/NativeTrafficLightTests",
             swiftSettings: testSettings
         ),
         .testTarget(

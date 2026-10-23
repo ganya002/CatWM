@@ -8,6 +8,7 @@ struct SavedTabs: Equatable {
 
     let members: [Member]
     let active: CGWindowID
+    var workspace: String?
 
     init(members: [Member], active: CGWindowID) {
         self.members = members

@@ -75,7 +75,7 @@ extension WindowManager {
                let hit = tiled(on: dst).first(where: { $0 != id && targets[$0]?.contains(point) == true }) {
                 swapOrder(id, hit)
             } else if dst.uuid != src.uuid {
-                assignManagedWindow(id, to: shown[dst.uuid])
+                assignTabs(of: id, to: shown[dst.uuid])
             }
         }
         corrections = [:]

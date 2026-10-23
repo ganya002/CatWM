@@ -1,4 +1,5 @@
 import AppKit
+import NativeTrafficLight
 import SwiftUI
 
 final class TabStrips {
@@ -54,6 +55,7 @@ final class TabStrips {
             if model.dragged == nil, model.tabs != tabs { model.tabs = tabs }
             if model.active != group.active { model.active = group.active }
             if model.focused != focused { model.focused = focused }
+            view.lights.isActive = focused
             let frame = Self.frame(above: slot)
             if frame != target || !panel.isVisible {
                 let wasVisible = panel.isVisible
@@ -134,12 +136,17 @@ private final class TabStripInput: NSView {
 
     private var press: Press?
     private let host: NSView
+    let lights = TrafficLights(buttons: .close)
 
     init(model: TabStripModel) {
         self.model = model
         host = NSHostingView(rootView: TabStripView(model: model))
         super.init(frame: .zero)
         addSubview(host)
+        lights.onAction = { [weak self] _ in
+            self?.model.tabs.forEach { _ = WindowManager.shared.closeWindow($0.id) }
+        }
+        addSubview(lights)
     }
 
     @available(*, unavailable)
@@ -148,12 +155,17 @@ private final class TabStripInput: NSView {
     override func layout() {
         super.layout()
         host.frame = bounds
+        let size = TrafficLights.size(for: .close)
+        lights.frame = NSRect(origin: NSPoint(x: ((TabStrip.lead - size.width) / 2).rounded(),
+                                              y: ((bounds.height - size.height) / 2).rounded()), size: size)
     }
 
     override func acceptsFirstMouse(for _: NSEvent?) -> Bool { true }
 
     override func hitTest(_ point: NSPoint) -> NSView? {
-        bounds.contains(convert(point, from: superview)) ? self : nil
+        let local = convert(point, from: superview)
+        if lights.frame.contains(local) { return lights }
+        return bounds.contains(local) ? self : nil
     }
 
     override func updateTrackingAreas() {
@@ -210,7 +222,9 @@ private final class TabStripInput: NSView {
         if model.lifted != lifted { model.lifted = lifted }
         let x = local(event).x - press.grab
         guard let from = model.tabs.firstIndex(where: { $0.id == press.id }) else { return }
-        let wanted = min(model.tabs.count - 1, max(0, Int((x / model.tabWidth(in: bounds.width)).rounded())))
+        let step = model.tabWidth(in: bounds.width)
+        guard step > 0 else { return }
+        let wanted = min(model.tabs.count - 1, max(0, Int(((x - TabStrip.lead) / step).rounded())))
         if wanted != from, !lifted {
             withAnimation(Motion.snap) {
                 model.tabs.move(fromOffsets: [from], toOffset: wanted > from ? wanted + 1 : wanted)

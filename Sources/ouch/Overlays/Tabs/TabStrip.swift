@@ -4,6 +4,7 @@ import SwiftUI
 enum TabStrip {
     static let height: CGFloat = Theme.controlHeight + Theme.Space.small
     static let inset: CGFloat = Theme.Radius.pane
+    static let lead: CGFloat = Theme.Space.extraLarge + Theme.Space.extraSmall
     static let radius: CGFloat = Theme.Radius.large
     static let closeSide: CGFloat = 20
     static let iconSide: CGFloat = 16
@@ -25,13 +26,13 @@ final class TabStripModel: ObservableObject {
     @Published var dragShift: CGFloat = 0
     @Published var lifted = false
 
-    func tabWidth(in width: CGFloat) -> CGFloat { width / CGFloat(max(tabs.count, 1)) }
+    func tabWidth(in width: CGFloat) -> CGFloat { max(0, width - TabStrip.lead) / CGFloat(max(tabs.count, 1)) }
 
-    func slotX(_ index: Int, width: CGFloat) -> CGFloat { CGFloat(index) * tabWidth(in: width) }
+    func slotX(_ index: Int, width: CGFloat) -> CGFloat { TabStrip.lead + CGFloat(index) * tabWidth(in: width) }
 
     func index(at x: CGFloat, width: CGFloat) -> Int? {
-        guard !tabs.isEmpty, width > 0 else { return nil }
-        return min(tabs.count - 1, max(0, Int((x / tabWidth(in: width)).rounded(.down))))
+        guard !tabs.isEmpty, x >= TabStrip.lead, tabWidth(in: width) > 0 else { return nil }
+        return min(tabs.count - 1, Int(((x - TabStrip.lead) / tabWidth(in: width)).rounded(.down)))
     }
 
     func closeRect(_ index: Int, width: CGFloat) -> CGRect {

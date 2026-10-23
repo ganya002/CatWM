@@ -31,11 +31,13 @@ extension WindowManager {
             assignManagedWindow(window.id, to: shown[dst.uuid])
             scheduleRefresh()
         } else if sharesSpaces {
-            displayOf[window.id] = dst.uuid
-            corrections[window.id] = nil
+            for member in tabs.group(of: window.id)?.members ?? [window.id] {
+                displayOf[member] = dst.uuid
+                corrections[member] = nil
+            }
             refresh()
         } else {
-            assignManagedWindow(window.id, to: shown[dst.uuid])
+            assignTabs(of: window.id, to: shown[dst.uuid])
             refresh()
         }
         focus(window)

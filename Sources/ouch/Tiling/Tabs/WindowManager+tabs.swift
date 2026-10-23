@@ -47,6 +47,10 @@ extension WindowManager {
         focus(window, warp: false)
     }
 
+    func assignTabs(of id: CGWindowID, to workspace: String?) {
+        moveTabs(of: id, to: workspace) { member, _ in assignManagedWindow(member, to: workspace) }
+    }
+
     func untab(_ id: CGWindowID, droppedAt point: CGPoint? = nil) {
         guard tabs.isGrouped(id), let window = windows[id] else { return }
         if let point, let host = tabDropTarget(for: id, at: point) {
