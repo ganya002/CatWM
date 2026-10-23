@@ -21,7 +21,8 @@ final class SplitHandle {
             shown.insert(screen.uuid)
             let handle = handles[screen.uuid] ?? Handle(screen: screen.uuid)
             handles[screen.uuid] = handle
-            handle.show(divider, duration: animate ? manager.config.animationDuration : 0)
+            handle.show(divider, duration: animate ? manager.config.animationDuration : 0,
+                        above: manager.splitIDs(on: screen))
         }
         for (uuid, handle) in handles where !shown.contains(uuid) { handle.hide() }
     }
@@ -31,7 +32,7 @@ final class SplitHandle {
     private final class Handle {
         private static let confirmDuration = 0.5
 
-        private let panel = OuchPanel(role: .overlay(.floating, clickThrough: false))
+        private let panel = OuchPanel(role: .overlay(.normal, clickThrough: false))
         private let view: SplitHandleView
         private var target: NSRect?
         private var confirmEnd: DispatchWorkItem?
@@ -41,10 +42,11 @@ final class SplitHandle {
             panel.contentView = view
         }
 
-        func show(_ divider: SplitDivider, duration: Double) {
+        func show(_ divider: SplitDivider, duration: Double, above tiled: [CGWindowID]) {
             view.divider = divider
             if view.model.vertical != divider.vertical { view.model.vertical = divider.vertical }
             let frame = Self.frame(for: divider)
+            defer { stack(above: tiled) }
             guard frame != target || !panel.isVisible else { return }
             target = frame
             if panel.isVisible, duration > 0, !view.model.dragging {
@@ -56,7 +58,14 @@ final class SplitHandle {
             } else {
                 panel.setFrame(frame, display: true)
             }
-            if !panel.isVisible { panel.orderFrontRegardless() }
+        }
+
+        private func stack(above tiled: [CGWindowID]) {
+            guard let top = CGWindowInfo.onScreen().first(where: { tiled.contains($0.id) }) else {
+                if !panel.isVisible { panel.orderFrontRegardless() }
+                return
+            }
+            panel.order(.above, relativeTo: Int(top.id))
         }
 
         func hide() {
