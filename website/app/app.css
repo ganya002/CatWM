@@ -232,6 +232,70 @@ a {
   pointer-events: auto;
 }
 
+/* Scroll hint: a black notch on top of the first card, with an arrow.
+   A copy in the card colour fills it from the bottom up, set by --fill from the scroll. */
+.scroll-hint {
+  position: absolute;
+  bottom: calc(100% - 1px);
+  left: 50%;
+  z-index: 3;
+  width: clamp(150px, 15vw, 220px);
+  aspect-ratio: 220 / 72;
+  translate: -50% 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--white);
+  cursor: pointer;
+  --fill: 0;
+}
+.scroll-hint__notch {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: var(--black);
+}
+.scroll-hint__fill {
+  position: absolute;
+  inset: 0;
+  color: var(--black);
+  clip-path: inset(calc((1 - var(--fill)) * 100%) 0 0 0);
+}
+.scroll-hint__fill .scroll-hint__notch {
+  fill: var(--card);
+}
+.scroll-hint__arrow {
+  position: absolute;
+  left: 50%;
+  bottom: 18%;
+  width: 22%;
+  height: auto;
+  translate: -50% 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: translate 0.18s cubic-bezier(0.33, 1, 0.68, 1);
+}
+.scroll-hint:hover .scroll-hint__arrow {
+  translate: -50% 3px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .scroll-hint__arrow {
+    animation: scroll-hint-bob 1.8s ease-in-out infinite;
+  }
+}
+@keyframes scroll-hint-bob {
+  50% {
+    transform: translateY(5px);
+  }
+}
+.scroll-hint:focus-visible {
+  outline-offset: -6px;
+}
+
 /* The pulse: a veil over the whole stage that a circle from the button reveals. */
 .pulse {
   position: absolute;
@@ -568,7 +632,7 @@ a {
     opacity 0.3s ease-out;
 }
 .demo__tile[data-focused] {
-  fill: var(--card);
+  fill: var(--black);
 }
 /* A pressed key is the tooltip: one raised tile per key, no pill behind it. The typed
    command is one pill. Both sit on surfaceRaised with popover elevation. --u is 1 px at 660 px wide. */
