@@ -20,6 +20,12 @@ struct TabGroups: Equatable {
 
     func isBehind(_ id: CGWindowID) -> Bool { group(of: id).map { $0.active != id } ?? false }
 
+    func heir(of id: CGWindowID) -> CGWindowID? {
+        guard let members = group(of: id)?.members, members.count > 1,
+              let index = members.firstIndex(of: id) else { return nil }
+        return members[index > 0 ? index - 1 : 1]
+    }
+
     func neighbor(of id: CGWindowID, offset: Int) -> CGWindowID? {
         guard let members = group(of: id)?.members, members.count > 1,
               let index = members.firstIndex(of: id) else { return nil }
@@ -45,7 +51,7 @@ struct TabGroups: Equatable {
         guard let index = index(of: id), let position = groups[index].members.firstIndex(of: id) else { return nil }
         var group = groups[index]
         group.members.remove(at: position)
-        let heir = group.members[min(position, group.members.count - 1)]
+        let heir = group.members[max(0, position - 1)]
         if group.active == id { group.active = heir }
         if group.members.count < 2 {
             groups.remove(at: index)

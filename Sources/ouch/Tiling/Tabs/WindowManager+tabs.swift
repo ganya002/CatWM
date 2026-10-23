@@ -3,6 +3,7 @@ import AppKit
 extension WindowManager {
     static let tabTitleBand: CGFloat = 44
     static let minimizeHold: TimeInterval = 2
+    static let tabHoverDelay: TimeInterval = 0.4
 
     var tabs: TabGroups { model.tabs }
 
@@ -48,6 +49,23 @@ extension WindowManager {
         focus(window, warp: false)
     }
 
+    func joinTabs(of id: CGWindowID, onto host: CGWindowID) {
+        guard let workspace = workspaceOf[host], windows[host]?.isFloating == false else { return }
+        for member in tabs.group(of: id)?.members ?? [] where member != id {
+            if workspaceOf[member] != workspace { assignManagedWindow(member, to: workspace) }
+            if sharesSpaces, let display = displayOf[host] { displayOf[member] = display }
+            model.joinTab(member, onto: host)
+        }
+        joinTab(id, onto: host)
+    }
+
+    func dropIntoStrip(_ id: CGWindowID, group: Int, at index: Int, alone: Bool = false) {
+        guard let host = tabs.groups.first(where: { $0.id == group })?.active else { return refresh() }
+        corrections = [:]
+        if alone { joinTab(id, onto: host) } else { joinTabs(of: id, onto: host) }
+        reorderTab(id, to: index)
+    }
+
     func assignTabs(of id: CGWindowID, to workspace: String?) {
         moveTabs(of: id, to: workspace) { member, _ in assignManagedWindow(member, to: workspace) }
     }
@@ -58,9 +76,11 @@ extension WindowManager {
             joinTab(id, onto: host)
             return
         }
-        let heir = tabs.group(of: id).flatMap { $0.active == id ? tabs.neighbor(of: id, offset: 1) : $0.active }
+        let hit = point.flatMap(tiledSlotOwner(at:)).flatMap { config.mouseSwapsWindows && $0 != id ? $0 : nil }
+        let heir = tabs.group(of: id).flatMap { $0.active == id ? tabs.heir(of: id) : $0.active }
         if let heir, let home = screen(of: window).map(state(for:)), home.zoomed == id { home.zoomed = heir }
         model.leaveTab(id)
+        if let hit { swapOrder(id, hit) }
         Log.info("tabs: \(window.bundleID ?? "window \(id)") left its tabs")
         refresh()
         focus(window, warp: false)
@@ -87,7 +107,7 @@ extension WindowManager {
     }
 
     func followTabFocus(_ id: CGWindowID?) {
-        guard let id, let group = tabs.group(of: id), group.active != id, visible.contains(id) else {
+        guard draggedTab == nil, let id, let group = tabs.group(of: id), group.active != id, visible.contains(id) else {
             TabStrips.shared.update()
             return
         }
@@ -131,6 +151,58 @@ extension WindowManager {
         }
     }
 
+    func dragTabGroup(_ window: Window) {
+        guard let group = tabs.group(of: window.id), group.active == window.id, let slot = targets[window.id],
+              !window.cachedFrame.isNull else { return }
+        let offset = CGVector(dx: window.cachedFrame.minX - slot.minX, dy: window.cachedFrame.minY - slot.minY)
+        for member in group.members where member != window.id {
+            guard let tab = windows[member], !tab.minimized, !tab.isFloating else { continue }
+            animator.position(tab, at: slot.offsetBy(dx: offset.dx, dy: offset.dy))
+        }
+        TabStrips.shared.shift(group.id, by: offset)
+    }
+
+    func dragTab(_ id: CGWindowID, grab: CGPoint, to point: CGPoint) {
+        guard let window = windows[id], let slot = targets[id] else { return }
+        if draggedTab != id {
+            draggedTab = id
+            tabLiftEnd = CACurrentMediaTime() + (config.animate ? config.animationDuration : 0)
+            focus(window, warp: false)
+        }
+        let held = CGRect(origin: CGPoint(x: point.x - grab.x, y: point.y - grab.y), size: slot.size)
+        let left = tabLiftEnd - CACurrentMediaTime()
+        if left > 0.01 {
+            animator.animate([.init(window: window, to: held, bounds: held)], duration: left, curve: .linear)
+        } else {
+            animator.position(window, at: held)
+        }
+        guard !TabStrips.shared.preview(window, at: point) else { return TabDropHint.shared.hide() }
+        guard let host = tabDropTarget(for: id, at: point), let hostSlot = targets[host] else {
+            return TabDropHint.shared.hide()
+        }
+        TabDropHint.shared.show(over: tabDropZone(host, hostSlot).union(hostSlot), adding: window)
+    }
+
+    func dropTab(_ id: CGWindowID, at point: CGPoint) {
+        draggedTab = nil
+        TabDropHint.shared.hide()
+        if let previewed = TabStrips.shared.endPreview(of: id) {
+            Log.info("tabs: \(id) dropped into the strip of group \(previewed.group) at \(previewed.index)")
+            dropIntoStrip(id, group: previewed.group, at: previewed.index, alone: true)
+        } else {
+            untab(id, droppedAt: point)
+        }
+        TabStrips.shared.update()
+    }
+
+    func cancelTabDrag(_ id: CGWindowID) {
+        guard draggedTab == id else { return }
+        draggedTab = nil
+        TabDropHint.shared.hide()
+        _ = TabStrips.shared.endPreview(of: id)
+        if tabs.group(of: id)?.active == id { refresh() } else { selectTab(id) }
+    }
+
     func tabStack(behind id: CGWindowID) -> [CGWindowID] {
         guard let group = tabs.group(of: id), group.active == id else { return [] }
         return group.members.filter {
@@ -164,12 +236,49 @@ extension WindowManager {
     }
 
     func tabDropTarget(for id: CGWindowID, at point: CGPoint) -> CGWindowID? {
+        tabHost(for: id, at: point) { host, slot in tabDropZone(host, slot) }
+    }
+
+    func tiledSlotOwner(at point: CGPoint) -> CGWindowID? {
+        guard tilingEnabled, let screen = Screen.all().first(where: { $0.frame.contains(point) }) else { return nil }
+        return tiled(on: screen).first { targets[$0]?.contains(point) == true }
+    }
+
+    func settledTabHover(for id: CGWindowID, at point: CGPoint) -> CGWindowID? {
+        guard let hover = tabHover, hover.settled else { return nil }
+        let owner = tiledSlotOwner(at: point) ?? hover.host
+        return owner == hover.host && owner != id ? hover.host : nil
+    }
+
+    private func tabHost(for id: CGWindowID, at point: CGPoint,
+                         zone: (CGWindowID, CGRect) -> CGRect) -> CGWindowID? {
         guard tilingEnabled, let screen = Screen.all().first(where: { $0.frame.contains(point) }) else { return nil }
         return tiled(on: screen).first { host in
             guard host != id, tabs.group(of: host)?.members.contains(id) != true,
                   let slot = targets[host] else { return false }
-            return tabDropZone(host, slot).contains(point)
+            return zone(host, slot).contains(point)
         }
+    }
+
+    private func trackTabHover(for id: CGWindowID, at point: CGPoint) {
+        guard let owner = tiledSlotOwner(at: point) else { return }
+        let joins = owner != id && tabs.group(of: owner)?.members.contains(id) != true
+        trackTabHover(joins ? owner : nil)
+    }
+
+    func trackTabHover(_ host: CGWindowID?) {
+        guard host != tabHover?.host else { return }
+        tabHoverWork?.cancel()
+        tabHoverWork = nil
+        tabHover = host.map { ($0, false) }
+        guard let host else { return }
+        let work = DispatchWorkItem { [weak self] in
+            guard let self, self.tabHover?.host == host else { return }
+            self.tabHover?.settled = true
+            self.updateTabDropHint()
+        }
+        tabHoverWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.tabHoverDelay, execute: work)
     }
 
     func tabDropZone(_ host: CGWindowID, _ slot: CGRect) -> CGRect {
@@ -184,7 +293,13 @@ extension WindowManager {
             return
         }
         let point = mouseLocation()
-        guard holds(window, at: point), let host = tabDropTarget(for: id, at: point), let slot = targets[host] else {
+        guard !TabStrips.shared.preview(window, at: point) else {
+            trackTabHover(nil)
+            return TabDropHint.shared.hide()
+        }
+        trackTabHover(for: id, at: point)
+        let band = holds(window, at: point) ? tabDropTarget(for: id, at: point) : nil
+        guard let host = band ?? settledTabHover(for: id, at: point), let slot = targets[host] else {
             TabDropHint.shared.hide()
             return
         }

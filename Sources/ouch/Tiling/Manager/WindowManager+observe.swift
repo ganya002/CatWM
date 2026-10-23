@@ -51,7 +51,7 @@ extension WindowManager {
             FocusDim.shared.update()
         case kAXWindowMovedNotification, kAXWindowResizedNotification:
             guard let window = windows.values.first(where: { CFEqual($0.element, element) }),
-                  !animator.isBusy(window.id), !movingToSpace else { return }
+                  !animator.isBusy(window.id), !movingToSpace, window.id != draggedTab else { return }
             let id = window.id
             observeFrame(window)
             if NSEvent.pressedMouseButtons & 1 != 0 {
