@@ -51,7 +51,9 @@ extension WindowManager {
         watchCrowding(screens)
         refocusAfterCloseIfNeeded(hasFresh: !observed.fresh.isEmpty)
 
+        restoreTabs()
         settleTabs()
+        saveTabs()
         guard tilingEnabled else {
             SplitHandle.shared.update(); TabStrips.shared.update(); onChange?(); return
         }

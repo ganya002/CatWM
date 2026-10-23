@@ -59,6 +59,19 @@ import Testing
         #expect(!model.tabs.isGrouped(3))
     }
 
+    @Test func savedTabsComeBackInTheirOrderWithTheirActiveTab() throws {
+        let saved = SavedTabs(members: [.init(id: 4, pid: 10), .init(id: 2, pid: 10), .init(id: 7, pid: 11)], active: 2)
+        #expect(SavedTabs(saved.line) == saved)
+        #expect(SavedTabs("4@10 > 4") == nil)
+        #expect(SavedTabs("nonsense") == nil)
+        var model = WorkspaceModel()
+        model.order = [9, 4, 2, 7]
+        model.restoreTabs([4, 2, 7], active: 2)
+        let group = try #require(model.tabs.group(of: 4))
+        #expect(group.members == [4, 2, 7] && group.active == 2)
+        #expect(model.order.filter { !model.tabs.isBehind($0) } == [9, 2])
+    }
+
     @Test func movingATabToAnotherWorkspaceTakesItOutOfItsTabs() {
         var model = WorkspaceModel()
         for id: CGWindowID in [1, 2, 3] { model.assign(id, to: "1") }

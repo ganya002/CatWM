@@ -75,7 +75,7 @@ final class TabDropHint {
                 }
                 .foregroundStyle(Theme.onAccent)
                 .padding(.horizontal, Theme.Space.medium)
-                .frame(height: TabStrip.height - TabStrip.padding * 2)
+                .frame(height: Theme.controlHeight)
                 .background(Capsule().fill(Theme.accent))
                 .padding(.top, Theme.Space.small)
                 .padding(.horizontal, Theme.Space.large)

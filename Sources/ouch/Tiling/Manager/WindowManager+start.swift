@@ -5,6 +5,7 @@ extension WindowManager {
         guard !isStarted else { return }
         isStarted = true
         loadWorkspaces()
+        loadTabs()
         if config.virtualWorkspaces { DesktopUI.prepare() }
         Log.verbose = config.debugLogging || Log.verboseLaunch
         Log.info(

@@ -115,6 +115,9 @@ var focusEcho: FocusEcho?
     var crowdWork: DispatchWorkItem?
     var autoSwitchAfter = Date.distantPast
     var lastSavedWorkspaces = ""
+    var savedTabs: [SavedTabs] = []
+    var savedTabsUntil = Date.distantPast
+    var lastSavedTabs: [String]?
     var focusSink: NSWindow?
     var visible: Set<CGWindowID> = []
     var targets: [CGWindowID: CGRect] = [:]

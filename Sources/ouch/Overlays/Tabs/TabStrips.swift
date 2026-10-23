@@ -128,6 +128,7 @@ private final class TabStripInput: NSView {
     }
 
     private var press: Press?
+    private var lightPress = false
 
     init(model: TabStripModel) {
         self.model = model
@@ -166,6 +167,7 @@ private final class TabStripInput: NSView {
         guard model.dragged == nil else { return }
         model.hovered = nil
         model.closeHovered = false
+        model.lightHovered = false
     }
 
     private func local(_ event: NSEvent) -> CGPoint {
@@ -176,7 +178,12 @@ private final class TabStripInput: NSView {
     private func hover(_ event: NSEvent) {
         guard model.dragged == nil else { return }
         let point = local(event)
-        guard let index = model.index(at: point.x, width: bounds.width) else { return }
+        let light = model.onLight(point.x)
+        if model.lightHovered != light { model.lightHovered = light }
+        guard let index = model.index(at: point.x, width: bounds.width) else {
+            model.hovered = nil
+            return
+        }
         let id = model.tabs[index].id
         if model.hovered != id { model.hovered = id }
         let onClose = model.closeRect(index, width: bounds.width).contains(point)
@@ -185,6 +192,7 @@ private final class TabStripInput: NSView {
 
     override func mouseDown(with event: NSEvent) {
         let point = local(event)
+        lightPress = model.onLight(point.x)
         guard let index = model.index(at: point.x, width: bounds.width) else { return }
         let onClose = model.closeRect(index, width: bounds.width).contains(point)
         press = Press(point: NSEvent.mouseLocation, id: model.tabs[index].id,
@@ -204,7 +212,7 @@ private final class TabStripInput: NSView {
         let x = local(event).x - press.grab
         guard let from = model.tabs.firstIndex(where: { $0.id == press.id }) else { return }
         let step = model.tabWidth(in: bounds.width) + TabStrip.spacing
-        let wanted = min(model.tabs.count - 1, max(0, Int(((x - TabStrip.padding) / step).rounded())))
+        let wanted = min(model.tabs.count - 1, max(0, Int(((x - TabStrip.lead) / step).rounded())))
         if wanted != from, !lifted {
             withAnimation(Motion.snap) {
                 model.tabs.move(fromOffsets: [from], toOffset: wanted > from ? wanted + 1 : wanted)
@@ -215,6 +223,11 @@ private final class TabStripInput: NSView {
     }
 
     override func mouseUp(with event: NSEvent) {
+        if lightPress {
+            lightPress = false
+            if model.onLight(local(event).x) { model.tabs.forEach { _ = WindowManager.shared.closeWindow($0.id) } }
+            return
+        }
         guard let press else { return }
         self.press = nil
         let manager = WindowManager.shared
@@ -250,6 +263,7 @@ private final class TabStripInput: NSView {
 
     func cancelDrag() {
         press = nil
+        lightPress = false
         model.dragged = nil
         model.dragShift = 0
         model.lifted = false
