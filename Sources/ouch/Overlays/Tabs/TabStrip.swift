@@ -2,12 +2,13 @@ import AppKit
 import SwiftUI
 
 enum TabStrip {
-    static let height: CGFloat = Theme.controlHeight + Theme.Space.small
+    static let height: CGFloat = Theme.rowHeight
     static let inset: CGFloat = Theme.Radius.pane
     static let lead: CGFloat = Theme.Space.extraLarge + Theme.Space.extraSmall
     static let radius: CGFloat = Theme.Radius.large
     static let closeSide: CGFloat = 20
     static let iconSide: CGFloat = 16
+    static let shape = UnevenRoundedRectangle(topLeadingRadius: radius, topTrailingRadius: radius, style: .continuous)
 }
 
 final class TabStripModel: ObservableObject {
@@ -83,8 +84,12 @@ struct TabStripView: View {
             }
         }
         .background(Theme.surface)
-        .clipShape(UnevenRoundedRectangle(topLeadingRadius: TabStrip.radius, topTrailingRadius: TabStrip.radius,
-                                          style: .continuous))
+        .clipShape(TabStrip.shape)
+        .overlay {
+            TabStrip.shape.strokeBorder(Theme.hairline, lineWidth: 1)
+                .padding(.bottom, -1)
+        }
+        .clipped()
         .animation(Motion.snap(reduceMotion), value: model.tabs.map(\.id))
         .animation(reduceMotion ? Motion.fade : Motion.easeOut, value: model.active)
         .animation(Motion.fade, value: model.focused)

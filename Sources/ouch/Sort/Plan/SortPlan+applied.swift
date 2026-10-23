@@ -7,6 +7,6 @@ extension SortPlan {
                       SortApplyLane(name: $0.workspace, label: $0.name.trimmingCharacters(in: .whitespaces),
                                     layout: $0.layout, ids: $0.ids)
                   },
-                  close: close, dropped: Array(claimed.union(existing)))
+                  close: close, dropped: Array(claimed.union(existing)), tabs: tabs)
     }
 }

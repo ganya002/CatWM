@@ -79,6 +79,7 @@ extension SortModel {
     func edit(keepNotice: Bool = false, _ change: (inout SortPlan) -> Void) {
         guard var displayPlan = plans[current] else { return }
         change(&displayPlan)
+        displayPlan.keepTabsTogether()
         displayPlan.touched = true
         displayPlan.pending = true
         plans[current] = displayPlan

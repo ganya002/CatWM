@@ -55,7 +55,7 @@ final class OuchPanel: NSPanel {
             collectionBehavior = base
         case .attached:
             level = .normal
-            collectionBehavior = [.managed, .ignoresCycle]
+            collectionBehavior = [.transient, .ignoresCycle]
             animationBehavior = .none
         }
     }

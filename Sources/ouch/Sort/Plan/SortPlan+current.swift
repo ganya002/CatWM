@@ -14,6 +14,8 @@ extension SortPlan {
                             lanes: lanes, strategy: nil,
                             existing: display.workspaces.map(\.name), taken: display.taken, active: display.active)
         plan.perDisplay = display.perDisplay
+        plan.tabs = display.tabs
+        plan.keepTabsTogether()
         for workspace in display.workspaces { plan.geometry[workspace.name] = (workspace.ratio, workspace.mainCount) }
         return plan
     }
@@ -88,6 +90,7 @@ extension SortPlan {
             .filter { dupes.contains($0.id) }
             .sorted { ($0.recency, $0.id) < ($1.recency, $1.id) }
             .map(\.id)
+        keepTabsTogether()
     }
 
     private static func groups(of live: [SortItem], by sortStrategy: SortStrategy) -> [SortGroup] {

@@ -38,7 +38,8 @@ extension WindowManager {
                                isLaptop: screen.isBuiltin, aspect: screen.frame.width / max(screen.frame.height, 1),
                                screen: screen.nsScreen, items: items, fullscreen: fullscreen,
                                workspaces: sortWorkspaces(mine, active: active, display: screen.uuid),
-                               active: active, taken: taken, perDisplay: config.workspacesPerDisplay)
+                               active: active, taken: taken, perDisplay: config.workspacesPerDisplay,
+                               tabs: tabs.groups.map(\.activeFirst))
         }
     }
 
@@ -136,26 +137,42 @@ extension WindowManager {
             guard let land else { continue }
             landing[apply.display] = land
             let dropped = gone[apply.display] ?? []
-            for (id, workspace) in workspaceOf where dropped.contains(workspace) && !moving.contains(id) {
-                model.assign(id, to: land)
-            }
+            let stranded = workspaceOf.filter { dropped.contains($0.value) && !moving.contains($0.key) }
+            model.assign(stranded.mapValues { _ in land })
         }
         return landing
     }
 
     private func applySortLanes(_ apply: SortApply, gone: Set<String>, fullscreen: Set<CGWindowID>) {
+        var moves: [CGWindowID: String] = [:]
         for lane in apply.lanes {
             monitorOf[lane.name] = apply.display
             labels[lane.name] = lane.label.isEmpty ? nil : lane.label
             let laneState = state(workspace: lane.name)
             laneState.layout = lane.layout
             if let zoomed = laneState.zoomed, !lane.ids.contains(zoomed) { laneState.zoomed = nil }
-            for id in lane.ids where windows[id] != nil && !fullscreen.contains(id) { model.assign(id, to: lane.name) }
+            for id in lane.ids where windows[id] != nil && !fullscreen.contains(id) { moves[id] = lane.name }
         }
         for name in gone { labels[name] = nil }
         let hidden = Self.pendingPrefix + apply.display
         monitorOf[hidden] = apply.display
-        for id in apply.close where windows[id] != nil { model.assign(id, to: hidden) }
+        for id in apply.close where windows[id] != nil { moves[id] = hidden }
+        model.assign(moves)
+        applySortTabs(apply)
+    }
+
+    private func applySortTabs(_ apply: SortApply) {
+        let laned = Set(apply.lanes.flatMap(\.ids)).filter { windows[$0] != nil }
+        let wanted = apply.tabs.map { $0.filter(laned.contains) }.filter { $0.count > 1 }
+        for id in laned where tabs.isGrouped(id) && !wanted.contains(where: { $0.contains(id) }) { model.leaveTab(id) }
+        for members in wanted {
+            let active = tabs.group(of: members[0])?.active
+            for (previous, id) in zip(members, members.dropFirst())
+            where tabs.group(of: previous)?.members.contains(id) != true {
+                model.joinTab(id, onto: previous)
+            }
+            if let active, members.contains(active) { model.activateTab(active) }
+        }
     }
 
     func finishSortAfterNative(closing ids: [CGWindowID], goTo: String?, focus: Bool, opening fullscreen: CGWindowID?) {

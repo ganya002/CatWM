@@ -5,6 +5,8 @@ struct TabGroups: Equatable {
         let id: Int
         var members: [CGWindowID]
         var active: CGWindowID
+
+        var activeFirst: [CGWindowID] { [active] + members.filter { $0 != active } }
     }
 
     private(set) var groups: [Group] = []

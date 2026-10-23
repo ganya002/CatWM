@@ -27,6 +27,17 @@ struct WorkspaceModel {
         workspaceOf[id] = workspace
     }
 
+    mutating func assign(_ moves: [CGWindowID: String]) {
+        for (id, workspace) in moves { workspaceOf[id] = workspace }
+        for group in tabs.groups where group.members.contains(where: { moves[$0] != nil }) {
+            let homes = group.members.map { workspaceOf[$0] }
+            let lead = workspaceOf[group.active]
+            func score(_ home: String?) -> (Int, Int) { (homes.filter { $0 == home }.count, home == lead ? 1 : 0) }
+            let home = homes.max { score($0) < score($1) } ?? lead
+            for member in group.members where workspaceOf[member] != home { leaveTab(member) }
+        }
+    }
+
     mutating func swapWorkspaces(_ first: CGWindowID, _ second: CGWindowID) {
         if workspaceOf[first] != workspaceOf[second] { leaveTab(first); leaveTab(second) }
         (workspaceOf[first], workspaceOf[second]) = (workspaceOf[second], workspaceOf[first])
