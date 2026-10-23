@@ -203,6 +203,7 @@ final class NativeDesktopController {
         guard DesktopMenuBar.needsPreparation(source: state.source, target: state.destination) else { return nil }
         async let image = DesktopMenuBarCover.capture(on: screen, source: state.source, target: state.destination)
         let background = await DesktopMenuBar.ready(source: state.source, target: state.destination, screen: screen)
+        timing?.checkpoint("menu-ready")
         guard let background else { DesktopMenuBarCover.recycle(await image); return nil }
         do {
             try background.persist()
@@ -217,7 +218,9 @@ final class NativeDesktopController {
             background.restore(); DesktopMenuBarCover.recycle(await image)
             throw error
         }
+        timing?.checkpoint("menu-guard")
         let panel = await image
+        timing?.checkpoint("menu-cover")
         if panel == nil {
             Log.info("native workspaces: no menu bar cover, screen recording "
                         + "\(PermissionWatcher.shared.granted.contains(.screenRecording))")

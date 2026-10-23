@@ -2,6 +2,7 @@ import AppKit
 import QuartzCore
 
 @MainActor final class DesktopMotion: NSObject {
+    private var preparedTarget: CFTimeInterval?
     private let screen: NSScreen
     private var callback: ((CADisplayLink) -> Void)?
 
@@ -9,10 +10,18 @@ import QuartzCore
 
     func animate(from: Double, to target: Double, with settings: NativeDesktopController.Settings,
                  update: @escaping (Double) throws -> Void) async throws {
+        let prepared = preparedTarget
+        preparedTarget = nil
         let duration = settings.duration * min(1, abs(target - from))
         if duration <= 0 { try update(target); return }
         let start = CACurrentMediaTime()
         try update(from)
+        if let prepared, prepared > start {
+            try Task.checkCancellation()
+            let time = min(1, (prepared - start) / duration)
+            try update(from + (target - from) * settings.curve.progress(time, bounce: settings.bounce))
+            if time >= 1 { return }
+        }
         try await run(limit: duration + 2, message: "Display link stopped before the animation finished",
                       fast: true) { link in
             let time = min(1, max(0, (link.targetTimestamp - start) / duration))
@@ -22,14 +31,17 @@ import QuartzCore
     }
 
     func frames(_ count: Int) async throws {
+        preparedTarget = nil
         var frames = 0
-        try await run(limit: 1, message: "The display stopped before the menu bar settled", fast: true) { _ in
+        try await run(limit: 1, message: "The display stopped before the menu bar settled", fast: true) { link in
             frames += 1
+            if frames >= count { self.preparedTarget = link.targetTimestamp }
             return frames >= count
         }
     }
 
     func follow(until finished: @escaping () -> Bool, update: @escaping () throws -> Void) async throws {
+        preparedTarget = nil
         try await run(limit: 180, message: "The Desktop swipe did not end", fast: false) { _ in
             try update()
             return finished()
