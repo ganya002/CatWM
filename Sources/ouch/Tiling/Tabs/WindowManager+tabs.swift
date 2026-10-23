@@ -5,6 +5,7 @@ extension WindowManager {
     static let minimizeHold: TimeInterval = 2
     static let tabHoverDelay: TimeInterval = 0.4
     static let tabDragSlack: CGFloat = 40
+    static let tabFollowWindow: TimeInterval = 1
 
     var tabs: TabGroups { model.tabs }
 
@@ -112,6 +113,7 @@ extension WindowManager {
             TabStrips.shared.update()
             return
         }
+        tabFollow = (group.active, Date())
         activateTab(id, previous: group.active)
     }
 
@@ -204,6 +206,18 @@ extension WindowManager {
         TabDropHint.shared.hide()
         _ = TabStrips.shared.endPreview(of: id)
         if tabs.group(of: id)?.active == id { refresh() } else { selectTab(id) }
+    }
+
+    func showHeir(of id: CGWindowID, focused: Bool) {
+        let replaced = tabFollow.map { $0.previous == id && Date().timeIntervalSince($0.at) < Self.tabFollowWindow }
+        guard focused || replaced == true,
+              let heir = tabs.group(of: id).flatMap({ $0.active == id || replaced == true ? tabs.heir(of: id) : nil })
+        else { return }
+        tabFollow = nil
+        DispatchQueue.main.async { [weak self] in
+            guard let self, let window = self.windows[heir] else { return }
+            if self.tabs.isGrouped(heir) { self.selectTab(heir) } else { self.focus(window, warp: false) }
+        }
     }
 
     func tabStack(behind id: CGWindowID) -> [CGWindowID] {

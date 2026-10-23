@@ -115,7 +115,9 @@ extension WindowManager {
     func forget(_ id: CGWindowID) {
         animator.forget(id)
         templateHiddenWindows[id] = nil
-        if !restoringTemplate, focusClock > 0, focusStamps[id] == focusClock { refocusAfterClose = workspaceOf[id] }
+        let focused = focusClock > 0 && focusStamps[id] == focusClock
+        if !restoringTemplate, focused { refocusAfterClose = workspaceOf[id] }
+        showHeir(of: id, focused: focused)
         if pendingFocus?.id == id { cancelFocusRequest() }
         if reportedFocus?.id == id {
             reportedFocus = nil
