@@ -3,14 +3,10 @@ import SwiftUI
 
 enum TabStrip {
     static let height: CGFloat = Theme.controlHeight + Theme.Space.small
-    static let overlap: CGFloat = Theme.Radius.pane
-    static let radius: CGFloat = Theme.Radius.pane
-    static let spacing: CGFloat = Theme.Space.xxs
-    static let lead: CGFloat = Theme.Space.xxl
+    static let inset: CGFloat = Theme.Radius.pane
+    static let radius: CGFloat = Theme.Radius.large
     static let closeSide: CGFloat = 20
     static let iconSide: CGFloat = 16
-    static let lightSide: CGFloat = 14
-    static let tabRadius: CGFloat = Theme.Radius.medium
 }
 
 final class TabStripModel: ObservableObject {
@@ -25,31 +21,21 @@ final class TabStripModel: ObservableObject {
     @Published var focused = false
     @Published var hovered: CGWindowID?
     @Published var closeHovered = false
-    @Published var lightHovered = false
     @Published var dragged: CGWindowID?
     @Published var dragShift: CGFloat = 0
     @Published var lifted = false
 
-    func tabWidth(in width: CGFloat) -> CGFloat {
-        let count = CGFloat(max(tabs.count, 1))
-        return max(0, (width - TabStrip.lead - TabStrip.spacing * (count - 1)) / count)
-    }
+    func tabWidth(in width: CGFloat) -> CGFloat { width / CGFloat(max(tabs.count, 1)) }
 
-    func slotX(_ index: Int, width: CGFloat) -> CGFloat {
-        TabStrip.lead + CGFloat(index) * (tabWidth(in: width) + TabStrip.spacing)
-    }
-
-    func onLight(_ x: CGFloat) -> Bool { x < TabStrip.lead - TabStrip.spacing / 2 }
+    func slotX(_ index: Int, width: CGFloat) -> CGFloat { CGFloat(index) * tabWidth(in: width) }
 
     func index(at x: CGFloat, width: CGFloat) -> Int? {
-        guard !tabs.isEmpty, !onLight(x) else { return nil }
-        let step = tabWidth(in: width) + TabStrip.spacing
-        guard step > 0 else { return nil }
-        return min(tabs.count - 1, max(0, Int(((x - TabStrip.lead + TabStrip.spacing / 2) / step).rounded(.down))))
+        guard !tabs.isEmpty, width > 0 else { return nil }
+        return min(tabs.count - 1, max(0, Int((x / tabWidth(in: width)).rounded(.down))))
     }
 
     func closeRect(_ index: Int, width: CGFloat) -> CGRect {
-        let right = slotX(index, width: width) + tabWidth(in: width) - Theme.Space.extraSmall
+        let right = slotX(index, width: width) + tabWidth(in: width) - Theme.Space.small
         return CGRect(x: right - TabStrip.closeSide, y: (TabStrip.height - TabStrip.closeSide) / 2,
                       width: TabStrip.closeSide, height: TabStrip.closeSide)
     }
@@ -61,85 +47,60 @@ struct TabStripView: View {
     var body: some View {
         GeometryReader { geometry in
             let width = geometry.size.width
+            let tabWidth = model.tabWidth(in: width)
             ZStack(alignment: .topLeading) {
-                TrafficLight(hovered: model.lightHovered)
-                    .frame(width: TabStrip.lead, height: TabStrip.height)
-                ForEach(Array(model.tabs.enumerated()), id: \.element.id) { index, _ in
-                    if index > 0, !beside(index) {
-                        Rectangle().fill(Theme.hairline)
-                            .frame(width: 1, height: TabStrip.iconSide)
-                            .offset(x: model.slotX(index, width: width) - TabStrip.spacing / 2 - 0.5,
-                                    y: (TabStrip.height - TabStrip.iconSide) / 2)
-                    }
+                if let hovered = model.hovered, hovered != model.active, model.dragged == nil,
+                   let index = model.tabs.firstIndex(where: { $0.id == hovered }) {
+                    Rectangle().fill(Theme.ink.opacity(0.04))
+                        .frame(width: tabWidth, height: TabStrip.height)
+                        .offset(x: model.slotX(index, width: width))
                 }
                 if let index = model.tabs.firstIndex(where: { $0.id == model.active }) {
-                    let dragged = model.dragged == model.active
-                    TabShape().fill(model.focused ? Theme.hover : Theme.surface)
-                        .frame(width: model.tabWidth(in: width), height: TabStrip.height)
-                        .offset(x: model.slotX(index, width: width) + (dragged ? model.dragShift : 0))
-                        .opacity(dragged && model.lifted ? 0.55 : 1)
-                        .transaction { if dragged { $0.animation = nil } }
+                    Rectangle().fill(Theme.ink.opacity(model.focused ? 0.1 : 0.06))
+                        .frame(width: tabWidth, height: TabStrip.height)
+                        .offset(x: offset(of: index, id: model.active, width: width))
+                        .transaction { if model.dragged == model.active { $0.animation = nil } }
+                }
+                ForEach(1..<max(model.tabs.count, 1), id: \.self) { index in
+                    Rectangle().fill(Theme.hairline)
+                        .frame(width: 1, height: TabStrip.height / 2)
+                        .offset(x: model.slotX(index, width: width) - 0.5, y: TabStrip.height / 4)
+                        .opacity(separated(index) ? 1 : 0)
                 }
                 ForEach(Array(model.tabs.enumerated()), id: \.element.id) { index, tab in
                     let dragged = model.dragged == tab.id
                     TabCell(tab: tab, active: tab.id == model.active, focused: model.focused,
                             hovered: model.hovered == tab.id && model.dragged == nil,
-                            closeHovered: model.closeHovered, lifted: dragged && model.lifted)
-                        .frame(width: model.tabWidth(in: width), height: TabStrip.height)
-                        .offset(x: model.slotX(index, width: width) + (dragged ? model.dragShift : 0))
+                            closeHovered: model.closeHovered)
+                        .frame(width: tabWidth, height: TabStrip.height)
+                        .offset(x: offset(of: index, id: tab.id, width: width))
+                        .opacity(dragged && model.lifted ? 0.55 : 1)
                         .zIndex(dragged ? 1 : 0)
                         .transaction { if dragged { $0.animation = nil } }
                         .transition(.opacity)
                 }
             }
         }
-        .background(Theme.background)
+        .background(Theme.surface)
         .clipShape(UnevenRoundedRectangle(topLeadingRadius: TabStrip.radius, topTrailingRadius: TabStrip.radius,
                                           style: .continuous))
         .animation(Motion.snap(reduceMotion), value: model.tabs.map(\.id))
-        .animation(Motion.snap(reduceMotion), value: model.active)
+        .animation(reduceMotion ? Motion.fade : Motion.easeOut, value: model.active)
         .animation(Motion.fade, value: model.focused)
         .animation(Motion.fade, value: model.hovered)
-        .animation(Motion.fade, value: model.lightHovered)
     }
 
     private var reduceMotion: Bool { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
 
-    private func beside(_ index: Int) -> Bool {
-        let lit = [model.active, model.dragged].compactMap(\.self)
-        return lit.contains(model.tabs[index].id) || lit.contains(model.tabs[index - 1].id)
-    }
-}
-
-private struct TabShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        UnevenRoundedRectangle(topLeadingRadius: TabStrip.tabRadius, topTrailingRadius: TabStrip.tabRadius,
-                               style: .continuous).path(in: rect)
-    }
-}
-
-private struct TrafficLight: View {
-    let hovered: Bool
-
-    var body: some View {
-        ZStack {
-            Circle().fill(Self.red)
-            Circle().strokeBorder(Self.rim, lineWidth: 0.5)
-            if hovered {
-                Image(systemName: "xmark")
-                    .font(Theme.symbol(Theme.Icon.extraSmall - 2, .bold))
-                    .foregroundStyle(Self.glyph)
-            }
-        }
-        .frame(width: TabStrip.lightSide, height: TabStrip.lightSide)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .contentShape(Rectangle())
-        .help("Close all tabs")
+    private func offset(of index: Int, id: CGWindowID, width: CGFloat) -> CGFloat {
+        model.slotX(index, width: width) + (model.dragged == id ? model.dragShift : 0)
     }
 
-    private static let red = Theme.rgb(0xFF5F57)
-    private static let rim = Theme.rgb(0xE2463F)
-    private static let glyph = Theme.rgb(0x4D0000)
+    private func separated(_ index: Int) -> Bool {
+        guard model.dragged == nil, index < model.tabs.count else { return false }
+        let lit: Set<CGWindowID> = [model.active, model.hovered ?? 0]
+        return !lit.contains(model.tabs[index - 1].id) && !lit.contains(model.tabs[index].id)
+    }
 }
 
 private struct TabCell: View {
@@ -148,7 +109,6 @@ private struct TabCell: View {
     let focused: Bool
     let hovered: Bool
     let closeHovered: Bool
-    let lifted: Bool
 
     var body: some View {
         ZStack {
@@ -172,11 +132,9 @@ private struct TabCell: View {
                         .transition(.opacity)
                 }
             }
-            .padding(.trailing, Theme.Space.extraSmall)
+            .padding(.trailing, Theme.Space.small)
         }
         .foregroundStyle(active && focused || hovered ? Theme.ink : Theme.inkMuted)
-        .background(TabShape().fill(lifted && !active ? Theme.hover : .clear))
-        .opacity(lifted ? 0.55 : 1)
         .help(tab.title)
     }
 }
@@ -202,14 +160,14 @@ extension GalleryContent {
         block("Tab strip") {
             VStack(alignment: .leading, spacing: Theme.Space.large) {
                 ForEach([true, false], id: \.self) { focused in
-                    TabStripView(model: .example(focused: focused))
-                        .frame(width: 520, height: TabStrip.height + TabStrip.overlap)
-                        .overlay(alignment: .bottom) {
-                            UnevenRoundedRectangle(topLeadingRadius: TabStrip.radius,
-                                                   topTrailingRadius: TabStrip.radius)
-                                .fill(Theme.surface)
-                                .frame(height: TabStrip.overlap)
-                        }
+                    VStack(spacing: 0) {
+                        TabStripView(model: .example(focused: focused))
+                            .frame(width: 520 - TabStrip.inset * 2, height: TabStrip.height)
+                        UnevenRoundedRectangle(topLeadingRadius: TabStrip.inset, topTrailingRadius: TabStrip.inset,
+                                               style: .continuous)
+                            .fill(Theme.surfaceRaised)
+                            .frame(width: 520, height: Theme.controlHeight)
+                    }
                 }
             }
         }

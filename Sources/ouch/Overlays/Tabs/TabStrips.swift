@@ -76,7 +76,7 @@ final class TabStrips {
                     }
                 }
             }
-            panel.order(.below, relativeTo: Int(group.active))
+            panel.order(.below, relativeTo: Int(Self.lowest(of: group)))
             if anchor != group.active || !wasOnSpace(of: group.active) { moveToSpace(of: group.active) }
             anchor = group.active
         }
@@ -101,6 +101,12 @@ final class TabStrips {
             }
         }
 
+        private static func lowest(of group: TabGroups.Group) -> CGWindowID {
+            let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
+            let ids = (list as? [[String: Any]] ?? []).compactMap { $0[kCGWindowNumber as String] as? CGWindowID }
+            return ids.last(where: group.members.contains) ?? group.active
+        }
+
         private static func title(of window: Window) -> String {
             if let title = window.title, !title.isEmpty { return title }
             return NSRunningApplication(processIdentifier: window.pid)?.localizedName ?? "Window"
@@ -108,9 +114,8 @@ final class TabStrips {
 
         private static func frame(above slot: CGRect) -> NSRect {
             let primaryHeight = NSScreen.screens.first?.frame.height ?? 0
-            let bottom = slot.minY + TabStrip.overlap
-            return NSRect(x: slot.minX, y: primaryHeight - bottom,
-                          width: slot.width, height: TabStrip.height + TabStrip.overlap).integral
+            return NSRect(x: slot.minX + TabStrip.inset, y: primaryHeight - slot.minY,
+                          width: max(0, slot.width - TabStrip.inset * 2), height: TabStrip.height).integral
         }
     }
 }
@@ -128,13 +133,12 @@ private final class TabStripInput: NSView {
     }
 
     private var press: Press?
-    private var lightPress = false
+    private let host: NSView
 
     init(model: TabStripModel) {
         self.model = model
+        host = NSHostingView(rootView: TabStripView(model: model))
         super.init(frame: .zero)
-        let host = NSHostingView(rootView: TabStripView(model: model))
-        host.autoresizingMask = [.width, .height]
         addSubview(host)
     }
 
@@ -143,14 +147,13 @@ private final class TabStripInput: NSView {
 
     override func layout() {
         super.layout()
-        subviews.forEach { $0.frame = bounds }
+        host.frame = bounds
     }
 
     override func acceptsFirstMouse(for _: NSEvent?) -> Bool { true }
 
     override func hitTest(_ point: NSPoint) -> NSView? {
-        let local = convert(point, from: superview)
-        return bounds.contains(local) && bounds.height - local.y <= TabStrip.height ? self : nil
+        bounds.contains(convert(point, from: superview)) ? self : nil
     }
 
     override func updateTrackingAreas() {
@@ -167,7 +170,6 @@ private final class TabStripInput: NSView {
         guard model.dragged == nil else { return }
         model.hovered = nil
         model.closeHovered = false
-        model.lightHovered = false
     }
 
     private func local(_ event: NSEvent) -> CGPoint {
@@ -178,8 +180,6 @@ private final class TabStripInput: NSView {
     private func hover(_ event: NSEvent) {
         guard model.dragged == nil else { return }
         let point = local(event)
-        let light = model.onLight(point.x)
-        if model.lightHovered != light { model.lightHovered = light }
         guard let index = model.index(at: point.x, width: bounds.width) else {
             model.hovered = nil
             return
@@ -192,7 +192,6 @@ private final class TabStripInput: NSView {
 
     override func mouseDown(with event: NSEvent) {
         let point = local(event)
-        lightPress = model.onLight(point.x)
         guard let index = model.index(at: point.x, width: bounds.width) else { return }
         let onClose = model.closeRect(index, width: bounds.width).contains(point)
         press = Press(point: NSEvent.mouseLocation, id: model.tabs[index].id,
@@ -211,8 +210,7 @@ private final class TabStripInput: NSView {
         if model.lifted != lifted { model.lifted = lifted }
         let x = local(event).x - press.grab
         guard let from = model.tabs.firstIndex(where: { $0.id == press.id }) else { return }
-        let step = model.tabWidth(in: bounds.width) + TabStrip.spacing
-        let wanted = min(model.tabs.count - 1, max(0, Int(((x - TabStrip.lead) / step).rounded())))
+        let wanted = min(model.tabs.count - 1, max(0, Int((x / model.tabWidth(in: bounds.width)).rounded())))
         if wanted != from, !lifted {
             withAnimation(Motion.snap) {
                 model.tabs.move(fromOffsets: [from], toOffset: wanted > from ? wanted + 1 : wanted)
@@ -223,11 +221,6 @@ private final class TabStripInput: NSView {
     }
 
     override func mouseUp(with event: NSEvent) {
-        if lightPress {
-            lightPress = false
-            if model.onLight(local(event).x) { model.tabs.forEach { _ = WindowManager.shared.closeWindow($0.id) } }
-            return
-        }
         guard let press else { return }
         self.press = nil
         let manager = WindowManager.shared
@@ -263,7 +256,6 @@ private final class TabStripInput: NSView {
 
     func cancelDrag() {
         press = nil
-        lightPress = false
         model.dragged = nil
         model.dragShift = 0
         model.lifted = false
