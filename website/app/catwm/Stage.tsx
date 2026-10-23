@@ -16,6 +16,7 @@ import {
   place,
 } from "./script";
 import { usePulse } from "./usePulse";
+import { PulseVeil } from "./PulseVeil";
 
 // Animator defaults: animation-duration 0.18, animation-curve ease-out (cubic).
 const MOVE = { duration: 0.18, ease: "power3.out" } as const;
@@ -113,7 +114,7 @@ export function Stage({ hero }: Props) {
     };
   }, [press, stopAttract]);
 
-  usePulse(root, "#000");
+  usePulse(root, "#000", "#fff");
 
   const startSlots = place(START);
 
@@ -142,7 +143,7 @@ export function Stage({ hero }: Props) {
         })}
       </div>
 
-      <div className="pulse" data-pulse aria-hidden="true" />
+      <PulseVeil />
       <div className="hero">{hero}</div>
     </div>
   );
