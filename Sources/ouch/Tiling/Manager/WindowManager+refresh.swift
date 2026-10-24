@@ -277,8 +277,10 @@ extension WindowManager {
         window.minimized = scan.minimized.contains(window.id)
         window.fullscreen = scan.fullscreen.contains(window.id)
         window.remember(found.frame, ifRevision: found.frameRevision ?? window.frameRevision, readAt: scan.readAt)
+        let retitled = window.title != found.title
         window.title = found.title
         window.resizable = found.resizable
+        if retitled { Notifications.shared.titleChanged(window) }
     }
 
     func refocusRecent(on workspace: String) {

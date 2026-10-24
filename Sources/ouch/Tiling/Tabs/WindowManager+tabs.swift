@@ -380,14 +380,18 @@ extension WindowManager {
         window.cachedFrame.insetBy(dx: -8, dy: -8).contains(point)
     }
 
-    func tabTitleChanged(_ element: AXUIElement) {
-        guard !tabs.isEmpty, let window = windows.values.first(where: { CFEqual($0.element, element) }),
-              tabs.isGrouped(window.id) else { return }
+    func titleChanged(_ element: AXUIElement) {
+        guard !tabs.isEmpty || Notifications.shared.enabled,
+              let window = windows.values.first(where: { CFEqual($0.element, element) }) else { return }
+        let grouped = tabs.isGrouped(window.id)
+        guard grouped || Notifications.shared.enabled else { return }
         scanner.run(window.pid) {
             let title = element.string(kAXTitleAttribute)
             DispatchQueue.main.async {
+                guard window.title != title else { return }
                 window.title = title
-                TabStrips.shared.update()
+                Notifications.shared.titleChanged(window)
+                if grouped { TabStrips.shared.update() }
             }
         }
     }

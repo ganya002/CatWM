@@ -8,12 +8,14 @@ final class WelcomeModel: ObservableObject {
     @Published var inputMonitoring = false
     @Published var screenRecording = false
     @Published var screenTestDone = false
+    @Published var fullDiskAccess = false
     @Published var login = false
     @Published var style: KeyStyle?
     @Published var landed = false
     var allowAccessibility: () -> Void = {}
     var allowInputMonitoring: () -> Void = {}
     var allowScreenRecording: () -> Void = {}
+    var allowFullDiskAccess: () -> Void = {}
     var takeTestImage: () -> Void = {}
     var allowLogin: () -> Void = {}
     var skip: () -> Void = {}

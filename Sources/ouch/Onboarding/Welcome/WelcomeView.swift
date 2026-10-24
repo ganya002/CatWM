@@ -52,6 +52,10 @@ struct WelcomeView: View {
                                           detail: "Takes a picture of each saved template", primary: false,
                                           action: model.allowScreenRecording,
                                           test: model.screenTestDone ? nil : model.takeTestImage))
+                permission(PermissionItem(granted: model.fullDiskAccess, symbol: "bell.badge",
+                                          title: "Full Disk Access", required: false,
+                                          detail: "Puts each notification on the right tab", primary: false,
+                                          action: model.allowFullDiskAccess))
                 permission(PermissionItem(granted: model.login, symbol: "power", title: "Open at login",
                                           required: false, detail: "Starts CatWM when you log in", primary: false,
                                           action: model.allowLogin))

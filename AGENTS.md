@@ -23,6 +23,7 @@ The app source is in `Sources/ouch/`. The `WindowSession` library is in `Sources
 - `Feedback/`: the Send Feedback sheet.
 - `Keys/`: the event tap, the Shortcut Map, keycaps and the keyboard help overlay.
 - `MenuBar/`: the menu bar icon, status menu and tip.
+- `Notifications/`: the unread badge of each window, its sources (Dock, Notification Center database and banners) and its listeners. Read `docs/internals/notifications.md` before you add a source.
 - `Onboarding/`: the intro, welcome card, tour, permission step and practice.
 - `Overlays/`: the HUD, the mode effect and the quick-action menu.
 - `Settings/`: the settings window, its pages and search.

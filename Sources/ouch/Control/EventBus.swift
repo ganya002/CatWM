@@ -52,6 +52,13 @@ final class EventBus {
         EventSpec(name: "mode.changed", summary: "The key mode changed", data: [
             Field(name: "mode", type: "string", summary: "Key mode, empty for none")
         ]),
+        EventSpec(name: "window.notifications", summary: "The unread badge of a window changed", data: [
+            Field(name: "window", type: "int", summary: "Window ID"),
+            Field(name: "app", type: "string?", summary: "Bundle ID"),
+            Field(name: "count", type: "int?", summary: "Unread count, or null for a dot or no badge"),
+            Field(name: "dot", type: "bool", summary: "The app shows unread items with no number"),
+            Field(name: "source", type: "string?", summary: "dock, banner or database, or null")
+        ]),
         EventSpec(name: "config.reloaded", summary: "Ouch read the config file again", data: [
             Field(name: "errors", type: "string[]", summary: "Problems in the config file")
         ])
@@ -160,6 +167,7 @@ extension WindowManager {
 
     func notifyChange() {
         onChange?()
+        Notifications.shared.stateChanged(focused: reportedFocusedWindow()?.id)
         EventBus.shared.stateChanged()
     }
 }
