@@ -62,11 +62,13 @@ Reorder your windows without dealing with the native macOS fuss.
 
 ### Callable via cli
 
-Agents (and humans) can call ouch via cli. Every bind is a dispatcher, and the cli runs the same ones.
+Agents (and humans) can call ouch via cli. Every bind is a dispatcher, and the cli runs the same ones. Python, TypeScript and Swift libraries (see [Clients](Clients/README.md)) use the same commands and can listen for events.
 
 ```sh
-ouch dispatch workspace 2
-ouch dispatch movefocus l
+ouch workspace 2
+ouch movefocus left
+ouch windows
+ouch events focus.changed
 ```
 
 <sub>We do not plan to add full support if any for urls (ouch://), if we do this anyone can close windows and etc.</sub>

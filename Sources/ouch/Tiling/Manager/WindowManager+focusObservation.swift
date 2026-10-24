@@ -46,7 +46,7 @@ extension WindowManager {
         }
         FocusDim.shared.update()
         TabStrips.shared.restack()
-        onChange?()
+        notifyChange()
     }
 
     func deferFocusCommand(_ dispatcher: String, arg: String, inMode: Bool) -> Bool {

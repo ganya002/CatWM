@@ -32,35 +32,7 @@ extension WindowManager {
         if config.enablesLayoutHUD { HUD.shared.show(layout.title, layout: layout, on: screen.nsScreen) }
     }
 
-    func ipc(_ command: String) {
-        let parts = command.split(separator: " ", maxSplits: 2).map(String.init)
-        Log.info("ipc: \(command)")
-        switch parts.first {
-        case "dispatch" where parts.count >= 2:
-            guard !["exec", "launch"].contains(parts[1].lowercased()) else {
-                Log.info("ipc: \(parts[1].lowercased()) is only allowed from keybinds")
-                return
-            }
-            dispatch(parts[1].lowercased(), parts.count > 2 ? parts[2] : "")
-        case "dump": dumpState()
-        case "grabtest": grabTest()
-        case "poststyle" where parts.count >= 2:
-            if let raw = Int(parts[1]), let style = Hotkeys.PostStyle(rawValue: raw) { Hotkeys.postStyle = style }
-            Log.info("ipc: post style is now \(Hotkeys.postStyle)")
-        case "reload": reload()
-        case "modefx":
-            ModeFX.shared.command(Array(parts.dropFirst()).flatMap { $0.split(separator: " ").map(String.init) })
-        case "panelfx": PanelMotionDemo.command(Array(parts.dropFirst()))
-        case "introlab": IntroLab.shared.open()
-        case "intro":
-            Onboarding.shared.playIntro(
-                parts.dropFirst().first.flatMap { IntroScore.Arrangement.named($0) } ?? .standard
-            )
-        default: Log.info("ipc: unknown command")
-        }
-    }
-
-    func dumpState() {
+    func dumpLines() -> [String] {
         var lines = [
             "state: trusted=\(Permission.accessibility.isGranted) keybinds=\(Hotkeys.shared.isActive) "
                 + "tiling=\(tilingEnabled) focused=\(focusedWindow()?.id ?? 0)"
@@ -96,7 +68,11 @@ extension WindowManager {
                     + "frame=\(windows[id]?.frame ?? .null)"
             )
         }
-        lines.forEach { Log.info($0) }
+        return lines
+    }
+
+    func dumpState() {
+        dumpLines().forEach { Log.info($0) }
     }
 
     func swapOrder(_ first: CGWindowID, _ second: CGWindowID) {

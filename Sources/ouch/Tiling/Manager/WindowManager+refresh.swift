@@ -46,7 +46,7 @@ extension WindowManager {
         self.present = observed.present
         let plan = syncWorkspaces(screens: screens, present: observed.present)
         visible = plan.visible
-        guard !restoringTemplate else { onChange?(); return }
+        guard !restoringTemplate else { notifyChange(); return }
         restoreTilingRecovery(observed.fresh)
         saveWorkspaces()
 
@@ -59,13 +59,13 @@ extension WindowManager {
         saveTabs()
         saveTilingRecovery()
         guard tilingEnabled else {
-            SplitHandle.shared.update(); TabStrips.shared.update(); onChange?(); return
+            SplitHandle.shared.update(); TabStrips.shared.update(); notifyChange(); return
         }
         applyTileMoves(planTileMoves(screens: screens, only: only), instant: instantLayout)
         SplitHandle.shared.update(instant: instantLayout || dividerDrag != nil)
         TabStrips.shared.update(instant: instantLayout || dividerDrag != nil)
         timing.checkpoint("apply")
-        onChange?()
+        notifyChange()
         timing.checkpoint("notify")
     }
 

@@ -1,0 +1,152 @@
+"""Tests for the Python client against a fake Ouch server. Run: python3 -m unittest discover Clients/python/tests"""
+import json
+import os
+import socket
+import sys
+import tempfile
+import threading
+import unittest
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
+from ouch import Ouch, OuchError  # noqa: E402
+from ouch.testing import Events, connect, find_windows, wait_for_window, wait_until  # noqa: E402
+
+WINDOWS = [
+    {"id": 1, "app": "com.apple.Safari", "title": "Docs", "focused": True, "workspace": "1", "floating": False},
+    {"id": 2, "app": "com.apple.Terminal", "title": None, "focused": False, "workspace": "2", "floating": True},
+]
+
+
+class FakeOuch:
+    """Speaks the Ouch protocol. A `fake.emit` request pushes the events given in its args."""
+
+    def __init__(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.path = os.path.join(self.directory.name, "ouch.sock")
+        self.requests = []
+        self.subscribers = []
+        self.server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.server.bind(self.path)
+        self.server.listen(8)
+        threading.Thread(target=self._accept, daemon=True).start()
+
+    def _accept(self):
+        while True:
+            try:
+                connection, _ = self.server.accept()
+            except OSError:
+                return
+            threading.Thread(target=self._serve, args=(connection,), daemon=True).start()
+
+    def _send(self, connection, message):
+        connection.sendall((json.dumps(message) + "\n").encode())
+
+    def _serve(self, connection):
+        self._send(connection, {"hello": {"protocol": 1, "version": "test", "pid": 1}})
+        for line in connection.makefile("r"):
+            request = json.loads(line)
+            self.requests.append(request)
+            name, args, rid = request["command"], request["args"], request["id"]
+            if name == "windows":
+                reply = {"id": rid, "ok": True, "result": WINDOWS}
+            elif name == "movefocus" and args.get("direction") not in ("left", "right", "up", "down"):
+                reply = {"id": rid, "ok": False, "error": {"code": "invalid_args", "message": "bad direction"}}
+            elif name == "subscribe":
+                self.subscribers.append(connection)
+                reply = {"id": rid, "ok": True, "result": {"events": args["events"]}}
+            elif name == "fake.emit":
+                for target in self.subscribers:
+                    for event in args["events"]:
+                        self._send(target, event)
+                reply = {"id": rid, "ok": True, "result": None}
+            else:
+                reply = {"id": rid, "ok": True, "result": None}
+            self._send(connection, reply)
+        connection.close()
+
+    def close(self):
+        self.server.close()
+        self.directory.cleanup()
+
+
+class ClientTests(unittest.TestCase):
+    def setUp(self):
+        self.fake = FakeOuch()
+        self.addCleanup(self.fake.close)
+        self.ouch = Ouch(self.fake.path, timeout=3)
+        self.addCleanup(self.ouch.close)
+
+    def test_hello_and_result(self):
+        self.assertEqual(self.ouch.hello["version"], "test")
+        self.assertEqual(self.ouch.windows(), WINDOWS)
+
+    def test_typed_method_sends_named_arguments_and_skips_none(self):
+        self.ouch.movefocus("left")
+        self.ouch.cyclenext()
+        sent = [(r["command"], r["args"]) for r in self.fake.requests]
+        self.assertEqual(sent, [("movefocus", {"direction": "left"}), ("cyclenext", {})])
+
+    def test_errors_become_exceptions(self):
+        with self.assertRaises(OuchError) as caught:
+            self.ouch.call("movefocus", {"direction": "sideways"})
+        self.assertEqual(caught.exception.code, "invalid_args")
+
+    def test_not_running_skips_the_test(self):
+        with self.assertRaises(unittest.SkipTest):
+            connect("/nonexistent/ouch.sock")
+        with self.assertRaises(OuchError) as caught:
+            Ouch("/nonexistent/ouch.sock")
+        self.assertEqual(caught.exception.code, "not_running")
+
+    def test_window_filters(self):
+        self.assertEqual([w["id"] for w in find_windows(self.ouch, app="com.apple.Safari")], [1])
+        self.assertEqual([w["id"] for w in find_windows(self.ouch, title="doc")], [1])
+        self.assertEqual([w["id"] for w in find_windows(self.ouch, floating=True)], [2])
+        self.assertEqual(wait_for_window(self.ouch, workspace="2")["id"], 2)
+        with self.assertRaises(TimeoutError):
+            wait_for_window(self.ouch, timeout=0.2, app="nothing")
+
+    def test_wait_until_returns_the_value(self):
+        values = iter([None, 0, "ready"])
+        self.assertEqual(wait_until(lambda: next(values), interval=0.01), "ready")
+
+
+class EventTests(unittest.TestCase):
+    def setUp(self):
+        self.fake = FakeOuch()
+        self.addCleanup(self.fake.close)
+        self.ouch = Ouch(self.fake.path, timeout=3)
+        self.addCleanup(self.ouch.close)
+
+    def emit(self, *events):
+        self.ouch.call("fake.emit", {"events": [{"event": n, "data": d} for n, d in events]})
+
+    def test_wait_filters_by_name_and_data(self):
+        with Events("focus.changed", "mode.changed", path=self.fake.path) as events:
+            self.emit(("mode.changed", {"mode": "window"}), ("focus.changed", {"window": 1}),
+                      ("focus.changed", {"window": 2}))
+            self.assertEqual(events.wait("focus.changed", where={"window": 2}, timeout=3)["data"], {"window": 2})
+
+    def test_wait_accepts_a_function(self):
+        with Events(path=self.fake.path) as events:
+            self.emit(("focus.changed", {"window": 5}))
+            self.assertEqual(events.wait(where=lambda data: data["window"] == 5, timeout=3)["event"], "focus.changed")
+
+    def test_timeout_and_drain(self):
+        with Events("focus.changed", path=self.fake.path) as events:
+            with self.assertRaises(TimeoutError):
+                events.wait("focus.changed", timeout=0.2)
+            self.emit(("focus.changed", {"window": 1}))
+            wait_until(lambda: events._queue.qsize(), interval=0.01)
+            self.assertEqual(len(events.drain()), 1)
+
+    def test_close_wakes_a_waiting_reader(self):
+        events = Events("focus.changed", path=self.fake.path)
+        threading.Timer(0.2, events.close).start()
+        with self.assertRaises(OuchError):
+            events.wait("focus.changed", timeout=3)
+
+
+if __name__ == "__main__":
+    unittest.main()
