@@ -71,7 +71,7 @@ extension WindowManager {
         case kAXFocusedWindowChangedNotification:
             observeFocus(element)
             FocusDim.shared.update()
-            onChange?()
+            notifyChange()
         case kAXTitleChangedNotification:
             tabTitleChanged(element)
         case kAXWindowMiniaturizedNotification:

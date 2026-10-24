@@ -22,12 +22,7 @@ extension WindowManager {
         installEventMonitors()
         installInputHandlers()
 
-        let ipcObserver = DistributedNotificationCenter.default().addObserver(
-            forName: ipcNotification, object: nil, queue: .main
-        ) { [weak self] notification in
-            if let cmd = notification.object as? String { self?.ipc(cmd) }
-        }
-        notificationObservers.append(ipcObserver)
+        ControlServer.shared.start()
 
         prepareFocusSink()
         HUD.shared.prepare(text: currentWorkspace ?? "1", layout: config.layouts.first)
@@ -143,7 +138,7 @@ extension WindowManager {
             KeyHelp.shared.modeChanged(name)
             CursorActions.shared.modeChanged(name)
             Tips.shared.modeChanged(name)
-            self?.onChange?()
+            self?.notifyChange()
             self?.onModeChange?(name)
         }
         NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved) { [weak self] event in
@@ -199,6 +194,7 @@ extension WindowManager {
         corrections = [:]
         scheduleRefresh(after: 0)
         refresh()
+        EventBus.shared.emit("config.reloaded", ["errors": .array(config.errors.map(JSON.string))])
         guard showHUD else { return }
         HUD.shared.show(
             config.errors.isEmpty ? "Config reloaded" : "Config: \(config.errors.count) error(s), see Console",

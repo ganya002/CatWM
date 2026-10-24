@@ -7,6 +7,7 @@ Read in this order:
 | File | Read it to |
 |---|---|
 | [cli.md](cli.md) | control a running CatWM from a shell (`dispatch`, `reload`, `dump`) |
+| [python.md](python.md) | drive and test a running CatWM from Python: commands, waits and events |
 | [config.md](config.md) | read or edit `~/.config/ouch/ouch.conf` (every option, value formats) |
 | [keybinds.md](keybinds.md) | write `bind` lines: modifiers, keys, ranges, scroll/swipe, window mode |
 | [dispatchers.md](dispatchers.md) | know what each command does and what args it takes |

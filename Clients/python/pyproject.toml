@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ouch-client"
+version = "0.1.0"
+description = "Control the Ouch tiling window manager"
+requires-python = ">=3.10"
+
+[tool.setuptools]
+packages = ["ouch"]
+
+[tool.setuptools.package-data]
+ouch = ["py.typed"]

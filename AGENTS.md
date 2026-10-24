@@ -11,13 +11,14 @@ These are the things we cant comprimise on, they make us what we are today and t
 
 ## How it works
 
-An event tap (`Hotkeys`) matches each key press against the binds of the active submap and sends the match to `WindowManager.dispatch` (`Tiling/Manager/`). The CLI calls the same `dispatch`. `WindowManager.shared` owns all state: one `Window` for each `CGWindowID`, and a `WorkspaceModel` for workspaces, order and layouts. `AXObserver` notifications and `WindowScanner` (`Tiling/Scan/`) feed `refresh()`. `refresh()` adds and forgets windows, asks `Layout.frames` for the slots, and places the windows. `Animator` (`Tiling/Motion/`) steps the frames at 120 Hz through one `AXWriter` queue for each app. Each workspace is one macOS Desktop. `NativeDesktopController` (`Tiling/Spaces/`) moves the Desktops with the Ouch animation settings. `Config.parse` reads `~/.config/ouch/ouch.conf` into binds and `ConfigOption` values. `reload()` applies them, and Settings edits the same file through `ConfigDocument`. The `WindowSession` module saves and opens app windows: it reads windows through AX, reads browser tabs and folders through app adapters, matches windows to saved windows and opens apps, files and URLs. `Templates/` imports it and adds the Ouch state: workspaces, Desktops, layouts and frames. Read `docs/internals/window-session.md` before you change how windows are saved or opened, or the `launch` dispatcher.
+An event tap (`Hotkeys`) matches each key press against the binds of the active submap and sends the match to `WindowManager.dispatch` (`Tiling/Manager/`). The CLI and the language libraries call the same command registry (`Control/`) through a Unix socket. Read `docs/internals/control.md` before you add a command or an event. `WindowManager.shared` owns all state: one `Window` for each `CGWindowID`, and a `WorkspaceModel` for workspaces, order and layouts. `AXObserver` notifications and `WindowScanner` (`Tiling/Scan/`) feed `refresh()`. `refresh()` adds and forgets windows, asks `Layout.frames` for the slots, and places the windows. `Animator` (`Tiling/Motion/`) steps the frames at 120 Hz through one `AXWriter` queue for each app. Each workspace is one macOS Desktop. `NativeDesktopController` (`Tiling/Spaces/`) moves the Desktops with the Ouch animation settings. `Config.parse` reads `~/.config/ouch/ouch.conf` into binds and `ConfigOption` values. `reload()` applies them, and Settings edits the same file through `ConfigDocument`. The `WindowSession` module saves and opens app windows: it reads windows through AX, reads browser tabs and folders through app adapters, matches windows to saved windows and opens apps, files and URLs. `Templates/` imports it and adds the Ouch state: workspaces, Desktops, layouts and frames. Read `docs/internals/window-session.md` before you change how windows are saved or opened, or the `launch` dispatcher.
 
 ## Code map
 
 The app source is in `Sources/ouch/`. The `WindowSession` library is in `Sources/WindowSession/`. Each folder has one job:
 
 - `App/`: app log, login item, permissions, updates and performance monitor.
+- `Control/`: the command registry, the socket server, events and the CLI client.
 - `Config/`: the config value, the option table, the open config and saved configs.
 - `Feedback/`: the Send Feedback sheet.
 - `Keys/`: the event tap, the Shortcut Map, keycaps and the keyboard help overlay.
@@ -96,8 +97,9 @@ swift test -Xswiftc -plugin-path -Xswiftc /Library/Developer/CommandLineTools/us
 ```
 
 - Run and verify: you can run the app and check it with the CLI, the log and a screen recording. Do not take focus from the developer, move their windows, or test while another thread uses the Desktop. If you cannot verify a change, end your reply with "Not verified" and list each thing the developer must test.
+- Commands and events: after you change one, run `swift run ouch --write-schema` and `python3 Tools/generate-clients.py`.
 - Config docs: after you change an option, run `swift run ouch --write-config-docs`. Read `docs/internals/add-a-setting.md` before you add or change a setting.
-- Log: Ouch writes `~/Library/Logs/ouch.log`. `build/ouch.app/Contents/MacOS/ouch dump` writes the tiling state to it.
+- Log: Ouch writes `~/Library/Logs/ouch.log`. `build/ouch.app/Contents/MacOS/ouch dump` prints the tiling state and writes it to the log.
 
 ## Aditional
 
