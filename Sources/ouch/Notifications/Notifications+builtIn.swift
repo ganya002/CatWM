@@ -11,5 +11,14 @@ extension Notifications {
             banner.changed = { [weak dock] in dock?.pollSoon() }
             register(banner)
         }
+        var queued = false
+        listen { _ in
+            guard !queued else { return }
+            queued = true
+            DispatchQueue.main.async {
+                queued = false
+                TabStrips.shared.update()
+            }
+        }
     }
 }

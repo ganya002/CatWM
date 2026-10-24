@@ -98,7 +98,8 @@ final class TabStrips {
             let manager = WindowManager.shared
             let tabs = group.members.compactMap { id in
                 manager.windows[id].map { window in
-                    TabStripModel.Tab(id: id, title: Self.title(of: window), pid: window.pid)
+                    TabStripModel.Tab(id: id, title: Self.title(of: window), pid: window.pid,
+                                      badge: Notifications.shared.badge(for: id))
                 }
             }
             if model.dragged == nil, model.tabs != tabs { model.tabs = tabs }
