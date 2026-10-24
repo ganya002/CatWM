@@ -24,7 +24,7 @@ A change to a token or a component rule is not finished until `Sources/ouch/UI/T
 3. **Two levels, then search.** Menus nest one level, two at most. Deeper items go behind the search field at the top of every menu.
 4. **Containers nest twice, then stop.** In Settings the content pane is one `surface` container on the ground, and each group of rows is one `surfaceRaised` container inside it (`OGroup`). Hairlines separate the rows inside a group. Nothing else gets a box. Floating things (menus, tips, tour cards, HUD) get depth from the `popover` and `float` elevations, not from borders.
 5. **Chrome is flat.** Window chrome and the Settings rail sit on `Theme.wash`, which is flat: `wash1` and `wash2` equal `background`, black in the dark theme and white in the light theme. Items sit on it as pills. The content is one rounded pane without a shadow (`.pane(shadow: false)`, `surface`, radius 14), inset 10 pt on the top, bottom and trailing sides.
-6. **Two faces.** Pilcrow Rounded for the wordmark, display, titles, headings and keycaps: Bold for the wordmark and display, Semibold for the rest. The system font for body text, labels, captions and menu rows. Nothing else.
+6. **Two faces.** Pilcrow Rounded for the wordmark and keycaps (Bold for the wordmark, Semibold for keycaps). Alpino Bold, the website heading face, for display, titles and headings. The system font for body text, labels, captions and menu rows. Nothing else.
 7. **Symbols move with meaning.** An SF Symbol effect always reports something: an action landed, a thing refused, the app is busy, a tip is waiting. Never decoration.
 
 ## Colour
@@ -45,10 +45,10 @@ One palette, `Palette.catwm`, with a light and a dark theme. It comes from the C
 ## Type
 
 - `wordmark` Pilcrow Rounded Bold, tracking -0.03 em. `Theme.wordmark`.
-- `display` 44/48, Pilcrow Rounded Bold. Welcome title and showcase headlines. One per screen.
+- `display` 44/48, Alpino Bold. Welcome title and showcase headlines. One per screen.
 - `numeral` 34, weight 300, in `inkMuted`. Step numbers.
-- `title` 22/27, Pilcrow Rounded Semibold. Tour cards, pane titles, the HUD.
-- `heading` 15/20, Pilcrow Rounded Semibold. Group titles in Settings (`sectionTitle`) use it in `ink`. `body` 13.5/19, system font at 400. `body-medium` is `body` at 500. `caption` 12/16. `label` 12/16, weight 500.
+- `title` 22/27, Alpino Bold. Tour cards, pane titles, the HUD.
+- `heading` 15/20, Alpino Bold. Group titles in Settings (`sectionTitle`) use it in `ink`. `body` 13.5/19, system font at 400. `body-medium` is `body` at 500. `caption` 12/16. `label` 12/16, weight 500.
 - `kbd` is Pilcrow Rounded Semibold through `Theme.keys`. The face has no modifier glyphs, so the font cascades to the system font for ⌘ ⇧ ⌥ ⌃ ⇥ ↩. `kicker` is Pilcrow Rounded Semibold 12 in `inkMuted`, tracking 0.05 em, and the only uppercase text: "STEP 2 OF 6". `code` uses the mono face.
 
 Labels, captions, buttons, keys and menu rows never wrap. They are one line and truncate with an ellipsis (`.oneLine()`). Only body prose wraps. Keep it to two lines in floating surfaces.
@@ -65,7 +65,7 @@ Labels, captions, buttons, keys and menu rows never wrap. They are one line and 
 
 ```text
 head      lead symbol, kicker, trailing item, close
-title     title in Pilcrow Rounded Semibold (smaller at small and medium)
+title     title in Alpino Bold (smaller at small and medium)
 body      inkMuted body
 keys      large keycaps and live state ("Press it now", then "Nice")
 children  rows, menus, groups
