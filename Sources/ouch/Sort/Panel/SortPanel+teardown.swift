@@ -81,38 +81,21 @@ extension SortPanel {
 
     func undoApplied() {
         guard manager.undoSort() else { return }
-        let screen = toast?.screen
-        dismissToast()
-        HUD.shared.show("Overview changes undone", on: screen)
+        undoWork?.cancel()
+        undoWork = nil
+        HUD.shared.show("Overview changes undone", on: nil)
     }
 
-    func showToast(_ text: String, on screen: NSScreen?) {
-        guard let screen else { return }
-        dismissToast()
-        let view = SortToastView(text: text, keys: ShortcutIndex().keys("sort-undo")) { [weak self] in
-            self?.undoApplied()
-        }
-        let host = OuchHostingView(rootView: view)
-        let card = OuchPanel(role: .overlay(.statusBar, clickThrough: false),
-                             frame: OuchPanel.frame(size: host.fittingSize, on: screen,
-                                                    anchor: .bottom(24 - SortToastView.inset.bottom),
-                                                    inset: SortToastView.inset))
-        card.contentView = host
-        card.alphaValue = 0
-        card.orderFrontRegardless()
-        animate(0.28) { card.animator().alphaValue = 1 }
-        toast = card
-        let work = DispatchWorkItem { [weak self] in self?.dismissToast() }
-        toastWork = work
+    func keepUndo() {
+        undoWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.dropUndo() }
+        undoWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 6, execute: work)
     }
 
-    func dismissToast() {
-        toastWork?.cancel()
-        toastWork = nil
-        guard let card = toast else { return }
-        toast = nil
+    func dropUndo() {
+        undoWork?.cancel()
+        undoWork = nil
         manager.dropSortSnapshot()
-        animate(0.2, changes: { card.animator().alphaValue = 0 }, completion: { card.orderOut(nil) })
     }
 }

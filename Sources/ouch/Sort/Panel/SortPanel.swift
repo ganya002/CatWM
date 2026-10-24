@@ -19,8 +19,7 @@ final class SortPanel: NSObject, NSWindowDelegate {
     var pruneTimer: Timer?
     var applyingUntil = Date.distantPast
 
-    var toast: OuchPanel?
-    var toastWork: DispatchWorkItem?
+    var undoWork: DispatchWorkItem?
 
     var isOpen: Bool { active }
 }

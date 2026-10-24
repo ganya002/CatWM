@@ -34,7 +34,6 @@ struct Config {
     var removesEmptyWorkspaces = true
     var workspacesPerDisplay = false
     var sortNudge = 5
-    var sortStrategy: SortStrategy = .task
     var modeEffect: ModeFX.Style = .draw
     var dimOtherWindows = false
     var dimStrength: CGFloat = 0.3

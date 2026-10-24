@@ -14,6 +14,4 @@ struct SortDisplay: Identifiable {
     let taken: Set<String>
     var perDisplay = false
     var tabs: [[CGWindowID]] = []
-
-    var isSorted: Bool { workspaces.filter { !$0.ids.isEmpty }.count > 1 }
 }

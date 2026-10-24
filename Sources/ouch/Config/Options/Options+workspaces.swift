@@ -27,14 +27,6 @@ extension Options {
                      help: "Each display starts at workspace 1. Off: all displays share one set of numbers",
                      keywords: "monitor screen display shared separate per", section: "Workspaces",
                      enabled: { $0.virtualWorkspaces }),
-        .choice("sort-strategy", \.sortStrategy, noun: "sort strategy")
-            .documented(nil, "the grouping Overview opens with")
-            .note("Overview: the grouping it opens with (task, app, focus or none), and how many windows one\n"
-                + "workspace holds before CatWM offers Overview (0 turns the offer off).")
-            .setting(.windows, "windows.sortStrategy", "Overview groups windows by",
-                     help: "How the Overview panel groups them when it opens",
-                     keywords: "group organize task app focus panel", section: "Workspaces",
-                     enabled: { $0.virtualWorkspaces }),
         .number("sort-nudge", \.sortNudge, valid: 0...100, make: { Int($0) }, text: { "\($0)" }, number: { Double($0) })
             .documented("0–100 (whole number)",
                         "windows on one workspace before CatWM offers Overview; `0` turns the offer off")

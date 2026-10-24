@@ -20,7 +20,7 @@ extension SortPanel {
             return
         }
         guard let screen = OuchPanel.pointerScreen() else { return }
-        dismissToast()
+        dropUndo()
         SortNudge.shared.dismiss()
         generation += 1
         let start = displays.first { $0.screen == screen && hasWindows($0) }
@@ -110,13 +110,11 @@ extension SortPanel {
         flushLive()
         let done = model.result()
         let leaving = model.fullscreenMoves()
-        let screen = model.currentDisplay?.screen ?? NSScreen.main
         close()
         manager.finishSort(closing: done.closing, goTo: goTo, focus: focus, opening: fullscreen,
                            leavingFullscreen: leaving)
         guard done.changed else { return manager.dropSortSnapshot() }
-        showToast("Sorted into \(done.workspaces) workspace\(done.workspaces == 1 ? "" : "s")"
-                  + (done.closing.isEmpty ? "" : ", closed \(done.closing.count)"), on: screen)
+        keepUndo()
     }
 
     func abandon() {

@@ -4,13 +4,12 @@ import SwiftUI
 
 struct OptionRows: View {
     private enum CustomRow {
-        case floatingMode, sortStrategy, sortNudge, animationDuration, animationCurve, animationBounce
+        case floatingMode, sortNudge, animationDuration, animationCurve, animationBounce
         case panelAnimation, modeEffect, keyboardFinish, switcherExclude
     }
 
     private static let customRows: [PartialKeyPath<Config>: CustomRow] = [
         \Config.floatingIsDenylist: .floatingMode,
-        \Config.sortStrategy: .sortStrategy,
         \Config.sortNudge: .sortNudge,
         \Config.animationDuration: .animationDuration,
         \Config.animationCurve: .animationCurve,
@@ -69,7 +68,6 @@ struct OptionRows: View {
     @ViewBuilder private func customRow(_ custom: CustomRow) -> some View {
         switch custom {
         case .floatingMode: floatingModeRow
-        case .sortStrategy: sortStrategyRow
         case .sortNudge: sortNudgeRows
         case .animationDuration: animationDurationRow
         case .animationCurve: animationCurveRows
@@ -144,14 +142,6 @@ extension OptionRows {
             OSegmented(title: label, options: [(true, "Float"), (false, "Tile")],
                        selection: $doc.config.floatingIsDenylist)
         }
-    }
-
-    private var sortStrategyRow: some View {
-        OptionRow(\Config.sortStrategy, settingsUI: settingsUI) { label in
-            OMenuPicker(title: label, options: SortStrategy.allCases.map { ($0, $0.title) },
-                        selection: $doc.config.sortStrategy)
-        }
-        .disabled(!doc.config.virtualWorkspaces)
     }
 
     @ViewBuilder private var sortNudgeRows: some View {

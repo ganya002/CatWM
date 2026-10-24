@@ -19,7 +19,7 @@ private func plan(items: [SortItem]? = nil, lanes: [SortLane]? = nil, taken: Set
         SortLane(workspace: "2", name: "", layout: .bsp, ids: [3])
     ]
     return SortPlan(display: "D", items: Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) }), lanes: lanes,
-                    strategy: nil, existing: lanes.map(\.workspace), taken: taken, active: "1")
+                    existing: lanes.map(\.workspace), taken: taken, active: "1")
 }
 
 @Suite struct SortPlanTests {
@@ -118,30 +118,6 @@ private func plan(items: [SortItem]? = nil, lanes: [SortLane]? = nil, taken: Set
         #expect(sortPlan.duplicateText == "Close 1 duplicate Finder window")
     }
 
-    @Test func sortByAppGroupsTheBusiestAppFirst() {
-        let items = [item(1, "Safari"), item(2, "Mail"), item(3, "Safari"), item(4, "Xcode")]
-        var sortPlan = plan(
-            items: items,
-            lanes: [SortLane(workspace: "1", name: "", layout: .tall, ids: [1, 2, 3, 4])]
-        )
-        sortPlan.sort(by: .app, layouts: Layout.allCases, avoiding: [])
-        #expect(sortPlan.lanes.first?.name == "Safari")
-        #expect(sortPlan.lanes.first?.ids == [1, 3])
-        #expect(sortPlan.lanes.flatMap(\.ids).sorted() == [1, 2, 3, 4])
-        #expect(Set(sortPlan.lanes.map(\.workspace)).count == sortPlan.lanes.count)
-    }
-
-    @Test func sortByFocusPutsThreeRecentWindowsFirst() {
-        let items = (1...5).map { item(CGWindowID($0), "App\($0)") }
-        var sortPlan = plan(
-            items: items,
-            lanes: [SortLane(workspace: "1", name: "", layout: .tall, ids: [1, 2, 3, 4, 5])]
-        )
-        sortPlan.sort(by: .focus, layouts: Layout.allCases, avoiding: [])
-        #expect(sortPlan.lanes.map(\.ids) == [[1, 2, 3], [4, 5]])
-        #expect(sortPlan.lanes[1].layout == .fullscreen)
-    }
-
     @Test func layoutForCountFallsBackToTheFirstEnabledLayout() {
         #expect(SortPlan.layout(forCount: 2, in: Layout.allCases) == .column)
         #expect(SortPlan.layout(forCount: 2, in: [.wide, .tall]) == .wide)
@@ -165,7 +141,7 @@ private func plan(items: [SortItem]? = nil, lanes: [SortLane]? = nil, taken: Set
                 SortLane(workspace: "1", name: "", layout: .tall, ids: [1]),
                 SortLane(workspace: "2", name: "", layout: .tall, ids: [])
             ],
-            strategy: nil, existing: ["1", "2"], taken: [], active: "1"
+            existing: ["1", "2"], taken: [], active: "1"
         )
     }
 

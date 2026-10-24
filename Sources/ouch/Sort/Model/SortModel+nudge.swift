@@ -41,7 +41,7 @@ extension SortModel {
               var src = plans[current],
               let item = src.items[id],
               let destination = display(uuid) else { return }
-        ensurePlan(uuid, grouped: false)
+        ensurePlan(uuid)
         guard var dst = plans[uuid] else { return }
         let lane = dst.activeLane
         src.untab(id)
