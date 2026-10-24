@@ -91,11 +91,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func permissionsChecked(_ granted: Set<Permission>, _ changed: Set<Permission>) {
         let trusted = granted.contains(.accessibility)
-        for permission in [Permission.inputMonitoring, .screenRecording] where changed.contains(permission) {
+        let optional: [Permission] = [.inputMonitoring, .screenRecording, .fullDiskAccess]
+        for permission in optional where changed.contains(permission) {
             let isGranted = granted.contains(permission)
             Log.info("\(permission.title) \(isGranted ? "granted" : "revoked")")
             if isGranted { PermissionGuide.shared.granted(permission) }
         }
+        if changed.contains(.fullDiskAccess) { Notifications.shared.refreshSources() }
         let manager = WindowManager.shared
         if trusted && !manager.isStarted {
             Log.info("Accessibility granted")

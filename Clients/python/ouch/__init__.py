@@ -170,6 +170,19 @@ class ModeChanged(TypedDict):
     data: ModeChangedData
 
 
+class WindowNotificationsData(TypedDict):
+    window: int
+    app: str | None
+    count: int | None
+    dot: bool
+    source: str | None
+
+
+class WindowNotifications(TypedDict):
+    event: Literal["window.notifications"]
+    data: WindowNotificationsData
+
+
 class ConfigReloadedData(TypedDict):
     errors: list[str]
 
@@ -179,8 +192,8 @@ class ConfigReloaded(TypedDict):
     data: ConfigReloadedData
 
 
-Event = FocusChanged | WindowAdded | WindowRemoved | WorkspaceChanged | LayoutChanged | TilingChanged | ModeChanged | ConfigReloaded
-EVENTS = ["focus.changed", "window.added", "window.removed", "workspace.changed", "layout.changed", "tiling.changed", "mode.changed", "config.reloaded"]
+Event = FocusChanged | WindowAdded | WindowRemoved | WorkspaceChanged | LayoutChanged | TilingChanged | ModeChanged | WindowNotifications | ConfigReloaded
+EVENTS = ["focus.changed", "window.added", "window.removed", "workspace.changed", "layout.changed", "tiling.changed", "mode.changed", "window.notifications", "config.reloaded"]
 
 
 def default_path() -> str:

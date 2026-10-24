@@ -148,6 +148,14 @@ public struct ModeChangedData: Codable, Equatable, Sendable {
     public let mode: String
 }
 
+public struct WindowNotificationsData: Codable, Equatable, Sendable {
+    public let window: Int
+    public let app: String?
+    public let count: Int?
+    public let dot: Bool
+    public let source: String?
+}
+
 public struct ConfigReloadedData: Codable, Equatable, Sendable {
     public let errors: [String]
 }
@@ -160,6 +168,7 @@ public enum Event: Sendable {
     case layoutChanged(LayoutChangedData)
     case tilingChanged(TilingChangedData)
     case modeChanged(ModeChangedData)
+    case windowNotifications(WindowNotificationsData)
     case configReloaded(ConfigReloadedData)
     case unknown(name: String, data: JSONValue)
 
@@ -172,6 +181,7 @@ public enum Event: Sendable {
         case "layout.changed": return .layoutChanged(try JSONDecoder().decode(LayoutChangedData.self, from: data))
         case "tiling.changed": return .tilingChanged(try JSONDecoder().decode(TilingChangedData.self, from: data))
         case "mode.changed": return .modeChanged(try JSONDecoder().decode(ModeChangedData.self, from: data))
+        case "window.notifications": return .windowNotifications(try JSONDecoder().decode(WindowNotificationsData.self, from: data))
         case "config.reloaded": return .configReloaded(try JSONDecoder().decode(ConfigReloadedData.self, from: data))
         default: return .unknown(name: name, data: try JSONDecoder().decode(JSONValue.self, from: data))
         }

@@ -38,6 +38,7 @@ extension Onboarding {
         welcomeModel.allowAccessibility = { Permission.accessibility.request() }
         welcomeModel.allowInputMonitoring = { Permission.inputMonitoring.request() }
         welcomeModel.allowScreenRecording = { Permission.screenRecording.request() }
+        welcomeModel.allowFullDiskAccess = { Permission.fullDiskAccess.request() }
         welcomeModel.takeTestImage = { [weak self] in
             Task { @MainActor in
                 guard await ScreenRecording.takeTestImage() else { return }
@@ -87,6 +88,8 @@ extension Onboarding {
         let screenRecording = Permission.screenRecording.isGranted, screenTestDone = ScreenRecording.isTestDone
         if welcomeModel.screenRecording != screenRecording { welcomeModel.screenRecording = screenRecording }
         if welcomeModel.screenTestDone != screenTestDone { welcomeModel.screenTestDone = screenTestDone }
+        let fullDiskAccess = Permission.fullDiskAccess.isGranted
+        if welcomeModel.fullDiskAccess != fullDiskAccess { welcomeModel.fullDiskAccess = fullDiskAccess }
         if welcomeModel.login != login { welcomeModel.login = login }
         if login, openedLoginItems {
             openedLoginItems = false

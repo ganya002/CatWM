@@ -122,6 +122,14 @@ export interface ModeChangedData {
   mode: string;
 }
 
+export interface WindowNotificationsData {
+  window: number;
+  app: string | null;
+  count: number | null;
+  dot: boolean;
+  source: string | null;
+}
+
 export interface ConfigReloadedData {
   errors: string[];
 }
@@ -134,8 +142,9 @@ export type OuchEvent =
   | { event: "layout.changed"; data: LayoutChangedData }
   | { event: "tiling.changed"; data: TilingChangedData }
   | { event: "mode.changed"; data: ModeChangedData }
+  | { event: "window.notifications"; data: WindowNotificationsData }
   | { event: "config.reloaded"; data: ConfigReloadedData };
-export const EVENTS = ["focus.changed", "window.added", "window.removed", "workspace.changed", "layout.changed", "tiling.changed", "mode.changed", "config.reloaded"] as const;
+export const EVENTS = ["focus.changed", "window.added", "window.removed", "workspace.changed", "layout.changed", "tiling.changed", "mode.changed", "window.notifications", "config.reloaded"] as const;
 
 export class OuchError extends Error {
   constructor(readonly code: string, message: string) {

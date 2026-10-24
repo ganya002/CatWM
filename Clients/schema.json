@@ -1079,6 +1079,37 @@
     {
       "data" : [
         {
+          "name" : "window",
+          "summary" : "Window ID",
+          "type" : "int"
+        },
+        {
+          "name" : "app",
+          "summary" : "Bundle ID",
+          "type" : "string?"
+        },
+        {
+          "name" : "count",
+          "summary" : "Unread count, or null for a dot or no badge",
+          "type" : "int?"
+        },
+        {
+          "name" : "dot",
+          "summary" : "The app shows unread items with no number",
+          "type" : "bool"
+        },
+        {
+          "name" : "source",
+          "summary" : "dock, banner or database, or null",
+          "type" : "string?"
+        }
+      ],
+      "name" : "window.notifications",
+      "summary" : "The unread badge of a window changed"
+    },
+    {
+      "data" : [
+        {
           "name" : "errors",
           "summary" : "Problems in the config file",
           "type" : "string[]"
