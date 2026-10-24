@@ -26,6 +26,7 @@ A change to a token or a component rule is not finished until `Sources/ouch/UI/T
 5. **Chrome is flat.** Window chrome and the Settings rail sit on `Theme.wash`, which is flat: `wash1` and `wash2` equal `background`, black in the dark theme and white in the light theme. Items sit on it as pills. The content is one rounded pane without a shadow (`.pane(shadow: false)`, `surface`, radius 14), inset 10 pt on the top, bottom and trailing sides.
 6. **Two faces.** Pilcrow Rounded for the wordmark and keycaps (Bold for the wordmark, Semibold for keycaps). Alpino Bold, the website heading face, for display, titles and headings. The system font for body text, labels, captions and menu rows. Nothing else.
 7. **Symbols move with meaning.** An SF Symbol effect always reports something: an action landed, a thing refused, the app is busy, a tip is waiting. Never decoration.
+8. **Close and create go on the left.** The close button and the create (add, new) button sit at the leading edge of a header, title bar or strip, as the macOS traffic lights do. Never put them at the trailing edge. If the button can go at the top or at the bottom of a container, put it at the top, in the top-left corner. Bad: a panel header with a close X on the right, after the count. Good: the close X at the left of the title bar, before the title.
 
 ## Colour
 
@@ -91,6 +92,7 @@ Each entry gives the design intent. The Swift type is in brackets.
 **Button** [`OButton`, `OIconButton`]. Variants: primary, secondary, ghost, danger, ghostDanger. Sizes: small, regular, large.
 - One primary per surface. It carries the return key shortcut.
 - Use ghost for Skip, Back, Close and other ways out.
+- Put Close and Create buttons at the top left of their header, title bar or strip (principle 8).
 - Use danger only for destructive actions, always with a verb ("Reset Shortcuts").
 - An icon-only button needs a label and a tooltip.
 
