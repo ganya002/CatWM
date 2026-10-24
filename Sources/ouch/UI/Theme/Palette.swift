@@ -14,7 +14,7 @@ struct Palette {
     var background, surface, surfaceRaised, surfaceSunken, hover, hairline, borderControl: Pair
     var ink, inkMuted, inkFaint: Pair
     var accent, accentHover, onAccent, accentInk, accentSoft, tint, focus: Pair
-    var success, warning, danger, dangerSoft: Pair
+    var success, warning, danger, dangerSoft, badge, onBadge: Pair
     var glass, wash1, wash2: Pair
 
     static let catwm = Palette(
@@ -27,7 +27,7 @@ struct Palette {
         accentInk: Pair(0x0072C2, 0x1FAFFF), accentSoft: Pair(0xDFF2FF, 0x0E2638),
         tint: Pair(0xC8C8C8, 0x3A3A3A), focus: Pair(0x000000, 0xFFFFFF),
         success: Pair(0x1F7A3D, 0x5FD38A), warning: Pair(0x8A5A00, 0xFFEA14), danger: Pair(0xC42B1C, 0xFF6B5B),
-        dangerSoft: Pair(0xFDE8E6, 0x3D2220),
+        dangerSoft: Pair(0xFDE8E6, 0x3D2220), badge: Pair(0xE0261B, 0xFF3B30), onBadge: Pair(0xFFFFFF, 0xFFFFFF),
         glass: Pair(0xFFFFFF, 0x141414, alpha: (0.82, 0.82)), wash1: Pair(0xFFFFFF, 0x000000),
         wash2: Pair(0xFFFFFF, 0x000000))
 }
