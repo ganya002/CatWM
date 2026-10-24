@@ -23,7 +23,6 @@ final class TabStripModel: ObservableObject {
         let id: CGWindowID
         var title: String
         let pid: pid_t
-        var badge: Badge?
     }
 
     @Published var tabs: [Tab] = []
@@ -149,12 +148,8 @@ private struct TabCell: View {
                         .transition(.opacity)
                 }
                 Spacer(minLength: 0)
-                if let badge = tab.badge {
-                    CountBadge(badge: badge).transition(.opacity.combined(with: .scale(scale: 0.6)))
-                }
             }
-            .padding(.horizontal, Theme.Space.small)
-            .animation(TabStrip.motion, value: tab.badge)
+            .padding(.leading, Theme.Space.small)
         }
         .foregroundStyle(active && focused || hovered ? Theme.ink : Theme.inkMuted)
     }
@@ -200,7 +195,7 @@ private extension TabStripModel {
         let model = TabStripModel()
         let pid = ProcessInfo.processInfo.processIdentifier
         model.tabs = ["Notes", "Terminal", "Design review"].enumerated().map { index, title in
-            Tab(id: CGWindowID(index + 1), title: title, pid: pid, badge: [.count(3), nil, .dot][index])
+            Tab(id: CGWindowID(index + 1), title: title, pid: pid)
         }
         model.active = 1
         model.focused = focused
