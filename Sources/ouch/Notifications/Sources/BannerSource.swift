@@ -1,7 +1,8 @@
 import AppKit
 final class BannerSource: NotificationSource {
-    let name = "banner"
+    let name: String
     let messagesClearOnFocus = true
+    let reportsMessages: Bool
     static let bundleID = "com.apple.notificationcenterui"
     static let subroles: Set<String> = ["AXNotificationCenterBanner", "AXNotificationCenterAlert"]
     private weak var sink: NotificationSink?
@@ -11,7 +12,12 @@ final class BannerSource: NotificationSource {
     private var seen: [String: Date] = [:]
     var changed: () -> Void = {}
 
-    var isAvailable: Bool { !NotificationDatabase.isReadable }
+    init(reportsMessages: Bool) {
+        self.reportsMessages = reportsMessages
+        name = reportsMessages ? "banner" : "banner.trigger"
+    }
+
+    var isAvailable: Bool { reportsMessages != NotificationDatabase.isReadable }
 
     func start(_ sink: NotificationSink) {
         self.sink = sink
@@ -58,6 +64,7 @@ final class BannerSource: NotificationSource {
 
     private func created(_ element: AXUIElement) {
         guard sink != nil else { return }
+        guard reportsMessages else { return changed() }
         queue.async { [weak self] in
             AXUIElementSetMessagingTimeout(element, 0.5)
             guard element.string(kAXRoleAttribute) == kAXWindowRole else { return }
