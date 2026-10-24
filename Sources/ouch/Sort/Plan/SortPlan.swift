@@ -9,7 +9,6 @@ struct SortPlan {
     var close: [CGWindowID] = []
     var closedLanes: [SortClosedLane] = []
     var origin: [CGWindowID: (workspace: String, at: Int)] = [:]
-    var strategy: SortStrategy?
     var duplicatesClosed = false
     var touched = false
     var pending = false

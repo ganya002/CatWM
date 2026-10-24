@@ -5,7 +5,6 @@ extension SortModel {
     func begin(displays: [SortDisplay], start: String, config: Config) {
         self.displays = displays
         layouts = config.layouts.isEmpty ? [.tall] : config.layouts
-        strategy = config.sortStrategy
         nextLayout = layouts.contains(.tall) ? .tall : layouts[0]
         plans = [:]
         hover = nil
@@ -45,17 +44,9 @@ extension SortModel {
 
     func count(of uuid: String) -> Int { plans[uuid]?.items.count ?? display(uuid)?.items.count ?? 0 }
 
-    func ensurePlan(_ uuid: String, grouped: Bool) {
+    func ensurePlan(_ uuid: String) {
         guard plans[uuid] == nil, let shown = display(uuid) else { return }
-        if grouped && !shown.isSorted {
-            var displayPlan = SortPlan.grouped(shown, by: strategy, layouts: layouts,
-                                               avoiding: reserved(excluding: uuid))
-            displayPlan.touched = true
-            displayPlan.pending = true
-            plans[uuid] = displayPlan
-        } else {
-            plans[uuid] = .current(of: shown)
-        }
+        plans[uuid] = .current(of: shown)
     }
 
     func reserved(excluding uuid: String? = nil) -> Set<String> {
@@ -65,7 +56,7 @@ extension SortModel {
     func use(_ uuid: String) {
         guard display(uuid) != nil else { return }
         current = uuid
-        ensurePlan(uuid, grouped: true)
+        ensurePlan(uuid)
         selected = nil; hover = nil; notice = nil
         scrollToStart()
         if plans[uuid]?.pending == true { changed() }

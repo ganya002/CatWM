@@ -45,7 +45,6 @@ The Settings window writes options in this order. Aliases (after `/`) are read b
 | `stay-on-workspace-after-close` | bool | `true` | |
 | `remove-empty-workspaces` | bool | `true` | true: an empty workspace and its Desktop go away when you leave it |
 | `workspaces-per-display` | bool | `false` | true: each display counts its own workspaces from 1, and `workspace 2` selects the second workspace on the current display. false: workspace numbers are shared by all displays |
-| `sort-strategy` | `task` `app` `focus` `none` | `task` | the grouping Overview opens with |
 | `sort-nudge` | 0–100 (whole number) | `5` | windows on one workspace before CatWM offers Overview; `0` turns the offer off |
 | `keyboard-help` | bool | `true` | on-screen keyboard help in window mode |
 | `keyboard-help-key` | one character | `?` | toggles the keyboard help in window mode |

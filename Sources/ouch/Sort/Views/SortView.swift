@@ -20,12 +20,13 @@ struct SortView: View {
         let tallest = ([closeRows] + plan.lanes.map(plan.rowCount)).max() ?? 1
         let rows = min(model.maxRows, max(SortMetrics.minRows, tallest))
         VStack(alignment: .leading, spacing: 0) {
-            header(plan)
+            let hasHeader = model.displays.count > 1 || plan.duplicateText != nil || model.notice != nil
+            if hasHeader { header(plan) }
             HStack(alignment: .top, spacing: 4) {
                 row(plan, rows: rows)
                 closeLane(plan, rows: rows)
             }
-            .padding(.top, 8).padding(.horizontal, -8)
+            .padding(.top, hasHeader ? 8 : 0).padding(.horizontal, -8)
         }
         .frame(width: width - 40)
         .padding(Density.large.padding)
@@ -44,10 +45,7 @@ struct SortView: View {
     }
 
     private func header(_ plan: SortPlan) -> some View {
-        let count = plan.items.count
-        return HStack(spacing: 12) {
-            Text("Overview · \(count) window\(count == 1 ? "" : "s")")
-                .textStyle(.title).monospacedDigit().oneLine().fixedSize()
+        HStack(spacing: 12) {
             if model.displays.count > 1 { SortDisplays(model: model) }
             notices(plan)
             Spacer(minLength: 12)

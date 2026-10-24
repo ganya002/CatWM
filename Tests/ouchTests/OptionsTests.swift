@@ -30,7 +30,6 @@ blur-other-windows = true
 blur-radius = 33.4
 virtual-workspaces = false
 stay-on-workspace-after-close = false
-sort-strategy = APP
 sort-nudge = 9
 keyboard-help = false
 keyboard-help-key = ##

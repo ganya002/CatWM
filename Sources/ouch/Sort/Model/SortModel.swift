@@ -27,7 +27,6 @@ final class SortModel: ObservableObject {
     var motion = PanelMotion.current
 
     var layouts: [Layout] = [.tall]
-    var strategy: SortStrategy = .task
     var maxRows = 7
     var zones: [SortZone: CGRect] = [:]
     var finish: (String?) -> Void = { _ in }
@@ -41,7 +40,7 @@ final class SortModel: ObservableObject {
     var running = false
 
     var plan: SortPlan {
-        plans[current] ?? SortPlan(display: current, items: [:], lanes: [], strategy: nil,
+        plans[current] ?? SortPlan(display: current, items: [:], lanes: [],
                                    existing: [], taken: [], active: nil)
     }
 

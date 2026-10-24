@@ -63,7 +63,7 @@ private var catalogRoot: URL {
         preservesOriginalOrder(
             OptionRows.options(pane: .windows, section: "Workspaces", advanced: false).map(\.settingInfo.id),
             [
-                "windows.workspaces", "windows.sortStrategy", "windows.sortNudge"
+                "windows.workspaces", "windows.sortNudge"
             ]))
     #expect(
         preservesOriginalOrder(

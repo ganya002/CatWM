@@ -11,19 +11,12 @@ extension SortPlan {
         }
         let items = Dictionary(display.items.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         var plan = SortPlan(display: display.id, items: items,
-                            lanes: lanes, strategy: nil,
+                            lanes: lanes,
                             existing: display.workspaces.map(\.name), taken: display.taken, active: display.active)
         plan.perDisplay = display.perDisplay
         plan.tabs = display.tabs
         plan.keepTabsTogether()
         for workspace in display.workspaces { plan.geometry[workspace.name] = (workspace.ratio, workspace.mainCount) }
-        return plan
-    }
-
-    static func grouped(_ display: SortDisplay, by strategy: SortStrategy, layouts: [Layout],
-                        avoiding other: Set<String>) -> SortPlan {
-        var plan = current(of: display)
-        plan.sort(by: strategy, layouts: layouts, avoiding: other)
         return plan
     }
 
@@ -64,60 +57,6 @@ extension SortPlan {
         default: want = .tall
         }
         return layouts.contains(want) ? want : layouts.first ?? .tall
-    }
-
-    mutating func sort(by sortStrategy: SortStrategy, layouts: [Layout], avoiding other: Set<String>) {
-        strategy = sortStrategy
-        let dupes = duplicatesClosed ? Set(duplicates) : []
-        let live = items.values.filter { !dupes.contains($0.id) }.sorted { ($0.recency, $0.id) < ($1.recency, $1.id) }
-        var groups = Self.groups(of: live, by: sortStrategy).filter { !$0.items.isEmpty }
-        if groups.isEmpty { groups = [SortGroup(name: "", items: [])] }
-        lanes = []
-        let pool = available(avoiding: other)
-        let cap = max(1, min(Self.maxLanes, pool.count))
-        while groups.count > cap {
-            let last = groups.removeLast()
-            groups[groups.count - 1].items += last.items
-        }
-        let names = Array(pool.prefix(groups.count)).sorted(by: Self.order)
-        lanes = groups.enumerated().map { i, group in
-            SortLane(workspace: i < names.count ? names[i] : existing.first ?? key("1"), name: group.name,
-                     layout: Self.fit(group.layout, group.items.count, layouts), ids: group.items.map(\.id))
-        }
-        closedLanes = []
-        origin = [:]
-        close = items.values
-            .filter { dupes.contains($0.id) }
-            .sorted { ($0.recency, $0.id) < ($1.recency, $1.id) }
-            .map(\.id)
-        keepTabsTogether()
-    }
-
-    private static func groups(of live: [SortItem], by sortStrategy: SortStrategy) -> [SortGroup] {
-        switch sortStrategy {
-        case .task:
-            return SortCategory.all.map { category in
-                SortGroup(name: category.rawValue, items: live.filter { SortCategory.of($0.bundleID) == category })
-            }
-        case .app:
-            var count: [String: Int] = [:]
-            for item in live { count[item.app, default: 0] += 1 }
-            let ranked = count.keys.sorted { lhs, rhs in
-                count[lhs, default: 0] != count[rhs, default: 0]
-                    ? count[lhs, default: 0] > count[rhs, default: 0]
-                    : (live.first { $0.app == lhs }?.recency ?? 0) < (live.first { $0.app == rhs }?.recency ?? 0)
-            }
-            let own = Array(ranked.prefix(4))
-            var groups = own.map { app in SortGroup(name: app, items: live.filter { $0.app == app }) }
-            let rest = live.filter { !own.contains($0.app) }
-            if !rest.isEmpty { groups.append(SortGroup(name: "Everything else", items: rest)) }
-            return groups
-        case .focus:
-            return [SortGroup(name: "Now", items: Array(live.prefix(3))),
-                    SortGroup(name: "Later", items: Array(live.dropFirst(3)), layout: .fullscreen)]
-        case .none:
-            return [SortGroup(name: "", items: live)]
-        }
     }
 
     static func fit(_ forced: Layout?, _ count: Int, _ layouts: [Layout]) -> Layout {
@@ -168,10 +107,4 @@ extension SortPlan {
         close.append(id)
         if let from { origin[id] = from }
     }
-}
-
-private struct SortGroup {
-    var name: String
-    var items: [SortItem]
-    var layout: Layout?
 }
