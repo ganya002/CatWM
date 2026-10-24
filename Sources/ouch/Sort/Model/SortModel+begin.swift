@@ -126,7 +126,6 @@ extension SortModel {
 
     func result() -> SortResult {
         let edited = plans.values.filter(\.touched)
-        return SortResult(changed: !edited.isEmpty, closing: edited.flatMap(\.close),
-                          workspaces: edited.reduce(0) { $0 + $1.lanes.filter { !$0.ids.isEmpty }.count })
+        return SortResult(changed: !edited.isEmpty, closing: edited.flatMap(\.close))
     }
 }
