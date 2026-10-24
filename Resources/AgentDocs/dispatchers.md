@@ -16,6 +16,7 @@ Used as `bind = MODS, key, <dispatcher>, <args>` or `ouch dispatch <dispatcher> 
 | `moveintogroup` | `l r u d` | add the focused window to the tabs of the window in that direction. The tabs share one tile, with a tab bar above it. You can also drag a window by its title bar onto the top of another window |
 | `moveoutofgroup` | | take the focused window out of its tabs and give it its own tile. You can also drag its tab down out of the tab bar |
 | `changegroupactive` | `f` / `b`, or a tab number from 1 | show the next or previous tab, or tab N |
+| `movegroupwindow` | `f` / `b` | move the focused tab one place right or left in its tab bar |
 | `killactive` | | close the focused window |
 | `exec` | shell command | run via `sh -c`. Keybinds only; refused from the CLI |
 | `launch` | app name, bundle ID, `.app` path, file path or URL, then optional `workspace=N`, `display=SPEC` (same as `focusmonitor`), `frame=x,y,w,h` (fractions or `%` of the display) | open an app, file or URL (deep links such as `vscode://…` work). With options, CatWM moves the new window to that workspace or display. `frame` floats it at that part of the display. Keybinds only; refused from the CLI |

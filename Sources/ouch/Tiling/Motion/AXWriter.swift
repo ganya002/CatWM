@@ -92,6 +92,22 @@ final class AXWriter {
         }
     }
 
+    private func write(_ window: Window, _ frame: CGRect) -> (size: Double, position: Double) {
+        let previous = lastSize[window.id]
+        lastSize[window.id] = frame.size
+        guard previous != frame.size else { return (0, measure { window.setPosition(frame.origin) }) }
+        let shrinks = previous.map { frame.size.width <= $0.width && frame.size.height <= $0.height } ?? false
+        if shrinks {
+            let positionTime = measure { window.setPosition(frame.origin) }
+            return (measure { window.setSize(frame.size) }, positionTime)
+        }
+        let rises = !window.cachedFrame.isNull && frame.minY < window.cachedFrame.minY
+        var sizeTime = measure { window.setSize(frame.size) }
+        let positionTime = measure { window.setPosition(frame.origin) }
+        if rises { sizeTime += measure { window.setSize(frame.size) } }
+        return (sizeTime, positionTime)
+    }
+
     private func apply(_ item: Pending) {
         let window = item.window
         if window.placementSuspended || WindowPlacementState.blocksPlacement(window.element) {
@@ -107,24 +123,14 @@ final class AXWriter {
         switch item.operation {
         case let .step(frameAt):
             let frame = frameAt(CACurrentMediaTime() + (stepCosts[window.id]?.lead ?? 0))
-            var sizeTime = 0.0
-            if lastSize[window.id] != frame.size {
-                sizeTime = measure { window.setSize(frame.size) }
-                lastSize[window.id] = frame.size
-            }
-            let positionTime = measure { window.setPosition(frame.origin) }
+            let (sizeTime, positionTime) = write(window, frame)
             stepCosts[window.id, default: StepCost()].add(sizeTime + positionTime)
             lock.withLock { if sizeTime > 0 { stats.size.add(sizeTime) }; stats.position.add(positionTime) }
         case let .follow(frame, done):
-            var actual: CGSize?
-            if lastSize[window.id] != frame.size {
-                let sizeTime = measure { window.setSize(frame.size) }
-                lastSize[window.id] = frame.size
-                actual = window.frame.size
-                lock.withLock { stats.size.add(sizeTime) }
-            }
-            let positionTime = measure { window.setPosition(frame.origin) }
-            lock.withLock { stats.position.add(positionTime) }
+            let resized = lastSize[window.id] != frame.size
+            let (sizeTime, positionTime) = write(window, frame)
+            let actual = resized ? window.frame.size : nil
+            lock.withLock { if resized { stats.size.add(sizeTime) }; stats.position.add(positionTime) }
             DispatchQueue.main.async { done(actual) }
         case let .position(point, done):
             let elapsed = measure { window.setPosition(point) }

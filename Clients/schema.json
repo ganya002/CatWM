@@ -1,0 +1,1092 @@
+{
+  "commands" : [
+    {
+      "args" : [
+
+      ],
+      "group" : "meta",
+      "name" : "ping",
+      "result" : {
+        "fields" : [
+          {
+            "name" : "protocol",
+            "summary" : "Protocol version",
+            "type" : "int"
+          },
+          {
+            "name" : "version",
+            "summary" : "Ouch version",
+            "type" : "string"
+          },
+          {
+            "name" : "pid",
+            "summary" : "Process ID of Ouch",
+            "type" : "int"
+          }
+        ],
+        "kind" : "object"
+      },
+      "summary" : "Check that Ouch answers"
+    },
+    {
+      "args" : [
+
+      ],
+      "group" : "meta",
+      "name" : "commands",
+      "result" : {
+        "kind" : "value"
+      },
+      "summary" : "List the commands with their arguments"
+    },
+    {
+      "args" : [
+        {
+          "name" : "dispatcher",
+          "required" : true,
+          "summary" : "Dispatcher name",
+          "type" : "string"
+        },
+        {
+          "name" : "arg",
+          "required" : false,
+          "summary" : "Dispatcher argument",
+          "type" : "string"
+        }
+      ],
+      "group" : "meta",
+      "name" : "dispatch",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Run a dispatcher by name, as a keybind does"
+    },
+    {
+      "args" : [
+        {
+          "name" : "events",
+          "required" : false,
+          "summary" : "Event names. An empty list means every event.",
+          "type" : "string[]"
+        }
+      ],
+      "group" : "events",
+      "name" : "subscribe",
+      "result" : {
+        "fields" : [
+          {
+            "name" : "events",
+            "summary" : "Events that this connection receives",
+            "type" : "string[]"
+          }
+        ],
+        "kind" : "object"
+      },
+      "summary" : "Receive events on this connection"
+    },
+    {
+      "args" : [
+        {
+          "name" : "events",
+          "required" : false,
+          "summary" : "Event names. An empty list means every event.",
+          "type" : "string[]"
+        }
+      ],
+      "group" : "events",
+      "name" : "unsubscribe",
+      "result" : {
+        "fields" : [
+          {
+            "name" : "events",
+            "summary" : "Events that this connection still receives",
+            "type" : "string[]"
+          }
+        ],
+        "kind" : "object"
+      },
+      "summary" : "Stop receiving events on this connection"
+    },
+    {
+      "args" : [
+        {
+          "choices" : [
+            "left",
+            "right",
+            "up",
+            "down"
+          ],
+          "name" : "direction",
+          "required" : true,
+          "summary" : "Direction",
+          "type" : "enum"
+        }
+      ],
+      "group" : "focus",
+      "name" : "movefocus",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Focus the window next to the focused window"
+    },
+    {
+      "args" : [
+        {
+          "choices" : [
+            "next",
+            "prev"
+          ],
+          "name" : "step",
+          "required" : false,
+          "summary" : "Which way to go. The default is `next`.",
+          "type" : "enum"
+        }
+      ],
+      "group" : "focus",
+      "name" : "cyclenext",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Focus the next or previous window"
+    },
+    {
+      "args" : [
+        {
+          "name" : "target",
+          "required" : true,
+          "summary" : "`+1`, `-1`, `left`, `right`, `up`, `down` or a display number counting from 0",
+          "type" : "string"
+        }
+      ],
+      "group" : "displays",
+      "name" : "focusmonitor",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Focus a display"
+    },
+    {
+      "args" : [
+        {
+          "choices" : [
+            "left",
+            "right",
+            "up",
+            "down"
+          ],
+          "name" : "direction",
+          "required" : true,
+          "summary" : "Direction",
+          "type" : "enum"
+        }
+      ],
+      "group" : "window",
+      "name" : "movewindow",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Move the focused window in a direction"
+    },
+    {
+      "args" : [
+        {
+          "name" : "target",
+          "required" : true,
+          "summary" : "`+1`, `-1`, `left`, `right`, `up`, `down` or a display number counting from 0",
+          "type" : "string"
+        }
+      ],
+      "group" : "displays",
+      "name" : "movewindowtomonitor",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Move the focused window to another display"
+    },
+    {
+      "args" : [
+        {
+          "choices" : [
+            "left",
+            "right",
+            "up",
+            "down"
+          ],
+          "name" : "direction",
+          "required" : true,
+          "summary" : "Direction",
+          "type" : "enum"
+        }
+      ],
+      "group" : "window",
+      "name" : "swapwindow",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Swap the focused window with its neighbour"
+    },
+    {
+      "args" : [
+        {
+          "choices" : [
+            "next",
+            "prev"
+          ],
+          "name" : "step",
+          "required" : false,
+          "summary" : "Which way to go. The default is `next`.",
+          "type" : "enum"
+        }
+      ],
+      "group" : "window",
+      "name" : "swapnext",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Swap the focused window with the next or previous window"
+    },
+    {
+      "args" : [
+
+      ],
+      "group" : "window",
+      "name" : "togglefloating",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Float or tile the focused window"
+    },
+    {
+      "args" : [
+
+      ],
+      "group" : "window",
+      "name" : "fullscreen",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Fill the screen with the focused window, inside the tiling"
+    },
+    {
+      "args" : [
+
+      ],
+      "group" : "window",
+      "name" : "nativefullscreen",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Give the focused window a macOS full screen Desktop"
+    },
+    {
+      "args" : [
+
+      ],
+      "group" : "window",
+      "name" : "minimize",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Minimise the focused window"
+    },
+    {
+      "args" : [
+
+      ],
+      "group" : "window",
+      "name" : "killactive",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Close the focused window"
+    },
+    {
+      "args" : [
+        {
+          "choices" : [
+            "left",
+            "right",
+            "up",
+            "down"
+          ],
+          "name" : "direction",
+          "required" : true,
+          "summary" : "Direction",
+          "type" : "enum"
+        }
+      ],
+      "group" : "tabs",
+      "name" : "moveintogroup",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Add the focused window to the tabs of its neighbour"
+    },
+    {
+      "args" : [
+
+      ],
+      "group" : "tabs",
+      "name" : "moveoutofgroup",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Take the focused window out of its tabs"
+    },
+    {
+      "args" : [
+        {
+          "name" : "tab",
+          "required" : false,
+          "summary" : "`next`, `prev` or a tab number counting from 1",
+          "type" : "string"
+        }
+      ],
+      "group" : "tabs",
+      "name" : "changegroupactive",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Show another tab"
+    },
+    {
+      "args" : [
+        {
+          "choices" : [
+            "next",
+            "prev"
+          ],
+          "name" : "step",
+          "required" : false,
+          "summary" : "Which way to go. The default is `next`.",
+          "type" : "enum"
+        }
+      ],
+      "group" : "tabs",
+      "name" : "movegroupwindow",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Move the focused tab along the strip"
+    },
+    {
+      "args" : [
+        {
+          "name" : "message",
+          "required" : true,
+          "summary" : "`swapwithmaster`, `swapsides`, `focusmaster`, `addmaster`, `removemaster`, `mfact <value>`, `orientationnext` or `orientationprev`",
+          "type" : "string"
+        }
+      ],
+      "group" : "layout",
+      "name" : "layoutmsg",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Send a message to the layout"
+    },
+    {
+      "args" : [
+        {
+          "name" : "value",
+          "required" : true,
+          "summary" : "A change such as `+0.05` or `-0.05`, or `exact 0.6`",
+          "type" : "string"
+        }
+      ],
+      "group" : "layout",
+      "name" : "splitratio",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Change the size of the main pane"
+    },
+    {
+      "args" : [
+        {
+          "choices" : [
+            "next",
+            "prev"
+          ],
+          "name" : "step",
+          "required" : false,
+          "summary" : "Which way to go. The default is `next`.",
+          "type" : "enum"
+        }
+      ],
+      "group" : "layout",
+      "name" : "cyclelayout",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Use the next or previous layout"
+    },
+    {
+      "args" : [
+        {
+          "choices" : [
+            "tall",
+            "tall-right",
+            "wide",
+            "middle-wide",
+            "fullscreen",
+            "column",
+            "row",
+            "floating",
+            "bsp",
+            "3column-left",
+            "3column-middle",
+            "3column-right",
+            "two-pane",
+            "two-pane-right",
+            "widescreen-tall",
+            "widescreen-tall-right"
+          ],
+          "name" : "layout",
+          "required" : true,
+          "summary" : "Layout name",
+          "type" : "enum"
+        }
+      ],
+      "group" : "layout",
+      "name" : "layout",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Use a layout on the current screen"
+    },
+    {
+      "args" : [
+
+      ],
+      "group" : "layout",
+      "name" : "toggletiling",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Turn tiling on or off"
+    },
+    {
+      "args" : [
+
+      ],
+      "group" : "layout",
+      "name" : "retile",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Place every window again"
+    },
+    {
+      "args" : [
+        {
+          "name" : "workspace",
+          "required" : true,
+          "summary" : "A number, a name (`name:<text>`), `previous`, `+1`, `-1` or `e+1` for the next workspace with windows",
+          "type" : "string"
+        }
+      ],
+      "group" : "workspaces",
+      "name" : "workspace",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Show a workspace"
+    },
+    {
+      "args" : [
+        {
+          "name" : "workspace",
+          "required" : true,
+          "summary" : "Same values as `workspace`",
+          "type" : "string"
+        }
+      ],
+      "group" : "workspaces",
+      "name" : "movetoworkspace",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Move the focused window to a workspace and go there"
+    },
+    {
+      "args" : [
+        {
+          "name" : "workspace",
+          "required" : true,
+          "summary" : "Same values as `workspace`",
+          "type" : "string"
+        }
+      ],
+      "group" : "workspaces",
+      "name" : "movetoworkspacesilent",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Move the focused window to a workspace and stay"
+    },
+    {
+      "args" : [
+
+      ],
+      "group" : "workspaces",
+      "name" : "sethomespace",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Make the current Desktop the home Desktop"
+    },
+    {
+      "args" : [
+
+      ],
+      "group" : "overview",
+      "name" : "sort",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Open or close the Overview"
+    },
+    {
+      "args" : [
+
+      ],
+      "group" : "overview",
+      "name" : "sort-undo",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Undo the last Overview change"
+    },
+    {
+      "args" : [
+        {
+          "choices" : [
+            "next",
+            "prev"
+          ],
+          "name" : "step",
+          "required" : false,
+          "summary" : "Which way to go. The default is `next`.",
+          "type" : "enum"
+        }
+      ],
+      "group" : "overview",
+      "name" : "switcher",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Open the window switcher"
+    },
+    {
+      "args" : [
+        {
+          "name" : "name",
+          "required" : true,
+          "summary" : "The mode name, or `reset` to leave the mode",
+          "type" : "string"
+        }
+      ],
+      "group" : "app",
+      "name" : "submap",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Enter a key mode, or leave it"
+    },
+    {
+      "args" : [
+
+      ],
+      "group" : "app",
+      "name" : "reload",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Read the config file again"
+    },
+    {
+      "args" : [
+
+      ],
+      "group" : "app",
+      "name" : "exit",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Quit Ouch"
+    },
+    {
+      "args" : [
+
+      ],
+      "group" : "focus",
+      "name" : "toggledim",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Toggle Dim Other Windows"
+    },
+    {
+      "args" : [
+
+      ],
+      "group" : "focus",
+      "name" : "toggleblur",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Toggle Blur Other Windows"
+    },
+    {
+      "args" : [
+
+      ],
+      "group" : "state",
+      "name" : "status",
+      "result" : {
+        "fields" : [
+          {
+            "name" : "trusted",
+            "summary" : "Accessibility permission is granted",
+            "type" : "bool"
+          },
+          {
+            "name" : "keybindsActive",
+            "summary" : "The key tap works",
+            "type" : "bool"
+          },
+          {
+            "name" : "running",
+            "summary" : "The window manager runs",
+            "type" : "bool"
+          },
+          {
+            "name" : "tilingEnabled",
+            "summary" : "Tiling is on",
+            "type" : "bool"
+          },
+          {
+            "name" : "launchAtLogin",
+            "summary" : "Ouch opens at login",
+            "type" : "bool"
+          },
+          {
+            "name" : "loginNeedsApproval",
+            "summary" : "The login item needs approval",
+            "type" : "bool"
+          },
+          {
+            "name" : "inputMonitoring",
+            "summary" : "Input Monitoring permission is granted",
+            "type" : "bool"
+          },
+          {
+            "name" : "tiled",
+            "summary" : "Number of tiled windows",
+            "type" : "int"
+          },
+          {
+            "name" : "floating",
+            "summary" : "Number of floating windows",
+            "type" : "int"
+          },
+          {
+            "name" : "mode",
+            "summary" : "Active key mode, empty for none",
+            "type" : "string"
+          },
+          {
+            "name" : "workspaces",
+            "summary" : "`ouch` or `macos`",
+            "type" : "string"
+          },
+          {
+            "name" : "screens",
+            "summary" : "One entry for each display",
+            "type" : "object[]"
+          }
+        ],
+        "kind" : "object"
+      },
+      "summary" : "Read the state of Ouch"
+    },
+    {
+      "args" : [
+
+      ],
+      "group" : "state",
+      "name" : "windows",
+      "result" : {
+        "fields" : [
+          {
+            "name" : "id",
+            "summary" : "Window ID",
+            "type" : "int"
+          },
+          {
+            "name" : "pid",
+            "summary" : "Process ID",
+            "type" : "int"
+          },
+          {
+            "name" : "app",
+            "summary" : "Bundle ID",
+            "type" : "string?"
+          },
+          {
+            "name" : "title",
+            "summary" : "Window title",
+            "type" : "string?"
+          },
+          {
+            "name" : "focused",
+            "summary" : "The window has focus",
+            "type" : "bool"
+          },
+          {
+            "name" : "floating",
+            "summary" : "The window floats",
+            "type" : "bool"
+          },
+          {
+            "name" : "minimized",
+            "summary" : "The window is minimised",
+            "type" : "bool"
+          },
+          {
+            "name" : "fullscreen",
+            "summary" : "The window is in full screen",
+            "type" : "bool"
+          },
+          {
+            "name" : "visible",
+            "summary" : "The window is on a shown workspace",
+            "type" : "bool"
+          },
+          {
+            "name" : "workspace",
+            "summary" : "Workspace name",
+            "type" : "string?"
+          },
+          {
+            "name" : "screen",
+            "summary" : "Display ID",
+            "type" : "string?"
+          },
+          {
+            "name" : "frame",
+            "summary" : "Last known frame",
+            "type" : "rect?"
+          }
+        ],
+        "kind" : "list"
+      },
+      "summary" : "List the windows that Ouch knows"
+    },
+    {
+      "args" : [
+
+      ],
+      "group" : "state",
+      "name" : "workspaces",
+      "result" : {
+        "fields" : [
+          {
+            "name" : "name",
+            "summary" : "Workspace name",
+            "type" : "string"
+          },
+          {
+            "name" : "windows",
+            "summary" : "Window IDs in the workspace",
+            "type" : "int[]"
+          },
+          {
+            "name" : "screens",
+            "summary" : "Displays that show the workspace",
+            "type" : "string[]"
+          },
+          {
+            "name" : "native",
+            "summary" : "The workspace is a macOS Desktop",
+            "type" : "bool"
+          }
+        ],
+        "kind" : "list"
+      },
+      "summary" : "List the workspaces"
+    },
+    {
+      "args" : [
+
+      ],
+      "group" : "state",
+      "name" : "screens",
+      "result" : {
+        "fields" : [
+          {
+            "name" : "uuid",
+            "summary" : "Display ID",
+            "type" : "string"
+          },
+          {
+            "name" : "name",
+            "summary" : "Display name",
+            "type" : "string"
+          },
+          {
+            "name" : "frame",
+            "summary" : "Display frame",
+            "type" : "rect"
+          },
+          {
+            "name" : "usable",
+            "summary" : "Area for tiled windows",
+            "type" : "rect"
+          },
+          {
+            "name" : "layout",
+            "summary" : "Layout name",
+            "type" : "string"
+          },
+          {
+            "name" : "ratio",
+            "summary" : "Main pane ratio",
+            "type" : "number"
+          },
+          {
+            "name" : "mainCount",
+            "summary" : "Number of main windows",
+            "type" : "int"
+          },
+          {
+            "name" : "workspace",
+            "summary" : "Workspace shown on the display",
+            "type" : "string"
+          },
+          {
+            "name" : "focused",
+            "summary" : "The display has focus",
+            "type" : "bool"
+          }
+        ],
+        "kind" : "list"
+      },
+      "summary" : "List the displays"
+    },
+    {
+      "args" : [
+
+      ],
+      "group" : "state",
+      "name" : "dump",
+      "result" : {
+        "kind" : "text"
+      },
+      "summary" : "Read a text report of the tiling state"
+    },
+    {
+      "args" : [
+        {
+          "name" : "key",
+          "required" : true,
+          "summary" : "Option name",
+          "type" : "string"
+        }
+      ],
+      "group" : "config",
+      "name" : "config.get",
+      "result" : {
+        "kind" : "text"
+      },
+      "summary" : "Read the value of a config option"
+    },
+    {
+      "args" : [
+        {
+          "name" : "key",
+          "required" : true,
+          "summary" : "Option name",
+          "type" : "string"
+        },
+        {
+          "name" : "value",
+          "required" : true,
+          "summary" : "New value",
+          "type" : "string"
+        }
+      ],
+      "group" : "config",
+      "name" : "config.set",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Change a config option and reload the config"
+    },
+    {
+      "args" : [
+
+      ],
+      "group" : "config",
+      "name" : "config.options",
+      "result" : {
+        "fields" : [
+          {
+            "name" : "key",
+            "summary" : "Option name",
+            "type" : "string"
+          },
+          {
+            "name" : "value",
+            "summary" : "Current value",
+            "type" : "string"
+          },
+          {
+            "name" : "default",
+            "summary" : "Default value",
+            "type" : "string"
+          },
+          {
+            "name" : "type",
+            "summary" : "Accepted values",
+            "type" : "string"
+          },
+          {
+            "name" : "summary",
+            "summary" : "What the option does",
+            "type" : "string"
+          }
+        ],
+        "kind" : "list"
+      },
+      "summary" : "List the config options"
+    }
+  ],
+  "events" : [
+    {
+      "data" : [
+        {
+          "name" : "window",
+          "summary" : "Window ID, or null when no window has focus",
+          "type" : "int?"
+        },
+        {
+          "name" : "app",
+          "summary" : "Bundle ID",
+          "type" : "string?"
+        },
+        {
+          "name" : "title",
+          "summary" : "Window title",
+          "type" : "string?"
+        }
+      ],
+      "name" : "focus.changed",
+      "summary" : "The focused window changed"
+    },
+    {
+      "data" : [
+        {
+          "name" : "window",
+          "summary" : "Window ID",
+          "type" : "int"
+        },
+        {
+          "name" : "app",
+          "summary" : "Bundle ID",
+          "type" : "string?"
+        },
+        {
+          "name" : "title",
+          "summary" : "Window title",
+          "type" : "string?"
+        }
+      ],
+      "name" : "window.added",
+      "summary" : "Ouch found a new window"
+    },
+    {
+      "data" : [
+        {
+          "name" : "window",
+          "summary" : "Window ID",
+          "type" : "int"
+        },
+        {
+          "name" : "app",
+          "summary" : "Bundle ID",
+          "type" : "string?"
+        }
+      ],
+      "name" : "window.removed",
+      "summary" : "A window is gone"
+    },
+    {
+      "data" : [
+        {
+          "name" : "screen",
+          "summary" : "Display ID",
+          "type" : "string"
+        },
+        {
+          "name" : "workspace",
+          "summary" : "Workspace name",
+          "type" : "string"
+        }
+      ],
+      "name" : "workspace.changed",
+      "summary" : "A display shows another workspace"
+    },
+    {
+      "data" : [
+        {
+          "name" : "screen",
+          "summary" : "Display ID",
+          "type" : "string"
+        },
+        {
+          "name" : "layout",
+          "summary" : "Layout name",
+          "type" : "string"
+        }
+      ],
+      "name" : "layout.changed",
+      "summary" : "A display uses another layout"
+    },
+    {
+      "data" : [
+        {
+          "name" : "enabled",
+          "summary" : "Tiling is on",
+          "type" : "bool"
+        }
+      ],
+      "name" : "tiling.changed",
+      "summary" : "Tiling went on or off"
+    },
+    {
+      "data" : [
+        {
+          "name" : "mode",
+          "summary" : "Key mode, empty for none",
+          "type" : "string"
+        }
+      ],
+      "name" : "mode.changed",
+      "summary" : "The key mode changed"
+    },
+    {
+      "data" : [
+        {
+          "name" : "errors",
+          "summary" : "Problems in the config file",
+          "type" : "string[]"
+        }
+      ],
+      "name" : "config.reloaded",
+      "summary" : "Ouch read the config file again"
+    }
+  ],
+  "protocol" : 1
+}

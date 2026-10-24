@@ -301,3 +301,13 @@ extension Animator {
         focusQueues[pid] = nil
     }
 }
+
+extension Animator {
+    func retarget(_ window: Window, to frame: CGRect) -> Bool {
+        guard let running = items[window.id] else { return false }
+        items[window.id] = Item(move: .init(window: window, to: frame, bounds: frame), from: running.from,
+                                start: running.start, duration: running.duration, curve: running.curve,
+                                bounce: running.bounce)
+        return true
+    }
+}

@@ -25,14 +25,13 @@ if CommandLine.arguments.dropFirst().first == "docs" {
     exit(1)
 }
 
-let cliArgs = Array(CommandLine.arguments.dropFirst())
-let ipcCommands = ["dispatch", "dump", "reload", "poststyle", "grabtest", "modefx", "panelfx", "intro", "introlab"]
-if let cmd = cliArgs.first, ipcCommands.contains(cmd) {
-    DistributedNotificationCenter.default().postNotificationName(ipcNotification,
-                                                                 object: cliArgs.joined(separator: " "),
-                                                                 userInfo: nil, deliverImmediately: true)
-    if cmd == "dump" { print("State written to \(Log.url.path)") }
+if CommandLine.arguments.dropFirst().first == "--write-schema" {
+    try ControlSchema.write(in: URL(fileURLWithPath: FileManager.default.currentDirectoryPath))
     exit(0)
+}
+
+if let first = CommandLine.arguments.dropFirst().first, !first.hasPrefix("-") || ["--help", "-h"].contains(first) {
+    ControlCLI.run(Array(CommandLine.arguments.dropFirst()))
 }
 
 signal(SIGPIPE, SIG_IGN)
@@ -42,6 +41,7 @@ for sig in [SIGTERM, SIGINT, SIGHUP] {
     let source = DispatchSource.makeSignalSource(signal: sig, queue: .main)
     source.setEventHandler {
         WindowManager.shared.isStarted = false
+        ControlServer.shared.stop()
         WindowManager.shared.restoreHiddenWindows {
             CapsLockChord.shared.restore()
             CrashWatch.cleanExit()

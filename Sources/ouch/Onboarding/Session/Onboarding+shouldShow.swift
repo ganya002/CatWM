@@ -112,7 +112,9 @@ extension Onboarding {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
             if self?.isRunning == true { MenuBarTip.shared.show() }
         }
-        poll = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in self?.refreshWelcome() }
+        poll = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+            LoginItem.refresh { self?.refreshWelcome() }
+        }
         poll?.tolerance = 0.1
     }
 

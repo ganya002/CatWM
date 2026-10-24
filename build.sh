@@ -33,6 +33,9 @@ cp Resources/Icon/AppIcon.icns "$APP/Contents/Resources/"
 cp -R ".build/$CONFIG/MacKeys_MacKeysCore.bundle" "$APP/Contents/Resources/"
 cp -R ".build/$CONFIG/PermissionFlow_PermissionFlow.bundle" "$APP/Contents/Resources/"
 cp -R Resources/AgentDocs "$APP/Contents/Resources/"
+mkdir -p "$APP/Contents/Resources/AgentDocs/python"
+cp -R Clients/python/ouch "$APP/Contents/Resources/AgentDocs/python/"
+find "$APP/Contents/Resources/AgentDocs/python" -name __pycache__ -prune -exec rm -rf {} +
 cp Resources/ThirdPartyNotices.txt "$APP/Contents/Resources/"
 SPARKLE=$(find .build/artifacts -type d -name Sparkle.framework -path '*macos-arm64_x86_64*' | head -1)
 ditto "$SPARKLE" "$APP/Contents/Frameworks/Sparkle.framework"

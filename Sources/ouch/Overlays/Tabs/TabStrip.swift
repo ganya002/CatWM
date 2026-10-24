@@ -12,6 +12,10 @@ enum TabStrip {
     static let closeSide: CGFloat = 20
     static let iconSide: CGFloat = 16
     static let shape = UnevenRoundedRectangle(topLeadingRadius: radius, topTrailingRadius: radius, style: .continuous)
+    static var animated: Bool { WindowManager.shared.config.animate }
+    static var reduceMotion: Bool { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
+    static var motion: Animation? { animated ? Motion.snap(reduceMotion) : nil }
+    static func fade(_ duration: Double) -> Double { animated ? duration : 0 }
 }
 
 final class TabStripModel: ObservableObject {
@@ -92,13 +96,13 @@ struct TabStripView: View {
                 .padding(.bottom, -1)
         }
         .clipped()
-        .animation(Motion.snap(reduceMotion), value: model.tabs.map(\.id))
-        .animation(reduceMotion ? Motion.fade : Motion.easeOut, value: model.active)
-        .animation(Motion.fade, value: model.focused)
-        .animation(Motion.fade, value: model.hovered)
+        .animation(TabStrip.motion, value: model.tabs.map(\.id))
+        .animation(fade(TabStrip.reduceMotion ? Motion.fade : Motion.easeOut), value: model.active)
+        .animation(fade(Motion.fade), value: model.focused)
+        .animation(fade(Motion.fade), value: model.hovered)
     }
 
-    private var reduceMotion: Bool { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
+    private func fade(_ animation: Animation) -> Animation? { TabStrip.animated ? animation : nil }
 
     private func fill(_ index: Int) -> UnevenRoundedRectangle {
         UnevenRoundedRectangle(topLeadingRadius: index == 0 ? TabStrip.radius : 0, style: .continuous)
@@ -140,6 +144,7 @@ private struct TabCell: View {
                         .font(Theme.symbol(Theme.Icon.extraSmall, .bold))
                         .frame(width: TabStrip.closeSide, height: TabStrip.closeSide)
                         .background(Circle().fill(closeHovered ? Theme.well : .clear))
+                        .accessibilityLabel("Close tab")
                         .transition(.opacity)
                 }
                 Spacer(minLength: 0)
@@ -147,7 +152,6 @@ private struct TabCell: View {
             .padding(.leading, Theme.Space.small)
         }
         .foregroundStyle(active && focused || hovered ? Theme.ink : Theme.inkMuted)
-        .help(tab.title)
     }
 }
 

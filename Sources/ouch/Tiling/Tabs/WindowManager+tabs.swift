@@ -4,6 +4,8 @@ extension WindowManager {
     static let tabTitleBand: CGFloat = 44
     static let minimizeHold: TimeInterval = 2
     static let tabHoverDelay: TimeInterval = 0.4
+    static let tabDragSlack: CGFloat = 40
+    static let tabFollowWindow: TimeInterval = 1
 
     var tabs: TabGroups { model.tabs }
 
@@ -27,6 +29,9 @@ extension WindowManager {
             } else if let next = tabs.neighbor(of: window.id, offset: offset) {
                 selectTab(next)
             }
+        case "movegroupwindow":
+            let lowered = arg.lowercased()
+            moveTab(window.id, by: lowered.hasPrefix("b") || lowered.hasPrefix("prev") ? -1 : 1)
         default: break
         }
     }
@@ -72,12 +77,8 @@ extension WindowManager {
 
     func untab(_ id: CGWindowID, droppedAt point: CGPoint? = nil) {
         guard tabs.isGrouped(id), let window = windows[id] else { return }
-        if let point, let host = tabDropTarget(for: id, at: point) {
-            joinTab(id, onto: host)
-            return
-        }
         let hit = point.flatMap(tiledSlotOwner(at:)).flatMap { config.mouseSwapsWindows && $0 != id ? $0 : nil }
-        let heir = tabs.group(of: id).flatMap { $0.active == id ? tabs.neighbor(of: id, offset: 1) : $0.active }
+        let heir = tabs.group(of: id).flatMap { $0.active == id ? tabs.heir(of: id) : $0.active }
         if let heir, let home = screen(of: window).map(state(for:)), home.zoomed == id { home.zoomed = heir }
         model.leaveTab(id)
         if let hit { swapOrder(id, hit) }
@@ -92,9 +93,16 @@ extension WindowManager {
         focus(window, warp: false)
     }
 
+    func moveTab(_ id: CGWindowID, by offset: Int) {
+        guard let members = tabs.group(of: id)?.members, let index = members.firstIndex(of: id),
+              members.indices.contains(index + offset) else { return }
+        reorderTab(id, to: index + offset)
+    }
+
     func reorderTab(_ id: CGWindowID, to position: Int) {
         model.tabs.move(id, to: position)
         TabStrips.shared.update()
+        saveTabs()
     }
 
     private func activateTab(_ id: CGWindowID, previous: CGWindowID, retile: Bool = true) {
@@ -111,6 +119,7 @@ extension WindowManager {
             TabStrips.shared.update()
             return
         }
+        tabFollow = (group.active, Date())
         activateTab(id, previous: group.active)
     }
 
@@ -155,40 +164,76 @@ extension WindowManager {
         guard let group = tabs.group(of: window.id), group.active == window.id, let slot = targets[window.id],
               !window.cachedFrame.isNull else { return }
         let offset = CGVector(dx: window.cachedFrame.minX - slot.minX, dy: window.cachedFrame.minY - slot.minY)
-        for member in group.members where member != window.id {
-            guard let tab = windows[member], !tab.minimized, !tab.isFloating else { continue }
-            animator.position(tab, at: slot.offsetBy(dx: offset.dx, dy: offset.dy))
+        let travelled = abs(offset.dx) + abs(offset.dy)
+        let screens = Screen.all()
+        for member in group.members where member != window.id && !parkedTabs.contains(member) {
+            guard let tab = windows[member], !tab.minimized, !tab.isFloating,
+                  tab.pid != window.pid || travelled > Self.tabDragSlack else { continue }
+            parkedTabs.insert(member)
+            cornerPark(member, screens: screens)
         }
-        TabStrips.shared.shift(group.id, by: offset)
+        let top = screen(of: window, in: screens)?.visible.minY ?? slot.minY
+        TabStripFollow.shared.follow(group.id, at: offset, lowest: top - slot.minY)
+    }
+
+    func settleParkedTabs() {
+        TabStripFollow.shared.end()
+        guard !parkedTabs.isEmpty else { return }
+        let parked = parkedTabs
+        parkedTabs = []
+        refresh()
+        let actives = Set(parked.compactMap { tabs.group(of: $0)?.active }).compactMap { windows[$0] }
+        animator.afterPendingWrites(pids: Set(parked.compactMap { windows[$0]?.pid })) { [weak self] in
+            guard let self else { return }
+            for active in actives { scanner.run(active.pid) { active.element.perform(kAXRaiseAction) } }
+        }
     }
 
     func dragTab(_ id: CGWindowID, grab: CGPoint, to point: CGPoint) {
         guard let window = windows[id], let slot = targets[id] else { return }
+        let held = CGRect(origin: CGPoint(x: point.x - grab.x, y: point.y - grab.y), size: slot.size)
         if draggedTab != id {
             draggedTab = id
-            tabLiftEnd = CACurrentMediaTime() + (config.animate ? config.animationDuration : 0)
+            tabDropCancelled = false
             focus(window, warp: false)
-        }
-        let held = CGRect(origin: CGPoint(x: point.x - grab.x, y: point.y - grab.y), size: slot.size)
-        let left = tabLiftEnd - CACurrentMediaTime()
-        if left > 0.01 {
-            animator.animate([.init(window: window, to: held, bounds: held)], duration: left, curve: .linear)
-        } else {
+            animator.animate([.init(window: window, to: held, bounds: held)],
+                             duration: config.animate ? config.animationDuration : 0,
+                             curve: config.animationCurve, bounce: config.animationBounce)
+        } else if !animator.retarget(window, to: held) {
             animator.position(window, at: held)
         }
-        guard !TabStrips.shared.preview(window, at: point) else { return TabDropHint.shared.hide() }
-        guard let host = tabDropTarget(for: id, at: point), let hostSlot = targets[host] else {
+        guard !tabDropCancelled else { return }
+        guard !TabStrips.shared.preview(window, at: point) else {
+            trackTabHover(nil)
             return TabDropHint.shared.hide()
         }
-        TabDropHint.shared.show(over: tabDropZone(host, hostSlot).union(hostSlot), adding: window)
+        trackTabHover(for: id, at: point)
+        showTabDropHint(adding: window, onto: tabDropTarget(for: id, at: point) ?? settledTabHover(for: id, at: point))
+    }
+
+    private func returnTab(_ id: CGWindowID) {
+        if tabs.group(of: id)?.active == id { refresh() } else { selectTab(id) }
+    }
+
+    private func sharesTabs(_ host: CGWindowID, _ id: CGWindowID) -> Bool {
+        host == id || tabs.group(of: host)?.members.contains(id) == true
     }
 
     func dropTab(_ id: CGWindowID, at point: CGPoint) {
+        let joins = !tabDropCancelled
+        let hovered = joins ? settledTabHover(for: id, at: point) : nil
         draggedTab = nil
+        tabDropCancelled = false
         TabDropHint.shared.hide()
-        if let previewed = TabStrips.shared.endPreview(of: id) {
+        trackTabHover(nil)
+        let previewed = TabStrips.shared.endPreview(of: id)
+        if !joins {
+            untab(id, droppedAt: point)
+        } else if let previewed {
             Log.info("tabs: \(id) dropped into the strip of group \(previewed.group) at \(previewed.index)")
             dropIntoStrip(id, group: previewed.group, at: previewed.index, alone: true)
+        } else if let host = tabDropTarget(for: id, at: point) ?? hovered {
+            if sharesTabs(host, id) { returnTab(id) } else { joinTab(id, onto: host) }
         } else {
             untab(id, droppedAt: point)
         }
@@ -198,9 +243,28 @@ extension WindowManager {
     func cancelTabDrag(_ id: CGWindowID) {
         guard draggedTab == id else { return }
         draggedTab = nil
+        tabDropCancelled = false
+        trackTabHover(nil)
         TabDropHint.shared.hide()
         _ = TabStrips.shared.endPreview(of: id)
-        if tabs.group(of: id)?.active == id { refresh() } else { selectTab(id) }
+        returnTab(id)
+    }
+
+    func showHeir(of id: CGWindowID, focused: Bool) {
+        let replaced = tabFollow.map { $0.previous == id && Date().timeIntervalSince($0.at) < Self.tabFollowWindow }
+        guard focused || replaced == true,
+              let heir = tabs.group(of: id).flatMap({ $0.active == id || replaced == true ? tabs.heir(of: id) : nil })
+        else { return }
+        tabFollow = nil
+        DispatchQueue.main.async { [weak self] in
+            guard let self, let window = self.windows[heir] else { return }
+            if self.tabs.isGrouped(heir) { self.selectTab(heir) } else { self.focus(window, warp: false) }
+        }
+    }
+
+    func covered(_ tab: Window, by target: CGRect) -> Bool {
+        let frame = animator.destination(tab.id) ?? tab.cachedFrame
+        return !frame.isNull && target.contains(frame)
     }
 
     func tabStack(behind id: CGWindowID) -> [CGWindowID] {
@@ -247,7 +311,7 @@ extension WindowManager {
     func settledTabHover(for id: CGWindowID, at point: CGPoint) -> CGWindowID? {
         guard let hover = tabHover, hover.settled else { return nil }
         let owner = tiledSlotOwner(at: point) ?? hover.host
-        return owner == hover.host && owner != id ? hover.host : nil
+        return owner == hover.host && (owner != id || draggedTab == id) ? hover.host : nil
     }
 
     private func tabHost(for id: CGWindowID, at point: CGPoint,
@@ -262,8 +326,7 @@ extension WindowManager {
 
     private func trackTabHover(for id: CGWindowID, at point: CGPoint) {
         guard let owner = tiledSlotOwner(at: point) else { return }
-        let joins = owner != id && tabs.group(of: owner)?.members.contains(id) != true
-        trackTabHover(joins ? owner : nil)
+        trackTabHover(draggedTab == id || !sharesTabs(owner, id) ? owner : nil)
     }
 
     func trackTabHover(_ host: CGWindowID?) {
@@ -287,6 +350,12 @@ extension WindowManager {
     }
 
     func updateTabDropHint() {
+        guard !tabDropCancelled else { return TabDropHint.shared.hide() }
+        if let id = draggedTab, let window = windows[id] {
+            let point = mouseLocation()
+            return showTabDropHint(adding: window,
+                                   onto: tabDropTarget(for: id, at: point) ?? settledTabHover(for: id, at: point))
+        }
         guard let (id, resized) = drags.first, drags.count == 1, !resized,
               let window = windows[id], NSEvent.pressedMouseButtons & 1 != 0 else {
             TabDropHint.shared.hide()
@@ -299,10 +368,11 @@ extension WindowManager {
         }
         trackTabHover(for: id, at: point)
         let band = holds(window, at: point) ? tabDropTarget(for: id, at: point) : nil
-        guard let host = band ?? settledTabHover(for: id, at: point), let slot = targets[host] else {
-            TabDropHint.shared.hide()
-            return
-        }
+        showTabDropHint(adding: window, onto: band ?? settledTabHover(for: id, at: point))
+    }
+
+    private func showTabDropHint(adding window: Window, onto host: CGWindowID?) {
+        guard let host, let slot = targets[host] else { return TabDropHint.shared.hide() }
         TabDropHint.shared.show(over: tabDropZone(host, slot).union(slot), adding: window)
     }
 
