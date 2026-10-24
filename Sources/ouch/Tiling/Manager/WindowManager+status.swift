@@ -155,7 +155,7 @@ extension WindowManager {
         case "sort": toggleSortCommand()
         case "sort-undo": SortPanel.shared.undoApplied()
         case "switcher": Switcher.shared.open(backward: arg.lowercased().hasPrefix("prev"))
-        case "moveintogroup", "moveoutofgroup", "changegroupactive": tabCommand(dispatcher, arg)
+        case "moveintogroup", "moveoutofgroup", "changegroupactive", "movegroupwindow": tabCommand(dispatcher, arg)
         default: NSLog("Ouch: unknown dispatcher %@", dispatcher)
         }
     }

@@ -29,6 +29,9 @@ extension WindowManager {
             } else if let next = tabs.neighbor(of: window.id, offset: offset) {
                 selectTab(next)
             }
+        case "movegroupwindow":
+            let lowered = arg.lowercased()
+            moveTab(window.id, by: lowered.hasPrefix("b") || lowered.hasPrefix("prev") ? -1 : 1)
         default: break
         }
     }
@@ -90,9 +93,16 @@ extension WindowManager {
         focus(window, warp: false)
     }
 
+    func moveTab(_ id: CGWindowID, by offset: Int) {
+        guard let members = tabs.group(of: id)?.members, let index = members.firstIndex(of: id),
+              members.indices.contains(index + offset) else { return }
+        reorderTab(id, to: index + offset)
+    }
+
     func reorderTab(_ id: CGWindowID, to position: Int) {
         model.tabs.move(id, to: position)
         TabStrips.shared.update()
+        saveTabs()
     }
 
     private func activateTab(_ id: CGWindowID, previous: CGWindowID, retile: Bool = true) {

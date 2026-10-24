@@ -149,6 +149,21 @@ import Testing
         #expect(manager.tabDropTarget(for: 2, at: CGPoint(x: slot.midX, y: slot.minY + 10)) == nil)
     }
 
+    @Test @MainActor func aTabMovesOnePlaceAndStopsAtTheEnds() {
+        guard let screen = Screen.all().first else { return }
+        let manager = manager(on: screen, windows: [1, 2, 3])
+        manager.model.joinTab(2, onto: 1)
+        manager.model.joinTab(3, onto: 2)
+        manager.moveTab(3, by: -1)
+        #expect(manager.tabs.group(of: 1)?.members == [1, 3, 2])
+        manager.moveTab(3, by: -1)
+        manager.moveTab(3, by: -1)
+        #expect(manager.tabs.group(of: 1)?.members == [3, 1, 2])
+        manager.moveTab(2, by: 1)
+        #expect(manager.tabs.group(of: 1)?.members == [3, 1, 2])
+        #expect(manager.tabs.group(of: 1)?.active == 3)
+    }
+
     @Test @MainActor func focusingAHiddenTabShowsIt() {
         guard let screen = Screen.all().first else { return }
         let manager = manager(on: screen, windows: [1, 2])
