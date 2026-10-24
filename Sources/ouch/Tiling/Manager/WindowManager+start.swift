@@ -23,6 +23,8 @@ extension WindowManager {
         installInputHandlers()
 
         ControlServer.shared.start()
+        Notifications.shared.installBuiltIn()
+        Notifications.shared.setEnabled(config.tabNotificationBadges)
 
         prepareFocusSink()
         HUD.shared.prepare(text: currentWorkspace ?? "1", layout: config.layouts.first)
@@ -152,6 +154,7 @@ extension WindowManager {
         FocusDim.shared.configure(dim: config.dimOtherWindows, strength: config.dimStrength,
                                   blur: config.blurOtherWindows, radius: Int(config.blurRadius))
         MacKeyboard.shared.setting = config.keyboardFinish
+        Notifications.shared.setEnabled(config.tabNotificationBadges)
         Hotkeys.shared.handler = { [weak self] binding in self?.dispatch(binding.dispatcher, binding.arg) }
         KeyHelp.shared.install()
         CursorActions.shared.install()
@@ -188,6 +191,7 @@ extension WindowManager {
         FocusDim.shared.configure(dim: config.dimOtherWindows, strength: config.dimStrength,
                                   blur: config.blurOtherWindows, radius: Int(config.blurRadius))
         MacKeyboard.shared.setting = config.keyboardFinish
+        Notifications.shared.setEnabled(config.tabNotificationBadges)
         config.errors.forEach { Log.info("config: \($0)") }
         Hotkeys.shared.setBindings(config.workspaceBindings)
         for window in windows.values { window.autoFloating = shouldFloat(window) }

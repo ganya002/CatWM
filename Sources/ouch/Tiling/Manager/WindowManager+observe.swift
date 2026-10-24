@@ -73,7 +73,7 @@ extension WindowManager {
             FocusDim.shared.update()
             notifyChange()
         case kAXTitleChangedNotification:
-            tabTitleChanged(element)
+            titleChanged(element)
         case kAXWindowMiniaturizedNotification:
             windowMinimizeChanged(element, minimized: true)
         case kAXWindowDeminiaturizedNotification:
@@ -133,6 +133,7 @@ extension WindowManager {
             focusObservation += 1
         }
         windows[id] = nil
+        Notifications.shared.forget(id)
         frameReads[id] = nil
         dirtyFrames.remove(id)
         snapNextPlacement.remove(id)

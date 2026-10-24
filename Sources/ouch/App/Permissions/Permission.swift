@@ -5,12 +5,14 @@ enum Permission: CaseIterable {
     case accessibility
     case inputMonitoring
     case screenRecording
+    case fullDiskAccess
 
     var isGranted: Bool {
         switch self {
         case .accessibility: AXIsProcessTrusted()
         case .inputMonitoring: IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) == kIOHIDAccessTypeGranted
         case .screenRecording: ScreenRecording.isGranted
+        case .fullDiskAccess: NotificationDatabase.isReadable
         }
     }
 
@@ -19,6 +21,7 @@ enum Permission: CaseIterable {
         case .accessibility: "Accessibility"
         case .inputMonitoring: "Input Monitoring"
         case .screenRecording: "Screen & System Audio Recording"
+        case .fullDiskAccess: "Full Disk Access"
         }
     }
 
@@ -27,6 +30,7 @@ enum Permission: CaseIterable {
         case .accessibility: .accessibility
         case .inputMonitoring: .inputMonitoring
         case .screenRecording: .screenRecording
+        case .fullDiskAccess: .fullDiskAccess
         }
     }
 
@@ -35,6 +39,7 @@ enum Permission: CaseIterable {
         case .accessibility: "Accessibility"
         case .inputMonitoring: "ListenEvent"
         case .screenRecording: "ScreenCapture"
+        case .fullDiskAccess: "SystemPolicyAllFiles"
         }
     }
 
