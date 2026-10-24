@@ -32,6 +32,8 @@ enum Actions {
                 group: "Add Window to Tabs", short: name)
         }
         add("Remove Window From Tabs", .move, "moveoutofgroup", "", "rectangle.stack.badge.minus")
+        add("Move Tab Right", .move, "movegroupwindow", "f", "arrow.right.to.line")
+        add("Move Tab Left", .move, "movegroupwindow", "b", "arrow.left.to.line")
         add("Swap With Previous Window", .move, "swapnext", "prev", "arrow.right.arrow.left")
         add("Previous Layout", .layout, "cyclelayout", "prev", "rectangle.2.swap")
         add("Grow Main Pane", .layout, "splitratio", "+0.05", "arrow.left.and.right.square")

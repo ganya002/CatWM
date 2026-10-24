@@ -25,6 +25,20 @@ import Testing
         #expect(!tabs.isGrouped(2))
     }
 
+    @Test func closingTheActiveTabShowsTheTabOnItsLeftElseOnItsRight() {
+        var tabs = TabGroups()
+        tabs.join(2, onto: 1)
+        tabs.join(3, onto: 2)
+        tabs.join(4, onto: 3)
+        #expect(tabs.group(of: 1)?.members == [1, 2, 3, 4])
+        tabs.activate(3)
+        #expect(tabs.heir(of: 3) == 2)
+        #expect(tabs.remove(3) == 2)
+        tabs.activate(1)
+        #expect(tabs.heir(of: 1) == 2)
+        #expect(tabs.remove(1) == 2)
+    }
+
     @Test func neighborsWrapAndTabsReorder() {
         var tabs = TabGroups()
         tabs.join(2, onto: 1)
@@ -82,7 +96,7 @@ import Testing
         #expect(model.tabs.group(of: 1)?.members.count == 3)
         model.assign(3, to: "2")
         #expect(model.tabs.group(of: 1)?.members == [1, 2])
-        #expect(model.tabs.group(of: 1)?.active == 2)
+        #expect(model.tabs.group(of: 1)?.active == 1)
         model.assign(4, to: "2")
         model.order.append(4)
         model.joinTab(4, onto: 1)

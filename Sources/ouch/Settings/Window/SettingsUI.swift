@@ -31,7 +31,9 @@ final class SettingsUI: ObservableObject {
         linkedPadding = Set(paddings).count == 1
         refreshStatus()
         timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in self?.refreshStatus() }
+        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            LoginItem.refresh { self?.refreshStatus() }
+        }
         timer?.tolerance = 0.2
     }
 

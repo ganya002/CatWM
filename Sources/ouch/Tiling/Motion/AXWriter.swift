@@ -101,8 +101,11 @@ final class AXWriter {
             let positionTime = measure { window.setPosition(frame.origin) }
             return (measure { window.setSize(frame.size) }, positionTime)
         }
-        let sizeTime = measure { window.setSize(frame.size) }
-        return (sizeTime, measure { window.setPosition(frame.origin) })
+        let rises = !window.cachedFrame.isNull && frame.minY < window.cachedFrame.minY
+        var sizeTime = measure { window.setSize(frame.size) }
+        let positionTime = measure { window.setPosition(frame.origin) }
+        if rises { sizeTime += measure { window.setSize(frame.size) } }
+        return (sizeTime, positionTime)
     }
 
     private func apply(_ item: Pending) {

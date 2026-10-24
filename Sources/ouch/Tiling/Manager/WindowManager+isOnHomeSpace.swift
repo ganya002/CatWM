@@ -50,7 +50,7 @@ extension WindowManager {
         cornerPark(id, screens: screens)
     }
 
-    private func cornerPark(_ id: CGWindowID, screens: [Screen]) {
+    func cornerPark(_ id: CGWindowID, screens: [Screen]) {
         guard let window = windows[id], let screen = monitorScreen(of: id, in: screens) else { return }
         let size = (animator.destination(id) ?? window.cachedFrame).size
         let frame = CGRect(origin: parkingSpot(size: size, on: screen, screens), size: size)

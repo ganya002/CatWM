@@ -227,8 +227,8 @@ extension WindowManager {
                 for member in [id] + tabStack(behind: id) {
                     targets[member] = target
                     if let only, !only.contains(member) { continue }
-                    if member == draggedTab { continue }
-                    guard let window = windows[member] else { continue }
+                    if member == draggedTab || member != id && drags[id] != nil { continue }
+                    guard let window = windows[member], member == id || !covered(window, by: target) else { continue }
                     planMove(window, to: target, on: screen, screens: screens, into: &planned)
                 }
             }

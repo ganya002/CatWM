@@ -45,6 +45,7 @@ extension WindowManager {
             dispatch(command.dispatcher, command.arg, inMode: command.inMode)
         }
         FocusDim.shared.update()
+        TabStrips.shared.restack()
         onChange?()
     }
 

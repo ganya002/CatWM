@@ -42,6 +42,7 @@ bind = SHIFT, tab, cyclenext, prev
 bind = CTRL, h|j|k|l, moveintogroup, l|d|u|r
 bind = , t, moveoutofgroup
 bind = , bracketleft|bracketright, changegroupactive, b|f
+bind = SHIFT, bracketleft|bracketright, movegroupwindow, b|f
 bind = , f, fullscreen
 bind = SHIFT, f, nativefullscreen
 bind = , v, togglefloating

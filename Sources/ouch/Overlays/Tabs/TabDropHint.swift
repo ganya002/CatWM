@@ -36,19 +36,21 @@ final class TabDropHint {
         }
         panel.order(.below, relativeTo: Int(window.id))
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = Theme.fast
+            context.duration = TabStrip.fade(Theme.fast)
             context.timingFunction = Motion.Curve.easeOut
             if !appearing { panel.animator().setFrame(frame, display: true) }
             panel.animator().alphaValue = 1
         }
     }
 
+    var showing: Bool { panel.isVisible && !hiding }
+
     func hide() {
         guard panel.isVisible, !hiding else { return }
         hiding = true
         target = nil
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = Theme.fast
+            context.duration = TabStrip.fade(Theme.fast)
             context.timingFunction = Motion.Curve.exit
             panel.animator().alphaValue = 0
         } completionHandler: { [weak self] in

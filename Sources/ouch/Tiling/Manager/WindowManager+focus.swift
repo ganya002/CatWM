@@ -41,28 +41,37 @@ extension WindowManager {
     func mouseUp() {
         TabDropHint.shared.hide()
         let point = mouseLocation()
-        let hovered = drags.count == 1 ? drags.first.flatMap { settledTabHover(for: $0.key, at: point) } : nil
+        let joins = !tabDropCancelled
+        tabDropCancelled = false
+        let hovered = joins && drags.count == 1 ? drags.first.flatMap { settledTabHover(for: $0.key, at: point) } : nil
         let previewed = drags.first.flatMap { TabStrips.shared.endPreview(of: $0.key) }
         trackTabHover(nil)
         if let previewed, let id = drags.first?.key, drags.count == 1, !movingToSpace {
             drags = [:]
-            return dropIntoStrip(id, group: previewed.group, at: previewed.index)
+            dropIntoStrip(id, group: previewed.group, at: previewed.index)
+            return settleParkedTabs()
         }
-        guard !drags.isEmpty, !movingToSpace else { drags = [:]; return }
+        guard !drags.isEmpty, !movingToSpace else {
+            drags = [:]
+            return settleParkedTabs()
+        }
         let finished = drags
         drags = [:]
         let dragged = finished.keys.compactMap { windows[$0] }
         readFrames(dragged) { [weak self] in
-            guard let self, NSEvent.pressedMouseButtons & 1 == 0, !self.movingToSpace else { return }
-            self.finishMouseDrag(finished, at: point, hovered: hovered)
+            guard let self else { return }
+            defer { self.settleParkedTabs() }
+            guard NSEvent.pressedMouseButtons & 1 == 0, !self.movingToSpace else { return }
+            self.finishMouseDrag(finished, at: point, hovered: hovered, joins: joins)
         }
     }
 
-    private func finishMouseDrag(_ finished: [CGWindowID: Bool], at point: CGPoint, hovered: CGWindowID?) {
+    private func finishMouseDrag(_ finished: [CGWindowID: Bool], at point: CGPoint, hovered: CGWindowID?,
+                                 joins: Bool) {
         let screens = Screen.all()
         for (id, resized) in finished {
             guard let window = windows[id], let src = screen(of: window, in: screens) else { continue }
-            let band = holds(window, at: point) ? tabDropTarget(for: id, at: point) : nil
+            let band = joins && holds(window, at: point) ? tabDropTarget(for: id, at: point) : nil
             if !resized, finished.count == 1, let host = band ?? hovered {
                 joinTabs(of: id, onto: host)
                 return

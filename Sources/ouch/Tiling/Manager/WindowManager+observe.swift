@@ -59,6 +59,7 @@ extension WindowManager {
             let id = window.id
             observeFrame(window)
             if NSEvent.pressedMouseButtons & 1 != 0 {
+                if drags.isEmpty { tabDropCancelled = false }
                 drags[id] = (drags[id] ?? false) || notification == kAXWindowResizedNotification
             } else if !window.isFloating {
                 if notification == kAXWindowResizedNotification {
@@ -123,7 +124,9 @@ extension WindowManager {
         tilingRecovery.forget(id)
         animator.forget(id)
         templateHiddenWindows[id] = nil
-        if !restoringTemplate, focusClock > 0, focusStamps[id] == focusClock { refocusAfterClose = workspaceOf[id] }
+        let focused = focusClock > 0 && focusStamps[id] == focusClock
+        if !restoringTemplate, focused { refocusAfterClose = workspaceOf[id] }
+        showHeir(of: id, focused: focused)
         if pendingFocus?.id == id { cancelFocusRequest() }
         if reportedFocus?.id == id {
             reportedFocus = nil

@@ -139,7 +139,9 @@ var focusEcho: FocusEcho?
     var tabHover: (host: CGWindowID, settled: Bool)?
     var tabHoverWork: DispatchWorkItem?
     var draggedTab: CGWindowID?
-    var tabLiftEnd: CFTimeInterval = 0
+    var tabDropCancelled = false
+    var parkedTabs: Set<CGWindowID> = []
+    var tabFollow: (previous: CGWindowID, at: Date)?
     var refreshWork: DispatchWorkItem?
     var minSizes: [CGWindowID: CGSize] = [:]
     struct MenuBarFloor {
