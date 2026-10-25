@@ -57,7 +57,7 @@ import Testing
         window.contentView = host
         defer { model.open = false }
         host.layoutSubtreeIfNeeded()
-        RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+        settle(host, rows: 2)
         let anchor = try #require(CursorActions.shared.rowHover)
         let rows = rowFrames(host).sorted { $0.minY < $1.minY }
         try #require(rows.count == 2)
@@ -82,7 +82,7 @@ import Testing
         window.contentView = host
         defer { model.open = false }
         host.layoutSubtreeIfNeeded()
-        RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+        settle(host, rows: 1)
         let anchor = try #require(CursorActions.shared.rowHover)
         let clip = try #require(anchor.enclosingScrollView?.contentView)
         let below = clip.convert(CGPoint(x: clip.bounds.midX, y: clip.bounds.maxY + 24), to: nil)
@@ -94,6 +94,14 @@ import Testing
         #expect(CursorActions.rowUnder(
             anchor, at: above, x: above.x - origin.x, y: origin.y - above.y, actions: model.actions
         ) == nil)
+    }
+
+    private func settle(_ host: NSView, rows: Int) {
+        let deadline = Date().addingTimeInterval(2)
+        while CursorActions.shared.rowHover?.window !== host.window || rowFrames(host).count < rows,
+              Date() < deadline {
+            RunLoop.main.run(mode: .default, before: Date().addingTimeInterval(0.01))
+        }
     }
 
     private func hitRow(_ anchor: NSView, in row: NSRect, actions: [QuickAction]) throws -> String? {

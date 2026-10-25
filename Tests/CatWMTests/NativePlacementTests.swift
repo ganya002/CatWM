@@ -103,12 +103,11 @@ struct NativePlacementTests {
         test.manager.animator = Animator(makeWriter: { _ in writer })
         test.manager.animator.position(test.window, at: test.frame)
         var released = false
-        let delayedRelease = Task { @MainActor in
-            try await Task.sleep(for: .milliseconds(100))
+        Task { @MainActor in
             released = true
             release.signal()
         }
-        defer { delayedRelease.cancel(); release.signal() }
+        defer { release.signal() }
         try await test.manager.prepareNativeLayout(test.request, readFrames: { _ in
             #expect(released)
             #expect(test.window.cachedFrame != test.frame)

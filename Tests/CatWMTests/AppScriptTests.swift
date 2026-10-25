@@ -22,8 +22,10 @@ import Testing
 
     @Test func blockingWorkReturnsTheFallbackAtTheTimeout() async {
         let started = Date()
+        let release = DispatchSemaphore(value: 0)
+        defer { release.signal() }
         let value = await Blocking.run(timeout: 0.2, fallback: 0) {
-            Thread.sleep(forTimeInterval: 2)
+            release.wait()
             return 1
         }
         #expect(value == 0)

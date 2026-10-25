@@ -89,7 +89,7 @@ import Testing
         manager.onDispatch = nil
     }
 
-    @Test @MainActor func aFocusedElementWithoutAWindowIDDoesNotRetry() async throws {
+    @Test @MainActor func aFocusedElementWithoutAWindowIDDoesNotRetry() async {
         let manager = manager()
         let reads = Counter()
         manager.focusRequests.focusReader = FocusReader { _ in
@@ -107,7 +107,8 @@ import Testing
         #expect(manager.focusRequests.reportedFocus?.id == nil)
         #expect(manager.focusRequests.focusCommands.isEmpty)
         #expect(dispatched == 1)
-        try await Task.sleep(for: .milliseconds(250))
+        let retried = await poll(0.25) { reads.value > 1 }
+        #expect(!retried)
         #expect(reads.value == 1)
         manager.isStarted = false
         manager.onDispatch = nil
@@ -198,7 +199,7 @@ import Testing
         manager.onChange = nil
     }
 
-    @Test @MainActor func aPendingFocusDoesNotExpireWhileItsWriteIsBlocked() async throws {
+    @Test @MainActor func aPendingFocusDoesNotExpireWhileItsWriteIsBlocked() async {
         let manager = manager()
         let tracked = window(7)
         manager.windows[tracked.id] = tracked
@@ -207,7 +208,8 @@ import Testing
         manager.animator = Animator(applyFocus: { _, _ in _ = release.wait(timeout: .now() + 3) })
         manager.focus(tracked, warp: false)
         manager.acceptFocus(pid: tracked.pid, id: tracked.id)
-        try await Task.sleep(for: .milliseconds(600))
+        let expired = await poll(0.6) { manager.focusRequests.pendingFocus == nil }
+        #expect(!expired)
         #expect(manager.focusedWindow()?.id == tracked.id)
         #expect(manager.focusRequests.pendingFocus?.id == tracked.id)
         manager.isStarted = false

@@ -37,12 +37,12 @@ struct NativePreparationTests {
         manager.order = [target.id]
         manager.model.assign(target.id, to: "test")
         var released = false
-        let delayedRelease = Task { @MainActor in
-            try await Task.sleep(for: .milliseconds(300))
-            released = true
-            release.signal()
+        if shouldWait {
+            Task { @MainActor in
+                released = true
+                release.signal()
+            }
         }
-        defer { delayedRelease.cancel() }
         let started = ProcessInfo.processInfo.systemUptime
         try await manager.prepareNativeLayout(.init(workspace: "test", display: screen.uuid, space: 0))
         let elapsed = (ProcessInfo.processInfo.systemUptime - started) * 1000
