@@ -125,7 +125,7 @@ extension WindowManager {
 
     private func floatingDecision(_ window: ObservedWindow) -> Bool {
         let title: String? = window.title
-        let created = Window(id: window.windowID, element: AXUIElementCreateApplication(window.pid), pid: window.pid,
+        let created = Window(id: window.windowID, element: axApp(window.pid), pid: window.pid,
                              bundleID: window.bundleID)
         created.naturalFrame = window.frame
         return shouldFloat(created, title: title, resizable: window.resizable)

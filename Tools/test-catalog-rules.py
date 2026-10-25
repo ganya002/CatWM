@@ -130,5 +130,117 @@ class SessionRules(unittest.TestCase):
                                       "let manager = WindowManager.shared"))
 
 
+class FailureRules(unittest.TestCase):
+    source = "Sources/CatWM/Tiling/Manager/WindowManager+start.swift"
+
+    def test_rejects_discarded_run_errors(self):
+        for code in ("try? process.run()", "    _ = try? child.run ()", "try? worker.run(arguments)"):
+            with self.subTest(code=code):
+                self.assertIn("try? drops a run failure. Use do/catch and record the error with Log",
+                              style.banned(self.source, code))
+
+    def test_rejects_discarded_directory_errors(self):
+        for code in ("try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)",
+                     "    try? fileManager.createDirectory(atPath: path, withIntermediateDirectories: true)",
+                     "_ = try? files.createDirectory (at: url, withIntermediateDirectories: true)"):
+            with self.subTest(code=code):
+                self.assertIn("try? drops a directory creation failure. Use do/catch and record the error with Log",
+                              style.banned(self.source, code))
+
+    def test_rejects_fixed_runloop_waits(self):
+        path = "Tests/CatWMTests/CursorHoverTests.swift"
+        for code in ("RunLoop.main.run(until: Date().addingTimeInterval(0.05))",
+                     "    RunLoop.current.run (until: Date().addingTimeInterval (delay))"):
+            with self.subTest(code=code):
+                self.assertIn("fixed run-loop wait in a test. Wait on a condition or an injected clock",
+                              style.banned(path, code))
+
+    def test_accepts_checked_errors_and_condition_waits(self):
+        cases = [
+            (self.source, "try process.run()"),
+            (self.source, 'do { try process.run() } catch { Log.info("launch: \\(error)") }'),
+            (self.source, "if (try? process.run()) != nil { started = true }"),
+            (self.source, "let started = (try? process.run()) != nil"),
+            (self.source, "try files.createDirectory(at: url, withIntermediateDirectories: true)"),
+            (self.source, "guard (try? files.createDirectory(at: url, withIntermediateDirectories: true)) != nil else { return }"),
+            (self.source, 'let text = "try? process.run()"'),
+            (self.source, 'let text = "try? files.createDirectory(at: url)"'),
+            ("Tests/CatWMTests/Example.swift", 'let text = "RunLoop.main.run(until: Date().addingTimeInterval(1))"'),
+            ("Tests/CatWMTests/Example.swift", "RunLoop.current.run(mode: .modalPanel, before: deadline)"),
+            ("Tests/CatWMTests/Example.swift", "await fulfillment(of: [done], timeout: 1)"),
+            ("Tests/CatWMTests/Example.swift", "try? process.run()"),
+            ("Tools/Probe.swift", "try? files.createDirectory(at: url)"),
+            ("Tools/Probe.swift", "RunLoop.main.run(until: Date().addingTimeInterval(1))"),
+            (self.source, "RunLoop.main.run(until: Date().addingTimeInterval(1))"),
+        ]
+        for path, code in cases:
+            with self.subTest(path=path, code=code):
+                self.assertFalse(style.banned(path, code))
+
+    def test_new_rules_keep_style_exemptions(self):
+        cases = [
+            (self.source, "try? process.run()"),
+            (self.source, "try? files.createDirectory(at: url)"),
+            ("Tests/CatWMTests/Example.swift", "RunLoop.main.run(until: Date().addingTimeInterval(1))"),
+        ]
+        for path, code in cases:
+            with self.subTest(code=code):
+                line = code + " // style-ok: the test requires this failure"
+                idx, in_multi = style.outside(line, False)
+                self.assertFalse(in_multi)
+                self.assertTrue(style.banned(path, line[:idx]))
+                match = style.OK.fullmatch(line[idx:])
+                self.assertIsNotNone(match)
+                self.assertTrue(style.reason_ok(match.group(1)))
+
+    def test_rejects_unsafe_calls(self):
+        cases = [
+            (self.source, "let app = AXUIElementCreateApplication(pid)", False),
+            (self.source, 'NSLog("CatWM: unknown dispatcher %@", dispatcher)', False),
+            (self.source, 'print("moved")', False),
+            (self.source, 'try? lines.joined(separator: "\\n").write(to: url, atomically: true, encoding: .utf8)', False),
+            (self.source, "    try? FileManager.default.moveItem(at: Self.url, to: bak)", False),
+            (self.source, "DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { run() }", False),
+            (self.source, "DispatchQueue.main.asyncAfter(deadline: .now() + settle) { run() }", False),
+            (self.source, "queue.asyncAfter(deadline: deadline, execute: work)", False),
+            (self.source, "try await Task.sleep(for: .milliseconds(20))", False),
+            (self.source, "private static var cache: [pid_t: NSImage] = [:]", False),
+            (self.source, "static var preview: PanelMotion?", False),
+            (self.source, "final class Gate: @unchecked Sendable {", False),
+            (self.source, "MainActor.assumeIsolated { wake() }", False),
+            ("Tests/CatWMTests/AnimatorTests.swift", "try await Task.sleep(for: .milliseconds(20))", False),
+            (self.source, 'let saved = defaults.dictionary(forKey: "grabHints")', True),
+            (self.source, 'UserDefaults.standard.set(true, forKey: "didSetUpLaunchAtLogin")', True),
+        ]
+        for path, code, uses_defaults in cases:
+            with self.subTest(code=code):
+                self.assertTrue(style.banned(path, code, uses_defaults))
+
+    def test_accepts_the_safe_form(self):
+        cases = [
+            (self.source, "let app = axApp(pid, timeout: 0.1)", False),
+            (self.source, "DispatchQueue.main.async { run() }", False),
+            ("Sources/CatWM/Keys/Help/KeyHelp.swift", "DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)", False),
+            (self.source, "static var defaultValue: [Int: CGFloat] = [:]", False),
+            (self.source, "static var isTestDone: Bool { defaults.bool(forKey: key) }", False),
+            (self.source, "static var current: Layout {", False),
+            ("Sources/CatWM/UI/Menus/Tooltip.swift", "DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { show() }", False),
+            (self.source, 'Log.info("unknown dispatcher \\(dispatcher)")', False),
+            (self.source, 'Log.attempt("save configs") { try data.write(to: Self.url, options: .atomic) }', False),
+            (self.source, "try? FileManager.default.removeItem(at: marker)", False),
+            (self.source, "let text = try? String(contentsOf: url, encoding: .utf8)", False),
+            (self.source, "if (try? backup.write(to: url, atomically: true, encoding: .utf8)) != nil {}", False),
+            (self.source, "let saved = defaults.dictionary(forKey: DefaultsKey.grabHints)", True),
+            (self.source, 'layer.add(animation, forKey: "glow")', False),
+            ("Sources/CatWM/Session/AX/AXRead.swift", "let app = AXUIElementCreateApplication(pid)", False),
+            ("Sources/CatWM/main.swift", "print(dir.path)", False),
+            ("Sources/CatWM/App/Log.swift", "try? handle.write(contentsOf: line)", False),
+            ("Sources/CatWM/App/DefaultsKey.swift", 'static let grabHints = "grabHints"', True),
+        ]
+        for path, code, uses_defaults in cases:
+            with self.subTest(code=code):
+                self.assertFalse(style.banned(path, code, uses_defaults))
+
+
 if __name__ == "__main__":
     unittest.main()

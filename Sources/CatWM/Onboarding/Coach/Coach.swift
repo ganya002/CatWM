@@ -67,11 +67,11 @@ final class Coach {
 
     var practiceWindows: [AXUIElement] {
         guard helperPID > 0 else { return [] }
-        return AXUIElementCreateApplication(helperPID).elements(kAXWindowsAttribute)
+        return axApp(helperPID).elements(kAXWindowsAttribute)
     }
 
     var focusedPractice: AXUIElement? {
-        helperPID > 0 ? AXUIElementCreateApplication(helperPID).element(kAXFocusedWindowAttribute) : nil
+        helperPID > 0 ? axApp(helperPID).element(kAXFocusedWindowAttribute) : nil
     }
 
     var focusedTitle: String? { focusedPractice?.string(kAXTitleAttribute) }

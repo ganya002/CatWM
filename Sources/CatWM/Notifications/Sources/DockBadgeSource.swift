@@ -118,8 +118,7 @@ final class DockBadgeSource: NotificationSource {
     private static func dockItems() -> [AXUIElement] {
         guard let dock = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.dock").first
         else { return [] }
-        let app = AXUIElementCreateApplication(dock.processIdentifier)
-        AXUIElementSetMessagingTimeout(app, 0.5)
+        let app = axApp(dock.processIdentifier, timeout: 0.5)
         let list = app.elements(kAXChildrenAttribute).first { $0.string(kAXRoleAttribute) == kAXListRole }
         return list?.elements(kAXChildrenAttribute) ?? []
     }

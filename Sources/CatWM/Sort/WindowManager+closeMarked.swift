@@ -89,7 +89,7 @@ extension WindowManager {
     private static func hasNoWindows(_ pid: pid_t) -> Bool {
         guard !AXStalls.shared.isStalled(pid) else { return reportsNoWindows(.cannotComplete, nil) }
         var value: CFTypeRef?
-        let app = AXUIElementCreateApplication(pid)
+        let app = axApp(pid)
         let error = app.noted { AXUIElementCopyAttributeValue(app, kAXWindowsAttribute as CFString, &value) }
         return reportsNoWindows(error, value)
     }

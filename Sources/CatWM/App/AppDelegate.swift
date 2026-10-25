@@ -23,7 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         WindowManager.shared.onChange = { [weak self] in
             self?.scheduleStatusUpdate()
         }
-        let firstRun = UserDefaults.standard.object(forKey: "didSetUpLaunchAtLogin") == nil
+        let firstRun = UserDefaults.standard.object(forKey: DefaultsKey.didSetUpLaunchAtLogin) == nil
         LoginItem.enableOnFirstLaunch()
         CommandLineTool.install()
         Onboarding.shared.statusButton = statusItem.button

@@ -25,6 +25,22 @@ TILING_UI = re.compile(
     r"|\bHotkeys\.shared\b"
 )
 SESSION_APP = re.compile(r"\b(?:WindowManager|WorkspaceModel|Layout|Theme|HUD)\b")
+AX_APP = re.compile(r"\bAXUIElementCreateApplication\(")
+AX_APP_OWNER = "Sources/CatWM/Session/AX/AXRead.swift"
+SYSTEM_LOG = re.compile(r"\bNSLog\(|^\s*print\(")
+SYSTEM_LOG_ALLOW = ("Sources/CatWM/main.swift",)
+IGNORED_WRITE = re.compile(r"^\s*try\? .*\.(?:write|moveItem|copyItem|replaceItem)\(")
+IGNORED_WRITE_ALLOW = ("Sources/CatWM/App/Log.swift",)
+FIXED_DELAY = re.compile(r"\basyncAfter\(|\bTask\.sleep\(|\bThread\.sleep\(|\busleep\(")
+STORED_STATIC = re.compile(r"\bstatic var (?!defaultValue\b)\w+(?: *: *[^={]*)? *(?:=|$)")
+UNCHECKED = re.compile(r"@unchecked Sendable")
+ASSUME_MAIN = re.compile(r"\bMainActor\.assumeIsolated\b")
+TEST_WAIT = re.compile(r"\bThread\.sleep\(|\bTask\.sleep\(|\busleep\(|\basyncAfter\(")
+IGNORED_RUN = re.compile(r"^\s*(?:_\s*=\s*)?try\?\s+\w+\.run\s*\(")
+IGNORED_DIRECTORY = re.compile(r"^\s*(?:_\s*=\s*)?try\?\s+\w+(?:\.\w+)*\.createDirectory\s*\(")
+TEST_RUNLOOP = re.compile(r"^\s*RunLoop\.(?:main|current)\.run\s*\(\s*until\s*:\s*Date\(\)\.addingTimeInterval\s*\(")
+DEFAULTS_LITERAL = re.compile(r'\bforKey: *"')
+DEFAULTS_KEYS = "Sources/CatWM/App/DefaultsKey.swift"
 TOOLS = "// swift-tools-version:"
 OK = re.compile(r"^// style-ok: (\S.*\S)$")
 
@@ -75,7 +91,7 @@ def reason_ok(text):
     return " " in text and len(text) >= 12
 
 
-def banned(path, code):
+def banned(path, code, uses_defaults=False):
     hits = []
     if path.startswith("Sources/CatWM/") and not STYLE_ALLOW.search(path) and STYLE.search(code):
         hits.append("hard-coded style. Use a Theme token")
@@ -85,6 +101,30 @@ def banned(path, code):
         hits.append("UI in Tiling. Use WindowManager.surface")
     if path.startswith("Sources/CatWM/Session/") and SESSION_APP.search(code):
         hits.append("CatWM type in Session. Put it in Templates")
+    if path.startswith("Sources/CatWM/") and path != AX_APP_OWNER and AX_APP.search(code):
+        hits.append("AXUIElementCreateApplication. Use axApp(pid), which sets the AX timeout")
+    if path.startswith("Sources/CatWM/") and path not in SYSTEM_LOG_ALLOW and SYSTEM_LOG.search(code):
+        hits.append("NSLog or print. Use Log, which Send Feedback reads")
+    if path.startswith("Sources/CatWM/") and path not in IGNORED_WRITE_ALLOW and IGNORED_WRITE.search(code):
+        hits.append("try? drops a write failure. Use Log.attempt")
+    if path.startswith("Sources/CatWM/Tiling/") and FIXED_DELAY.search(code):
+        hits.append("timer wait in Tiling. Wait for the event, or end the line with // style-ok: <why no event exists>")
+    if path.startswith("Sources/CatWM/") and STORED_STATIC.search(code):
+        hits.append("stored static var. Put the state in an owner that WindowManager or AppDelegate holds")
+    if path.startswith("Sources/CatWM/") and UNCHECKED.search(code):
+        hits.append("@unchecked Sendable. Use an actor or a lock type the compiler can check")
+    if path.startswith("Sources/CatWM/") and ASSUME_MAIN.search(code):
+        hits.append("MainActor.assumeIsolated traps off the main thread. Hop to the main actor")
+    if path.startswith("Tests/") and TEST_WAIT.search(code):
+        hits.append("sleep in a test. Wait on a condition or an injected clock")
+    if path.startswith("Sources/CatWM/") and IGNORED_RUN.search(code):
+        hits.append("try? drops a run failure. Use do/catch and record the error with Log")
+    if path.startswith("Sources/CatWM/") and IGNORED_DIRECTORY.search(code):
+        hits.append("try? drops a directory creation failure. Use do/catch and record the error with Log")
+    if path.startswith("Tests/") and TEST_RUNLOOP.search(code):
+        hits.append("fixed run-loop wait in a test. Wait on a condition or an injected clock")
+    if uses_defaults and path.startswith("Sources/CatWM/") and path != DEFAULTS_KEYS and DEFAULTS_LITERAL.search(code):
+        hits.append("UserDefaults key literal. Add it to DefaultsKey")
     return hits
 
 
@@ -157,6 +197,8 @@ def main():
         in_multi = False
         in_block = False
         with open(os.path.join(ROOT, path), encoding="utf-8") as handle:
+            uses_defaults = "UserDefaults" in handle.read()
+        with open(os.path.join(ROOT, path), encoding="utf-8") as handle:
             for number, raw in enumerate(handle, 1):
                 line = raw.rstrip("\n")
                 if in_block:
@@ -165,7 +207,7 @@ def main():
                     continue
                 idx, in_multi = outside(line, in_multi)
                 code = line if idx is None else line[:idx]
-                hits = banned(path, code)
+                hits = banned(path, code, uses_defaults)
                 if idx is None:
                     for hit in hits:
                         failures.append((path, number, hit, line.strip()))

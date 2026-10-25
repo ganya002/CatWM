@@ -45,7 +45,7 @@ extension ConfigLibrary {
             if FileManager.default.fileExists(atPath: Self.url.path) {
                 let bak = Self.url.appendingPathExtension("bak")
                 try? FileManager.default.removeItem(at: bak)
-                try? FileManager.default.moveItem(at: Self.url, to: bak)
+                Log.attempt("back up saved configs") { try FileManager.default.moveItem(at: Self.url, to: bak) }
             }
             adoptCurrentSettings()
         }
@@ -59,7 +59,7 @@ extension ConfigLibrary {
         guard let data = try? JSONEncoder().encode(stored) else { return }
         try? FileManager.default.createDirectory(at: Self.url.deletingLastPathComponent(),
                                                  withIntermediateDirectories: true)
-        try? data.write(to: Self.url, options: .atomic)
+        Log.attempt("save configs") { try data.write(to: Self.url, options: .atomic) }
     }
 
     func adoptCurrentSettings() {

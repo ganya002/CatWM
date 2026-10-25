@@ -103,7 +103,7 @@ enum SystemShortcut {
 
     private static func read(_ id: Int) -> (enabled: Bool, combo: Combo)? {
         guard let all = UserDefaults(suiteName: "com.apple.symbolichotkeys")?
-                .dictionary(forKey: "AppleSymbolicHotKeys"),
+                .dictionary(forKey: "AppleSymbolicHotKeys"), // style-ok: a system preference key, not ours
               let entry = all[String(id)] as? [String: Any] else { return nil }
         let enabled = (entry["enabled"] as? Bool) ?? ((entry["enabled"] as? Int).map { $0 != 0 } ?? false)
         guard let params = (entry["value"] as? [String: Any])?["parameters"] as? [Int], params.count == 3

@@ -9,8 +9,7 @@ extension WindowManager {
               isOnHomeSpace(display), let workspace = virtualShown[display.uuid],
               let app = dockApplication(at: point),
               !AXStalls.shared.isStalled(app.processIdentifier) else { return nil }
-        let appElement = AXUIElementCreateApplication(app.processIdentifier)
-        AXUIElementSetMessagingTimeout(appElement, 0.03)
+        let appElement = axApp(app.processIdentifier, timeout: 0.03)
         var focused: CFTypeRef?
         guard AXUIElementCopyAttributeValue(appElement, kAXFocusedWindowAttribute as CFString, &focused)
             != .cannotComplete else { return nil }
@@ -56,8 +55,7 @@ extension WindowManager {
     private func dockApplication(at point: CGPoint) -> NSRunningApplication? {
         guard let dock = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.dock").first
         else { return nil }
-        let dockElement = AXUIElementCreateApplication(dock.processIdentifier)
-        AXUIElementSetMessagingTimeout(dockElement, 0.03)
+        let dockElement = axApp(dock.processIdentifier, timeout: 0.03)
         var hit: AXUIElement?
         guard AXUIElementCopyElementAtPosition(dockElement, Float(point.x), Float(point.y), &hit) == .success,
               let hit else { return nil }

@@ -48,6 +48,10 @@ enum Log {
     static func info(_ message: @autoclosure () -> String) { write(message()) }
     static func debug(_ message: @autoclosure () -> String) { if verbose { write(message()) } }
 
+    static func attempt(_ action: String, _ body: () throws -> Void) {
+        do { try body() } catch { info("\(action) failed: \(error)") }
+    }
+
     private static func write(_ message: String) {
         let line = Data("\(time.string(from: Date())) \(message)\n".utf8)
         guard let handle else { return }

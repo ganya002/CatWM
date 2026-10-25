@@ -77,8 +77,7 @@ extension WindowManager {
     }
 
     private func offDesktopWindows(of app: NSRunningApplication, ids: Set<CGWindowID>, deadline: Date) -> [Window] {
-        let element = AXUIElementCreateApplication(app.processIdentifier)
-        AXUIElementSetMessagingTimeout(element, 0.1)
+        let element = axApp(app.processIdentifier, timeout: 0.1)
         let known = windows.values.filter { $0.pid == app.processIdentifier && ids.contains($0.id) }.map(\.element)
         let candidates = (known.count < ids.count ? element.elements(kAXWindowsAttribute) : []) + known
         defer { known.forEach { AXUIElementSetMessagingTimeout($0, Window.messagingTimeout) } }

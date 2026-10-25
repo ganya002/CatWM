@@ -53,7 +53,7 @@ final class BannerSource: NotificationSource {
             Unmanaged<BannerSource>.fromOpaque(refcon).takeUnretainedValue().created(element)
         }
         guard AXObserverCreate(center.processIdentifier, callback, &created) == .success, let created else { return }
-        let app = AXUIElementCreateApplication(center.processIdentifier)
+        let app = axApp(center.processIdentifier, timeout: 0.5)
         let refcon = Unmanaged.passUnretained(self).toOpaque()
         for name in [kAXWindowCreatedNotification, kAXCreatedNotification] {
             AXObserverAddNotification(created, app, name as CFString, refcon)

@@ -31,7 +31,8 @@ struct TerminalAdapter: AppAdapter {
         let folders = tabs.compactMap { URL(string: $0) }
         guard let current = state.current.flatMap({ URL(string: $0) }), current.isFileURL else { return false }
         guard folders.count > 1 else { return await Launcher.open(current, withApp: appURL) }
-        let profile = UserDefaults(suiteName: "com.apple.Terminal")?.string(forKey: "Default Window Settings")
+        let profile = UserDefaults(suiteName: "com.apple.Terminal")?
+            .string(forKey: "Default Window Settings") // style-ok: a Terminal preference key, not ours
         let file = FileManager.default.temporaryDirectory.appendingPathComponent("CatWM-\(UUID().uuidString).terminal")
         guard let data = TerminalGroup.file(folders: folders, selected: selected,
                                             profile: profile ?? "Basic"),
