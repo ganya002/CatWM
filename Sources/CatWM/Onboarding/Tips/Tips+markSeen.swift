@@ -83,12 +83,12 @@ extension Tips {
                       body: "Global keys work anywhere. The rest work in window mode, so they never clash with typing.",
                       chords: chord.isEmpty ? [] : [chord], place: place)
         case .layout:
-            let next = keys.keys("cyclelayout", "next")
+            let next = keys.keys(WindowActions.cyclelayout.name, "next")
             tip = next.isEmpty ? nil : Tip(id: "settings.layout", title: "Step through these layouts",
                                            body: "In window mode, \(next.joined()) steps through this list.",
                                            chords: chord.isEmpty ? [next] : [chord, next], place: place)
         case .windows:
-            let float = keys.keys("togglefloating")
+            let float = keys.keys(WindowActions.togglefloating.name)
             let body = "This list floats whole apps. \(float.joined()) in window mode floats one window."
             tip = float.isEmpty ? nil : Tip(id: "settings.windows", title: "Float a single window",
                                             body: body,

@@ -9,33 +9,6 @@ extension WindowManager {
 
     var tabs: TabGroups { model.tabs }
 
-    func tabCommand(_ dispatcher: String, _ arg: String) {
-        guard let window = focusedWindow() else { return }
-        switch dispatcher {
-        case "moveintogroup":
-            guard let direction = Direction(arg), !window.isFloating else { return }
-            let candidates = order.filter { visible.contains($0) && !tabs.isBehind($0) && $0 != window.id }
-                .compactMap { windows[$0] }.filter { !$0.isFloating }
-            guard case let .window(host) = resolve(direction, from: window, among: candidates) else { return }
-            joinTab(window.id, onto: host.id)
-        case "moveoutofgroup":
-            untab(window.id)
-        case "changegroupactive":
-            let lowered = arg.lowercased()
-            let offset = lowered.hasPrefix("b") || lowered.hasPrefix("prev") ? -1 : 1
-            if let index = Int(lowered), let members = tabs.group(of: window.id)?.members,
-               members.indices.contains(index - 1) {
-                selectTab(members[index - 1])
-            } else if let next = tabs.neighbor(of: window.id, offset: offset) {
-                selectTab(next)
-            }
-        case "movegroupwindow":
-            let lowered = arg.lowercased()
-            moveTab(window.id, by: lowered.hasPrefix("b") || lowered.hasPrefix("prev") ? -1 : 1)
-        default: break
-        }
-    }
-
     func joinTab(_ id: CGWindowID, onto host: CGWindowID) {
         guard id != host, let window = windows[id], windows[host]?.isFloating == false,
               let workspace = workspaceOf[host] else { return }

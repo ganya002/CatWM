@@ -48,17 +48,19 @@ extension Steps {
         let book = coach.book
         let config = coach.windowManager.config
         var rows: [SummaryRow] = []
-        let dirs = book.directions.compactMap { book.find(["movefocus"], $0) }
+        let dirs = book.directions.compactMap { book.find([WindowActions.movefocus], $0) }
         if dirs.count == 4 { rows.append((dirs.map { KeyWords.keyLabel($0.keyCode, long: false) }, "Move focus")) }
-        let moves = book.directions.compactMap { book.find(["movewindow", "swapwindow"], $0) }
+        let moves = book.directions.compactMap { book.find([WindowActions.movewindow, WindowActions.swapwindow], $0) }
         if moves.count == 4 {
             let keys = moves.map { KeyWords.keyLabel($0.keyCode, long: false) }
             rows.append((KeyWords.modLabels(moves[0].mods, long: false) + keys, "Move the window"))
         }
-        if let swap = book.find(["layoutmsg"], "swapwithmaster") { rows.append((cap(swap), "Swap with the main pane")) }
+        if let swap = book.find([WindowActions.layoutmsg], "swapwithmaster") {
+            rows.append((cap(swap), "Swap with the main pane"))
+        }
         if let (grow, shrink) = book.resize { rows.append((cap(shrink) + cap(grow), "Shrink / grow")) }
-        if let next = book.find(["cyclelayout"], "next") { rows.append((cap(next), "Next layout")) }
-        if let workspace = book.find(["workspace"], "1") {
+        if let next = book.find([WindowActions.cyclelayout], "next") { rows.append((cap(next), "Next layout")) }
+        if let workspace = book.find([WindowActions.workspace], "1") {
             rows.append((KeyWords.modLabels(workspace.mods, long: false) + ["1–0"], "Switch workspace"))
         }
         if book.enter != nil, config.keyboardHelp { rows.append(([config.keyboardHelpKey], "Keyboard help")) }
@@ -67,16 +69,16 @@ extension Steps {
 
     private static func moreRows(_ book: BindBook) -> [SummaryRow] {
         var rows: [SummaryRow] = []
-        if let zoom = book.find(["fullscreen"]) { rows.append((cap(zoom), "Zoom")) }
-        if let native = book.find(["nativefullscreen"]) { rows.append((cap(native), "macOS full screen")) }
-        if let float = book.find(["togglefloating"]) { rows.append((cap(float), "Float or tile")) }
+        if let zoom = book.find([WindowActions.fullscreen]) { rows.append((cap(zoom), "Zoom")) }
+        if let native = book.find([WindowActions.nativefullscreen]) { rows.append((cap(native), "macOS full screen")) }
+        if let float = book.find([WindowActions.togglefloating]) { rows.append((cap(float), "Float or tile")) }
         return rows
     }
 
     private static func anywhereRows(_ book: BindBook) -> [SummaryRow] {
         var rows: [SummaryRow] = []
-        if let sort = book.find(["sort"], global: true) { rows.append((cap(sort), "Overview")) }
-        if let workspace = book.find(["workspace"], "1", global: true) {
+        if let sort = book.find([WindowActions.sort], global: true) { rows.append((cap(sort), "Overview")) }
+        if let workspace = book.find([WindowActions.workspace], "1", global: true) {
             rows.append((KeyWords.modLabels(workspace.mods, long: false) + ["1–0"], "Switch workspace"))
         }
         return rows

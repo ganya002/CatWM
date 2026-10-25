@@ -100,44 +100,14 @@ extension WindowManager {
             feature.run()
             return
         }
-        switch dispatcher {
-        case "movefocus": if let direction = Direction(arg) { moveFocus(direction) }
-        case "movewindow": moveWindowCommand(arg)
-        case "swapwindow": if let direction = Direction(arg) { moveWindow(direction) }
-        case "cyclenext": cycleFocus(arg.lowercased().hasPrefix("prev") ? -1 : 1)
-        case "swapnext": cycleSwap(arg.lowercased().hasPrefix("prev") ? -1 : 1)
-        case "layoutmsg": layoutMessage(arg)
-        case "splitratio": adjustRatio(arg)
-        case "togglefloating": toggleFloating()
-        case "fullscreen": toggleZoom()
-        case "nativefullscreen": toggleNativeFullscreen()
-        case "killactive": lastClose = Date(); _ = focusedWindow().map { closeWindow($0.id) }
-        case "minimize": if let window = focusedWindow() { minimize(window) }
-        case "exec": exec(arg)
-        case "launch": launchCommand(arg)
-        case "focusmonitor": focusMonitor(arg)
-        case "movewindowtomonitor": moveToMonitor(arg)
-        case "workspace": showWorkspaceCommand(arg)
-        case "movetoworkspace", "movetoworkspacesilent":
-            moveToWorkspaceCommand(arg, follow: dispatcher == "movetoworkspace")
-        case "cyclelayout": cycleLayout(arg.lowercased().hasPrefix("prev") ? -1 : 1)
-        case "layout", "setlayout": setLayoutCommand(arg)
-        case "toggletiling": toggleTiling()
-        case "retile", "reevaluate": corrections = [:]; refresh()
-        case "reload": reload()
-        case "exit":
-            RunLoop.main.perform(inModes: [.common, .modalPanel]) { NSApp.terminate(nil) }
-        case "submap": Hotkeys.shared.setSubmap(arg)
-        case "sethomespace": makeCurrentSpaceHome()
-        case "sort": toggleSortCommand()
-        case "sort-undo": SortPanel.shared.undoApplied()
-        case "switcher": Switcher.shared.open(backward: arg.lowercased().hasPrefix("prev"))
-        case "moveintogroup", "moveoutofgroup", "changegroupactive", "movegroupwindow": tabCommand(dispatcher, arg)
-        default: NSLog("CatWM: unknown dispatcher %@", dispatcher)
+        guard let action = WindowActions.named(dispatcher) else {
+            NSLog("CatWM: unknown dispatcher %@", dispatcher)
+            return
         }
+        action.run(ActionContext(manager: self, arg: arg))
     }
 
-    private func moveWindowCommand(_ arg: String) {
+    func moveWindowCommand(_ arg: String) {
         if arg.lowercased().hasPrefix("mon:") {
             moveToMonitor(String(arg.dropFirst(4)))
         } else if let direction = Direction(arg) {
@@ -145,13 +115,13 @@ extension WindowManager {
         }
     }
 
-    private func setLayoutCommand(_ arg: String) {
+    func setLayoutCommand(_ arg: String) {
         if let layout = Layout(rawValue: arg.lowercased()), let screen = currentScreen() {
             setLayout(layout, on: screen)
         }
     }
 
-    private func toggleSortCommand() {
+    func toggleSortCommand() {
         if config.virtualWorkspaces {
             SortPanel.shared.toggle()
         } else {
@@ -159,7 +129,7 @@ extension WindowManager {
         }
     }
 
-    private func showWorkspaceCommand(_ arg: String) {
+    func showWorkspaceCommand(_ arg: String) {
         if config.virtualWorkspaces {
             if let workspace = resolveWorkspace(arg) { showWorkspace(workspace) }
         } else if let number = Int(arg) {
@@ -167,7 +137,7 @@ extension WindowManager {
         }
     }
 
-    private func moveToWorkspaceCommand(_ arg: String, follow: Bool) {
+    func moveToWorkspaceCommand(_ arg: String, follow: Bool) {
         if config.virtualWorkspaces {
             if let workspace = resolveWorkspace(arg) { moveFocusedWindow(to: workspace, follow: follow) }
         } else if let number = Int(arg) {

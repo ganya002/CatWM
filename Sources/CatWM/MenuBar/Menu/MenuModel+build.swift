@@ -18,7 +18,7 @@ extension MenuModel {
         }
 
         out.append(MenuItem(id: "tiling", kind: .check, label: "Tiling", symbol: "rectangle.split.3x1",
-                            shortcut: keys.keys("toggletiling"),
+                            shortcut: keys.keys(WindowActions.toggletiling.name),
                             checked: manager.tilingEnabled, enabled: trusted, hidden: true,
                             keywords: "enable disable pause toggle",
                             keepOpen: true, action: { manager.toggleTiling() }))
@@ -50,7 +50,7 @@ extension MenuModel {
         let highest = summary.all.compactMap { Int($0.name) }.max() ?? 0
         for number in 1...max(9, min(highest, 10)) {
             out.append(MenuItem(id: "ws-\(number)", label: "Go to Workspace \(number)",
-                                shortcut: keys.keys("workspace", "\(number)"),
+                                shortcut: keys.keys(WindowActions.workspace.name, "\(number)"),
                                 hidden: true, keywords: "switch space desktop",
                                 action: { manager.showWorkspaceNumber("\(number)") }))
         }
@@ -62,19 +62,19 @@ extension MenuModel {
         var layoutItems: [MenuItem] = [
             MenuItem(id: "picker", kind: .layoutPicker),
             MenuItem(id: "next-layout", label: "Next Layout", symbol: "chevron.right",
-                     shortcut: keys.keys("cyclelayout", "next"),
+                     shortcut: keys.keys(WindowActions.cyclelayout.name, "next"),
                      enabled: trusted, hidden: true, keepOpen: true,
-                     action: { manager.dispatch("cyclelayout", "next") }),
+                     action: { manager.dispatch(WindowActions.cyclelayout.name, "next") }),
             MenuItem(id: "prev-layout", label: "Previous Layout", symbol: "chevron.left",
-                     shortcut: keys.keys("cyclelayout", "prev"),
+                     shortcut: keys.keys(WindowActions.cyclelayout.name, "prev"),
                      enabled: trusted, hidden: true, keepOpen: true,
-                     action: { manager.dispatch("cyclelayout", "prev") })
+                     action: { manager.dispatch(WindowActions.cyclelayout.name, "prev") })
         ]
         layoutItems += Layout.allCases.map { option in
             MenuItem(id: "layout-\(option.rawValue)", kind: .radio, label: option.title,
-                     shortcut: keys.keys("layout", option.rawValue), checked: option == layout,
+                     shortcut: keys.keys(WindowActions.layout.name, option.rawValue), checked: option == layout,
                      enabled: trusted, hidden: true, keywords: "layout \(option.blurb)",
-                     action: { manager.dispatch("layout", option.rawValue) })
+                     action: { manager.dispatch(WindowActions.layout.name, option.rawValue) })
         }
         return MenuItem(id: "layout", kind: .sub, label: "Layout", symbol: "square.grid.2x2", value: layout?.title,
                         enabled: trusted, width: 276, children: layoutItems)
@@ -138,7 +138,7 @@ extension MenuModel {
                      keywords: "hints help tooltips",
                      keepOpen: true, action: { Tips.shared.enabled.toggle() }),
             MenuItem(id: "reload", label: "Reload Config", symbol: "arrow.triangle.2.circlepath",
-                     shortcut: keys.keys("reload"),
+                     shortcut: keys.keys(WindowActions.reload.name),
                      hidden: true, keywords: "refresh file", keepOpen: true, rotates: true,
                      action: { manager.reload() }),
             MenuItem(id: "updates", label: "Check for Updates…", symbol: "arrow.down.circle",

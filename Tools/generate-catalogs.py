@@ -22,13 +22,6 @@ def gallery_examples():
     return sorted(examples)
 
 
-def dispatcher_names():
-    path = ROOT / "Sources/CatWM/Tiling/Manager/WindowManager+status.swift"
-    source = path.read_text().split("        switch dispatcher {", 1)[1].split("        default:", 1)[0]
-    return [name for line in source.splitlines() if line.startswith("        case ")
-            for name in re.findall(r'"([^"\\]+)"', line.split(":", 1)[0])]
-
-
 def config_doc_digest(root=ROOT):
     manifest = json.loads((root / "Tools/config-doc-inputs.json").read_text())
     paths = manifest["files"][:]
@@ -43,7 +36,6 @@ def config_doc_digest(root=ROOT):
 def render():
     names = ",\n".join("        " + name for order, name in gallery_examples())
     gallery = "#if DEBUG\nextension GalleryExamples {\n    static let all: [GalleryExample] = [\n" + names + "\n    ]\n}\n#endif\n"
-    dispatchers = ", ".join('"' + name + '"' for name in dispatcher_names())
     palette = (ROOT / "Sources/CatWM/UI/Theme/Palette.swift").read_text()
     colors = [name.strip() for fields in re.findall(r"^    var ([\w, ]+): Pair$", palette, re.M) for name in fields.split(",")]
     tokens = ",\n".join('        ColorToken(name: "' + name + '", path: \\.' + name + ')' for name in colors)
@@ -68,7 +60,7 @@ def render():
         values = ", ".join('("' + value + '", Theme.' + kind + '.' + value + ')' for value in names)
         metrics.append("    static let " + name + ": [(String, CGFloat)] = [" + values + "]")
     metric_source = "\n#if DEBUG\nenum GalleryMetrics {\n" + "\n".join(metrics) + "\n}\n#endif\n"
-    return ("import AppKit\n" + metric_source + gallery + "\nenum DispatcherNames {\n    static let all = [" + dispatchers + "]\n}\n"
+    return ("import AppKit\n" + metric_source + gallery
             + "\n#if DEBUG\nextension ColorToken {\n    static let all: [ColorToken] = [\n" + tokens + "\n    ]\n}\n#endif\n"
             + "\nenum CustomSettingsIndex {\n    static let all: [SettingEntry] = [\n" + entries + "\n    ]\n}\n"
             + "\nenum OptionPlacements {\n    static let all: [OptionPlacement] = [\n" + placement_rows + "\n    ]\n}\n")

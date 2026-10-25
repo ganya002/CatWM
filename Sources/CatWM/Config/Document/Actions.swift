@@ -5,84 +5,14 @@ import SwiftUI
 
 enum Actions {
     static let all: [Action] = {
-        var actions: [Action] = []
-        func add(_ title: String, _ category: ActionCategory, _ dispatcher: String, _ args: String = "",
-                 _ symbol: String, group: String? = nil, short: String? = nil,
-                 focusRequired: FocusRequirement = .byCategory) {
-            actions.append(Action(title: title, category: category, dispatcher: dispatcher, args: args, symbol: symbol,
-                                  group: group, short: short, focusRequired: focusRequired))
+        let rows = WindowActions.all.flatMap { action in
+            action.pickers.map { (picker: $0, action: action.action(for: $0)) }
         }
-        for direction in Direction.allCases {
-            let dir = direction.rawValue, name = direction.title, arrow = direction.symbolName
-            add("Focus \(name)", .focus, "movefocus", dir, "arrow.\(arrow)")
-        }
-        add("Focus Next Window", .focus, "cyclenext", "", "arrow.forward")
-        add("Focus Previous Window", .focus, "cyclenext", "prev", "arrow.backward")
-        add("Focus Main Window", .focus, "layoutmsg", "focusmaster", "star")
-        add("Next Tab", .focus, "changegroupactive", "f", "chevron.right.2")
-        add("Previous Tab", .focus, "changegroupactive", "b", "chevron.left.2")
-        for direction in Direction.allCases {
-            let dir = direction.rawValue, name = direction.title, arrow = direction.symbolName
-            add("Move Window \(name)", .move, "movewindow", dir, "arrow.\(arrow).square")
-        }
-        add("Swap With Next Window", .move, "swapnext", "", "arrow.left.arrow.right")
-        for direction in Direction.allCases {
-            let dir = direction.rawValue, name = direction.title
-            add("Add Window to Tabs \(name)", .move, "moveintogroup", dir, "rectangle.stack.badge.plus",
-                group: "Add Window to Tabs", short: name)
-        }
-        add("Remove Window From Tabs", .move, "moveoutofgroup", "", "rectangle.stack.badge.minus")
-        add("Move Tab Right", .move, "movegroupwindow", "f", "arrow.right.to.line")
-        add("Move Tab Left", .move, "movegroupwindow", "b", "arrow.left.to.line")
-        add("Swap With Previous Window", .move, "swapnext", "prev", "arrow.right.arrow.left")
-        add("Previous Layout", .layout, "cyclelayout", "prev", "rectangle.2.swap")
-        add("Grow Main Pane", .layout, "splitratio", "+0.05", "arrow.left.and.right.square")
-        add("Shrink Main Pane", .layout, "splitratio", "-0.05", "arrow.right.and.line.vertical.and.arrow.left")
-        add("Swap Sides", .layout, "layoutmsg", "swapsides", "arrow.left.arrow.right.square")
-        add("More Main Windows", .layout, "layoutmsg", "addmaster", "plus.rectangle")
-        add("Fewer Main Windows", .layout, "layoutmsg", "removemaster", "minus.rectangle")
-        for layout in Layout.allCases {
-            add("Use \(layout.title) Layout", .layout, "layout", layout.rawValue, "rectangle.split.2x2",
-                group: "Use Layout", short: layout.title)
-        }
-        add("Overview", .window, "sort", "", "square.grid.3x1.below.line.grid.1x2", focusRequired: false)
-        add("Switch Windows", .window, "switcher", "", "rectangle.stack", focusRequired: false)
-        add("Switch Windows Backward", .window, "switcher", "prev", "rectangle.stack", focusRequired: false)
-        add("Undo Last Overview Change", .window, "sort-undo", "", "arrow.uturn.backward", focusRequired: false)
-        add("Focus Next Display", .displays, "focusmonitor", "+1", "display")
-        add("Focus Previous Display", .displays, "focusmonitor", "-1", "display")
-        add("Move Window to Previous Display", .displays, "movewindow", "mon:-1", "rectangle.portrait.and.arrow.right",
-            focusRequired: true)
-        for direction in Direction.allCases {
-            let dir = direction.rawValue, name = direction.title, arrow = direction.symbolName
-            add("Focus Display \(name)", .displays, "focusmonitor", dir, "arrow.\(arrow).to.line")
-            add("Move Window to Display \(name)", .displays, "movewindow", "mon:\(dir)", "arrow.\(arrow).square",
-                focusRequired: true)
-        }
-        for number in 1...10 {
-            add("Workspace \(number)", .spaces, "workspace", "\(number)", "\(number).square",
-                group: "Go to Workspace", short: "Workspace \(number)")
-        }
-        add("Previous Workspace", .spaces, "workspace", "previous", "arrow.uturn.backward.square")
-        add("Next Workspace", .spaces, "workspace", "+1", "chevron.right.square")
-        add("Previous Numbered Workspace", .spaces, "workspace", "-1", "chevron.left.square")
-        add("Next Workspace With Windows", .spaces, "workspace", "e+1", "chevron.forward.2")
-        for number in 1...10 {
-            add("Move Window to Workspace \(number)", .spaces, "movetoworkspace", "\(number)", "\(number).square.fill",
-                group: "Move Window to Workspace", short: "Workspace \(number)", focusRequired: true)
-        }
-        for number in 1...10 {
-            add("Send Window to Workspace \(number)", .spaces, "movetoworkspacesilent", "\(number)",
-                "\(number).square.fill", group: "Send Window to Workspace", short: "Workspace \(number)",
-                focusRequired: true)
-        }
-        add("Run Command", .commands, "exec", "", "terminal")
-        add("Enter Window Mode", .app, "submap", "window", "keyboard")
-        add("Leave Mode", .app, "submap", "reset", "escape")
-        add("Toggle Tiling", .app, "toggletiling", "", "power")
-        add("Retile Windows", .app, "retile", "", "arrow.clockwise")
-        add("Reload Config", .app, "reload", "", "arrow.triangle.2.circlepath")
-        add("Quit CatWM", .app, "exit", "", "xmark.circle")
+            .enumerated().map { index, row in
+                (key: (ActionCategory.allCases.firstIndex(of: row.picker.category) ?? 0, row.picker.order, index),
+                 action: row.action)
+            }
+        var actions = rows.sorted { $0.key < $1.key }.map(\.action)
         for spec in PointerActions.all.sorted(by: { $0.actionOrder < $1.actionOrder }) where spec.includeInActions {
             if let before = spec.actionBefore, let index = actions.firstIndex(where: { $0.id == before }) {
                 actions.insert(spec.action, at: index)
@@ -125,8 +55,7 @@ enum Actions {
 
     private static func normalized(_ row: BindRow) -> (dispatcher: String, args: String) {
         var dispatcher = row.dispatcher.lowercased(), args = norm(row.args)
-        if dispatcher == "setlayout" { dispatcher = "layout" }
-        if dispatcher == "reevaluate" { dispatcher = "retile" }
+        if let action = WindowActions.named(dispatcher) { dispatcher = action.name }
         if dispatcher == "swapwindow" { dispatcher = "movewindow" }
         if dispatcher == "movewindowtomonitor" { dispatcher = "movewindow"; args = "mon:" + args }
         if dispatcher == "layoutmsg" {
@@ -208,7 +137,7 @@ enum Actions {
     }
 
     static let dispatchers: [String] = {
-        var names = DispatcherNames.all
+        var names = WindowActions.all.flatMap { [$0.name] + $0.aliases }
         for feature in FocusDim.features {
             let index = names.firstIndex(of: feature.dispatcherBefore) ?? names.endIndex
             names.insert(feature.pointer.dispatcher, at: index)

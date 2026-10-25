@@ -22,11 +22,11 @@ enum MenuCategory: String, CaseIterable, Identifiable {
         switch action.category {
         case .focus: self = .focus
         case .move: self = .move
-        case .displays: self = action.dispatcher == "focusmonitor" ? .focus : .move
+        case .displays: self = action.dispatcher == WindowActions.focusmonitor.name ? .focus : .move
         case .spaces: self = .workspace
         case .layout: self = .layout
         case .window, .commands: self = .window
-        case .app, .custom: self = action.dispatcher == "submap" ? .mode : .app
+        case .app, .custom: self = action.dispatcher == WindowActions.submap.name ? .mode : .app
         }
     }
 }

@@ -116,26 +116,26 @@ extension SortModel {
     func run(_ bind: KeyBinding, on windowID: CGWindowID?) -> Bool {
         let arg = bind.arg.trimmingCharacters(in: .whitespaces).lowercased()
         switch bind.dispatcher {
-        case "movefocus":
+        case WindowActions.movefocus.name:
             guard let direction = Direction(arg) else { return false }
             if let hover { nudge(hover, direction) } else { moveSelection(direction) }
             return true
-        case "movewindow", "swapwindow", "movewindowtomonitor":
+        case WindowActions.movewindow.name, WindowActions.swapwindow.name, WindowActions.movewindowtomonitor.name:
             return runMoveWindow(dispatcher: bind.dispatcher, arg: arg, on: windowID)
-        case "movetoworkspace", "movetoworkspacesilent":
+        case WindowActions.movetoworkspace.name, WindowActions.movetoworkspacesilent.name:
             return runMoveToWorkspace(arg: arg, on: windowID)
-        case "cyclelayout":
+        case WindowActions.cyclelayout.name:
             guard let windowID, let lane = plan.lane(of: windowID) else { return false }
             cycleLayout(of: lane, by: arg.hasPrefix("prev") ? -1 : 1)
             return true
-        case "layoutmsg":
+        case WindowActions.layoutmsg.name:
             guard arg == "swapwithmaster", let windowID, plan.lane(of: windowID) != nil else { return false }
             moveToTop(windowID)
             return true
-        case "focusmonitor":
+        case WindowActions.focusmonitor.name:
             cycleDisplay(arg.hasPrefix("-") ? -1 : 1)
             return true
-        case "killactive":
+        case WindowActions.killactive.name:
             guard let windowID else { return false }
             toggleClose(windowID)
             return true
@@ -145,7 +145,7 @@ extension SortModel {
     }
 
     private func runMoveWindow(dispatcher: String, arg: String, on windowID: CGWindowID?) -> Bool {
-        let spec = dispatcher == "movewindowtomonitor"
+        let spec = dispatcher == WindowActions.movewindowtomonitor.name
             ? arg
             : arg.hasPrefix("mon:") ? String(arg.dropFirst(4)) : nil
         if let spec {

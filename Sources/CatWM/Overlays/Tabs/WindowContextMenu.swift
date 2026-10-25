@@ -30,36 +30,40 @@ enum WindowContextMenu {
     static func items(_ input: Input) -> [MenuItem] {
         let keys = input.keys, run = input.run
         var out: [MenuItem] = [
-            MenuItem(id: "float", label: "Toggle floating", shortcut: keys("togglefloating", ""),
-                     action: { run("togglefloating", "") }),
-            MenuItem(id: "fullscreen", label: "Fullscreen", shortcut: keys("fullscreen", ""),
-                     action: { run("fullscreen", "") })
+            MenuItem(id: "float", label: "Toggle floating", shortcut: keys(WindowActions.togglefloating.name, ""),
+                     action: { run(WindowActions.togglefloating.name, "") }),
+            MenuItem(id: "fullscreen", label: "Fullscreen", shortcut: keys(WindowActions.fullscreen.name, ""),
+                     action: { run(WindowActions.fullscreen.name, "") })
         ]
         if !input.workspaces.isEmpty {
             let children = input.workspaces.map { name in
                 MenuItem(id: "ws-\(name)", kind: .radio, label: "Workspace \(name)",
-                         shortcut: keys("movetoworkspace", name), checked: name == input.currentWorkspace,
-                         action: { run("movetoworkspace", name) })
+                         shortcut: keys(WindowActions.movetoworkspace.name, name),
+                         checked: name == input.currentWorkspace,
+                         action: { run(WindowActions.movetoworkspace.name, name) })
             }
             out.append(MenuItem(id: "workspace", kind: .sub, label: "Move to workspace", children: children))
         }
         if !input.displays.isEmpty {
             let children = input.displays.map { display in
                 MenuItem(id: "display-\(display.index)", label: display.name, shortcut: display.keys,
-                         action: { run("movewindow", "mon:\(display.index)") })
+                         action: { run(WindowActions.movewindow.name, "mon:\(display.index)") })
             }
             out.append(MenuItem(id: "display", kind: .sub, label: "Move to display", children: children))
         }
         if input.grouped {
-            out.append(MenuItem(id: "out", label: "Move out of group", shortcut: keys("moveoutofgroup", ""),
-                                action: { run("moveoutofgroup", "") }))
+            out.append(MenuItem(id: "out", label: "Move out of group",
+                                shortcut: keys(WindowActions.moveoutofgroup.name, ""),
+                                action: { run(WindowActions.moveoutofgroup.name, "") }))
         }
         if input.tiled {
-            out.append(MenuItem(id: "swap", label: "Swap with master", shortcut: keys("layoutmsg", "swapwithmaster"),
-                                action: { run("layoutmsg", "swapwithmaster") }))
+            out.append(MenuItem(id: "swap", label: "Swap with master",
+                                shortcut: keys(WindowActions.layoutmsg.name, "swapwithmaster"),
+                                action: { run(WindowActions.layoutmsg.name, "swapwithmaster") }))
         }
         out.append(.sep("s1"))
-        out.append(MenuItem(id: "retile", label: "Retile", shortcut: keys("retile", ""), action: { run("retile", "") }))
+        out.append(MenuItem(id: "retile", label: "Retile", shortcut: keys(WindowActions.retile.name, ""),
+                            action: { run(WindowActions.retile.name, "") }))
         return out
     }
 
@@ -73,8 +77,8 @@ enum WindowContextMenu {
                 let direction = Direction.allCases.first {
                     manager.screen(from: source, spec: $0.rawValue, in: screens)?.uuid == screen.uuid
                 }
-                displays.append(Display(index: index, name: screen.nsScreen.localizedName,
-                                        keys: direction.map { keys("movewindow", "mon:\($0.rawValue)") } ?? []))
+                let shortcut = direction.map { keys(WindowActions.movewindow.name, "mon:\($0.rawValue)") } ?? []
+                displays.append(Display(index: index, name: screen.nsScreen.localizedName, keys: shortcut))
             }
         }
         return Input(floating: window.isFloating, grouped: manager.tabs.isGrouped(window.id),
@@ -96,7 +100,7 @@ enum TabMenu {
             out.append(MenuItem(id: "select", label: "Select tab", action: { manager.selectTab(id) }))
         }
         out.append(MenuItem(id: "out", label: "Move out of group",
-                            shortcut: focused ? ShortcutIndex().keys("moveoutofgroup") : [],
+                            shortcut: focused ? ShortcutIndex().keys(WindowActions.moveoutofgroup.name) : [],
                             action: { manager.untab(id) }))
         if let workspaces = workspaceMenu(id, manager) { out.append(workspaces) }
         out.append(.sep("s1"))

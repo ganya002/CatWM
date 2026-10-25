@@ -2,40 +2,42 @@ import AppKit
 
 extension Steps {
     static func global(_ coach: Coach) -> PlannedStep? {
-        guard let desk = coach.desk, let global = coach.book.find(["workspace"], desk, global: true) else { return nil }
+        guard let desk = coach.desk,
+              let global = coach.book.find([WindowActions.workspace], desk, global: true) else { return nil }
         return PlannedStep { coach in
             Step(title: "Switch workspaces", text: "",
                  target: .bar, caps: KeyWords.caps(global, long: true),
                  accept: { event in
-                     if case .command("workspace", _, let inMode) = event, !inMode,
+                     if case .command(WindowActions.workspace.name, _, let inMode) = event, !inMode,
                         coach.windowManager.currentWorkspace == desk {
                          return ""
                      }
                      return nil
                  }, simulate: {
                      Hotkeys.shared.setSubmap("")
-                     DispatchQueue.main.async { coach.windowManager.dispatch("workspace", desk) }
+                     DispatchQueue.main.async { coach.windowManager.dispatch(WindowActions.workspace.name, desk) }
                  })
         }
     }
 
     static func monitor(_ coach: Coach) -> PlannedStep? {
-        guard NSScreen.screens.count > 1, let mon = coach.book.find(["focusmonitor"]) else { return nil }
+        guard NSScreen.screens.count > 1, let mon = coach.book.find([WindowActions.focusmonitor]) else { return nil }
         let key = KeyWords.keyLabel(mon.keyCode, long: false)
         return PlannedStep { coach in
             Step(title: "Other display",
                  text: "\(key) moves focus to the next display. Press it again to come back.",
                  target: .window, caps: KeyWords.caps(mon, long: false), needsMode: true, count: 2,
                  accept: { event in
-                     if case .command("focusmonitor", _, _) = event { return "" }
+                     if case .command(WindowActions.focusmonitor.name, _, _) = event { return "" }
                      return nil
-                 }, simulate: { coach.windowManager.dispatch("focusmonitor", "+1") })
+                 }, simulate: { coach.windowManager.dispatch(WindowActions.focusmonitor.name, "+1") })
         }
     }
 
     static func sortIntro(_ coach: Coach) -> PlannedStep? {
         guard coach.windowManager.config.virtualWorkspaces,
-              let sort = coach.book.find(["sort"], global: true) ?? coach.book.find(["sort"]) else { return nil }
+              let sort = coach.book.find([WindowActions.sort], global: true) ?? coach.book.find([WindowActions.sort])
+        else { return nil }
         return PlannedStep { _ in
             Step(title: "Overview", text: "", target: .bar, caps: KeyWords.caps(sort, long: true),
                  button: "Next", count: 0)
@@ -44,7 +46,7 @@ extension Steps {
 
     static func sortTry(_ coach: Coach) -> [PlannedStep] {
         guard coach.windowManager.config.virtualWorkspaces,
-              let sort = coach.book.find(["sort"], global: true) else { return [] }
+              let sort = coach.book.find([WindowActions.sort], global: true) else { return [] }
         let shortcut = "\(KeyWords.modWords(sort.mods))-\(KeyWords.keyLabel(sort.keyCode, long: false))"
         let open = PlannedStep { _ in
             Step(title: "Overview",
@@ -71,7 +73,7 @@ extension Steps {
         guard focus(coach) != nil else { return nil }
         let book = coach.book
         let keys = book.directions
-            .compactMap { book.find(["movefocus"], $0) }
+            .compactMap { book.find([WindowActions.movefocus], $0) }
             .map { KeyWords.keyLabel($0.keyCode, long: false) }
         return PlannedStep { coach in
             let target = coach.visibleTitles.filter { $0 != coach.focusedTitle }.randomElement()
@@ -79,14 +81,17 @@ extension Steps {
                         target: .window, caps: keys, needsMode: true, recall: true,
                         accept: { event in
                             guard case .command(let dispatcher, _, _) = event,
-                                  ["movefocus", "cyclenext"].contains(dispatcher) else { return nil }
+                                  [WindowActions.movefocus.name, WindowActions.cyclenext.name].contains(dispatcher)
+                            else { return nil }
                             return target == nil || coach.focusedTitle == target ? "" : nil
-                        }, simulate: { coach.windowManager.dispatch("cyclenext", "") })
+                        }, simulate: { coach.windowManager.dispatch(WindowActions.cyclenext.name, "") })
         }
     }
 
     static func mainDrill(_ coach: Coach) -> PlannedStep? {
-        guard let swap = coach.book.find(["layoutmsg"], "swapwithmaster"), focus(coach) != nil else { return nil }
+        guard let swap = coach.book.find([WindowActions.layoutmsg], "swapwithmaster"), focus(coach) != nil else {
+            return nil
+        }
         return PlannedStep { coach in
             let target = coach.visibleTitles.filter { $0 != coach.mainTitle }.randomElement()
             return Step(title: "Put \(target ?? "another window") in the main pane",
@@ -95,16 +100,18 @@ extension Steps {
                         accept: { event in
                             guard case .command(let dispatcher, let argument, _) = event else { return nil }
                             if let target { return coach.mainTitle == target ? "" : nil }
-                            return dispatcher == "layoutmsg" && argument.lowercased() == "swapwithmaster" ? "" : nil
-                        }, simulate: { coach.windowManager.dispatch("layoutmsg", "swapwithmaster") })
+                            let swapped = dispatcher == WindowActions.layoutmsg.name
+                                && argument.lowercased() == "swapwithmaster"
+                            return swapped ? "" : nil
+                        }, simulate: { coach.windowManager.dispatch(WindowActions.layoutmsg.name, "swapwithmaster") })
         }
     }
 
     static func layoutDrill(_ coach: Coach) -> PlannedStep? {
-        guard let next = coach.book.find(["cyclelayout"], "next") else { return nil }
+        guard let next = coach.book.find([WindowActions.cyclelayout], "next") else { return nil }
         let options = coach.windowManager.config.layouts.filter { ![.fullscreen, .floating].contains($0) }
         guard options.count > 1 else { return nil }
-        let prev = coach.book.find(["cyclelayout"], "prev")
+        let prev = coach.book.find([WindowActions.cyclelayout], "prev")
         let keys = [next, prev].compactMap(\.self).map { KeyWords.caps($0, long: false).joined() }
         return PlannedStep { coach in
             let now = coach.windowManager.menuBarState()?.layout
@@ -114,13 +121,13 @@ extension Steps {
                         accept: { event in
                             guard case .command = event else { return nil }
                             return coach.windowManager.menuBarState()?.layout == target ? "" : nil
-                        }, simulate: { coach.windowManager.dispatch("cyclelayout", "next") })
+                        }, simulate: { coach.windowManager.dispatch(WindowActions.cyclelayout.name, "next") })
         }
     }
 
     static func workspaceDrill(_ coach: Coach) -> PlannedStep? {
-        guard let desk = coach.desk, let other = coach.other, coach.book.find(["workspace"], other) != nil,
-              let back = coach.book.find(["workspace"], desk) else { return nil }
+        guard let desk = coach.desk, let other = coach.other, coach.book.find([WindowActions.workspace], other) != nil,
+              let back = coach.book.find([WindowActions.workspace], desk) else { return nil }
         let digits = [other, desk].map { $0 == "10" ? "0" : $0 }
         let caps: [String] = KeyWords.caps(back, long: false).dropLast() + digits
         return PlannedStep { coach in
@@ -129,12 +136,13 @@ extension Steps {
                         target: .bar, caps: caps,
                         tokens: [], needsMode: false, recall: true, count: 1,
                         accept: { event in
-                            guard case .command("workspace", _, _) = event else { return nil }
+                            guard case .command(WindowActions.workspace.name, _, _) = event else { return nil }
                             if coach.windowManager.currentWorkspace == other { went = true }
                             return went && coach.windowManager.currentWorkspace == desk ? "" : nil
                         }, simulate: {
                             let manager = coach.windowManager
-                            manager.dispatch("workspace", manager.currentWorkspace == other ? desk : other)
+                            let destination = manager.currentWorkspace == other ? desk : other
+                            manager.dispatch(WindowActions.workspace.name, destination)
                         })
         }
     }
@@ -154,17 +162,17 @@ extension Steps {
 
 extension Steps {
     static func switcher(_ coach: Coach) -> PlannedStep? {
-        guard let bind = coach.book.find(["switcher"], "", global: true) else { return nil }
+        guard let bind = coach.book.find([WindowActions.switcher], "", global: true) else { return nil }
         return PlannedStep { coach in
             Step(title: "Switch to any window",
                  text: "Tap it for your last window. Hold it to see every window, type to search, then release.",
                  caps: KeyWords.caps(bind, long: true),
                  accept: { event in
-                     if case .command("switcher", _, _) = event { return "" }
+                     if case .command(WindowActions.switcher.name, _, _) = event { return "" }
                      return nil
                  }, simulate: {
                      Hotkeys.shared.setSubmap("")
-                     DispatchQueue.main.async { coach.windowManager.dispatch("switcher", "") }
+                     DispatchQueue.main.async { coach.windowManager.dispatch(WindowActions.switcher.name, "") }
                  })
         }
     }
@@ -173,17 +181,17 @@ extension Steps {
 extension Steps {
     static func sendGlobal(_ coach: Coach) -> PlannedStep? {
         guard let sendTo = coach.sendTo,
-              let send = coach.book.find(["movetoworkspace"], sendTo, global: true) else { return nil }
+              let send = coach.book.find([WindowActions.movetoworkspace], sendTo, global: true) else { return nil }
         return PlannedStep { coach in
             Step(title: "Move a window to a workspace",
                  text: "Hold the keys from anywhere. The window goes with you.",
                  target: .window, caps: KeyWords.caps(send, long: true),
                  accept: { event in
-                     if case .command("movetoworkspace", _, _) = event { return "" }
+                     if case .command(WindowActions.movetoworkspace.name, _, _) = event { return "" }
                      return nil
                  }, simulate: {
                      Hotkeys.shared.setSubmap("")
-                     coach.windowManager.dispatch("movetoworkspace", sendTo)
+                     coach.windowManager.dispatch(WindowActions.movetoworkspace.name, sendTo)
                  })
         }
     }
