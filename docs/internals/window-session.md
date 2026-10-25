@@ -1,12 +1,12 @@
 # Window session
 
-The `WindowSession` module saves and opens app windows. The app imports it with `import WindowSession`. The module does not know about CatWM workspaces, layouts or Desktops. The code in `Sources/CatWM/Templates/` uses the module and changes the CatWM state.
+`Sources/CatWM/Session/` saves and opens app windows. It does not know about CatWM workspaces, layouts or Desktops. It has no CatWM types, such as `WindowManager`, `WorkspaceModel`, `Layout`, `Theme` or `HUD`, and `Tools/check-style.sh` rejects these names in it. The code in `Sources/CatWM/Templates/` uses `Session/` and changes the CatWM state.
 
-## Module map
+## Folder map
 
 ```mermaid
 flowchart TB
-    subgraph App["catwm target: Templates/ and Tiling/Manager/"]
+    subgraph App["Templates/ and Tiling/Manager/"]
         direction LR
         Library["TemplateLibrary"]
         Capture["WindowManager+captureTemplate<br/>TemplateCaptureAssembler"]
@@ -14,7 +14,7 @@ flowchart TB
         LaunchCmd["WindowManager+launch"]
     end
 
-    subgraph WS["WindowSession module"]
+    subgraph WS["Session/"]
         direction LR
         Cap["Capture/<br/>WindowCapture, CaptureSlot"]
         Apps["Apps/<br/>AppStateCapture, AppAdapters,<br/>AppScript, Automation"]
@@ -41,7 +41,7 @@ flowchart TB
 
 ## Saved data
 
-`WorkspaceTemplate` stays in the app. Its `SavedWindow` is the module type. The `state` and `launch` fields are optional, so an old `templates.json` file loads without a change.
+`WorkspaceTemplate` stays in the app. Its `SavedWindow` is the `Session/` type. The `state` and `launch` fields are optional, so an old `templates.json` file loads without a change.
 
 ```mermaid
 classDiagram

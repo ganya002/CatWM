@@ -1,5 +1,4 @@
 import AppKit
-import WindowSession
 
 struct TilingRecovery: Codable, Equatable {
     struct Identity: Codable, Hashable {

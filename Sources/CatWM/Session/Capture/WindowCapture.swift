@@ -1,90 +1,59 @@
 import AppKit
 import ApplicationServices
 
-public struct AppSnapshot: Sendable {
-    public var pid: pid_t
-    public var bundleID: String
-    public var name: String
-    public var launchDate: Date?
-
-    public init(pid: pid_t, bundleID: String, name: String, launchDate: Date?) {
-        self.pid = pid
-        self.bundleID = bundleID
-        self.name = name
-        self.launchDate = launchDate
-    }
+struct AppSnapshot: Sendable {
+    var pid: pid_t
+    var bundleID: String
+    var name: String
+    var launchDate: Date?
 }
 
-public struct ObservedWindow: Sendable {
-    public var pid: pid_t
-    public var bundleID: String
-    public var appName: String
-    public var title: String
-    public var document: String?
-    public var frame: CGRect
-    public var minimized: Bool
-    public var fullscreen: Bool
-    public var resizable: Bool
-    public var windowID: CGWindowID
-    public var launchDate: Date?
-    public var spaces: [UInt64] = []
-    public var floatingOverride = false
-
-    public init(pid: pid_t, bundleID: String, appName: String, title: String, document: String?, frame: CGRect,
-                minimized: Bool, fullscreen: Bool, resizable: Bool, windowID: CGWindowID, launchDate: Date?,
-                spaces: [UInt64] = [], floatingOverride: Bool = false) {
-        self.pid = pid
-        self.bundleID = bundleID
-        self.appName = appName
-        self.title = title
-        self.document = document
-        self.frame = frame
-        self.minimized = minimized
-        self.fullscreen = fullscreen
-        self.resizable = resizable
-        self.windowID = windowID
-        self.launchDate = launchDate
-        self.spaces = spaces
-        self.floatingOverride = floatingOverride
-    }
+struct ObservedWindow: Sendable {
+    var pid: pid_t
+    var bundleID: String
+    var appName: String
+    var title: String
+    var document: String?
+    var frame: CGRect
+    var minimized: Bool
+    var fullscreen: Bool
+    var resizable: Bool
+    var windowID: CGWindowID
+    var launchDate: Date?
+    var spaces: [UInt64] = []
+    var floatingOverride = false
 }
 
-public struct WindowBatch: Sendable {
-    public var windows: [ObservedWindow]
-    public var focusedID: CGWindowID?
-    public var complete: Bool
-
-    public init(windows: [ObservedWindow], focusedID: CGWindowID?, complete: Bool) {
-        self.windows = windows
-        self.focusedID = focusedID
-        self.complete = complete
-    }
+struct WindowBatch: Sendable {
+    var windows: [ObservedWindow]
+    var focusedID: CGWindowID?
+    var complete: Bool
 }
 
-public enum AppRead: Sendable {
+enum AppRead: Sendable {
     case windows([ObservedWindow])
     case stalled
 }
 
-public enum WindowKind {
-    public static func includes(subrole: String?, minimized: Bool) -> Bool {
+enum WindowKind {
+    static func includes(subrole: String?, minimized: Bool) -> Bool {
         subrole == kAXStandardWindowSubrole || (minimized && subrole == kAXDialogSubrole)
     }
 }
 
-public enum DocumentURL {
-    public static func normalized(_ raw: String) -> String? {
+enum DocumentURL {
+    static func normalized(_ raw: String) -> String? {
         guard let url = URL(string: raw), let scheme = url.scheme?.lowercased(), !scheme.isEmpty else { return nil }
         if ["file", "https", "http"].contains(scheme) { return url.absoluteString }
         return NSWorkspace.shared.urlForApplication(toOpen: url) == nil ? nil : url.absoluteString
     }
 }
 
-public enum WindowWalk {
-    public static func collect(apps: [AppSnapshot], budget: TimeInterval,
-                               now: @escaping @Sendable () -> Date = { Date() },
-                               stop: @escaping @Sendable () -> Bool = { false },
-                               read: (AppSnapshot) -> AppRead) -> WindowBatch {
+enum WindowWalk {
+    static func collect(apps: [AppSnapshot], budget: TimeInterval,
+                        now: @escaping @Sendable () -> Date = { Date() },
+                        stop: @escaping @Sendable () -> Bool = { false },
+                        read: (AppSnapshot) -> AppRead) -> WindowBatch {
         let deadline = now().addingTimeInterval(budget)
         func expired() -> Bool { stop() || now() >= deadline }
         var windows: [ObservedWindow] = []
@@ -114,9 +83,9 @@ public enum WindowWalk {
     }
 }
 
-public enum WindowCapture {
-    public static func collect(apps: [AppSnapshot], frontmostPID: pid_t?, budget: TimeInterval,
-                               stop: @escaping @Sendable () -> Bool) -> WindowBatch {
+enum WindowCapture {
+    static func collect(apps: [AppSnapshot], frontmostPID: pid_t?, budget: TimeInterval,
+                        stop: @escaping @Sendable () -> Bool) -> WindowBatch {
         let deadline = Date().addingTimeInterval(budget)
         let expired: @Sendable () -> Bool = { stop() || Date() >= deadline }
         var batch = WindowWalk.collect(apps: apps, budget: budget, stop: expired) { app in

@@ -22,11 +22,11 @@ These are the things we cant comprimise on, they make us what we are today and t
 
 ## How it works
 
-An event tap (`Hotkeys`) matches each key press against the binds of the active submap and sends the match to `WindowManager.dispatch` (`Tiling/Manager/`), which runs the `WindowAction` of that name (`Actions/`). The CLI and the language libraries call the same command registry (`Control/`) through a Unix socket. Read `docs/internals/control.md` before you add a command or an event. `WindowManager.shared` owns all state: one `Window` for each `CGWindowID`, and a `WorkspaceModel` for workspaces, order and layouts. `Tiling/` does not call UI types. It calls `WindowManager.surface` (`TilingSurface`). `AppSurface` (`App/`) sends these calls to the HUD, tab strips, keys and panels, and tests use `HeadlessSurface`. `Tools/check-style.sh` rejects a UI singleton in `Tiling/`. `AXObserver` notifications and `WindowScanner` (`Tiling/Scan/`) feed `refresh()`. `refresh()` adds and forgets windows, asks `Layout.frames` for the slots, and places the windows. `Animator` (`Tiling/Motion/`) steps the frames at 120 Hz through one `AXWriter` queue for each app. Each workspace is one macOS Desktop. `NativeDesktopController` (`Tiling/Spaces/`) moves the Desktops with the CatWM animation settings. `Config.parse` reads `~/.config/CatWM/CatWM.conf` into binds and `ConfigOption` values. `reload()` applies them, and Settings edits the same file through `ConfigDocument`. The `WindowSession` module saves and opens app windows: it reads windows through AX, reads browser tabs and folders through app adapters, matches windows to saved windows and opens apps, files and URLs. `Templates/` imports it and adds the CatWM state: workspaces, Desktops, layouts and frames. Read `docs/internals/window-session.md` before you change how windows are saved or opened, or the `launch` dispatcher.
+An event tap (`Hotkeys`) matches each key press against the binds of the active submap and sends the match to `WindowManager.dispatch` (`Tiling/Manager/`), which runs the `WindowAction` of that name (`Actions/`). The CLI and the language libraries call the same command registry (`Control/`) through a Unix socket. Read `docs/internals/control.md` before you add a command or an event. `WindowManager.shared` owns all state: one `Window` for each `CGWindowID`, and a `WorkspaceModel` for workspaces, order and layouts. `Tiling/` does not call UI types. It calls `WindowManager.surface` (`TilingSurface`). `AppSurface` (`App/`) sends these calls to the HUD, tab strips, keys and panels, and tests use `HeadlessSurface`. `Tools/check-style.sh` rejects a UI singleton in `Tiling/`. `AXObserver` notifications and `WindowScanner` (`Tiling/Scan/`) feed `refresh()`. `refresh()` adds and forgets windows, asks `Layout.frames` for the slots, and places the windows. `Animator` (`Tiling/Motion/`) steps the frames at 120 Hz through one `AXWriter` queue for each app. Each workspace is one macOS Desktop. `NativeDesktopController` (`Tiling/Spaces/`) moves the Desktops with the CatWM animation settings. `Config.parse` reads `~/.config/CatWM/CatWM.conf` into binds and `ConfigOption` values. `reload()` applies them, and Settings edits the same file through `ConfigDocument`. `Session/` saves and opens app windows: it reads windows through AX, reads browser tabs and folders through app adapters, matches windows to saved windows and opens apps, files and URLs. `Templates/` uses it and adds the CatWM state: workspaces, Desktops, layouts and frames. Read `docs/internals/window-session.md` before you change how windows are saved or opened, or the `launch` dispatcher.
 
 ## Code map
 
-The app source is in `Sources/CatWM/`. The `WindowSession` library is in `Sources/WindowSession/`. Each folder has one job:
+The app source is in `Sources/CatWM/`. Each folder has one job:
 
 - `Actions/`: one `WindowAction` for each dispatcher (CLI command, bind picker rows and handler). `WindowActions.all` is the only list.
 - `App/`: app log, login item, permissions, updates, performance monitor and `AppSurface`.
@@ -38,6 +38,7 @@ The app source is in `Sources/CatWM/`. The `WindowSession` library is in `Source
 - `Notifications/`: the unread badge of each window, its sources (Dock, Notification Center database and banners) and its listeners. Read `docs/internals/notifications.md` before you add a source.
 - `Onboarding/`: the intro, welcome card, tour, permission step and practice.
 - `Overlays/`: the HUD, the mode effect and the quick-action menu.
+- `Session/`: the save and open of app windows. See below.
 - `Settings/`: the settings window, its pages and search.
 - `Sort/`: the Overview plan, session and panel.
 - `Switcher/`: the window switcher, its search and its panel.
@@ -46,7 +47,7 @@ The app source is in `Sources/CatWM/`. The `WindowSession` library is in `Source
 - `UI/`: theme tokens, controls, menus, panels and the Design Gallery.
 - `main.swift`: the entry point.
 
-`Sources/WindowSession/` has no CatWM types. Make a type `public` only when the app uses it:
+`Session/` has no CatWM types, such as `WindowManager`, `WorkspaceModel`, `Layout`, `Theme` or `HUD`. `Templates/` uses it. `Tools/check-style.sh` rejects these names in `Session/`. Its folders:
 
 - `AX/`: AX reads that tell a timeout from a missing value, and the window ID of an AX element.
 - `Model/`: `SavedWindow`, `AppState` (tabs and folders) and `LaunchSpec` (URL, arguments, command).
@@ -94,6 +95,6 @@ Do not commit implementation plans, research notes, or agent scratch files. Keep
 
 ## Testing
 
-Run `swift test`. Put a test for a `WindowSession` type in `Tests/WindowSessionTests/`.
+Run `swift test`. Put a test for an app type, also a `Session/` type, in `Tests/CatWMTests/`.
 
 - Test actual implementation, do not duplicate logic into tests.

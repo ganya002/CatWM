@@ -1,5 +1,4 @@
 import AppKit
-import WindowSession
 
 extension WindowManager {
     func closeMarked(_ ids: [CGWindowID], attempt: Int) {

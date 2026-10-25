@@ -24,6 +24,7 @@ TILING_UI = re.compile(
     r"|CursorActions|ModeFX|ModeCursor|KeyHelp|TemplateLibrary|MacKeyboard|Notifications)\b"
     r"|\bHotkeys\.shared\b"
 )
+SESSION_APP = re.compile(r"\b(?:WindowManager|WorkspaceModel|Layout|Theme|HUD)\b")
 TOOLS = "// swift-tools-version:"
 OK = re.compile(r"^// style-ok: (\S.*\S)$")
 
@@ -82,6 +83,8 @@ def banned(path, code):
         hits.append("NSPanel. Use CatWMPanel")
     if path.startswith("Sources/CatWM/Tiling/") and TILING_UI.search(code):
         hits.append("UI in Tiling. Use WindowManager.surface")
+    if path.startswith("Sources/CatWM/Session/") and SESSION_APP.search(code):
+        hits.append("CatWM type in Session. Put it in Templates")
     return hits
 
 

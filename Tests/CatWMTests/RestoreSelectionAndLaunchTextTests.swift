@@ -1,6 +1,6 @@
+@testable import CatWM
 import Foundation
 import Testing
-@testable import WindowSession
 
 @Suite struct RestoreTabSelectionTests {
     @Test func aDuplicateFolderKeepsTheSelectedTab() {

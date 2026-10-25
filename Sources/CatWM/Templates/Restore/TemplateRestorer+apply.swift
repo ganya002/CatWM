@@ -1,6 +1,6 @@
 import AppKit
 
-private typealias TemplatePair = (WorkspaceTemplate.SavedWindow, Window)
+private typealias TemplatePair = (SavedWindow, Window)
 
 extension TemplateRestorer {
     func apply() async throws {

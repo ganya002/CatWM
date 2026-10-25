@@ -1,6 +1,6 @@
 import Foundation
 
-public enum SlotOutcome<Value: Sendable>: Sendable {
+enum SlotOutcome<Value: Sendable>: Sendable {
     case finished(Value)
     case timedOut
     case cancelled
@@ -8,7 +8,7 @@ public enum SlotOutcome<Value: Sendable>: Sendable {
 }
 
 extension SlotOutcome: Equatable where Value: Equatable {
-    public static func == (lhs: Self, rhs: Self) -> Bool {
+    static func == (lhs: Self, rhs: Self) -> Bool {
         switch (lhs, rhs) {
         case (.timedOut, .timedOut), (.cancelled, .cancelled), (.busy, .busy):
             return true
@@ -20,27 +20,27 @@ extension SlotOutcome: Equatable where Value: Equatable {
     }
 }
 
-public final class StopFlag: @unchecked Sendable {
+final class StopFlag: @unchecked Sendable {
     private let lock = NSLock()
     private var stopped = false
 
-    public init() {}
+    init() {}
 
-    public func stop() { lock.withLock { stopped = true } }
-    public var isStopped: Bool { lock.withLock { stopped } }
+    func stop() { lock.withLock { stopped = true } }
+    var isStopped: Bool { lock.withLock { stopped } }
 }
 
-public final class CaptureSlot<Value: Sendable>: @unchecked Sendable {
+final class CaptureSlot<Value: Sendable>: @unchecked Sendable {
     private let lock = NSLock()
     private var active: Task<Value, Never>?
     private var activeID = 0
 
-    public init() {}
+    init() {}
 
-    public var isIdle: Bool { lock.withLock { active == nil } }
+    var isIdle: Bool { lock.withLock { active == nil } }
 
-    public func run(within timeout: Duration,
-                    operation: @escaping @Sendable () async -> Value) async -> SlotOutcome<Value> {
+    func run(within timeout: Duration,
+             operation: @escaping @Sendable () async -> Value) async -> SlotOutcome<Value> {
         guard let task = claim(operation) else { return .busy }
         return await race(task, timeout: timeout)
     }

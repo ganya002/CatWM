@@ -1,39 +1,39 @@
 import AppKit
 
-public enum RestoreAX {
-    public struct App: Sendable {
-        public var pid: pid_t
-        public var bundleID: String
-        public var launchDate: Date?
+enum RestoreAX {
+    struct App: Sendable {
+        var pid: pid_t
+        var bundleID: String
+        var launchDate: Date?
 
-        public init(pid: pid_t, bundleID: String, launchDate: Date?) {
+        init(pid: pid_t, bundleID: String, launchDate: Date?) {
             self.pid = pid
             self.bundleID = bundleID
             self.launchDate = launchDate
         }
     }
 
-    public struct Candidate: @unchecked Sendable {
-        public var id: CGWindowID
-        public var element: AXUIElement
-        public var pid: pid_t
-        public var title: String
-        public var document: String?
-        public var launchDate: Date?
-        public var frame: CGRect?
+    struct Candidate: @unchecked Sendable {
+        var id: CGWindowID
+        var element: AXUIElement
+        var pid: pid_t
+        var title: String
+        var document: String?
+        var launchDate: Date?
+        var frame: CGRect?
     }
 
-    public struct Probe: @unchecked Sendable {
-        public var id: CGWindowID
-        public var element: AXUIElement
+    struct Probe: @unchecked Sendable {
+        var id: CGWindowID
+        var element: AXUIElement
 
-        public init(id: CGWindowID, element: AXUIElement) {
+        init(id: CGWindowID, element: AXUIElement) {
             self.id = id
             self.element = element
         }
     }
 
-    public static func invalidated(_ probes: [Probe], deadline: Date) async -> Set<CGWindowID> {
+    static func invalidated(_ probes: [Probe], deadline: Date) async -> Set<CGWindowID> {
         await Task.detached(priority: .userInitiated) {
             var invalid = Set<CGWindowID>()
             for probe in probes {
@@ -48,7 +48,7 @@ public enum RestoreAX {
         }.value
     }
 
-    public static func read(apps: [App], deadline: Date) async -> (candidates: [Candidate], complete: Bool) {
+    static func read(apps: [App], deadline: Date) async -> (candidates: [Candidate], complete: Bool) {
         let stop = StopFlag()
         return await withTaskCancellationHandler {
             await Task.detached(priority: .userInitiated) {
@@ -110,7 +110,7 @@ public enum RestoreAX {
                                 launchDate: app.launchDate, frame: frame))
     }
 
-    public static func newWindow(pid: pid_t, deadline: Date) async -> Bool {
+    static func newWindow(pid: pid_t, deadline: Date) async -> Bool {
         let stop = StopFlag()
         return await withTaskCancellationHandler {
             await Task.detached(priority: .userInitiated) {

@@ -1,7 +1,7 @@
+@testable import CatWM
 import CoreGraphics
 import Foundation
 import Testing
-@testable import WindowSession
 
 @Suite struct WindowMatchOrderTests {
     private func saved(_ id: CGWindowID, _ frame: CGRect, title: String = "zsh",

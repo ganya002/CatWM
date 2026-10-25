@@ -1,7 +1,6 @@
 import AppKit
 @testable import CatWM
 import Testing
-@testable import WindowSession
 
 @Suite struct WorkspaceTemplateTests {
     func template() -> WorkspaceTemplate {

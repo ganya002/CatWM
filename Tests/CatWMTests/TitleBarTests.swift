@@ -1,7 +1,6 @@
 import ApplicationServices
 @testable import CatWM
 import Testing
-import WindowSession
 
 @Suite struct TitleBarKindTests {
     let lights = CGRect(x: 8, y: 8, width: 62, height: 16)

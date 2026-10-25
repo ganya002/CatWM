@@ -1,5 +1,4 @@
 import AppKit
-import WindowSession
 
 extension TemplateRestorer {
     struct Found {

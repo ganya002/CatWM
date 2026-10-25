@@ -9,20 +9,20 @@ func axApplication(_ pid: pid_t) -> AXUIElement {
     return app
 }
 
-private typealias GetWindowFn = @convention(c) (AXUIElement, UnsafeMutablePointer<CGWindowID>) -> AXError
+typealias GetWindowFn = @convention(c) (AXUIElement, UnsafeMutablePointer<CGWindowID>) -> AXError
 
-private let getWindow: GetWindowFn? = {
+let axGetWindow: GetWindowFn? = {
     let path = "/System/Library/Frameworks/ApplicationServices.framework/Frameworks/HIServices.framework/HIServices"
     guard let handle = dlopen(path, RTLD_LAZY), let address = dlsym(handle, "_AXUIElementGetWindow") else { return nil }
     return unsafeBitCast(address, to: GetWindowFn.self)
 }()
 
-public enum AXRead<T> {
+enum AXRead<T> {
     case value(T)
     case missing
     case stalled
 
-    public var value: T? {
+    var value: T? {
         if case .value(let found) = self { return found }
         return nil
     }
@@ -31,7 +31,7 @@ public enum AXRead<T> {
 extension AXUIElement {
     var windowNumber: CGWindowID? {
         var id: CGWindowID = 0
-        guard let getWindow, getWindow(self, &id) == .success, id != 0 else { return nil }
+        guard let axGetWindow, axGetWindow(self, &id) == .success, id != 0 else { return nil }
         return id
     }
 
@@ -48,7 +48,7 @@ extension AXUIElement {
         }
     }
 
-    public func readString(_ attribute: String) -> AXRead<String> {
+    func readString(_ attribute: String) -> AXRead<String> {
         cast(read(attribute)) { $0 as? String }
     }
 
@@ -56,7 +56,7 @@ extension AXUIElement {
         cast(read(attribute)) { $0 as? Bool }
     }
 
-    public func readElements(_ attribute: String) -> AXRead<[AXUIElement]> {
+    func readElements(_ attribute: String) -> AXRead<[AXUIElement]> {
         switch read(attribute) {
         case .stalled: return .stalled
         case .missing: return .missing

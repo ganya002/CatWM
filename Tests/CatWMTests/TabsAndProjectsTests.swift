@@ -1,8 +1,8 @@
+@testable import CatWM
 import CoreGraphics
 import Foundation
 import SQLite3
 import Testing
-@testable import WindowSession
 
 @Suite struct WindowTabsTests {
     private let frame = CGRect(x: 0, y: 25, width: 800, height: 600)
