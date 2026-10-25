@@ -20,6 +20,34 @@ All scripts are in `.agents/skills/verify-catwm/scripts/`. Run them from the wor
 - A scoped instance writes a claim file (`~/.config/catwm/instances/<id>/scope`). The user's CatWM leaves out the claimed pids, but only if it is a build with this change. An older build of the user's CatWM still tiles the test windows, and two instances then write the same frames. Before a live test, check the build of the user's CatWM (`ps -o command= -p <pid>`).
 - If the user is typing or presenting, do not start.
 
+## Scoped run
+
+Use a scoped run when the test needs only its own windows. Open the test windows in your own process first (a small test app in `/tmp`, or `desk.sh start`), then:
+
+```sh
+$S/run-scoped.sh <pid>[,<pid>...] <command> [args...]
+$S/run-scoped.sh --no-build "$APP_PID" sh -c 'build/CatWM.app/Contents/MacOS/CatWM windows --json'
+```
+
+It builds the worktree (not with `--no-build`), starts the instance with `CATWM_SCOPE=pids:<pids>`, waits for `ping`, runs the command with `CATWM_INSTANCE` set and always stops the instance, also when the command fails. Its exit code is the exit code of the command.
+
+Permissions: macOS gives Accessibility to the "responsible process". `run-scoped.sh` starts CatWM as a child process, so the instance gets the permissions of the app that runs your shell. An instance that `open -n` starts (`launch.sh`) is its own responsible process and needs its own permission in System Settings.
+
+## Host lock
+
+Some tests need state that the whole Mac shares: the focused app, the macOS Desktops, key presses, the pointer, Caps Lock. Only one agent at a time can do such a test. Run it in the host lock:
+
+```sh
+$S/with-lock.sh $S/run-scoped.sh <pid> <command>
+```
+
+`with-lock.sh` waits until no other agent holds the lock (`~/Library/Caches/CatWM-verify/host.lock`), runs the command and releases the lock. It removes the lock of a pid that does not run. After `LOCK_TIMEOUT` seconds (default 600) it stops with exit code 75. Then ask the user. Do not remove the lock of a pid that runs.
+
+| Test | Lock |
+|---|---|
+| layout, tiling, float, frames, `windows`, `dump`, config of a scoped instance | not necessary |
+| focus, `CATWM_KEYS=on`, key presses, Desktops, `launch.sh` without a scope | necessary |
+
 ## Launch
 
 ```sh
@@ -119,6 +147,8 @@ Run `cleanup.sh` after each failed attempt too. If a script stopped halfway, `do
 
 | Script | Use |
 |---|---|
+| `scripts/run-scoped.sh [--no-build] <pids> <command>` | build, start a scoped instance, run the command, stop the instance |
+| `scripts/with-lock.sh <command>` | run the command in the host lock |
 | `scripts/launch.sh` | build, start the named instance, wait until it is ready |
 | `scripts/doctor.sh` | read-only health check |
 | `scripts/desk.sh start [count]\|stop` | TextEdit test windows on a new workspace |
