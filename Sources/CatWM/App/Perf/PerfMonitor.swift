@@ -2,7 +2,9 @@ import AppKit
 import CryptoKit
 import QuartzCore
 
-enum PerfMonitor {
+final class PerfMonitor {
+    static let shared = PerfMonitor()
+
     struct SlowApp {
         let bundle: String
         let stepMs: Double
@@ -17,46 +19,48 @@ enum PerfMonitor {
         var tags: Set<String> = []
     }
 
-    private static let settle = 30.0
-    private static let skipFirstRuns = 2
-    private static let hangLine = 0.25, severeHang = 1.0
-    private static let slowAppStepMs = 24.0, slowAppSkipped = 0.5
-    private static let eventsNeeded = 5, severeEventsNeeded = 2
-    private static let cooldown = 7 * 86400.0, perWeek = 5
+    private let settle = 30.0
+    private let skipFirstRuns = 2
+    private let hangLine = 0.25, severeHang = 1.0
+    private let slowAppStepMs = 24.0, slowAppSkipped = 0.5
+    private let eventsNeeded = 5, severeEventsNeeded = 2
+    private let cooldown = 7 * 86400.0, perWeek = 5
 
-    private static let launched = CACurrentMediaTime()
-    private static var seen: [String: Int] = [:]
-    private static var active: [FrameRun] = []
-    private static var asleep = false
-    private static var busyAt: CFTimeInterval = 0
-    private static var uploading = false
-    private static var observers: [NSObjectProtocol] = []
+    private let launched = CACurrentMediaTime()
+    private var seen: [String: Int] = [:]
+    private var active: [FrameRun] = []
+    private var asleep = false
+    private var busyAt: CFTimeInterval = 0
+    private var uploading = false
+    private var observers: [NSObjectProtocol] = []
 
-    static var enabled: Bool { WindowManager.shared.config.perfReports }
+    var enabled: Bool { WindowManager.shared.config.perfReports }
 
-    static func begin(_ kind: String) -> FrameRun? {
+    func begin(_ kind: String) -> FrameRun? {
         guard !asleep, let screen = NSScreen.main else { return nil }
         let run = FrameRun(kind: kind, screen: screen)
         active.append(run)
         return run
     }
 
-    static func track(_ kind: String, for seconds: Double) {
+    func track(_ kind: String, for seconds: Double) {
         guard let run = begin(kind) else { return }
         DispatchQueue.main.asyncAfter(deadline: .now() + seconds + 0.05) { run.end() }
     }
 
-    static func start() {
+    func start() {
         let center = NSWorkspace.shared.notificationCenter
         let changes = [(NSWorkspace.screensDidSleepNotification, true),
                        (NSWorkspace.screensDidWakeNotification, false),
                        (NSWorkspace.sessionDidResignActiveNotification, true),
                        (NSWorkspace.sessionDidBecomeActiveNotification, false)]
         for (name, value) in changes {
-            observers.append(center.addObserver(forName: name, object: nil, queue: .main) { _ in asleep = value })
+            observers.append(center.addObserver(forName: name, object: nil, queue: .main) { [self] _ in
+                asleep = value
+            })
         }
         let activities = CFRunLoopActivity([.afterWaiting, .beforeWaiting]).rawValue
-        let observer = CFRunLoopObserverCreateWithHandler(nil, activities, true, 0) { _, activity in
+        let observer = CFRunLoopObserverCreateWithHandler(nil, activities, true, 0) { [self] _, activity in
             let now = CACurrentMediaTime()
             if activity == .afterWaiting { busyAt = now; return }
             guard busyAt > 0 else { return }
@@ -67,7 +71,7 @@ enum PerfMonitor {
         CFRunLoopAddObserver(CFRunLoopGetMain(), observer, .commonModes)
     }
 
-    static func finish(_ run: FrameRun, apps: [SlowApp]) {
+    func finish(_ run: FrameRun, apps: [SlowApp]) {
         active.removeAll { $0 === run }
         let runs = seen[run.kind, default: 0] + 1
         seen[run.kind] = runs
@@ -93,14 +97,14 @@ enum PerfMonitor {
         record(event)
     }
 
-    private static func hung(_ seconds: Double) {
+    private func hung(_ seconds: Double) {
         guard !asleep else { return }
         var event = Event(kind: "hang", hangMs: seconds * 1000)
         event.kind = "hang:" + (active.map(\.kind).min() ?? "idle")
         record(event)
     }
 
-    private static func record(_ event: Event) {
+    private func record(_ event: Event) {
         let text = String(format: "perf: %@ frames %d p95 %.1fms slow %.0f%% hang %.0fms app %@ tags %@",
                           event.kind, event.frames, event.p95Ms, event.slowShare * 100, event.hangMs,
                           event.app?.bundle ?? "-", event.tags.sorted().joined(separator: ","))
@@ -123,7 +127,7 @@ enum PerfMonitor {
               now - (log.last ?? 0) > 86400, now > defaults.double(forKey: DefaultsKey.perfBackoffUntil) else { return }
 
         uploading = true
-        upload(event, fingerprint: digest, count: count, to: endpoint) { succeeded in
+        upload(event, fingerprint: digest, count: count, to: endpoint) { [self] succeeded in
             uploading = false
             if succeeded {
                 log.append(now)
@@ -139,13 +143,13 @@ enum PerfMonitor {
         }
     }
 
-    private static var endpoint: URL? {
+    private var endpoint: URL? {
         guard let reportURL = Bundle.main.object(forInfoDictionaryKey: "CatWMReportURL") as? String,
               reportURL.hasSuffix("/report") else { return nil }
         return URL(string: String(reportURL.dropLast("report".count)) + "perf")
     }
 
-    private static func fingerprint(_ event: Event) -> String {
+    private func fingerprint(_ event: Event) -> String {
         let minorVersion = version.split(separator: ".").prefix(2).joined(separator: ".")
         let magnitude = event.hangMs > 0 ? event.hangMs / 250 : event.p95Ms / 8
         let bucket = Int(log2(max(1, magnitude)))
@@ -154,8 +158,8 @@ enum PerfMonitor {
         return SHA256.hash(data: Data(raw.utf8)).prefix(4).map { String(format: "%02x", $0) }.joined()
     }
 
-    private static func upload(_ event: Event, fingerprint digest: String, count: Int, to url: URL,
-                               done: @escaping (Bool) -> Void) {
+    private func upload(_ event: Event, fingerprint digest: String, count: Int, to url: URL,
+                        done: @escaping (Bool) -> Void) {
         let system = ProcessInfo.processInfo.operatingSystemVersion
         let config = WindowManager.shared.config
         var body: [String: Any] = [
@@ -186,11 +190,11 @@ enum PerfMonitor {
         }.resume()
     }
 
-    private static var version: String {
+    private var version: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
     }
 
-    private static let hardware: String = {
+    private let hardware: String = {
         var size = 0
         sysctlbyname("hw.model", nil, &size, nil, 0)
         var buffer = [CChar](repeating: 0, count: size)

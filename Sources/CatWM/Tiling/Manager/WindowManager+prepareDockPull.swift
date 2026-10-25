@@ -132,6 +132,6 @@ extension WindowManager {
         parkFocus()
         guard !screen.frame.contains(mouseLocation()) else { return }
         CGWarpMouseCursorPosition(screen.center)
-        CursorRefresh.soon()
+        CursorRefresh.shared.soon()
     }
 }

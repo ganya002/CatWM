@@ -2,29 +2,28 @@ import AppKit
 import SwiftUI
 
 class CatWMHostingView<Content: View>: NSHostingView<Content> {
-    private var keepsArrow = false
+    private var arrowCursor: ArrowCursor?
 
     override func acceptsFirstMouse(for _: NSEvent?) -> Bool { true }
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        guard window != nil, !keepsArrow else { return }
-        keepsArrow = true
-        ArrowCursor.keep(in: self)
+        guard window != nil, arrowCursor == nil else { return }
+        arrowCursor = ArrowCursor(keeping: self)
     }
 }
 
 final class ArrowCursor: NSResponder {
     private weak var view: NSView?
-    private static var key = 0
 
-    static func keep(in view: NSView) {
-        let keeper = ArrowCursor()
-        keeper.view = view
-        objc_setAssociatedObject(view, &key, keeper, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+    init(keeping view: NSView) {
+        self.view = view
+        super.init()
         let options: NSTrackingArea.Options = [.mouseMoved, .mouseEnteredAndExited, .activeAlways, .inVisibleRect]
-        view.addTrackingArea(NSTrackingArea(rect: .zero, options: options, owner: keeper))
+        view.addTrackingArea(NSTrackingArea(rect: .zero, options: options, owner: self))
     }
+
+    required init?(coder _: NSCoder) { nil }
 
     override func mouseEntered(with event: NSEvent) { update(event) }
     override func mouseMoved(with event: NSEvent) { update(event) }

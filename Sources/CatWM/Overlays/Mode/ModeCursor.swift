@@ -47,7 +47,7 @@ final class ModeCursor {
             timer?.invalidate()
             timer = nil
             setInBackground?(false)
-            CursorRefresh.soon(after: 0)
+            CursorRefresh.shared.soon(after: 0)
             return
         }
         if timer == nil {

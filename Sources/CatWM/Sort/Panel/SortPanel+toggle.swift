@@ -62,7 +62,7 @@ extension SortPanel {
         shownPanel.makeKeyAndOrderFront(nil)
         shownPanel.makeFirstResponder(nil)
         fit()
-        PerfMonitor.track("ui:sort-panel", for: 0.5)
+        PerfMonitor.shared.track("ui:sort-panel", for: 0.5)
         DispatchQueue.main.async { [weak self] in self?.model.shown = true }
     }
 

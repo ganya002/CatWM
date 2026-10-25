@@ -105,7 +105,7 @@ extension WindowManager {
             guard let info = Spaces.list(display: screen.uuid), let target = info.ids.firstIndex(of: space),
                   let cur = info.current, cur != target, let combo = SystemShortcut.step(right: target > cur)
             else { continue }
-            for _ in 0..<abs(target - cur) { Hotkeys.post(keyCode: combo.keyCode, flags: combo.flags) }
+            for _ in 0..<abs(target - cur) { post(combo) }
             return true
         }
         return false

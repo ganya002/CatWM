@@ -1,16 +1,17 @@
 import Foundation
+import os
 import ServiceManagement
 
 enum LoginItem {
-    private static var status = SMAppService.mainApp.status
-    static var isEnabled: Bool { status == .enabled }
-    static var needsApproval: Bool { status == .requiresApproval }
+    private static let status = OSAllocatedUnfairLock(initialState: SMAppService.mainApp.status)
+    static var isEnabled: Bool { status.withLock { $0 } == .enabled }
+    static var needsApproval: Bool { status.withLock { $0 } == .requiresApproval }
 
     static func refresh(then done: @escaping () -> Void) {
         DispatchQueue.global(qos: .utility).async {
             let next = SMAppService.mainApp.status
             DispatchQueue.main.async {
-                status = next
+                status.withLock { $0 = next }
                 done()
             }
         }
@@ -20,8 +21,9 @@ enum LoginItem {
     static func set(_ enabled: Bool) -> Bool {
         do {
             if enabled { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
-            status = SMAppService.mainApp.status
-            Log.info("launch at login \(enabled ? "on" : "off") (status \(status.rawValue))")
+            let next = SMAppService.mainApp.status
+            status.withLock { $0 = next }
+            Log.info("launch at login \(enabled ? "on" : "off") (status \(next.rawValue))")
             return true
         } catch {
             Log.info("launch at login: \(error.localizedDescription)")
@@ -50,7 +52,9 @@ enum CommandLineTool {
         let home = files.homeDirectoryForCurrentUser
         let folders = [URL(fileURLWithPath: "/usr/local/bin"), home.appendingPathComponent(".local/bin")]
         for folder in folders {
-            try? files.createDirectory(at: folder, withIntermediateDirectories: true)
+            Log.attempt("create \(folder.path)") {
+                try files.createDirectory(at: folder, withIntermediateDirectories: true)
+            }
             guard files.isWritableFile(atPath: folder.path) else { continue }
             let path = folder.appendingPathComponent("catwm").path
             if let current = try? files.destinationOfSymbolicLink(atPath: path) {

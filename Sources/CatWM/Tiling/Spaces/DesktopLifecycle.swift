@@ -18,7 +18,7 @@ enum DesktopLifecycle {
         }
         let created = ProcessInfo.processInfo.systemUptime
         if let current = before.current {
-            DesktopMenuBarCover.begin(on: screen, source: before.ids[current], target: space)
+            DesktopMenuBarCover.shared.begin(on: screen, source: before.ids[current], target: space)
         }
         let covered = ProcessInfo.processInfo.systemUptime
         do {

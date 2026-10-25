@@ -18,7 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.mainMenu = makeMainMenu()
         Updater.shared.start()
         CrashWatch.start()
-        PerfMonitor.start()
+        PerfMonitor.shared.start()
         WindowManager.shared.surface = AppSurface()
         WindowManager.shared.onChange = { [weak self] in
             self?.scheduleStatusUpdate()
@@ -143,7 +143,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                    accessibilityDescription: "CatWM")
             return
         }
-        MenuBarIcon.pruneIcons(keeping: Set(state.pids))
+        AppIcons.shared.prune(keeping: Set(state.pids))
         button.image = MenuBarIcon.image(mode: Hotkeys.shared.submap, workspace: state.workspace, layout: state.layout,
                                          pids: state.pids)
     }

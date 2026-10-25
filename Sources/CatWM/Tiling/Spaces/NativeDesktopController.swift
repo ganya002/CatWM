@@ -26,6 +26,7 @@ final class NativeDesktopController {
     private var gestureProgress = 0.0
     private var requestedAt: CFTimeInterval = 0
     @MainActor private var timing: DesktopTransitionTiming?
+    @MainActor private var warmGuard: DesktopGuardClient?
 
     func request(_ target: Request, since start: CFTimeInterval = CACurrentMediaTime()) {
         requested = target
@@ -100,11 +101,11 @@ final class NativeDesktopController {
         }
         let state = DesktopGuard.Context(display: target.display, source: source, destination: target.space,
                                          sourceOptions: sourceState.options, destinationOptions: targetState.options)
-        let recovery = DesktopGuardClient.acquire()
+        let recovery = takeGuard()
         timing.checkpoint("ready")
         try await prepareWhileGuarding(target, state, recovery)
         timing.checkpoint("guard/layout")
-        if !wants(target) { try await recovery.finish(); return }
+        if !wants(target) { try await release(recovery); return }
         var failure: Error?
         do {
             try await compose(state, screen: screen, forward: into > from, target: target, recovery: recovery)
@@ -115,7 +116,7 @@ final class NativeDesktopController {
                 && DesktopBridge.isIdle(display: target.display)
         }
         guard restored else { throw DesktopTransitionError.check("Desktop recovery is still in progress") }
-        try await recovery.finish()
+        try await release(recovery)
         if let failure {
             let maximised = !list.desktops.contains(from) || !list.desktops.contains(into)
             guard maximised, wants(target), Spaces.current(display: target.display) != target.space else {
@@ -134,7 +135,7 @@ final class NativeDesktopController {
         var preparation: Error?
         do { try await prepare(target) } catch { preparation = error }
         do { try await launch.value } catch { throw preparation ?? error }
-        if let preparation { try? await recovery.finish(); throw preparation }
+        if let preparation { try? await release(recovery); throw preparation }
     }
 
     @MainActor private func compose(_ state: DesktopGuard.Context, screen: Screen, forward desktopOrder: Bool,
@@ -201,10 +202,11 @@ final class NativeDesktopController {
     @MainActor private func prepareMenuBar(_ state: DesktopGuard.Context, on screen: Screen,
                                            recovery: DesktopGuardClient) async throws -> DesktopMenuBarLease? {
         guard DesktopMenuBar.needsPreparation(source: state.source, target: state.destination) else { return nil }
-        async let image = DesktopMenuBarCover.capture(on: screen, source: state.source, target: state.destination)
+        let cover = DesktopMenuBarCover.shared
+        async let image = cover.capture(on: screen, source: state.source, target: state.destination)
         let background = await DesktopMenuBar.ready(source: state.source, target: state.destination, screen: screen)
         timing?.checkpoint("menu-ready")
-        guard let background else { DesktopMenuBarCover.recycle(await image); return nil }
+        guard let background else { DesktopMenuBarCover.shared.recycle(await image); return nil }
         do {
             try background.persist()
             var guarded = state
@@ -215,7 +217,7 @@ final class NativeDesktopController {
                 throw DesktopTransitionError.check("Cannot prepare the Desktop background")
             }
         } catch {
-            background.restore(); DesktopMenuBarCover.recycle(await image)
+            background.restore(); DesktopMenuBarCover.shared.recycle(await image)
             throw error
         }
         timing?.checkpoint("menu-guard")
@@ -265,5 +267,28 @@ final class NativeDesktopController {
 
     private func check(_ condition: Bool, _ message: String) throws {
         if !condition { throw DesktopTransitionError.check(message) }
+    }
+}
+
+extension NativeDesktopController {
+    @MainActor func prewarmGuard() {
+        guard warmGuard?.process.isRunning != true else { return }
+        let client = DesktopGuardClient()
+        if (try? client.launch()) != nil { warmGuard = client }
+    }
+
+    @MainActor private func takeGuard() -> DesktopGuardClient {
+        defer { warmGuard = nil }
+        if let warmGuard, warmGuard.process.isRunning { return warmGuard }
+        return DesktopGuardClient()
+    }
+
+    @MainActor private func release(_ recovery: DesktopGuardClient) async throws {
+        try await recovery.finish()
+        if warmGuard?.process.isRunning != true {
+            warmGuard = recovery
+        } else if warmGuard !== recovery {
+            try await recovery.retire()
+        }
     }
 }

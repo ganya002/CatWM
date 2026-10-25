@@ -14,7 +14,7 @@ extension WindowManager {
             ignoreMouseUntil = Date().addingTimeInterval(0.3)
             CGWarpMouseCursorPosition(navFrame(window).center)
         }
-        CursorRefresh.soon()
+        CursorRefresh.shared.soon()
     }
 
     func mouseMoved() {

@@ -20,6 +20,7 @@ struct NativeDesktopState {
     var lastNativeCatalogHomes: [String: String] = [:]
     var lastNativeCatalogUUIDs: [String: String] = [:]
     var nativeGestureSign: Double?
+    var keyPostStyle: Hotkeys.PostStyle = .physical
     var nativeMigration: [CGWindowID: String] = [:]
     var nativeCreationBusy = false
     var desktopRemovalScheduled = false

@@ -129,7 +129,7 @@ private struct TabCell: View {
     var body: some View {
         ZStack {
             HStack(spacing: Theme.Space.small - Theme.Space.xxs) {
-                Image(nsImage: AppIcons.icon(for: tab.pid))
+                Image(nsImage: AppIcons.shared.icon(for: tab.pid))
                     .resizable()
                     .frame(width: TabStrip.iconSide, height: TabStrip.iconSide)
                     .opacity(active || hovered ? 1 : 0.7)
@@ -155,14 +155,21 @@ private struct TabCell: View {
     }
 }
 
-enum AppIcons {
-    private static var cache: [pid_t: NSImage] = [:]
+final class AppIcons {
+    static let shared = AppIcons()
+    private var cache: [pid_t: NSImage] = [:]
 
-    static func icon(for pid: pid_t) -> NSImage {
+    func icon(for pid: pid_t) -> NSImage { running(pid) ?? NSWorkspace.shared.icon(for: .application) }
+
+    func running(_ pid: pid_t) -> NSImage? {
         if let cached = cache[pid] { return cached }
-        let icon = NSRunningApplication(processIdentifier: pid)?.icon ?? NSWorkspace.shared.icon(for: .application)
+        guard let icon = NSRunningApplication(processIdentifier: pid)?.icon else { return nil }
         cache[pid] = icon
         return icon
+    }
+
+    func prune(keeping pids: Set<pid_t>) {
+        cache = cache.filter { pids.contains($0.key) || NSRunningApplication(processIdentifier: $0.key) != nil }
     }
 }
 

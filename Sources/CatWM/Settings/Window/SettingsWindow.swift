@@ -4,6 +4,7 @@ import SwiftUI
 final class SettingsWindow: NSObject, NSWindowDelegate {
     static let shared = SettingsWindow()
     private(set) var window: NSWindow?
+    private var arrowCursor: ArrowCursor?
     private var sessionOpen = false
     let doc = ConfigDocument()
     private(set) lazy var library = ConfigLibrary(doc: doc)
@@ -21,7 +22,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
             let host = NSHostingController(rootView: SettingsView(doc: doc, settingsUI: settingsUI))
             host.sizingOptions = []
             settingsWindow.contentViewController = host
-            ArrowCursor.keep(in: host.view)
+            arrowCursor = ArrowCursor(keeping: host.view)
             settingsWindow.setContentSize(NSSize(width: 880, height: 620))
             settingsWindow.contentMinSize = NSSize(width: 760, height: 520)
             settingsWindow.clearTitlebar(hiding: [.zoomButton])

@@ -1,16 +1,20 @@
 import Foundation
+import os
 
 enum Log {
     static let url = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/CatWM.log")
-    static var verbose = false
+    private static let verboseFlag = OSAllocatedUnfairLock(initialState: false)
+    static var verbose: Bool {
+        get { verboseFlag.withLock { $0 } }
+        set { verboseFlag.withLock { $0 = newValue } }
+    }
     static let verboseLaunch = CommandLine.arguments.contains("--verbose")
 
     static let maxSize = 2_000_000
     static let keptSize = 500_000
 
-    private static var launchOffset: UInt64 = 0
-    private static var size: UInt64 = 0
-    private static let lock = NSLock()
+    private struct Extent { var launchOffset: UInt64 = 0, size: UInt64 = 0 }
+    private static let extent = OSAllocatedUnfairLock(initialState: Extent())
 
     private static let handle: FileHandle? = {
         let fileManager = FileManager.default
@@ -20,8 +24,8 @@ enum Log {
         }
         if !fileManager.fileExists(atPath: url.path) { fileManager.createFile(atPath: url.path, contents: nil) }
         let fileHandle = try? FileHandle(forWritingTo: url)
-        launchOffset = (try? fileHandle?.seekToEnd()) ?? 0
-        size = launchOffset
+        let end = (try? fileHandle?.seekToEnd()) ?? 0
+        extent.withLock { $0 = Extent(launchOffset: end, size: end) }
         return fileHandle
     }()
 
@@ -35,7 +39,7 @@ enum Log {
     static func beforeLaunch() -> String {
         _ = handle
         guard let data = FileManager.default.contents(atPath: url.path) else { return "" }
-        let offset = lock.withLock { launchOffset }
+        let offset = extent.withLock { $0.launchOffset }
         return String(decoding: data.prefix(Int(offset)), as: Unicode.UTF8.self)
     }
 
@@ -55,20 +59,20 @@ enum Log {
     private static func write(_ message: String) {
         let line = Data("\(time.string(from: Date())) \(message)\n".utf8)
         guard let handle else { return }
-        lock.withLock {
-            if size > UInt64(maxSize) { trim(handle) }
+        extent.withLock { extent in
+            if extent.size > UInt64(maxSize) { trim(handle, &extent) }
             try? handle.write(contentsOf: line)
-            size += UInt64(line.count)
+            extent.size += UInt64(line.count)
         }
     }
 
-    private static func trim(_ handle: FileHandle) {
+    private static func trim(_ handle: FileHandle, _ extent: inout Extent) {
         guard let data = FileManager.default.contents(atPath: url.path) else { return }
         let kept = tail(of: data)
         try? handle.truncate(atOffset: 0)
         try? handle.write(contentsOf: kept)
         let removed = UInt64(data.count - kept.count)
-        launchOffset = launchOffset > removed ? launchOffset - removed : 0
-        size = UInt64(kept.count)
+        extent.launchOffset = extent.launchOffset > removed ? extent.launchOffset - removed : 0
+        extent.size = UInt64(kept.count)
     }
 }

@@ -1,25 +1,28 @@
 import AppKit
+import os
 import ScreenCaptureKit
 
 enum ScreenRecording {
     private static let testDoneKey = "screenRecordingTestDone"
-    private static let permissionLock = NSLock()
-    private static var grantedLive = false
-    private static var checking = false
-    static var watching = false
+    private struct Check { var grantedLive = false, checking = false, watching = false }
+    private static let check = OSAllocatedUnfairLock(initialState: Check())
 
-    static var isGranted: Bool { permissionLock.withLock { grantedLive } || CGPreflightScreenCaptureAccess() }
+    static var isGranted: Bool { check.withLock { $0.grantedLive } || CGPreflightScreenCaptureAccess() }
     static var isTestDone: Bool { UserDefaults.standard.bool(forKey: testDoneKey) }
 
+    static func watch() { check.withLock { $0.watching = true } }
+
     static func refresh() {
-        guard watching, !isGranted, !checking else { return }
-        checking = true
+        guard check.withLock({ $0.watching && !$0.checking }), !isGranted else { return }
+        check.withLock { $0.checking = true }
         Task { @MainActor in
             let content = try? await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
             let granted = content != nil
-            permissionLock.withLock { grantedLive = granted }
-            checking = false
-            if granted { watching = false }
+            check.withLock { check in
+                check.grantedLive = granted
+                check.checking = false
+                if granted { check.watching = false }
+            }
         }
     }
 

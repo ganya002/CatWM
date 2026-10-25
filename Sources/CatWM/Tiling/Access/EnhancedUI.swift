@@ -1,45 +1,48 @@
 import AppKit
 import ApplicationServices
+import os
 
 enum EnhancedUI {
-    private static var held: [pid_t: (count: Int, wasOn: Bool)] = [:]
-    private static var locks: [pid_t: NSLock] = [:]
-    private static let tableLock = NSLock()
+    private struct Table {
+        var held: [pid_t: (count: Int, wasOn: Bool)] = [:]
+        var locks: [pid_t: NSLock] = [:]
+    }
+    private static let table = OSAllocatedUnfairLock(initialState: Table())
     private static let attr = "AXEnhancedUserInterface"
 
     static func suspend(_ pid: pid_t) {
         let pidLock = lock(pid)
         pidLock.lock(); defer { pidLock.unlock() }
-        if let hold = tableLock.withLock({ held[pid] }) {
-            tableLock.withLock { held[pid] = (hold.count + 1, hold.wasOn) }
+        if let hold = table.withLock({ $0.held[pid] }) {
+            table.withLock { $0.held[pid] = (hold.count + 1, hold.wasOn) }
             return
         }
         let app = axApp(pid)
         let wasOn = app.flag(attr)
         if wasOn { app.set(attr, kCFBooleanFalse) }
-        tableLock.withLock { held[pid] = (1, wasOn) }
+        table.withLock { $0.held[pid] = (1, wasOn) }
     }
     static func resume(_ pid: pid_t) {
         let pidLock = lock(pid)
         pidLock.lock(); defer { pidLock.unlock() }
-        guard let hold = tableLock.withLock({ held[pid] }) else { return }
-        if hold.count > 1 { tableLock.withLock { held[pid] = (hold.count - 1, hold.wasOn) }; return }
-        tableLock.withLock { held[pid] = nil }
+        guard let hold = table.withLock({ $0.held[pid] }) else { return }
+        if hold.count > 1 { table.withLock { $0.held[pid] = (hold.count - 1, hold.wasOn) }; return }
+        table.withLock { $0.held[pid] = nil }
         if hold.wasOn { axApp(pid).set(attr, kCFBooleanTrue) }
     }
 
     static func terminated(_ pid: pid_t) {
-        tableLock.withLock {
-            held[pid] = nil
-            locks[pid] = nil
+        table.withLock {
+            $0.held[pid] = nil
+            $0.locks[pid] = nil
         }
     }
 
     private static func lock(_ pid: pid_t) -> NSLock {
-        tableLock.withLock {
-            if let existing = locks[pid] { return existing }
+        table.withLock {
+            if let existing = $0.locks[pid] { return existing }
             let created = NSLock()
-            locks[pid] = created
+            $0.locks[pid] = created
             return created
         }
     }

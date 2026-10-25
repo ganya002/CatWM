@@ -1,14 +1,17 @@
 import AppKit
 import QuartzCore
 
-enum CursorRefresh {
-    private static var work: DispatchWorkItem?
+final class CursorRefresh {
+    static let shared = CursorRefresh()
+    private var work: DispatchWorkItem?
 
-    static func soon(after delay: Double = 0.08) {
+    func soon(after delay: Double = 0.08) {
         work?.cancel()
-        let item = DispatchWorkItem { post() }
+        let item = DispatchWorkItem { Self.post() }
         work = item
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: item)
+        DispatchQueue.main.asyncAfter( // style-ok: this debounce merges bursts of window moves
+            deadline: .now() + delay, execute: item
+        )
     }
 
     private static func post() {
