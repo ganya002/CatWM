@@ -7,6 +7,40 @@ import Testing
         .init(info: CGWindowInfo(id: id, pid: 7, bounds: CGRect(x: 0, y: 0, width: 300, height: 200)), spaces: spaces)
     }
 
+    @Test func nativeObservationIDsKeepOrderAndAnEmptySnapshot() {
+        for ids: [CGWindowID] in [[9, 3, 7], []] {
+            let found = WindowServerQuery.observationWindowIDs([.optionOnScreenOnly, .excludeDesktopElements],
+                onScreen: { ids }, fallback: { _ in
+                    Issue.record("Unexpected public window list read"); return nil
+                })
+            #expect(found == ids)
+        }
+    }
+
+    @Test func unavailableNativeObservationIDsUseThePublicFallback() {
+        let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
+        var reads: [CGWindowListOption] = []
+        let found = WindowServerQuery.observationWindowIDs(options, onScreen: { nil }, fallback: {
+            reads.append($0)
+            return [8, 2]
+        })
+        #expect(found == [8, 2] && reads == [options])
+    }
+
+    @Test(arguments: [
+        CGWindowListOption.optionAll,
+        .optionOnScreenOnly,
+        [.optionAll, .excludeDesktopElements],
+        .optionIncludingWindow
+    ])
+    func otherWindowListsKeepTheirPublicSemantics(_ options: CGWindowListOption) {
+        var reads: [CGWindowListOption] = []
+        let found = WindowServerQuery.observationWindowIDs(options, onScreen: {
+            Issue.record("Unexpected native on-screen list read"); return []
+        }, fallback: { reads.append($0); return [8, 2] })
+        #expect(found == [8, 2] && reads == [options])
+    }
+
     @Test func observationPreservesTheSeparateStackingOrders() throws {
         let records: WindowServerQuery.Records = [1: record(1, spaces: [11]), 2: record(2, spaces: [12]),
                                                   3: record(3, spaces: [11, 12])]
