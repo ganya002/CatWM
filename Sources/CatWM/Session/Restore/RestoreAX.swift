@@ -57,7 +57,7 @@ enum RestoreAX {
                 for app in apps {
                     guard !expired() else { return (found, false) }
                     let listed: [AXUIElement]
-                    switch axApplication(app.pid).readElements(kAXWindowsAttribute) {
+                    switch axApp(app.pid).readElements(kAXWindowsAttribute) {
                     case .stalled: return (found, false)
                     case .missing: continue
                     case .value(let elements): listed = elements
@@ -116,7 +116,7 @@ enum RestoreAX {
             await Task.detached(priority: .userInitiated) {
                 let end = min(deadline, Date().addingTimeInterval(1.5))
                 func expired() -> Bool { stop.isStopped || Date() >= end }
-                guard !expired(), let bar = axApplication(pid).readElement(kAXMenuBarAttribute).value else {
+                guard !expired(), let bar = axApp(pid).readElement(kAXMenuBarAttribute).value else {
                     return false
                 }
                 AXUIElementSetMessagingTimeout(bar, axTimeout)

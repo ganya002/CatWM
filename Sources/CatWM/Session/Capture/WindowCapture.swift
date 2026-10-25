@@ -100,7 +100,7 @@ enum WindowCapture {
     private static func read(_ app: AppSnapshot, expired: () -> Bool) -> AppRead {
         if expired() { return .stalled }
         let listed: [AXUIElement]
-        switch axApplication(app.pid).readElements(kAXWindowsAttribute) {
+        switch axApp(app.pid).readElements(kAXWindowsAttribute) {
         case .stalled: return .stalled
         case .missing: return .windows([])
         case .value(let found): listed = found
@@ -119,7 +119,7 @@ enum WindowCapture {
     }
 
     private static func focusedID(_ pid: pid_t) -> CGWindowID? {
-        guard let focused = axApplication(pid).readElement(kAXFocusedWindowAttribute).value else { return nil }
+        guard let focused = axApp(pid).readElement(kAXFocusedWindowAttribute).value else { return nil }
         AXUIElementSetMessagingTimeout(focused, axTimeout)
         return focused.windowNumber
     }

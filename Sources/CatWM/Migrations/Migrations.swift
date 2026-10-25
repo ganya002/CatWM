@@ -53,8 +53,8 @@ enum Migrations {
     }
 
     static func migrateDefaults(_ defaults: UserDefaults) {
-        guard !defaults.bool(forKey: "migratedLegacyDefaults") else { return }
-        defaults.set(true, forKey: "migratedLegacyDefaults")
+        guard !defaults.bool(forKey: DefaultsKey.migratedLegacyDefaults) else { return }
+        defaults.set(true, forKey: DefaultsKey.migratedLegacyDefaults)
         for domain in ["local.ouch", "local.hyprthyst"] {
             guard let old = defaults.persistentDomain(forName: domain) else { continue }
             for (key, value) in old where defaults.object(forKey: key) == nil

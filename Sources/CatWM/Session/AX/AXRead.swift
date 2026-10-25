@@ -3,9 +3,9 @@ import ApplicationServices
 
 let axTimeout: Float = 0.3
 
-func axApplication(_ pid: pid_t) -> AXUIElement {
+func axApp(_ pid: pid_t, timeout: Float = axTimeout) -> AXUIElement {
     let app = AXUIElementCreateApplication(pid)
-    AXUIElementSetMessagingTimeout(app, axTimeout)
+    AXUIElementSetMessagingTimeout(app, timeout)
     return app
 }
 

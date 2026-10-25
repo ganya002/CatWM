@@ -105,7 +105,7 @@ extension WindowManager {
             return
         }
         guard let action = WindowActions.named(dispatcher) else {
-            NSLog("CatWM: unknown dispatcher %@", dispatcher)
+            Log.info("unknown dispatcher \(dispatcher)")
             return
         }
         action.run(ActionContext(manager: self, arg: arg))
@@ -157,7 +157,7 @@ extension WindowManager {
         case "mfact": adjustRatio(parts.dropFirst().joined(separator: " "))
         case "orientationnext": cycleLayout(1)
         case "orientationprev": cycleLayout(-1)
-        default: NSLog("CatWM: unknown layoutmsg %@", cmd)
+        default: Log.info("unknown layoutmsg \(cmd)")
         }
     }
 }

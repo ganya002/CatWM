@@ -60,10 +60,10 @@ struct Config {
         let fileManager = FileManager.default
         if !fileManager.fileExists(atPath: url.path) {
             try? fileManager.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try? defaultText.write(to: url, atomically: true, encoding: .utf8)
+            Log.attempt("write default config") { try defaultText.write(to: url, atomically: true, encoding: .utf8) }
         }
         let config = parse((try? String(contentsOf: url, encoding: .utf8)) ?? defaultText)
-        config.errors.forEach { NSLog("CatWM config: %@", $0) }
+        config.errors.forEach { Log.info("config: \($0)") }
         return config
     }
 
@@ -84,7 +84,9 @@ struct Config {
             let firstBind = lines.firstIndex { $0.trimmingCharacters(in: .whitespaces).lowercased().hasPrefix("bind") }
             lines.insert("\(key) = \(value)", at: firstBind ?? lines.count)
         }
-        try? lines.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
+        Log.attempt("write config option \(key)") {
+            try lines.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
+        }
     }
 
     static func parse(_ text: String) -> Config {

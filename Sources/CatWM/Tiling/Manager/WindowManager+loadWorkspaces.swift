@@ -4,21 +4,22 @@ extension WindowManager {
     func loadWorkspaces() {
         guard config.virtualWorkspaces else { return }
         let defaults = UserDefaults.standard
-        desktops.nativeCatalog.saved = (defaults.dictionary(forKey: "ws.nativeSpaces") ?? [:]).compactMapValues {
-            $0 as? UInt64
-        }
-        desktops.nativeCatalog.homes = defaults.dictionary(forKey: "ws.nativeDisplays") as? [String: String] ?? [:]
-        desktops.nativeCatalog.uuids = defaults.dictionary(forKey: "ws.nativeSpaceUUIDs") as? [String: String] ?? [:]
-        for (key, value) in defaults.dictionary(forKey: "ws.owners") as? [String: String] ?? [:] {
+        desktops.nativeCatalog.saved = (defaults.dictionary(forKey: DefaultsKey.wsNativeSpaces) ?? [:])
+            .compactMapValues { $0 as? UInt64 }
+        desktops.nativeCatalog.homes = defaults.dictionary(forKey: DefaultsKey.wsNativeDisplays)
+            as? [String: String] ?? [:]
+        desktops.nativeCatalog.uuids = defaults.dictionary(forKey: DefaultsKey.wsNativeSpaceUUIDs)
+            as? [String: String] ?? [:]
+        for (key, value) in defaults.dictionary(forKey: DefaultsKey.wsOwners) as? [String: String] ?? [:] {
             if let id = CGWindowID(key) { floats.savedOwnerOf[id] = value }
         }
-        monitorOf = defaults.dictionary(forKey: "ws.monitors") as? [String: String] ?? [:]
-        labels = defaults.dictionary(forKey: "ws.labels") as? [String: String] ?? [:]
-        virtualShown = defaults.dictionary(forKey: "ws.shown") as? [String: String] ?? [:]
-        for (key, value) in defaults.dictionary(forKey: "ws.home") ?? [:] {
+        monitorOf = defaults.dictionary(forKey: DefaultsKey.wsMonitors) as? [String: String] ?? [:]
+        labels = defaults.dictionary(forKey: DefaultsKey.wsLabels) as? [String: String] ?? [:]
+        virtualShown = defaults.dictionary(forKey: DefaultsKey.wsShown) as? [String: String] ?? [:]
+        for (key, value) in defaults.dictionary(forKey: DefaultsKey.wsHome) ?? [:] {
             if let space = value as? UInt64 { desktops.homeSpace[key] = space }
         }
-        for (key, value) in defaults.dictionary(forKey: "ws.floating") as? [String: Bool] ?? [:] {
+        for (key, value) in defaults.dictionary(forKey: DefaultsKey.wsFloating) as? [String: Bool] ?? [:] {
             if let id = CGWindowID(key) { floats.savedFloating[id] = value }
         }
         loadNativeMigration(defaults)
@@ -29,7 +30,7 @@ extension WindowManager {
     }
 
     private func loadWorkspaceLayouts(_ defaults: UserDefaults) {
-        let saved = defaults.dictionary(forKey: "ws.layouts") as? [String: String] ?? [:]
+        let saved = defaults.dictionary(forKey: DefaultsKey.wsLayouts) as? [String: String] ?? [:]
         for (workspace, value) in saved where isVirtual(workspace) {
             let parts = value.split(separator: " ").map(String.init)
             guard let layout = parts.first.flatMap(Layout.init(rawValue:)) else { continue }
@@ -63,11 +64,11 @@ extension WindowManager {
         guard key != lastSavedWorkspaces else { return }
         lastSavedWorkspaces = key
         let defaults = UserDefaults.standard
-        defaults.set(monitors, forKey: "ws.monitors")
-        defaults.set(virtualShown, forKey: "ws.shown")
-        defaults.set(desktops.homeSpace, forKey: "ws.home")
-        defaults.set(labels, forKey: "ws.labels")
-        defaults.set(layouts, forKey: "ws.layouts")
+        defaults.set(monitors, forKey: DefaultsKey.wsMonitors)
+        defaults.set(virtualShown, forKey: DefaultsKey.wsShown)
+        defaults.set(desktops.homeSpace, forKey: DefaultsKey.wsHome)
+        defaults.set(labels, forKey: DefaultsKey.wsLabels)
+        defaults.set(layouts, forKey: DefaultsKey.wsLayouts)
     }
 
     func showWorkspace(

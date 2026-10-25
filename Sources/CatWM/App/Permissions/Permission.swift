@@ -58,7 +58,7 @@ enum Permission: CaseIterable {
     static func closeSettingsWindows() {
         let settings = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.systempreferences")
         guard let app = settings.first else { return }
-        for window in AXUIElementCreateApplication(app.processIdentifier).elements(kAXWindowsAttribute) {
+        for window in axApp(app.processIdentifier).elements(kAXWindowsAttribute) {
             window.element(kAXCloseButtonAttribute)?.perform(kAXPressAction)
         }
     }

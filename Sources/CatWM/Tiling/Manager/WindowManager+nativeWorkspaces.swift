@@ -31,9 +31,9 @@ extension WindowManager {
             desktops.lastNativeCatalogSaved = desktops.nativeCatalog.saved
             desktops.lastNativeCatalogHomes = desktops.nativeCatalog.homes
             desktops.lastNativeCatalogUUIDs = desktops.nativeCatalog.uuids
-            UserDefaults.standard.set(desktops.nativeCatalog.saved, forKey: "ws.nativeSpaces")
-            UserDefaults.standard.set(desktops.nativeCatalog.homes, forKey: "ws.nativeDisplays")
-            UserDefaults.standard.set(desktops.nativeCatalog.uuids, forKey: "ws.nativeSpaceUUIDs")
+            UserDefaults.standard.set(desktops.nativeCatalog.saved, forKey: DefaultsKey.wsNativeSpaces)
+            UserDefaults.standard.set(desktops.nativeCatalog.homes, forKey: DefaultsKey.wsNativeDisplays)
+            UserDefaults.standard.set(desktops.nativeCatalog.uuids, forKey: DefaultsKey.wsNativeSpaceUUIDs)
         }
         return snapshot
     }

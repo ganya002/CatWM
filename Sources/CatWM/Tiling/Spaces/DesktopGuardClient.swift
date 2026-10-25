@@ -98,7 +98,8 @@ import AppKit
 
     private func send(_ message: String) {
         guard process.isRunning else { heartbeat?.invalidate(); return }
-        try? input.fileHandleForWriting.write(contentsOf: Data((message + "\n").utf8))
+        let line = Data((message + "\n").utf8)
+        try? input.fileHandleForWriting.write(contentsOf: line) // style-ok: the guard may exit after the check
     }
 
     private func receive(_ data: Data) {

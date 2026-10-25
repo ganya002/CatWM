@@ -2,18 +2,20 @@ import AppKit
 
 extension WindowManager {
     func loadNativeMigration(_ defaults: UserDefaults) {
-        if defaults.integer(forKey: "ws.nativeVersion") == 0 {
-            defaults.set(defaults.dictionary(forKey: "ws.windows") ?? [:], forKey: "ws.legacy.windows")
-            defaults.set(defaults.dictionary(forKey: "ws.owners") ?? [:], forKey: "ws.legacy.owners")
-            defaults.set(1, forKey: "ws.nativeVersion")
+        if defaults.integer(forKey: DefaultsKey.wsNativeVersion) == 0 {
+            defaults.set(defaults.dictionary(forKey: DefaultsKey.wsWindows) ?? [:], forKey: DefaultsKey.wsLegacyWindows)
+            defaults.set(defaults.dictionary(forKey: DefaultsKey.wsOwners) ?? [:], forKey: DefaultsKey.wsLegacyOwners)
+            defaults.set(1, forKey: DefaultsKey.wsNativeVersion)
         }
-        if defaults.dictionary(forKey: "ws.nativeMigration") == nil {
-            defaults.set(defaults.dictionary(forKey: "ws.legacy.windows") ?? [:], forKey: "ws.nativeMigration")
-            if defaults.dictionary(forKey: "ws.legacy.owners") == nil {
-                defaults.set(defaults.dictionary(forKey: "ws.owners") ?? [:], forKey: "ws.legacy.owners")
+        if defaults.dictionary(forKey: DefaultsKey.wsNativeMigration) == nil {
+            defaults.set(defaults.dictionary(forKey: DefaultsKey.wsLegacyWindows) ?? [:],
+                         forKey: DefaultsKey.wsNativeMigration)
+            if defaults.dictionary(forKey: DefaultsKey.wsLegacyOwners) == nil {
+                defaults.set(defaults.dictionary(forKey: DefaultsKey.wsOwners) ?? [:],
+                             forKey: DefaultsKey.wsLegacyOwners)
             }
         }
-        let pending = defaults.dictionary(forKey: "ws.nativeMigration") as? [String: String] ?? [:]
+        let pending = defaults.dictionary(forKey: DefaultsKey.wsNativeMigration) as? [String: String] ?? [:]
         desktops.nativeMigration = Dictionary(pending.compactMap { key, value in
             CGWindowID(key).map { ($0, value) }
         }, uniquingKeysWith: { first, _ in first })
@@ -21,7 +23,7 @@ extension WindowManager {
 
     func restoreNativeMigration(_ window: Window) {
         guard let workspace = desktops.nativeMigration[window.id] else { return }
-        let owners = UserDefaults.standard.dictionary(forKey: "ws.legacy.owners") as? [String: String] ?? [:]
+        let owners = UserDefaults.standard.dictionary(forKey: DefaultsKey.wsLegacyOwners) as? [String: String] ?? [:]
         guard owners[String(window.id)] == owner(window), isVirtual(workspace), !isPending(workspace) else {
             completeNativeMigration(window.id, workspace: workspace)
             return
@@ -38,6 +40,6 @@ extension WindowManager {
         desktops.nativeMigration[id] = nil
         UserDefaults.standard.set(Dictionary(uniqueKeysWithValues: desktops.nativeMigration.map {
             (String($0.key), $0.value)
-        }), forKey: "ws.nativeMigration")
+        }), forKey: DefaultsKey.wsNativeMigration)
     }
 }

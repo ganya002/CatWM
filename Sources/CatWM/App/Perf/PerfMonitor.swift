@@ -109,18 +109,18 @@ enum PerfMonitor {
               CACurrentMediaTime() - launched > settle, let endpoint else { return }
         let digest = fingerprint(event)
         let defaults = UserDefaults.standard
-        var counts = defaults.dictionary(forKey: "perf.counts") as? [String: Int] ?? [:]
+        var counts = defaults.dictionary(forKey: DefaultsKey.perfCounts) as? [String: Int] ?? [:]
         let count = counts[digest, default: 0] + 1
         counts[digest] = count
-        defaults.set(counts, forKey: "perf.counts")
+        defaults.set(counts, forKey: DefaultsKey.perfCounts)
 
         let severe = event.hangMs > severeHang * 1000
         guard count >= (severe ? severeEventsNeeded : eventsNeeded), !uploading else { return }
         let now = Date().timeIntervalSince1970
-        let sentAt = defaults.dictionary(forKey: "perf.sentAt") as? [String: Double] ?? [:]
-        var log = (defaults.array(forKey: "perf.sentLog") as? [Double] ?? []).filter { now - $0 < 7 * 86400 }
+        let sentAt = defaults.dictionary(forKey: DefaultsKey.perfSentAt) as? [String: Double] ?? [:]
+        var log = (defaults.array(forKey: DefaultsKey.perfSentLog) as? [Double] ?? []).filter { now - $0 < 7 * 86400 }
         guard now - (sentAt[digest] ?? 0) > cooldown, log.count < perWeek,
-              now - (log.last ?? 0) > 86400, now > defaults.double(forKey: "perf.backoffUntil") else { return }
+              now - (log.last ?? 0) > 86400, now > defaults.double(forKey: DefaultsKey.perfBackoffUntil) else { return }
 
         uploading = true
         upload(event, fingerprint: digest, count: count, to: endpoint) { succeeded in
@@ -130,11 +130,11 @@ enum PerfMonitor {
                 var sent = sentAt
                 sent[digest] = now
                 counts[digest] = 0
-                defaults.set(sent, forKey: "perf.sentAt")
-                defaults.set(log, forKey: "perf.sentLog")
-                defaults.set(counts, forKey: "perf.counts")
+                defaults.set(sent, forKey: DefaultsKey.perfSentAt)
+                defaults.set(log, forKey: DefaultsKey.perfSentLog)
+                defaults.set(counts, forKey: DefaultsKey.perfCounts)
             } else {
-                defaults.set(now + 3600, forKey: "perf.backoffUntil")
+                defaults.set(now + 3600, forKey: DefaultsKey.perfBackoffUntil)
             }
         }
     }
