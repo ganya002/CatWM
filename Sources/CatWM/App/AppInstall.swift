@@ -17,10 +17,14 @@ final class LoginItem {
         }
     }
 
+    static let isAvailable = !Instance.isNamed
+
     @discardableResult
-    func set(_ enabled: Bool) -> Bool {
+    func set(_ enabled: Bool, available: Bool = LoginItem.isAvailable,
+             service: (Bool) throws -> Void = LoginItem.applyToMainApp) -> Bool {
+        guard available else { return false }
         do {
-            if enabled { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
+            try service(enabled)
             status = SMAppService.mainApp.status
             Log.info("launch at login \(enabled ? "on" : "off") (status \(status.rawValue))")
             return true
@@ -28,6 +32,10 @@ final class LoginItem {
             Log.info("launch at login: \(error.localizedDescription)")
             return false
         }
+    }
+
+    static func applyToMainApp(_ enabled: Bool) throws {
+        if enabled { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
     }
 
     func enableOnFirstLaunch() {

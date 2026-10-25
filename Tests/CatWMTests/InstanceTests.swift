@@ -66,7 +66,16 @@ import Testing
 
     @Test func theSocketRefusesAPathThatIsTooLong() {
         let folder = "/tmp/catwm-test-\(UUID().uuidString)/" + String(repeating: "a", count: 80)
-        #expect(ControlServer.listen(on: folder + "/catwm.sock") == nil)
+        var lines: [String] = []
+        #expect(ControlServer.listen(on: folder + "/catwm.sock") { lines.append($0) } == nil)
         #expect(!FileManager.default.fileExists(atPath: folder))
+        #expect(lines.count == 1 && lines[0].contains("too long"))
+    }
+
+    @Test func aNamedInstanceDoesNotChangeTheLoginItem() {
+        var calls: [Bool] = []
+        #expect(!LoginItem.shared.set(true, available: false) { calls.append($0) })
+        #expect(!LoginItem.shared.set(false, available: false) { calls.append($0) })
+        #expect(calls.isEmpty)
     }
 }

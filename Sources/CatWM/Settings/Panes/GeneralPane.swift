@@ -14,9 +14,14 @@ struct GeneralPane: View {
             }
 
             OGroup("Startup") {
-                OSwitchRow(GeneralPane.searchLogin.title, isOn: loginBinding)
-                    .setting(GeneralPane.searchLogin.id, settingsUI)
-                if status.loginNeedsApproval {
+                if LoginItem.isAvailable {
+                    OSwitchRow(GeneralPane.searchLogin.title, isOn: loginBinding)
+                        .setting(GeneralPane.searchLogin.id, settingsUI)
+                } else {
+                    ORow(GeneralPane.searchLogin.title, description: "Only the main CatWM can open at login")
+                        .setting(GeneralPane.searchLogin.id, settingsUI)
+                }
+                if LoginItem.isAvailable && status.loginNeedsApproval {
                     ORow("Waiting for approval", description: "Allow CatWM in Login Items",
                          symbol: "exclamationmark.triangle.fill") {
                         OButton("Open Login Items", size: .small) { LoginItem.shared.openSettings() }
