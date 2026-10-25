@@ -43,7 +43,7 @@ extension WindowManager {
         desktops.spaceGeneration += 1
         let generation = desktops.spaceGeneration
         guard autoCorrect else { return abs(delta) }
-        DispatchQueue.main.asyncAfter( // style-ok: a Desktop step sequence has no end event
+        DispatchQueue.main.asyncAfter( // style-ok: a lost key step sends no Space change, so a timeout checks it
             deadline: .now() + settle
         ) { [weak self] in
             self?.correctSpace(display: screen.uuid, target: info.desktops[number - 1], generation: generation,
@@ -63,7 +63,7 @@ extension WindowManager {
         for _ in 0..<abs(delta) { post(combo) }
         let settle = 0.6 + 0.15 * Double(abs(delta))
         desktops.pendingSpace = .init(display: display, index: target, until: Date().addingTimeInterval(settle))
-        DispatchQueue.main.asyncAfter( // style-ok: a Desktop step sequence has no end event
+        DispatchQueue.main.asyncAfter( // style-ok: a lost key step sends no Space change, so a timeout checks it
             deadline: .now() + settle
         ) { [weak self] in
             self?.correctSpace(display: display, target: target, generation: generation, attemptsLeft: attemptsLeft - 1)
@@ -99,7 +99,7 @@ extension WindowManager {
         postMouse(.leftMouseDown, point)
         func step(_ index: Int) {
             guard index < offsets.count else {
-                DispatchQueue.main.asyncAfter( // style-ok: the server does not confirm a fake drag
+                DispatchQueue.main.asyncAfter( // style-ok: a failed fake grab sends no kAXWindowMoved
                     deadline: .now() + 0.09
                 ) { [weak self] in
                     guard let self else { return }

@@ -81,7 +81,7 @@ extension WindowManager {
         case kAXWindowCreatedNotification:
             scheduleRefresh(after: 0)
             for delay in [0.3, 1.0] {
-                DispatchQueue.main.asyncAfter( // style-ok: a new window fills in with no event
+                DispatchQueue.main.asyncAfter( // style-ok: an untracked new window has no AX observer
                     deadline: .now() + delay
                 ) { [weak self] in
                     self?.scheduleRefresh(after: 0)

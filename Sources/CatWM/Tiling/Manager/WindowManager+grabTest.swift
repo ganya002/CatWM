@@ -45,7 +45,7 @@ extension WindowManager {
     }
 
     func holdUntilArrived(space number: Int, release: CGPoint, restore: CGPoint, settle: Double, attemptsLeft: Int) {
-        DispatchQueue.main.asyncAfter( // style-ok: a Desktop step sequence has no end event
+        DispatchQueue.main.asyncAfter( // style-ok: a lost key step sends no Space change, so a timeout checks it
             deadline: .now() + settle
         ) { [weak self] in
             guard let self else { return }

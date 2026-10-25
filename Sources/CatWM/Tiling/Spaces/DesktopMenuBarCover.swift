@@ -65,7 +65,7 @@ final class DesktopMenuBarCover {
         let next = Pending(display: screen.id, source: source, image: image, panel: panel(on: screen))
         next.move(to: target)
         pending = next
-        DispatchQueue.main.asyncAfter( // style-ok: a Desktop switch that never starts sends no event
+        DispatchQueue.main.asyncAfter( // style-ok: a cover that no switch claims sends no event
             deadline: .now() + 1
         ) { [self] in
             if pending === next { discard() }
