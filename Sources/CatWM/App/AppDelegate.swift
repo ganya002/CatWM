@@ -38,7 +38,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             WindowManager.shared.prewarm()
         }
         if Onboarding.shouldShow(firstRun: firstRun, trusted: trusted)
-            || CommandLine.arguments.contains("--onboarding") {
+            || LaunchFlag.onboarding.isSet {
             Onboarding.shared.start()
         } else if !trusted {
             Permission.accessibility.request()
@@ -46,7 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Tips.shared.launched()
         WhatsNew.shared.launched()
         #if DEBUG
-        if CommandLine.arguments.contains("--gallery") { DesignGallery.shared.open() }
+        if LaunchFlag.gallery.isSet { DesignGallery.shared.open() }
         #endif
         updateIcon()
         watcher.subscribe { [weak self] granted, changed in self?.permissionsChecked(granted, changed) }

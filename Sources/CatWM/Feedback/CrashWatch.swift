@@ -28,7 +28,7 @@ enum CrashWatch {
 
         let defaults = UserDefaults.standard
         if defaults.object(forKey: seenKey) == nil { defaults.set(Date(), forKey: seenKey) }
-        if CommandLine.arguments.contains("--crash-report"), let latest = newestReport(after: .distantPast) {
+        if LaunchFlag.crashReport.isSet, let latest = newestReport(after: .distantPast) {
             return found(latest)
         }
         guard let previous else { return pending.map(send) ?? () }
@@ -83,7 +83,7 @@ enum CrashWatch {
         while [ $i -lt 60 ]; do
           i=$((i + 1))
           if [ -n "$(find "$4" -maxdepth 1 -name 'CatWM-*.ips' -newer "$2" 2>/dev/null)" ]; then
-            open "$3" --args --after-crash
+            open "$3" --args \(LaunchFlag.afterCrash.rawValue)
             exit 0
           fi
           sleep 1

@@ -2,7 +2,7 @@ import Foundation
 
 enum Log {
     static let url = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/CatWM.log")
-    static let verboseLaunch = CommandLine.arguments.contains("--verbose")
+    static let verboseLaunch = LaunchFlag.verbose.isSet
 
     static let maxSize = 2_000_000
     static let keptSize = 500_000
