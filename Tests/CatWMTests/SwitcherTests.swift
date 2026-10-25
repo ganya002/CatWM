@@ -145,3 +145,26 @@ private let all = [safari, slack, notes, safariTwo]
         #expect(model.scope == .all)
     }
 }
+
+@Suite struct SwitcherKeyTests {
+    @Test func everySwitcherKeyIsABindInTheDefaultConfig() {
+        let binds = Config.parse(defaultText).switcherBindings
+        #expect(Set(binds.map { SwitcherKey($0.arg) }) == Set(SwitcherKey.allCases))
+        #expect(binds.allSatisfy { $0.submap == Hotkeys.switcherMode })
+    }
+
+    @Test func aConfigWithoutSwitcherKeysGetsTheDefaultsAndOwnKeysWin() {
+        #expect(Config.parse("$mod = ALT\n").switcherBindings.count == Config.parse(switcherBinds).bindings.count)
+        let own = Config.parse("submap = switcher\nbind = , p, switcher, peek\nsubmap = reset\n").switcherBindings
+        #expect(own.map(\.keyCode) == [keyCodes["p"]])
+    }
+
+    @Test func theShortcutMapListsTheSwitcherKeysOfAnOldConfig() {
+        let doc = ConfigDocument(text: "$mod = ALT\nbind = $mod, tab, switcher\n")
+        #expect(doc.submaps.contains(Hotkeys.switcherMode))
+        let titles = doc.keyActions(in: Hotkeys.switcherMode).map(\.title)
+        #expect(titles.contains("Peek at the Window"))
+        #expect(doc.problemCount == 0)
+        #expect(Config.parse(doc.serialize()).bindings.contains { $0.submap == Hotkeys.switcherMode })
+    }
+}

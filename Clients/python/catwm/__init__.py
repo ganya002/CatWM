@@ -20,6 +20,7 @@ class CatWMError(Exception):
 Direction = Literal["left", "right", "up", "down"]
 Step = Literal["next", "prev"]
 Layout = Literal["tall", "tall-right", "wide", "middle-wide", "fullscreen", "column", "row", "floating", "bsp", "3column-left", "3column-middle", "3column-right", "two-pane", "two-pane-right", "widescreen-tall", "widescreen-tall-right"]
+Key = Literal["next", "prev", "peek", "app", "scope", "bring", "minimize", "close", "quit", "hide", "pick", "cancel"]
 
 
 class Rect(TypedDict):
@@ -460,11 +461,11 @@ class CatWM:
         args: dict[str, Any] = {}
         self.call("sort-undo", args)
 
-    def switcher(self, step: Step | None = None) -> None:
-        """Open the window switcher"""
+    def switcher(self, key: Key | None = None) -> None:
+        """Open the window switcher, or run a switcher key while it is open"""
         args: dict[str, Any] = {}
-        if step is not None:
-            args["step"] = step
+        if key is not None:
+            args["key"] = key
         self.call("switcher", args)
 
     def submap(self, name: str) -> None:

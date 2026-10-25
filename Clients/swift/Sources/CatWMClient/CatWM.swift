@@ -35,6 +35,21 @@ public enum Layout: String, CaseIterable, Sendable {
     case widescreenTallRight = "widescreen-tall-right"
 }
 
+public enum Key: String, CaseIterable, Sendable {
+    case next = "next"
+    case prev = "prev"
+    case peek = "peek"
+    case app = "app"
+    case scope = "scope"
+    case bring = "bring"
+    case minimize = "minimize"
+    case close = "close"
+    case quit = "quit"
+    case hide = "hide"
+    case pick = "pick"
+    case cancel = "cancel"
+}
+
 public struct Rect: Codable, Equatable, Sendable {
     public let x: Double
     public let y: Double
@@ -559,10 +574,10 @@ public final class CatWM: @unchecked Sendable {
         _ = try call("sort-undo", args)
     }
 
-    /// Open the window switcher
-    public func switcher(step: Step? = nil) throws {
+    /// Open the window switcher, or run a switcher key while it is open
+    public func switcher(key: Key? = nil) throws {
         var args: [String: Any] = [:]
-        if let value = step { args["step"] = value.rawValue }
+        if let value = key { args["key"] = value.rawValue }
         _ = try call("switcher", args)
     }
 

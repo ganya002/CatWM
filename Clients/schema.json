@@ -563,11 +563,21 @@
         {
           "choices" : [
             "next",
-            "prev"
+            "prev",
+            "peek",
+            "app",
+            "scope",
+            "bring",
+            "minimize",
+            "close",
+            "quit",
+            "hide",
+            "pick",
+            "cancel"
           ],
-          "name" : "step",
+          "name" : "key",
           "required" : false,
-          "summary" : "Which way to go. The default is `next`.",
+          "summary" : "`next` and `prev` open the switcher or move the selection. The others work while it is open. The default is `next`.",
           "type" : "enum"
         }
       ],
@@ -576,7 +586,7 @@
       "result" : {
         "kind" : "none"
       },
-      "summary" : "Open the window switcher"
+      "summary" : "Open the window switcher, or run a switcher key while it is open"
     },
     {
       "args" : [

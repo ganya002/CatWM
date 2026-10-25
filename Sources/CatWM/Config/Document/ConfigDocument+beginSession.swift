@@ -78,6 +78,9 @@ extension ConfigDocument {
         config = Config.parse(text)
         var parse = ConfigTextParse()
         for raw in text.components(separatedBy: .newlines) { parse.read(raw) }
+        if !parse.binds.contains(where: { $0.submap == Hotkeys.switcherMode }) {
+            for raw in switcherBinds.components(separatedBy: .newlines) { parse.read(raw) }
+        }
         if !parse.vars.contains(where: { $0.name.lowercased().contains("mod") }) {
             parse.vars.insert(VarRow(name: "$mod", value: "ALT"), at: 0)
         }

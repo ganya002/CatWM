@@ -90,7 +90,7 @@ struct KeyHint: Identifiable, Equatable {
         case "exec": return "Run"
         case "exit": return "Quit"
         case "sethomespace": return "Home"
-        case "switcher": return back ? "‹ Switch" : "Switch"
+        case "switcher": return SwitcherKey(argument).label
         case "submap": return argument == "reset" ? "Exit" : argument.capitalized
         default:
             var name = Substring(command)

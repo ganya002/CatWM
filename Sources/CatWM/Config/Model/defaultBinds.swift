@@ -1,5 +1,23 @@
 import AppKit
 
+let switcherBinds = """
+submap = switcher
+binde = , tab|right|down, switcher
+binde = SHIFT, tab, switcher, prev
+binde = , left|up, switcher, prev
+bind = , space, switcher, peek
+bind = , grave, switcher, app
+bind = , return, switcher, pick
+bind = , escape, switcher, cancel
+bind = SUPER, s, switcher, scope
+bind = SUPER, b, switcher, bring
+bind = SUPER, m, switcher, minimize
+bind = SUPER, w, switcher, close
+bind = SUPER, q, switcher, quit
+bind = SUPER, h, switcher, hide
+submap = reset
+"""
+
 let defaultBinds = """
 # ---- keybinds: bind = MODS, key, dispatcher, args -------------------------
 # Global binds work everywhere. Everything else lives in "window mode" (a Hyprland submap):
@@ -17,6 +35,9 @@ bind = SUPER, capslock, submap, window
 # bind = $mod, mouse_down, workspace, e+1
 # bind = $mod, mouse_up, workspace, e-1
 # bind = $mod CTRL, swipe_left, workspace, e+1
+
+# Keys while the switcher is open. You still hold $mod, so these modifiers come on top of it.
+\(switcherBinds)
 
 submap = window
 bind = , h|j|k|l, movefocus, l|d|u|r

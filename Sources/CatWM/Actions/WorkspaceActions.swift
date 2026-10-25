@@ -49,11 +49,25 @@ extension WindowActions {
                                order: 1)]
     ) { _ in SortPanel.shared.undoApplied() }
 
-    static let switcher = WindowAction.step(
-        "switcher", "overview", "Open the window switcher",
+    static let switcher = WindowAction.text(
+        "switcher", "overview", "Open the window switcher, or run a switcher key while it is open",
+        .choice("key", SwitcherKey.allCases.map(\.rawValue),
+                "`next` and `prev` open the switcher or move the selection. The others work while it is open. "
+                    + "The default is `next`.", required: false),
         pickers: [
             ActionPicker("Switch Windows", .window, "", "rectangle.stack", focusRequired: false),
-            ActionPicker("Switch Windows Backward", .window, "prev", "rectangle.stack", focusRequired: false)
+            ActionPicker("Switch Windows Backward", .window, "prev", "rectangle.stack", focusRequired: false),
+            ActionPicker("Peek at the Window", .window, "peek", "eye", focusRequired: false, order: 1),
+            ActionPicker("Show Only This App", .window, "app", "app", focusRequired: false, order: 1),
+            ActionPicker("Change the Scope", .window, "scope", "scope", focusRequired: false, order: 1),
+            ActionPicker("Bring the Window Here", .window, "bring", "arrow.down.to.line", focusRequired: false,
+                         order: 1),
+            ActionPicker("Minimize the Window", .window, "minimize", "minus.square", focusRequired: false, order: 1),
+            ActionPicker("Close the Window", .window, "close", "xmark.square", focusRequired: false, order: 1),
+            ActionPicker("Quit the App", .window, "quit", "power", focusRequired: false, order: 1),
+            ActionPicker("Hide the App", .window, "hide", "eye.slash", focusRequired: false, order: 1),
+            ActionPicker("Open the Window", .window, "pick", "return", focusRequired: false, order: 1),
+            ActionPicker("Close the Switcher", .window, "cancel", "escape", focusRequired: false, order: 1)
         ]
-    ) { Switcher.shared.open(backward: $0.backward) }
+    ) { Switcher.shared.run($0.arg) }
 }

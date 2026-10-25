@@ -230,6 +230,11 @@ struct Config {
 }
 
 extension Config {
+    var switcherBindings: [KeyBinding] {
+        let own = bindings.filter { $0.submap == Hotkeys.switcherMode }
+        return own.isEmpty ? Config.parse(switcherBinds).bindings : own
+    }
+
     var workspaceBindings: [KeyBinding] {
         guard virtualWorkspaces else { return bindings }
         var defaults = Config.parse("bind = CTRL, 1..0, workspace, 1..10\n"

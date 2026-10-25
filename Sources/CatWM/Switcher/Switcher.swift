@@ -1,6 +1,26 @@
 import AppKit
 import SwiftUI
 
+enum SwitcherKey: String, CaseIterable {
+    case next, prev, peek, app, scope, bring, minimize, close, quit, hide, pick, cancel
+
+    init(_ argument: String) {
+        let name = argument.lowercased()
+        self = name.hasPrefix("prev") ? .prev : Self(rawValue: name) ?? .next
+    }
+
+    var opens: Bool { self == .next || self == .prev }
+
+    var label: String {
+        switch self {
+        case .next: "Switch"
+        case .prev: "‹ Switch"
+        case .pick: "Open"
+        default: rawValue.capitalized
+        }
+    }
+}
+
 final class Switcher {
     static let shared = Switcher()
 
@@ -17,6 +37,7 @@ final class Switcher {
     private var clickMonitor: Any?
     private var previewTask: Task<Void, Never>?
     private var peekTask: Task<Void, Never>?
+    private var binds: [UInt64: KeyBinding] = [:]
     private static let holdDelay = 0.15
     private static let releaseDelay = 0.3
 
@@ -26,8 +47,7 @@ final class Switcher {
         model.onDismiss = { [weak self] in self?.cancel() }
     }
 
-    func open(backward: Bool) {
-        guard !active else { move(backward ? -1 : 1, wrap: true); return }
+    private func open(backward: Bool) {
         let items = WindowManager.shared.switcherItems()
         guard !items.isEmpty else { return }
         let focused = WindowManager.shared.focusedWindow()?.id
@@ -37,6 +57,8 @@ final class Switcher {
         guard !held.isEmpty else { WindowManager.shared.switchTo(items[start]); return }
         active = true
         sticky = false
+        binds = Dictionary(WindowManager.shared.config.switcherBindings.map { (Hotkeys.key($0.keyCode, $0.mods), $0) },
+                           uniquingKeysWith: { first, _ in first })
         holdMods = held
         var still = Transaction()
         still.disablesAnimations = true
@@ -87,44 +109,45 @@ final class Switcher {
         if let item = model.selected { confirm(item) } else { cancel() }
     }
 
+    func run(_ argument: String, isRepeat: Bool = false) {
+        let key = SwitcherKey(argument)
+        guard active else {
+            if key.opens { open(backward: key == .prev) }
+            return
+        }
+        let manager = WindowManager.shared
+        switch key {
+        case .next, .prev: move(key == .prev ? -1 : 1, wrap: !isRepeat)
+        case .peek: togglePeek()
+        case .app: model.toggleAppFilter(); reveal()
+        case .scope: model.nextScope(); reveal()
+        case .bring: bringHere()
+        case .minimize: act(wholeApp: false) { manager.minimizeSwitcherItem($0) }
+        case .close: act(wholeApp: false) { manager.closeWindow($0.id) }
+        case .quit: act(wholeApp: true) { Self.app($0)?.terminate() ?? false }
+        case .hide: act(wholeApp: true) { Self.app($0)?.hide() ?? false }
+        case .pick: if let item = model.selected { confirm(item) }
+        case .cancel: cancel()
+        }
+    }
+
     private func key(_ code: UInt16, _ flags: CGEventFlags, isRepeat: Bool) {
         guard active else { return }
         jumpWork?.cancel()
         releaseWork?.cancel()
-        let command = flags.contains(.maskCommand), extra = flags.subtracting(holdMods)
-        switch code {
-        case 48: move(flags.contains(.maskShift) ? -1 : 1, wrap: !isRepeat)
-        case 124, 125: move(1, wrap: !isRepeat)
-        case 123, 126: move(-1, wrap: !isRepeat)
-        case 53 where !isRepeat: cancel()
-        case 36, 76: if !isRepeat, let item = model.selected { confirm(item) }
-        case 51: edit { model.erase(all: !extra.isDisjoint(with: [.maskCommand, .maskAlternate])) }
-        case 50: if !isRepeat { model.toggleAppFilter(); reveal() }
-        case 49 where !model.query.isEmpty: edit { model.type(" ") }
-        case 49: if !isRepeat { togglePeek() }
-        default:
-            if command, commandKey(code, isRepeat: isRepeat) { return }
-            if extra.isDisjoint(with: [.maskCommand, .maskControl]),
-                      let text = ConfigDocument.typedCharacter(keyCode: code, flags: extra.contains(.maskShift)
-                          ? .shift : []) {
-                edit { model.type(text) }
+        let extra = flags.subtracting(holdMods)
+        if code == 51 { edit { model.erase(all: !extra.isDisjoint(with: [.maskCommand, .maskAlternate])) }; return }
+        let typed = extra.isDisjoint(with: [.maskCommand, .maskControl])
+            ? (code == 49 ? " " : ConfigDocument.typedCharacter(keyCode: code, flags: extra.contains(.maskShift)
+                ? .shift : [])) : nil
+        if model.searching, let typed { edit { model.type(typed) }; return }
+        if let bind = binds[Hotkeys.key(code, extra)] ?? binds[Hotkeys.key(code, flags)] {
+            if bind.dispatcher == WindowActions.switcher.name, bind.repeats || !isRepeat {
+                run(bind.arg, isRepeat: isRepeat)
             }
+            return
         }
-    }
-
-    private func commandKey(_ code: UInt16, isRepeat: Bool) -> Bool {
-        guard [1, 4, 11, 12, 13, 46].contains(code) else { return false }
-        guard !isRepeat else { return true }
-        let manager = WindowManager.shared
-        switch code {
-        case 1: model.nextScope(); reveal()
-        case 11: bringHere()
-        case 46: act(wholeApp: false) { manager.minimizeSwitcherItem($0) }
-        case 13: act(wholeApp: false) { manager.closeWindow($0.id) }
-        case 12: act(wholeApp: true) { Self.app($0)?.terminate() ?? false }
-        default: act(wholeApp: true) { Self.app($0)?.hide() ?? false }
-        }
-        return true
+        if let typed, code != 49 { edit { model.type(typed) } }
     }
 
     private func move(_ delta: Int, wrap: Bool) {

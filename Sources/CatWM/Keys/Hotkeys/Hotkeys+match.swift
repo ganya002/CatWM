@@ -78,6 +78,7 @@ extension Hotkeys {
 
 extension Hotkeys {
     static let windowMode = "window"
+    static let switcherMode = "switcher"
 
     func handlePointer(_ type: CGEventType, _ event: CGEvent) -> Bool {
         type == .scrollWheel ? handleScroll(event) : handleRightClick(type, event)

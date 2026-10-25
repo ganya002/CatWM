@@ -18,7 +18,8 @@ extension SortModel {
         running = true
         binds = [:]
         var modes: [String] = []
-        for bind in config.bindings where !bind.submap.isEmpty && !modes.contains(bind.submap) {
+        for bind in config.bindings where !bind.submap.isEmpty && bind.submap != Hotkeys.switcherMode
+            && !modes.contains(bind.submap) {
             modes.append(bind.submap)
         }
         let mode = modes.first { $0.lowercased() == "window" } ?? modes.first ?? ""

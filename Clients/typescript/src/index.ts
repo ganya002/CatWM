@@ -8,6 +8,7 @@ export const PROTOCOL = 1;
 export type Direction = "left" | "right" | "up" | "down";
 export type Step = "next" | "prev";
 export type Layout = "tall" | "tall-right" | "wide" | "middle-wide" | "fullscreen" | "column" | "row" | "floating" | "bsp" | "3column-left" | "3column-middle" | "3column-right" | "two-pane" | "two-pane-right" | "widescreen-tall" | "widescreen-tall-right";
+export type Key = "next" | "prev" | "peek" | "app" | "scope" | "bring" | "minimize" | "close" | "quit" | "hide" | "pick" | "cancel";
 
 export interface Rect {
   x: number;
@@ -433,9 +434,9 @@ export class CatWM {
     await this.call("sort-undo");
   }
 
-  /** Open the window switcher */
-  async switcher(step?: Step): Promise<void> {
-    await this.call("switcher", { "step": step });
+  /** Open the window switcher, or run a switcher key while it is open */
+  async switcher(key?: Key): Promise<void> {
+    await this.call("switcher", { "key": key });
   }
 
   /** Enter a key mode, or leave it */

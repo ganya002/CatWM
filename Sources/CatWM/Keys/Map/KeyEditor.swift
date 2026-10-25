@@ -17,14 +17,19 @@ struct KeyEditor: View {
     var hairline: some View { Rectangle().fill(Theme.hairline).frame(height: 1) }
 
     var catalog: [Action] {
-        var modes = doc.submaps.filter { !$0.isEmpty }
+        let switcher = WindowActions.switcher.name
+        guard draft.mode != Hotkeys.switcherMode else { return Actions.all.filter { $0.dispatcher == switcher } }
+        var modes = doc.submaps.filter { !$0.isEmpty && $0 != Hotkeys.switcherMode }
         if !modes.contains(where: { $0.lowercased() == "window" }) { modes.insert("window", at: 0) }
         let enter = modes.map {
             Action(title: "Enter \($0.capitalized) Mode", category: .app, dispatcher: "submap", args: $0,
                    symbol: "keyboard")
         }
         let leave = Actions.all.filter { $0.dispatcher == "submap" && $0.args == "reset" }
-        return Actions.all.filter { $0.dispatcher != "submap" } + enter + leave
+        let global = Actions.all.filter {
+            $0.dispatcher != "submap" && ($0.dispatcher != switcher || SwitcherKey($0.args).opens)
+        }
+        return global + enter + leave
     }
 
     var action: Action? {

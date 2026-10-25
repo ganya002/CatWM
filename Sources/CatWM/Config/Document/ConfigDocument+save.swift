@@ -132,7 +132,8 @@ extension ConfigDocument {
             return (.error, "Enter the command to run")
         }
         if let typing = typingIssue(row, flags: flags, combos: mine) { return typing }
-        if flags == .command, !BindRange.isRange(row.key), Self.commonShortcuts.contains(row.key.lowercased()) {
+        if row.submap.isEmpty, flags == .command, !BindRange.isRange(row.key),
+           Self.commonShortcuts.contains(row.key.lowercased()) {
             return (.warning, "Replaces a standard app shortcut (\(prettyShortcut(row).joined()))")
         }
         return nil
