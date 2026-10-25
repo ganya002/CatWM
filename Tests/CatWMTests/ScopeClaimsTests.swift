@@ -58,7 +58,7 @@ import Testing
     @Test func aNewClaimReleasesTheWindowsThatTheManagerAlreadyHas() async throws {
         let scanner = WindowScanner(readDesktop: { _ in WindowServerObservation() }, readApplications: { [] },
                                     claims: ScopeClaims(folder: folder, alive: { _ in true }))
-        let manager = WindowManager(scope: nil, config: Config(), scanner: scanner)
+        let manager = WindowManager(config: Config(), scanner: scanner)
         let claimed = Window(id: 31, element: AXUIElementCreateApplication(4242), pid: 4242, bundleID: nil)
         let other = Window(id: 32, element: AXUIElementCreateApplication(4243), pid: 4243, bundleID: nil)
         manager.windows = [31: claimed, 32: other]
@@ -110,7 +110,7 @@ import Testing
     @Test(.timeLimit(.minutes(1))) func aClaimChangeStartsAScanWithoutAnyOtherEvent() async throws {
         let paths = try #require(InstancePaths(id: "a", home: folder))
         let scanner = claimedScanner(ScopeClaims(folder: paths.instancesFolder, alive: { _ in true }))
-        let manager = WindowManager(scope: nil, config: Config(), scanner: scanner)
+        let manager = WindowManager(config: Config(), scanner: scanner)
         manager.windows = [31: Window(id: 31, element: AXUIElementCreateApplication(4242), pid: 4242, bundleID: nil)]
         let (changes, change) = AsyncStream.makeStream(of: Void.self)
         var changed = changes.makeAsyncIterator()
@@ -175,7 +175,7 @@ import Testing
         weak var releasedClaims: ScopeClaims?
         do {
             let claims = ScopeClaims(folder: paths.instancesFolder)
-            let manager = WindowManager(scope: nil, config: Config(), scanner: claimedScanner(claims))
+            let manager = WindowManager(config: Config(), scanner: claimedScanner(claims))
             manager.watchClaims()
             #expect(handles(to: paths.instancesFolder) == 1)
             released = manager
