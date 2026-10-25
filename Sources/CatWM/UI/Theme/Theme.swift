@@ -62,6 +62,8 @@ enum Theme {
     static let warning = token(\.warning)
     static let danger = token(\.danger)
     static let dangerSoft = token(\.dangerSoft)
+    static let badge = token(\.badge)
+    static let onBadge = token(\.onBadge)
     static let glass = token(\.glass)
     static let wash1 = token(\.wash1)
     static let wash2 = token(\.wash2)

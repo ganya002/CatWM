@@ -19,19 +19,21 @@ extension TabStrips {
             panel.contentView = view
         }
 
-        func show(_ group: TabGroups.Group, above slot: CGRect, focused: Bool, duration: Double) {
+        func show(_ group: TabGroups.Group, above slot: CGRect, style: TabStripStyle, focused: Bool, duration: Double) {
             hidden = false
             let manager = WindowManager.shared
             let tabs = group.members.compactMap { id in
                 manager.windows[id].map { window in
-                    TabStripModel.Tab(id: id, title: Self.title(of: window), pid: window.pid)
+                    TabStripModel.Tab(id: id, title: Self.title(of: window), pid: window.pid,
+                                      badge: Notifications.shared.badge(for: id))
                 }
             }
             if model.dragged == nil, model.tabs != tabs { model.tabs = tabs }
             if model.active != group.active { model.active = group.active }
             if model.focused != focused { model.focused = focused }
             view.lights.isActive = focused
-            let frame = Self.frame(above: slot)
+            if model.style != style { model.style = style }
+            let frame = Self.frame(above: slot, style: style)
             if frame != target || shifted || !panel.isVisible || panel.alphaValue < 1 {
                 let wasVisible = panel.isVisible
                 target = frame
@@ -62,8 +64,10 @@ extension TabStrips {
 
         func contains(_ point: CGPoint) -> Bool {
             let primaryHeight = NSScreen.screens.first?.frame.height ?? 0
+            let bar = NSRect(x: panel.frame.minX, y: panel.frame.minY + model.style.corner,
+                             width: panel.frame.width, height: TabStrip.height)
             return panel.isVisible && panel.alphaValue > 0
-                && panel.frame.contains(NSPoint(x: point.x, y: primaryHeight - point.y))
+                && bar.contains(NSPoint(x: point.x, y: primaryHeight - point.y))
         }
 
         func preview(_ window: Window, at point: CGPoint) {
@@ -186,10 +190,10 @@ extension TabStrips {
             return NSRunningApplication(processIdentifier: window.pid)?.localizedName ?? "Window"
         }
 
-        private static func frame(above slot: CGRect) -> NSRect {
+        private static func frame(above slot: CGRect, style: TabStripStyle) -> NSRect {
             let primaryHeight = NSScreen.screens.first?.frame.height ?? 0
-            return NSRect(x: slot.minX + TabStrip.inset, y: primaryHeight - slot.minY,
-                          width: max(0, slot.width - TabStrip.inset * 2), height: TabStrip.height).integral
+            return NSRect(x: slot.minX + style.sideInset, y: primaryHeight - slot.minY - style.corner,
+                          width: max(0, slot.width - style.sideInset * 2), height: style.panelHeight).integral
         }
     }
 }
