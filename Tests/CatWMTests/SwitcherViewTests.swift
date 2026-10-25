@@ -43,15 +43,16 @@ import Testing
         #expect(SwitcherView.scaled(small.size, by: scale) == CGSize(width: 400, height: 300))
     }
 
-    @Test func barTilesShareOneScaleAndFitTheRoom() {
+    @Test func barTilesShareOneHeightAndFitTheRoom() {
         let room = CGSize(width: 1000, height: 900)
-        let items = [CGSize(width: 1600, height: 1000), CGSize(width: 800, height: 500)].enumerated().map {
+        let items = [CGSize(width: 1600, height: 1000), CGSize(width: 400, height: 500)].enumerated().map {
             SwitcherItem(id: CGWindowID($0 + 1), pid: 1, app: "App", title: "", size: $1)
         }
-        let scale = SwitcherView.barScale(items, room: room)
-        let tiles = items.map { SwitcherView.tileSize($0, scale: scale, room: room) }
-        #expect(tiles.map(\.width).reduce(0, +) <= room.width + 1)
-        #expect(tiles[0].width - SwitcherView.Tile.inner * 2 == (tiles[1].width - SwitcherView.Tile.inner * 2) * 2)
+        let height = SwitcherView.barHeight(items, room: room)
+        let tiles = items.map { SwitcherView.tileSize($0, height: height, room: room) }
+        #expect(tiles.map(\.width).reduce(0, +) <= room.width)
+        #expect(tiles[0].height == tiles[1].height)
+        #expect(tiles[0].width > tiles[1].width * 1.9)
     }
 
     private static func fakeWindow(index: Int, size: CGSize) -> NSImage {

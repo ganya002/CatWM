@@ -39,32 +39,35 @@ struct SwitcherView: View {
         CGSize(width: (size.width * scale).rounded(), height: (size.height * scale).rounded())
     }
 
-    static func barScale(_ items: [SwitcherItem], room: CGSize) -> CGFloat {
-        let sizes = items.map { windowSize($0, room: room) }
-        let wide = (room.width - CGFloat(sizes.count) * Tile.inner * 2) / max(sizes.map(\.width).reduce(0, +), 1)
-        let tall = (room.height - Theme.rowHeight) * Tile.barShare / max(sizes.map(\.height).max() ?? 1, 1)
-        return min(wide, tall, 1)
+    static func aspect(_ item: SwitcherItem, room: CGSize) -> CGFloat {
+        let size = windowSize(item, room: room)
+        return size.width / size.height
     }
 
-    static func tileSize(_ item: SwitcherItem, scale: CGFloat, room: CGSize) -> CGSize {
-        let size = windowSize(item, room: room)
-        return CGSize(width: (size.width * scale).rounded() + Tile.inner * 2,
-                      height: (size.height * scale).rounded() + Tile.inner * 2)
+    static func barHeight(_ items: [SwitcherItem], room: CGSize) -> CGFloat {
+        let wide = (room.width - CGFloat(items.count) * Tile.inner * 2)
+            / max(items.map { aspect($0, room: room) }.reduce(0, +), 1)
+        return min(wide, (room.height - Theme.rowHeight) * Tile.barShare).rounded(.down)
+    }
+
+    static func tileSize(_ item: SwitcherItem, height: CGFloat, room: CGSize) -> CGSize {
+        CGSize(width: (height * aspect(item, room: room)).rounded(.down) + Tile.inner * 2,
+               height: height + Tile.inner * 2)
     }
 
     var mode: Mode { model.searching ? .search : model.peeking ? .peek : .bar }
 
     var body: some View {
         GeometryReader { space in
-            ZStack(alignment: .top) {
+            ZStack {
                 Color.clear.contentShape(Rectangle()).onTapGesture { model.onDismiss?() }
                 card(room: Self.room(space.size))
                     .opacity(model.shown ? 1 : 0)
-                    .scaleEffect(model.shown || reduceMotion ? 1 : 0.97, anchor: .top)
+                    .scaleEffect(model.shown || reduceMotion ? 1 : 0.97)
                     .animation(animated ? model.shown ? Motion.fade : Motion.exit : nil, value: model.shown)
             }
             .padding(Self.margin)
-            .frame(width: space.size.width, height: space.size.height, alignment: .top)
+            .frame(width: space.size.width, height: space.size.height)
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Window switcher")
@@ -75,27 +78,27 @@ struct SwitcherView: View {
     var fade: Animation? { animated ? Motion.fade : nil }
 
     private func card(room: CGSize) -> some View {
-        let scale = Self.barScale(model.results, room: room)
+        let height = Self.barHeight(model.results, room: room)
         let peekScale = Self.peekScale(model.results, room: room)
         let peek = model.selected.map { Self.scaled(Self.windowSize($0, room: room), by: peekScale) } ?? .zero
         return VStack(spacing: 0) {
             switch mode {
-            case .bar: bar(scale: scale, room: room)
+            case .bar: bar(height: height, room: room)
             case .search: search(room: room)
             case .peek: self.peek(peek)
             }
         }
         .transition(.opacity)
-        .frame(width: width(scale: scale, peek: peek, room: room))
+        .frame(width: width(height: height, peek: peek, room: room))
         .surface(.medium)
         .animation(change, value: mode)
     }
 
-    private func width(scale: CGFloat, peek: CGSize, room: CGSize) -> CGFloat? {
+    private func width(height: CGFloat, peek: CGSize, room: CGSize) -> CGFloat? {
         switch mode {
         case .bar:
             model.results.isEmpty ? nil
-                : model.results.map { Self.tileSize($0, scale: scale, room: room).width }.reduce(0, +)
+                : model.results.map { Self.tileSize($0, height: height, room: room).width }.reduce(0, +)
         case .search: Self.searchWidth - Self.inset * 2
         case .peek: peek.width
         }

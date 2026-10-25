@@ -2,11 +2,11 @@ import AppKit
 import SwiftUI
 
 extension SwitcherView {
-    func bar(scale: CGFloat, room: CGSize) -> some View {
+    func bar(height: CGFloat, room: CGSize) -> some View {
         VStack(spacing: Theme.Space.extraSmall) {
-            HStack(alignment: .bottom, spacing: 0) {
+            HStack(spacing: 0) {
                 ForEach(Array(model.results.enumerated()), id: \.element.id) { index, item in
-                    barTile(item, size: Self.tileSize(item, scale: scale, room: room),
+                    barTile(item, size: Self.tileSize(item, height: height, room: room),
                             selected: index == model.selection)
                 }
             }
