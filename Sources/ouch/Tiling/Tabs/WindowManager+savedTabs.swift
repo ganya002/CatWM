@@ -2,12 +2,13 @@ import CoreGraphics
 import Foundation
 
 extension WindowManager {
-    private static let savedTabsKey = "tabs.groups"
-    private static let savedTabsWait: TimeInterval = 10
+    private static let legacyTabsKey = "tabs.groups"
 
     func loadTabs() {
-        savedTabs = (UserDefaults.standard.stringArray(forKey: Self.savedTabsKey) ?? []).compactMap(SavedTabs.init)
-        savedTabsUntil = Date().addingTimeInterval(Self.savedTabsWait)
+        let defaults = UserDefaults.standard
+        savedTabs = (defaults.stringArray(forKey: Self.legacyTabsKey) ?? []).compactMap(SavedTabs.init)
+        defaults.removeObject(forKey: Self.legacyTabsKey)
+        savedTabsUntil = Date().addingTimeInterval(SavedTabs.wait)
     }
 
     func restoreTabs() {
@@ -15,7 +16,10 @@ extension WindowManager {
         let late = Date() >= savedTabsUntil
         savedTabs.removeAll { saved in
             let back = saved.members.filter { member in
-                windows[member.id].map { $0.pid == member.pid && !$0.isFloating } == true
+                windows[member.id].map { window in
+                    window.pid == member.pid && (member.bundleID == nil || window.bundleID == member.bundleID)
+                        && !window.isFloating
+                } == true
             }.map(\.id)
             let workspace = saved.workspace ?? back.first.flatMap { workspaceOf[$0] }
             let ready = back.filter { workspace != nil && workspaceOf[$0] == workspace }
@@ -31,24 +35,13 @@ extension WindowManager {
     func moveTabs(of id: CGWindowID, to workspace: String?, _ move: (_ member: CGWindowID, _ lead: Bool) -> Void) {
         guard let group = tabs.group(of: id), let workspace else { return move(id, true) }
         let members = group.members.compactMap { member in
-            windows[member].map { SavedTabs.Member(id: member, pid: $0.pid) }
+            windows[member].map { SavedTabs.Member(id: member, pid: $0.pid, bundleID: $0.bundleID) }
         }
         var saved = SavedTabs(members: members, active: group.active)
         saved.workspace = workspace
         savedTabs.append(saved)
-        savedTabsUntil = Date().addingTimeInterval(Self.savedTabsWait)
+        savedTabsUntil = Date().addingTimeInterval(SavedTabs.wait)
         for member in group.members where member != id { move(member, false) }
         move(id, true)
-    }
-
-    func saveTabs() {
-        guard savedTabs.isEmpty else { return }
-        let lines = tabs.groups.map { group in
-            SavedTabs(members: group.members.compactMap { id in windows[id].map { .init(id: id, pid: $0.pid) } },
-                      active: group.active).line
-        }
-        guard lines != lastSavedTabs else { return }
-        lastSavedTabs = lines
-        UserDefaults.standard.set(lines, forKey: Self.savedTabsKey)
     }
 }

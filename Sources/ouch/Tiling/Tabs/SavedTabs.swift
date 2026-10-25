@@ -1,12 +1,18 @@
 import CoreGraphics
+import Foundation
 
 struct SavedTabs: Equatable {
     struct Member: Equatable {
         let id: CGWindowID
         let pid: pid_t
+        var bundleID: String?
+
+        var identity: TilingRecovery.Identity { .init(id: id, pid: pid, bundleID: bundleID) }
     }
 
-    let members: [Member]
+    static let wait: TimeInterval = 10
+
+    var members: [Member]
     let active: CGWindowID
     var workspace: String?
 

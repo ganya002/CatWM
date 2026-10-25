@@ -7,8 +7,13 @@ extension WindowManager {
         guard let snapshot = supplied ?? Spaces.snapshot() else { return nil }
         let displays = screens.compactMap { screen in
             snapshot.list(display: screen.uuid).map { info in
-                NativeWorkspaceCatalog.Display(id: screen.uuid, spaces: info.desktops.map { info.ids[$0] },
-                                               current: info.current.map { info.ids[$0] })
+                let uuids = info.desktops.compactMap { index in
+                    info.uuids.indices.contains(index) ? info.uuids[index].map { (info.ids[index], $0) } : nil
+                }
+                return NativeWorkspaceCatalog.Display(
+                    id: screen.uuid, spaces: info.desktops.map { info.ids[$0] },
+                    current: info.current.map { info.ids[$0] },
+                    uuids: Dictionary(uuids, uniquingKeysWith: { first, _ in first }))
             }
         }
         guard !displays.isEmpty, displays.count == screens.count else { return nil }
@@ -20,11 +25,14 @@ extension WindowManager {
         }
         nativeCatalog.synchronize(displays)
         for entry in nativeCatalog.entries { monitorOf[entry.name] = entry.display }
-        if nativeCatalog.saved != lastNativeCatalogSaved || nativeCatalog.homes != lastNativeCatalogHomes {
+        if nativeCatalog.saved != lastNativeCatalogSaved || nativeCatalog.homes != lastNativeCatalogHomes
+            || nativeCatalog.uuids != lastNativeCatalogUUIDs {
             lastNativeCatalogSaved = nativeCatalog.saved
             lastNativeCatalogHomes = nativeCatalog.homes
+            lastNativeCatalogUUIDs = nativeCatalog.uuids
             UserDefaults.standard.set(nativeCatalog.saved, forKey: "ws.nativeSpaces")
             UserDefaults.standard.set(nativeCatalog.homes, forKey: "ws.nativeDisplays")
+            UserDefaults.standard.set(nativeCatalog.uuids, forKey: "ws.nativeSpaceUUIDs")
         }
         return snapshot
     }
@@ -33,7 +41,7 @@ extension WindowManager {
         tilingRecovery.zoomed = [:]
         model.resetWorkspaces()
         nativeCatalog = NativeWorkspaceCatalog()
-        labels = [:]; previousWorkspace = [:]; savedWorkspaceOf = [:]; savedOwnerOf = [:]
+        labels = [:]; previousWorkspace = [:]; savedOwnerOf = [:]
         nativeDroppedWorkspaces = []; nativeSortNames = []
         sortSnapshot = nil; closingNow = []; closingApps = []
         SortPanel.shared.abandon()

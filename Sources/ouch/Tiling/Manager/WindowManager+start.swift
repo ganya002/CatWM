@@ -4,6 +4,7 @@ extension WindowManager {
     func start() {
         guard !isStarted else { return }
         isStarted = true
+        startedAt = Date()
         loadWorkspaces()
         loadTabs()
         if config.virtualWorkspaces { DesktopUI.prepare() }
@@ -52,6 +53,12 @@ extension WindowManager {
             else { return }
             applicationTerminated(app.processIdentifier)
         })
+        notificationObservers.append(center.addObserver(
+            forName: NSWorkspace.willPowerOffNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            Log.info("recovery: macOS is logging out or shutting down; keeping the state of quitting apps")
+            self?.poweringOffAt = Date()
+        })
         for name in [NSWorkspace.didHideApplicationNotification, NSWorkspace.didUnhideApplicationNotification] {
             notificationObservers.append(center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
                 self?.scheduleRefresh()
@@ -88,7 +95,7 @@ extension WindowManager {
         observers[pid] = nil
         scanner.terminated(pid)
         observing.removeValue(forKey: pid)
-        windows.values.filter { $0.pid == pid }.forEach { self.forget($0.id) }
+        windows.values.filter { $0.pid == pid }.forEach { self.forget($0.id, keepRecovery: true) }
         animator.terminated(pid)
         focusReader.terminated(pid)
         scheduleRefresh()
