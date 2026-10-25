@@ -1,3 +1,4 @@
+import AppKit
 import CoreGraphics
 
 enum MotionResolver {
@@ -102,5 +103,67 @@ enum MotionResolver {
         guard ids.count > 1, let i = ids.firstIndex(of: id) else { return nil }
         let delta = dir == .left || dir == .upward ? -1 : 1
         return ids[((i + delta) % ids.count + ids.count) % ids.count]
+    }
+}
+
+enum MotionTarget {
+    case window(Window)
+    case monitor(Screen)
+}
+
+extension WindowManager {
+    func resolve(_ direction: Direction, from window: Window, among candidates: [Window]) -> MotionTarget? {
+        let screens = Screen.all()
+        if let home = screen(of: window, in: screens), state(for: home).zoomed == window.id {
+            return MotionResolver.cycle(window.id, in: tiled(on: home), direction)
+                .flatMap { windows[$0] }.map(MotionTarget.window)
+        }
+        let hit = MotionResolver.resolve(from: navItem(window, in: screens), direction,
+                                         among: candidates.map { navItem($0, in: screens) },
+                                         displays: screens.map { .init(id: $0.uuid, frame: $0.frame) },
+                                         stamps: focusStamps)
+        switch hit {
+        case let .window(id): return windows[id].map(MotionTarget.window)
+        case let .monitor(uuid): return screens.first { $0.uuid == uuid }.map(MotionTarget.monitor)
+        case nil: return nil
+        }
+    }
+
+    func navItem(_ window: Window, in screens: [Screen]) -> MotionResolver.Item {
+        .init(id: window.id, frame: navFrame(window), screen: screen(of: window, in: screens)?.uuid)
+    }
+}
+
+enum Direction: String, CaseIterable {
+    case left = "l", right = "r", upward = "u", down = "d"
+
+    var title: String { symbolName.capitalized }
+    var symbolName: String {
+        switch self {
+        case .left: "left"
+        case .right: "right"
+        case .upward: "up"
+        case .down: "down"
+        }
+    }
+
+    static let hintArrows = Dictionary(uniqueKeysWithValues: allCases.flatMap { direction in
+        let arrow: String
+        switch direction {
+        case .left: arrow = "←"
+        case .right: arrow = "→"
+        case .upward: arrow = "↑"
+        case .down: arrow = "↓"
+        }
+        return [(direction.rawValue, arrow), (direction.symbolName, arrow)]
+    })
+    init?(_ text: String) {
+        switch text.lowercased() {
+        case "l", "left": self = .left
+        case "r", "right": self = .right
+        case "u", "up", "t", "top": self = .upward
+        case "d", "down", "b", "bottom": self = .down
+        default: return nil
+        }
     }
 }

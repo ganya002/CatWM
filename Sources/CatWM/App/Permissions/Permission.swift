@@ -1,5 +1,6 @@
 import AppKit
 import PermissionFlow
+import SwiftUI
 
 enum Permission: CaseIterable {
     case accessibility
@@ -60,5 +61,45 @@ enum Permission: CaseIterable {
         for window in AXUIElementCreateApplication(app.processIdentifier).elements(kAXWindowsAttribute) {
             window.element(kAXCloseButtonAttribute)?.perform(kAXPressAction)
         }
+    }
+}
+
+enum Permissions {
+    static func request() { Permission.accessibility.request() }
+    static func reset() { Permission.accessibility.reset() }
+    static func requestInputMonitoring() { Permission.inputMonitoring.request() }
+}
+
+extension Process {
+    static func runTool(_ path: String, _ args: [String], wait: Bool = true) {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: path)
+        process.arguments = args
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        try? process.run()
+        if wait { process.waitUntilExit() }
+    }
+}
+
+final class PermissionGuide {
+    static let shared = PermissionGuide()
+    private let flow = MainActor.assumeIsolated { PermissionFlow.makeController() }
+    private var kind: Permission?
+    var onGranted: (() -> Void)?
+
+    func show(_ kind: Permission) {
+        self.kind = kind
+        MainActor.assumeIsolated {
+            flow.authorize(pane: kind.pane, suggestedAppURLs: [Bundle.main.bundleURL])
+        }
+    }
+
+    func granted(_ granted: Permission) {
+        guard kind == granted else { return }
+        kind = nil
+        MainActor.assumeIsolated { flow.closePanel() }
+        Permission.closeSettingsWindows()
+        onGranted?()
     }
 }

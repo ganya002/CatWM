@@ -176,3 +176,70 @@ final class Popup: NSObject, NSWindowDelegate {
         return true
     }
 }
+
+struct PopoverModifier<PopContent: View>: ViewModifier {
+    @Binding var isPresented: Bool
+    let content: () -> PopContent
+    @StateObject private var anchor = ScreenAnchor()
+    @StateObject private var state = PopoverState()
+
+    func body(content view: Content) -> some View {
+        view
+            .background(AnchorReader(anchor: anchor))
+            .onChange(of: isPresented) { _, now in
+                if now {
+                    guard let rect = anchor.screenRect else { isPresented = false; return }
+                    let binding = $isPresented
+                    Popup.shared.popover(from: rect, onClose: { binding.wrappedValue = false }, content: content)
+                    state.generation = Popup.shared.generation
+                } else {
+                    Popup.shared.close(generation: state.generation)
+                }
+            }
+    }
+}
+
+extension View {
+    func oPopover<C: View>(isPresented: Binding<Bool>, @ViewBuilder content: @escaping () -> C) -> some View {
+        modifier(PopoverModifier(isPresented: isPresented, content: content))
+    }
+}
+
+final class PopoverState: ObservableObject { var generation = -1 }
+
+final class ScreenAnchor: ObservableObject {
+    weak var view: NSView?
+
+    var screenRect: NSRect? {
+        guard let view, let window = view.window else { return nil }
+        return window.convertToScreen(view.convert(view.bounds, to: nil))
+    }
+}
+
+struct AnchorReader: NSViewRepresentable {
+    let anchor: ScreenAnchor
+    func makeNSView(context _: Context) -> NSView {
+        let view = PassThroughView()
+        anchor.view = view
+        return view
+    }
+    func updateNSView(_ nsView: NSView, context _: Context) { anchor.view = nsView }
+}
+
+extension MenuItem {
+    static func fitWidth(_ items: [MenuItem]) -> CGFloat {
+        let font = Theme.nsBody(13.5)
+        let keyFont = NSFont.systemFont(ofSize: 13)
+        var widest: CGFloat = 0
+        for item in items where !item.hidden {
+            var width = item.label.size(withAttributes: [.font: font]).width
+            if let value = item.value { width += 8 + value.size(withAttributes: [.font: font]).width }
+            if !item.shortcut.isEmpty {
+                width += 16 + item.shortcut.joined().size(withAttributes: [.font: keyFont]).width
+            }
+            if item.kind == .sub { width += 18 }
+            widest = max(widest, width)
+        }
+        return min(max(widest * 1.1 + 20 + 26 + 12 + 20, 180), 380)
+    }
+}

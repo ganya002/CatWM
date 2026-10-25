@@ -36,3 +36,46 @@ struct CurveGraph: View {
         }
     }
 }
+
+struct CurveAnimation: CustomAnimation {
+    let curve: AnimationCurve
+    let bounce: Double
+    let duration: Double
+
+    func animate<V: VectorArithmetic>(value: V, time: TimeInterval, context _: inout AnimationContext<V>) -> V? {
+        guard time < duration else { return nil }
+        return value.scaled(by: curve.progress(time / duration, bounce: bounce))
+    }
+}
+
+struct PresetTile: View {
+    let preset: MotionPane.Preset
+    let selected: Bool
+    let action: () -> Void
+    @StateObject private var hover = Flag()
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Text(preset.name).font(Theme.body(12.5, selected ? .medium : .regular)).oneLine()
+                    .foregroundStyle(selected ? Theme.accentInk : Theme.ink)
+                Spacer(minLength: 0)
+                CurveGraph(curve: preset.animate ? preset.curve : .linear, bounce: preset.bounce,
+                           instant: !preset.animate, lineWidth: 2, color: Theme.accent)
+                    .frame(width: 56, height: 28)
+            }
+            .padding(.horizontal, Theme.Space.medium)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous)
+                .fill(selected ? Theme.accentSoft : hover.isOn ? Theme.wellHover : Theme.well))
+            .overlay(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous)
+                .strokeBorder(Theme.accent, lineWidth: 1.5).opacity(selected ? 1 : 0))
+            .contentShape(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous))
+        }
+        .buttonStyle(PressScale())
+        .onHover { hover.isOn = $0 }
+        .animation(.easeOut(duration: Theme.medium), value: selected)
+        .accessibilityLabel(preset.name)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+}

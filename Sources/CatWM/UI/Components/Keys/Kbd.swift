@@ -73,3 +73,5 @@ extension GalleryContent {
     }
 }
 #endif
+
+enum KbdSize { case small, medium, large }

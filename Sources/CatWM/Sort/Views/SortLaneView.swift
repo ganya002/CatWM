@@ -122,3 +122,8 @@ struct SortLaneView: View {
         }
     }
 }
+
+final class NumberEdit: ObservableObject {
+    @Published var isEditing = false
+    @Published var draft = ""
+}

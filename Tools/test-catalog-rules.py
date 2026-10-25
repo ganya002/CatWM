@@ -66,7 +66,7 @@ class CatalogRules(unittest.TestCase):
             ("Settings/Rows/OptionRows.swift", "OptionSwitch(path, doc: doc, ui: ui)"),
             ("Settings/Panes/WindowsPane.swift", "PointerActions.all.filter { $0.available(context) }"),
             ("UI/Components/Controls/OButton.swift", "static let buttons = GalleryExample(order: 3) {}"),
-            ("Keys/Help/KeyHelpModel.swift", "binds.map { KeyHint($0) }"),
+            ("Keys/Help/KeyHelp.swift", "binds.map { KeyHint($0) }"),
             ("Templates/Model/TemplateLibrary.swift", 'QuickAction(id: "template.save", title: "Save") {}'),
             ("Tiling/Focus/FocusDim.swift", 'QuickAction(id: "focus.dim", title: "Dim") {}'),
             ("UI/Components/Rows/TemplateRow.swift", 'static let templates = GalleryExample(order: 15) {}\nQuickAction(id: "x", title: "Save") {}'),

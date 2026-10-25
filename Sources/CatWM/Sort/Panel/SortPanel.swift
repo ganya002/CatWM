@@ -24,3 +24,11 @@ final class SortPanel: NSObject, NSWindowDelegate {
 
     var isOpen: Bool { active }
 }
+
+final class SortHost: CatWMHostingView<SortView> {
+    var sizeChanged: (() -> Void)?
+    override func invalidateIntrinsicContentSize() {
+        super.invalidateIntrinsicContentSize()
+        sizeChanged?()
+    }
+}

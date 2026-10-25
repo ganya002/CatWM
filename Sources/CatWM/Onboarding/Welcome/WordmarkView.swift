@@ -27,3 +27,10 @@ struct WordmarkView: View {
             + Text("-style tiling for macOS.").font(Theme.body(points, .light))
     }
 }
+
+final class WordmarkModel: ObservableObject {
+    @Published var subtitle = false
+    @Published var landed = false
+}
+
+let hyprlandBlue = Theme.rgb(0x1FAFFF)

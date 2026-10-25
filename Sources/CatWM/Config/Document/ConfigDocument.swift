@@ -2,6 +2,7 @@ import AppKit
 import Carbon
 import Combine
 import SwiftUI
+import UniformTypeIdentifiers
 
 final class ConfigDocument: ObservableObject {
     @Published var config = Config()
@@ -94,4 +95,23 @@ final class ConfigDocument: ObservableObject {
             .debounce(for: .milliseconds(50), scheduler: RunLoop.main)
             .sink { [weak self] in self?.autosaveIfNeeded() }
     }
+}
+
+struct VarRow: Equatable {
+    var name: String
+    var value: String
+}
+
+struct BindRow: Identifiable, Equatable {
+    let id = UUID()
+    var mods: String
+    var key: String
+    var dispatcher: String
+    var args: String
+    var submap = ""
+    var kind = "bind"
+}
+
+extension ConfigDocument {
+    var skippedLineCount: Int { extraLineCount }
 }

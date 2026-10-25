@@ -4,7 +4,7 @@ What's New shows existing users the features of a new release. It can also start
 
 ## How it works
 
-- `Release.all` (`Onboarding/WhatsNew/Release+all.swift`) is the catalog. Put the newest release first.
+- `Release.all` (`Onboarding/WhatsNew/Release.swift`) is the catalog. Put the newest release first.
 - `WhatsNew` keeps the ids of the features that the user saw in the `whatsNew.seen` default.
 - At launch, a user who did not finish onboarding gets every current feature marked as seen. The tour already teaches the current app.
 - At launch, if a feature is not seen, the card opens below the menu bar icon. If CatWM is busy (onboarding, Overview, window mode), it tries again later.
