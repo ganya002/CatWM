@@ -29,7 +29,7 @@ $S/run-scoped.sh <pid>[,<pid>...] <command> [args...]
 $S/run-scoped.sh --no-build "$APP_PID" sh -c 'build/CatWM.app/Contents/MacOS/CatWM windows --json'
 ```
 
-It builds the worktree (not with `--no-build`), starts the instance with `CATWM_SCOPE=pids:<pids>`, waits for `ping`, runs the command with `CATWM_INSTANCE` set and always stops the instance, also when the command fails. Its exit code is the exit code of the command. Only one run at a time can use an instance id. A second run with the same `INSTANCE` stops with exit code 1 while the first run or its instance runs. It also stops when the instance of `launch.sh` runs. Set `INSTANCE` to another id to run two at the same time.
+It builds the worktree (not with `--no-build`), starts the instance with `CATWM_SCOPE=pids:<pids>`, waits for `ping`, runs the command with `CATWM_INSTANCE` set and always stops the instance, also when the command fails. Its exit code is the exit code of the command. Only one run at a time can use an instance id. A second run with the same `INSTANCE` stops with exit code 1 while the first run or its instance runs. It also stops when the instance of `launch.sh` runs. `launch.sh` takes the same lock (`lock_instance` in `env.sh`), so it stops with exit code 1 while a run uses its instance id. Set `INSTANCE` to another id to run two at the same time.
 
 Permissions: macOS gives Accessibility to the "responsible process". `run-scoped.sh` starts CatWM as a child process, so the instance gets the permissions of the app that runs your shell. An instance that `open -n` starts (`launch.sh`) is its own responsible process and needs its own permission in System Settings.
 
