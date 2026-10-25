@@ -112,7 +112,8 @@ final class WindowManager {
     let cursorRefresh: CursorRefresh
     var warp: (CGPoint) -> Void = { CGWarpMouseCursorPosition($0) }
 
-    init(backend: any WindowBackend = AXBackend.shared, config: Config, scope: WindowScope? = nil) {
+    init(backend: any WindowBackend = AXBackend.shared, config: Config, scope: WindowScope? = nil,
+         scanner: WindowScanner? = nil) {
         self.backend = backend
         self.scope = scope
         input = GlobalInput(scope: scope, keys: Instance.keys)
@@ -120,9 +121,10 @@ final class WindowManager {
         frontmostPID = { backend.frontmostPID() }
         animator = Animator(backend: backend)
         cursorRefresh = CursorRefresh(backend: backend)
-        scanner = WindowScanner(read: { backend.scan($0, discovered: $1) }, readDesktop: { backend.desktop(known: $0) },
-                                readApplications: { backend.applications() }, scope: scope,
-                                claims: scope == nil ? ScopeClaims(folder: Instance.paths.instancesFolder) : nil)
+        self.scanner = scanner ?? WindowScanner(
+            read: { backend.scan($0, discovered: $1) }, readDesktop: { backend.desktop(known: $0) },
+            readApplications: { backend.applications() }, scope: scope,
+            claims: scope == nil ? ScopeClaims(folder: Instance.paths.instancesFolder) : nil)
         focusRequests.focusReader = FocusReader { backend.focusedWindow(pid: $0) }
     }
 

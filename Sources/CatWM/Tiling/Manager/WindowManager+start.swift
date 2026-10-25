@@ -96,6 +96,19 @@ extension WindowManager {
     }
 
     private func applicationTerminated(_ pid: pid_t) {
+        release(pid)
+        scheduleRefresh()
+    }
+
+    func releaseClaimedApps() {
+        let held = Set(windows.values.map(\.pid)).union(observers.keys).union(observing.keys)
+        for pid in held.intersection(scanner.claimed) {
+            Log.debug("pid \(pid) is in the scope of another instance; leaving its windows")
+            release(pid)
+        }
+    }
+
+    private func release(_ pid: pid_t) {
         if let obs = observers[pid] {
             CFRunLoopRemoveSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(obs), .defaultMode)
         }
@@ -105,7 +118,6 @@ extension WindowManager {
         windows.values.filter { $0.pid == pid }.forEach { self.forget($0.id, keepRecovery: true) }
         animator.terminated(pid)
         focusRequests.focusReader.terminated(pid)
-        scheduleRefresh()
     }
 
     private func observeSpaceAndScreenNotifications() {

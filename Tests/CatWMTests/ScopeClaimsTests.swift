@@ -31,17 +31,49 @@ import Testing
         #expect(claims.claimedPids() == [10, 11])
     }
 
-    @Test func claimsAreReadAgainOnlyWhenAFileChanges() throws {
-        let date = Date(timeIntervalSince1970: 1_000_000)
-        try write(ScopeClaim(owner: 1, scope: WindowScope(pids: [10])), id: "a", modified: date)
-        let claims = ScopeClaims(folder: folder, alive: { _ in true })
+    @Test func claimsAreReadAgainOnlyWhenTheInstancesFolderChanges() throws {
+        let home = folder.appendingPathComponent("home")
+        let paths = try #require(InstancePaths(id: "a", home: home))
+        try paths.writeClaim(ScopeClaim(owner: 1, scope: WindowScope(pids: [10])))
+        let claims = ScopeClaims(folder: paths.instancesFolder, alive: { _ in true })
         #expect(claims.claimedPids() == [10])
-        try write(ScopeClaim(owner: 1, scope: WindowScope(pids: [12])), id: "a", modified: date)
+        try Data(ScopeClaim(owner: 1, scope: WindowScope(pids: [11])).text.utf8).write(to: paths.scopeFile)
         #expect(claims.claimedPids() == [10])
-        try write(ScopeClaim(owner: 1, scope: WindowScope(pids: [12])), id: "a", modified: date + 1)
+        try paths.writeClaim(ScopeClaim(owner: 1, scope: WindowScope(pids: [12])))
         #expect(claims.claimedPids() == [12])
-        try FileManager.default.removeItem(at: folder.appendingPathComponent("a"))
+        try paths.removeClaim()
         #expect(claims.claimedPids().isEmpty)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: paths.instancesFolder.path) == ["a"])
+    }
+
+    @Test func aDeadOwnerIsCheckedOnEachReadWithoutReadingTheFilesAgain() throws {
+        try write(ScopeClaim(owner: 1, scope: WindowScope(pids: [10])), id: "a")
+        var running = true
+        let claims = ScopeClaims(folder: folder, alive: { _ in running })
+        #expect(claims.claimedPids() == [10])
+        running = false
+        #expect(claims.claimedPids().isEmpty)
+    }
+
+    @Test func aNewClaimReleasesTheWindowsThatTheManagerAlreadyHas() async throws {
+        let scanner = WindowScanner(readDesktop: { _ in WindowServerObservation() }, readApplications: { [] },
+                                    claims: ScopeClaims(folder: folder, alive: { _ in true }))
+        let manager = WindowManager(scope: nil, config: Config(), scanner: scanner)
+        let claimed = Window(id: 31, element: AXUIElementCreateApplication(4242), pid: 4242, bundleID: nil)
+        let other = Window(id: 32, element: AXUIElementCreateApplication(4243), pid: 4243, bundleID: nil)
+        manager.windows = [31: claimed, 32: other]
+        manager.observing[4242] = UUID()
+        manager.releaseClaimedApps()
+        #expect(manager.windows.count == 2)
+        try write(ScopeClaim(owner: 1, scope: WindowScope(pids: [4242])), id: "test")
+        await withCheckedContinuation { continuation in
+            scanner.observeDesktop(known: []) { continuation.resume() }
+        }
+        manager.releaseClaimedApps()
+        #expect(manager.windows.keys.sorted() == [32])
+        #expect(manager.observing[4242] == nil)
+        manager.observe(pid: 4242)
+        #expect(manager.observing[4242] == nil)
     }
 
     @Test func anUnscopedScannerHidesTheClaimedPids() async throws {

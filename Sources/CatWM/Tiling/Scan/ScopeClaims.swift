@@ -22,7 +22,7 @@ struct ScopeClaim: Equatable {
 final class ScopeClaims {
     private let folder: URL
     private let alive: (pid_t) -> Bool
-    private var stamps: [String: Date] = [:]
+    private var stamp: Date?
     private var claims: [ScopeClaim] = []
 
     init(folder: URL, alive: @escaping (pid_t) -> Bool = { kill($0, 0) == 0 || errno == EPERM }) {
@@ -32,18 +32,13 @@ final class ScopeClaims {
 
     func claimedPids() -> Set<pid_t> {
         let files = FileManager.default
-        let ids = (try? files.contentsOfDirectory(atPath: folder.path)) ?? []
-        var stamps: [String: Date] = [:]
-        for id in ids {
-            let path = folder.appendingPathComponent("\(id)/scope").path
-            if let date = (try? files.attributesOfItem(atPath: path))?[.modificationDate] as? Date {
-                stamps[path] = date
-            }
-        }
-        if stamps != self.stamps {
-            self.stamps = stamps
-            claims = stamps.keys.compactMap { path in
-                (try? String(contentsOfFile: path, encoding: .utf8)).flatMap(ScopeClaim.init)
+        let stamp = (try? files.attributesOfItem(atPath: folder.path))?[.modificationDate] as? Date
+        if stamp != self.stamp {
+            self.stamp = stamp
+            let ids = (try? files.contentsOfDirectory(atPath: folder.path)) ?? []
+            claims = ids.compactMap { id in
+                let file = folder.appendingPathComponent("\(id)/scope")
+                return (try? String(contentsOf: file, encoding: .utf8)).flatMap(ScopeClaim.init)
             }
         }
         return Set(claims.filter { alive($0.owner) }.flatMap(\.scope.pids))

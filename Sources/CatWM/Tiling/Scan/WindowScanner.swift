@@ -42,6 +42,7 @@ final class WindowScanner {
     private(set) var results: [pid_t: AppScan] = [:]
     private(set) var desktop = WindowServerObservation()
     private(set) var applications: [RunningApplicationSnapshot] = []
+    private(set) var claimed: Set<pid_t> = []
     private var observingDesktop = false
     private var pendingDesktop: (known: Set<CGWindowID>, done: () -> Void)?
     private let readDesktop: (Set<CGWindowID>) -> WindowServerObservation
@@ -83,6 +84,7 @@ final class WindowScanner {
                 guard let self else { return }
                 self.desktop = observation
                 self.applications = applications
+                self.claimed = claimed
                 self.observingDesktop = false
                 let pending = self.pendingDesktop
                 self.pendingDesktop = nil
@@ -91,6 +93,8 @@ final class WindowScanner {
             }
         }
     }
+
+    func keeps(_ pid: pid_t) -> Bool { scope?.pids.contains(pid) ?? !claimed.contains(pid) }
 
     func scan(_ jobs: [Job], done: @escaping () -> Void, updated: @escaping () -> Void,
               readAll: ((_ all: Bool) -> Void)? = nil) {
