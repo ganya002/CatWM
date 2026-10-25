@@ -132,7 +132,7 @@ final class Animator {
             let newTimer = Timer(timeInterval: 1.0 / 120.0, repeats: true) { [weak self] _ in self?.tick() }
             RunLoop.main.add(newTimer, forMode: .common)
             timer = newTimer
-            frameRun = PerfMonitor.begin("window-move")
+            frameRun = PerfMonitor.shared.begin("window-move")
             tick()
         }
     }
@@ -227,23 +227,6 @@ final class Animator {
                      skipped: Double(stats.skipped) / Double(stats.skipped + stats.position.count))
     }
 
-    private func land(_ move: Move) {
-        let id = move.window.id
-        landings += 1
-        let number = landings
-        let epoch = epochs[id] ?? nextEpoch(for: id)
-        landing[id] = (move, number)
-        quietUntil[id] = CACurrentMediaTime() + 0.4
-        writer(move.window.pid).land(move.window, at: move.target) { [weak self] wrote in
-            guard let self, self.landing[id]?.number == number else { return }
-            self.landing[id] = nil
-            guard wrote else { return }
-            CursorRefresh.soon()
-            self.quietUntil[id] = CACurrentMediaTime() + 0.4
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in self?.verify(move, epoch: epoch) }
-        }
-    }
-
     private func verify(_ move: Move, epoch: Int) {
         let window = move.window
         guard epochs[window.id, default: 0] == epoch, items[window.id] == nil, landing[window.id] == nil,
@@ -279,6 +262,25 @@ final class Animator {
 }
 
 extension Animator {
+    private func land(_ move: Move) {
+        let id = move.window.id
+        landings += 1
+        let number = landings
+        let epoch = epochs[id] ?? nextEpoch(for: id)
+        landing[id] = (move, number)
+        quietUntil[id] = CACurrentMediaTime() + 0.4
+        writer(move.window.pid).land(move.window, at: move.target) { [weak self] wrote in
+            guard let self, self.landing[id]?.number == number else { return }
+            self.landing[id] = nil
+            guard wrote else { return }
+            CursorRefresh.shared.soon()
+            self.quietUntil[id] = CACurrentMediaTime() + 0.4
+            DispatchQueue.main.asyncAfter( // style-ok: a kept frame sends no event
+                deadline: .now() + 0.12
+            ) { [weak self] in self?.verify(move, epoch: epoch) }
+        }
+    }
+
     func forget(_ id: CGWindowID) {
         cancel(id)
         if let pid = owners.removeValue(forKey: id) { writers[pid]?.forget(id) }
@@ -329,7 +331,9 @@ extension Animator {
     @MainActor func waitForPendingWrites(pids: Set<pid_t>, timeout: TimeInterval = 1) async -> Bool {
         let completion = PendingWrites()
         let deadline = Task { @MainActor in
-            do { try await Task.sleep(for: .seconds(timeout)) } catch { return }
+            do {
+                try await Task.sleep(for: .seconds(timeout)) // style-ok: timeout for a blocked writer
+            } catch { return }
             completion.finish(false)
         }
         defer { deadline.cancel() }
@@ -338,7 +342,7 @@ extension Animator {
             return await withCheckedContinuation { continuation in
                 completion.wait(continuation)
                 afterPendingWrites(pids: pids) {
-                    MainActor.assumeIsolated { completion.finish(true) }
+                    Task { @MainActor in completion.finish(true) }
                 }
             }
         } onCancel: {
