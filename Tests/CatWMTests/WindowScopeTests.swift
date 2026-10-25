@@ -54,7 +54,7 @@ import Testing
     }
 
     @Test func aScopedManagerTurnsOffWhatActsOnTheWholeMac() {
-        let manager = WindowManager(scope: WindowScope(pids: [10]), config: Self.globalConfig)
+        let manager = WindowManager(config: Self.globalConfig, scope: WindowScope(pids: [10]))
         #expect(!manager.config.virtualWorkspaces)
         #expect(!manager.config.focusFollowsMouse)
         #expect(!manager.config.mouseFollowsFocus)
@@ -89,7 +89,7 @@ import Testing
     }
 
     @Test func aScopedInstanceRefusesACommandBeforeItRuns() {
-        let scoped = WindowManager(scope: WindowScope(pids: [10]), config: Config())
+        let scoped = WindowManager(config: Config(), scope: WindowScope(pids: [10]))
         let calls: [(String, [String: JSON])] = [
             ("grabtest", [:]), ("launch", [:]), ("dispatch", ["dispatcher": .string("Workspace")]),
             ("submap", ["name": .string("window")]),
@@ -102,7 +102,7 @@ import Testing
     }
 
     @Test func aScopedManagerDoesNotMoveThePointerOrTakeFocus() throws {
-        let scoped = WindowManager(scope: WindowScope(pids: [10]), config: Config())
+        let scoped = WindowManager(config: Config(), scope: WindowScope(pids: [10]))
         #expect(!scoped.input.pointerAndFocus)
         let display = try #require(NSScreen.screens.first)
         let away = CGRect(x: 90000, y: 90000, width: 100, height: 100)
@@ -119,20 +119,20 @@ import Testing
     @Test func aScopedManagerDropsTheKeyBindsOfARefusedDispatcher() {
         let config = Config.parse("bind = ALT, w, submap, window\nbind = ALT, 2, workspace, 2\n"
             + "bind = ALT, h, movefocus, l\nsubmap = window\nbind = , escape, submap, reset\nsubmap = reset")
-        let scoped = WindowManager(scope: WindowScope(pids: [10]), config: config)
+        let scoped = WindowManager(config: config, scope: WindowScope(pids: [10]))
         #expect(scoped.config.bindings.map(\.dispatcher) == ["movefocus"])
-        let unscoped = WindowManager(scope: nil, config: config)
+        let unscoped = WindowManager(config: config)
         #expect(unscoped.config.bindings.count == 4)
     }
 
     @Test func aScopedManagerRefusesWhatActsOutsideTheScope() {
-        let scoped = WindowManager(scope: WindowScope(pids: [10]), config: Config())
+        let scoped = WindowManager(config: Config(), scope: WindowScope(pids: [10]))
         for name in WindowScope.refusedCommands.sorted() {
             #expect(scoped.scopeRefusal(name)?.contains("not available in a scoped instance") == true)
         }
         #expect(scoped.scopeRefusal("movefocus") == nil)
         #expect(scoped.scopeRefusal("setlayout") == nil)
-        let unscoped = WindowManager(scope: nil, config: Config())
+        let unscoped = WindowManager(config: Config())
         #expect(unscoped.scopeRefusal("workspace") == nil)
     }
 }
