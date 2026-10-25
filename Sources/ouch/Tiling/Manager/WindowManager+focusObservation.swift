@@ -30,6 +30,13 @@ extension WindowManager {
 
     func acceptFocus(pid: pid_t, id: CGWindowID?, confirmsRequest: Bool = false) {
         guard frontmostPID() == pid else { return }
+        TabStrips.shared.batch {
+            acceptReportedFocus(pid: pid, id: id, confirmsRequest: confirmsRequest)
+        }
+        notifyChange()
+    }
+
+    private func acceptReportedFocus(pid: pid_t, id: CGWindowID?, confirmsRequest: Bool) {
         reportedFocus = (pid, id)
         if confirmsRequest, pendingFocus?.executed == true { pendingFocus = nil }
         if let id, windows[id] == nil { scheduleRefresh(after: 0.1) }
@@ -46,7 +53,6 @@ extension WindowManager {
         }
         FocusDim.shared.update()
         TabStrips.shared.restack()
-        notifyChange()
     }
 
     func deferFocusCommand(_ dispatcher: String, arg: String, inMode: Bool) -> Bool {

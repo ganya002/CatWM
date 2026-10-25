@@ -125,7 +125,8 @@ extension WindowManager {
         case "toggletiling": toggleTiling()
         case "retile", "reevaluate": corrections = [:]; refresh()
         case "reload": reload()
-        case "exit": NSApp.terminate(nil)
+        case "exit":
+            RunLoop.main.perform(inModes: [.common, .modalPanel]) { NSApp.terminate(nil) }
         case "submap": Hotkeys.shared.setSubmap(arg)
         case "sethomespace": makeCurrentSpaceHome()
         case "sort": toggleSortCommand()

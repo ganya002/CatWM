@@ -64,7 +64,7 @@ enum WindowServerQuery {
     }
 
     static func observation(
-        known: Set<CGWindowID>, list: (CGWindowListOption) -> [CGWindowID]? = windowIDs,
+        known: Set<CGWindowID>, list: (CGWindowListOption) -> [CGWindowID]? = { observationWindowIDs($0) },
         query: (Set<CGWindowID>) -> Records? = records,
         fallback: (CGWindowID) -> [UInt64] = Spaces.of,
         managedSpaces: () -> [UInt64: UInt64]? = { Spaces.snapshot()?.managedSpaceIDs }
@@ -80,6 +80,14 @@ enum WindowServerQuery {
             (id, found[id].flatMap { membership($0.spaces, managed: managed) } ?? Set(fallback(id)))
         })
         return WindowServerObservation(windows: windows, allWindows: allWindows, spaces: spaces)
+    }
+
+    static func observationWindowIDs(
+        _ options: CGWindowListOption, onScreen: () -> [CGWindowID]? = WindowServerList.onScreen,
+        fallback: (CGWindowListOption) -> [CGWindowID]? = windowIDs
+    ) -> [CGWindowID]? {
+        if options == [.optionOnScreenOnly, .excludeDesktopElements], let ids = onScreen() { return ids }
+        return fallback(options)
     }
 
     static func memberships(
