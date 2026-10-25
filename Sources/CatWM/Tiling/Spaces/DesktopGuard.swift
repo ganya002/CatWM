@@ -111,7 +111,9 @@ final class DesktopGuard {
         }
         context.restore()
         Log.info("native-desktop-guard: restored transforms after parent exit or missing heartbeat")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { exit(0) }
+        DispatchQueue.main.asyncAfter( // style-ok: the server does not confirm the restore
+            deadline: .now() + 0.2
+        ) { exit(0) }
     }
 }
 

@@ -36,14 +36,18 @@ extension WindowManager {
                 self?.postMouse(.leftMouseUp, held)
                 Log.info("grabtest: \(point) \(grabbed ? "GRABS" : "no")")
                 if grabbed { self?.rememberGrab(window, point, frame: original) }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { next(rest.dropFirst()) }
+                DispatchQueue.main.asyncAfter( // style-ok: fake mouse events need a gap
+                    deadline: .now() + 0.3
+                ) { next(rest.dropFirst()) }
             }
         }
         next(points[...])
     }
 
     func holdUntilArrived(space number: Int, release: CGPoint, restore: CGPoint, settle: Double, attemptsLeft: Int) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + settle) { [weak self] in
+        DispatchQueue.main.asyncAfter( // style-ok: a Desktop step sequence has no end event
+            deadline: .now() + settle
+        ) { [weak self] in
             guard let self else { return }
             let point = mouseLocation()
             if attemptsLeft > 0, let screen = Screen.all().first(where: { $0.frame.contains(point) }),
@@ -53,7 +57,7 @@ extension WindowManager {
                let combo = SystemShortcut.step(right: info.desktops[number - 1] > cur) {
                 let delta = info.desktops[number - 1] - cur
                 Log.info("move to space: landed on \(cur + 1); stepping \(delta) more")
-                for _ in 0..<abs(delta) { Hotkeys.post(keyCode: combo.keyCode, flags: combo.flags) }
+                for _ in 0..<abs(delta) { post(combo) }
                 holdUntilArrived(space: number, release: release, restore: restore,
                                  settle: 0.45 + 0.15 * Double(abs(delta) - 1), attemptsLeft: attemptsLeft - 1)
                 return
@@ -65,7 +69,7 @@ extension WindowManager {
 
     func finishMove(restore: CGPoint) {
         CGWarpMouseCursorPosition(restore)
-        CursorRefresh.soon()
+        CursorRefresh.shared.soon()
         drags = [:]
         desktops.movingToSpace = false
         scheduleRefresh(after: 0.2)

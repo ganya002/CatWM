@@ -38,7 +38,9 @@ extension FocusDim {
             self?.pending = false
             self?.apply()
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in self?.apply() }
+        DispatchQueue.main.asyncAfter( // style-ok: a late restack has no event
+            deadline: .now() + 0.12
+        ) { [weak self] in self?.apply() }
     }
 
     func owns(_ windowNumber: Int) -> Bool { panelNumbers.contains(windowNumber) }

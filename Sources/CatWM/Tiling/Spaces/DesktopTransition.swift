@@ -18,7 +18,7 @@ enum DesktopTransitionError: LocalizedError {
     while current() {
         if condition() { return true }
         guard ProcessInfo.processInfo.systemUptime < deadline, !Task.isCancelled else { return false }
-        try? await Task.sleep(nanoseconds: nanoseconds)
+        try? await Task.sleep(nanoseconds: nanoseconds) // style-ok: Desktop state has no change event
     }
     return false
 }

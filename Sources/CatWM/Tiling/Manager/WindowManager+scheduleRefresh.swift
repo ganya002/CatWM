@@ -8,7 +8,9 @@ extension WindowManager {
         let work = DispatchWorkItem { [weak self] in self?.scanAndRefresh() }
         refreshWork = work
         refreshDeadline = deadline
-        DispatchQueue.main.asyncAfter(deadline: deadline, execute: work)
+        DispatchQueue.main.asyncAfter( // style-ok: this debounce merges AX event bursts
+            deadline: deadline, execute: work
+        )
     }
 
     func scanAndRefresh() {

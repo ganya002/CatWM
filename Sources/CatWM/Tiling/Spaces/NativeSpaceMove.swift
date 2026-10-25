@@ -191,7 +191,9 @@ struct WindowSpaceMove {
     var isOnScreen: () -> Bool
     var now: () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }
     var schedule: (TimeInterval, @escaping () -> Void) -> Void = { delay, work in
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
+        DispatchQueue.main.asyncAfter( // style-ok: Desktop membership has no change event
+            deadline: .now() + delay, execute: work
+        )
     }
 
     func run(to target: UInt64, waitUntilOnScreen: Bool, completion: @escaping (Bool) -> Void) {

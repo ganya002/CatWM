@@ -71,7 +71,9 @@ extension WindowManager {
         guard let workspace = focusRequests.refocusAfterClose else { return }
         focusRequests.refocusAfterClose = nil
         guard !hasFresh else { return }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+        DispatchQueue.main.asyncAfter( // style-ok: an app can skip the focus event
+            deadline: .now() + 0.1
+        ) { [weak self] in
             self?.refocusRecent(on: workspace)
         }
     }

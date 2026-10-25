@@ -29,7 +29,9 @@ extension WindowManager {
         requestFocusObservation()
         refresh()
         for delay in [0.5, 1.5, 3.0, 6.0] {
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in self?.scheduleRefresh() }
+            DispatchQueue.main.asyncAfter( // style-ok: restored apps send no ready event
+                deadline: .now() + delay
+            ) { [weak self] in self?.scheduleRefresh() }
         }
     }
 
@@ -79,7 +81,9 @@ extension WindowManager {
         observe(app)
         scheduleRefresh(after: 0)
         for delay in [0.3, 1.0, 2.5] {
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            DispatchQueue.main.asyncAfter( // style-ok: a launched app sends no AX ready event
+                deadline: .now() + delay
+            ) { [weak self] in
                 self?.observe(app)
                 self?.scheduleRefresh()
             }
