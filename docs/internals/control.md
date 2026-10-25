@@ -41,10 +41,18 @@ A scoped instance:
 - does not use macOS Desktops (`virtual-workspaces` is off). It does not make, remove or show a Desktop.
 - turns off focus follows mouse, mouse follows focus, quick actions and the dimming and blur panels (`WindowScope.restrict`).
 - does not start the key event tap, the Caps Lock change (`hidutil`), the Desktop swipe tap or the Dock window pull tap (`GlobalInput`). `CATWM_KEYS=on` starts the key event tap again. Then the instance reads all key presses, the same as the user's CatWM. Caps Lock stays off.
+- refuses the dispatchers in `WindowScope.refusedDispatchers`. `WindowManager.dispatch` stops them, and the socket command gives the error `failed`. These dispatchers can change windows, Desktops or input outside the scope:
+  - `nativefullscreen` reads the focused window of any app and makes a macOS Desktop.
+  - `focusmonitor` moves the pointer when the display has no window.
+  - `workspace`, `movetoworkspace`, `movetoworkspacesilent` and `sethomespace` change macOS Desktops. Without CatWM workspaces they send the Desktop shortcut or move the pointer.
+  - `sort` and `sort-undo` move windows between macOS Desktops.
+  - `switcher` shows and focuses the windows of all apps.
+  - `exec` and `launch` run commands and open other apps.
+  - `toggledim` and `toggleblur` put panels over the windows of all apps.
 
 A focus command can still make the app of the target window active. The other windows of that app can then come to the front.
 
-Add a new switch for a scoped instance to `WindowScope.restrict` (a config option) or to `GlobalInput` (an event tap or a system setting). Do not add a check at the call site.
+Add a new switch for a scoped instance to `WindowScope.restrict` (a config option), to `GlobalInput` (an event tap or a system setting) or to `WindowScope.refusedDispatchers` (a dispatcher). Do not add a check at the call site. Put each new dispatcher in `WindowScope.allowedDispatchers` or in `WindowScope.refusedDispatchers`. A test fails if a dispatcher is in no list.
 
 ## Add a command
 

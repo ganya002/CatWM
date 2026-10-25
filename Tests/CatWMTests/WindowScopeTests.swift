@@ -42,8 +42,19 @@ import Testing
         #expect(scanner.desktop.windows.map(\.pid) == [10, 20])
     }
 
+    private static var globalConfig: Config {
+        var config = Config()
+        config.virtualWorkspaces = true
+        config.focusFollowsMouse = true
+        config.mouseFollowsFocus = true
+        config.cursorActions = true
+        config.dimOtherWindows = true
+        config.blurOtherWindows = true
+        return config
+    }
+
     @Test func aScopedManagerTurnsOffWhatActsOnTheWholeMac() {
-        let manager = WindowManager(scope: WindowScope(pids: [10]))
+        let manager = WindowManager(scope: WindowScope(pids: [10]), config: Self.globalConfig)
         #expect(!manager.config.virtualWorkspaces)
         #expect(!manager.config.focusFollowsMouse)
         #expect(!manager.config.mouseFollowsFocus)
@@ -66,5 +77,25 @@ import Testing
     @Test func anUnscopedInstanceKeepsEveryInput() {
         let input = GlobalInput(scope: nil, keys: nil)
         #expect(input.keys && input.capsLock && input.mouseTaps)
+    }
+
+    @Test func eachDispatcherIsAllowedOrRefusedInAScopedInstance() {
+        let names = WindowActions.all.map(\.name) + FocusDim.features.map(\.pointer.dispatcher)
+        let allowed = WindowScope.allowedDispatchers, refused = WindowScope.refusedDispatchers
+        for name in names {
+            #expect(allowed.contains(name) != refused.contains(name), "decide if \(name) runs in a scoped instance")
+        }
+        #expect(allowed.union(refused) == Set(names))
+    }
+
+    @Test func aScopedManagerRefusesWhatActsOutsideTheScope() {
+        let scoped = WindowManager(scope: WindowScope(pids: [10]), config: Config())
+        for name in ["nativefullscreen", "workspace", "movetoworkspace", "toggledim", "toggleblur", "switcher"] {
+            #expect(scoped.scopeRefusal(name)?.contains("not available in a scoped instance") == true)
+        }
+        #expect(scoped.scopeRefusal("movefocus") == nil)
+        #expect(scoped.scopeRefusal("setlayout") == nil)
+        let unscoped = WindowManager(scope: nil, config: Config())
+        #expect(unscoped.scopeRefusal("workspace") == nil)
     }
 }

@@ -95,6 +95,10 @@ extension WindowManager {
     }
 
     func dispatch(_ dispatcher: String, _ rawArg: String, inMode: Bool) {
+        if let refusal = scopeRefusal(dispatcher) {
+            Log.info(refusal)
+            return
+        }
         let arg = rawArg.trimmingCharacters(in: .whitespaces)
         if deferFocusCommand(dispatcher, arg: arg, inMode: inMode) { return }
         let timing = TilingTiming("command \(dispatcher)", windows: windows.count)

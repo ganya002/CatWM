@@ -57,6 +57,21 @@ struct WindowScope: Equatable {
         config.blurOtherWindows = false
         return config
     }
+
+    func allows(_ dispatcher: String) -> Bool { !Self.refusedDispatchers.contains(dispatcher) }
+
+    static let allowedDispatchers: Set<String> = [
+        "movefocus", "cyclenext", "movewindow", "movewindowtomonitor", "swapwindow", "swapnext",
+        "togglefloating", "fullscreen", "minimize", "killactive",
+        "moveintogroup", "moveoutofgroup", "changegroupactive", "movegroupwindow",
+        "layoutmsg", "splitratio", "cyclelayout", "layout", "toggletiling", "retile",
+        "submap", "reload", "exit"
+    ]
+
+    static let refusedDispatchers: Set<String> = [
+        "nativefullscreen", "focusmonitor", "workspace", "movetoworkspace", "movetoworkspacesilent", "sethomespace",
+        "sort", "sort-undo", "switcher", "exec", "launch", "toggledim", "toggleblur"
+    ]
 }
 
 struct GlobalInput: Equatable {

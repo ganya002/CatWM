@@ -31,6 +31,7 @@ enum CommandRegistry {
                        .text("arg", "Dispatcher argument", required: false)]) { call in
             let name = call.text("dispatcher").lowercased()
             guard !keybindOnly.contains(name) else { throw ControlError.forbidden(name) }
+            try refuseOutsideScope(name)
             WindowManager.shared.dispatch(name, call.text("arg"))
             return .null
         },

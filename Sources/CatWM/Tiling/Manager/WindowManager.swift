@@ -1,7 +1,7 @@
 import AppKit
 
 final class WindowManager {
-    static let shared = WindowManager(config: loadConfig(scope: Instance.scope), scope: Instance.scope)
+    static let shared = WindowManager(config: Config.load(), scope: Instance.scope)
 
     let backend: any WindowBackend
     let scope: WindowScope?
@@ -113,7 +113,7 @@ final class WindowManager {
     init(backend: any WindowBackend = AXBackend.shared, config: Config, scope: WindowScope? = nil) {
         self.backend = backend
         self.scope = scope
-        self.config = config
+        self.config = scope?.restrict(config) ?? config
         frontmostPID = { backend.frontmostPID() }
         animator = Animator(backend: backend)
         cursorRefresh = CursorRefresh(backend: backend)
@@ -125,6 +125,13 @@ final class WindowManager {
     static func loadConfig(scope: WindowScope?) -> Config {
         let config = Config.load()
         return scope?.restrict(config) ?? config
+    }
+
+    func scopeRefusal(_ dispatcher: String) -> String? {
+        guard let scope else { return nil }
+        let name = WindowActions.named(dispatcher)?.name ?? dispatcher
+        guard !scope.allows(name) else { return nil }
+        return "`\(name)` is not available in a scoped instance: it would change windows or Desktops outside the scope"
     }
 
     var currentLayoutTitle: String {
