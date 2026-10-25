@@ -1,14 +1,14 @@
 import AppKit
 
 struct Config {
-    var layouts: [Layout] = [.tall, .wide, .fullscreen, .bsp, .column]
+    var layouts: [Layout] = [.bsp, .wide, .floating, .fullscreen]
     var windowMargins = true
     var windowMarginSize: CGFloat = 10
-    var smartWindowMargins = false
+    var smartWindowMargins = true
     var paddingLeft: CGFloat = 10, paddingRight: CGFloat = 10, paddingTop: CGFloat = 10, paddingBottom: CGFloat = 10
     var mouseFollowsFocus = false
-    var focusFollowsMouse = false
-    var focusFollowsMouseInModeOnly = false
+    var focusFollowsMouse = true
+    var focusFollowsMouseInModeOnly = true
     var mouseSwapsWindows = true
     var mouseResizesWindows = true
     var splitHandle = true
@@ -18,13 +18,13 @@ struct Config {
     var floatingIsDenylist = true
     var floatSmallWindows = true
     var newWindowsToMain = false
-    var enablesLayoutHUD = true
+    var enablesLayoutHUD = false
     var enablesLayoutHUDOnSpaceChange = true
     var ignoreMenuBar = false
-    var disablePaddingOnBuiltinDisplay = false
+    var disablePaddingOnBuiltinDisplay = true
     var windowResizeStep: CGFloat = 0.05
     var animate = true
-    var animationDuration: Double = 0.18
+    var animationDuration: Double = 0.12
     var animationCurve: AnimationCurve = .easeOut
     var animationBounce: Double = 0.5
     var debugLogging = false
@@ -32,11 +32,11 @@ struct Config {
     var virtualWorkspaces = true
     var stayOnWorkspaceAfterClose = true
     var removesEmptyWorkspaces = true
-    var workspacesPerDisplay = false
+    var workspacesPerDisplay = true
     var sortNudge = 5
     var modeEffect: ModeFX.Style = .draw
     var dimOtherWindows = false
-    var dimStrength: CGFloat = 0.3
+    var dimStrength: CGFloat = 0.5
     var blurOtherWindows = false
     var blurRadius: CGFloat = 20
     var panelAnimation: PanelMotion = .rise

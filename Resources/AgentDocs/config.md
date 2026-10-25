@@ -13,21 +13,21 @@ The Settings window writes options in this order. Aliases (after `/`) are read b
 | Option | Value | Default | Notes |
 |---|---|---|---|
 | `$mod` | `SUPER` / `ALT` / `CTRL` / `SHIFT` | `ALT` | variable used in binds |
-| `layouts` | comma list | `tall, wide, fullscreen, bsp, column` | the cycle; each layout once. Names below |
+| `layouts` | comma list | `bsp, wide, floating, fullscreen` | the cycle; each layout once. Names below |
 | `floating` | comma list of bundle IDs | empty (first run: System Settings, Calculator) | apps that float (or the only ones that tile, see next). Wildcards such as `com.adobe.*` work |
 | `floating-is-blacklist` | bool | `true` | true: listed apps float. false: only listed apps are tiled |
 | `window-margins` | bool | `true` | gaps between windows |
 | `window-margin-size` | 0–100 points | `10` | `gaps_in` is accepted and doubled |
-| `smart-window-margins` / `smart-gaps` | bool | `false` | no gaps with a single window |
+| `smart-window-margins` / `smart-gaps` | bool | `true` | no gaps with a single window |
 | `screen-padding-left` | 0–500 points | `10` | `screen-padding` or `gaps_out` sets all four sides |
 | `screen-padding-right` | 0–500 points | `10` | |
 | `screen-padding-top` | 0–500 points | `10` | |
 | `screen-padding-bottom` | 0–500 points | `10` | |
-| `disable-padding-on-builtin-display` | bool | `false` | |
+| `disable-padding-on-builtin-display` | bool | `true` | |
 | `ignore-menu-bar` | bool | `false` | tile over the menu bar area |
 | `mouse-follows-focus` | bool | `false` | |
-| `focus-follows-mouse` / `follow_mouse` | bool | `false` | |
-| `focus-follows-mouse-in-mode-only` | bool | `false` | with `focus-follows-mouse` on, hovering focuses a window only while window mode is on |
+| `focus-follows-mouse` / `follow_mouse` | bool | `true` | |
+| `focus-follows-mouse-in-mode-only` | bool | `true` | with `focus-follows-mouse` on, hovering focuses a window only while window mode is on |
 | `mouse-swaps-windows` | bool | `true` | drag a tile onto another to swap |
 | `mouse-resizes-windows` | bool | `true` | drag edges to resize |
 | `split-handle` | bool | `true` | a bar on the main split: drag it to resize, click it to swap the sides |
@@ -36,16 +36,16 @@ The Settings window writes options in this order. Aliases (after `/`) are read b
 | `new-windows-to-main` / `new_is_master` | bool | `false` | |
 | `float-small-windows` | bool | `true` | |
 | `window-resize-step` | number | `5` | percent (`5`) or fraction (`0.05`); 1 or more is read as percent |
-| `enables-layout-hud` | bool | `true` | HUD when the layout changes |
+| `enables-layout-hud` | bool | `false` | HUD when the layout changes |
 | `enables-layout-hud-on-space-change` | bool | `true` | |
 | `dim-other-windows` / `dim_inactive` | bool | `false` | darken every window but the focused one |
-| `dim-strength` | 0–1 (or 0–100) | `0.3` | how dark; a value above 1 is read as percent |
+| `dim-strength` | 0–1 (or 0–100) | `0.5` | how dark; a value above 1 is read as percent |
 | `blur-other-windows` | bool | `false` | blur every window but the focused one; combines with dimming |
 | `blur-radius` | 1–100 (points) | `20` | rounded to whole points. The Settings slider shows 2–60 |
 | `virtual-workspaces` | bool | `true` | true: CatWM controls native Desktops. false: macOS controls switching. See [workspaces.md](workspaces.md) |
 | `stay-on-workspace-after-close` | bool | `true` | |
 | `remove-empty-workspaces` | bool | `true` | true: an empty workspace and its Desktop go away when you leave it |
-| `workspaces-per-display` | bool | `false` | true: each display counts its own workspaces from 1, and `workspace 2` selects the second workspace on the current display. false: workspace numbers are shared by all displays |
+| `workspaces-per-display` | bool | `true` | true: each display counts its own workspaces from 1, and `workspace 2` selects the second workspace on the current display. false: workspace numbers are shared by all displays |
 | `sort-nudge` | 0–100 (whole number) | `5` | windows on one workspace before CatWM offers Overview; `0` turns the offer off |
 | `keyboard-help` | bool | `true` | on-screen keyboard help in window mode |
 | `keyboard-help-key` | one character | `?` | toggles the keyboard help in window mode |
@@ -56,7 +56,7 @@ The Settings window writes options in this order. Aliases (after `/`) are read b
 | `switcher-jump-delay` | milliseconds | `300` | wait before instant jump opens the match; `0` opens it at once |
 | `switcher-exclude` | bundle IDs, comma separated | `` | apps the window switcher never shows; wildcards like com.adobe.* work |
 | `animate` / `animations` | bool | `true` | `animations { enabled = … }` also works |
-| `animation-duration` | seconds, or ms if above 5 | `0.18` | |
+| `animation-duration` | seconds, or ms if above 5 | `0.12` | |
 | `animation-curve` | `ease-out` `ease-in-out` `linear` `spring` `bounce` `overshoot` `cubic-bezier(x1, y1, x2, y2)` | `ease-out` | |
 | `animation-bounce` | 0–1 (or 0–100) | `0.5` | liveliness of spring/bounce/overshoot |
 | `panel-animation` | `rise` `pop` `focus` `tile` `draw` | `rise` | how Overview and keyboard help come and go; `tile` follows the animation curve; `catwm panelfx <style>` previews |
