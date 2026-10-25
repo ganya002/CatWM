@@ -36,6 +36,7 @@ final class FakeBackend: WindowBackend {
     private var onCursorRefresh: (() -> Void)?
     private var nextID: CGWindowID = 1
     private var nextDisplay: CGDirectDisplayID = 1
+    private var scanGate: DispatchSemaphore?
 
     @discardableResult
     func addScreen(frame: CGRect = CGRect(x: 0, y: 0, width: 1440, height: 900), visible: CGRect? = nil) -> Screen {
@@ -121,6 +122,14 @@ final class FakeBackend: WindowBackend {
 
     var cursorRefreshes: Int { lock.withLock { cursorRefreshCount } }
 
+    func holdScans() -> DispatchSemaphore {
+        lock.withLock {
+            let gate = DispatchSemaphore(value: 0)
+            scanGate = gate
+            return gate
+        }
+    }
+
     func applications() -> [RunningApplicationSnapshot] {
         lock.withLock {
             apps.map { RunningApplicationSnapshot(pid: $0.key, bundleID: $0.value, regular: true, hidden: false) }
@@ -138,7 +147,11 @@ final class FakeBackend: WindowBackend {
     }
 
     func scan(_ job: WindowScanner.Job, discovered _: (WindowScanner.AppScan) -> Void) -> WindowScanner.AppScan {
-        lock.withLock {
+        if let gate = lock.withLock({ scanGate }) {
+            gate.wait()
+            gate.signal()
+        }
+        return lock.withLock {
             var scan = WindowScanner.AppScan()
             let mine = stacking.compactMap { windowList[$0] }.filter { $0.pid == job.pid }
             if job.listWindows { scan.listed = mine.map(\.id) }
@@ -224,23 +237,45 @@ extension FakeBackend {
         return manager
     }
 
-    @MainActor func settle(_ manager: WindowManager, rounds: Int = 8) async {
+    @MainActor @discardableResult
+    func settle(_ manager: WindowManager, rounds: Int = 8, timeout: TimeInterval = 10) async -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
         for _ in 0..<rounds {
             let before = writes.count
-            await withCheckedContinuation { done in manager.scanAndRefresh { done.resume() } }
-            await withCheckedContinuation { done in manager.animator.afterPendingWrites { done.resume() } }
-            if writes.count == before, Set(manager.windows.keys) == ids { return }
+            let scanned = await bounded(until: deadline) { waiter in
+                manager.scanAndRefresh { waiter.finish(true) }
+                let request = manager.scanRequests
+                return { manager.scanWaiters.removeAll { $0.request == request } }
+            }
+            guard scanned, await bounded(until: deadline, { waiter in
+                manager.animator.afterPendingWrites { waiter.finish(true) }
+                return {}
+            }) else { return false }
+            if writes.count == before, Set(manager.windows.keys) == ids { return true }
         }
+        return false
     }
 
     @MainActor @discardableResult
     func wait(_ manager: WindowManager, timeout: TimeInterval = 10,
               until condition: @escaping () -> Bool) async -> Bool {
         guard !condition() else { return true }
-        let waiter = Waiter(manager, self)
+        return await bounded(until: Date().addingTimeInterval(timeout)) { waiter in
+            manager.onChange = { if condition() { waiter.finish(true) } }
+            self.observeCursorRefresh { if condition() { waiter.finish(true) } }
+            return {
+                manager.onChange = nil
+                self.observeCursorRefresh(nil)
+            }
+        }
+    }
+
+    @MainActor private func bounded(until deadline: Date,
+                                    _ start: @escaping (Waiter) -> () -> Void) async -> Bool {
+        let waiter = Waiter()
         return await withTaskCancellationHandler {
             await withCheckedContinuation { done in
-                waiter.start(done, timeout: timeout, condition)
+                waiter.start(done, until: deadline, start)
                 if Task.isCancelled { waiter.finish(false) }
             }
         } onCancel: {
@@ -249,31 +284,26 @@ extension FakeBackend {
     }
 
     @MainActor private final class Waiter {
-        private weak var manager: WindowManager?
-        private weak var fake: FakeBackend?
         private var done: CheckedContinuation<Bool, Never>?
         private var deadline: DispatchWorkItem?
+        private var cleanUp: (() -> Void)?
 
-        init(_ manager: WindowManager, _ fake: FakeBackend) {
-            self.manager = manager
-            self.fake = fake
-        }
-
-        func start(_ done: CheckedContinuation<Bool, Never>, timeout: TimeInterval, _ condition: @escaping () -> Bool) {
+        func start(_ done: CheckedContinuation<Bool, Never>, until end: Date, _ start: (Waiter) -> () -> Void) {
             self.done = done
-            manager?.onChange = { [weak self] in if condition() { self?.finish(true) } }
-            fake?.observeCursorRefresh { [weak self] in if condition() { self?.finish(true) } }
             let deadline = DispatchWorkItem { [weak self] in self?.finish(false) }
             self.deadline = deadline
-            DispatchQueue.main.asyncAfter(deadline: .now() + timeout, execute: deadline) // style-ok: deadline of a wait
+            DispatchQueue.main.asyncAfter( // style-ok: deadline of a wait
+                deadline: .now() + max(end.timeIntervalSinceNow, 0), execute: deadline)
+            let cleanUp = start(self)
+            if self.done == nil { cleanUp() } else { self.cleanUp = cleanUp }
         }
 
         func finish(_ met: Bool) {
             guard let done else { return }
             self.done = nil
             deadline?.cancel()
-            manager?.onChange = nil
-            fake?.observeCursorRefresh(nil)
+            cleanUp?()
+            cleanUp = nil
             done.resume(returning: met)
         }
     }

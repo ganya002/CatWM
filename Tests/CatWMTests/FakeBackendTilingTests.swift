@@ -74,6 +74,21 @@ import Testing
         #expect(manager.onChange == nil)
     }
 
+    @Test func aSettleOnAReadThatNeverReturnsEnds() async {
+        let fake = FakeBackend()
+        fake.addScreen()
+        let manager = fake.makeManager()
+        fake.addWindow()
+        let gate = fake.holdScans()
+        defer { gate.signal() }
+        #expect(await !fake.settle(manager, timeout: 0.2))
+        #expect(manager.scanWaiters.isEmpty)
+        let settling = Task { @MainActor in await fake.settle(manager, timeout: 600) }
+        settling.cancel()
+        #expect(await !settling.value)
+        #expect(manager.scanWaiters.isEmpty)
+    }
+
     @Test func aMinimumSizePushesTheNeighbour() async {
         let fake = FakeBackend()
         let screen = fake.addScreen()
