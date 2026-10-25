@@ -42,8 +42,33 @@ final class TabStripInput: NSView {
         super.layout()
         host.frame = bounds
         let size = TrafficLights.size(for: TabStrip.lights)
-        lights.frame = NSRect(origin: NSPoint(x: TabStrip.lightsInset, y: model.style.corner + TabStrip.lightsInset),
+        lights.frame = NSRect(origin: NSPoint(x: TabStrip.lightsInset, y: TabStrip.corner + TabStrip.lightsInset),
                               size: size)
+    }
+
+    override func isAccessibilityElement() -> Bool { false }
+    override func accessibilityRole() -> NSAccessibility.Role? { .group }
+    override func accessibilityLabel() -> String? { "Tabs" }
+
+    override func accessibilityChildren() -> [Any]? {
+        let width = bounds.width
+        let tabs: [Any] = model.tabs.enumerated().map { index, tab in
+            let element = TabAccessibilityElement()
+            element.setAccessibilityRole(.radioButton)
+            element.setAccessibilityLabel(tab.title)
+            element.setAccessibilityValue(tab.id == model.active ? 1 : 0)
+            element.setAccessibilityParent(self)
+            let frame = NSRect(x: model.slotX(index, width: width), y: bounds.height - TabStrip.height,
+                               width: model.tabWidth(in: width), height: TabStrip.height)
+            element.setAccessibilityFrameInParentSpace(frame)
+            element.press = { WindowManager.shared.selectTab(tab.id) }
+            element.setAccessibilityCustomActions([NSAccessibilityCustomAction(name: "Close tab") {
+                _ = WindowManager.shared.closeWindow(tab.id)
+                return true
+            }])
+            return element
+        }
+        return [lights] + tabs
     }
 
     override func acceptsFirstMouse(for _: NSEvent?) -> Bool { true }
@@ -70,7 +95,7 @@ final class TabStripInput: NSView {
         model.closeHovered = false
     }
 
-    private var bar: NSRect { NSRect(x: 0, y: model.style.corner, width: bounds.width, height: TabStrip.height) }
+    private var bar: NSRect { NSRect(x: 0, y: TabStrip.corner, width: bounds.width, height: TabStrip.height) }
 
     private func local(_ event: NSEvent) -> CGPoint {
         let point = convert(event.locationInWindow, from: nil)
@@ -81,7 +106,8 @@ final class TabStripInput: NSView {
         guard model.dragged == nil, menuTab == nil else { return }
         let point = local(event)
         guard point.y <= TabStrip.height, let index = model.index(at: point.x, width: bounds.width) else {
-            model.hovered = nil
+            if model.hovered != nil { model.hovered = nil }
+            if model.closeHovered { model.closeHovered = false }
             return
         }
         let id = model.tabs[index].id
@@ -97,7 +123,7 @@ final class TabStripInput: NSView {
         let onClose = model.closeRect(index, width: bounds.width).contains(point)
         press = Press(point: NSEvent.mouseLocation, id: model.tabs[index].id,
                       grab: point.x - model.slotX(index, width: bounds.width),
-                      hold: CGPoint(x: point.x + model.style.sideInset, y: point.y), onClose: onClose)
+                      hold: point, onClose: onClose)
     }
 
     override func rightMouseDown(with event: NSEvent) { openMenu(event) }
@@ -122,7 +148,7 @@ final class TabStripInput: NSView {
         guard let from = model.tabs.firstIndex(where: { $0.id == press.id }) else { return }
         let step = model.tabWidth(in: bounds.width)
         guard step > 0 else { return }
-        let wanted = min(model.tabs.count - 1, max(0, Int(((x - TabStrip.lead) / step).rounded())))
+        let wanted = model.slot(at: x, width: bounds.width)
         if wanted != from, !lifted {
             withAnimation(TabStrip.motion) {
                 model.tabs.move(fromOffsets: [from], toOffset: wanted > from ? wanted + 1 : wanted)
@@ -138,9 +164,7 @@ final class TabStripInput: NSView {
             if lifted, let from = model.tabs.firstIndex(where: { $0.id == id }) {
                 liftedTab = model.tabs.remove(at: from)
             } else if !lifted, let tab = liftedTab {
-                let step = max(0, bounds.width - TabStrip.lead) / CGFloat(model.tabs.count + 1)
-                let wanted = step > 0 ? Int(((x - TabStrip.lead) / step).rounded()) : 0
-                model.tabs.insert(tab, at: min(model.tabs.count, max(0, wanted)))
+                model.tabs.insert(tab, at: model.slot(at: x, width: bounds.width, extra: 1))
                 liftedTab = nil
             }
         }
@@ -206,5 +230,14 @@ final class TabStripInput: NSView {
         model.dragShift = 0
         model.lifted = false
         model.hovered = nil
+    }
+}
+
+private final class TabAccessibilityElement: NSAccessibilityElement {
+    var press: () -> Void = {}
+
+    override func accessibilityPerformPress() -> Bool {
+        press()
+        return true
     }
 }

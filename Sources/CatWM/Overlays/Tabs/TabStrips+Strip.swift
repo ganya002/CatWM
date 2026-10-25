@@ -19,7 +19,7 @@ extension TabStrips {
             panel.contentView = view
         }
 
-        func show(_ group: TabGroups.Group, above slot: CGRect, style: TabStripStyle, focused: Bool, duration: Double) {
+        func show(_ group: TabGroups.Group, above slot: CGRect, focused: Bool, duration: Double) {
             hidden = false
             let manager = WindowManager.shared
             let tabs = group.members.compactMap { id in
@@ -32,8 +32,7 @@ extension TabStrips {
             if model.active != group.active { model.active = group.active }
             if model.focused != focused { model.focused = focused }
             view.lights.isActive = focused
-            if model.style != style { model.style = style }
-            let frame = Self.frame(above: slot, style: style)
+            let frame = Self.frame(above: slot)
             if frame != target || shifted || !panel.isVisible || panel.alphaValue < 1 {
                 let wasVisible = panel.isVisible
                 target = frame
@@ -64,7 +63,7 @@ extension TabStrips {
 
         func contains(_ point: CGPoint) -> Bool {
             let primaryHeight = NSScreen.screens.first?.frame.height ?? 0
-            let bar = NSRect(x: panel.frame.minX, y: panel.frame.minY + model.style.corner,
+            let bar = NSRect(x: panel.frame.minX, y: panel.frame.minY + TabStrip.corner,
                              width: panel.frame.width, height: TabStrip.height)
             return panel.isVisible && panel.alphaValue > 0
                 && bar.contains(NSPoint(x: point.x, y: primaryHeight - point.y))
@@ -74,11 +73,9 @@ extension TabStrips {
             let x = point.x - panel.frame.minX
             let width = panel.frame.width
             if !model.tabs.contains(where: { $0.id == window.id }) {
-                let step = max(0, width - TabStrip.lead) / CGFloat(model.tabs.count + 1)
-                let wanted = step > 0 ? Int(((x - TabStrip.lead) / step).rounded(.down)) : 0
+                let wanted = model.slot(at: x, width: width, extra: 1, rounding: .down)
                 withAnimation(TabStrip.motion) {
-                    model.tabs.insert(.init(id: window.id, title: Self.title(of: window), pid: window.pid),
-                                      at: min(model.tabs.count, max(0, wanted)))
+                    model.tabs.insert(.init(id: window.id, title: Self.title(of: window), pid: window.pid), at: wanted)
                 }
                 model.dragged = window.id
                 model.hovered = nil
@@ -87,7 +84,7 @@ extension TabStrips {
             let step = model.tabWidth(in: width)
             guard step > 0 else { return }
             let grab = x - step / 2
-            let wanted = min(model.tabs.count - 1, max(0, Int(((grab - TabStrip.lead) / step).rounded())))
+            let wanted = model.slot(at: grab, width: width)
             if wanted != from {
                 withAnimation(TabStrip.motion) {
                     model.tabs.move(fromOffsets: [from], toOffset: wanted > from ? wanted + 1 : wanted)
@@ -190,10 +187,10 @@ extension TabStrips {
             return NSRunningApplication(processIdentifier: window.pid)?.localizedName ?? "Window"
         }
 
-        private static func frame(above slot: CGRect, style: TabStripStyle) -> NSRect {
+        private static func frame(above slot: CGRect) -> NSRect {
             let primaryHeight = NSScreen.screens.first?.frame.height ?? 0
-            return NSRect(x: slot.minX + style.sideInset, y: primaryHeight - slot.minY - style.corner,
-                          width: max(0, slot.width - style.sideInset * 2), height: style.panelHeight).integral
+            return NSRect(x: slot.minX, y: primaryHeight - slot.minY - TabStrip.corner,
+                          width: max(0, slot.width), height: TabStrip.panelHeight).integral
         }
     }
 }

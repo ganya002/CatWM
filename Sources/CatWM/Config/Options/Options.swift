@@ -71,10 +71,6 @@ enum Options {
             .setting(.windows, "windows.autoHideTabStrip", "Auto-hide tab strip",
                      help: "Tab groups hide their tabs. Move the pointer to the window top to show them",
                      keywords: "tabs group bar strip hide collapse reveal", section: "Tab groups"),
-        .choice("tab-strip-style", \.tabStripStyle, noun: "tab strip style")
-            .documented(nil, "`inset` rests the strip on the straight part of the window top; "
-                            + "`full` is as wide as the window and fills its rounded corners")
-            .note("How wide the tab strip is: inset (between the window corners) or full (the window width)."),
         .bool("tab-notification-badges", \.tabNotificationBadges)
             .documented("bool", "show a red badge with the unread count on each tab")
             .setting(.windows, "windows.tabNotificationBadges", "Show notification badges on tabs",

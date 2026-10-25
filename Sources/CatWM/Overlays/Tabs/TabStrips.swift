@@ -65,7 +65,7 @@ final class TabStrips {
                             continue
                         }
                     }
-                    strip.show(group, above: target, style: manager.config.tabStripStyle,
+                    strip.show(group, above: target,
                                focused: focused.map(group.members.contains) ?? false,
                                duration: animate ? manager.config.animationDuration : 0)
                     placements.append((strip, group.active))

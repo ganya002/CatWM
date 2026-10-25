@@ -27,7 +27,7 @@ import Testing
         let slots = try #require(manager.layoutTargets([3, 2], manager.state(for: screen), on: screen))
         let slot = try #require(slots[3])
         let tile = manager.belowTabStrip(slot, for: 3)
-        #expect(tile.minY == slot.minY + TabStrip.height)
+        #expect(tile.minY == slot.minY + TabGeometry.stripHeight)
         #expect(tile.maxY == slot.maxY && tile.width == slot.width)
         #expect(manager.belowTabStrip(slot, for: 2) == slot)
     }
@@ -37,7 +37,7 @@ import Testing
         let manager = manager(on: screen, windows: [1, 2])
         manager.model.joinTab(2, onto: 1)
         let slot = CGRect(x: 0, y: 40, width: 800, height: 600)
-        #expect(manager.belowTabStrip(slot, for: 2).minY == slot.minY + TabStrip.height)
+        #expect(manager.belowTabStrip(slot, for: 2).minY == slot.minY + TabGeometry.stripHeight)
         manager.config.autoHideTabStrip = true
         #expect(manager.belowTabStrip(slot, for: 1) == slot)
         #expect(manager.belowTabStrip(slot, for: 2) == slot)
@@ -133,7 +133,7 @@ import Testing
         manager.minSizes[1] = CGSize(width: 500, height: 300)
         manager.minSizes[2] = CGSize(width: 400, height: 420)
         manager.model.joinTab(2, onto: 1)
-        #expect(manager.slotMinimum(2) == CGSize(width: 500, height: 420 + TabStrip.height))
+        #expect(manager.slotMinimum(2) == CGSize(width: 500, height: 420 + TabGeometry.stripHeight))
     }
 
     @Test @MainActor func droppingOnTheTopOfATileAddsATab() {

@@ -266,7 +266,7 @@ extension WindowManager {
     func belowTabStrip(_ slot: CGRect, for id: CGWindowID) -> CGRect {
         guard let group = tabs.group(of: id),
               !config.autoHideTabStrip || surface.revealedTabGroup == group.id else { return slot }
-        let inset = TabStrip.height
+        let inset = TabGeometry.stripHeight
         return CGRect(x: slot.minX, y: slot.minY + inset, width: slot.width, height: max(0, slot.height - inset))
     }
 
@@ -275,7 +275,7 @@ extension WindowManager {
         let sizes = group.members.compactMap { minSizes[$0] }
         guard !sizes.isEmpty else { return nil }
         return CGSize(width: sizes.map(\.width).max() ?? 0,
-                      height: (sizes.map(\.height).max() ?? 0) + TabStrip.height)
+                      height: (sizes.map(\.height).max() ?? 0) + TabGeometry.stripHeight)
     }
 
     func tabDropTarget(for id: CGWindowID, at point: CGPoint) -> CGWindowID? {
@@ -330,7 +330,7 @@ extension WindowManager {
     }
 
     func tabDropZone(_ host: CGWindowID, _ slot: CGRect) -> CGRect {
-        let top = tabs.isGrouped(host) ? slot.minY - TabStrip.height : slot.minY
+        let top = tabs.isGrouped(host) ? slot.minY - TabGeometry.stripHeight : slot.minY
         return CGRect(x: slot.minX, y: top, width: slot.width, height: slot.minY - top + Self.tabTitleBand)
     }
 
