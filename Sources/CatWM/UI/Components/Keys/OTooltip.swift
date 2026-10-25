@@ -9,8 +9,8 @@ struct OTooltip: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Text(text).font(Theme.body(12.5)).lineLimit(4).fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: 320, alignment: .leading)
+            Text(text).font(Theme.body(12.5)).oneLine()
+                .frame(maxWidth: 240, alignment: .leading)
             if !chords.isEmpty {
                 HStack(spacing: 5) {
                     ForEach(Array(chords.enumerated()), id: \.offset) { i, keys in
@@ -32,8 +32,8 @@ extension GalleryContent {
         HStack(alignment: .top, spacing: Theme.Space.extraLarge) {
             OTooltip(text: "Retile", chords: [["Z"]], caret: .none).fixedSize()
             OTooltip(text: "Settings", chords: [["⌘", ","]], caret: .none).fixedSize()
-            OTooltip(text: "Swap with main", caret: .none).fixedSize()
-            OIconButton(symbol: "gearshape", label: "Hover for a tooltip") {}
+            OTooltip(text: "Send feedback", caret: .none).fixedSize()
+            OIconButton(symbol: "ladybug", label: "Send feedback", tip: true) {}
         }
     }
 }

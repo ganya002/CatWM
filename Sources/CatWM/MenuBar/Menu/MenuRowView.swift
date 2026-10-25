@@ -30,20 +30,19 @@ struct MenuRowView: View {
                     if let crumb, !crumb.isEmpty {
                         Text(crumb).textStyle(.caption).foregroundStyle(muted).oneLine()
                     } else if let value = item.value {
-                        Text(value).font(Theme.body(12.5)).foregroundStyle(muted).oneLine()
+                        Text(value).textStyle(.caption).foregroundStyle(muted).oneLine()
                     }
                 }
                 .layoutPriority(1)
             }
         } trailing: {
             if item.kind == .footer {
-                Image(systemName: "power").font(Theme.symbol(Theme.Icon.small)).foregroundStyle(muted)
-                Text(item.label).font(Theme.body(12.5)).oneLine()
+                Text(item.label).textStyle(.caption).oneLine()
             }
             if let badge = item.badge {
                 Text("\(badge)").font(Theme.body(12, .medium)).monospacedDigit()
                     .foregroundStyle(Theme.accentInk)
-                    .padding(.horizontal, 7).frame(height: 18)
+                    .padding(.horizontal, Theme.Space.small).frame(height: 18)
                     .background(Capsule().fill(Theme.accentSoft))
             }
             if item.kind == .sub && crumb == nil {

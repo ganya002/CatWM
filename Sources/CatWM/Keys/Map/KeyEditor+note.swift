@@ -26,7 +26,6 @@ extension KeyEditor {
             if let issue {
                 hairline
                 OStatus(kind: issue.severity == .error ? .danger : .warning, text: issue.message)
-                    .tooltip(issue.message)
                     .padding(.horizontal, 8).frame(height: 34)
             }
             others
@@ -47,7 +46,7 @@ extension KeyEditor {
             Text(text).font(Theme.body(13)).oneLine()
             if let detail { Text(detail).textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine() }
         }
-        .padding(.horizontal, 8).padding(.vertical, 10)
+        .padding(.horizontal, 8).padding(.vertical, Theme.Space.small)
     }
 
     func modeEntry(_ mode: String) -> [String]? {
@@ -110,7 +109,7 @@ extension KeyEditor {
             Text(category.rawValue).oneLine().fixedSize()
         }, trailing: {
             if current, let action {
-                Text(action.title).foregroundStyle(Theme.accentInk).oneLine()
+                Text(action.title).foregroundStyle(Theme.ink).oneLine()
             }
             Image(systemName: "chevron.right").font(Theme.symbol(Theme.Icon.extraSmall, .semibold))
                 .foregroundStyle(Theme.inkFaint)

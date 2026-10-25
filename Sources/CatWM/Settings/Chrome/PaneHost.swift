@@ -36,7 +36,7 @@ struct PaneHost: View {
                     case .shortcuts: ShortcutsPane(doc: doc, settingsUI: settingsUI)
                     }
                 }
-                .padding(.horizontal, 28).padding(.top, 22).padding(.bottom, 40)
+                .padding(.horizontal, Theme.Space.extraLarge).padding(.top, 22).padding(.bottom, 40)
                 .frame(maxWidth: 660, alignment: .leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }

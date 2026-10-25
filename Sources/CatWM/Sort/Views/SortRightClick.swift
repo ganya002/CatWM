@@ -15,8 +15,13 @@ struct SortRightClick: NSViewRepresentable {
     final class RightClickView: NSView {
         var action: () -> Void = {}
         override func hitTest(_ point: NSPoint) -> NSView? {
-            NSApp.currentEvent?.type == .rightMouseDown ? super.hitTest(point) : nil
+            guard let event = NSApp.currentEvent else { return nil }
+            let controlClick = event.type == .leftMouseDown && event.modifierFlags.contains(.control)
+            return event.type == .rightMouseDown || controlClick ? super.hitTest(point) : nil
         }
         override func rightMouseDown(with _: NSEvent) { action() }
+        override func mouseDown(with event: NSEvent) {
+            if event.modifierFlags.contains(.control) { action() } else { super.mouseDown(with: event) }
+        }
     }
 }

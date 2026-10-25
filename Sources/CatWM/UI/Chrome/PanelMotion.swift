@@ -53,5 +53,10 @@ enum PanelMotion: String, CaseIterable {
                                         duration: config.animationDuration))
     }
 
+    static func windowAnimation(reduceMotion: Bool) -> Animation? {
+        guard let animation = windowAnimation else { return nil }
+        return reduceMotion ? Motion.fade : animation
+    }
+
     static var tileDuration: Double { max(0.3, WindowManager.shared.config.animationDuration * 1.7) }
 }

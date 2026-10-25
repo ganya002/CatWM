@@ -22,7 +22,7 @@ struct SortOfferView: View {
                 OButton("Keep as is", variant: .ghost) { choose(false) }
             }
             .padding(.top, 20)
-            Capsule().fill(Theme.accent).frame(height: 3).padding(.top, 14)
+            Capsule().fill(Theme.accent).frame(height: 3).padding(.top, Theme.Space.medium)
         }
         .frame(width: Self.width - 40)
         .surface(.large, caret: .top(caret))

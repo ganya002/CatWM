@@ -8,6 +8,7 @@ struct OSegmented<T: Hashable>: View {
     private let pick: (T) -> Void
     private let multiple: Bool
     @Namespace private var thumb
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(title: String, options: [(value: T, label: String)], selection: Binding<T>) {
         self.title = title
@@ -38,7 +39,7 @@ struct OSegmented<T: Hashable>: View {
             ForEach(options, id: \.value) { option in
                 OSegment(label: option.label, keys: option.keys, count: option.count, selected: isOn(option.value),
                          thumb: multiple ? nil : thumb) {
-                    withAnimation(Motion.spring) { pick(option.value) }
+                    withAnimation(reduceMotion ? Motion.fade : Motion.spring) { pick(option.value) }
                 }
                 .tooltip(option.help ?? "")
                 .accessibilityLabel(option.help ?? option.label)

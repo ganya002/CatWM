@@ -25,7 +25,7 @@ struct ColorPopover: View {
                            onSubmit: applyText)
                 OButton("None", variant: .ghost, size: .small) {
                     model.set(color: nil); model.colorText = ""
-                }.tooltip("No background color")
+                }
             }
         }
         .padding(14).frame(width: 260)

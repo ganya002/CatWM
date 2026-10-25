@@ -13,7 +13,7 @@ struct StatusHero: View {
                                   : status.keybindsActive ? "pause.circle.fill" : "exclamationmark.circle.fill",
                               color: live ? Theme.success : Theme.warning, size: 52)
                     .squish(on: live, when: live)
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: Theme.Space.extraSmall) {
                     Text(!status.trusted ? "CatWM needs Accessibility access"
                          : !status.tilingEnabled ? "Tiling is paused"
                          : status.keybindsActive ? "CatWM is running" : "Keyboard shortcuts aren't active")

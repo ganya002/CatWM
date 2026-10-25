@@ -16,9 +16,9 @@ struct FinishCardView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 4)
             }
-            if !summary.modeCaps.isEmpty { mode.padding(.top, 14) }
+            if !summary.modeCaps.isEmpty { mode.padding(.top, Theme.Space.medium) }
             columns.padding(.top, 16)
-            footer.padding(.top, 22).padding(.bottom, 18)
+            footer.padding(.top, Theme.Space.extraLarge).padding(.bottom, 21)
         }
         .padding(Self.pad)
         .frame(width: Self.width, alignment: .leading)
@@ -37,7 +37,7 @@ struct FinishCardView: View {
     }
 
     private var mode: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: Theme.Space.medium) {
             Kbd(keys: summary.modeCaps, size: .medium).fixedSize()
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(summary.modeName).font(Theme.body(13.5, .medium)).oneLine().fixedSize()
@@ -53,9 +53,9 @@ struct FinishCardView: View {
 
     private var columns: some View {
         let count = summary.groups.map(\.column).max() ?? 1
-        return HStack(alignment: .top, spacing: 28) {
+        return HStack(alignment: .top, spacing: Theme.Space.extraLarge) {
             ForEach(1...max(1, count), id: \.self) { col in
-                VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: Theme.Space.medium) {
                     let columnGroups = Array(summary.groups.enumerated()).filter { $0.element.column == col }
                     ForEach(columnGroups, id: \.offset) { _, summaryGroup in
                         group(summaryGroup)
@@ -70,7 +70,7 @@ struct FinishCardView: View {
         VStack(alignment: .leading, spacing: 0) {
             OSectionHeader(summaryGroup.title, tone: Theme.inkMuted).padding(.bottom, Theme.Space.extraSmall)
             ForEach(Array(summaryGroup.rows.enumerated()), id: \.offset) { i, row in
-                HStack(spacing: 10) {
+                HStack(spacing: Theme.Space.medium) {
                     Text(row.label).font(Theme.body()).oneLine()
                     Spacer(minLength: 8)
                     Kbd(keys: row.caps).fixedSize()

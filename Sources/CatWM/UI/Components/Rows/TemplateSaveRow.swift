@@ -9,10 +9,10 @@ struct TemplateSaveRow: View {
 
     var body: some View {
         HStack(spacing: Theme.Space.small) {
+            OIconButton(symbol: "xmark", label: "Cancel save", action: cancel)
             OTextField(placeholder: "Template name", text: $name, onSubmit: save, autofocus: true)
             OButton("Save", variant: .primary, shortcut: ["↩"], action: save)
                 .disabled(busy || problem != nil)
-            OIconButton(symbol: "xmark", label: "Cancel save", action: cancel)
         }
     }
 }

@@ -7,9 +7,11 @@ struct SortLaneView: View {
     let lane: SortLane
     let rows: Int
     @StateObject private var hover = Flag()
+    @StateObject private var menu = Flag()
     @FocusState private var editing: Bool
     @StateObject private var number = NumberEdit()
     @FocusState private var numberFocus: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var carry: some Gesture {
         DragGesture(minimumDistance: 4, coordinateSpace: .named("sort"))
@@ -20,7 +22,7 @@ struct SortLaneView: View {
     @ViewBuilder private func numberView(filled: Bool) -> some View {
         if number.isEditing {
             TextField("", text: $number.draft)
-                .textFieldStyle(.plain).font(Theme.display(22)).monospacedDigit().tracking(-0.4)
+                .textFieldStyle(.plain).textStyle(.title).monospacedDigit()
                 .foregroundStyle(Theme.ink)
                 .frame(width: 32)
                 .focused($numberFocus)
@@ -32,7 +34,7 @@ struct SortLaneView: View {
                 .onChange(of: numberFocus) { _, focused in if !focused { commitNumber() } }
                 .accessibilityLabel("Number for workspace \(lane.number)")
         } else {
-            Text(lane.number).font(Theme.display(22)).monospacedDigit().tracking(-0.4)
+            Text(lane.number).textStyle(.title).monospacedDigit()
                 .foregroundStyle(filled ? Theme.ink : Theme.inkFaint).fixedSize()
                 .contentShape(Rectangle())
                 .onTapGesture {
@@ -49,7 +51,9 @@ struct SortLaneView: View {
     private func commitNumber() {
         guard number.isEditing else { return }
         number.isEditing = false
-        withAnimation(PanelMotion.windowAnimation) { model.renumber(lane.id, to: number.draft) }
+        withAnimation(PanelMotion.windowAnimation(reduceMotion: reduceMotion)) {
+            model.renumber(lane.id, to: number.draft)
+        }
     }
 
     var body: some View {
@@ -57,6 +61,15 @@ struct SortLaneView: View {
         let count = lane.ids.count
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
+                if model.plan.lanes.count > 1 {
+                    RemoveButton(help: "Close workspace \(lane.number)", variant: .close) {
+                        withAnimation(PanelMotion.windowAnimation(reduceMotion: reduceMotion)) {
+                            model.closeLane(lane.id)
+                        }
+                    }
+                    .opacity(hover.isOn || editing ? 1 : 0)
+                    .padding(.vertical, -4)
+                }
                 numberView(filled: count > 0)
                 TextField("", text: Binding(get: { lane.name }, set: { model.rename(lane.id, $0) }),
                           prompt: Text("Workspace \(lane.number)").foregroundStyle(Theme.inkFaint))
@@ -68,15 +81,15 @@ struct SortLaneView: View {
                 Text(count > 0 ? "\(count)" : "")
                     .textStyle(.caption).monospacedDigit().foregroundStyle(Theme.inkFaint).fixedSize()
                     .gesture(carry)
-                if model.plan.lanes.count > 1 {
-                    RemoveButton(help: "Close workspace \(lane.number)", variant: .close, tooltip: false) {
-                        withAnimation(PanelMotion.windowAnimation) { model.closeLane(lane.id) }
-                    }
-                        .opacity(hover.isOn || editing ? 1 : 0)
-                        .padding(.vertical, -4)
-                }
             }
             .padding(.horizontal, 4)
+            .contentShape(Rectangle())
+            .oContextMenu(opened: { menu.isOn = $0 }, items: {
+                model.laneMenu(lane, index: index, rename: { editing = true },
+                               run: { change in
+                                   withAnimation(PanelMotion.windowAnimation(reduceMotion: reduceMotion), change)
+                               })
+            })
             SortThumb(layout: lane.layout, ids: model.plan.tiles(lane.ids),
                       lit: (model.hover ?? model.selected).flatMap(lead),
                       ratio: model.plan.geometry[lane.workspace]?.ratio ?? 0.5,
@@ -94,7 +107,7 @@ struct SortLaneView: View {
         .padding(.vertical, 8).padding(.horizontal, 4)
         .frame(width: SortMetrics.lane, alignment: .topLeading)
         .background(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous)
-            .fill(over ? Theme.accentSoft : Theme.surfaceRaised))
+            .fill(over ? Theme.accentSoft : menu.isOn ? Theme.hover : Theme.surfaceRaised))
         .opacity(model.columnDrag?.lane.id == lane.id ? 0.3 : 1)
         .overlay(alignment: .leading) { slotBar(model.columnSlot == index).offset(x: -3.5) }
         .overlay(alignment: .trailing) {

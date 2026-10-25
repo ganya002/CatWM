@@ -7,6 +7,7 @@ struct LayoutPicker: View {
     var columns = 4
     let pick: (Layout) -> Void
     @StateObject private var model = Model()
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     final class Model: ObservableObject { @Published var hovered: Layout? }
 
@@ -17,18 +18,18 @@ struct LayoutPicker: View {
                 ForEach(layouts, id: \.self) { layout in
                     Button { pick(layout) } label: {
                         LayoutThumbnail(layout: layout, selected: layout == selection)
-                            .scaleEffect(model.hovered == layout ? 1.06 : 1)
+                            .scaleEffect(model.hovered == layout && !reduceMotion ? 1.06 : 1)
                             .padding(6)
                             .background(RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
                                 .fill(layout == selection ? Theme.accentSoft
-                                      : model.hovered == layout ? Theme.wellHover : .clear))
+                                      : model.hovered == layout ? Theme.hover : .clear))
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .onHover { hovering in
                         if hovering { model.hovered = layout } else if model.hovered == layout { model.hovered = nil }
                     }
-                    .animation(Motion.spring, value: model.hovered == layout)
+                    .animation(reduceMotion ? Motion.fade : Motion.spring, value: model.hovered == layout)
                     .accessibilityLabel(layout.title)
                     .accessibilityAddTraits(layout == selection ? .isSelected : [])
                 }

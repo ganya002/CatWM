@@ -52,7 +52,8 @@ extension KeyEditor {
             hairline
             VStack(alignment: .leading, spacing: 0) {
                 OSectionHeader("With other modifiers", tone: Theme.inkMuted)
-                    .padding(.horizontal, 10).padding(.top, Theme.Space.small).padding(.bottom, Theme.Space.xxs)
+                    .padding(.horizontal, Theme.Space.medium).padding(.top, Theme.Space.small)
+                    .padding(.bottom, Theme.Space.xxs)
                 ForEach(list.prefix(4)) { other in
                     OMenuRow(action: {
                         model.held = []
@@ -65,7 +66,6 @@ extension KeyEditor {
                             Text(other.title).oneLine()
                         }
                     }, trailing: {})
-                    .tooltip("Show \(ConfigDocument.modifierCaps(other.flags).joined()) shortcuts")
                 }
             }
             .padding(.bottom, 4)

@@ -10,6 +10,7 @@ struct OMenuRow<Lead: View, Label: View, Trailing: View>: View {
     @ViewBuilder var label: Label
     @ViewBuilder var trailing: Trailing
     @AccessibilityFocusState private var voiceOverFocus: Bool
+    @Environment(\.isEnabled) private var enabled
 
     init(highlight: MenuRowHighlight = .followsHover, open: Bool = false, danger: Bool = false,
          action: @escaping () -> Void, @ViewBuilder lead: () -> Lead, @ViewBuilder label: () -> Label,
@@ -20,14 +21,14 @@ struct OMenuRow<Lead: View, Label: View, Trailing: View>: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 10) {
+            HStack(spacing: Theme.Space.medium) {
                 if Lead.self != EmptyView.self { lead.frame(width: 16) }
                 label
                 Spacer(minLength: 6)
                 trailing
             }
             .font(Theme.body(13.5))
-            .foregroundStyle(danger ? Theme.danger : Theme.ink)
+            .foregroundStyle(!enabled ? Theme.inkFaint : danger ? Theme.danger : Theme.ink)
         }
         .buttonStyle(OMenuRowStyle(highlight: highlight, open: open, danger: danger))
         .accessibilityFocused($voiceOverFocus)
@@ -46,14 +47,15 @@ extension GalleryContent {
     @ViewBuilder var menus: some View {
         block("Menu rows") {
             VStack(spacing: 0) {
-                OMenuRow(action: {}, lead: { Image(systemName: "gearshape") }, label: { Text("Settings…") },
+                OMenuRow(action: {}, lead: { EmptyView() }, label: { Text("Settings…") },
                          trailing: { Text("⌘,").foregroundStyle(Theme.inkMuted) })
-                OMenuRow(highlight: .fixed(true), action: {}, lead: { Image(systemName: "macwindow") },
+                OMenuRow(highlight: .fixed(true), action: {}, lead: { EmptyView() },
                          label: { Text("Highlighted row") })
-                OMenuRow(open: true, action: {}, lead: { Image(systemName: "square.grid.2x2") },
+                OMenuRow(open: true, action: {}, lead: { EmptyView() },
                          label: { Text("Layout") },
                          trailing: { Image(systemName: "chevron.right").foregroundStyle(Theme.inkMuted) })
-                OMenuRow(danger: true, action: {}, lead: { Image(systemName: "power") }, label: { Text("Quit CatWM") })
+                OMenuRow(action: {}, lead: { EmptyView() }, label: { Text("Disabled row") }).disabled(true)
+                OMenuRow(danger: true, action: {}, lead: { EmptyView() }, label: { Text("Quit CatWM") })
             }
             .frame(width: Theme.menuWidth)
             .padding(Theme.Space.extraSmall + Theme.Space.xxs)

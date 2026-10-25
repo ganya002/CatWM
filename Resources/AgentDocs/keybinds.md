@@ -35,7 +35,7 @@ submap = reset
 
 - While on, "-- WINDOW --" appears at the screen bottom and the menu bar shows WINDOW.
 - Keys with no bind in the mode are swallowed. ⌘ and ⌃ shortcuts still reach apps.
-- Clicking anywhere leaves the mode.
+- Clicking anywhere leaves the mode, except a right click on a window: it opens that window's context menu and the mode stays on.
 - Always give the mode an exit (`submap, reset`) or the user gets stuck.
 - Mode names are free-form; `window` is what the UI's "Window mode" tab edits.
 

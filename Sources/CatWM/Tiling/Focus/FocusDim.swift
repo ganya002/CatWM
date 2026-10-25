@@ -67,7 +67,6 @@ final class FocusDim {
             let dispatcher = feature.pointer.dispatcher
             let args = feature.pointer.args
             return QuickAction(id: "focus.\(feature.pointer.id)", title: menu.title,
-                               symbol: feature.pointer.action.symbol,
                                keys: [menu.key.uppercased()], keyCode: keyCodes[menu.key], isOn: menu.isOn()) {
                 WindowManager.shared.dispatch(dispatcher, args)
             }

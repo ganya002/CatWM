@@ -6,10 +6,11 @@ struct OButtonBody: View {
     let style: OButtonStyle
     @StateObject private var hover = Flag()
     @Environment(\.isEnabled) private var enabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         configuration.label
-            .font(Theme.body(style.size == .small ? 12.5 : style.size == .large ? 14 : 13, .medium))
+            .font(Theme.body(style.size == .small ? 12 : 13.5, .medium))
             .oneLine()
             .foregroundStyle(ink)
             .padding(.horizontal, style.iconOnly ? 0 : style.size == .small ? 11 : style.size == .large ? 18 : 14)
@@ -17,7 +18,7 @@ struct OButtonBody: View {
             .background(Capsule().fill(fill))
             .contentShape(Capsule())
             .scaleEffect(configuration.isPressed ? 0.95 : 1)
-            .animation(Motion.spring, value: configuration.isPressed)
+            .animation(reduceMotion ? Motion.fade : Motion.spring, value: configuration.isPressed)
             .animation(Motion.fade, value: lit)
             .opacity(enabled ? 1 : 0.45)
             .onHover { hover.isOn = $0 }

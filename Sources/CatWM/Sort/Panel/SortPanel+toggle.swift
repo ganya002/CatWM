@@ -160,7 +160,7 @@ extension SortPanel {
     }
 
     func installMonitors() {
-        dismiss.start(keeps: { [weak self] in $0 === self?.panel }, screens: true,
+        dismiss.start(keeps: { [weak self] in $0 === self?.panel || Popup.shared.owns($0) }, screens: true,
                       key: { [weak self] event in self?.key(event) == true }, close: { [weak self] in self?.finish() })
     }
 }

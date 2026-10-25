@@ -25,6 +25,7 @@ A change to a token or a component rule is not finished until `Sources/CatWM/UI/
 6. **Two faces.** Pilcrow Rounded for the wordmark and keycaps (Bold for the wordmark, Semibold for keycaps). Alpino Bold, the website heading face, for display, titles and headings. The system font for body text, labels, captions and menu rows. Nothing else.
 7. **Symbols move with meaning.** An SF Symbol effect always reports something: an action landed, a thing refused, the app is busy, a tip is waiting. Never decoration.
 8. **Close and create go on the left.** The close button and the create (add, new) button sit at the leading edge of a header, title bar or strip, as the macOS traffic lights do. Never put them at the trailing edge. If the button can go at the top or at the bottom of a container, put it at the top, in the top-left corner. Bad: a panel header with a close X on the right, after the count. Good: the close X at the left of the title bar, before the title.
+9. **Right click is a shortcut, not a home.** Every command in a context menu also exists in the menu bar menu, in Settings or on a key. A context menu only brings the commands closer to the pointer. It never holds a command that has no other way in. One exception: on a control that a left click steps forward through a list (the layout pill), a right click steps back. Keys and the Layout menu reach the same list.
 
 ## Colour
 
@@ -93,7 +94,7 @@ Each entry gives the design intent. The Swift type is in brackets.
 - Use ghost for Skip, Back, Close and other ways out.
 - Put Close and Create buttons at the top left of their header, title bar or strip (principle 8).
 - Use danger only for destructive actions, always with a verb ("Reset Shortcuts").
-- An icon-only button needs a label and a tooltip.
+- An icon-only button needs an accessibility label. It gets a tooltip only when its symbol is not obvious (see Tooltip).
 
 **Switch** [`OSwitch`, `OSwitchRow`]. Toggles one setting at once. Off is `borderControl` on `surfaceSunken`. On is `accent` with an `onAccent` thumb that springs and stretches while pressed. The thumb follows a drag and springs to the nearer side. For a choice of two to four options, use Segmented.
 
@@ -118,7 +119,14 @@ Each entry gives the design intent. The Swift type is in brackets.
 
 **Kbd** [`Kbd`]. Keycaps for a shortcut, a chord or a sequence. Small keycaps (20 pt, `well`) go in tooltips, labels and buttons. Menu rows use plain `kbd` text. Medium keycaps (30 pt) go in onboarding key pickers and summaries. Large keycaps (40 pt) go only in coach marks, where the real key press fills them with `accent` and sinks them 2 pt. Medium and large keycaps are flat `surfaceRaised` tiles, with no shadow and no bottom edge. Order modifiers the macOS way: control, option, shift, command, then the key.
 
-**Tooltip** [`OTooltip`, `Tooltip`]. The smallest surface (`extraSmall`). One short phrase in sentence case, with no full stop. Never a button inside. Every icon-only button gets one. A shortcut is one chord at most. It points at its target with a small caret.
+**Tooltip** [`OTooltip`, `Tooltip`]. The smallest surface (`extraSmall`). A tooltip is rare. Add one only when a person cannot tell what a control does without it.
+
+- Add a tooltip to an icon-only button when its symbol is not universal, or when its shortcut is useful. Do not add one to close, add, back, chevrons, or any control that has a visible text label.
+- Do not add a tooltip to a row, a menu item, a switch, a slider, a segmented control or a button with text. Their label and description already say it.
+- Do not repeat the visible label in a tooltip. If the tooltip adds nothing, remove it.
+- Every icon-only button still has an accessibility label, with or without a tooltip.
+- The tooltip shows after a 0.5 s hover. Moving to a next tooltip right after shows it at once. A press, a scroll or a key press hides it.
+- One short phrase in sentence case, with no full stop. Never a button inside. A shortcut is one chord at most. It points at its target with a small caret.
 
 **Menu** [`Popup`, `OMenuRow`, `OMenuButton`, `OMenuPicker`]. A dropdown with groups, checks, radios, switches, inline controls and nested submenus, with type-to-search. The picker button is an outlined pill (`borderControl`) with the current value in `body-medium` and the up-down chevron.
 
@@ -128,6 +136,22 @@ Each entry gives the design intent. The Swift type is in brackets.
 - Every actionable row shows its shortcut.
 - Give hidden aliases to commands that live inside a custom control, so search still finds them.
 - Arrow keys, return and escape work. Typing focuses search.
+
+**Context menu** [`Popup.context`, `oContextMenu`]. A right click, or a Control-click, on a thing opens a menu of what you can do to that thing. It is the `Menu` component with the same rows, the same `medium` surface and the same search rules. These rules are added to it:
+
+- *Scope.* The menu is about the object under the pointer: a window, a tab, a workspace, a template, a row. It is never about the whole app. App-wide commands stay in the status menu.
+- *Opening.* The menu opens with its top-left corner at the pointer and has no caret. At a screen edge it flips to the other side of the pointer. It stays inside the screen. The object under the pointer shows a selected state while the menu is open. If the object was not selected before, it is selected again when the menu closes.
+- *Content.* Show 2 to 7 rows. Order them by how often a person uses them. Put the most common row first. Put the rows that change the object before the rows that move or share it. Use one separator between groups. Use no more than two groups.
+- *Names.* Each row is a verb and sentence case, as in all menus: "Rename", "Move to workspace", "Close window". Do not repeat the object in the label. The object is already clear from the pointer.
+- *Shortcuts.* Show the shortcut of a row on the right, as in principle 1. A row without a shortcut has an empty trailing column. Do not invent a key just to fill it.
+- *Symbols.* Rows carry no symbols, as in all menus.
+- *Danger.* A destructive row is the last row. A separator comes before it. Its text is `danger` and the verb says what is lost: "Delete template". If an undo exists, do not ask to confirm. If no undo exists, the row is a submenu with one danger row that names the object ("Delete “Writing”"). It never opens a dialog.
+- *Unavailable rows.* Keep a row in the menu but disable it (`inkFaint`) when the command is valid for this kind of object but not now. Hide a row when the command does not apply to this kind of object. A menu never has all rows disabled. Show no menu in that case.
+- *Submenus.* One level at most. Prefer a flat list. Use a submenu only for a choice from a set, such as the target workspace, or for a confirm row.
+- *Keyboard.* Arrow keys, return and escape work, as in all menus. Tab does nothing. The first row is not highlighted when the menu opens by pointer. It is highlighted when the menu opens by key.
+- *Dismissal.* A click outside the menu, Escape, a scroll or a change of the object closes it. A click on a row runs the command and closes the menu. The exception is a row that toggles a state the person may want to repeat. Keep the menu open for that row only.
+- *Discoverability.* A right click is never the only hint. Put the same commands in a place that is visible: a hover button, a menu bar item or a setting. Do not add a tip to teach right click.
+- *Motion.* The menu appears with `Motion.easeOut` at `Theme.fast`. It does not scale or bounce. With Reduce Motion on, it fades only.
 
 **Welcome card and intro** [`WelcomeView`, `WordmarkView`]. The welcome card opens with the cat mascot at 72 pt, not the app icon, above the `display` title. Permission rows use `inkMuted` symbols and the page dots are `ink`. The intro wordmark is the lockup: the cat beside the wordmark, both white, with the tagline below.
 
@@ -141,7 +165,7 @@ Each entry gives the design intent. The Swift type is in brackets.
 
 **HUD**. Confirms a keyboard action in the middle of the screen: a glass surface with a layout thumbnail and its name. Shown for about one second. Never interactive. It ignores the mouse. The warning variant wiggles `exclamationmark.triangle.fill` and names the app that refused.
 
-**Layout picker and thumb** [`LayoutPicker`]. Picks a layout from a grid of thumbnails. The hovered layout's name and description show on one line below. Thumbnails carry no labels, so nothing wraps. Panes are `tint`. The main pane is a darker neutral. A selected main pane is `accent`. Use the app's own layout descriptions as tooltips.
+**Layout picker and thumb** [`LayoutPicker`]. Picks a layout from a grid of thumbnails. The hovered layout's name and description show on one line below. Thumbnails carry no labels, so nothing wraps. Panes are `tint`. The main pane is a darker neutral. A selected main pane is `accent`. The hovered layout's description already shows below the grid, so thumbnails need no tooltips.
 
 **Tab strip** [`TabStripView`, `TabStrips`]. Sits on the top edge of a tab group, flat on `surface` with `large` top corners. It is inset by `pane` from each side, so it rests on the straight part of the window top and the window keeps its own traffic lights. The tabs share the width with no gap. The active tab is `ink` at 10% while the group has focus and at 6% when it does not, and the fill slides to the next tab with `Motion.easeOut`. A hovered tab is `ink` at 4%. A `hairline` separates two tabs when neither is active or hovered. Each tab fills the full strip height, so the whole tab is the hit target. Native close and minimise lights (`NativeTrafficLight`) sit at the left, inset by the same 8 pt as above and below them, with `medium` space before the first tab. They close or minimise every tab in the group, and they are grey when no tab has focus. The first tab has the same `large` top-left radius as the strip. A hovered tab shows its close button at the left. A drag of the window title bar moves the whole group: the strip follows the cursor on each mouse event, the hidden tabs wait off the screen, and after the drop they go back behind the window in one step. A drop on another group adds every tab. A tab dragged out of the strip, or more than 5 pt above or below it, carries its window under the cursor, and the drop takes it out of the group. Held 0.4 s over another window, it shows the drop hint and the drop adds it there. Over its own group, the drop puts it back. Escape hides the drop hint and the strip preview, the drag goes on, and the release is a plain drop. While it is out, the other tabs fill the strip. A window dragged into a strip shows as a tab at the cursor, the strip stays under the window, and the other tabs make space. The drop adds it at that place. The strip and the lifted window move with the animation settings (duration, curve and bounce), like the tiled windows. The tabs move with `Motion.snap`, or `Motion.fade` when Reduce Motion is on. When animations are off, nothing animates. The strip is `rowHeight` tall. It stays on the Desktop of its group and moves with it, and Mission Control does not show it. With the "Auto-hide tab strip" setting on (off by default), every strip hides and its window fills the strip space, with or without focus. When the cursor comes above the window or into the empty title bar (`TitleBar.clearTop`, or 10 pt when the app does not tell), the strip comes back. The traffic lights, and a cursor that moves toward them, do not show it, so the person can reach them and the window moves down under it. The strip hides again 0.3 s after the cursor leaves.
 

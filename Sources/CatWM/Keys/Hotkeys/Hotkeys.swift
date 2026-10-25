@@ -35,6 +35,7 @@ final class Hotkeys {
     var modeChord: CGEventFlags = []
     var lastMods: CGEventFlags = []
     var tapDown: TapDown?
+    var swallowRightUp = false
 
     struct TapDown {
         let flag: CGEventFlags

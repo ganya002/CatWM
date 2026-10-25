@@ -72,10 +72,10 @@ struct KeyEditor: View {
         if let entry = modeEntry(draft.mode) { chords.insert(entry, at: 0) }
         return HStack(spacing: 12) {
             KeyHintKeyboard.keycap(key, hint: preview, scale: capScale)
-            VStack(alignment: .leading, spacing: 5) {
-                Text(title).font(Theme.heading(14)).oneLine()
+            VStack(alignment: .leading, spacing: Theme.Space.extraSmall) {
+                Text(title).textStyle(.sectionTitle).oneLine()
                     .foregroundStyle(draft.dispatcher.isEmpty ? Theme.inkMuted : Theme.ink)
-                HStack(spacing: 5) {
+                HStack(spacing: Theme.Space.extraSmall) {
                     ForEach(Array(chords.enumerated()), id: \.offset) { i, keys in
                         if i > 0 { Text("then").font(Theme.body(11.5)).foregroundStyle(Theme.inkMuted).oneLine() }
                         Kbd(keys: keys)
@@ -85,12 +85,12 @@ struct KeyEditor: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 8).padding(.top, 8).padding(.bottom, 10)
+        .padding(.horizontal, 8).padding(.top, 8).padding(.bottom, Theme.Space.small)
         .animation(Motion.fade, value: title)
     }
 
     var check: some View {
-        Image(systemName: "checkmark").font(Theme.symbol(Theme.Icon.small, .semibold)).foregroundStyle(Theme.accentInk)
+        Image(systemName: "checkmark").font(Theme.symbol(Theme.Icon.small, .semibold)).foregroundStyle(Theme.ink)
     }
 
     var hasArgument: Bool {
@@ -98,7 +98,7 @@ struct KeyEditor: View {
     }
 
     @ViewBuilder var argument: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: Theme.Space.medium) {
             if draft.dispatcher == "exec" {
                 Text("Command").foregroundStyle(Theme.inkMuted).oneLine().fixedSize()
                 OTextField(placeholder: "open -na Terminal", text: $draft.args, mono: true, autofocus: true)
@@ -123,7 +123,7 @@ struct KeyEditor: View {
 
     var options: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 10) {
+            HStack(spacing: Theme.Space.medium) {
                 Text("Modifiers").foregroundStyle(Theme.inkMuted).oneLine()
                 Spacer(minLength: 8)
                 modifierToggles
@@ -131,7 +131,7 @@ struct KeyEditor: View {
             .frame(height: 38)
             if doc.submaps.count > 1 {
                 hairline
-                HStack(spacing: 10) {
+                HStack(spacing: Theme.Space.medium) {
                     Text("Shortcut set").foregroundStyle(Theme.inkMuted).oneLine()
                     Spacer(minLength: 8)
                     OMenuPicker(title: "Shortcut set",

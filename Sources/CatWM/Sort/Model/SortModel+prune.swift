@@ -87,6 +87,11 @@ extension SortModel {
 
     func cycleLayout(of lane: Int, by delta: Int = 1) { edit { $0.cycleLayout(of: lane, by: delta, in: layouts) } }
 
+    func setLayout(_ layout: Layout, of lane: Int) {
+        guard plan.lanes.indices.contains(lane) else { return }
+        edit { $0.lanes[lane].layout = layout }
+    }
+
     func cycleNextLayout(by delta: Int = 1) {
         let i = layouts.firstIndex(of: nextLayout) ?? -1
         nextLayout = layouts[((i + delta) % layouts.count + layouts.count) % layouts.count]

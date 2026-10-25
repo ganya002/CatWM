@@ -6,7 +6,7 @@ struct OStep: View {
     let text: String
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
+        HStack(alignment: .firstTextBaseline, spacing: Theme.Space.medium) {
             Text("\(number)").font(Theme.display(20)).foregroundStyle(Theme.ink)
                 .frame(width: 14, alignment: .leading)
             Text(Self.styled(text)).font(Theme.body(13.5)).foregroundStyle(Theme.ink)

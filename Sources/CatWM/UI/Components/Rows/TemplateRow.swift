@@ -10,6 +10,7 @@ struct TemplateRow: View {
     let rename: () -> Void
     let update: () -> Void
     let delete: () -> Void
+    @State private var menuOpen = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.small) {
@@ -20,7 +21,6 @@ struct TemplateRow: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Enlarge preview of \(name)")
-                .help("Click to enlarge")
             } else {
                 Text("Update this template to add a screenshot.")
                     .textStyle(.caption).foregroundStyle(Theme.inkMuted)
@@ -32,14 +32,31 @@ struct TemplateRow: View {
                 OIconButton(symbol: "pencil", label: "Rename template", action: rename)
                     .accessibilityLabel("Rename \(name)")
                 OIconButton(symbol: "arrow.triangle.2.circlepath", label: "Update workspace and screenshot",
-                            action: update)
+                            tip: true, action: update)
                     .accessibilityLabel("Update \(name)")
                 OIconButton(symbol: "trash", label: "Delete template", variant: .ghostDanger, action: delete)
                     .accessibilityLabel("Delete \(name)")
             }
         }
         .padding(.vertical, Theme.Space.small)
+        .background(RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous)
+            .fill(menuOpen ? Theme.hover : .clear))
+        .oContextMenu(opened: { menuOpen = $0 }, items: menuItems)
         .disabled(busy)
+    }
+
+    private func menuItems() -> [MenuItem] {
+        guard !busy else { return [] }
+        return [
+            MenuItem(id: "open", label: "Open", action: open),
+            MenuItem(id: "rename", label: "Rename", action: rename),
+            MenuItem(id: "update", label: "Update", action: update),
+            .sep("s"),
+            MenuItem(id: "delete", kind: .sub, label: "Delete template", danger: true,
+                     width: Theme.submenuWidth,
+                     children: [MenuItem(id: "delete-confirm", label: "Delete “\(name)”",
+                                         danger: true, action: delete)])
+        ]
     }
 }
 
@@ -69,15 +86,15 @@ extension GalleryContent {
                         open: {}, rename: {}, update: {}, delete: {})
             TemplateSaveRow(name: $model.text, save: {}, cancel: {})
             VStack(spacing: 0) {
-                ActionRow(action: QuickAction(id: "template.save.gallery", title: "Save workspace…", symbol: "plus",
+                ActionRow(action: QuickAction(id: "template.save.gallery", title: "Save workspace…",
                                               keys: ["S"]) {},
-                          hovered: false, shown: true, index: 0, pick: {})
-                ActionRow(action: QuickAction(id: "template.gallery", title: "Writing", symbol: "rectangle.3.group",
+                          hovered: false, pick: {})
+                ActionRow(action: QuickAction(id: "template.gallery", title: "Writing",
                                               keys: ["1"], remove: {}, run: {}),
-                          hovered: false, shown: true, index: 1, remove: {}, pick: {})
+                          hovered: false, remove: {}, pick: {})
                 ActionRow(action: QuickAction(id: "template.gallery.hover", title: "Research",
-                                              symbol: "rectangle.3.group", keys: ["2"], remove: {}, run: {}),
-                          hovered: true, shown: true, index: 2, remove: {}, pick: {})
+                                              keys: ["2"], remove: {}, run: {}),
+                          hovered: true, remove: {}, pick: {})
             }
             .frame(width: Theme.submenuWidth)
         }

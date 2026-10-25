@@ -25,7 +25,7 @@ struct OBarSlider: View {
                 Rectangle().fill(Theme.accent).frame(width: trackWidth * fraction)
                     .overlay(alignment: .trailing) {
                         Capsule().fill(Theme.onAccent).frame(width: 3, height: slider.dragging ? 18 : 12)
-                            .opacity(slider.dragging ? 0.95 : 0.5).padding(.trailing, 7)
+                            .opacity(slider.dragging ? 0.95 : 0.5).padding(.trailing, Theme.Space.small)
                             .opacity(trackWidth * fraction > 44 ? 1 : 0)
                     }
                 content(Theme.ink)
@@ -62,7 +62,7 @@ struct OBarSlider: View {
         }
         .font(Theme.body(13.5, .medium))
         .foregroundStyle(color)
-        .padding(.horizontal, 14)
+        .padding(.horizontal, Theme.Space.medium)
         .allowsHitTesting(false)
     }
 }

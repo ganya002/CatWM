@@ -37,7 +37,7 @@ struct ConfigSheetView: View {
     private var canConfirm: Bool { !model.name.trimmingCharacters(in: .whitespaces).isEmpty && nameProblem == nil }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: Theme.Space.medium) {
             Text(title).textStyle(.title).oneLine()
             if case .export(let kind) = sheet { exportBody(kind) } else { editorBody }
         }
@@ -52,12 +52,12 @@ struct ConfigSheetView: View {
             HStack(spacing: 8) {
                 Button { model.pickingSymbol.toggle() } label: {
                     Image(systemName: model.symbol ?? kinds[0].genericSymbol).font(Theme.symbol(Theme.Icon.large))
-                        .foregroundStyle(Theme.accentInk)
+                        .foregroundStyle(Theme.ink)
                         .frame(width: 34, height: Theme.controlHeight)
                         .background(RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous)
                             .fill(Theme.well))
                 }
-                .buttonStyle(.plain).tooltip("Icon").accessibilityLabel("Choose icon")
+                .buttonStyle(.plain).accessibilityLabel("Choose icon")
                 .oPopover(isPresented: $model.pickingSymbol) {
                     SymbolGrid(selection: $model.symbol, close: { model.pickingSymbol = false })
                 }
@@ -71,7 +71,7 @@ struct ConfigSheetView: View {
                             style: StrokeStyle(lineWidth: 1, dash: model.hasColor ? [] : [3, 2])))
                         .frame(width: 32, height: 32).contentShape(Rectangle())
                 }
-                .buttonStyle(.plain).tooltip("Color").accessibilityLabel("Choose color")
+                .buttonStyle(.plain).accessibilityLabel("Choose color")
                 .oPopover(isPresented: $model.pickingColor) { ColorPopover(model: model) }
             }
             if let problem = nameProblem { OStatus(kind: .danger, text: problem) }

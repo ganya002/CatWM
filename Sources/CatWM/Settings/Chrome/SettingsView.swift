@@ -15,7 +15,8 @@ struct SettingsView: View {
                 .frame(width: 196)
             PaneHost(doc: doc, settingsUI: settingsUI)
                 .pane(shadow: false)
-                .padding(EdgeInsets(top: 10, leading: 0, bottom: 10, trailing: 10))
+                .padding(EdgeInsets(top: Theme.Space.small, leading: 0,
+                                    bottom: Theme.Space.small, trailing: Theme.Space.small))
         }
         .sheet(item: $templates.draft) { TemplateSheet(template: $0, library: templates) }
         .sheet(isPresented: $feedback.isOpen) { FeedbackSheet(feedback: feedback) }

@@ -6,7 +6,7 @@ struct WordmarkView: View {
     let size: CGFloat
 
     var body: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: Theme.Space.medium) {
             HStack(alignment: .center, spacing: size * 0.12) {
                 CatMascot(feeling: .content).frame(height: size * 0.92).foregroundStyle(.white)
                 Text("CatWM").font(Theme.wordmark(size)).tracking(-size * 0.03).foregroundStyle(.white)

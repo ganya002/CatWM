@@ -13,8 +13,8 @@ struct AppList: View {
         } else if ids.isEmpty {
             ORow("No apps yet", description: empty) { addMenu }
         } else {
+            HStack { addMenu; Spacer() }.padding(.vertical, Theme.Space.small)
             rows
-            HStack { Spacer(); addMenu }.padding(.vertical, 10)
         }
     }
 
@@ -23,7 +23,7 @@ struct AppList: View {
             HStack(spacing: 12) {
                 Self.icon(id)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(Self.name(id) ?? id).font(Theme.body(14)).oneLine()
+                    Text(Self.name(id) ?? id).font(Theme.body()).oneLine()
                     if Self.name(id) != nil {
                         Text(id).font(Theme.mono(11, .regular)).foregroundStyle(Theme.inkMuted)
                             .oneLine(.middle)

@@ -6,6 +6,7 @@ struct OIconButton: View {
     let label: String
     var size: ButtonSize = .small
     var variant: ButtonVariant = .ghost
+    var tip = false
     let action: () -> Void
 
     var body: some View {
@@ -13,7 +14,7 @@ struct OIconButton: View {
             Image(systemName: symbol).font(Theme.symbol(size == .small ? Theme.Icon.medium : Theme.Icon.large))
         }
         .buttonStyle(OButtonStyle(variant: variant, size: size, iconOnly: true))
-        .tooltip(label)
+        .tooltip(tip ? label : "")
         .accessibilityLabel(label)
     }
 }

@@ -51,11 +51,11 @@ struct SortGhosts: View {
             VStack(spacing: 0) {
                 if dragged.group.isEmpty {
                     SortRowFace(item: dragged.item, closing: dragged.closing)
-                        .padding(.leading, 5).padding(.trailing, 8)
+                        .padding(.leading, Theme.Space.extraSmall).padding(.trailing, 8)
                         .frame(height: SortMetrics.rowHeight)
                 } else {
                     SortTabHeaderFace(count: dragged.group.count)
-                        .padding(.leading, 5).padding(.trailing, 8)
+                        .padding(.leading, Theme.Space.extraSmall).padding(.trailing, 8)
                         .frame(height: SortMetrics.rowHeight)
                     ForEach(dragged.group) { item in
                         SortRowFace(item: item, closing: false)

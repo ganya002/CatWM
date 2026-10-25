@@ -11,9 +11,9 @@ struct TemplatePreviewSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.large) {
             HStack {
+                OButton("Close", variant: .ghost, action: close).keyboardShortcut(.cancelAction)
                 Text(template.name).textStyle(.title).oneLine()
                 Spacer()
-                OButton("Close", variant: .ghost, action: close).keyboardShortcut(.cancelAction)
             }
             if let data = template.screenshot, let image = NSImage(data: data) {
                 let imageWidth = width - Theme.Space.extraLarge * 2

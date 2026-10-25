@@ -7,8 +7,8 @@ func tapCallback(proxy _: CGEventTapProxy, type: CGEventType, event: CGEvent,
         Hotkeys.shared.reenable()
         return Unmanaged.passUnretained(event)
     }
-    if type == .scrollWheel {
-        return Hotkeys.shared.handleScroll(event) ? nil : Unmanaged.passUnretained(event)
+    if type == .scrollWheel || type == .rightMouseDown || type == .rightMouseUp {
+        return Hotkeys.shared.handlePointer(type, event) ? nil : Unmanaged.passUnretained(event)
     }
     guard type == .keyDown || type == .flagsChanged else { return Unmanaged.passUnretained(event) }
     if let intercept = Hotkeys.shared.intercept, intercept(type, event) { return nil }

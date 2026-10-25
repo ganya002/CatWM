@@ -26,7 +26,7 @@ struct KeyStyleTile: View {
                     .padding(.top, 1)
             }
             .foregroundStyle(selected ? Theme.onAccent : Theme.ink)
-            .padding(14)
+            .padding(Theme.Space.medium)
             .background(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous)
                 .fill(selected ? Theme.accent : model.hover ? Theme.wellHover : Theme.well))
             .contentShape(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous))
@@ -41,11 +41,11 @@ struct KeyStyleTile: View {
     @ViewBuilder private var cluster: some View {
         switch style {
         case .vim:
-            HStack(spacing: 5) { ForEach(["H", "J", "K", "L"], id: \.self) { cap($0) } }
+            HStack(spacing: Theme.Space.extraSmall) { ForEach(["H", "J", "K", "L"], id: \.self) { cap($0) } }
         case .wasd:
-            VStack(spacing: 5) {
+            VStack(spacing: Theme.Space.extraSmall) {
                 cap("W")
-                HStack(spacing: 5) { ForEach(["A", "S", "D"], id: \.self) { cap($0) } }
+                HStack(spacing: Theme.Space.extraSmall) { ForEach(["A", "S", "D"], id: \.self) { cap($0) } }
             }
         }
     }

@@ -13,10 +13,10 @@ struct HUDView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "exclamationmark.triangle.fill").font(Theme.symbol(Theme.Icon.large, .semibold))
                         .foregroundStyle(Theme.warning)
-                        .wiggleEffect(value: model.pops)
-                    Text(model.text).font(Theme.body(14, .medium)).oneLine().fixedSize()
+                        .wiggleEffect(value: reduceMotion ? 0 : model.pops)
+                    Text(model.text).font(Theme.body().weight(.medium)).oneLine().fixedSize()
                 }
-                .padding(.horizontal, 18).padding(.vertical, 12)
+                .padding(.horizontal, 17).padding(.vertical, 12)
                 .floatingGlass(Capsule())
             } else {
                 VStack(spacing: 12) {

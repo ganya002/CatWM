@@ -11,12 +11,12 @@ struct SettingsTipLayer: View {
                 let rect = geometry[anchor]
                 if rect.midY < geometry.size.height * 0.6 {
                     TipView(tip: tip, caret: .leading(20))
-                        .offset(x: rect.maxX + 14, y: rect.midY - 20)
+                        .offset(x: rect.maxX + Theme.Space.medium, y: rect.midY - 20)
                         .transition(.opacity.combined(with: .offset(x: -6)))
                 } else {
                     TipView(tip: tip, caret: .leadingBottom(24))
                         .frame(height: rect.midY + 24, alignment: .bottom)
-                        .offset(x: rect.maxX + 14)
+                        .offset(x: rect.maxX + Theme.Space.medium)
                         .transition(.opacity.combined(with: .offset(x: -6)))
                 }
             }

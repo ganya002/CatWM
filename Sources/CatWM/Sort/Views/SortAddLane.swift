@@ -17,8 +17,8 @@ struct SortAddLane: View {
             Button { withAnimation(PanelMotion.windowAnimation) { _ = model.addLane(focus: true) } } label: {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text("+").font(Theme.display(22)).fixedSize()
-                        Text(title(next)).font(Theme.heading()).oneLine()
+                        Text("+").textStyle(.title).fixedSize()
+                        Text(title(next)).textStyle(.sectionTitle).oneLine()
                     }
                     .foregroundStyle(hovered ? Theme.ink : Theme.inkMuted)
                     .padding(.horizontal, 4)
@@ -50,7 +50,7 @@ struct SortAddLane: View {
         .padding(.vertical, 8).padding(.horizontal, 4)
         .frame(width: SortMetrics.lane, alignment: .topLeading)
         .background(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous)
-            .fill(drop ? Theme.accentSoft : hovered ? Theme.surfaceRaised : .clear))
+            .fill(drop ? Theme.accentSoft : hovered ? Theme.hover : .clear))
         .overlay {
             if drop {
                 RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous)

@@ -39,7 +39,7 @@ struct Sidebar: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Color.clear.frame(height: SettingsWindow.titlebarHeight)
-            HStack(spacing: 10) {
+            HStack(spacing: Theme.Space.medium) {
                 CatMascot(feeling: mood.feeling, look: gaze.look).frame(height: 56)
                     .foregroundStyle(mood.color)
                     .animation(Motion.fadeMedium, value: mood.color)
@@ -51,7 +51,7 @@ struct Sidebar: View {
                 if let first = SettingsIndex.search(settingsUI.search, doc: doc).first { settingsUI.open(first) }
             }
             .background(Capsule().fill(Theme.surface))
-            .padding(.bottom, 10)
+            .padding(.bottom, Theme.Space.small)
             ForEach(Pane.allCases) { pane in
                 SideItem(pane: pane, selected: pane == settingsUI.pane && settingsUI.search.isEmpty,
                          badge: badge(pane)) {
@@ -74,7 +74,7 @@ struct Sidebar: View {
             }
             .padding(.leading, 12).padding(.top, 6)
         }
-        .padding(.horizontal, 12).padding(.bottom, 14)
+        .padding(.horizontal, 12).padding(.bottom, Theme.Space.medium)
         .onContinuousHover(coordinateSpace: .local, perform: watch)
     }
 

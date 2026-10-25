@@ -34,7 +34,7 @@ struct SortFullscreenLane: View {
                 .gesture(carry)
             VStack(spacing: 0) {
                 SortRowFace(item: item, closing: false)
-                    .padding(.leading, 5).padding(.trailing, 8)
+                    .padding(.leading, Theme.Space.extraSmall).padding(.trailing, 8)
                     .frame(height: SortMetrics.rowHeight)
                     .background(RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
                         .fill(lit ? Theme.hover : .clear))

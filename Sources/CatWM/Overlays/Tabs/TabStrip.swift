@@ -134,7 +134,7 @@ private struct TabCell: View {
                     .frame(width: TabStrip.iconSide, height: TabStrip.iconSide)
                     .opacity(active || hovered ? 1 : 0.7)
                 Text(tab.title)
-                    .font(Theme.body(12, active && focused ? .medium : .regular))
+                    .textStyle(.caption).fontWeight(active && focused ? .medium : .regular)
                     .oneLine()
             }
             .padding(.horizontal, TabStrip.closeSide + Theme.Space.small)

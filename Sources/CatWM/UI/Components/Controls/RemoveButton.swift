@@ -5,11 +5,11 @@ struct RemoveButton: View {
     enum Variant { case row, close, restore, badge }
     let help: String
     var variant: Variant = .row
-    var tooltip = true
+    var tooltip = false
     let action: () -> Void
     @StateObject private var hover = Flag()
 
-    init(help: String, variant: Variant = .row, tooltip: Bool = true, action: @escaping () -> Void) {
+    init(help: String, variant: Variant = .row, tooltip: Bool = false, action: @escaping () -> Void) {
         self.help = help; self.variant = variant; self.tooltip = tooltip; self.action = action
     }
 

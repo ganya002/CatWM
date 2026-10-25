@@ -34,7 +34,7 @@ struct OMenuButton<Label: View>: View {
 extension GalleryContent {
     @ViewBuilder var menuButtonExample: some View {
         OMenuButton(items: {
-            [MenuItem(id: "a", label: "Retile", symbol: "arrow.triangle.2.circlepath", shortcut: ["Z"]),
+            [MenuItem(id: "a", label: "Retile", shortcut: ["Z"]),
              MenuItem(id: "b", kind: .check, label: "Tiling", checked: true),
              .sep("s"),
              MenuItem(id: "c", label: "Quit CatWM", danger: true)]

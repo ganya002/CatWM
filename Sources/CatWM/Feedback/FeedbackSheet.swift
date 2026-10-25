@@ -6,7 +6,7 @@ struct FeedbackSheet: View {
     @FocusState private var focused: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: Theme.Space.medium) {
             Text("Send feedback").textStyle(.title).oneLine()
             editor
             Text(disclosure)

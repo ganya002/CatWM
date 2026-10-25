@@ -18,7 +18,6 @@ struct AmoreCredit: View {
                 Text("shipped with")
                 Image(systemName: "heart.fill")
                     .foregroundStyle(Theme.danger)
-                    .scaleEffect(hovering && !reduce ? 1.25 : 1)
                     .squish(on: beats, anchor: .center)
                 Text("Amore").fontWeight(.medium)
                     .offset(y: hovering && !reduce ? -0.5 : 0)
@@ -35,6 +34,5 @@ struct AmoreCredit: View {
         }
         .buttonStyle(PressScale(scale: reduce ? 1 : 0.95))
         .onHover { hover.isOn = $0 }
-        .tooltip("Updates delivered by Amore")
     }
 }
