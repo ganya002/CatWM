@@ -8,7 +8,7 @@ sys.dont_write_bytecode = True
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 STYLE_ALLOW = re.compile(
-    r"^Sources/ouch/(UI/|Keys/Keyboard/)"
+    r"^Sources/CatWM/(UI/|Keys/Keyboard/)"
 )
 STYLE = re.compile(
     r"\.system\(size:"
@@ -71,15 +71,15 @@ def reason_ok(text):
 
 def banned(path, code):
     hits = []
-    if path.startswith("Sources/ouch/") and not STYLE_ALLOW.search(path) and STYLE.search(code):
+    if path.startswith("Sources/CatWM/") and not STYLE_ALLOW.search(path) and STYLE.search(code):
         hits.append("hard-coded style. Use a Theme token")
-    if path.startswith("Sources/ouch/") and PANEL.search(code):
-        hits.append("NSPanel. Use OuchPanel")
+    if path.startswith("Sources/CatWM/") and PANEL.search(code):
+        hits.append("NSPanel. Use CatWMPanel")
     return hits
 
 
 def catalog_violations(path, source):
-    if not path.startswith("Sources/ouch/"):
+    if not path.startswith("Sources/CatWM/"):
         return []
     failures = []
 
@@ -88,12 +88,12 @@ def catalog_violations(path, source):
             number = source.count("\n", 0, match.start()) + 1
             failures.append((path, number, reason, source.splitlines()[number - 1].strip()))
 
-    renderer = "Sources/ouch/Settings/Rows/OptionRows.swift"
-    pointer = "Sources/ouch/Settings/Panes/CursorShortcutSpec.swift"
-    feature = "Sources/ouch/Tiling/Focus/FocusDim.swift"
-    quick = "Sources/ouch/Tiling/Manager/WindowManager+quickActions.swift"
+    renderer = "Sources/CatWM/Settings/Rows/OptionRows.swift"
+    pointer = "Sources/CatWM/Settings/Panes/CursorShortcutSpec.swift"
+    feature = "Sources/CatWM/Tiling/Focus/FocusDim.swift"
+    quick = "Sources/CatWM/Tiling/Manager/WindowManager+quickActions.swift"
     action_owners = {
-        "Sources/ouch/Templates/Model/TemplateLibrary.swift",
+        "Sources/CatWM/Templates/Model/TemplateLibrary.swift",
         feature,
     }
     if path != renderer:
@@ -103,16 +103,16 @@ def catalog_violations(path, source):
         reject(r"\bCursorShortcutSpec\s*(?:\(|\.init\s*\()", "catalog: declare pointer actions only in PointerActions or the effect descriptor")
         reject(r"\[CursorShortcutSpec\]\s*=\s*\[", "catalog: a second pointer action array is not allowed")
     gallery_registration = re.compile(r"static\s+let\s+\w+\s*=\s*GalleryExample\(\s*order:\s*\d+\s*\)")
-    registered_example = path.startswith("Sources/ouch/UI/") and "/Gallery/" not in path and gallery_registration.search(source)
+    registered_example = path.startswith("Sources/CatWM/UI/") and "/Gallery/" not in path and gallery_registration.search(source)
     if path not in action_owners and not registered_example:
         reject(r"\bQuickAction\s*(?:\(|\.init\s*\()", "catalog: declare quick actions on the feature or its gallery example")
     reject(r"\[(?:QuickAction|KeyHint)\]\s*=\s*\[\s*[^]\s]", "catalog: a hand-written quick action or key hint table is not allowed")
     if path == quick:
         reject(r'\baction\(\s*"', "catalog: quick action literals belong in PointerActions")
-    if path == "Sources/ouch/Keys/Keyboard/KeyHint.swift":
+    if path == "Sources/CatWM/Keys/Keyboard/KeyHint.swift":
         reject(r'"(?:togglefloating|fullscreen|nativefullscreen|toggledim|toggleblur|killactive|minimize)"',
                "catalog: pointer key hints belong in the action descriptor")
-    if path not in (pointer, feature, "Sources/ouch/Keys/Map/KeyEditor.swift", "Sources/ouch/Config/Document/Actions.swift"):
+    if path not in (pointer, feature, "Sources/CatWM/Keys/Map/KeyEditor.swift", "Sources/CatWM/Config/Document/Actions.swift"):
         reject(r'\bAction\s*\(\s*title:\s*"', "catalog: action declarations belong in Actions or PointerActions")
     reject(r"\[(?:GalleryExample|ColorToken|SettingEntry|OptionPlacement)\]\s*=\s*\[", "catalog: the build generates gallery, palette, and custom search registries")
     if path != pointer:
@@ -126,14 +126,14 @@ def catalog_violations(path, source):
                "catalog: the gallery body can only render the discovered registry")
     if "DesignGalleryView" in path:
         reject(r"\bvar\s+(?!(?:body|header|model)\b)\w+\s*:", "catalog: the gallery view must walk GalleryExamples.all")
-    if path == "Sources/ouch/Config/Document/Actions.swift":
+    if path == "Sources/CatWM/Config/Document/Actions.swift":
         reject(r'\badd\([^\n]*"(?:togglefloating|fullscreen|nativefullscreen|killactive|minimize|toggledim|toggleblur)"',
                "catalog: read pointer commands from PointerActions")
     reject(r'\("[^"\n]+", Theme\.(?:Radius|Space|Icon)\.', "catalog: gallery metrics come from the Theme declarations")
     reject(r'ForEach\(\s*\[\("sm", Elevation', "catalog: elevations come from Elevation.allCases")
     reject(r'for \(dir, name, arrow\) in \[', "catalog: direction actions come from Direction.allCases")
     reject(r'(?:let|var) arrows\s*=\s*\[', "catalog: direction hints come from Direction.hintArrows")
-    if path == "Sources/ouch/Config/Options/Options.swift":
+    if path == "Sources/CatWM/Config/Options/Options.swift":
         reject(r'"# tall,', "catalog: layout names come from Layout.allCases")
     return failures
 
@@ -186,9 +186,9 @@ def main():
     try:
         digest_path = os.path.join(ROOT, "Resources/AgentDocs/config.catalog.sha256")
         if not os.path.exists(digest_path) or open(digest_path, encoding="utf-8").read() != generator.config_doc_digest():
-            failures.append(("Resources/AgentDocs/config.md", 1, "catalog: config docs are stale. Run swift run ouch --write-config-docs", ""))
+            failures.append(("Resources/AgentDocs/config.md", 1, "catalog: config docs are stale. Run ./build.sh --dev", ""))
         generator.gallery_examples()
-        option_sources = [os.path.join(ROOT, "Sources/ouch/Config/Options/Options.swift"), os.path.join(ROOT, "Sources/ouch/Tiling/Focus/FocusDim.swift")]
+        option_sources = [os.path.join(ROOT, "Sources/CatWM/Config/Options/Options.swift"), os.path.join(ROOT, "Sources/CatWM/Tiling/Focus/FocusDim.swift")]
         keys = set()
         for source_path in option_sources:
             source = open(source_path, encoding="utf-8").read()

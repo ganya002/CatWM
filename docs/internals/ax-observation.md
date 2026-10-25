@@ -31,7 +31,7 @@ Verbose logs include `scan`, `refresh`, `reconcile`, `workspace`, `stage-home` a
 For visual verification, run:
 
 ```sh
-./build.sh --dev && open build/ouch.app
+./build.sh --dev && open build/CatWM.app
 ```
 
 Check these cases:

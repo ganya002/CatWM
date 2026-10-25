@@ -1,7 +1,7 @@
 {
-  "name": "ouch-client",
+  "name": "catwm-client",
   "version": "0.1.0",
-  "description": "Control the Ouch tiling window manager",
+  "description": "Control the CatWM tiling window manager",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

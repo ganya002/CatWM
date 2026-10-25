@@ -134,7 +134,7 @@ export interface ConfigReloadedData {
   errors: string[];
 }
 
-export type OuchEvent =
+export type CatWMEvent =
   | { event: "focus.changed"; data: FocusChangedData }
   | { event: "window.added"; data: WindowAddedData }
   | { event: "window.removed"; data: WindowRemovedData }
@@ -146,20 +146,20 @@ export type OuchEvent =
   | { event: "config.reloaded"; data: ConfigReloadedData };
 export const EVENTS = ["focus.changed", "window.added", "window.removed", "workspace.changed", "layout.changed", "tiling.changed", "mode.changed", "window.notifications", "config.reloaded"] as const;
 
-export class OuchError extends Error {
+export class CatWMError extends Error {
   constructor(readonly code: string, message: string) {
     super(message);
-    this.name = "OuchError";
+    this.name = "CatWMError";
   }
 }
 
-type Listener = (event: OuchEvent) => void;
+type Listener = (event: CatWMEvent) => void;
 
 export function defaultPath(): string {
-  return process.env.OUCH_SOCKET ?? `${os.homedir()}/.config/ouch/ouch.sock`;
+  return process.env.CATWM_SOCKET ?? `${os.homedir()}/.config/catwm/catwm.sock`;
 }
 
-export class Ouch {
+export class CatWM {
   private nextId = 1;
   private buffer = "";
   private pending = new Map<number, { resolve: (value: unknown) => void; reject: (error: Error) => void }>();
@@ -171,19 +171,19 @@ export class Ouch {
     this.ready = new Promise((resolve) => (this.onHello = resolve));
     socket.setEncoding("utf8");
     socket.on("data", (chunk: string) => this.receive(chunk));
-    socket.on("close", () => this.fail(new OuchError("closed", "Ouch closed the connection")));
-    socket.on("error", (error) => this.fail(new OuchError("failed", error.message)));
+    socket.on("close", () => this.fail(new CatWMError("closed", "CatWM closed the connection")));
+    socket.on("error", (error) => this.fail(new CatWMError("failed", error.message)));
   }
 
   private onHello: () => void = () => undefined;
 
-  static connect(path: string = defaultPath()): Promise<Ouch> {
+  static connect(path: string = defaultPath()): Promise<CatWM> {
     return new Promise((resolve, reject) => {
       const socket = net.createConnection(path);
-      socket.once("error", (error) => reject(new OuchError("not_running", `Ouch is not running: ${error.message}`)));
+      socket.once("error", (error) => reject(new CatWMError("not_running", `CatWM is not running: ${error.message}`)));
       socket.once("connect", async () => {
         socket.removeAllListeners("error");
-        const client = new Ouch(socket);
+        const client = new CatWM(socket);
         await client.ready;
         resolve(client);
       });
@@ -211,8 +211,8 @@ export class Ouch {
   }
 
   /** Subscribe and yield events until the connection closes. */
-  async *events(...names: (typeof EVENTS)[number][]): AsyncGenerator<OuchEvent> {
-    const queue: OuchEvent[] = [];
+  async *events(...names: (typeof EVENTS)[number][]): AsyncGenerator<CatWMEvent> {
+    const queue: CatWMEvent[] = [];
     let wake: (() => void) | undefined;
     let closed = false;
     const off = this.onEvent((event) => {
@@ -251,12 +251,12 @@ export class Ouch {
       this.hello = message.hello;
       this.onHello();
     } else if (message.event) {
-      this.listeners.forEach((listener) => listener(message as OuchEvent));
+      this.listeners.forEach((listener) => listener(message as CatWMEvent));
     } else if (this.pending.has(message.id)) {
       const { resolve, reject } = this.pending.get(message.id)!;
       this.pending.delete(message.id);
       if (message.ok) resolve(message.result);
-      else reject(new OuchError(message.error?.code ?? "failed", message.error?.message ?? "The command failed"));
+      else reject(new CatWMError(message.error?.code ?? "failed", message.error?.message ?? "The command failed"));
     }
   }
 
@@ -266,7 +266,7 @@ export class Ouch {
   }
 
 
-  /** Check that Ouch answers */
+  /** Check that CatWM answers */
   async ping(): Promise<PingResult> {
     return (await this.call("ping")) as PingResult;
   }
@@ -446,7 +446,7 @@ export class Ouch {
     await this.call("reload");
   }
 
-  /** Quit Ouch */
+  /** Quit CatWM */
   async exit(): Promise<void> {
     await this.call("exit");
   }
@@ -461,12 +461,12 @@ export class Ouch {
     await this.call("toggleblur");
   }
 
-  /** Read the state of Ouch */
+  /** Read the state of CatWM */
   async status(): Promise<StatusResult> {
     return (await this.call("status")) as StatusResult;
   }
 
-  /** List the windows that Ouch knows */
+  /** List the windows that CatWM knows */
   async windows(): Promise<WindowsItem[]> {
     return (await this.call("windows")) as WindowsItem[];
   }

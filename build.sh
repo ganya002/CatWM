@@ -11,22 +11,25 @@ if [ "$CONFIG" = "debug" ]; then
 else
   swift build -c release
 fi
-pkill -x ouch 2>/dev/null || true
+".build/$CONFIG/CatWM" --write-schema
+".build/$CONFIG/CatWM" --write-config-docs
+python3 Tools/generate-clients.py
+pkill -x CatWM 2>/dev/null || true
 pkill -x Hyprthyst 2>/dev/null || true
-APP=build/ouch.app
+APP=build/CatWM.app
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Frameworks" "$APP/Contents/Resources"
-cp ".build/$CONFIG/ouch" "$APP/Contents/MacOS/"
+cp ".build/$CONFIG/CatWM" "$APP/Contents/MacOS/"
 xcrun vtool -set-build-version macos 14.0 "$(xcrun --show-sdk-version)" -replace \
-  -output "$APP/Contents/MacOS/ouch" "$APP/Contents/MacOS/ouch"
+  -output "$APP/Contents/MacOS/CatWM" "$APP/Contents/MacOS/CatWM"
 cp Info.plist "$APP/Contents/"
 PLIST="$APP/Contents/Info.plist"
 BUILD=$(git rev-list --count HEAD)
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD" "$PLIST"
-if [ -n "$OUCH_CHANNEL" ]; then
+if [ -n "$CATWM_CHANNEL" ]; then
   SHORT=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$PLIST")
-  /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $SHORT-$OUCH_CHANNEL.$BUILD" "$PLIST"
-  /usr/libexec/PlistBuddy -c "Add :OuchUpdateChannel string $OUCH_CHANNEL" "$PLIST"
+  /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $SHORT-$CATWM_CHANNEL.$BUILD" "$PLIST"
+  /usr/libexec/PlistBuddy -c "Add :CatWMUpdateChannel string $CATWM_CHANNEL" "$PLIST"
 fi
 cp -R Resources/Fonts "$APP/Contents/Resources/"
 cp Resources/Icon/AppIcon.icns "$APP/Contents/Resources/"
@@ -34,7 +37,7 @@ cp -R ".build/$CONFIG/MacKeys_MacKeysCore.bundle" "$APP/Contents/Resources/"
 cp -R ".build/$CONFIG/PermissionFlow_PermissionFlow.bundle" "$APP/Contents/Resources/"
 cp -R Resources/AgentDocs "$APP/Contents/Resources/"
 mkdir -p "$APP/Contents/Resources/AgentDocs/python"
-cp -R Clients/python/ouch "$APP/Contents/Resources/AgentDocs/python/"
+cp -R Clients/python/catwm "$APP/Contents/Resources/AgentDocs/python/"
 find "$APP/Contents/Resources/AgentDocs/python" -name __pycache__ -prune -exec rm -rf {} +
 cp Resources/ThirdPartyNotices.txt "$APP/Contents/Resources/"
 SPARKLE=$(find .build/artifacts -type d -name Sparkle.framework -path '*macos-arm64_x86_64*' | head -1)

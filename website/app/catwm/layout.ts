@@ -1,5 +1,5 @@
-// A port of Sources/ouch/Tiling/Layout/Layout.swift and
-// Sources/ouch/Tiling/Navigation/Motion/MotionResolver.swift.
+// A port of Sources/CatWM/Tiling/Layout/Layout.swift and
+// Sources/CatWM/Tiling/Navigation/Motion/MotionResolver.swift.
 // The page animates only what these functions say.
 
 export type Rect = { x: number; y: number; w: number; h: number };

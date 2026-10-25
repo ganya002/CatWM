@@ -1,8 +1,8 @@
-# Config: `~/.config/ouch/ouch.conf`
+# Config: `~/.config/catwm/catwm.conf`
 
 Hyprland syntax: `key = value`, `$var = value`, `# comments`, `bind = …` lines, and `name { … }` blocks. Option names are case-insensitive and `-` equals `_` (`window-margin-size` = `window_margin_size`). A `prefix:` is stripped (`general:gaps_in`), so Hyprland configs mostly parse. Unknown options and bad values are logged as `config: …` and skipped; the rest still loads.
 
-Apply changes with `ouch reload`, the menu bar's reload button, or by saving through Settings.
+Apply changes with `catwm reload`, the menu bar's reload button, or by saving through Settings.
 
 Booleans accept `true yes on 1` and `false no off 0`. Any other value is an error: CatWM logs it and the option becomes false. A bad number or name is also an error, and the option keeps its earlier value (the default, if no earlier line sets it). Numbers outside the range in the table are clamped to that range.
 
@@ -47,13 +47,13 @@ bind = $mod, return, exec, open -na Terminal
 
 ## Settings window and saved configs
 
-Menu bar → **Settings…** (⌘,). Panes: General, Layout, Windows, Motion, Templates, Shortcuts. Changes save and apply automatically. **Configs** (menu bar submenu / Settings) stores named keyboard, animation, and full presets in `~/.config/ouch/configs.json`; switching one rewrites the matching part of `ouch.conf`. Presets can be imported and exported.
+Menu bar → **Settings…** (⌘,). Panes: General, Layout, Windows, Motion, Templates, Shortcuts. Changes save and apply automatically. **Configs** (menu bar submenu / Settings) stores named keyboard, animation, and full presets in `~/.config/catwm/configs.json`; switching one rewrites the matching part of `catwm.conf`. Presets can be imported and exported.
 
-When editing by hand while the app runs, make the edit then run `ouch reload`. If the user also has Settings open, tell them: UI edits can overwrite hand edits.
+When editing by hand while the app runs, make the edit then run `catwm reload`. If the user also has Settings open, tell them: UI edits can overwrite hand edits.
 
 ## Workspace templates
 
-Settings → **Templates** lists saved workspaces with large screenshot previews. Click a screenshot to enlarge it. Open, rename, update, or delete a template here. A template stores app identities, document addresses when available, window frames, display sizes, layouts, main-pane ratios and counts, window order, tiling status, and floating, minimized, zoomed, or native full screen states. Templates are stored in `~/.config/ouch/templates.json`, separately from configs. Screenshots are stored in that file. Screen recording access is required to capture them. Saving still works without that access. Update an older template to add a screenshot.
+Settings → **Templates** lists saved workspaces with large screenshot previews. Click a screenshot to enlarge it. Open, rename, update, or delete a template here. A template stores app identities, document addresses when available, window frames, display sizes, layouts, main-pane ratios and counts, window order, tiling status, and floating, minimized, zoomed, or native full screen states. Templates are stored in `~/.config/catwm/templates.json`, separately from configs. Screenshots are stored in that file. Screen recording access is required to capture them. Saving still works without that access. Update an older template to add a screenshot.
 
 With `template-app-scripting = true` (Settings → Templates → **Save tabs and folders**), a template also saves:
 

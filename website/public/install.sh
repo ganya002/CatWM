@@ -31,8 +31,8 @@ ditto -x -k "$TMP/CatWM.zip" "$TMP/out"
 APP=$(find "$TMP/out" -maxdepth 2 -name '*.app' | head -1)
 [ -n "$APP" ] || { echo "No app found in the download." >&2; exit 1; }
 
-pkill -x ouch 2>/dev/null || true
-rm -rf /Applications/Ouch.app "$DEST"
+pkill -x CatWM 2>/dev/null || true
+rm -rf /Applications/CatWM.app "$DEST"
 ditto "$APP" "$DEST"
 xattr -dr com.apple.quarantine "$DEST" 2>/dev/null || true
 echo "Installed $DEST"

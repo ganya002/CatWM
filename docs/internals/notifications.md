@@ -1,12 +1,12 @@
 # Notifications: the unread badge of each window
 
-`Notifications.shared` (`Sources/ouch/Notifications/`) holds one `Badge` for each window: a count (`99+` above 99) or a dot. Sources find the badges and messages. Listeners get each change. The `tab-notification-badges` option turns it on and off. When it is off, no source runs.
+`Notifications.shared` (`Sources/CatWM/Notifications/`) holds one `Badge` for each window: a count (`99+` above 99) or a dot. Sources find the badges and messages. Listeners get each change. The `tab-notification-badges` option turns it on and off. When it is off, no source runs.
 
 This document tells what the code does and why. Read it before you add a source or change a source.
 
 ## The goal
 
-macOS gives no API that tells which window a notification is for. The Dock shows a count for each app, and Notification Center shows messages for each app. Ouch must find a count for each window from these, and it must do this with almost no CPU, because Ouch runs all the time.
+macOS gives no API that tells which window a notification is for. The Dock shows a count for each app, and Notification Center shows messages for each app. CatWM must find a count for each window from these, and it must do this with almost no CPU, because CatWM runs all the time.
 
 ## The rule for each window
 
@@ -20,7 +20,7 @@ macOS gives no API that tells which window a notification is for. The Dock shows
 
 Why: the Dock count is correct for the app, but it cannot tell the windows apart. The text match can tell them apart, but it misses messages. So the Dock count is the upper limit, and the text match makes it smaller for one window only when it is sure.
 
-Ouch does not read unread marks such as `(3)` or `•` from window titles. Apps use those marks for other things, such as unsaved changes, and this gave false dots (tldraw). While badges are on, Ouch keeps the title of each window current, so that the text match uses the title that is on the screen now.
+CatWM does not read unread marks such as `(3)` or `•` from window titles. Apps use those marks for other things, such as unsaved changes, and this gave false dots (tldraw). While badges are on, CatWM keeps the title of each window current, so that the text match uses the title that is on the screen now.
 
 ## When `resolve()` runs
 
@@ -30,7 +30,7 @@ Ouch does not read unread marks such as `(3)` or `•` from window titles. Apps 
 
 | Source | Gives | Runs when | Cost |
 |---|---|---|---|
-| `DockBadgeSource` | app badges | always | 0.4 to 0.9 ms CPU in Ouch and about 1 to 2 ms in the Dock for each poll |
+| `DockBadgeSource` | app badges | always | 0.4 to 0.9 ms CPU in CatWM and about 1 to 2 ms in the Dock for each poll |
 | `NotificationDatabase` | messages | Full Disk Access is on | 0.2 to 0.9 ms for a read with no change or one new row. A full read: 6 ms at 1,000 rows, 28 ms at 5,000 rows |
 | `BannerSource(reportsMessages: true)` | messages | Full Disk Access is off | 2 to 130 ms for each banner, off the main queue |
 | `BannerSource(reportsMessages: false)` | a poll trigger only | Full Disk Access is on | one Dock poll for each Notification Center window |
@@ -48,7 +48,7 @@ Registration order sets which source wins when two report a badge for the same a
 
 Why 10 s: the cost grows in proportion to the number of polls. Measured with 13 Dock items, CPU each minute:
 
-| Interval | Ouch | Dock |
+| Interval | CatWM | Dock |
 |---|---|---|
 | 10 s | about 5 ms | no visible change |
 | 5 s | 10.8 ms | no clear change |
@@ -91,7 +91,7 @@ A banner shows only on the screen. It does not catch:
 
 So the Dock poll must stay, also with banners.
 
-## What Ouch sees without Full Disk Access
+## What CatWM sees without Full Disk Access
 
 - Apps that badge their Dock icon: the badge shows in all cases, also in a Focus. Each window of the app gets the app count.
 - The split between windows of one app: only for messages whose banner showed. In a Focus, all windows of the app show the app count.
@@ -99,7 +99,7 @@ So the Dock poll must stay, also with banners.
 
 With Full Disk Access, the database has each notification, also the hidden ones, so the split between windows is complete.
 
-## Routes that Ouch does not use
+## Routes that CatWM does not use
 
 | Route | Why not |
 |---|---|
@@ -110,7 +110,7 @@ With Full Disk Access, the database has each notification, also the hidden ones,
 | SQLite hooks on the database | They run only for changes in the same process. |
 | The unified log (`log stream`) | It is instant, but it costs a lot, it is noisy, and its messages are private. |
 | The Notification Center panel through AX | It can be read only while the user has the panel open. |
-| `UNUserNotificationCenter` | It gives only the notifications of Ouch itself. |
+| `UNUserNotificationCenter` | It gives only the notifications of CatWM itself. |
 
 ## Add a source
 

@@ -7,7 +7,7 @@ let testSettings: [SwiftSetting] = FileManager.default.fileExists(atPath: testin
     ? [.unsafeFlags(["-plugin-path", testingPlugins])] : []
 
 let package = Package(
-    name: "ouch",
+    name: "CatWM",
     platforms: [.macOS(.v14)],
     dependencies: [
         .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.8.1"),
@@ -19,7 +19,7 @@ let package = Package(
         .target(name: "WindowSession", path: "Sources/WindowSession"),
         .target(name: "NativeTrafficLight", path: "Sources/native-traffic-light"),
         .executableTarget(
-            name: "ouch",
+            name: "CatWM",
             dependencies: [
                 "WindowSession",
                 "NativeTrafficLight",
@@ -28,7 +28,7 @@ let package = Package(
                 .product(name: "MacKeysUI", package: "mackeys-sdk"),
                 .product(name: "PermissionFlow", package: "PermissionFlow")
             ],
-            path: "Sources/ouch",
+            path: "Sources/CatWM",
             linkerSettings: [.unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"]),
                              .linkedLibrary("sqlite3")],
             plugins: [.plugin(name: "CatalogPlugin")]
@@ -46,9 +46,9 @@ let package = Package(
             swiftSettings: testSettings
         ),
         .testTarget(
-            name: "ouchTests",
-            dependencies: ["ouch", "WindowSession"],
-            path: "Tests/ouchTests",
+            name: "CatWMTests",
+            dependencies: ["CatWM", "WindowSession"],
+            path: "Tests/CatWMTests",
             swiftSettings: testSettings
         )
     ]

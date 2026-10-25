@@ -3,13 +3,13 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ouch-client"
+name = "catwm-client"
 version = "0.1.0"
-description = "Control the Ouch tiling window manager"
+description = "Control the CatWM tiling window manager"
 requires-python = ">=3.10"
 
 [tool.setuptools]
-packages = ["ouch"]
+packages = ["catwm"]
 
 [tool.setuptools.package-data]
-ouch = ["py.typed"]
+catwm = ["py.typed"]
