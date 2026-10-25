@@ -94,6 +94,8 @@ enum Theme {
     private static let brandBold = "PilcrowRounded-Bold"
     private static let hasBrandFace = NSFont(name: brandSemibold, size: 12) != nil
         && NSFont(name: brandBold, size: 12) != nil
+    private static let headerBold = "Alpino-Bold"
+    private static let hasHeaderFace = NSFont(name: headerBold, size: 12) != nil
 
     private static let keysDescriptor = NSFontDescriptor(fontAttributes: [
         .name: brandSemibold,
@@ -113,12 +115,14 @@ enum Theme {
         .system(size: size, weight: weight, design: .monospaced)
     }
     static func heading(_ size: CGFloat = 15) -> Font {
-        hasBrandFace ? .custom(brandSemibold, size: size) : .system(size: size, weight: .semibold)
+        hasHeaderFace ? .custom(headerBold, size: size) : .system(size: size, weight: .semibold)
     }
     static func display(_ size: CGFloat) -> Font {
+        hasHeaderFace ? .custom(headerBold, size: size) : .system(size: size, weight: .bold)
+    }
+    static func wordmark(_ size: CGFloat) -> Font {
         hasBrandFace ? .custom(brandBold, size: size) : .system(size: size, weight: .bold)
     }
-    static func wordmark(_ size: CGFloat) -> Font { display(size) }
 
     static func nsBody(_ size: CGFloat, weight: NSFont.Weight = .regular) -> NSFont {
         .systemFont(ofSize: size, weight: weight)
