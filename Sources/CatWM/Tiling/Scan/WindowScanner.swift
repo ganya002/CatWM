@@ -48,6 +48,7 @@ final class WindowScanner {
     private let readApplications: () -> [RunningApplicationSnapshot]
     private(set) var lastScan: CFTimeInterval = 0
     private var busy: [pid_t: UUID] = [:]
+    private var idleWaiters: [() -> Void] = []
     private var queues: [pid_t: DispatchQueue] = [:]
     private let read: (Job, (AppScan) -> Void) -> AppScan
     private let scanDeadline: TimeInterval
@@ -84,7 +85,8 @@ final class WindowScanner {
         }
     }
 
-    func scan(_ jobs: [Job], done: @escaping () -> Void, updated: @escaping () -> Void) {
+    func scan(_ jobs: [Job], done: @escaping () -> Void, updated: @escaping () -> Void,
+              readAll: ((_ all: Bool) -> Void)? = nil) {
         lastScan = CACurrentMediaTime()
         let running = Set(jobs.map(\.pid))
         for pid in results.keys where !running.contains(pid) { forget(pid) }
@@ -105,7 +107,7 @@ final class WindowScanner {
             finished = true
             done()
         }
-        guard waiting > 0 else { finish(); return }
+        guard waiting > 0 else { finish(); readAll?(asked.count == jobs.count); return }
         for job in asked {
             let token = UUID()
             busy[job.pid] = token
@@ -129,7 +131,8 @@ final class WindowScanner {
                             updated()
                         } else if waiting > 0, scan.hasNewWindows(comparedTo: job.known) { publish() }
                     }
-                    if waiting == 0 { finish() }
+                    if waiting == 0 { finish(); readAll?(asked.count == jobs.count) }
+                    self.notifyIdle()
                 }
             }
         }
@@ -144,9 +147,22 @@ final class WindowScanner {
         }
     }
 
+    func whenIdle(_ action: @escaping () -> Void) {
+        guard !busy.isEmpty else { return action() }
+        idleWaiters.append(action)
+    }
+
+    private func notifyIdle() {
+        guard busy.isEmpty, !idleWaiters.isEmpty else { return }
+        let waiters = idleWaiters
+        idleWaiters = []
+        waiters.forEach { $0() }
+    }
+
     func forget(_ pid: pid_t) {
         results[pid] = nil
         busy[pid] = nil
+        notifyIdle()
     }
 
     func terminated(_ pid: pid_t) {

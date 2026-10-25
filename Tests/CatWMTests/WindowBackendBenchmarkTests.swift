@@ -63,8 +63,8 @@ struct WindowBackendBenchmarkTests {
         }
     }
 
-    @Test func axWritePath() {
-        report("ax-write-path", writePath(AXBackend.shared), per: Self.windows * Self.steps)
+    @Test func refusedAXWritePath() {
+        report("refused-ax-write-path", writePath(AXBackend.shared), per: Self.windows * Self.steps)
     }
 
     @Test func recordedWritePath() {
@@ -73,7 +73,7 @@ struct WindowBackendBenchmarkTests {
         #expect(backend.writes >= Self.windows * Self.steps * Self.runs)
     }
 
-    @Test func setPositionCall() {
+    @Test func refusedSetPositionCall() {
         let window = Window(id: 1, element: AXUIElementCreateApplication(-77_777), pid: -77_777, bundleID: nil)
         let calls = 20_000
         let samples = (0..<Self.runs).map { _ in
@@ -81,6 +81,6 @@ struct WindowBackendBenchmarkTests {
             for index in 0..<calls { window.setPosition(CGPoint(x: index, y: 0)) }
             return CACurrentMediaTime() - start
         }
-        report("set-position", samples, per: calls)
+        report("refused-set-position", samples, per: calls)
     }
 }

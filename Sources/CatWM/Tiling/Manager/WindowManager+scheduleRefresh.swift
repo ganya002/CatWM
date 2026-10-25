@@ -37,7 +37,11 @@ extension WindowManager {
             jobs.append(.init(pid: pid, listWindows: list, known: known[pid] ?? [:]))
         }
         let refresh: () -> Void = { [weak self] in self?.refresh() }
-        scanner.scan(jobs, done: { [weak self] in self?.refresh(); self?.finishScan(request) }, updated: refresh)
+        let readAll: ((Bool) -> Void)? = scanWaiters.isEmpty ? nil : { [weak self] all in
+            guard let self else { return }
+            if all { finishScan(request) } else { scanner.whenIdle { [weak self] in self?.scanAndRefresh() } }
+        }
+        scanner.scan(jobs, done: refresh, updated: refresh, readAll: readAll)
     }
 
     private func finishScan(_ request: Int) {
