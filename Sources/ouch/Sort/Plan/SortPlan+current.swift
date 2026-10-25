@@ -43,11 +43,6 @@ extension SortPlan {
         lanes.count < Self.maxLanes && !available(avoiding: other).isEmpty
     }
 
-    func title(of lane: Int) -> String {
-        let name = lanes[lane].name.trimmingCharacters(in: .whitespaces)
-        return name.isEmpty ? "Workspace \(lanes[lane].number)" : name
-    }
-
     static func layout(forCount count: Int, in layouts: [Layout]) -> Layout {
         let want: Layout
         switch count {
@@ -75,8 +70,8 @@ extension SortPlan {
         for i in lanes.indices { lanes[i].ids.removeAll { $0 == id } }
         close.removeAll { $0 == id }
         origin[id] = nil
+        closedLanes.removeAll { $0.ids == [id] }
         for i in closedLanes.indices { closedLanes[i].ids.removeAll { $0 == id } }
-        closedLanes.removeAll { $0.ids.isEmpty }
     }
 
     mutating func place(_ id: CGWindowID, inLane i: Int, at index: Int? = nil) {

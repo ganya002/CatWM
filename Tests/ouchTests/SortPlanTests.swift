@@ -57,14 +57,21 @@ private func plan(items: [SortItem]? = nil, lanes: [SortLane]? = nil, taken: Set
     @Test func theLastLaneCannotBeClosedOrRemoved() {
         var sortPlan = plan(lanes: [SortLane(workspace: "1", name: "", layout: .tall, ids: [1, 2, 3])])
         #expect(sortPlan.closeLane(at: 0) == nil)
-        #expect(sortPlan.removeLane(at: 0) == nil)
     }
 
-    @Test func removeLaneMovesWindowsToTheLaneBefore() {
-        var sortPlan = plan()
-        let removal = sortPlan.removeLane(at: 1)
-        #expect(removal?.target == 0 && removal?.moved == 1)
-        #expect(sortPlan.lanes[0].ids == [1, 2, 3])
+    @Test func closingAnEmptyLaneListsItAndReopensIt() {
+        var sortPlan = plan(lanes: [
+            SortLane(workspace: "1", name: "", layout: .tall, ids: [1, 2, 3]),
+            SortLane(workspace: "2", name: "Mail", layout: .bsp, ids: [])
+        ])
+        #expect(sortPlan.closeLane(at: 1) == 0)
+        #expect(sortPlan.closedLanes.map(\.name) == ["Mail"])
+        sortPlan.markClosing(1)
+        sortPlan.restore(1, avoiding: [])
+        #expect(sortPlan.closedLanes.count == 1)
+        sortPlan.reopen(sortPlan.closedLanes[0].id, avoiding: [])
+        #expect(sortPlan.closedLanes.isEmpty)
+        #expect(sortPlan.lanes.map(\.name) == ["", "Mail"])
     }
 
     @Test func mergeLaneKeepsTheTargetsName() {

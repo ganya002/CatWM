@@ -25,6 +25,20 @@ extension SortPlan {
 
     func rowCount(_ lane: SortLane) -> Int { lane.ids.count + tabBlocks(lane.ids).filter { isTabbed($0[0]) }.count }
 
+    func closeBlocks(_ ids: [CGWindowID]) -> [[CGWindowID]] {
+        var blocks: [[CGWindowID]] = []
+        for id in ids where !blocks.contains(where: { $0.contains(id) }) {
+            blocks.append(isTabbed(id) ? tabs(of: id).filter(ids.contains) : [id])
+        }
+        return blocks
+    }
+
+    var closeRowCount: Int {
+        let grouped = Set(closedLanes.flatMap(\.ids))
+        let sections = closedLanes.map(\.ids) + [close.filter { !grouped.contains($0) }]
+        return close.count + closedLanes.count + sections.flatMap(closeBlocks).filter { $0.count > 1 }.count
+    }
+
     mutating func untab(_ id: CGWindowID) {
         for i in tabs.indices { tabs[i].removeAll { $0 == id } }
         tabs.removeAll(where: \.isEmpty)
@@ -44,7 +58,8 @@ extension SortPlan {
     }
 
     mutating func placeTabs(_ id: CGWindowID, inLane i: Int) {
-        let members = tabs(of: id).filter { $0 == id || lane(of: $0) != nil }
+        let fromClose = isClosing(id)
+        let members = tabs(of: id).filter { $0 == id || (fromClose ? isClosing($0) : lane(of: $0) != nil) }
         for member in members { place(member, inLane: i) }
     }
 

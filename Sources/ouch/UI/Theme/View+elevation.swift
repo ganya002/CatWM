@@ -3,7 +3,7 @@ import CoreText
 import SwiftUI
 
 extension View {
-    func elevation<S: Shape>(_ elevation: Elevation, in shape: S) -> some View {
+    func elevation<S: Shape>(_ elevation: Elevation, in shape: S, outlined: Bool = true) -> some View {
         let ring = Theme.hairline
         let drop = Color(nsColor: NSColor(name: nil) { appearance in
             let dark = Theme.isDark(appearance)
@@ -15,7 +15,7 @@ extension View {
             }
         })
         return self
-            .overlay(shape.stroke(ring, lineWidth: elevation == .popover || elevation == .float ? 1 : 0))
+            .overlay(shape.stroke(ring, lineWidth: outlined && (elevation == .popover || elevation == .float) ? 1 : 0))
             .shadow(color: drop, radius: elevation.radius, y: elevation.y)
     }
 

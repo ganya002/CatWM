@@ -61,7 +61,7 @@ extension SortModel {
         let name = dst.lanes[lane].name.trimmingCharacters(in: .whitespaces)
         changed()
         let laneName = name.isEmpty ? "workspace \(dst.lanes[lane].number)" : name
-        notice = SortNotice(text: "Moved \(item.title) to \(destination.short), \(laneName).", undo: nil)
+        notice = SortNotice(text: "Moved \(item.title) to \(destination.short), \(laneName).")
     }
 
     func moveSelection(_ direction: Direction) {

@@ -15,7 +15,7 @@ struct SortView: View {
 
     var body: some View {
         let plan = model.plan
-        let closeCount = CGFloat(plan.close.count + plan.closedLanes.count)
+        let closeCount = CGFloat(plan.closeRowCount)
         let closeRows = Int(ceil(closeCount - SortMetrics.closeExtra / SortMetrics.rowHeight))
         let tallest = ([closeRows] + plan.lanes.map(plan.rowCount)).max() ?? 1
         let rows = min(model.maxRows, max(SortMetrics.minRows, tallest))
@@ -24,19 +24,22 @@ struct SortView: View {
             if hasHeader { header(plan) }
             HStack(alignment: .top, spacing: 4) {
                 row(plan, rows: rows)
-                closeLane(plan, rows: rows)
+                closedColumn(plan, rows: rows)
             }
-            .padding(.top, hasHeader ? 8 : 0).padding(.horizontal, -8)
+            .overlay(alignment: .trailing) { dropZone }
+            .animation(PanelMotion.windowAnimation, value: model.carriesToClose)
+            .animation(PanelMotion.windowAnimation, value: plan.close.isEmpty && plan.closedLanes.isEmpty)
+            .padding(.top, hasHeader ? Theme.Space.small : 0).padding(.horizontal, -8)
+            actions
         }
         .frame(width: width - 40)
         .padding(Density.large.padding)
         .padding(.top, Theme.Space.small)
         .background { Self.shape.fill(Theme.surface).elevation(.float, in: Self.shape) }
+        .zone(.panel)
         .panelEntrance(model.shown, style: model.motion)
         .padding(Self.inset)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .overlay(alignment: .topLeading) { ghost }
-        .overlay(alignment: .topLeading) { columnGhost }
         .coordinateSpace(name: "sort")
         .onPreferenceChange(SortZoneKey.self) { model.zones = $0 }
         .font(Theme.body())
@@ -87,7 +90,7 @@ struct SortView: View {
             }
             .onChange(of: model.reveal) { _, reveal in
                 guard let lane = reveal.lane else { return }
-                withAnimation(Motion.easeOut) { proxy.scrollTo(lane) }
+                withAnimation(PanelMotion.windowAnimation) { proxy.scrollTo(lane) }
             }
         }
     }
@@ -96,15 +99,12 @@ struct SortView: View {
         (model.currentDisplay?.fullscreen ?? []).filter { plan.items[$0.id] == nil }
     }
 
-    private func closeLane(_ plan: SortPlan, rows: Int) -> some View {
-        let over = model.over == .close
+    @ViewBuilder private func closedColumn(_ plan: SortPlan, rows: Int) -> some View {
         let count = plan.close.count
-        let shape = RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous)
-        return VStack(alignment: .trailing, spacing: SortMetrics.closeGap) {
+        if count > 0 || !plan.closedLanes.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(Image(systemName: "xmark")).font(Theme.display(22)).foregroundStyle(Theme.danger).fixedSize()
-                    Text("Close").font(Theme.heading()).foregroundStyle(Theme.ink).oneLine()
+                    Text("Closed").font(Theme.heading()).foregroundStyle(Theme.inkMuted).oneLine()
                     Text(count > 0 ? "\(count)" : "")
                         .textStyle(.caption).monospacedDigit().foregroundStyle(Theme.inkFaint).fixedSize()
                 }
@@ -113,17 +113,38 @@ struct SortView: View {
             }
             .padding(.vertical, 8).padding(.horizontal, 4)
             .frame(width: SortMetrics.lane, alignment: .topLeading)
-            .background(shape.fill(over ? Theme.dangerSoft : Theme.surfaceRaised))
-            .animation(Motion.fadeMedium, value: over)
-            .zone(.close)
-            HStack(spacing: 4) {
-                OButton("Revert", variant: .ghost, size: .small, shortcut: ["esc"]) { model.revert() }
-                OButton("Done", variant: .primary, size: .small, shortcut: ["⏎"]) { model.finish(nil) }
-            }
-            .font(Theme.body(13.5))
+            .padding(.leading, 4).padding(.trailing, 8)
+            .transition(.asymmetric(insertion: .identity, removal: .opacity.combined(with: .offset(x: 24))))
         }
-        .frame(width: SortMetrics.lane)
-        .padding(.leading, 4).padding(.trailing, 8)
+    }
+
+    @ViewBuilder private var dropZone: some View {
+        if model.carriesToClose {
+            let over = model.over == .close
+            let shape = RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous)
+            Text("Drop to close").font(Theme.heading()).foregroundStyle(Theme.danger).oneLine()
+                .frame(width: SortMetrics.lane)
+                .frame(maxHeight: .infinity)
+                .background {
+                    shape.fill(Theme.surface).elevation(.popover, in: shape, outlined: false)
+                    shape.fill(Theme.dangerSoft).opacity(over ? 1 : 0.6)
+                }
+                .animation(Motion.fadeMedium, value: over)
+                .zone(.close)
+                .padding(.trailing, 8).padding(.bottom, 6)
+                .transition(.opacity.combined(with: .offset(x: 24)))
+                .accessibilityLabel("Drop to close")
+        }
+    }
+
+    private var actions: some View {
+        HStack(spacing: 4) {
+            Spacer(minLength: 0)
+            OButton("Revert", variant: .ghost, size: .small, shortcut: ["esc"]) { model.revert() }
+            OButton("Done", variant: .primary, size: .small, shortcut: ["⏎"]) { model.finish(nil) }
+        }
+        .font(Theme.body(13.5))
+        .padding(.top, SortMetrics.closeGap)
     }
 
     private func notices(_ plan: SortPlan) -> some View {
@@ -131,70 +152,9 @@ struct SortView: View {
             if let text = plan.duplicateText {
                 OButton(text, icon: "xmark.circle", variant: .ghost) { model.closeDuplicates() }
             }
-            if let notice = model.notice {
-                HStack(spacing: 8) {
-                    Text(notice.text).oneLine()
-                    if notice.undo != nil {
-                        OButton("Undo", icon: "arrow.uturn.backward", size: .small) { model.undoRemove() }
-                    }
-                }
-            }
+            if let notice = model.notice { Text(notice.text).oneLine() }
         }
         .font(Theme.body(13.5))
         .foregroundStyle(Theme.inkMuted)
-    }
-
-    @ViewBuilder private var columnGhost: some View {
-        if let dragged = model.columnDrag {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(dragged.lane.number).font(Theme.display(22)).monospacedDigit().tracking(-0.4)
-                        .foregroundStyle(Theme.ink).fixedSize()
-                    Text(dragged.lane.name.isEmpty ? "Workspace \(dragged.lane.number)" : dragged.lane.name)
-                        .font(Theme.heading()).oneLine()
-                }
-                .padding(.horizontal, 2)
-                SortThumb(layout: dragged.lane.layout, ids: dragged.lane.ids, lit: nil,
-                          ratio: dragged.ratio, mainCount: dragged.mainCount)
-                    .padding(.horizontal, 2)
-            }
-            .padding(.vertical, 2)
-            .frame(width: SortMetrics.lane - 12, alignment: .topLeading)
-            .surface(.medium)
-            .keepInside(CGPoint(x: dragged.location.x - dragged.grab.width,
-                                y: dragged.location.y - dragged.grab.height))
-            .allowsHitTesting(false)
-        }
-    }
-
-    @ViewBuilder private var ghost: some View {
-        if let dragged = model.drag {
-            VStack(spacing: 0) {
-                if dragged.group.isEmpty {
-                    SortRowFace(item: dragged.item, closing: dragged.closing)
-                        .padding(.leading, 5).padding(.trailing, 8)
-                        .frame(height: SortMetrics.rowHeight)
-                } else {
-                    SortTabHeaderFace(count: dragged.group.count)
-                        .padding(.leading, 5).padding(.trailing, 8)
-                        .frame(height: SortMetrics.rowHeight)
-                    ForEach(dragged.group) { item in
-                        SortRowFace(item: item, closing: false)
-                            .padding(.leading, SortMetrics.tabIndent).padding(.trailing, 8)
-                            .frame(height: SortMetrics.rowHeight)
-                            .background(alignment: .leading) {
-                                SortTabBracket(last: item.id == dragged.group.last?.id)
-                            }
-                    }
-                }
-            }
-            .frame(width: 168)
-            .background(RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
-                .fill(Theme.surfaceRaised)
-                .elevation(.popover, in: RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)))
-            .keepInside(CGPoint(x: dragged.location.x - dragged.grab.width,
-                                y: dragged.location.y - dragged.grab.height))
-            .allowsHitTesting(false)
-        }
     }
 }

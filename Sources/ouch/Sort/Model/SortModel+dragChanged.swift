@@ -7,8 +7,11 @@ extension SortModel {
             let start = value.startLocation
             let key: SortZone = group ? .tabs(item.id) : .row(item.id)
             let origin = zones[key]?.origin ?? CGPoint(x: start.x - 80, y: start.y - 15)
-            let members = group ? plan.tabs(of: item.id).filter { plan.lane(of: $0) != nil } : []
-            drag = SortDrag(item: item, closing: plan.isClosing(item.id), location: value.location,
+            let closing = plan.isClosing(item.id)
+            let members = group
+                ? plan.tabs(of: item.id).filter { closing ? plan.isClosing($0) : plan.lane(of: $0) != nil }
+                : []
+            drag = SortDrag(item: item, closing: closing, location: value.location,
                             grab: CGSize(width: min(max(start.x - origin.x, 0), 160),
                                          height: min(max(start.y - origin.y, 0), SortMetrics.rowHeight)),
                             group: members.compactMap { plan.items[$0] })
@@ -93,11 +96,13 @@ extension SortModel {
         columnDrag = nil
         over = nil
         columnSlot = nil
-        switch (columnHit.over, columnHit.slot) {
-        case (.close, _): closeLane(ended.lane.id)
-        case (.lane(let target), _): withAnimation(Motion.easeOut) { mergeLane(ended.lane.id, into: target) }
-        case (nil, let slot?): withAnimation(Motion.spring) { moveLane(ended.lane.id, toSlot: slot) }
-        default: break
+        withAnimation(PanelMotion.windowAnimation) {
+            switch (columnHit.over, columnHit.slot) {
+            case (.close, _): closeLane(ended.lane.id)
+            case (.lane(let target), _): mergeLane(ended.lane.id, into: target)
+            case (nil, let slot?): moveLane(ended.lane.id, toSlot: slot)
+            default: break
+            }
         }
     }
 
@@ -120,9 +125,18 @@ extension SortModel {
         return (nil, nil)
     }
 
+    var carriesToClose: Bool { columnDrag != nil || drag.map { !$0.closing } == true }
+
+    var dragOutside: Bool {
+        guard carriesToClose, let point = drag?.location ?? columnDrag?.location,
+              let card = zones[.panel] else { return false }
+        return !card.contains(point)
+    }
+
     func zone(at point: CGPoint) -> SortZone? {
         for (zone, frame) in zones { if case .display = zone, frame.contains(point) { return zone } }
         if let frame = zones[.close], frame.contains(point) { return .close }
+        if let frame = zones[.panel], !frame.contains(point) { return .close }
         guard let scrollFrame = zones[.scroller], scrollFrame.contains(point) else { return nil }
         if let frame = zones[.add], frame.contains(point) { return .add }
         for (zone, frame) in zones { if case .lane = zone, frame.minX <= point.x, point.x < frame.maxX { return zone } }
@@ -135,8 +149,9 @@ extension SortModel {
               location.y > frame.minY - 40,
               location.y < frame.maxY + 40 else { return }
         let edge: CGFloat = 56, top: CGFloat = 14
-        if location.x > frame.maxX - edge, location.x <= frame.maxX {
-            scrollRow(by: 2 + top * (location.x - (frame.maxX - edge)) / edge)
+        let right = min(frame.maxX, zones[.close]?.minX ?? frame.maxX)
+        if location.x > right - edge, location.x <= right {
+            scrollRow(by: 2 + top * (location.x - (right - edge)) / edge)
         } else if location.x < frame.minX + edge {
             scrollRow(by: -(2 + top * min(1, (frame.minX + edge - location.x) / edge)))
         }

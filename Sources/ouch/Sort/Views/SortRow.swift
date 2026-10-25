@@ -16,15 +16,17 @@ struct SortRow: View {
     var body: some View {
         let pointed = model.hover == item.id
         let lit = pointed || model.selected == item.id
+        let lead: CGFloat = tab != nil ? SortMetrics.tabIndent : indented ? 5 + SortMetrics.closedIndent : 5
         SortRowFace(item: item, closing: closing)
-            .padding(.leading, tab != nil ? SortMetrics.tabIndent : indented ? 19 : 5).padding(.trailing, 8)
+            .padding(.leading, lead).padding(.trailing, 8)
             .frame(height: SortMetrics.rowHeight)
             .background(alignment: .leading) { if let tab { SortTabBracket(last: tab == .last) } }
             .background(RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
                 .fill((closing ? pointed : lit) ? Theme.hover : .clear))
             .overlay(alignment: .trailing) {
                 if pointed && model.drag == nil {
-                    RemoveButton(help: closing ? "Bring back" : "Close window", variant: closing ? .restore : .close) {
+                    RemoveButton(help: closing ? "Bring back" : "Close window", variant: closing ? .restore : .close,
+                                 tooltip: false) {
                         if closing { model.restore(item.id) } else { model.markClosing(item.id) }
                     }
                     .padding(.trailing, 2)
@@ -45,7 +47,6 @@ struct SortRow: View {
             .gesture(DragGesture(minimumDistance: 4, coordinateSpace: .named("sort"))
                 .onChanged { model.dragChanged(item, $0) }
                 .onEnded { _ in model.dragEnded() })
-            .tooltip(closing ? "Click to bring back" : "")
             .accessibilityLabel("\(item.title), \(item.app)")
     }
 }

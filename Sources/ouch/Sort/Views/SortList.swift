@@ -35,7 +35,7 @@ struct SortList: View {
             }
             .frame(height: CGFloat(rows) * SortMetrics.rowHeight)
             .onChange(of: model.reveal) { _, reveal in
-                if ids.contains(reveal.id) { withAnimation(Motion.easeOut) { proxy.scrollTo(reveal.id) } }
+                if ids.contains(reveal.id) { withAnimation(PanelMotion.windowAnimation) { proxy.scrollTo(reveal.id) } }
             }
         }
     }

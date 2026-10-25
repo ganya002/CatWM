@@ -7,6 +7,7 @@ final class SortPanel: NSObject, NSWindowDelegate {
     let manager = WindowManager.shared
     let model = SortModel()
     var panel: OuchPanel?
+    var ghostPanel: OuchPanel?
     var host: SortHost?
     let dismiss = DismissMonitor()
     var active = false

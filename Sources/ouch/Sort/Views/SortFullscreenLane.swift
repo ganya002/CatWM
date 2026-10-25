@@ -27,9 +27,8 @@ struct SortFullscreenLane: View {
             SortThumb(layout: .fullscreen, ids: [item.id], lit: lit ? item.id : nil)
                 .padding(.horizontal, 4)
                 .contentShape(Rectangle())
-                .onTapGesture(count: 2) { model.openFullscreen(item.id) }
+                .onTapGesture { model.openFullscreen(item.id) }
                 .gesture(carry)
-                .tooltip("Double-click to go to this full screen window, or drag it into a workspace")
             Text("Full screen").textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine().padding(.leading, 4)
                 .contentShape(Rectangle())
                 .gesture(carry)
@@ -51,7 +50,6 @@ struct SortFullscreenLane: View {
                     .onTapGesture(count: 2) { model.openFullscreen(item.id) }
                     .onTapGesture { model.selected = item.id }
                     .gesture(carry)
-                    .tooltip("Drag into a workspace to tile it")
                     .accessibilityLabel("\(item.title), \(item.app), full screen")
                 Spacer(minLength: 0)
             }
