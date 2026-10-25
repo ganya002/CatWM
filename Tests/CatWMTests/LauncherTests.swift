@@ -1,7 +1,7 @@
+@testable import CatWM
 import CoreGraphics
 import Foundation
 import Testing
-@testable import WindowSession
 
 @Suite struct LaunchRequestTests {
     @Test func readsPlacementOptionsFromTheEnd() throws {

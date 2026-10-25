@@ -32,12 +32,12 @@ enum Blocking {
     }
 }
 
-public enum Automation {
-    public enum Access: Equatable, Sendable {
+enum Automation {
+    enum Access: Equatable, Sendable {
         case granted, denied, needsConsent, notRunning
     }
 
-    public static func access(_ bundleID: String, ask: Bool, timeout: TimeInterval) async -> Access {
+    static func access(_ bundleID: String, ask: Bool, timeout: TimeInterval) async -> Access {
         await Blocking.run(timeout: timeout, fallback: .needsConsent) { check(bundleID, ask: ask) }
     }
 

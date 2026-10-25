@@ -62,5 +62,3 @@ func axApp(_ pid: pid_t) -> AXUIElement {
     AXUIElementSetMessagingTimeout(app, axTimeout)
     return app
 }
-
-let axTimeout: Float = 0.3

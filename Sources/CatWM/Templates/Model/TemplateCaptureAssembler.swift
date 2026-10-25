@@ -2,7 +2,6 @@ import AppKit
 import CoreGraphics
 import Foundation
 import ScreenCaptureKit
-import WindowSession
 
 struct TemplateCaptureFacts: @unchecked Sendable {
     var tilingEnabled: Bool
@@ -35,7 +34,7 @@ enum TemplateCaptureAssembler {
         guard batch.complete else { throw WindowManager.TemplateError.incomplete }
         guard !facts.displays.isEmpty else { throw WindowManager.TemplateError.notReady }
         let focused = batch.focusedID ?? facts.fallbackFocus
-        var captured: [WorkspaceTemplate.SavedWindow] = []
+        var captured: [SavedWindow] = []
         for window in batch.windows {
             if facts.hiddenWorkspaceWindows.contains(window.windowID), !window.fullscreen { continue }
             if !window.spaces.isEmpty, facts.currentSpaces.isDisjoint(with: Set(window.spaces)) { continue }

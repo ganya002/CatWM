@@ -1,66 +1,39 @@
 import Foundation
 
-public struct RestoreTarget: Equatable {
-    public var id: UUID
-    public var bundleID: String
-    public var appName: String
-    public var document: String?
-
-    public init(id: UUID, bundleID: String, appName: String, document: String?) {
-        self.id = id
-        self.bundleID = bundleID
-        self.appName = appName
-        self.document = document
-    }
+struct RestoreTarget: Equatable {
+    var id: UUID
+    var bundleID: String
+    var appName: String
+    var document: String?
 }
 
-public struct AppLaunchState: Equatable {
-    public var running: Bool
-    public var finishedLaunching: Bool
-    public var openable: Bool
-
-    public init(running: Bool, finishedLaunching: Bool, openable: Bool) {
-        self.running = running
-        self.finishedLaunching = finishedLaunching
-        self.openable = openable
-    }
+struct AppLaunchState: Equatable {
+    var running: Bool
+    var finishedLaunching: Bool
+    var openable: Bool
 }
 
-public struct RestoreRequest: Equatable {
-    public var savedID: UUID
-    public var bundleID: String
-    public var appName: String
-    public var document: String?
-    public var token: UUID
-
-    public init(savedID: UUID, bundleID: String, appName: String, document: String?, token: UUID) {
-        self.savedID = savedID
-        self.bundleID = bundleID
-        self.appName = appName
-        self.document = document
-        self.token = token
-    }
+struct RestoreRequest: Equatable {
+    var savedID: UUID
+    var bundleID: String
+    var appName: String
+    var document: String?
+    var token: UUID
 }
 
-public struct RestoreScheduler {
-    public static let totalWait: TimeInterval = 15
-    public static let pollInterval: TimeInterval = 0.3
-    public static let requestGap: TimeInterval = 0.3
-    public static let launchSettle: TimeInterval = 0.75
-    public static let firstWindowWait: TimeInterval = 3
-    public static let retryDelay: TimeInterval = 0.5
-    public static let maxAttempts = 3
+struct RestoreScheduler {
+    static let totalWait: TimeInterval = 15
+    static let pollInterval: TimeInterval = 0.3
+    static let requestGap: TimeInterval = 0.3
+    static let launchSettle: TimeInterval = 0.75
+    static let firstWindowWait: TimeInterval = 3
+    static let retryDelay: TimeInterval = 0.5
+    static let maxAttempts = 3
 
-    public struct Step: Equatable {
-        public var launch: [String]
-        public var requests: [RestoreRequest]
-        public var keepWaiting: Bool
-
-        public init(launch: [String], requests: [RestoreRequest], keepWaiting: Bool) {
-            self.launch = launch
-            self.requests = requests
-            self.keepWaiting = keepWaiting
-        }
+    struct Step: Equatable {
+        var launch: [String]
+        var requests: [RestoreRequest]
+        var keepWaiting: Bool
     }
 
     private enum AttemptOutcome {
@@ -95,16 +68,16 @@ public struct RestoreScheduler {
     private var launchFailed: Set<String> = []
     private var lastRequest: [String: Date] = [:]
     private var settledMatches: [String: Set<UUID>] = [:]
-    public private(set) var cancelled = false
-    public private(set) var failures = Set<String>()
+    private(set) var cancelled = false
+    private(set) var failures = Set<String>()
 
-    public init() {}
+    init() {}
 
-    public mutating func cancel() {
+    mutating func cancel() {
         cancelled = true
     }
 
-    public mutating func noteRefused(_ savedID: UUID, appName: String, now: Date) {
+    mutating func noteRefused(_ savedID: UUID, appName: String, now: Date) {
         guard !cancelled, var attempt = attempts[savedID], attempt.outcome == .pending else { return }
         attempt.outcome = .refused
         attempt.time = now
@@ -112,7 +85,7 @@ public struct RestoreScheduler {
         if attempt.tries >= Self.maxAttempts { failures.insert(appName) }
     }
 
-    public mutating func noteFailed(_ savedID: UUID, token: UUID, appName: String, now: Date) {
+    mutating func noteFailed(_ savedID: UUID, token: UUID, appName: String, now: Date) {
         guard !cancelled, var attempt = attempts[savedID], attempt.token == token,
               attempt.outcome == .pending else { return }
         attempt.outcome = .failed
@@ -121,14 +94,14 @@ public struct RestoreScheduler {
         if attempt.tries >= Self.maxAttempts { failures.insert(appName) }
     }
 
-    public mutating func noteLaunchFailed(_ bundleID: String, appName: String) {
+    mutating func noteLaunchFailed(_ bundleID: String, appName: String) {
         guard !cancelled else { return }
         launchFailed.insert(bundleID)
         failures.insert(appName)
     }
 
-    public mutating func step(now: Date, deadline: Date, targets: [RestoreTarget], matched: Set<UUID>,
-                              apps: [String: AppLaunchState]) -> Step {
+    mutating func step(now: Date, deadline: Date, targets: [RestoreTarget], matched: Set<UUID>,
+                       apps: [String: AppLaunchState]) -> Step {
         if cancelled || now >= deadline { return Step(launch: [], requests: [], keepWaiting: false) }
         let pending = targets.filter { !matched.contains($0.id) }
         if pending.isEmpty { return Step(launch: [], requests: [], keepWaiting: false) }
@@ -233,8 +206,8 @@ public struct RestoreScheduler {
     }
 }
 
-public enum NewWindowCommand {
-    public static func isPlainCommandN(command: String?, modifiers: Int?) -> Bool {
+enum NewWindowCommand {
+    static func isPlainCommandN(command: String?, modifiers: Int?) -> Bool {
         command?.lowercased() == "n" && modifiers == 0
     }
 }

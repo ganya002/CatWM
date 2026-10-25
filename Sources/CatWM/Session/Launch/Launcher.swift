@@ -1,17 +1,17 @@
 import AppKit
 
-public enum LaunchTarget: Equatable, Sendable {
+enum LaunchTarget: Equatable, Sendable {
     case app(URL)
     case open(URL)
 }
 
-public struct LaunchRequest: Equatable, Sendable {
-    public var target: String
-    public var workspace: String?
-    public var display: String?
-    public var frame: CGRect?
+struct LaunchRequest: Equatable, Sendable {
+    var target: String
+    var workspace: String?
+    var display: String?
+    var frame: CGRect?
 
-    public init?(_ text: String) {
+    init?(_ text: String) {
         var rest = Self.trimmed(Substring(text))
         while let space = rest.lastIndex(where: \.isWhitespace), case let last = rest[rest.index(after: space)...],
               let equals = last.firstIndex(of: "="), Self.keys.contains(last[..<equals].lowercased()) {
@@ -38,7 +38,7 @@ public struct LaunchRequest: Equatable, Sendable {
         return text[start...end]
     }
 
-    public var placesWindow: Bool { workspace != nil || display != nil || frame != nil }
+    var placesWindow: Bool { workspace != nil || display != nil || frame != nil }
 
     static func unitRect(_ text: String) -> CGRect? {
         let parts = text.split(separator: ",").map { part -> Double? in
@@ -52,11 +52,11 @@ public struct LaunchRequest: Equatable, Sendable {
     }
 }
 
-public enum Launcher {
+enum Launcher {
     static let appFolders = ["/Applications", "/Applications/Utilities", "/System/Applications",
                              "/System/Applications/Utilities", NSHomeDirectory() + "/Applications"]
 
-    public static func resolve(_ text: String) -> LaunchTarget? {
+    static func resolve(_ text: String) -> LaunchTarget? {
         let trimmed = text.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return nil }
         if trimmed.contains("://") {
@@ -78,19 +78,19 @@ public enum Launcher {
         return nil
     }
 
-    public static func appURL(for target: LaunchTarget) -> URL? {
+    static func appURL(for target: LaunchTarget) -> URL? {
         switch target {
         case .app(let url): url
         case .open(let url): NSWorkspace.shared.urlForApplication(toOpen: url)
         }
     }
 
-    public static func bundleID(for target: LaunchTarget) -> String? {
+    static func bundleID(for target: LaunchTarget) -> String? {
         appURL(for: target).flatMap { Bundle(url: $0)?.bundleIdentifier }
     }
 
     @discardableResult
-    public static func open(_ target: LaunchTarget, activates: Bool = true) async -> Bool {
+    static func open(_ target: LaunchTarget, activates: Bool = true) async -> Bool {
         switch target {
         case .app(let url): return await launch(url, activates: activates)
         case .open(let url):
@@ -99,7 +99,7 @@ public enum Launcher {
         }
     }
 
-    public static func open(_ url: URL, withApp appURL: URL, activates: Bool = false) async -> Bool {
+    static func open(_ url: URL, withApp appURL: URL, activates: Bool = false) async -> Bool {
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.activates = activates
         do {
@@ -110,7 +110,7 @@ public enum Launcher {
         }
     }
 
-    public static func launch(_ appURL: URL, arguments: [String] = [], activates: Bool = false) async -> Bool {
+    static func launch(_ appURL: URL, arguments: [String] = [], activates: Bool = false) async -> Bool {
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.activates = activates
         configuration.arguments = arguments
@@ -122,7 +122,7 @@ public enum Launcher {
         }
     }
 
-    public static func run(command: String) -> Bool {
+    static func run(command: String) -> Bool {
         guard !command.trimmingCharacters(in: .whitespaces).isEmpty else { return false }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/sh")

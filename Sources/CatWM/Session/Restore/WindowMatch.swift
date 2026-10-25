@@ -1,18 +1,18 @@
 import CoreGraphics
 import Foundation
 
-public struct WindowCandidate: Equatable {
-    public var windowID: CGWindowID
-    public var bundleID: String
-    public var title: String
-    public var document: String?
-    public var launchDate: Date?
-    public var allowsGenericFallback: Bool
-    public var newlyOpened = false
-    public var frame: CGRect?
+struct WindowCandidate: Equatable {
+    var windowID: CGWindowID
+    var bundleID: String
+    var title: String
+    var document: String?
+    var launchDate: Date?
+    var allowsGenericFallback: Bool
+    var newlyOpened = false
+    var frame: CGRect?
 
-    public init(windowID: CGWindowID, bundleID: String, title: String, document: String?, launchDate: Date?,
-                allowsGenericFallback: Bool, newlyOpened: Bool = false, frame: CGRect? = nil) {
+    init(windowID: CGWindowID, bundleID: String, title: String, document: String?, launchDate: Date?,
+         allowsGenericFallback: Bool, newlyOpened: Bool = false, frame: CGRect? = nil) {
         self.windowID = windowID
         self.bundleID = bundleID
         self.title = title
@@ -24,9 +24,9 @@ public struct WindowCandidate: Equatable {
     }
 }
 
-public enum WindowMatch {
-    public static func score(_ saved: SavedWindow, title: String, document: String?,
-                             windowID: CGWindowID, launchDate: Date?) -> Int? {
+enum WindowMatch {
+    static func score(_ saved: SavedWindow, title: String, document: String?,
+                      windowID: CGWindowID, launchDate: Date?) -> Int? {
         if let expected = saved.document, expected != document {
             guard document == nil, !saved.title.isEmpty, saved.title == title else {
                 return saved.state == nil ? nil : 0
@@ -38,11 +38,11 @@ public enum WindowMatch {
         return saved.document == nil ? 0 : nil
     }
 
-    public static func allowsGenericFallback(offSpace: Bool, hiddenWorkspace: Bool) -> Bool {
+    static func allowsGenericFallback(offSpace: Bool, hiddenWorkspace: Bool) -> Bool {
         !offSpace && !hiddenWorkspace
     }
 
-    public static func assign(_ saved: [SavedWindow], candidates: [WindowCandidate]) -> [UUID: CGWindowID] {
+    static func assign(_ saved: [SavedWindow], candidates: [WindowCandidate]) -> [UUID: CGWindowID] {
         let rank = Dictionary(saved.enumerated().sorted { lhs, rhs in
             lhs.element.windowID == rhs.element.windowID ? lhs.offset < rhs.offset
                 : lhs.element.windowID < rhs.element.windowID
@@ -71,9 +71,9 @@ public enum WindowMatch {
         return result
     }
 
-    public static func retainUnscanned(_ previous: [UUID: CGWindowID], assigned: [UUID: CGWindowID],
-                                       scanned: Set<CGWindowID>,
-                                       invalidated: Set<CGWindowID> = []) -> [UUID: CGWindowID] {
+    static func retainUnscanned(_ previous: [UUID: CGWindowID], assigned: [UUID: CGWindowID],
+                                scanned: Set<CGWindowID>,
+                                invalidated: Set<CGWindowID> = []) -> [UUID: CGWindowID] {
         var next = assigned
         for (savedID, windowID) in previous
         where next[savedID] == nil && !scanned.contains(windowID) && !invalidated.contains(windowID) {
@@ -108,9 +108,9 @@ public enum WindowMatch {
     }
 }
 
-public struct MatchStability {
-    public static let settleTime: TimeInterval = 0.6
-    public static let maximumWait: TimeInterval = 2
+struct MatchStability {
+    static let settleTime: TimeInterval = 0.6
+    static let maximumWait: TimeInterval = 2
     private struct Sighting {
         var candidate: WindowCandidate
         var since: Date
@@ -119,10 +119,10 @@ public struct MatchStability {
 
     private var provisional: [UUID: Sighting] = [:]
 
-    public init() {}
+    init() {}
 
-    public mutating func waiting(saved: [SavedWindow], candidates: [WindowCandidate],
-                                 assigned: [UUID: CGWindowID], now: Date) -> Bool {
+    mutating func waiting(saved: [SavedWindow], candidates: [WindowCandidate],
+                          assigned: [UUID: CGWindowID], now: Date) -> Bool {
         let byID = Dictionary(candidates.map { ($0.windowID, $0) }, uniquingKeysWith: { first, _ in first })
         var next: [UUID: Sighting] = [:]
         for window in saved {

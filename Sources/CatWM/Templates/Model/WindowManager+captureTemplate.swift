@@ -1,5 +1,4 @@
 import AppKit
-import WindowSession
 
 extension WindowManager {
     enum TemplateError: LocalizedError, Equatable {

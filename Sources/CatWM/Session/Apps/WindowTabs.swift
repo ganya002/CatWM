@@ -1,8 +1,8 @@
 import CoreGraphics
 
-public enum WindowTabs {
-    public static func background(_ windows: [AppStateCapture.Window],
-                                  onScreen: Set<CGWindowID>) -> [CGWindowID: CGWindowID] {
+enum WindowTabs {
+    static func background(_ windows: [AppStateCapture.Window],
+                           onScreen: Set<CGWindowID>) -> [CGWindowID: CGWindowID] {
         var result: [CGWindowID: CGWindowID] = [:]
         for hidden in windows where !onScreen.contains(hidden.id) {
             let visible = windows.first {

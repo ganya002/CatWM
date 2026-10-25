@@ -1,7 +1,6 @@
 import AppKit
 import CoreGraphics
 import Foundation
-import WindowSession
 
 @MainActor
 final class TemplateRestorer {

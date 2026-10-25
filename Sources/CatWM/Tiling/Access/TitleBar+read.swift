@@ -1,6 +1,5 @@
 import ApplicationServices
 import QuartzCore
-import WindowSession
 
 extension TitleBar {
     struct Node<Element> {

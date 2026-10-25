@@ -1,7 +1,6 @@
 import AppKit
 @testable import CatWM
 import Testing
-@testable import WindowSession
 
 @Suite struct TemplateCaptureTests {
     @Test func minimizedWindowsCanReportADialogSubrole() {

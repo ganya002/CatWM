@@ -1,18 +1,12 @@
 import AppKit
 
-public struct ScriptedWindow: Equatable, Sendable {
-    public var title: String
-    public var frame: CGRect?
-    public var state: AppState
-
-    public init(title: String, frame: CGRect?, state: AppState) {
-        self.title = title
-        self.frame = frame
-        self.state = state
-    }
+struct ScriptedWindow: Equatable, Sendable {
+    var title: String
+    var frame: CGRect?
+    var state: AppState
 }
 
-public protocol AppAdapter: Sendable {
+protocol AppAdapter: Sendable {
     var bundleIDs: Set<String> { get }
     var captureNeedsAutomation: Bool { get }
     var restoreNeedsAutomation: Bool { get }
@@ -20,36 +14,36 @@ public protocol AppAdapter: Sendable {
     func restore(_ state: AppState, bundleID: String, appURL: URL, timeout: TimeInterval) async -> Bool
 }
 
-public enum AppAdapters {
-    public static let all: [any AppAdapter] = [SafariAdapter(), ChromiumAdapter(), TerminalAdapter(),
-                                               ITermAdapter(), FinderAdapter(), CodeEditorAdapter(),
-                                               ZedAdapter(), XcodeAdapter()]
+enum AppAdapters {
+    static let all: [any AppAdapter] = [SafariAdapter(), ChromiumAdapter(), TerminalAdapter(),
+                                        ITermAdapter(), FinderAdapter(), CodeEditorAdapter(),
+                                        ZedAdapter(), XcodeAdapter()]
 
-    public static func adapter(for bundleID: String) -> (any AppAdapter)? {
+    static func adapter(for bundleID: String) -> (any AppAdapter)? {
         all.first { $0.bundleIDs.contains(bundleID) }
     }
 
-    public static func canRestore(_ state: AppState, bundleID: String) async -> Bool {
+    static func canRestore(_ state: AppState, bundleID: String) async -> Bool {
         guard !state.tabs.isEmpty, let adapter = adapter(for: bundleID) else { return false }
         guard adapter.restoreNeedsAutomation else { return true }
         return await Automation.access(bundleID, ask: false, timeout: 1) == .granted
     }
 
-    public static func restore(_ state: AppState, bundleID: String, appURL: URL) async -> Bool {
+    static func restore(_ state: AppState, bundleID: String, appURL: URL) async -> Bool {
         guard let adapter = adapter(for: bundleID) else { return false }
         return await adapter.restore(state, bundleID: bundleID, appURL: appURL, timeout: 4)
     }
 }
 
-public enum AppStateCapture {
-    public struct Window: Sendable {
-        public var id: CGWindowID
-        public var bundleID: String
-        public var title: String
-        public var frame: CGRect
-        public var document: String?
+enum AppStateCapture {
+    struct Window: Sendable {
+        var id: CGWindowID
+        var bundleID: String
+        var title: String
+        var frame: CGRect
+        var document: String?
 
-        public init(id: CGWindowID, bundleID: String, title: String, frame: CGRect, document: String? = nil) {
+        init(id: CGWindowID, bundleID: String, title: String, frame: CGRect, document: String? = nil) {
             self.id = id
             self.bundleID = bundleID
             self.title = title
@@ -58,8 +52,8 @@ public enum AppStateCapture {
         }
     }
 
-    public static func capture(_ windows: [Window], consentWait: TimeInterval,
-                               scriptTimeout: TimeInterval) async -> [CGWindowID: AppState] {
+    static func capture(_ windows: [Window], consentWait: TimeInterval,
+                        scriptTimeout: TimeInterval) async -> [CGWindowID: AppState] {
         let bundles = Set(windows.map(\.bundleID)).filter { AppAdapters.adapter(for: $0) != nil }.sorted()
         return await withTaskGroup(of: [CGWindowID: AppState].self) { group in
             for bundle in bundles {
@@ -80,7 +74,7 @@ public enum AppStateCapture {
         }
     }
 
-    public static func attach(_ scripted: [ScriptedWindow], to windows: [Window]) -> [CGWindowID: AppState] {
+    static func attach(_ scripted: [ScriptedWindow], to windows: [Window]) -> [CGWindowID: AppState] {
         var pairs: [Pair] = []
         for window in windows {
             for (index, entry) in scripted.enumerated() {

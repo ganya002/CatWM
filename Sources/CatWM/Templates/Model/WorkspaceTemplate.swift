@@ -1,5 +1,4 @@
 import AppKit
-import WindowSession
 
 struct WorkspaceTemplate: Codable, Identifiable {
     var id = UUID()
@@ -20,8 +19,6 @@ struct WorkspaceTemplate: Codable, Identifiable {
         var ratio: CGFloat
         var mainCount: Int
     }
-
-    typealias SavedWindow = WindowSession.SavedWindow
 
     var summary: String {
         "\(windows.count) \(windows.count == 1 ? "window" : "windows") · "

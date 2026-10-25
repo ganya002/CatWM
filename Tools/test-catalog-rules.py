@@ -106,5 +106,29 @@ class TilingRules(unittest.TestCase):
         self.assertFalse(style.banned("Sources/CatWM/App/AppSurface.swift", "TabStrips.shared.update()"))
 
 
+class SessionRules(unittest.TestCase):
+    session = "Sources/CatWM/Session/Restore/WindowMatch.swift"
+
+    def test_rejects_catwm_types_in_session(self):
+        cases = [
+            "let manager = WindowManager.shared",
+            "var model: WorkspaceModel",
+            "let layout: Layout = .tall",
+            "let gap = Theme.Space.md",
+            'HUD.shared.show("Saved", on: nil)',
+        ]
+        for code in cases:
+            with self.subTest(code=code):
+                self.assertTrue(style.banned(self.session, code))
+
+    def test_accepts_session_code_and_catwm_types_outside_session(self):
+        for code in ("let match = WindowMatch.assign(saved, candidates)", "let frame = element.readFrame().value",
+                     "var layoutName: String"):
+            with self.subTest(code=code):
+                self.assertFalse(style.banned(self.session, code))
+        self.assertFalse(style.banned("Sources/CatWM/Templates/Restore/TemplateRestorer.swift",
+                                      "let manager = WindowManager.shared"))
+
+
 if __name__ == "__main__":
     unittest.main()

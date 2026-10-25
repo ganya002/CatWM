@@ -1,7 +1,7 @@
+@testable import CatWM
 import CoreGraphics
 import Foundation
 import Testing
-@testable import WindowSession
 
 @Suite struct AppStateCaptureTests {
     private func window(_ id: CGWindowID, _ title: String, _ frame: CGRect) -> AppStateCapture.Window {

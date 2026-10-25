@@ -14,4 +14,4 @@ Use these words in code, docs, UI text and commit messages. Each word has one me
 - **overview** means the Sort menu. Sort is the old name, and the code folder and types still use it.
 - **switcher** means the window switcher. `$mod Tab` opens it, and the `switcher` dispatcher runs it.
 - **template** means a saved workspace template: the windows, workspaces, Desktops, layouts and frames of a setup. `Templates/` owns it.
-- **session** (in `WindowSession`) means the save and open of app windows. It has no CatWM types. See `window-session.md`.
+- **session** (in `Session/`) means the save and open of app windows. It has no CatWM types. See `window-session.md`.

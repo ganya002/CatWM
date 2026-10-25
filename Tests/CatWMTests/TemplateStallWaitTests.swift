@@ -1,7 +1,6 @@
 @testable import CatWM
 import Foundation
 import Testing
-@testable import WindowSession
 
 @Test @MainActor func aStalledAppHoldsTheRestoreOnlyWhileItHasUnmatchedWindows() {
     let editor = RestoreTarget(id: UUID(), bundleID: "com.example.editor", appName: "Editor", document: nil)

@@ -112,12 +112,12 @@ struct ITermAdapter: AppAdapter {
     }
 }
 
-public enum WorkingDirectory {
-    public static func url(tty: String) -> String {
+enum WorkingDirectory {
+    static func url(tty: String) -> String {
         path(tty: tty).map { URL(fileURLWithPath: $0, isDirectory: true).absoluteString } ?? ""
     }
 
-    public static func path(tty: String) -> String? {
+    static func path(tty: String) -> String? {
         guard !tty.isEmpty else { return nil }
         var info = stat()
         guard stat(tty.hasPrefix("/dev/") ? tty : "/dev/" + tty, &info) == 0 else { return nil }

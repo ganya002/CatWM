@@ -1,7 +1,6 @@
 import AppKit
 @testable import CatWM
 import Testing
-import WindowSession
 
 @Suite struct SheetLeakPaddingAuditTests {
     @Test func aStalledSheetReadKeepsTheAppAlive() {

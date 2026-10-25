@@ -1,7 +1,6 @@
 import AppKit
 @testable import CatWM
 import Testing
-@testable import WindowSession
 
 private let bundle = "com.example.editor"
 private let launch = Date(timeIntervalSince1970: 100)
@@ -15,8 +14,8 @@ private func target(
 }
 
 private func savedWindow(title: String = "Draft", document: String? = nil, windowID: CGWindowID = 42,
-                         launchDate: Date? = launch, bundleID: String = bundle) -> WorkspaceTemplate.SavedWindow {
-    WorkspaceTemplate.SavedWindow(
+                         launchDate: Date? = launch, bundleID: String = bundle) -> SavedWindow {
+    SavedWindow(
         bundleID: bundleID, appName: "Editor", title: title, document: document, display: "main",
         frame: .zero, floating: false, minimized: false, fullscreen: false, zoomed: false,
         focused: false, windowID: windowID, launchDate: launchDate
