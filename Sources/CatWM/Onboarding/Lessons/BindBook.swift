@@ -8,16 +8,18 @@ struct BindBook {
     init(binds: [KeyBinding]) {
         self.binds = binds
         enter = binds.first {
-            $0.submap.isEmpty && $0.dispatcher == "submap" && !["", "reset"].contains($0.arg.lowercased())
+            $0.submap.isEmpty && $0.dispatcher == WindowActions.submap.name
+                && !["", "reset"].contains($0.arg.lowercased())
         }
         mode = enter?.arg ?? ""
     }
 
-    func find(_ dispatchers: [String], _ arg: String? = nil, global: Bool = false) -> KeyBinding? {
+    func find(_ actions: [WindowAction], _ arg: String? = nil, global: Bool = false) -> KeyBinding? {
         let submap = global ? "" : mode
+        let names = actions.flatMap { [$0.name] + $0.aliases }
         return binds.first { bind in
             bind.submap == submap
-                && dispatchers.contains(bind.dispatcher)
+                && names.contains(bind.dispatcher)
                 && (arg.map { KeyWords.same(bind.arg, $0) } ?? true)
         }
     }
@@ -25,7 +27,7 @@ struct BindBook {
     var exits: [KeyBinding] {
         binds.filter {
             $0.submap == mode
-                && $0.dispatcher == "submap"
+                && $0.dispatcher == WindowActions.submap.name
                 && ["", "reset"].contains($0.arg.lowercased())
                 && $0.mods.isEmpty
         }
@@ -33,7 +35,7 @@ struct BindBook {
 
     func enterCaps(long: Bool) -> [String] { enter.map { KeyWords.caps($0, long: long) } ?? [] }
 
-    var wasd: Bool { find(["movefocus"], "u")?.keyCode == 13 }
+    var wasd: Bool { find([WindowActions.movefocus], "u")?.keyCode == 13 }
 
     var directions: [String] { wasd ? ["u", "l", "d", "r"] : ["l", "d", "u", "r"] }
 

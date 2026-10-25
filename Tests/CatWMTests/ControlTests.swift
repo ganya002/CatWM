@@ -2,8 +2,6 @@
 import Foundation
 import Testing
 
-private let aliases: Set<String> = ["reevaluate", "setlayout"]
-
 private var projectRoot: URL {
     URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
 }
@@ -14,9 +12,7 @@ private func reply(_ text: String) throws -> JSON {
 
 @Suite struct ControlRegistryTests {
     @Test func everyDispatcherCanBeCalledThroughTheRegistry() {
-        let missing = DispatcherNames.all.filter { name in
-            CommandRegistry.command(named: name) == nil && !aliases.contains(name)
-        }
+        let missing = WindowActions.all.map(\.name).filter { CommandRegistry.command(named: $0) == nil }
         #expect(missing.isEmpty)
     }
 

@@ -39,6 +39,9 @@ class CatalogRules(unittest.TestCase):
             ("Config/Document/Actions.swift", 'for (dir, name, arrow) in [("l", "Left", "left")] {}'),
             ("Keys/Keyboard/KeyHint.swift", 'let arrows = ["l": "←"]'),
             ("Config/Document/Actions.swift", 'static let dispatchers = ["toggledim"]'),
+            ("Tiling/Manager/WindowManager+status.swift", 'switch dispatcher {\ncase "minimize": break\n}'),
+            ("Tiling/Manager/WindowManager+status.swift", 'static let minimize = WindowAction(name: "minimize")'),
+            ("Config/Document/Actions.swift", 'add(ActionPicker("Minimize", .window, "", "minus"))'),
         ]
         for path, source in cases:
             with self.subTest(path=path, source=source):
@@ -69,6 +72,9 @@ class CatalogRules(unittest.TestCase):
             ("Keys/Help/KeyHelp.swift", "binds.map { KeyHint($0) }"),
             ("Templates/Model/TemplateLibrary.swift", 'QuickAction(id: "template.save", title: "Save") {}'),
             ("Tiling/Focus/FocusDim.swift", 'QuickAction(id: "focus.dim", title: "Dim") {}'),
+            ("Actions/WindowActions+window.swift", 'static let minimize = WindowAction(name: "minimize")'),
+            ("Actions/LayoutActions.swift", 'ActionPicker("Swap Sides", .layout, "swapsides", "arrow")'),
+            ("Actions/FocusActions.swift", 'static let movefocus = WindowAction.direction("movefocus")'),
             ("UI/Components/Rows/TemplateRow.swift", 'static let templates = GalleryExample(order: 15) {}\nQuickAction(id: "x", title: "Save") {}'),
         ]
         for path, source in cases:

@@ -25,10 +25,10 @@ enum KeyWords {
 
     static func ratioDirection(_ dispatcher: String, _ arg: String) -> RatioChange? {
         var amount = arg.lowercased().trimmingCharacters(in: .whitespaces)
-        if dispatcher == "layoutmsg" {
+        if dispatcher == WindowActions.layoutmsg.name {
             guard amount.hasPrefix("mfact") else { return nil }
             amount = String(amount.dropFirst(5)).trimmingCharacters(in: .whitespaces)
-        } else if dispatcher != "splitratio" {
+        } else if dispatcher != WindowActions.splitratio.name {
             return nil
         }
         guard !amount.hasPrefix("exact") else { return nil }

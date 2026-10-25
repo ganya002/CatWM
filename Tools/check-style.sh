@@ -112,12 +112,16 @@ def catalog_violations(path, source):
     if path == "Sources/CatWM/Keys/Keyboard/KeyHint.swift":
         reject(r'"(?:togglefloating|fullscreen|nativefullscreen|toggledim|toggleblur|killactive|minimize)"',
                "catalog: pointer key hints belong in the action descriptor")
-    if path not in (pointer, feature, "Sources/CatWM/Keys/Map/KeyEditor.swift", "Sources/CatWM/Config/Document/Actions.swift"):
-        reject(r'\bAction\s*\(\s*title:\s*"', "catalog: action declarations belong in Actions or PointerActions")
+    if path not in (pointer, feature, "Sources/CatWM/Keys/Map/KeyEditor.swift"):
+        reject(r'\bAction\s*\(\s*title:\s*"', "catalog: action declarations belong in WindowActions or PointerActions")
+    if not path.startswith("Sources/CatWM/Actions/"):
+        reject(r'\b(?:WindowAction|ActionPicker)\s*\(', "catalog: declare window actions only in Sources/CatWM/Actions")
+        reject(r'\bWindowAction\.(?:direction|step|text)\s*\(', "catalog: declare window actions only in Sources/CatWM/Actions")
     reject(r"\[(?:GalleryExample|ColorToken|SettingEntry|OptionPlacement)\]\s*=\s*\[", "catalog: the build generates gallery, palette, and custom search registries")
     if path != pointer:
         reject(r'PointerActions\.named\(\s*"', "catalog: walk PointerActions.all instead of listing action identities")
-    reject(r"static let dispatchers(?:\s*:\s*\[String\])?\s*=\s*\[", "catalog: dispatcher names come from the dispatch implementation")
+    reject(r"static let dispatchers(?:\s*:\s*\[String\])?\s*=\s*\[", "catalog: dispatcher names come from WindowActions.all")
+    reject(r"\bswitch\s+dispatcher\s*\{", "catalog: run a dispatcher through WindowActions.named, not a string switch")
     if "/UI/Gallery/" in path:
         reject(r"\bGalleryExample\s*\(", "catalog: register the gallery example in its control file")
         reject(r'\bblock\(\s*"', "catalog: put gallery content in the control file")
@@ -126,9 +130,6 @@ def catalog_violations(path, source):
                "catalog: the gallery body can only render the discovered registry")
     if "DesignGalleryView" in path:
         reject(r"\bvar\s+(?!(?:body|header|model)\b)\w+\s*:", "catalog: the gallery view must walk GalleryExamples.all")
-    if path == "Sources/CatWM/Config/Document/Actions.swift":
-        reject(r'\badd\([^\n]*"(?:togglefloating|fullscreen|nativefullscreen|killactive|minimize|toggledim|toggleblur)"',
-               "catalog: read pointer commands from PointerActions")
     reject(r'\("[^"\n]+", Theme\.(?:Radius|Space|Icon)\.', "catalog: gallery metrics come from the Theme declarations")
     reject(r'ForEach\(\s*\[\("sm", Elevation', "catalog: elevations come from Elevation.allCases")
     reject(r'for \(dir, name, arrow\) in \[', "catalog: direction actions come from Direction.allCases")
