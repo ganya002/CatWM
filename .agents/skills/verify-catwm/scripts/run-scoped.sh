@@ -8,17 +8,30 @@ BUILD=1
 [ $# -ge 2 ] || { echo "usage: run-scoped.sh [--no-build] <pid>[,<pid>...] <command> [args...]" >&2; exit 2; }
 PIDS=$1
 shift
-if [ -n "$OURS_PID" ] && kill -0 "$OURS_PID" 2>/dev/null; then
-  echo "run-scoped: launch.sh already started instance $INSTANCE (pid $OURS_PID). Run cleanup.sh first." >&2
+# One run for each instance id: a second run would stop the instance of the first run (build.sh, or the pid file).
+# The flock(2) on fd 8 stays until this shell and the instance stop. The build and the command do not get fd 8.
+exec 8>>"$VERIFY_HOME/run.flock"
+if ! lockf -s -t 0 8; then
+  echo "run-scoped: another run uses instance $INSTANCE ($(cat "$VERIFY_HOME/run.owner" 2>/dev/null))." \
+    "Wait for it, or set INSTANCE to another id." >&2
   exit 1
 fi
+RUNNING=$(cat "$PID_FILE" 2>/dev/null)
+case "$(ps -o comm= -p "${RUNNING:-0}" 2>/dev/null)" in
+  */CatWM)
+    echo "run-scoped: instance $INSTANCE already runs (pid $RUNNING). Run cleanup.sh first, or set INSTANCE to another id." >&2
+    exit 1 ;;
+esac
+TOKEN="pid $$ since $(date +%s)"
+echo "$TOKEN" > "$VERIFY_HOME/run.owner"
 if [ -n "$BUILD" ]; then
-  (cd "$ROOT" && ./build.sh --dev) > "$VERIFY_HOME/build.log" 2>&1 || {
+  (cd "$ROOT" && ./build.sh --dev) 8>&- > "$VERIFY_HOME/build.log" 2>&1 || {
     tail -30 "$VERIFY_HOME/build.log" >&2; echo "run-scoped: build failed, full log: $VERIFY_HOME/build.log" >&2; exit 1; }
 fi
 
 OURS=""
 cleanup() {
+  [ "$(cat "$VERIFY_HOME/run.owner" 2>/dev/null)" = "$TOKEN" ] && rm -f "$VERIFY_HOME/run.owner"
   [ -n "$OURS" ] || return
   if [ "$(cat "$PID_FILE" 2>/dev/null)" = "$OURS" ]; then "$CLI" exit > /dev/null 2>&1; fi
   i=0
@@ -43,5 +56,5 @@ if [ "$("$CLI" status --json | jq -r '.trusted')" != "true" ]; then
   exit 1
 fi
 echo "run-scoped: instance $INSTANCE (pid $OURS) manages pids $PIDS" >&2
-"$@"
+"$@" 8>&-
 exit $?

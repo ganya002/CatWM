@@ -29,7 +29,7 @@ $S/run-scoped.sh <pid>[,<pid>...] <command> [args...]
 $S/run-scoped.sh --no-build "$APP_PID" sh -c 'build/CatWM.app/Contents/MacOS/CatWM windows --json'
 ```
 
-It builds the worktree (not with `--no-build`), starts the instance with `CATWM_SCOPE=pids:<pids>`, waits for `ping`, runs the command with `CATWM_INSTANCE` set and always stops the instance, also when the command fails. Its exit code is the exit code of the command.
+It builds the worktree (not with `--no-build`), starts the instance with `CATWM_SCOPE=pids:<pids>`, waits for `ping`, runs the command with `CATWM_INSTANCE` set and always stops the instance, also when the command fails. Its exit code is the exit code of the command. Only one run at a time can use an instance id. A second run with the same `INSTANCE` stops with exit code 1 while the first run or its instance runs. It also stops when the instance of `launch.sh` runs. Set `INSTANCE` to another id to run two at the same time.
 
 Permissions: macOS gives Accessibility to the "responsible process". `run-scoped.sh` starts CatWM as a child process, so the instance gets the permissions of the app that runs your shell. An instance that `open -n` starts (`launch.sh`) is its own responsible process and needs its own permission in System Settings.
 
@@ -41,7 +41,7 @@ Some tests need state that the whole Mac shares: the focused app, the macOS Desk
 $S/with-lock.sh $S/run-scoped.sh <pid> <command>
 ```
 
-`with-lock.sh` waits until no other agent holds the lock (`~/Library/Caches/CatWM-verify/host.lock`), runs the command and releases the lock. It removes the lock of a pid that does not run. After `LOCK_TIMEOUT` seconds (default 600) it stops with exit code 75. Then ask the user. Do not remove the lock of a pid that runs.
+`with-lock.sh` waits until no other agent holds the lock, runs the command and releases the lock. The lock is a `flock(2)` on `~/Library/Caches/CatWM-verify/host.flock` (`lockf`). The kernel releases it when the agent stops, also on `kill -9`, so a stale lock cannot stay. `host.flock.owner` tells who holds the lock. After `LOCK_TIMEOUT` seconds (default 600) it stops with exit code 75. Then ask the user. Do not delete `host.flock`.
 
 | Test | Lock |
 |---|---|
