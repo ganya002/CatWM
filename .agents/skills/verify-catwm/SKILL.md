@@ -1,0 +1,126 @@
+---
+name: verify-catwm
+description: Drive the real CatWM app (macOS tiling window manager) to prove that a change works. It builds this worktree, replaces the running CatWM, opens test windows on an empty workspace, runs commands through the catwm socket CLI and saves state JSON, tiling dumps, logs and screenshots as evidence. Use it after a change to tiling, layouts, focus, workspaces, floating, config or the control commands, when a unit test is not enough proof.
+---
+
+# Verify CatWM
+
+CatWM is a menu bar app with no main window. A user touches it through key binds, the menu bar and the windows that it moves. An agent touches it through the `catwm` CLI. The CLI sends one command to the running app through the Unix socket `~/.config/catwm/catwm.sock`, and it runs the same command registry as the key binds (`docs/internals/control.md`, `Resources/AgentDocs/cli.md`).
+
+All scripts are in `.agents/skills/verify-catwm/scripts/`. Run them from the worktree root. `S=.agents/skills/verify-catwm/scripts` in the examples below.
+
+## Read this first: there is only one instance
+
+- CatWM cannot run two copies. At start, `AppDelegate.closePreviousInstances` quits every other process with the bundle ID `local.catwm`. `build.sh` also runs `pkill -x CatWM`.
+- The socket, `~/.config/catwm/catwm.conf` and `~/Library/Logs/CatWM.log` are shared with the user's CatWM. There is no other data folder.
+- So `launch.sh` QUITS THE USER'S WINDOW MANAGER and starts this worktree's build in its place. The user's real windows move when the new instance tiles them.
+- Before you run `launch.sh`, ask the user. Approval for one run does not apply to the next session.
+- If the user is typing or presenting, do not start. Another agent can drive CatWM at the same time from another worktree. If `doctor.sh` shows a CatWM from another worktree that you did not start, ask before you replace it.
+
+## Launch
+
+```sh
+$S/launch.sh
+```
+
+It does these steps:
+
+1. It records the executable of the CatWM that runs now (`PREV_EXE`) in `~/Library/Caches/CatWM-verify/state.env`.
+2. It runs `./build.sh --dev` (lint, debug build, schema, clients, `build/CatWM.app`). The build log is `~/Library/Caches/CatWM-verify/build.log`. A lint failure stops the launch. Fix the lint error.
+3. It makes the evidence folder `~/Library/Caches/CatWM-verify/runs/<UTC time>/` and writes `commit.txt` (HEAD and `git status`).
+4. It runs `open -g build/CatWM.app --args --verbose`.
+5. It shows the workspace that the old instance showed, because a new instance can start on another workspace.
+6. Ready means: `catwm ping` answers with a pid whose executable is `build/CatWM.app/Contents/MacOS/CatWM`, and `status` shows `trusted` and `running` as `true`.
+
+If it stops with "not trusted", this build has no Accessibility permission. Only the user can grant it: System Settings > Privacy & Security > Accessibility > CatWM. Then run `doctor.sh`. Do not try to go around TCC.
+
+The data folder is never empty, because it is the user's config. Do not delete or replace `~/.config/catwm`. A first-run check (onboarding) needs a separate macOS user account, which this skill does not cover.
+
+## Doctor
+
+```sh
+$S/doctor.sh
+```
+
+It is read-only. It shows which CatWM processes run, and it fails when:
+
+- no CatWM runs, or more than one runs,
+- the socket answers from a process that is not this worktree's build,
+- the pid is not the one `launch.sh` started,
+- the build number in `Info.plist` is not `git rev-list --count HEAD`,
+- `trusted`, `running` or `tilingEnabled` is false.
+
+Run it first when a command does nothing, when a result looks wrong, or when you come back to a run.
+
+## Drive
+
+Use the build's own binary as the CLI: `CLI=build/CatWM.app/Contents/MacOS/CatWM`. The user's `catwm` link can point to another copy. Add `--json` for compact JSON and parse it with `jq`. `$CLI help` lists all commands, and `$CLI help <command>` shows the arguments. Exit code `0` means the command ran, `1` means it was refused or CatWM does not run, and `2` means the arguments are wrong.
+
+Test windows: `$S/desk.sh start [count]` goes to a new workspace (the number after the last workspace of the display) and opens `count` (default 4) scratch files `verify-1.txt` and up in a NEW TextEdit process. The user's own TextEdit is not touched. All test windows belong to that process, `DESK_PID` in the state file. Select them by `pid`. The script gives a test window the focus with `cyclenext`. The user's windows stay parked on their own workspace. `$S/desk.sh stop` quits that TextEdit process and goes back.
+
+Do not use the onboarding practice windows (`CatWM practice`) as test windows. CatWM floats every window of its own bundle (`WindowManager.shouldFloat`), except during the tour, so they never tile.
+
+Each workspace is a macOS Desktop. When you show workspace N, CatWM makes the missing Desktops up to N, and it removes the empty ones when you leave. Use the next free number, not a high number such as 9.
+
+```sh
+. $S/env.sh                                    # sets CLI, RUN, DESK_PID and the other state values
+$CLI windows --json | jq --argjson p "$DESK_PID" '[.[] | select(.pid == $p)]'
+$CLI layout tall
+$CLI dump                                      # each tiled window: target, actual, OK or MISMATCH
+```
+
+Commands act on the focused window. Before a window command, check `focused` in `windows --json`. Commands run asynchronously: frames animate at 120 Hz. Wait for the state, do not sleep a fixed time. Poll `windows --json` or `dump`, or subscribe to an event first: `$CLI events layout.changed tiling.changed > $RUN/events.jsonl &` (record `$!` and kill that pid when you are done).
+
+For Python, use the generated client and the test helpers in `Clients/python/catwm/testing.py` (`connect`, `wait_for_window`, `wait_until`, `Events`):
+
+```sh
+python3 -I -c 'import sys; sys.path.insert(0, "Clients/python")
+from catwm import CatWM
+from catwm.testing import Events
+c = CatWM()
+with Events("layout.changed") as e:
+    c.layout("wide"); print(e.wait("layout.changed", timeout=3))'
+```
+
+Key binds and menus need real key presses. The user path for a key bind is the event tap, so a proof for a key bind change needs a key press: `osascript -e 'tell application "System Events" to key code 48 using command down'`. That needs Accessibility for the terminal app, and it acts on whatever has the focus. Ask the user before you send key presses. For most changes, the CLI command is the same dispatcher that the key bind calls, and it is enough.
+
+The feature map is in `features/README.md`. Before you claim that a feature works, drive every entry point that its file lists.
+
+## Evidence
+
+```sh
+$S/evidence.sh before    # before the action
+$CLI layout wide
+$S/evidence.sh after     # after the action
+```
+
+`evidence.sh <label>` writes `<label>.status.json`, `<label>.windows.json`, `<label>.workspaces.json`, `<label>.dump.txt` and `<label>.png` (full screen, `screencapture -x`) to the run folder. It also updates `catwm.log`, which holds the CatWM log lines since launch. The screenshot shows the user's screen. It can show private content, so do not upload it anywhere without asking.
+
+Proof rules:
+
+- Use the real user path: a dispatcher through the socket, a key press, a config edit and `reload`. Do not call internal setters. The `dev` commands (`grabtest`, `modefx`, `panelfx`, `poststyle`, `intro`, `introlab`) are only previews.
+- Capture the state before and after the action, not only the end state.
+- Check the side effects too: the frames in `dump` (each tiled window must be `OK`, not `MISMATCH`), the file `~/.config/catwm/catwm.conf` after `config.set`, and the log lines (`config:`, `ipc:`, `tiling:`).
+- For a speed change, use the timings in the log (`tiling: refresh windows 6 17.7ms`, `native workspaces: request to motion ...`), not your impression.
+- A screenshot shows the result, and JSON or `dump` proves it. Give both.
+
+## Cleanup
+
+```sh
+$S/cleanup.sh
+```
+
+It closes the test windows, goes back to the workspace from before `desk.sh start`, quits the verify instance through `catwm exit` (CatWM puts parked windows back first), and starts the previous CatWM again with `open -g <its bundle>`. It stops only the pids that the scripts started. It never kills by process name. If the previous bundle is gone from disk (a deleted worktree), the dev build stays running, and the script prints a warning. Tell the user. The evidence folder stays. Give the user its path.
+
+Run `cleanup.sh` after each failed attempt too. If a script stopped halfway, `doctor.sh` shows what still runs.
+
+## Helpers
+
+| Script | Use |
+|---|---|
+| `scripts/launch.sh` | build, replace the running CatWM, wait until it is ready |
+| `scripts/doctor.sh` | read-only health check |
+| `scripts/desk.sh start [count]\|stop` | TextEdit test windows on a new workspace |
+| `scripts/evidence.sh <label>` | save state, dump, log and screenshot |
+| `scripts/cleanup.sh` | close the test windows, start the previous CatWM again, keep the evidence |
+| `scripts/env.sh` | `. scripts/env.sh` loads `CLI`, `RUN`, `DESK_PID` and the paths into your shell |
