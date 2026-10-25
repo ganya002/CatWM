@@ -19,7 +19,7 @@ extension WindowManager {
         observeSpaceAndScreenNotifications()
         installEventMonitors()
         installInputHandlers()
-        scanner.watchClaims { DispatchQueue.main.async { [weak self] in self?.scheduleRefresh() } }
+        watchClaims()
 
         ControlServer.shared.start()
 
@@ -39,6 +39,10 @@ extension WindowManager {
         animator.onMinimumSize = { [weak self] id, size in self?.learnMinimum(id, size) }
         animator.onTopRefused = { [weak self] target, actual in self?.learnMenuBar(target, actual) }
         animator.onLanded = { [weak self] in self?.cursorRefresh.soon() }
+    }
+
+    func watchClaims() {
+        scanner.watchClaims { [weak self] in DispatchQueue.main.async { self?.scheduleRefresh() } }
     }
 
     private func observeApplicationNotifications() {

@@ -134,10 +134,15 @@ import Testing
 
     @Test(.timeLimit(.minutes(1))) func theExitOfAClaimOwnerStartsAScanAndTheScanKeepsItsPids() async throws {
         let paths = try #require(InstancePaths(id: "a", home: folder))
+        let input = Pipe()
         let owner = Process()
-        owner.executableURL = URL(fileURLWithPath: "/bin/sleep")
-        owner.arguments = ["30"]
+        owner.executableURL = URL(fileURLWithPath: "/bin/cat")
+        owner.standardInput = input
         try owner.run()
+        defer {
+            try? input.fileHandleForWriting.close()
+            owner.waitUntilExit()
+        }
         try paths.writeClaim(ScopeClaim(owner: owner.processIdentifier, scope: WindowScope(pids: [4242])))
         let scanner = claimedScanner(ScopeClaims(folder: paths.instancesFolder))
         let (changes, change) = AsyncStream.makeStream(of: Void.self)
@@ -152,6 +157,37 @@ import Testing
         await scanDesktop(scanner)
         #expect(scanner.desktop.windows.map(\.pid) == [4242])
         #expect(scanner.keeps(4242))
+    }
+
+    func handles(to folder: URL) -> Int {
+        guard let path = realpath(folder.path, nil) else { return 0 }
+        defer { free(path) }
+        return (0..<getdtablesize()).filter { handle in
+            var buffer = [CChar](repeating: 0, count: Int(MAXPATHLEN))
+            return fcntl(handle, F_GETPATH, &buffer) == 0 && strcmp(buffer, path) == 0
+        }.count
+    }
+
+    @Test func aManagerThatWatchesClaimsIsReleasedAndStopsItsWatches() throws {
+        let paths = try #require(InstancePaths(id: "a", home: folder))
+        try paths.writeClaim(ScopeClaim(owner: getpid(), scope: WindowScope(pids: [4242])))
+        weak var released: WindowManager?
+        weak var releasedClaims: ScopeClaims?
+        do {
+            let claims = ScopeClaims(folder: paths.instancesFolder)
+            let manager = WindowManager(scope: nil, config: Config(), scanner: claimedScanner(claims))
+            manager.watchClaims()
+            #expect(handles(to: paths.instancesFolder) == 1)
+            released = manager
+            releasedClaims = claims
+        }
+        #expect(released == nil)
+        #expect(releasedClaims == nil)
+        let deadline = Date().addingTimeInterval(2)
+        while handles(to: paths.instancesFolder) > 0 && Date() < deadline {
+            RunLoop.main.run(mode: .default, before: Date().addingTimeInterval(0.01))
+        }
+        #expect(handles(to: paths.instancesFolder) == 0)
     }
 
     @Test func aFolderChangeWithoutAClaimChangeStartsNoScan() throws {
