@@ -19,7 +19,7 @@ struct GeneralPane: View {
                 if status.loginNeedsApproval {
                     ORow("Waiting for approval", description: "Allow CatWM in Login Items",
                          symbol: "exclamationmark.triangle.fill") {
-                        OButton("Open Login Items", size: .small) { LoginItem.openSettings() }
+                        OButton("Open Login Items", size: .small) { LoginItem.shared.openSettings() }
                     }
                 }
                 if !status.inputMonitoring && CapsLockChord.shared.isBound {
@@ -102,7 +102,7 @@ struct GeneralPane: View {
 
     private var loginBinding: Binding<Bool> {
         Binding(get: { settingsUI.status.launchAtLogin || settingsUI.status.loginNeedsApproval }, set: { enabled in
-            LoginItem.set(enabled)
+            LoginItem.shared.set(enabled)
             settingsUI.refreshStatus()
         })
     }

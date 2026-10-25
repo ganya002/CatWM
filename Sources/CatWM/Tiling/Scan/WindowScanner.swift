@@ -133,7 +133,7 @@ final class WindowScanner {
                 }
             }
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + scanDeadline) { finish() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + scanDeadline) { finish() } // style-ok: limit for a hung app
     }
 
     private func acceptDiscovery(_ scan: AppScan, pid: pid_t, token: UUID, notify: @escaping () -> Void) {

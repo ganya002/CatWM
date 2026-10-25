@@ -16,12 +16,12 @@ class CatWMHostingView<Content: View>: NSHostingView<Content> {
 
 final class ArrowCursor: NSResponder {
     private weak var view: NSView?
-    private static var key = 0
+    private static let key = UnsafeMutableRawPointer.allocate(byteCount: 1, alignment: 1)
 
     static func keep(in view: NSView) {
         let keeper = ArrowCursor()
         keeper.view = view
-        objc_setAssociatedObject(view, &key, keeper, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        objc_setAssociatedObject(view, key, keeper, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         let options: NSTrackingArea.Options = [.mouseMoved, .mouseEnteredAndExited, .activeAlways, .inVisibleRect]
         view.addTrackingArea(NSTrackingArea(rect: .zero, options: options, owner: keeper))
     }

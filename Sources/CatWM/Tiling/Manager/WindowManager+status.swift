@@ -7,7 +7,7 @@ extension WindowManager {
         return Status(trusted: Permission.accessibility.isGranted, keybindsActive: surface.keybindsActive,
                       running: isStarted,
                       tilingEnabled: tilingEnabled,
-                      launchAtLogin: LoginItem.isEnabled, loginNeedsApproval: LoginItem.needsApproval,
+                      launchAtLogin: LoginItem.shared.isEnabled, loginNeedsApproval: LoginItem.shared.needsApproval,
                       inputMonitoring: Permission.inputMonitoring.isGranted,
                       tiled: managed.filter { !$0.isFloating }.count, floating: managed.filter(\.isFloating).count,
                       screens: isStarted ? screens.map { screen in

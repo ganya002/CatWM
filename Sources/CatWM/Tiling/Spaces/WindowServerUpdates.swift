@@ -47,7 +47,9 @@ final class WindowServerUpdates {
             guard disable() else { lock.unlock(); return nil }
             generation += 1
             let batch = generation
-            DispatchQueue.global(qos: .userInteractive).asyncAfter(deadline: .now() + maximumHold) { [self] in
+            DispatchQueue.global(qos: .userInteractive).asyncAfter( // style-ok: limit for a lost lease
+                deadline: .now() + maximumHold
+            ) { [self] in
                 finish(batch, force: true)
             }
         }

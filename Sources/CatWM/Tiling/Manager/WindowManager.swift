@@ -23,6 +23,7 @@ final class WindowManager {
     var onModeChange: ((String) -> Void)?
     var surface: any TilingSurface = HeadlessSurface()
     var practice: (pid: pid_t, workspaces: [String: String])?
+    var keyPostStyle = Hotkeys.PostStyle.physical
 
     var windows: [CGWindowID: Window] = [:]
     var observedApps: [(pid: pid_t, bundleID: String?)] = []
@@ -103,6 +104,7 @@ final class WindowManager {
     let scanner = WindowScanner()
     let dockWindowPull = DockWindowPull()
     let dockArea = DockArea()
+    let cursorRefresh = CursorRefresh()
 
     var currentLayoutTitle: String {
         guard let screen = currentScreen() else { return "" }

@@ -71,7 +71,7 @@ final class TabDropHint {
                     .strokeBorder(Theme.accent, lineWidth: 2)
                 HStack(spacing: Theme.Space.small) {
                     Image(systemName: "plus").font(Theme.symbol(Theme.Icon.small, .bold))
-                    Image(nsImage: AppIcons.icon(for: model.pid)).resizable()
+                    Image(nsImage: AppIcons.shared.iconOrGeneric(for: model.pid)).resizable()
                         .frame(width: TabStrip.iconSide, height: TabStrip.iconSide)
                     Text(model.title).font(Theme.body(12, .medium)).oneLine()
                 }

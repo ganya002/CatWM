@@ -13,7 +13,7 @@ enum RestoreAX {
         }
     }
 
-    struct Candidate: @unchecked Sendable {
+    struct Candidate: @unchecked Sendable { // style-ok: AXUIElement is safe to use on any thread
         var id: CGWindowID
         var element: AXUIElement
         var pid: pid_t
@@ -23,7 +23,7 @@ enum RestoreAX {
         var frame: CGRect?
     }
 
-    struct Probe: @unchecked Sendable {
+    struct Probe: @unchecked Sendable { // style-ok: AXUIElement is safe to use on any thread
         var id: CGWindowID
         var element: AXUIElement
 

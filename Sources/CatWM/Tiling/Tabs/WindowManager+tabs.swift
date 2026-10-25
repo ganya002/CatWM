@@ -116,7 +116,9 @@ extension WindowManager {
         tabUI.minimizingTabs.insert(group.id)
         surface.tabsDidChange(instant: true)
         group.members.compactMap { windows[$0] }.forEach(minimize)
-        DispatchQueue.main.asyncAfter(deadline: .now() + Self.minimizeHold) { [weak self] in
+        DispatchQueue.main.asyncAfter( // style-ok: covers the minimize animation
+            deadline: .now() + Self.minimizeHold
+        ) { [weak self] in
             self?.tabUI.minimizingTabs.remove(group.id)
             self?.surface.tabsDidChange(instant: false)
         }
@@ -318,7 +320,9 @@ extension WindowManager {
             self.updateTabDropHint()
         }
         tabUI.tabHoverWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + Self.tabHoverDelay, execute: work)
+        DispatchQueue.main.asyncAfter( // style-ok: hover dwell time
+            deadline: .now() + Self.tabHoverDelay, execute: work
+        )
     }
 
     func tabDropZone(_ host: CGWindowID, _ slot: CGRect) -> CGRect {

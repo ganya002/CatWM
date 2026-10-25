@@ -11,7 +11,6 @@ enum MenuBarIcon {
     private static let height: CGFloat = 18
     private static let glyphSize = CGSize(width: 19, height: 13)
     private static let iconSize: CGFloat = 16
-    private static var iconCache: [pid_t: NSImage] = [:]
 
     static func image(mode: String, workspace: String?, layout: Layout, pids: [pid_t]) -> NSImage {
         let workspaceText = workspace.map { NSAttributedString(string: $0, attributes: [
@@ -34,7 +33,7 @@ enum MenuBarIcon {
             drawLayout(layout, color: mode.isEmpty ? .labelColor : Theme.ns(\.accent), in: rect)
         })
         for (i, pid) in shown.enumerated() {
-            let icon = self.icon(for: pid)
+            let icon = AppIcons.shared.icon(for: pid)
             parts.append(Part(width: iconSize, gapAfter: i == shown.count - 1 ? 2 : 1) { x in
                 icon?.draw(in: CGRect(x: x, y: (height - iconSize) / 2, width: iconSize, height: iconSize))
             })
@@ -56,17 +55,6 @@ enum MenuBarIcon {
         image.accessibilityDescription = (workspace.map { "Workspace \($0), " } ?? "") + layout.title
             + (mode.isEmpty ? "" : ", \(mode) mode")
         return image
-    }
-
-    static func pruneIcons(keeping pids: Set<pid_t>) {
-        iconCache = iconCache.filter { pids.contains($0.key) || NSRunningApplication(processIdentifier: $0.key) != nil }
-    }
-
-    private static func icon(for pid: pid_t) -> NSImage? {
-        if let cached = iconCache[pid] { return cached }
-        guard let icon = NSRunningApplication(processIdentifier: pid)?.icon else { return nil }
-        iconCache[pid] = icon
-        return icon
     }
 
     private static func draw(_ text: NSAttributedString, at x: CGFloat) {

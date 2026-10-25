@@ -57,8 +57,7 @@ import Testing
         window.contentView = host
         defer { model.open = false }
         host.layoutSubtreeIfNeeded()
-        RunLoop.main.run(until: Date().addingTimeInterval(0.05))
-        let anchor = try #require(CursorActions.shared.rowHover)
+        let anchor = try #require(anchor(in: host) { rowFrames(host).count == 2 })
         let rows = rowFrames(host).sorted { $0.minY < $1.minY }
         try #require(rows.count == 2)
         let mark = anchor.convert(anchor.bounds, to: host)
@@ -82,8 +81,7 @@ import Testing
         window.contentView = host
         defer { model.open = false }
         host.layoutSubtreeIfNeeded()
-        RunLoop.main.run(until: Date().addingTimeInterval(0.05))
-        let anchor = try #require(CursorActions.shared.rowHover)
+        let anchor = try #require(anchor(in: host) { CursorActions.shared.rowHover?.enclosingScrollView != nil })
         let clip = try #require(anchor.enclosingScrollView?.contentView)
         let below = clip.convert(CGPoint(x: clip.bounds.midX, y: clip.bounds.maxY + 24), to: nil)
         let origin = anchor.convert(CGPoint.zero, to: nil)
@@ -94,6 +92,15 @@ import Testing
         #expect(CursorActions.rowUnder(
             anchor, at: above, x: above.x - origin.x, y: origin.y - above.y, actions: model.actions
         ) == nil)
+    }
+
+    private func anchor(in host: NSView, when ready: () -> Bool) -> NSView? {
+        let deadline = Date().addingTimeInterval(2)
+        while Date() < deadline {
+            if let anchor = CursorActions.shared.rowHover, anchor.isDescendant(of: host), ready() { return anchor }
+            RunLoop.main.run(mode: .default, before: Date().addingTimeInterval(0.01))
+        }
+        return nil
     }
 
     private func hitRow(_ anchor: NSView, in row: NSRect, actions: [QuickAction]) throws -> String? {

@@ -51,7 +51,7 @@ extension WindowManager {
 
     func syncNativeWorkspaces(screens: [Screen], present: Set<CGWindowID>) -> WorkspaceReconciliation {
         updateNativeCatalog(screens)
-        MainActor.assumeIsolated { DesktopGuardClient.prewarm() }
+        Task { @MainActor [nativeDesktop] in nativeDesktop.prewarmGuard() }
         let displays = Set(screens.map(\.uuid))
         shown = shown.filter { displays.contains($0.key) }
         virtualShown = virtualShown.filter { displays.contains($0.key) }
@@ -212,7 +212,7 @@ extension WindowManager {
             do { return try await remove(space, screen) } catch DesktopTransitionError.occupied {
                 throw DesktopTransitionError.occupied
             } catch where attempt < 5 {
-                try await Task.sleep(nanoseconds: 200_000_000)
+                try await Task.sleep(nanoseconds: 200_000_000) // style-ok: a failed remove has no retry event
             }
         }
     }

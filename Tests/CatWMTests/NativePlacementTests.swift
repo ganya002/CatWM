@@ -104,7 +104,6 @@ struct NativePlacementTests {
         test.manager.animator.position(test.window, at: test.frame)
         var released = false
         let delayedRelease = Task { @MainActor in
-            try await Task.sleep(for: .milliseconds(100))
             released = true
             release.signal()
         }

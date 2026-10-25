@@ -4,7 +4,7 @@ extension WindowManager {
     @discardableResult
     func goToSpace(_ number: Int, autoCorrect: Bool = true) -> Int? {
         if let combo = SystemShortcut.desktop(number) {
-            Hotkeys.post(keyCode: combo.keyCode, flags: combo.flags)
+            Hotkeys.post(keyCode: combo.keyCode, flags: combo.flags, style: keyPostStyle)
             desktops.pendingSpace = nil
             return 1
         }
@@ -30,16 +30,18 @@ extension WindowManager {
         }
         Log.info(
             "spaces: desktop \(cur + 1) → \(number), stepping \(delta) with key \(combo.keyCode) "
-                + "flags \(combo.flags.rawValue) style \(Hotkeys.postStyle)"
+                + "flags \(combo.flags.rawValue) style \(keyPostStyle)"
         )
-        for _ in 0..<abs(delta) { Hotkeys.post(keyCode: combo.keyCode, flags: combo.flags) }
+        for _ in 0..<abs(delta) { Hotkeys.post(keyCode: combo.keyCode, flags: combo.flags, style: keyPostStyle) }
         let settle = 0.6 + 0.15 * Double(abs(delta))
         desktops.pendingSpace = .init(display: screen.uuid, index: info.desktops[number - 1],
                                       until: Date().addingTimeInterval(settle))
         desktops.spaceGeneration += 1
         let generation = desktops.spaceGeneration
         guard autoCorrect else { return abs(delta) }
-        DispatchQueue.main.asyncAfter(deadline: .now() + settle) { [weak self] in
+        DispatchQueue.main.asyncAfter( // style-ok: no event marks the last queued Desktop step
+            deadline: .now() + settle
+        ) { [weak self] in
             self?.correctSpace(display: screen.uuid, target: info.desktops[number - 1], generation: generation,
                                attemptsLeft: 2)
         }
@@ -54,10 +56,12 @@ extension WindowManager {
               let combo = SystemShortcut.step(right: target > cur) else { return }
         let delta = target - cur
         Log.info("spaces: landed on \(cur + 1) instead of \(target + 1); correcting by \(delta)")
-        for _ in 0..<abs(delta) { Hotkeys.post(keyCode: combo.keyCode, flags: combo.flags) }
+        for _ in 0..<abs(delta) { Hotkeys.post(keyCode: combo.keyCode, flags: combo.flags, style: keyPostStyle) }
         let settle = 0.6 + 0.15 * Double(abs(delta))
         desktops.pendingSpace = .init(display: display, index: target, until: Date().addingTimeInterval(settle))
-        DispatchQueue.main.asyncAfter(deadline: .now() + settle) { [weak self] in
+        DispatchQueue.main.asyncAfter( // style-ok: no event marks the last queued Desktop step
+            deadline: .now() + settle
+        ) { [weak self] in
             self?.correctSpace(display: display, target: target, generation: generation, attemptsLeft: attemptsLeft - 1)
         }
     }
@@ -91,7 +95,9 @@ extension WindowManager {
         postMouse(.leftMouseDown, point)
         func step(_ index: Int) {
             guard index < offsets.count else {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.09) { [weak self] in
+                DispatchQueue.main.asyncAfter( // style-ok: a grabbed window moves with no event
+                    deadline: .now() + 0.09
+                ) { [weak self] in
                     guard let self else { return }
                     let after = serverFrame(window.id) ?? window.frame
                     let grabbed = !after.approxEqual(before, tolerance: 4)
@@ -103,7 +109,9 @@ extension WindowManager {
                 }
                 return
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + (index == 0 ? 0.05 : 0.025)) { [weak self] in
+            DispatchQueue.main.asyncAfter( // style-ok: paces synthetic drag input
+                deadline: .now() + (index == 0 ? 0.05 : 0.025)
+            ) { [weak self] in
                 self?.postMouse(.leftMouseDragged, CGPoint(x: point.x + offsets[index], y: point.y))
                 step(index + 1)
             }
@@ -123,7 +131,9 @@ extension WindowManager {
             guard let self else { return }
             guard grabbed else {
                 postMouse(.leftMouseUp, held)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) { [weak self] in
+                DispatchQueue.main.asyncAfter( // style-ok: paces synthetic drag input
+                    deadline: .now() + 0.06
+                ) { [weak self] in
                     self?.tryGrab(window, points.dropFirst(), space: number, restore: restore)
                 }
                 return

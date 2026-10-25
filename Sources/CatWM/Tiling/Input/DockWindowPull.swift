@@ -50,7 +50,9 @@ final class DockWindowPull {
             pending = (down, action)
             let work = DispatchWorkItem { [weak self] in self?.giveBackClick() }
             hold = work
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: work)
+            DispatchQueue.main.asyncAfter( // style-ok: a click becomes a hold after this time
+                deadline: .now() + 0.35, execute: work
+            )
             return true
         case .leftMouseDragged:
             guard let pending else { return false }

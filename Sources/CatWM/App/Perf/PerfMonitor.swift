@@ -2,7 +2,9 @@ import AppKit
 import CryptoKit
 import QuartzCore
 
-enum PerfMonitor {
+final class PerfMonitor {
+    static let shared = PerfMonitor()
+
     struct SlowApp {
         let bundle: String
         let stepMs: Double
@@ -25,54 +27,56 @@ enum PerfMonitor {
     private static let cooldown = 7 * 86400.0, perWeek = 5
 
     private static let launched = CACurrentMediaTime()
-    private static var seen: [String: Int] = [:]
-    private static var active: [FrameRun] = []
-    private static var asleep = false
-    private static var busyAt: CFTimeInterval = 0
-    private static var uploading = false
-    private static var observers: [NSObjectProtocol] = []
+    private var seen: [String: Int] = [:]
+    private var active: [FrameRun] = []
+    private var asleep = false
+    private var busyAt: CFTimeInterval = 0
+    private var uploading = false
+    private var observers: [NSObjectProtocol] = []
 
-    static var enabled: Bool { WindowManager.shared.config.perfReports }
+    var enabled: Bool { WindowManager.shared.config.perfReports }
 
-    static func begin(_ kind: String) -> FrameRun? {
+    func begin(_ kind: String) -> FrameRun? {
         guard !asleep, let screen = NSScreen.main else { return nil }
         let run = FrameRun(kind: kind, screen: screen)
         active.append(run)
         return run
     }
 
-    static func track(_ kind: String, for seconds: Double) {
+    func track(_ kind: String, for seconds: Double) {
         guard let run = begin(kind) else { return }
         DispatchQueue.main.asyncAfter(deadline: .now() + seconds + 0.05) { run.end() }
     }
 
-    static func start() {
+    func start() {
         let center = NSWorkspace.shared.notificationCenter
         let changes = [(NSWorkspace.screensDidSleepNotification, true),
                        (NSWorkspace.screensDidWakeNotification, false),
                        (NSWorkspace.sessionDidResignActiveNotification, true),
                        (NSWorkspace.sessionDidBecomeActiveNotification, false)]
         for (name, value) in changes {
-            observers.append(center.addObserver(forName: name, object: nil, queue: .main) { _ in asleep = value })
+            observers.append(center.addObserver(forName: name, object: nil, queue: .main) { [unowned self] _ in
+                asleep = value
+            })
         }
         let activities = CFRunLoopActivity([.afterWaiting, .beforeWaiting]).rawValue
-        let observer = CFRunLoopObserverCreateWithHandler(nil, activities, true, 0) { _, activity in
+        let observer = CFRunLoopObserverCreateWithHandler(nil, activities, true, 0) { [unowned self] _, activity in
             let now = CACurrentMediaTime()
             if activity == .afterWaiting { busyAt = now; return }
             guard busyAt > 0 else { return }
             let busy = now - busyAt
             busyAt = 0
-            if busy > hangLine { hung(busy) }
+            if busy > Self.hangLine { hung(busy) }
         }
         CFRunLoopAddObserver(CFRunLoopGetMain(), observer, .commonModes)
     }
 
-    static func finish(_ run: FrameRun, apps: [SlowApp]) {
+    func finish(_ run: FrameRun, apps: [SlowApp]) {
         active.removeAll { $0 === run }
         let runs = seen[run.kind, default: 0] + 1
         seen[run.kind] = runs
-        guard runs > skipFirstRuns, !run.tags.contains("gap") else { return }
-        let slowApp = apps.filter { $0.stepMs > slowAppStepMs || $0.skipped > slowAppSkipped }
+        guard runs > Self.skipFirstRuns, !run.tags.contains("gap") else { return }
+        let slowApp = apps.filter { $0.stepMs > Self.slowAppStepMs || $0.skipped > Self.slowAppSkipped }
             .max { $0.stepMs < $1.stepMs }
         let stats = run.stats
         let framesSlow = stats.map {
@@ -93,38 +97,38 @@ enum PerfMonitor {
         record(event)
     }
 
-    private static func hung(_ seconds: Double) {
+    private func hung(_ seconds: Double) {
         guard !asleep else { return }
         var event = Event(kind: "hang", hangMs: seconds * 1000)
         event.kind = "hang:" + (active.map(\.kind).min() ?? "idle")
         record(event)
     }
 
-    private static func record(_ event: Event) {
+    private func record(_ event: Event) {
         let text = String(format: "perf: %@ frames %d p95 %.1fms slow %.0f%% hang %.0fms app %@ tags %@",
                           event.kind, event.frames, event.p95Ms, event.slowShare * 100, event.hangMs,
                           event.app?.bundle ?? "-", event.tags.sorted().joined(separator: ","))
         Log.info(text)
         guard enabled, event.tags.isDisjoint(with: ["thermal", "lowpower", "load"]),
-              CACurrentMediaTime() - launched > settle, let endpoint else { return }
-        let digest = fingerprint(event)
+              CACurrentMediaTime() - Self.launched > Self.settle, let endpoint = Self.endpoint else { return }
+        let digest = Self.fingerprint(event)
         let defaults = UserDefaults.standard
         var counts = defaults.dictionary(forKey: DefaultsKey.perfCounts) as? [String: Int] ?? [:]
         let count = counts[digest, default: 0] + 1
         counts[digest] = count
         defaults.set(counts, forKey: DefaultsKey.perfCounts)
 
-        let severe = event.hangMs > severeHang * 1000
-        guard count >= (severe ? severeEventsNeeded : eventsNeeded), !uploading else { return }
+        let severe = event.hangMs > Self.severeHang * 1000
+        guard count >= (severe ? Self.severeEventsNeeded : Self.eventsNeeded), !uploading else { return }
         let now = Date().timeIntervalSince1970
         let sentAt = defaults.dictionary(forKey: DefaultsKey.perfSentAt) as? [String: Double] ?? [:]
         var log = (defaults.array(forKey: DefaultsKey.perfSentLog) as? [Double] ?? []).filter { now - $0 < 7 * 86400 }
-        guard now - (sentAt[digest] ?? 0) > cooldown, log.count < perWeek,
+        guard now - (sentAt[digest] ?? 0) > Self.cooldown, log.count < Self.perWeek,
               now - (log.last ?? 0) > 86400, now > defaults.double(forKey: DefaultsKey.perfBackoffUntil) else { return }
 
         uploading = true
-        upload(event, fingerprint: digest, count: count, to: endpoint) { succeeded in
-            uploading = false
+        Self.upload(event, fingerprint: digest, count: count, to: endpoint) { succeeded in
+            self.uploading = false
             if succeeded {
                 log.append(now)
                 var sent = sentAt

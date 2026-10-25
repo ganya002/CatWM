@@ -12,7 +12,7 @@ enum Permission: CaseIterable {
         switch self {
         case .accessibility: AXIsProcessTrusted()
         case .inputMonitoring: IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) == kIOHIDAccessTypeGranted
-        case .screenRecording: ScreenRecording.isGranted
+        case .screenRecording: ScreenRecording.shared.isGranted
         case .fullDiskAccess: NotificationDatabase.isReadable
         }
     }
@@ -46,7 +46,7 @@ enum Permission: CaseIterable {
 
     func request() {
         guard !isGranted else { return }
-        if self == .screenRecording { ScreenRecording.watching = true }
+        if self == .screenRecording { ScreenRecording.shared.watching = true }
         PermissionGuide.shared.show(self)
     }
 
@@ -77,28 +77,31 @@ extension Process {
         process.arguments = args
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice
-        try? process.run()
+        do {
+            try process.run()
+        } catch {
+            Log.info("run \(path) failed: \(error)")
+            return
+        }
         if wait { process.waitUntilExit() }
     }
 }
 
 final class PermissionGuide {
     static let shared = PermissionGuide()
-    private let flow = MainActor.assumeIsolated { PermissionFlow.makeController() }
+    @MainActor private lazy var flow = PermissionFlow.makeController()
     private var kind: Permission?
     var onGranted: (() -> Void)?
 
     func show(_ kind: Permission) {
         self.kind = kind
-        MainActor.assumeIsolated {
-            flow.authorize(pane: kind.pane, suggestedAppURLs: [Bundle.main.bundleURL])
-        }
+        Task { @MainActor in flow.authorize(pane: kind.pane, suggestedAppURLs: [Bundle.main.bundleURL]) }
     }
 
     func granted(_ granted: Permission) {
         guard kind == granted else { return }
         kind = nil
-        MainActor.assumeIsolated { flow.closePanel() }
+        Task { @MainActor in flow.closePanel() }
         Permission.closeSettingsWindows()
         onGranted?()
     }
