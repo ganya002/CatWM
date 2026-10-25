@@ -19,6 +19,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Updater.shared.start()
         CrashWatch.start()
         PerfMonitor.start()
+        WindowManager.shared.surface = AppSurface()
         WindowManager.shared.onChange = { [weak self] in
             self?.scheduleStatusUpdate()
         }

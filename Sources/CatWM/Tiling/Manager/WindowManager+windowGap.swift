@@ -34,7 +34,7 @@ extension WindowManager {
     func warnTooSmall(_ id: CGWindowID, on screen: Screen?) {
         let name = windows[id].flatMap { NSRunningApplication(processIdentifier: $0.pid)?.localizedName }
             ?? "This window"
-        HUD.shared.warn("\(name) can't get any smaller", on: screen?.nsScreen)
+        surface.warnHUD("\(name) can't get any smaller", on: screen?.nsScreen)
     }
 
     func tiled(on screen: Screen) -> [CGWindowID] {

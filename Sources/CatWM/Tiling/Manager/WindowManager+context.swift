@@ -156,4 +156,16 @@ extension WindowManager {
             ?? (delta > 0 ? -1 : 0)
         setLayout(layouts[((i + delta) % layouts.count + layouts.count) % layouts.count], on: current.screen)
     }
+
+    func closeWindow(_ id: CGWindowID) -> Bool {
+        guard let window = windows[id] else { return false }
+        closeAndSort.lastClose = Date()
+        markClosedTab(id)
+        scanner.run(window.pid) { window.close() }
+        return true
+    }
+
+    func minimize(_ window: Window) {
+        scanner.run(window.pid) { window.element.set(kAXMinimizedAttribute, kCFBooleanTrue) }
+    }
 }

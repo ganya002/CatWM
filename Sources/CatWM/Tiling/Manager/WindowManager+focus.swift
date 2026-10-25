@@ -23,7 +23,7 @@ extension WindowManager {
     }
 
     private var focusFollowsMouseNow: Bool {
-        config.focusFollowsMouse && (!config.focusFollowsMouseInModeOnly || !Hotkeys.shared.submap.isEmpty)
+        config.focusFollowsMouse && (!config.focusFollowsMouseInModeOnly || surface.inMode)
     }
 
     func noteFocus(_ id: CGWindowID) { model.noteFocus(id) }
@@ -39,12 +39,12 @@ extension WindowManager {
     }
 
     func mouseUp() {
-        TabDropHint.shared.hide()
+        surface.hideTabDropHint()
         let point = mouseLocation()
         let joins = !tabUI.tabDropCancelled
         tabUI.tabDropCancelled = false
         let hovered = joins && drags.count == 1 ? drags.first.flatMap { settledTabHover(for: $0.key, at: point) } : nil
-        let previewed = drags.first.flatMap { TabStrips.shared.endPreview(of: $0.key) }
+        let previewed = drags.first.flatMap { surface.endTabPreview(of: $0.key) }
         trackTabHover(nil)
         if let previewed, let id = drags.first?.key, drags.count == 1, !desktops.movingToSpace {
             drags = [:]

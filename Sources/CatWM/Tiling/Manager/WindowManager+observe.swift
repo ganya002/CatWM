@@ -133,7 +133,7 @@ extension WindowManager {
             focusRequests.focusObservation += 1
         }
         windows[id] = nil
-        Notifications.shared.forget(id)
+        surface.windowForgotten(id)
         frameReads[id] = nil
         dirtyFrames.remove(id)
         snapNextPlacement.remove(id)

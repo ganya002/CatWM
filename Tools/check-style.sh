@@ -19,6 +19,11 @@ STYLE = re.compile(
     r"|\.shadow\("
 )
 PANEL = re.compile(r"\bNSPanel\(")
+TILING_UI = re.compile(
+    r"\b(?:HUD|TabStrips|TabDropHint|TabStripFollow|TabStripReveal|SplitHandle|SortPanel|Switcher|Tips"
+    r"|CursorActions|ModeFX|ModeCursor|KeyHelp|TemplateLibrary|MacKeyboard|Notifications)\b"
+    r"|\bHotkeys\.shared\b"
+)
 TOOLS = "// swift-tools-version:"
 OK = re.compile(r"^// style-ok: (\S.*\S)$")
 
@@ -75,6 +80,8 @@ def banned(path, code):
         hits.append("hard-coded style. Use a Theme token")
     if path.startswith("Sources/CatWM/") and PANEL.search(code):
         hits.append("NSPanel. Use CatWMPanel")
+    if path.startswith("Sources/CatWM/Tiling/") and TILING_UI.search(code):
+        hits.append("UI in Tiling. Use WindowManager.surface")
     return hits
 
 
@@ -91,7 +98,7 @@ def catalog_violations(path, source):
     renderer = "Sources/CatWM/Settings/Rows/OptionRows.swift"
     pointer = "Sources/CatWM/Settings/Panes/CursorShortcutSpec.swift"
     feature = "Sources/CatWM/Tiling/Focus/FocusDim.swift"
-    quick = "Sources/CatWM/Tiling/Manager/WindowManager+quickActions.swift"
+    quick = "Sources/CatWM/Overlays/Cursor/CursorActions+template.swift"
     action_owners = {
         "Sources/CatWM/Templates/Model/TemplateLibrary.swift",
         feature,

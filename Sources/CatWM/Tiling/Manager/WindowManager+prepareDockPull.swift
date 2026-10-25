@@ -46,7 +46,7 @@ extension WindowManager {
                     window.autoFloating = shouldFloat(window)
                 }
                 cancelFocusRequest()
-                Hotkeys.shared.setSubmap("")
+                surface.leaveMode()
                 moveWindow(window, toWorkspace: workspace, follow: true)
             }
         }

@@ -31,7 +31,7 @@ extension WindowManager {
 
     func acceptFocus(pid: pid_t, id: CGWindowID?, confirmsRequest: Bool = false) {
         guard frontmostPID() == pid else { return }
-        TabStrips.shared.batch {
+        surface.batchTabChanges {
             acceptReportedFocus(pid: pid, id: id, confirmsRequest: confirmsRequest)
         }
         notifyChange()
@@ -53,7 +53,7 @@ extension WindowManager {
             dispatch(command.dispatcher, command.arg, inMode: command.inMode)
         }
         FocusDim.shared.update()
-        TabStrips.shared.restack()
+        surface.restackTabStrips()
     }
 
     func deferFocusCommand(_ dispatcher: String, arg: String, inMode: Bool) -> Bool {

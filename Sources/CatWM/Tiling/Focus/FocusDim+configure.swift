@@ -10,12 +10,12 @@ extension FocusDim {
 
     func toggleDim() {
         set(dim: !dims, blur: blurs)
-        HUD.shared.show(dims ? "Dimming other windows" : "Dim off", on: NSScreen.main)
+        WindowManager.shared.surface.showHUD(dims ? "Dimming other windows" : "Dim off", on: NSScreen.main)
     }
 
     func toggleBlur() {
         set(dim: dims, blur: !blurs)
-        HUD.shared.show(blurs ? "Blurring other windows" : "Blur off", on: NSScreen.main)
+        WindowManager.shared.surface.showHUD(blurs ? "Blurring other windows" : "Blur off", on: NSScreen.main)
     }
 
     func set(dim: Bool, blur: Bool) {
