@@ -8,7 +8,7 @@ extension Onboarding {
 
     func start() {
         guard !isRunning else { return }
-        let resuming = Self.isStarted && !CommandLine.arguments.contains("--onboarding")
+        let resuming = Self.isStarted && !LaunchFlag.onboarding.isSet
         firstRun = true
         UserDefaults.standard.set(true, forKey: Self.startedKey)
         guard let screen = CatWMPanel.pointerScreen() else { return }

@@ -32,8 +32,12 @@ if CommandLine.arguments.dropFirst().first == "--write-schema" {
 
 Migrations.run()
 
-if let first = CommandLine.arguments.dropFirst().first, !first.hasPrefix("-") || ["--help", "-h"].contains(first) {
-    ControlCLI.run(Array(CommandLine.arguments.dropFirst()))
+switch LaunchArguments.decide(Array(CommandLine.arguments.dropFirst())) {
+case .start: break
+case .cli(let words): ControlCLI.run(words)
+case .usage(let message):
+    FileHandle.standardError.write(Data((message + "\n").utf8))
+    exit(2)
 }
 
 signal(SIGPIPE, SIG_IGN)

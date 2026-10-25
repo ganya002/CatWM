@@ -56,6 +56,8 @@ Passed to the app itself, e.g. `open build/CatWM.app --args --verbose`:
 
 - `--verbose`: detailed logging (same as `debug-logging = true`).
 - `--onboarding`: play the welcome card and keyboard tour regardless of state.
+- `--crash-report`: send the newest crash report, to test the upload.
+- An unknown argument that starts with `-` prints a usage error and exits 2. It does not start the app. `LaunchFlag` in `App/LaunchArguments.swift` is the list of start flags.
 - `practice <pid> [titles]`: internal; the tour's practice windows run as a second copy of the binary. Don't invoke it.
 
 ## Build and release (this repo)
