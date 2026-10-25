@@ -17,6 +17,7 @@ protocol WindowBackend: AnyObject {
     func suspendEnhancedUI(_ pid: pid_t) -> Bool
     func resumeEnhancedUI(_ pid: pid_t)
     func focus(_ window: Window, ifCurrent: () -> Bool)
+    func refreshCursor()
 }
 
 final class AXBackend: WindowBackend {
@@ -76,4 +77,6 @@ final class AXBackend: WindowBackend {
         guard ifCurrent() else { return }
         window.element.perform(kAXRaiseAction)
     }
+
+    func refreshCursor() { CursorRefresh.post() }
 }

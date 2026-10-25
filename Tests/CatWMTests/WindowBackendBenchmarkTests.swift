@@ -27,6 +27,7 @@ struct WindowBackendBenchmarkTests {
         func suspendEnhancedUI(_: pid_t) -> Bool { false }
         func resumeEnhancedUI(_: pid_t) {}
         func focus(_: Window, ifCurrent _: () -> Bool) {}
+        func refreshCursor() {}
     }
 
     private static let windows = 200, steps = 120, runs = 7

@@ -32,6 +32,8 @@ final class FakeBackend: WindowBackend {
     private var focusedIn: [pid_t: CGWindowID] = [:]
     private var front: pid_t?
     private var writeLog: [Write] = []
+    private var cursorRefreshCount = 0
+    private var onCursorRefresh: (() -> Void)?
     private var nextID: CGWindowID = 1
     private var nextDisplay: CGDirectDisplayID = 1
 
@@ -117,6 +119,8 @@ final class FakeBackend: WindowBackend {
 
     var frontmost: pid_t? { lock.withLock { front } }
 
+    var cursorRefreshes: Int { lock.withLock { cursorRefreshCount } }
+
     func applications() -> [RunningApplicationSnapshot] {
         lock.withLock {
             apps.map { RunningApplicationSnapshot(pid: $0.key, bundleID: $0.value, regular: true, hidden: false) }
@@ -191,6 +195,16 @@ final class FakeBackend: WindowBackend {
         guard ifCurrent() else { return }
         userFocuses(window.id)
     }
+
+    func refreshCursor() {
+        let observer = lock.withLock {
+            cursorRefreshCount += 1
+            return onCursorRefresh
+        }
+        observer?()
+    }
+
+    func observeCursorRefresh(_ observer: (() -> Void)?) { lock.withLock { onCursorRefresh = observer } }
 }
 
 extension FakeBackend {
@@ -219,14 +233,48 @@ extension FakeBackend {
         }
     }
 
-    @MainActor func wait(_ manager: WindowManager, until condition: @escaping () -> Bool) async {
-        guard !condition() else { return }
-        await withCheckedContinuation { done in
-            manager.onChange = { [weak manager] in
-                guard condition() else { return }
-                manager?.onChange = nil
-                done.resume()
+    @MainActor @discardableResult
+    func wait(_ manager: WindowManager, timeout: TimeInterval = 10,
+              until condition: @escaping () -> Bool) async -> Bool {
+        guard !condition() else { return true }
+        let waiter = Waiter(manager, self)
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { done in
+                waiter.start(done, timeout: timeout, condition)
+                if Task.isCancelled { waiter.finish(false) }
             }
+        } onCancel: {
+            Task { @MainActor in waiter.finish(false) }
+        }
+    }
+
+    @MainActor private final class Waiter {
+        private weak var manager: WindowManager?
+        private weak var fake: FakeBackend?
+        private var done: CheckedContinuation<Bool, Never>?
+        private var deadline: DispatchWorkItem?
+
+        init(_ manager: WindowManager, _ fake: FakeBackend) {
+            self.manager = manager
+            self.fake = fake
+        }
+
+        func start(_ done: CheckedContinuation<Bool, Never>, timeout: TimeInterval, _ condition: @escaping () -> Bool) {
+            self.done = done
+            manager?.onChange = { [weak self] in if condition() { self?.finish(true) } }
+            fake?.observeCursorRefresh { [weak self] in if condition() { self?.finish(true) } }
+            let deadline = DispatchWorkItem { [weak self] in self?.finish(false) }
+            self.deadline = deadline
+            DispatchQueue.main.asyncAfter(deadline: .now() + timeout, execute: deadline) // style-ok: deadline of a wait
+        }
+
+        func finish(_ met: Bool) {
+            guard let done else { return }
+            self.done = nil
+            deadline?.cancel()
+            manager?.onChange = nil
+            fake?.observeCursorRefresh(nil)
+            done.resume(returning: met)
         }
     }
 }

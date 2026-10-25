@@ -24,6 +24,7 @@ import Testing
         let frames = [fake.frame(of: first), fake.frame(of: second)]
         expectTiles(frames, fill: screen.visible)
         #expect(frames[0].width == screen.visible.width / 2)
+        #expect(await fake.wait(manager) { fake.cursorRefreshes > 0 })
     }
 
     @Test func closingAWindowGivesItsSlotBack() async {
@@ -50,13 +51,27 @@ import Testing
         let (left, right) = (sorted[0], sorted[1])
         fake.userFocuses(left)
         if let element = fake.element(left) { manager.handle(kAXFocusedWindowChangedNotification, element) }
-        await fake.wait(manager) { manager.focusRequests.reportedFocus?.id == left }
+        #expect(await fake.wait(manager) { manager.focusRequests.reportedFocus?.id == left })
         fake.clearWrites()
+        let cursorRefreshes = fake.cursorRefreshes
         manager.dispatch("movefocus", "r")
-        await fake.wait(manager) { manager.focusRequests.reportedFocus?.id == right }
+        #expect(await fake.wait(manager) { manager.focusRequests.reportedFocus?.id == right })
         #expect(fake.focused(in: pid) == right)
         #expect(fake.frontmost == pid)
         #expect(fake.writes.isEmpty)
+        #expect(await fake.wait(manager) { fake.cursorRefreshes > cursorRefreshes })
+    }
+
+    @Test func aWaitForAnEventThatNeverComesEnds() async {
+        let fake = FakeBackend()
+        fake.addScreen()
+        let manager = fake.makeManager()
+        #expect(await !fake.wait(manager, timeout: 0.05) { false })
+        #expect(manager.onChange == nil)
+        let waiting = Task { @MainActor in await fake.wait(manager, timeout: 600) { false } }
+        waiting.cancel()
+        #expect(await !waiting.value)
+        #expect(manager.onChange == nil)
     }
 
     @Test func aMinimumSizePushesTheNeighbour() async {
@@ -65,7 +80,7 @@ import Testing
         let manager = fake.makeManager()
         let wide = fake.addWindow(minSize: CGSize(width: 1000, height: 0)), other = fake.addWindow(pid: -101)
         await fake.settle(manager)
-        await fake.wait(manager) { manager.minSizes[wide] != nil }
+        #expect(await fake.wait(manager) { manager.minSizes[wide] != nil })
         await fake.settle(manager)
         #expect(manager.minSizes[wide]?.width == 1000)
         #expect(fake.frame(of: wide).width == 1000)
