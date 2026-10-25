@@ -6,7 +6,7 @@ struct Config {
     var windowMarginSize: CGFloat = 10
     var smartWindowMargins = true
     var paddingLeft: CGFloat = 10, paddingRight: CGFloat = 10, paddingTop: CGFloat = 10, paddingBottom: CGFloat = 10
-    var mouseFollowsFocus = false
+    var mouseFollowsFocus = true
     var focusFollowsMouse = true
     var focusFollowsMouseInModeOnly = true
     var mouseSwapsWindows = true
