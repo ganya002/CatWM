@@ -75,7 +75,7 @@ extension SwitcherView {
                 }
             }
             .frame(width: tileWidth(item) - Tile.inner * 2, height: tile.height - Tile.inner * 2)
-            .animation(Motion.fade, value: model.previews[item.id] != nil)
+            .animation(fade, value: model.previews[item.id] != nil)
             appIcon(item.pid, size: tile.iconSize)
                 .matchedGeometryEffect(id: item.id, in: morph)
                 .offset(x: -Theme.Space.extraSmall, y: Theme.Space.extraSmall)

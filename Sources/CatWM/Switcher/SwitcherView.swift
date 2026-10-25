@@ -54,7 +54,7 @@ struct SwitcherView: View {
                 card(room: Self.room(space.size.width))
                     .opacity(model.shown ? 1 : 0)
                     .scaleEffect(model.shown || reduceMotion ? 1 : 0.97, anchor: .top)
-                    .animation(model.shown ? Motion.fade : Motion.exit, value: model.shown)
+                    .animation(animated ? model.shown ? Motion.fade : Motion.exit : nil, value: model.shown)
             }
             .padding(Self.margin)
             .frame(width: space.size.width, height: space.size.height, alignment: .top)
@@ -63,7 +63,9 @@ struct SwitcherView: View {
         .accessibilityLabel("Window switcher")
     }
 
-    var change: Animation { reduceMotion ? Motion.fade : Motion.easeOut }
+    var animated: Bool { WindowManager.shared.config.animate }
+    var change: Animation? { PanelMotion.windowAnimation(reduceMotion: reduceMotion) }
+    var fade: Animation? { animated ? Motion.fade : nil }
 
     private func card(room: CGFloat) -> some View {
         VStack(spacing: 0) {

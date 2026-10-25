@@ -27,7 +27,7 @@ final class Switcher {
     }
 
     func open(backward: Bool) {
-        guard !active else { move(backward ? -1 : 1); return }
+        guard !active else { move(backward ? -1 : 1, wrap: true); return }
         let items = WindowManager.shared.switcherItems()
         guard !items.isEmpty else { return }
         let focused = WindowManager.shared.focusedWindow()?.id
@@ -93,9 +93,9 @@ final class Switcher {
         releaseWork?.cancel()
         let command = flags.contains(.maskCommand), extra = flags.subtracting(holdMods)
         switch code {
-        case 48: move(flags.contains(.maskShift) ? -1 : 1)
-        case 124, 125: move(1)
-        case 123, 126: move(-1)
+        case 48: move(flags.contains(.maskShift) ? -1 : 1, wrap: !isRepeat)
+        case 124, 125: move(1, wrap: !isRepeat)
+        case 123, 126: move(-1, wrap: !isRepeat)
         case 53 where !isRepeat: cancel()
         case 36, 76: if !isRepeat, let item = model.selected { confirm(item) }
         case 51: edit { model.erase(all: !extra.isDisjoint(with: [.maskCommand, .maskAlternate])) }
@@ -127,8 +127,8 @@ final class Switcher {
         return true
     }
 
-    private func move(_ delta: Int) {
-        model.move(delta)
+    private func move(_ delta: Int, wrap: Bool) {
+        model.move(delta, wrap: wrap)
         reveal()
         if model.peeking { capturePeek() }
     }
@@ -205,6 +205,7 @@ final class Switcher {
         revealed = false
         model.shown = false
         panel?.ignoresMouseEvents = true
+        guard WindowManager.shared.config.animate else { panel?.orderOut(nil); return }
         let work = DispatchWorkItem { [weak self] in self?.panel?.orderOut(nil) }
         orderOutWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + Theme.fast + 0.05, execute: work)

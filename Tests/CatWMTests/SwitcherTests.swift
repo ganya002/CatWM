@@ -46,6 +46,16 @@ private let all = [safari, slack, notes, safariTwo]
         #expect(model.selected == safari)
     }
 
+    @Test func heldMoveStopsAtTheEnds() {
+        let model = SwitcherModel()
+        model.begin(all, selection: all.count - 2)
+        model.move(1, wrap: false)
+        model.move(1, wrap: false)
+        #expect(model.selection == all.count - 1)
+        model.move(-all.count, wrap: false)
+        #expect(model.selection == 0)
+    }
+
     @Test func typingSelectsTheBestMatchAndErasingRestoresTheList() {
         let model = SwitcherModel()
         model.begin(all, selection: 1)

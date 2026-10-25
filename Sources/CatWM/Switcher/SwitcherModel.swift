@@ -46,8 +46,9 @@ final class SwitcherModel: ObservableObject {
         previews[id] = image
     }
 
-    func move(_ delta: Int) {
+    func move(_ delta: Int, wrap: Bool = true) {
         guard !results.isEmpty else { return }
+        guard wrap else { selection = min(max(selection + delta, 0), results.count - 1); return }
         selection = (selection + delta % results.count + results.count) % results.count
     }
 

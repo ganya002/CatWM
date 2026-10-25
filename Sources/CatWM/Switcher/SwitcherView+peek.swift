@@ -8,7 +8,7 @@ extension SwitcherView {
                 if let item = model.selected { shot(item).id(item.id).transition(.opacity) }
             }
             .frame(width: size.width, height: size.height)
-            .animation(Motion.fade, value: model.selected?.id)
+            .animation(fade, value: model.selected?.id)
             if let item = model.selected { titleLine(item) }
         }
     }
