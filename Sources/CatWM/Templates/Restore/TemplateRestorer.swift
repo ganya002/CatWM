@@ -24,6 +24,7 @@ final class TemplateRestorer {
     init(template: WorkspaceTemplate) { self.template = template }
 
     func restore() async throws -> String {
+        guard manager.scope == nil else { throw WindowManager.TemplateError.scoped }
         guard manager.isStarted, !Screen.all().isEmpty else { throw WindowManager.TemplateError.notReady }
         initialWindowIDs = Set(Self.windowList(.optionAll).map(\.id))
         manager.restoringTemplate = true

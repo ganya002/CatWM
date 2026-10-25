@@ -1,9 +1,10 @@
 import AppKit
 
 final class WindowManager {
-    static let shared = WindowManager(config: Config.load())
+    static let shared = WindowManager(config: loadConfig(scope: Instance.scope), scope: Instance.scope)
 
     let backend: any WindowBackend
+    let scope: WindowScope?
     var config: Config
     var tilingEnabled = true
     var restoringTemplate = false {
@@ -109,15 +110,21 @@ final class WindowManager {
     let dockArea = DockArea()
     let cursorRefresh: CursorRefresh
 
-    init(backend: any WindowBackend = AXBackend.shared, config: Config) {
+    init(backend: any WindowBackend = AXBackend.shared, config: Config, scope: WindowScope? = nil) {
         self.backend = backend
+        self.scope = scope
         self.config = config
         frontmostPID = { backend.frontmostPID() }
         animator = Animator(backend: backend)
         cursorRefresh = CursorRefresh(backend: backend)
         scanner = WindowScanner(read: { backend.scan($0, discovered: $1) }, readDesktop: { backend.desktop(known: $0) },
-                                readApplications: { backend.applications() })
+                                readApplications: { backend.applications() }, scope: scope)
         focusRequests.focusReader = FocusReader { backend.focusedWindow(pid: $0) }
+    }
+
+    static func loadConfig(scope: WindowScope?) -> Config {
+        let config = Config.load()
+        return scope?.restrict(config) ?? config
     }
 
     var currentLayoutTitle: String {

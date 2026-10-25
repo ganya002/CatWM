@@ -170,7 +170,7 @@ extension WindowManager {
         nativeDesktop.stop()
         let wasVirtual = config.virtualWorkspaces
         let wasPerDisplay = config.workspacesPerDisplay
-        config = Config.load()
+        config = Self.loadConfig(scope: scope)
         if wasVirtual != config.virtualWorkspaces {
             tilingRecovery = TilingRecovery()
             if wasVirtual { restoreHiddenWindows() }
@@ -212,6 +212,7 @@ extension WindowManager {
 
 extension WindowManager {
     func startMouseTaps(logFailure: Bool = false) {
+        guard Instance.input.mouseTaps else { return }
         nativeGestures.start()
         guard !dockWindowPull.isInstalled else { return }
         if dockWindowPull.start() {

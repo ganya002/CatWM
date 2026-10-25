@@ -46,6 +46,7 @@ final class WindowScanner {
     private var pendingDesktop: (known: Set<CGWindowID>, done: () -> Void)?
     private let readDesktop: (Set<CGWindowID>) -> WindowServerObservation
     private let readApplications: () -> [RunningApplicationSnapshot]
+    private let scope: WindowScope?
     private(set) var lastScan: CFTimeInterval = 0
     private var busy: [pid_t: UUID] = [:]
     private var idleWaiters: [() -> Void] = []
@@ -56,11 +57,13 @@ final class WindowScanner {
     init(read: @escaping (Job, (AppScan) -> Void) -> AppScan = { AXBackend.shared.scan($0, discovered: $1) },
          readDesktop: @escaping (Set<CGWindowID>) -> WindowServerObservation = { AXBackend.shared.desktop(known: $0) },
          readApplications: @escaping () -> [RunningApplicationSnapshot] = { AXBackend.shared.applications() },
-         deadline: TimeInterval = WindowScanner.deadline) {
+         deadline: TimeInterval = WindowScanner.deadline,
+         scope: WindowScope? = nil) {
         self.read = read
         self.readDesktop = readDesktop
         self.readApplications = readApplications
         scanDeadline = deadline
+        self.scope = scope
     }
 
     func observeDesktop(known: Set<CGWindowID>, done: @escaping () -> Void) {
@@ -69,9 +72,13 @@ final class WindowScanner {
             return
         }
         observingDesktop = true
-        DispatchQueue.global(qos: .userInitiated).async { [weak self, readDesktop, readApplications] in
-            let observation = readDesktop(known)
-            let applications = readApplications()
+        DispatchQueue.global(qos: .userInitiated).async { [weak self, readDesktop, readApplications, scope] in
+            var observation = readDesktop(known)
+            var applications = readApplications()
+            if let scope {
+                observation = scope.filter(observation)
+                applications = scope.filter(applications)
+            }
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.desktop = observation

@@ -68,13 +68,26 @@ enum Instance {
     static let cacheFolder = paths.cacheFolder
     static let pidFile = paths.pidFile
 
+    static let scope: WindowScope? = {
+        guard let text = ProcessInfo.processInfo.environment["CATWM_SCOPE"] else { return nil }
+        guard let scope = WindowScope(text) else {
+            fail("CATWM_SCOPE must be pids:<pid>,<pid>... with an optional ;display:<display UUID>")
+        }
+        return scope
+    }()
+
+    static let input = GlobalInput(scope: scope, keys: ProcessInfo.processInfo.environment["CATWM_KEYS"])
+
     static let defaults: UserDefaults = {
         guard let suite = paths.defaultsSuite else { return .standard }
         guard let defaults = UserDefaults(suiteName: suite) else { fail("cannot open the defaults suite \(suite)") }
         return defaults
     }()
 
-    static func check() { _ = paths }
+    static func check() {
+        _ = paths
+        _ = scope
+    }
 
     static func writePid() {
         Log.attempt("write \(pidFile.path)") {

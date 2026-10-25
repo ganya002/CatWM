@@ -18,13 +18,14 @@ struct Screen {
         func flip(_ rect: CGRect) -> CGRect {
             CGRect(x: rect.minX, y: height - rect.maxY, width: rect.width, height: rect.height)
         }
-        return NSScreen.screens.compactMap { screen in
+        let screens = NSScreen.screens.compactMap { screen -> Screen? in
             guard let id = screen.displayID else { return nil }
             let uuid = screen.displayUUID ?? "\(id)"
             return Screen(id: id, uuid: uuid, frame: flip(screen.frame), visible: flip(screen.visibleFrame),
                           isBuiltin: CGDisplayIsBuiltin(id) != 0, nsScreen: screen)
         }
         .sorted { ($0.frame.minX, $0.frame.minY) < ($1.frame.minX, $1.frame.minY) }
+        return Instance.scope?.filter(screens) ?? screens
     }
 }
 

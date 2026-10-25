@@ -29,6 +29,23 @@ A named instance does not register a login item, link the `catwm` command, start
 
 The CLI and the libraries read `CATWM_INSTANCE` too. `CATWM_SOCKET` wins over it.
 
+## Window scope
+
+`CATWM_SCOPE=pids:<pid>,<pid>...[;display:<display UUID>]` gives an instance a window scope. Use it with `CATWM_INSTANCE` for a test. `Instance.scope` reads the value one time. CatWM stops with exit code 2 on a bad value, also on an empty value. A bad value never means "all windows".
+
+A scoped instance:
+
+- manages only the windows of these pids. `WindowScanner` removes the other windows and apps from what it reads, before the manager sees them. `observe(pid:)` and the app list of a template save also skip the other pids.
+- tiles only on the display with that UUID (`Screen.all()`), if the value has `display:`.
+- cannot open a template (`TemplateError.scoped`).
+- does not use macOS Desktops (`virtual-workspaces` is off). It does not make, remove or show a Desktop.
+- turns off focus follows mouse, mouse follows focus, quick actions and the dimming and blur panels (`WindowScope.restrict`).
+- does not start the key event tap, the Caps Lock change (`hidutil`), the Desktop swipe tap or the Dock window pull tap (`GlobalInput`). `CATWM_KEYS=on` starts the key event tap again. Then the instance reads all key presses, the same as the user's CatWM. Caps Lock stays off.
+
+A focus command can still make the app of the target window active. The other windows of that app can then come to the front.
+
+Add a new switch for a scoped instance to `WindowScope.restrict` (a config option) or to `GlobalInput` (an event tap or a system setting). Do not add a check at the call site.
+
 ## Add a command
 
 A dispatcher (a command that a key bind can run) is one `WindowAction` in `Sources/CatWM/Actions/`. The value holds the name, the CLI group and summary, the arguments, the access, the aliases, the bind picker rows and the handler. `WindowActions.all` is the only list. The registry, `WindowManager.dispatch` and the bind picker read it.

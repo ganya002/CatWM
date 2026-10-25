@@ -28,6 +28,7 @@ final class CapsLockChord {
     private(set) var isBound = false
 
     func setBound(_ bound: Bool) {
+        let bound = bound && Instance.input.capsLock
         guard bound != isBound else { return }
         isBound = bound
         Self.setDelay(bound ? 0 : -1)

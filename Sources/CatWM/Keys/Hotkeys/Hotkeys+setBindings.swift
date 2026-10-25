@@ -28,6 +28,7 @@ extension Hotkeys {
     @discardableResult
     func start() -> Bool {
         if tap != nil { return true }
+        guard Instance.input.keys else { return false }
         let mask = CGEventMask(1 << CGEventType.keyDown.rawValue) | CGEventMask(1 << CGEventType.flagsChanged.rawValue)
             | CGEventMask(1 << CGEventType.scrollWheel.rawValue) | CGEventMask(1 << CGEventType.rightMouseDown.rawValue)
             | CGEventMask(1 << CGEventType.rightMouseUp.rawValue)

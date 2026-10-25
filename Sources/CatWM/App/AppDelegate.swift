@@ -99,7 +99,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Log.info("Accessibility granted")
             manager.start()
         } else if trusted {
-            if !Hotkeys.shared.isActive { Hotkeys.shared.restart() }
+            if Instance.input.keys, !Hotkeys.shared.isActive { Hotkeys.shared.restart() }
             manager.startMouseTaps()
         }
         if changed.contains(.accessibility) {

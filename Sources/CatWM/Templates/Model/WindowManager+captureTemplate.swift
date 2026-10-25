@@ -2,13 +2,14 @@ import AppKit
 
 extension WindowManager {
     enum TemplateError: LocalizedError, Equatable {
-        case notReady, empty, incomplete, busy
+        case notReady, empty, incomplete, busy, scoped
         var errorDescription: String? {
             switch self {
             case .notReady: "Grant Accessibility access before you save or open a template."
             case .empty: "Open a window in this workspace before you save a template."
             case .incomplete: "CatWM could not read every window in time, so this template was not saved."
             case .busy: "CatWM is still reading another workspace, so this template was not saved."
+            case .scoped: "This CatWM manages only some apps (CATWM_SCOPE), so it cannot open a template."
             }
         }
     }
@@ -103,6 +104,7 @@ extension WindowManager {
                                          naturalFrames: naturalFrames, fallbackFocus: model.mostRecent(of: visible))
         let apps = NSWorkspace.shared.runningApplications.compactMap { app -> AppSnapshot? in
             guard app.activationPolicy == .regular, app.processIdentifier != getpid(),
+                  scope?.pids.contains(app.processIdentifier) ?? true,
                   let bundleID = app.bundleIdentifier else { return nil }
             return AppSnapshot(pid: app.processIdentifier, bundleID: bundleID,
                                        name: app.localizedName ?? bundleID, launchDate: app.launchDate)
