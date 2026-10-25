@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 enum SlotOutcome<Value: Sendable>: Sendable {
     case finished(Value)
@@ -20,24 +21,25 @@ extension SlotOutcome: Equatable where Value: Equatable {
     }
 }
 
-final class StopFlag: @unchecked Sendable {
-    private let lock = NSLock()
-    private var stopped = false
+final class StopFlag: Sendable {
+    private let stopped = OSAllocatedUnfairLock(initialState: false)
 
     init() {}
 
-    func stop() { lock.withLock { stopped = true } }
-    var isStopped: Bool { lock.withLock { stopped } }
+    func stop() { stopped.withLock { $0 = true } }
+    var isStopped: Bool { stopped.withLock { $0 } }
 }
 
-final class CaptureSlot<Value: Sendable>: @unchecked Sendable {
-    private let lock = NSLock()
-    private var active: Task<Value, Never>?
-    private var activeID = 0
+final class CaptureSlot<Value: Sendable>: Sendable {
+    private struct State: Sendable {
+        var active: Task<Value, Never>?
+        var activeID = 0
+    }
+    private let state = OSAllocatedUnfairLock(initialState: State())
 
     init() {}
 
-    var isIdle: Bool { lock.withLock { active == nil } }
+    var isIdle: Bool { state.withLock { $0.active == nil } }
 
     func run(within timeout: Duration,
              operation: @escaping @Sendable () async -> Value) async -> SlotOutcome<Value> {
@@ -46,28 +48,25 @@ final class CaptureSlot<Value: Sendable>: @unchecked Sendable {
     }
 
     private func claim(_ operation: @escaping @Sendable () async -> Value) -> Task<Value, Never>? {
-        lock.lock()
-        if active != nil {
-            lock.unlock()
-            return nil
+        state.withLock { state in
+            guard state.active == nil else { return nil }
+            state.activeID += 1
+            let id = state.activeID
+            let created = Task { [weak self] in
+                let value = await operation()
+                self?.clear(id)
+                return value
+            }
+            state.active = created
+            return created
         }
-        activeID += 1
-        let id = activeID
-        let created = Task { [weak self] in
-            let value = await operation()
-            self?.clear(id)
-            return value
-        }
-        active = created
-        lock.unlock()
-        return created
     }
 
     private func clear(_ id: Int) {
-        lock.lock()
-        defer { lock.unlock() }
-        guard activeID == id else { return }
-        active = nil
+        state.withLock { state in
+            guard state.activeID == id else { return }
+            state.active = nil
+        }
     }
 
     private func race(_ task: Task<Value, Never>, timeout: Duration) async -> SlotOutcome<Value> {
@@ -90,40 +89,34 @@ final class CaptureSlot<Value: Sendable>: @unchecked Sendable {
     }
 }
 
-private final class OnceGate<T: Sendable>: @unchecked Sendable {
-    private let lock = NSLock()
-    private var continuation: CheckedContinuation<T, Never>?
-    private var pending: T?
-    private var done = false
+private final class OnceGate<T: Sendable>: Sendable {
+    private struct State: Sendable {
+        var continuation: CheckedContinuation<T, Never>?
+        var pending: T?
+        var done = false
+    }
+    private let state = OSAllocatedUnfairLock(initialState: State())
 
     func install(_ continuation: CheckedContinuation<T, Never>) {
-        lock.lock()
-        if let pending {
-            lock.unlock()
-            continuation.resume(returning: pending)
-            return
+        let pending = state.withLock { state -> T? in
+            if let pending = state.pending { return pending }
+            if !state.done { state.continuation = continuation }
+            return nil
         }
-        if done {
-            lock.unlock()
-            return
-        }
-        self.continuation = continuation
-        lock.unlock()
+        if let pending { continuation.resume(returning: pending) }
     }
 
     @discardableResult
     func resume(_ value: T) -> Bool {
-        lock.lock()
-        if done {
-            lock.unlock()
-            return false
+        let (first, continuation) = state.withLock { state -> (Bool, CheckedContinuation<T, Never>?) in
+            guard !state.done else { return (false, nil) }
+            state.done = true
+            let continuation = state.continuation
+            state.continuation = nil
+            if continuation == nil { state.pending = value }
+            return (true, continuation)
         }
-        done = true
-        let continuation = continuation
-        self.continuation = nil
-        if continuation == nil { pending = value }
-        lock.unlock()
         continuation?.resume(returning: value)
-        return true
+        return first
     }
 }
