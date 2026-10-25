@@ -33,10 +33,14 @@ import Testing
         }
     }
 
-    @Test func peekKeepsTheWindowSizeAndShrinksOnlyToFit() {
+    @Test func peekUsesOneScaleThatFitsEveryWindow() {
         let room = CGSize(width: 1600, height: 800)
-        #expect(SwitcherView.fit(CGSize(width: 800, height: 600), in: room) == CGSize(width: 800, height: 600))
-        #expect(SwitcherView.fit(CGSize(width: 1000, height: 1600), in: room) == CGSize(width: 500, height: 800))
+        let small = SwitcherItem(id: 1, pid: 1, app: "App", title: "", size: CGSize(width: 800, height: 600))
+        let tall = SwitcherItem(id: 2, pid: 1, app: "App", title: "", size: CGSize(width: 1000, height: 1600))
+        #expect(SwitcherView.peekScale([small], room: room) == 1)
+        let scale = SwitcherView.peekScale([small, tall], room: room)
+        #expect(SwitcherView.scaled(tall.size, by: scale) == CGSize(width: 500, height: 800))
+        #expect(SwitcherView.scaled(small.size, by: scale) == CGSize(width: 400, height: 300))
     }
 
     @Test func barTilesShareOneScaleAndFitTheRoom() {

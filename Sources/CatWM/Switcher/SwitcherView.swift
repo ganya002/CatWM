@@ -28,9 +28,15 @@ struct SwitcherView: View {
         item.size.width > 0 && item.size.height > 0 ? item.size : room
     }
 
-    static func fit(_ size: CGSize, in room: CGSize) -> CGSize {
-        let scale = min(1, room.width / size.width, room.height / size.height)
-        return CGSize(width: (size.width * scale).rounded(), height: (size.height * scale).rounded())
+    static func peekScale(_ items: [SwitcherItem], room: CGSize) -> CGFloat {
+        items.map { item in
+            let size = windowSize(item, room: room)
+            return min(room.width / size.width, room.height / size.height)
+        }.reduce(1, min)
+    }
+
+    static func scaled(_ size: CGSize, by scale: CGFloat) -> CGSize {
+        CGSize(width: (size.width * scale).rounded(), height: (size.height * scale).rounded())
     }
 
     static func barScale(_ items: [SwitcherItem], room: CGSize) -> CGFloat {
@@ -70,7 +76,8 @@ struct SwitcherView: View {
 
     private func card(room: CGSize) -> some View {
         let scale = Self.barScale(model.results, room: room)
-        let peek = model.selected.map { Self.fit(Self.windowSize($0, room: room), in: room) } ?? .zero
+        let peekScale = Self.peekScale(model.results, room: room)
+        let peek = model.selected.map { Self.scaled(Self.windowSize($0, room: room), by: peekScale) } ?? .zero
         return VStack(spacing: 0) {
             switch mode {
             case .bar: bar(scale: scale, room: room)
