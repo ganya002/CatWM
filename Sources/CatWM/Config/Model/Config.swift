@@ -13,6 +13,7 @@ struct Config {
     var mouseResizesWindows = true
     var splitHandle = true
     var autoHideTabStrip = false
+    var tabStripStyle: TabStripStyle = .inset
     var tabNotificationBadges = true
     var floating: [String] = []
     var floatingIsDenylist = true
