@@ -64,3 +64,13 @@ import Testing
     #expect(tail.count.isMultiple(of: 100))
     #expect(Log.tail(of: line) == line)
 }
+
+@Test func testsLogToATemporaryFile() throws {
+    let real = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/CatWM.log")
+    let marker = "log test \(UUID().uuidString)"
+    Log.info(marker)
+    #expect(Log.url.path.hasPrefix(FileManager.default.temporaryDirectory.path))
+    #expect(try String(contentsOf: Log.url, encoding: .utf8).contains(marker))
+    let realText = (try? String(contentsOf: real, encoding: .utf8)) ?? ""
+    #expect(!realText.contains(marker))
+}

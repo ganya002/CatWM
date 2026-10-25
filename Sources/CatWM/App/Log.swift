@@ -1,7 +1,9 @@
 import Foundation
 
 enum Log {
-    static let url = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/CatWM.log")
+    static let url = NSClassFromString("XCTestCase") == nil
+        ? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/CatWM.log")
+        : FileManager.default.temporaryDirectory.appendingPathComponent("CatWM-test-\(getpid()).log")
     static let verboseLaunch = LaunchFlag.verbose.isSet
 
     static let maxSize = 2_000_000
