@@ -25,7 +25,7 @@ The Settings window writes options in this order. Aliases (after `/`) are read b
 | `screen-padding-bottom` | 0–500 points | `10` | |
 | `disable-padding-on-builtin-display` | bool | `true` | |
 | `ignore-menu-bar` | bool | `false` | tile over the menu bar area |
-| `mouse-follows-focus` | bool | `false` | |
+| `mouse-follows-focus` | bool | `true` | |
 | `focus-follows-mouse` / `follow_mouse` | bool | `true` | |
 | `focus-follows-mouse-in-mode-only` | bool | `true` | with `focus-follows-mouse` on, hovering focuses a window only while window mode is on |
 | `mouse-swaps-windows` | bool | `true` | drag a tile onto another to swap |
