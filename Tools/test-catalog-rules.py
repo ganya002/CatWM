@@ -22,9 +22,9 @@ class CatalogRules(unittest.TestCase):
             ("Settings/Panes/MotionPane.swift", "OptionRow(\\Config.animationCurve, ui: ui)"),
             ("Settings/Panes/WindowsPane.swift", 'CursorShortcutSpec(id: "dim")'),
             ("Settings/Panes/WindowsPane.swift", "let list: [CursorShortcutSpec] = [.init()]"),
-            ("Tiling/Manager/WindowManager+quickActions.swift", 'out.append(action("dim", "Dim", "toggledim"))'),
-            ("Tiling/Manager/WindowManager+quickActions.swift", 'QuickAction(id: "focus.dim", title: "Dim") {}'),
-            ("Tiling/Manager/WindowManager+quickActions.swift", 'let label = "GalleryExample("\nQuickAction(id: "focus.dim", title: "Dim") {}'),
+            ("Overlays/Cursor/CursorActions+template.swift", 'out.append(action("dim", "Dim", "toggledim"))'),
+            ("Overlays/Cursor/CursorActions+template.swift", 'QuickAction(id: "focus.dim", title: "Dim") {}'),
+            ("Overlays/Cursor/CursorActions+template.swift", 'let label = "GalleryExample("\nQuickAction(id: "focus.dim", title: "Dim") {}'),
             ("UI/Components/Rows/TemplateRow.swift", 'let label = "GalleryExample("\nQuickAction(id: "x", title: "Save") {}'),
             ("UI/Gallery/DesignGalleryView.swift", 'static let templates = GalleryExample(order: 15) {}\nQuickAction(id: "x", title: "Save") {}'),
             ("Keys/Keyboard/KeyHint.swift", 'case "toggledim": return "Dim"'),
@@ -79,6 +79,31 @@ class CatalogRules(unittest.TestCase):
         ]
         for path, source in cases:
             self.assertFalse(style.catalog_violations("Sources/CatWM/" + path, source))
+
+
+class TilingRules(unittest.TestCase):
+    engine = "Sources/CatWM/Tiling/Manager/WindowManager+start.swift"
+
+    def test_rejects_ui_in_tiling(self):
+        cases = [
+            'HUD.shared.show("Tiling on", on: nil)',
+            "TabStrips.shared.update()",
+            "TabDropHint.shared.hide()",
+            'Hotkeys.shared.setSubmap("")',
+            "SortPanel.shared.abandon()",
+            "Notifications.shared.forget(id)",
+            "KeyHelp.shared.install()",
+        ]
+        for code in cases:
+            with self.subTest(code=code):
+                self.assertTrue(style.banned(self.engine, code))
+
+    def test_accepts_surface_and_ui_outside_tiling(self):
+        for code in ('surface.showHUD("Tiling on", on: nil)', "Hotkeys.post(keyCode: 1, flags: [])",
+                     "surface.tabsDidChange(instant: false)"):
+            with self.subTest(code=code):
+                self.assertFalse(style.banned(self.engine, code))
+        self.assertFalse(style.banned("Sources/CatWM/App/AppSurface.swift", "TabStrips.shared.update()"))
 
 
 if __name__ == "__main__":

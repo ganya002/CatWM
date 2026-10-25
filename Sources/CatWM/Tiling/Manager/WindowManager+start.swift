@@ -24,11 +24,8 @@ extension WindowManager {
         installInputHandlers()
 
         ControlServer.shared.start()
-        Notifications.shared.installBuiltIn()
-        Notifications.shared.setEnabled(config.tabNotificationBadges)
 
         prepareFocusSink()
-        HUD.shared.prepare(text: currentWorkspace ?? "1", layout: config.layouts.first)
         requestFocusObservation()
         refresh()
         for delay in [0.5, 1.5, 3.0, 6.0] {
@@ -110,7 +107,7 @@ extension WindowManager {
             scheduleRefresh(after: 0.15)
             if !config.virtualWorkspaces, config.enablesLayoutHUDOnSpaceChange, config.enablesLayoutHUD,
                let screen = currentScreen() {
-                HUD.shared.show(state(for: screen).layout.title, layout: state(for: screen).layout, on: screen.nsScreen)
+                surface.showHUD(state(for: screen).layout.title, layout: state(for: screen).layout, on: screen.nsScreen)
             }
         })
         notificationObservers.append(NotificationCenter.default.addObserver(
@@ -120,9 +117,7 @@ extension WindowManager {
     }
 
     private func observeLock() {
-        let leave: (Notification) -> Void = { _ in
-            if !Hotkeys.shared.submap.isEmpty { Hotkeys.shared.setSubmap("") }
-        }
+        let leave: (Notification) -> Void = { [weak self] _ in self?.surface.leaveMode() }
         for name in [NSWorkspace.screensDidSleepNotification, NSWorkspace.sessionDidResignActiveNotification] {
             notificationObservers.append(NSWorkspace.shared.notificationCenter.addObserver(
                 forName: name, object: nil, queue: .main, using: leave))
@@ -139,17 +134,7 @@ extension WindowManager {
         }
         NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
             self?.cancelFocusRequest()
-            if !Hotkeys.shared.submap.isEmpty { Hotkeys.shared.setSubmap("") }
-        }
-        Hotkeys.shared.onSubmapChange = { [weak self] name in
-            Log.debug("mode: \(name.isEmpty ? "reset" : name)")
-            ModeFX.shared.setActive(!name.isEmpty)
-            ModeCursor.shared.setActive(!name.isEmpty)
-            KeyHelp.shared.modeChanged(name)
-            CursorActions.shared.modeChanged(name)
-            Tips.shared.modeChanged(name)
-            self?.notifyChange()
-            self?.onModeChange?(name)
+            self?.surface.leaveMode()
         }
         NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved) { [weak self] event in
             if !CursorRefresh.isOurs(event) { self?.mouseMoved() }
@@ -157,24 +142,17 @@ extension WindowManager {
     }
 
     private func installInputHandlers() {
-        Hotkeys.shared.setBindings(config.workspaceBindings)
-        ModeFX.shared.style = config.modeEffect
+        surface.apply(config)
         FocusDim.shared.configure(dim: config.dimOtherWindows, strength: config.dimStrength,
                                   blur: config.blurOtherWindows, radius: Int(config.blurRadius))
-        MacKeyboard.shared.setting = config.keyboardFinish
-        Notifications.shared.setEnabled(config.tabNotificationBadges)
-        Hotkeys.shared.handler = { [weak self] binding in self?.dispatch(binding.dispatcher, binding.arg) }
-        KeyHelp.shared.install()
-        CursorActions.shared.install()
-        Switcher.shared.install()
+        surface.start(self)
         nativeGestures.enabled = { [weak self] in
             guard let self else { return false }
-            return self.config.virtualWorkspaces && !Hotkeys.shared.paused && !self.closeAndSort.sortSession
+            return self.config.virtualWorkspaces && !self.surface.keysPaused && !self.closeAndSort.sortSession
                 && !self.desktops.nativeCreationBusy
         }
         nativeGestures.receive = { [weak self] in self?.handleNativeSwipe($0) }
         nativeGestures.interrupted = { [weak self] in self?.nativeDesktop.endGesture(commit: false) }
-        startKeyboardTap()
         dockWindowPull.prepare = { [weak self] point in self?.prepareDockPull(at: point) }
         startMouseTaps(logFailure: true)
     }
@@ -189,26 +167,23 @@ extension WindowManager {
             if wasVirtual { restoreHiddenWindows() }
             model.resetWorkspaces()
             labels = [:]; closeAndSort.sortSnapshot = nil; closeAndSort.closingNow = []; closeAndSort.closingApps = []
-            SortPanel.shared.abandon()
+            surface.abandonOverview()
             Log.info("workspaces: \(config.virtualWorkspaces ? "CatWM workspaces" : "macOS Spaces")")
         } else if wasPerDisplay != config.workspacesPerDisplay {
             renumberWorkspaces()
         }
         Log.verbose = config.debugLogging || Log.verboseLaunch
-        ModeFX.shared.style = config.modeEffect
+        surface.apply(config)
         FocusDim.shared.configure(dim: config.dimOtherWindows, strength: config.dimStrength,
                                   blur: config.blurOtherWindows, radius: Int(config.blurRadius))
-        MacKeyboard.shared.setting = config.keyboardFinish
-        Notifications.shared.setEnabled(config.tabNotificationBadges)
         config.errors.forEach { Log.info("config: \($0)") }
-        Hotkeys.shared.setBindings(config.workspaceBindings)
         for window in windows.values { window.autoFloating = shouldFloat(window) }
         corrections = [:]
         scheduleRefresh(after: 0)
         refresh()
         EventBus.shared.emit("config.reloaded", ["errors": .array(config.errors.map(JSON.string))])
         guard showHUD else { return }
-        HUD.shared.show(
+        surface.showHUD(
             config.errors.isEmpty ? "Config reloaded" : "Config: \(config.errors.count) error(s), see Console",
             on: currentScreen()?.nsScreen
         )
@@ -216,21 +191,17 @@ extension WindowManager {
 
     func toggleTiling() {
         tilingEnabled.toggle()
-        HUD.shared.show(tilingEnabled ? "Tiling on" : "Tiling off", on: currentScreen()?.nsScreen)
+        surface.showHUD(tilingEnabled ? "Tiling on" : "Tiling off", on: currentScreen()?.nsScreen)
         refresh()
+    }
+
+    func modeChanged(_ name: String) {
+        notifyChange()
+        onModeChange?(name)
     }
 }
 
 extension WindowManager {
-    func startKeyboardTap() {
-        guard !Hotkeys.shared.start() else { return }
-        Log.info("start: could not create the keyboard event tap")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-            guard !Hotkeys.shared.isActive else { return }
-            HUD.shared.show("Keybinds unavailable: grant Accessibility", on: nil)
-        }
-    }
-
     func startMouseTaps(logFailure: Bool = false) {
         nativeGestures.start()
         guard !dockWindowPull.isInstalled else { return }
@@ -242,7 +213,7 @@ extension WindowManager {
     }
 
     func setInputTaps(enabled: Bool) {
-        if enabled { Hotkeys.shared.restart() } else { Hotkeys.shared.disable() }
+        surface.setKeyTap(enabled: enabled)
         dockWindowPull.setEnabled(enabled)
         nativeGestures.setEnabled(enabled)
         Log.info("input taps \(enabled ? "on" : "off")")

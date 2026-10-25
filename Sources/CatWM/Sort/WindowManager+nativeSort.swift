@@ -1,6 +1,14 @@
 import AppKit
 
 extension WindowManager {
+    func toggleSortCommand() {
+        if config.virtualWorkspaces {
+            SortPanel.shared.toggle()
+        } else {
+            HUD.shared.show("Overview needs CatWM workspaces", on: currentScreen()?.nsScreen)
+        }
+    }
+
     func finishSort(closing ids: [CGWindowID], goTo: String?, focus: Bool, opening fullscreen: CGWindowID? = nil,
                     leavingFullscreen moves: [CGWindowID: String] = [:]) {
         Task { @MainActor in

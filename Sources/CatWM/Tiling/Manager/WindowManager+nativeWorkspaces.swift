@@ -45,7 +45,7 @@ extension WindowManager {
         labels = [:]; previousWorkspace = [:]; floats.savedOwnerOf = [:]
         desktops.nativeDroppedWorkspaces = []; desktops.nativeSortNames = []
         closeAndSort.sortSnapshot = nil; closeAndSort.closingNow = []; closeAndSort.closingApps = []
-        SortPanel.shared.abandon()
+        surface.abandonOverview()
         Log.info("workspaces: \(config.workspacesPerDisplay ? "numbered on each display" : "numbered on all displays")")
     }
 
@@ -135,7 +135,7 @@ extension WindowManager {
                     }
                 } catch is CancellationError { } catch {
                     Log.info("native workspaces: create \(workspace) failed: \(error.localizedDescription)")
-                    HUD.shared.show(error.localizedDescription, on: screen.nsScreen)
+                    surface.showHUD(error.localizedDescription, on: screen.nsScreen)
                 }
             }
             return
@@ -290,7 +290,7 @@ extension WindowManager {
         }
         nativeDesktop.onFailure = { [weak self] message in
             Log.info("native workspaces: \(message)")
-            HUD.shared.show(message, on: self?.currentScreen()?.nsScreen)
+            self?.surface.showHUD(message, on: self?.currentScreen()?.nsScreen)
             self?.scheduleRefresh(after: 0)
         }
     }

@@ -25,11 +25,11 @@ extension WindowManager {
 extension WindowManager {
     func cancelTabDrop() -> Bool {
         guard let id = tabUI.draggedTab ?? drags.first?.key, !tabUI.tabDropCancelled,
-              TabDropHint.shared.showing || TabStrips.shared.isPreviewing else { return false }
+              surface.showsTabDrop else { return false }
         tabUI.tabDropCancelled = true
         trackTabHover(nil)
-        _ = TabStrips.shared.endPreview(of: id)
-        TabDropHint.shared.hide()
+        _ = surface.endTabPreview(of: id)
+        surface.hideTabDropHint()
         Log.info("tabs: Escape cancelled the drop of \(id)")
         return true
     }

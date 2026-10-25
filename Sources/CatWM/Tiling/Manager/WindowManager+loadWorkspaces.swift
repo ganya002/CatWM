@@ -83,7 +83,7 @@ extension WindowManager {
         let layout = state(workspace: workspace).layout
         DispatchQueue.main.async { [weak self] in
             guard self?.shown[monitor.uuid] == workspace else { return }
-            HUD.shared.show(text, layout: layout, on: monitor.nsScreen)
+            self?.surface.showHUD(text, layout: layout, on: monitor.nsScreen)
         }
     }
 

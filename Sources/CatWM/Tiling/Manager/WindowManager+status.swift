@@ -4,7 +4,7 @@ extension WindowManager {
     func status() -> Status {
         let screens = Screen.all()
         let managed = visible.compactMap { windows[$0] }
-        return Status(trusted: Permission.accessibility.isGranted, keybindsActive: Hotkeys.shared.isActive,
+        return Status(trusted: Permission.accessibility.isGranted, keybindsActive: surface.keybindsActive,
                       running: isStarted,
                       tilingEnabled: tilingEnabled,
                       launchAtLogin: LoginItem.isEnabled, loginNeedsApproval: LoginItem.needsApproval,
@@ -29,12 +29,12 @@ extension WindowManager {
         screenState.zoomed = nil
         corrections = [:]
         refresh()
-        if config.enablesLayoutHUD { HUD.shared.show(layout.title, layout: layout, on: screen.nsScreen) }
+        if config.enablesLayoutHUD { surface.showHUD(layout.title, layout: layout, on: screen.nsScreen) }
     }
 
     func dumpLines() -> [String] {
         var lines = [
-            "state: trusted=\(Permission.accessibility.isGranted) keybinds=\(Hotkeys.shared.isActive) "
+            "state: trusted=\(Permission.accessibility.isGranted) keybinds=\(surface.keybindsActive) "
                 + "tiling=\(tilingEnabled) focused=\(focusedWindow()?.id ?? 0)"
         ]
         for screen in Screen.all() {
@@ -90,7 +90,11 @@ extension WindowManager {
         }
     }
 
-    func dispatch(_ dispatcher: String, _ rawArg: String, inMode: Bool = !Hotkeys.shared.submap.isEmpty) {
+    func dispatch(_ dispatcher: String, _ rawArg: String) {
+        dispatch(dispatcher, rawArg, inMode: surface.inMode)
+    }
+
+    func dispatch(_ dispatcher: String, _ rawArg: String, inMode: Bool) {
         let arg = rawArg.trimmingCharacters(in: .whitespaces)
         if deferFocusCommand(dispatcher, arg: arg, inMode: inMode) { return }
         let timing = TilingTiming("command \(dispatcher)", windows: windows.count)
@@ -118,14 +122,6 @@ extension WindowManager {
     func setLayoutCommand(_ arg: String) {
         if let layout = Layout(rawValue: arg.lowercased()), let screen = currentScreen() {
             setLayout(layout, on: screen)
-        }
-    }
-
-    func toggleSortCommand() {
-        if config.virtualWorkspaces {
-            SortPanel.shared.toggle()
-        } else {
-            HUD.shared.show("Overview needs CatWM workspaces", on: currentScreen()?.nsScreen)
         }
     }
 

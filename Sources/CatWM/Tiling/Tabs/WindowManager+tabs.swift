@@ -74,7 +74,7 @@ extension WindowManager {
 
     func reorderTab(_ id: CGWindowID, to position: Int) {
         model.tabs.move(id, to: position)
-        TabStrips.shared.update()
+        surface.tabsDidChange(instant: false)
         saveTilingRecovery()
     }
 
@@ -90,7 +90,7 @@ extension WindowManager {
     func followTabFocus(_ id: CGWindowID?) {
         guard tabUI.draggedTab == nil, let id, let group = tabs.group(of: id), group.active != id,
               visible.contains(id) else {
-            TabStrips.shared.update()
+            surface.tabsDidChange(instant: false)
             return
         }
         tabUI.tabFollow = (group.active, Date())
@@ -114,11 +114,11 @@ extension WindowManager {
     func minimizeTabs(_ members: [CGWindowID]) {
         guard let group = members.first.flatMap(tabs.group(of:)) else { return }
         tabUI.minimizingTabs.insert(group.id)
-        TabStrips.shared.update(instant: true)
+        surface.tabsDidChange(instant: true)
         group.members.compactMap { windows[$0] }.forEach(minimize)
         DispatchQueue.main.asyncAfter(deadline: .now() + Self.minimizeHold) { [weak self] in
             self?.tabUI.minimizingTabs.remove(group.id)
-            TabStrips.shared.update()
+            self?.surface.tabsDidChange(instant: false)
         }
     }
 
@@ -148,11 +148,11 @@ extension WindowManager {
             cornerPark(member, screens: screens)
         }
         let top = screen(of: window, in: screens)?.visible.minY ?? slot.minY
-        TabStripFollow.shared.follow(group.id, at: offset, lowest: top - slot.minY)
+        surface.followTabStrip(group.id, at: offset, lowest: top - slot.minY)
     }
 
     func settleParkedTabs() {
-        TabStripFollow.shared.end()
+        surface.endTabStripFollow()
         guard !tabUI.parkedTabs.isEmpty else { return }
         let parked = tabUI.parkedTabs
         tabUI.parkedTabs = []
@@ -178,9 +178,9 @@ extension WindowManager {
             animator.position(window, at: held)
         }
         guard !tabUI.tabDropCancelled else { return }
-        guard !TabStrips.shared.preview(window, at: point) else {
+        guard !surface.previewTabDrop(window, at: point) else {
             trackTabHover(nil)
-            return TabDropHint.shared.hide()
+            return surface.hideTabDropHint()
         }
         trackTabHover(for: id, at: point)
         showTabDropHint(adding: window, onto: tabDropTarget(for: id, at: point) ?? settledTabHover(for: id, at: point))
@@ -199,9 +199,9 @@ extension WindowManager {
         let hovered = joins ? settledTabHover(for: id, at: point) : nil
         tabUI.draggedTab = nil
         tabUI.tabDropCancelled = false
-        TabDropHint.shared.hide()
+        surface.hideTabDropHint()
         trackTabHover(nil)
-        let previewed = TabStrips.shared.endPreview(of: id)
+        let previewed = surface.endTabPreview(of: id)
         if !joins {
             untab(id, droppedAt: point)
         } else if let previewed {
@@ -212,7 +212,7 @@ extension WindowManager {
         } else {
             untab(id, droppedAt: point)
         }
-        TabStrips.shared.update()
+        surface.tabsDidChange(instant: false)
     }
 
     func cancelTabDrag(_ id: CGWindowID) {
@@ -220,8 +220,8 @@ extension WindowManager {
         tabUI.draggedTab = nil
         tabUI.tabDropCancelled = false
         trackTabHover(nil)
-        TabDropHint.shared.hide()
-        _ = TabStrips.shared.endPreview(of: id)
+        surface.hideTabDropHint()
+        _ = surface.endTabPreview(of: id)
         returnTab(id)
     }
 
@@ -263,7 +263,7 @@ extension WindowManager {
 
     func belowTabStrip(_ slot: CGRect, for id: CGWindowID) -> CGRect {
         guard let group = tabs.group(of: id),
-              !config.autoHideTabStrip || TabStripReveal.shared.revealed == group.id else { return slot }
+              !config.autoHideTabStrip || surface.revealedTabGroup == group.id else { return slot }
         let inset = TabStrip.height
         return CGRect(x: slot.minX, y: slot.minY + inset, width: slot.width, height: max(0, slot.height - inset))
     }
@@ -327,7 +327,7 @@ extension WindowManager {
     }
 
     func updateTabDropHint() {
-        guard !tabUI.tabDropCancelled else { return TabDropHint.shared.hide() }
+        guard !tabUI.tabDropCancelled else { return surface.hideTabDropHint() }
         if let id = tabUI.draggedTab, let window = windows[id] {
             let point = mouseLocation()
             return showTabDropHint(adding: window,
@@ -335,13 +335,13 @@ extension WindowManager {
         }
         guard let (id, resized) = drags.first, drags.count == 1, !resized,
               let window = windows[id], NSEvent.pressedMouseButtons & 1 != 0 else {
-            TabDropHint.shared.hide()
+            surface.hideTabDropHint()
             return
         }
         let point = mouseLocation()
-        guard !TabStrips.shared.preview(window, at: point) else {
+        guard !surface.previewTabDrop(window, at: point) else {
             trackTabHover(nil)
-            return TabDropHint.shared.hide()
+            return surface.hideTabDropHint()
         }
         trackTabHover(for: id, at: point)
         let band = holds(window, at: point) ? tabDropTarget(for: id, at: point) : nil
@@ -349,8 +349,8 @@ extension WindowManager {
     }
 
     private func showTabDropHint(adding window: Window, onto host: CGWindowID?) {
-        guard let host, let slot = targets[host] else { return TabDropHint.shared.hide() }
-        TabDropHint.shared.show(over: tabDropZone(host, slot).union(slot), adding: window)
+        guard let host, let slot = targets[host] else { return surface.hideTabDropHint() }
+        surface.showTabDropHint(over: tabDropZone(host, slot).union(slot), adding: window)
     }
 
     func holds(_ window: Window, at point: CGPoint) -> Bool {
@@ -358,17 +358,17 @@ extension WindowManager {
     }
 
     func titleChanged(_ element: AXUIElement) {
-        guard !tabs.isEmpty || Notifications.shared.enabled,
+        guard !tabs.isEmpty || surface.watchesTitles,
               let window = windows.values.first(where: { CFEqual($0.element, element) }) else { return }
         let grouped = tabs.isGrouped(window.id)
-        guard grouped || Notifications.shared.enabled else { return }
+        guard grouped || surface.watchesTitles else { return }
         scanner.run(window.pid) {
             let title = element.string(kAXTitleAttribute)
             DispatchQueue.main.async {
                 guard window.title != title else { return }
                 window.title = title
-                Notifications.shared.titleChanged(window)
-                if grouped { TabStrips.shared.update() }
+                self.surface.titleChanged(window)
+                if grouped { self.surface.tabsDidChange(instant: false) }
             }
         }
     }

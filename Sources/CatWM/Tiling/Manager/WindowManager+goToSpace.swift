@@ -16,7 +16,7 @@ extension WindowManager {
             return nil
         }
         guard number >= 1, number <= info.desktops.count else {
-            HUD.shared.show("There is no space \(number)", on: screen.nsScreen)
+            surface.showHUD("There is no space \(number)", on: screen.nsScreen)
             return nil
         }
         if let pending = desktops.pendingSpace, pending.display == screen.uuid, Date() < pending.until {
@@ -25,7 +25,7 @@ extension WindowManager {
         let delta = info.desktops[number - 1] - cur
         guard delta != 0 else { return 0 }
         guard let combo = SystemShortcut.step(right: delta > 0) else {
-            HUD.shared.show("Turn on “Move left/right a space” in Keyboard Shortcuts", on: screen.nsScreen)
+            surface.showHUD("Turn on “Move left/right a space” in Keyboard Shortcuts", on: screen.nsScreen)
             return nil
         }
         Log.info(
@@ -68,7 +68,7 @@ extension WindowManager {
         guard !frame.isNull else { return }
         let points = grabPoints(for: window, frame: frame)
         guard !points.isEmpty else {
-            HUD.shared.show("This window has nothing to grab", on: screen(of: window)?.nsScreen)
+            surface.showHUD("This window has nothing to grab", on: screen(of: window)?.nsScreen)
             Log.info("move to space: no grab point for \(window.bundleID ?? "pid \(window.pid)")")
             return
         }
@@ -114,7 +114,7 @@ extension WindowManager {
     func tryGrab(_ window: Window, _ points: ArraySlice<CGPoint>, space number: Int, restore: CGPoint) {
         guard let point = points.first else {
             Log.info("move to space: couldn't grab \(window.bundleID ?? "pid \(window.pid)")")
-            HUD.shared.show("Couldn't grab this window", on: screen(of: window)?.nsScreen)
+            surface.showHUD("Couldn't grab this window", on: screen(of: window)?.nsScreen)
             finishMove(restore: restore)
             return
         }

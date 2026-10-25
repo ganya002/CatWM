@@ -58,11 +58,10 @@ extension WindowManager {
         settleTabs()
         saveTilingRecovery()
         guard tilingEnabled else {
-            SplitHandle.shared.update(); TabStrips.shared.update(); notifyChange(); return
+            surface.tilesDidChange(instant: false); notifyChange(); return
         }
         applyTileMoves(planTileMoves(screens: screens, only: only), instant: instantLayout)
-        SplitHandle.shared.update(instant: instantLayout || dividerState.dividerDrag != nil)
-        TabStrips.shared.update(instant: instantLayout || dividerState.dividerDrag != nil)
+        surface.tilesDidChange(instant: instantLayout || dividerState.dividerDrag != nil)
         timing.checkpoint("apply")
         notifyChange()
         timing.checkpoint("notify")
@@ -279,7 +278,7 @@ extension WindowManager {
         let retitled = window.title != found.title
         window.title = found.title
         window.resizable = found.resizable
-        if retitled { Notifications.shared.titleChanged(window) }
+        if retitled { surface.titleChanged(window) }
     }
 
     func refocusRecent(on workspace: String) {

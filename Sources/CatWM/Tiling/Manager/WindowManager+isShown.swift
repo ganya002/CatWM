@@ -171,6 +171,6 @@ extension WindowManager {
         guard config.virtualWorkspaces else { return }
         updateNativeCatalog(Screen.all())
         refresh()
-        HUD.shared.show("CatWM controls this Desktop", on: currentScreen()?.nsScreen)
+        surface.showHUD("CatWM controls this Desktop", on: currentScreen()?.nsScreen)
     }
 }

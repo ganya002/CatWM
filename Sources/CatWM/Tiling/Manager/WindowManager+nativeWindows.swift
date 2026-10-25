@@ -86,7 +86,7 @@ extension WindowManager {
     }
 
     private func rollBackNativeMove(_ window: Window, from: String?, known: Bool, frame: CGRect?) {
-        HUD.shared.show("macOS couldn't move this window", on: currentScreen()?.nsScreen)
+        surface.showHUD("macOS couldn't move this window", on: currentScreen()?.nsScreen)
         if let frame {
             if known { model.assign(window.id, to: from) } else { forget(window.id) }
             if !frame.isNull, window.isValidUnlessStalled { window.setFrame(frame) }
@@ -110,7 +110,7 @@ extension WindowManager {
                 Log.info("native workspaces: move \(window.id) to \(workspace) failed: "
                     + error.localizedDescription)
                 self.desktops.nativeMoveTargets[window.id] = nil
-                HUD.shared.show(error.localizedDescription, on: screen.nsScreen)
+                surface.showHUD(error.localizedDescription, on: screen.nsScreen)
                 self.scheduleRefresh(after: 0)
             }
         }
@@ -166,7 +166,7 @@ extension WindowManager {
                     try await self.removeDesktop(entry.space, on: screen)
                     if self.config.workspacesPerDisplay { self.closeGap(after: entry) }
                 } catch {
-                    HUD.shared.show(error.localizedDescription, on: screen.nsScreen)
+                    surface.showHUD(error.localizedDescription, on: screen.nsScreen)
                 }
             }
             self.desktops.nativeDroppedWorkspaces.subtract(removed)

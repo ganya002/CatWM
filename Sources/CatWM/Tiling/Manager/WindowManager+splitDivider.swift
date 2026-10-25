@@ -77,7 +77,7 @@ extension WindowManager {
         }
         corrections = [:]
         refresh()
-        SplitHandle.shared.confirmSwap(on: screen.uuid)
+        surface.splitSwapped(on: screen.uuid)
     }
 
     func swapSides() {
