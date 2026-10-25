@@ -1,4 +1,5 @@
 import AppKit
+@preconcurrency import ApplicationServices
 
 enum RestoreAX {
     struct App: Sendable {
@@ -13,7 +14,7 @@ enum RestoreAX {
         }
     }
 
-    struct Candidate: @unchecked Sendable {
+    struct Candidate: Sendable {
         var id: CGWindowID
         var element: AXUIElement
         var pid: pid_t
@@ -23,7 +24,7 @@ enum RestoreAX {
         var frame: CGRect?
     }
 
-    struct Probe: @unchecked Sendable {
+    struct Probe: Sendable {
         var id: CGWindowID
         var element: AXUIElement
 

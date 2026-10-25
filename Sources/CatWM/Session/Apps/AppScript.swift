@@ -1,5 +1,6 @@
 import AppKit
 import CoreServices
+import os
 
 enum Blocking {
     static func run<T: Sendable>(timeout: TimeInterval, fallback: T, _ work: @escaping @Sendable () -> T) async -> T {
@@ -11,21 +12,21 @@ enum Blocking {
         }
     }
 
-    private final class Gate<T: Sendable>: @unchecked Sendable {
-        private let lock = NSLock()
-        private var continuation: CheckedContinuation<T, Never>?
-        private var done = false
+    private final class Gate<T: Sendable>: Sendable {
+        private let state = OSAllocatedUnfairLock<(continuation: CheckedContinuation<T, Never>?, done: Bool)>(
+            initialState: (nil, false)
+        )
 
         func install(_ continuation: CheckedContinuation<T, Never>) {
-            lock.withLock { self.continuation = continuation }
+            state.withLock { $0.continuation = continuation }
         }
 
         func resume(_ value: T) {
-            let waiting: CheckedContinuation<T, Never>? = lock.withLock {
-                guard !done else { return nil }
-                done = true
-                defer { continuation = nil }
-                return continuation
+            let waiting: CheckedContinuation<T, Never>? = state.withLock {
+                guard !$0.done else { return nil }
+                $0.done = true
+                defer { $0.continuation = nil }
+                return $0.continuation
             }
             waiting?.resume(returning: value)
         }

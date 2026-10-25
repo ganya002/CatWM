@@ -9,7 +9,7 @@ struct WorkspaceTemplate: Codable, Identifiable {
     var windows: [SavedWindow]
     var screenshot: Data?
 
-    struct Display: Codable, Identifiable {
+    struct Display: Codable, Identifiable, Sendable {
         var id: String
         var name: String
         var frame: CGRect

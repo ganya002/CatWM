@@ -3,7 +3,7 @@ import CoreGraphics
 import Foundation
 import ScreenCaptureKit
 
-struct TemplateCaptureFacts: @unchecked Sendable {
+struct TemplateCaptureFacts: Sendable {
     var tilingEnabled: Bool
     var displays: [WorkspaceTemplate.Display]
     var zoomed: [String: CGWindowID]
@@ -17,7 +17,7 @@ struct TemplateCaptureFacts: @unchecked Sendable {
     var fallbackFocus: CGWindowID?
 }
 
-struct TemplateCaptureRequest: @unchecked Sendable {
+struct TemplateCaptureRequest: Sendable {
     var facts: TemplateCaptureFacts
     var apps: [AppSnapshot]
     var frontmostPID: pid_t?

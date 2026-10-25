@@ -1,4 +1,5 @@
 import AppKit
+import os
 
 private typealias TemplatePair = (SavedWindow, Window)
 
@@ -291,34 +292,20 @@ extension TemplateRestorer {
     }
 }
 
-private final class PlacementSignal: @unchecked Sendable {
-    private let lock = NSLock()
-    private var settled = false
-    private var value = false
+private final class PlacementSignal: Sendable {
+    private let state = OSAllocatedUnfairLock(initialState: (settled: false, value: false))
 
     func complete(_ success: Bool) {
-        lock.lock()
-        if !settled {
-            settled = true
-            value = success
-        }
-        lock.unlock()
+        state.withLock { if !$0.settled { $0 = (true, success) } }
     }
 
-    var isComplete: Bool {
-        lock.lock()
-        defer { lock.unlock() }
-        return settled
-    }
+    var isComplete: Bool { state.withLock { $0.settled } }
 
     func claim(_ fallback: Bool) -> Bool {
-        lock.lock()
-        defer { lock.unlock() }
-        if !settled {
-            settled = true
-            value = fallback
+        state.withLock {
+            if !$0.settled { $0 = (true, fallback) }
+            return $0.value
         }
-        return value
     }
 }
 

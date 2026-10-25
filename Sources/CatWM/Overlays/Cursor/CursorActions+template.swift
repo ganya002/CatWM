@@ -1,16 +1,19 @@
 import AppKit
+import os
 
 enum TemplatePreviewState: Equatable, Sendable {
     case waiting
     case ready(Data?)
 }
 
-final class TemplatePreviewJob: @unchecked Sendable {
-    private let lock = NSLock()
-    private var stored: TemplatePreviewState = .waiting
-    private var waiter: CheckedContinuation<Data?, Never>?
+final class TemplatePreviewJob: Sendable {
+    private struct State: Sendable {
+        var stored = TemplatePreviewState.waiting
+        var waiter: CheckedContinuation<Data?, Never>?
+    }
+    private let lock = OSAllocatedUnfairLock(initialState: State())
 
-    func state() -> TemplatePreviewState { lock.withLock { stored } }
+    func state() -> TemplatePreviewState { lock.withLock { $0.stored } }
 
     func finish(_ data: Data?) { settle(.ready(data)) }
 
@@ -19,27 +22,21 @@ final class TemplatePreviewJob: @unchecked Sendable {
     func result() async -> Data? {
         if case .ready(let data) = state() { return data }
         return await withCheckedContinuation { continuation in
-            lock.lock()
-            if case .ready(let data) = stored {
-                lock.unlock()
-                continuation.resume(returning: data)
-                return
+            let ready: TemplatePreviewState = lock.withLock {
+                if case .waiting = $0.stored { $0.waiter = continuation }
+                return $0.stored
             }
-            waiter = continuation
-            lock.unlock()
+            if case .ready(let data) = ready { continuation.resume(returning: data) }
         }
     }
 
     private func settle(_ state: TemplatePreviewState) {
-        lock.lock()
-        guard case .waiting = stored else {
-            lock.unlock()
-            return
+        let waiter: CheckedContinuation<Data?, Never>? = lock.withLock {
+            guard case .waiting = $0.stored else { return nil }
+            $0.stored = state
+            defer { $0.waiter = nil }
+            return $0.waiter
         }
-        stored = state
-        let waiter = waiter
-        self.waiter = nil
-        lock.unlock()
         if case .ready(let data) = state { waiter?.resume(returning: data) }
     }
 }
