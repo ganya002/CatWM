@@ -14,7 +14,7 @@ enum TabStrip {
     static let iconSide: CGFloat = 16
     static let closeInset = Theme.Space.small
     static let roomyWidth: CGFloat = 120
-    static let hoverFill = 0.04, activeFill = 0.1, unfocusedActiveFill = 0.06
+    static let hoverFill = 0.04, activeFill = 0.1, unfocusedActiveFill = 0.08
     static let restingIcon = 0.7, liftedOpacity = 0.55
     static let shape = UnevenRoundedRectangle(topLeadingRadius: radius, topTrailingRadius: radius, style: .continuous)
     static var animated: Bool { WindowManager.shared.config.animate }
@@ -204,11 +204,12 @@ private struct TabCell: View {
             }
             .padding(.horizontal, roomy ? TabStrip.closeSide + Theme.Space.small : Theme.Space.small)
             HStack {
-                if hovered {
+                if hovered || active {
                     Image(systemName: "xmark")
                         .font(Theme.symbol(Theme.Icon.extraSmall, .bold))
                         .frame(width: TabStrip.closeSide, height: TabStrip.closeSide)
-                        .background(Circle().fill(closeHovered ? Theme.well : .clear))
+                        .background(RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
+                            .fill(closeHovered ? Theme.well : .clear))
                         .accessibilityLabel("Close tab")
                         .transition(.opacity)
                 }
@@ -220,7 +221,7 @@ private struct TabCell: View {
             .padding(.horizontal, TabStrip.closeInset)
             .animation(TabStrip.motion, value: tab.badge)
         }
-        .foregroundStyle(active && focused || hovered ? Theme.ink : Theme.inkMuted)
+        .foregroundStyle(active || hovered ? Theme.ink : Theme.inkMuted)
     }
 }
 
