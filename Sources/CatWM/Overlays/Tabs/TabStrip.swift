@@ -2,23 +2,19 @@ import AppKit
 import NativeTrafficLight
 import SwiftUI
 
-enum TabStripStyle: String, CaseIterable {
-    case inset
-    case full
-
-    var sideInset: CGFloat { self == .inset ? Theme.Radius.pane : 0 }
-    var corner: CGFloat { self == .full ? Theme.Radius.pane : 0 }
-    var panelHeight: CGFloat { TabStrip.height + corner }
-}
-
 enum TabStrip {
-    static let height: CGFloat = Theme.rowHeight
+    static let height = TabGeometry.stripHeight
+    static let corner: CGFloat = Theme.Radius.pane
+    static let panelHeight = height + corner
     static let lights: TrafficLights.Buttons = [.close, .minimize]
     static let lightsInset: CGFloat = ((height - TrafficLights.lightDiameter) / 2).rounded()
-    static let lead: CGFloat = lightsInset + TrafficLights.size(for: lights).width + Theme.Space.medium
+    static let lead: CGFloat = lightsInset + TrafficLights.size(for: lights).width + lightsInset - Theme.Space.xxs
     static let radius: CGFloat = Theme.Radius.large
     static let closeSide: CGFloat = 20
     static let iconSide: CGFloat = 16
+    static let closeInset = Theme.Space.small
+    static let hoverFill = 0.04, activeFill = 0.1, unfocusedActiveFill = 0.06
+    static let restingIcon = 0.7, liftedOpacity = 0.55
     static let shape = UnevenRoundedRectangle(topLeadingRadius: radius, topTrailingRadius: radius, style: .continuous)
     static var animated: Bool { WindowManager.shared.config.animate }
     static var reduceMotion: Bool { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
@@ -35,7 +31,6 @@ final class TabStripModel: ObservableObject {
     }
 
     @Published var tabs: [Tab] = []
-    @Published var style = TabStripStyle.inset
     @Published var active: CGWindowID = 0
     @Published var focused = false
     @Published var hovered: CGWindowID?
@@ -53,8 +48,16 @@ final class TabStripModel: ObservableObject {
         return min(tabs.count - 1, Int(((x - TabStrip.lead) / tabWidth(in: width)).rounded(.down)))
     }
 
+    func slot(at x: CGFloat, width: CGFloat, extra: Int = 0,
+              rounding: FloatingPointRoundingRule = .toNearestOrAwayFromZero) -> Int {
+        let count = tabs.count + extra
+        let step = max(0, width - TabStrip.lead) / CGFloat(max(count, 1))
+        guard count > 0, step > 0 else { return 0 }
+        return min(count - 1, max(0, Int(((x - TabStrip.lead) / step).rounded(rounding))))
+    }
+
     func closeRect(_ index: Int, width: CGFloat) -> CGRect {
-        CGRect(x: slotX(index, width: width) + Theme.Space.small, y: (TabStrip.height - TabStrip.closeSide) / 2,
+        CGRect(x: slotX(index, width: width) + TabStrip.closeInset, y: (TabStrip.height - TabStrip.closeSide) / 2,
                width: TabStrip.closeSide, height: TabStrip.closeSide)
     }
 }
@@ -65,14 +68,12 @@ struct TabStripView: View {
     var body: some View {
         VStack(spacing: 0) {
             bar.frame(height: TabStrip.height)
-            if model.style.corner > 0 {
-                HStack(spacing: 0) {
-                    TabStripCorner(side: model.style.corner, style: model.style)
-                    Spacer(minLength: 0)
-                    TabStripCorner(side: model.style.corner, style: model.style).scaleEffect(x: -1)
-                }
-                .frame(height: model.style.corner)
+            HStack(spacing: 0) {
+                TabStripCorner()
+                Spacer(minLength: 0)
+                TabStripCorner().scaleEffect(x: -1)
             }
+            .frame(height: TabStrip.corner)
         }
     }
 
@@ -83,13 +84,12 @@ struct TabStripView: View {
             ZStack(alignment: .topLeading) {
                 if let hovered = model.hovered, hovered != model.active, model.dragged == nil,
                    let index = model.tabs.firstIndex(where: { $0.id == hovered }) {
-                    Rectangle().fill(Theme.ink.opacity(0.04))
-                        .frame(width: tabWidth, height: TabStrip.height)
+                    pill(Theme.ink.opacity(TabStrip.hoverFill), tabWidth: tabWidth)
                         .offset(x: model.slotX(index, width: width))
                 }
                 if let index = model.tabs.firstIndex(where: { $0.id == model.active }) {
-                    Rectangle().fill(Theme.ink.opacity(model.focused ? 0.1 : 0.06))
-                        .frame(width: tabWidth, height: TabStrip.height)
+                    pill(Theme.ink.opacity(model.focused ? TabStrip.activeFill : TabStrip.unfocusedActiveFill),
+                         tabWidth: tabWidth)
                         .offset(x: offset(of: index, id: model.active, width: width))
                         .transaction { if model.dragged == model.active { $0.animation = nil } }
                 }
@@ -106,14 +106,14 @@ struct TabStripView: View {
                             closeHovered: model.closeHovered)
                         .frame(width: tabWidth, height: TabStrip.height)
                         .offset(x: offset(of: index, id: tab.id, width: width))
-                        .opacity(dragged && model.lifted ? 0.55 : 1)
+                        .opacity(dragged && model.lifted ? TabStrip.liftedOpacity : 1)
                         .zIndex(dragged ? 1 : 0)
                         .transaction { if dragged { $0.animation = nil } }
                         .transition(.opacity)
                 }
             }
         }
-        .background { TabStripBackdrop(style: model.style) }
+        .background { TabStripBackdrop() }
         .clipShape(TabStrip.shape)
         .overlay {
             TabStrip.shape.strokeBorder(Theme.hairline, lineWidth: 1)
@@ -128,6 +128,12 @@ struct TabStripView: View {
 
     private func fade(_ animation: Animation) -> Animation? { TabStrip.animated ? animation : nil }
 
+    private func pill(_ fill: Color, tabWidth: CGFloat) -> some View {
+        RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous).fill(fill)
+            .padding(Theme.Space.xxs)
+            .frame(width: tabWidth, height: TabStrip.height)
+    }
+
     private func offset(of index: Int, id: CGWindowID, width: CGFloat) -> CGFloat {
         model.slotX(index, width: width) + (model.dragged == id ? model.dragShift : 0)
     }
@@ -140,19 +146,16 @@ struct TabStripView: View {
 }
 
 private struct TabStripBackdrop: View {
-    let style: TabStripStyle
-
     var body: some View {
         ZStack {
             Theme.surface
-            if style == .full { Theme.ink.opacity(0.04) }
+            Theme.ink.opacity(TabStrip.hoverFill)
         }
     }
 }
 
 private struct TabStripCorner: View {
-    let side: CGFloat
-    let style: TabStripStyle
+    private let side = TabStrip.corner
 
     private var wedge: Path {
         var path = Path()
@@ -172,7 +175,7 @@ private struct TabStripCorner: View {
 
     var body: some View {
         ZStack {
-            TabStripBackdrop(style: style).clipShape(wedge)
+            TabStripBackdrop().clipShape(wedge)
             edge.stroke(Theme.hairline, lineWidth: 1)
         }
         .frame(width: side, height: side)
@@ -192,7 +195,7 @@ private struct TabCell: View {
                 Image(nsImage: AppIcons.shared.iconOrGeneric(for: tab.pid))
                     .resizable()
                     .frame(width: TabStrip.iconSide, height: TabStrip.iconSide)
-                    .opacity(active || hovered ? 1 : 0.7)
+                    .opacity(active || hovered ? 1 : TabStrip.restingIcon)
                 Text(tab.title)
                     .textStyle(.caption).fontWeight(active && focused ? .medium : .regular)
                     .oneLine()
@@ -212,7 +215,7 @@ private struct TabCell: View {
                     CountBadge(badge: badge).transition(.opacity.combined(with: .scale(scale: 0.6)))
                 }
             }
-            .padding(.horizontal, Theme.Space.small)
+            .padding(.horizontal, TabStrip.closeInset)
             .animation(TabStrip.motion, value: tab.badge)
         }
         .foregroundStyle(active && focused || hovered ? Theme.ink : Theme.inkMuted)
@@ -228,19 +231,17 @@ extension GalleryContent {
     @ViewBuilder var tabStrip: some View {
         block("Tab strip") {
             VStack(alignment: .leading, spacing: Theme.Space.large) {
-                ForEach(TabStripStyle.allCases, id: \.self) { style in
-                    ForEach([true, false], id: \.self) { focused in
-                        ZStack(alignment: .top) {
-                            UnevenRoundedRectangle(topLeadingRadius: Theme.Radius.pane,
-                                                   topTrailingRadius: Theme.Radius.pane, style: .continuous)
-                                .fill(Theme.surfaceRaised)
-                                .frame(width: 520, height: Theme.controlHeight)
-                                .padding(.top, TabStrip.height)
-                            TabStripView(model: .example(style: style, focused: focused))
-                                .frame(width: 520 - style.sideInset * 2, height: style.panelHeight)
-                        }
-                        .frame(width: 520, height: TabStrip.height + Theme.controlHeight, alignment: .top)
+                ForEach([true, false], id: \.self) { focused in
+                    ZStack(alignment: .top) {
+                        UnevenRoundedRectangle(topLeadingRadius: Theme.Radius.pane,
+                                               topTrailingRadius: Theme.Radius.pane, style: .continuous)
+                            .fill(Theme.surfaceRaised)
+                            .frame(width: 520, height: Theme.controlHeight)
+                            .padding(.top, TabStrip.height)
+                        TabStripView(model: .example(focused: focused))
+                            .frame(width: 520, height: TabStrip.panelHeight)
                     }
+                    .frame(width: 520, height: TabStrip.height + Theme.controlHeight, alignment: .top)
                 }
             }
         }
@@ -248,9 +249,8 @@ extension GalleryContent {
 }
 
 private extension TabStripModel {
-    static func example(style: TabStripStyle, focused: Bool) -> TabStripModel {
+    static func example(focused: Bool) -> TabStripModel {
         let model = TabStripModel()
-        model.style = style
         let pid = ProcessInfo.processInfo.processIdentifier
         model.tabs = ["Notes", "Terminal", "Design review"].enumerated().map { index, title in
             Tab(id: CGWindowID(index + 1), title: title, pid: pid, badge: [.count(3), nil, .dot][index])
