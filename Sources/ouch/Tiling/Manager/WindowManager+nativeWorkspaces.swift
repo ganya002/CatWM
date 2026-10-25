@@ -60,7 +60,7 @@ extension WindowManager {
                 Spaces.list(display: $0.uuid)?.ids.contains(space) == true
             }) else { return nil }
             let key = Self.spaceWorkspace(display: screen.uuid, space: space)
-            model.assign(id, to: key)
+            model.hostMaximised(id, in: key)
             monitorOf[key] = screen.uuid
             return key
         }
