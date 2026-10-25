@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import os
 import QuartzCore
 
 final class Animator {
@@ -327,7 +328,7 @@ extension Animator {
     @MainActor func waitForPendingWrites(pids: Set<pid_t>, timeout: TimeInterval = 1) async -> Bool {
         let completion = PendingWrites()
         let deadline = Task { @MainActor in
-            do { try await Task.sleep(for: .seconds(timeout)) } catch { return }
+            do { try await Task.sleep(for: .seconds(timeout)) } catch { return } // style-ok: a hung app never drains
             completion.finish(false)
         }
         defer { deadline.cancel() }
@@ -335,28 +336,36 @@ extension Animator {
             guard !Task.isCancelled else { return false }
             return await withCheckedContinuation { continuation in
                 completion.wait(continuation)
-                afterPendingWrites(pids: pids) {
-                    MainActor.assumeIsolated { completion.finish(true) }
-                }
+                afterPendingWrites(pids: pids) { completion.finish(true) }
             }
         } onCancel: {
-            Task { @MainActor in completion.finish(false) }
+            completion.finish(false)
         }
     }
+}
 
-    @MainActor private final class PendingWrites {
-        private var continuation: CheckedContinuation<Bool, Never>?
-        private var result: Result<Bool, Never>?
+private final class PendingWrites: Sendable {
+    private struct State: Sendable {
+        var continuation: CheckedContinuation<Bool, Never>?
+        var result: Result<Bool, Never>?
+    }
+    private let state = OSAllocatedUnfairLock(initialState: State())
 
-        func wait(_ continuation: CheckedContinuation<Bool, Never>) {
-            if let result { continuation.resume(with: result) } else { self.continuation = continuation }
+    func wait(_ continuation: CheckedContinuation<Bool, Never>) {
+        let result = state.withLock { state -> Result<Bool, Never>? in
+            if state.result == nil { state.continuation = continuation }
+            return state.result
         }
+        if let result { continuation.resume(with: result) }
+    }
 
-        func finish(_ result: Bool) {
-            guard self.result == nil else { return }
-            self.result = .success(result)
-            continuation?.resume(returning: result)
-            continuation = nil
+    func finish(_ result: Bool) {
+        let waiting = state.withLock { state -> CheckedContinuation<Bool, Never>? in
+            guard state.result == nil else { return nil }
+            state.result = .success(result)
+            defer { state.continuation = nil }
+            return state.continuation
         }
+        waiting?.resume(returning: result)
     }
 }

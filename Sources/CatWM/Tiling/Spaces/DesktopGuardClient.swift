@@ -30,7 +30,7 @@ import AppKit
     func start(_ context: DesktopGuard.Context) async throws {
         try launch()
         let timer = Timer(timeInterval: 0.25, repeats: true) { [weak self] timer in
-            MainActor.assumeIsolated {
+            MainActor.assumeIsolated { // style-ok: the timer runs on the main run loop
                 guard let self else { return timer.invalidate() }
                 self.send("PING")
             }
