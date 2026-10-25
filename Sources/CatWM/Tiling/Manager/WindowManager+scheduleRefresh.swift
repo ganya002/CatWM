@@ -22,6 +22,7 @@ extension WindowManager {
 
     private func scanAppsAndRefresh(_ request: Int) {
         guard isStarted, !nativeDesktop.isRunning, !desktops.nativeCreationBusy else { return finishScan(request) }
+        releaseClaimedApps()
         let listed = config.virtualWorkspaces ? scanner.desktop.allWindows : scanner.desktop.windows
         let pidsOnScreen = Set(listed.map(\.pid))
         var known: [pid_t: [CGWindowID: Window]] = [:]

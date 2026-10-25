@@ -17,7 +17,7 @@ All scripts are in `.agents/skills/verify-catwm/scripts/`. Run them from the wor
 - A named instance does not register a login item, link the `catwm` command, check for updates, send crash or performance reports, show onboarding, tips or What's New, or run migrations. Its menu bar icon shows the id in the tooltip.
 - Without a window scope, a named instance tiles all windows and reads all key presses, the same as the user's CatWM. So two instances move the same windows. Before you run `launch.sh` without a scope, ask the user. Approval for one run does not apply to the next session.
 - `CATWM_SCOPE=pids:<pid>,<pid>...` makes the instance manage only the windows of these pids. A scoped instance does not use macOS Desktops, does not read key presses (`CATWM_KEYS=on` turns them on), does not change Caps Lock and does not move the pointer. A bad value stops CatWM with exit code 2. Read "Window scope" in `docs/internals/control.md`.
-- The user's CatWM still tiles the windows of a scoped instance. Two instances then write the same frames.
+- A scoped instance writes a claim file (`~/.config/catwm/instances/<id>/scope`). The user's CatWM leaves out the claimed pids, but only if it is a build with this change. An older build of the user's CatWM still tiles the test windows, and two instances then write the same frames. Before a live test, check the build of the user's CatWM (`ps -o command= -p <pid>`).
 - If the user is typing or presenting, do not start.
 
 ## Launch

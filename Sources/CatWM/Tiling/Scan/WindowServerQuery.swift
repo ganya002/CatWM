@@ -164,6 +164,10 @@ struct WindowServerObservation {
     var allWindows: [CGWindowInfo] = []
     var spaces: [CGWindowID: Set<UInt64>] = [:]
 
+    func keeping(_ keep: (pid_t) -> Bool) -> Self {
+        Self(windows: windows.filter { keep($0.pid) }, allWindows: allWindows.filter { keep($0.pid) }, spaces: spaces)
+    }
+
     static func read(known: Set<CGWindowID>) -> Self {
         dispatchPrecondition(condition: .notOnQueue(.main))
         if let observation = WindowServerQuery.observation(known: known) { return observation }

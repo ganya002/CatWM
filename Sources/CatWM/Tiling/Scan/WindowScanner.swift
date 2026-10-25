@@ -42,11 +42,13 @@ final class WindowScanner {
     private(set) var results: [pid_t: AppScan] = [:]
     private(set) var desktop = WindowServerObservation()
     private(set) var applications: [RunningApplicationSnapshot] = []
+    private(set) var claimed: Set<pid_t> = []
     private var observingDesktop = false
     private var pendingDesktop: (known: Set<CGWindowID>, done: () -> Void)?
     private let readDesktop: (Set<CGWindowID>) -> WindowServerObservation
     private let readApplications: () -> [RunningApplicationSnapshot]
     private let scope: WindowScope?
+    private let claims: ScopeClaims?
     private(set) var lastScan: CFTimeInterval = 0
     private var busy: [pid_t: UUID] = [:]
     private var idleWaiters: [() -> Void] = []
@@ -58,12 +60,13 @@ final class WindowScanner {
          readDesktop: @escaping (Set<CGWindowID>) -> WindowServerObservation = { AXBackend.shared.desktop(known: $0) },
          readApplications: @escaping () -> [RunningApplicationSnapshot] = { AXBackend.shared.applications() },
          deadline: TimeInterval = WindowScanner.deadline,
-         scope: WindowScope? = nil) {
+         scope: WindowScope? = nil, claims: ScopeClaims? = nil) {
         self.read = read
         self.readDesktop = readDesktop
         self.readApplications = readApplications
         scanDeadline = deadline
         self.scope = scope
+        self.claims = claims
     }
 
     func observeDesktop(known: Set<CGWindowID>, done: @escaping () -> Void) {
@@ -72,17 +75,16 @@ final class WindowScanner {
             return
         }
         observingDesktop = true
-        DispatchQueue.global(qos: .userInitiated).async { [weak self, readDesktop, readApplications, scope] in
-            var observation = readDesktop(known)
-            var applications = readApplications()
-            if let scope {
-                observation = scope.filter(observation)
-                applications = scope.filter(applications)
-            }
+        DispatchQueue.global(qos: .userInitiated).async { [weak self, readDesktop, readApplications, scope, claims] in
+            let claimed = claims?.claimedPids() ?? []
+            let keep = { (pid: pid_t) in scope?.pids.contains(pid) ?? !claimed.contains(pid) }
+            let observation = readDesktop(known).keeping(keep)
+            let applications = readApplications().filter { keep($0.pid) }
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.desktop = observation
                 self.applications = applications
+                self.claimed = claimed
                 self.observingDesktop = false
                 let pending = self.pendingDesktop
                 self.pendingDesktop = nil
@@ -91,6 +93,10 @@ final class WindowScanner {
             }
         }
     }
+
+    func watchClaims(_ changed: @escaping () -> Void) { claims?.watch(changed) }
+
+    func keeps(_ pid: pid_t) -> Bool { scope?.pids.contains(pid) ?? !claimed.contains(pid) }
 
     func scan(_ jobs: [Job], done: @escaping () -> Void, updated: @escaping () -> Void,
               readAll: ((_ all: Bool) -> Void)? = nil) {

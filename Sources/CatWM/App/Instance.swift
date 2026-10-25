@@ -24,6 +24,8 @@ struct InstancePaths: Equatable {
     var supportFolder: URL { named(home.appendingPathComponent("Library/Application Support/CatWM")) }
     var cacheFolder: URL { named(home.appendingPathComponent("Library/Caches/catwm")) }
     var pidFile: URL { configFolder.appendingPathComponent("catwm.pid") }
+    var scopeFile: URL { configFolder.appendingPathComponent("scope") }
+    private var stagedScopeFile: URL { instancesFolder.appendingPathComponent(".\(id ?? "default").scope") }
     var defaultsSuite: String? { id.map { "local.catwm.instance.\($0)" } }
 
     private func named(_ folder: URL) -> URL {
@@ -33,6 +35,23 @@ struct InstancePaths: Equatable {
     func namedPidFiles(fileManager: FileManager = .default) -> [URL] {
         let ids = (try? fileManager.contentsOfDirectory(atPath: instancesFolder.path)) ?? []
         return ids.filter { $0 != id }.map { instancesFolder.appendingPathComponent("\($0)/catwm.pid") }
+    }
+
+    func writeClaim(_ claim: ScopeClaim) throws {
+        try FileManager.default.createDirectory(at: configFolder, withIntermediateDirectories: true)
+        try Data(claim.text.utf8).write(to: stagedScopeFile)
+        try Self.move(stagedScopeFile, to: scopeFile)
+    }
+
+    func removeClaim() throws {
+        try Self.move(scopeFile, to: stagedScopeFile)
+        try FileManager.default.removeItem(at: stagedScopeFile)
+    }
+
+    private static func move(_ source: URL, to target: URL) throws {
+        guard rename(source.path, target.path) == 0 else {
+            throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+        }
     }
 
     static func readPid(_ url: URL) -> pid_t? {
@@ -70,6 +89,7 @@ enum Instance {
 
     static let scope: WindowScope? = {
         guard let text = ProcessInfo.processInfo.environment["CATWM_SCOPE"] else { return nil }
+        guard isNamed else { fail("CATWM_SCOPE needs CATWM_INSTANCE") }
         guard let scope = WindowScope(text) else {
             fail("CATWM_SCOPE must be pids:<pid>,<pid>... with an optional ;display:<display UUID>")
         }
@@ -94,12 +114,16 @@ enum Instance {
         Log.attempt("write \(pidFile.path)") {
             try FileManager.default.createDirectory(at: configFolder, withIntermediateDirectories: true)
             try Data("\(getpid())".utf8).write(to: pidFile, options: .atomic)
+            guard let scope else { return }
+            try paths.writeClaim(ScopeClaim(owner: getpid(), scope: scope))
         }
     }
 
     static func removePid() {
         guard InstancePaths.readPid(pidFile) == getpid() else { return }
         Log.attempt("remove \(pidFile.path)") { try FileManager.default.removeItem(at: pidFile) }
+        guard scope != nil else { return }
+        Log.attempt("remove \(paths.scopeFile.path)") { try paths.removeClaim() }
     }
 
     private static func fail(_ message: String) -> Never {
