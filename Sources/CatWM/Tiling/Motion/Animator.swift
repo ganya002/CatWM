@@ -235,7 +235,9 @@ final class Animator {
             guard wrote else { return }
             self.onLanded?()
             self.quietUntil[id] = CACurrentMediaTime() + 0.4
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in self?.verify(move, epoch: epoch) }
+            DispatchQueue.main.asyncAfter( // style-ok: an app that ignores a write sends no event
+                deadline: .now() + 0.12
+            ) { [weak self] in self?.verify(move, epoch: epoch) }
         }
     }
 

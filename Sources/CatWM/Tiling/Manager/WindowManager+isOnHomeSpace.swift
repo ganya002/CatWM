@@ -107,7 +107,9 @@ extension WindowManager {
         let until = CACurrentMediaTime() + config.animationDuration
         slide = Slide(monitor: screen.uuid, workspace: workspace, outgoing: outgoing,
                       forward: workspaceSort(previous, workspace), until: until)
-        DispatchQueue.main.asyncAfter(deadline: .now() + config.animationDuration + 0.2) { [weak self] in
+        DispatchQueue.main.asyncAfter( // style-ok: the slide is a time window for late windows
+            deadline: .now() + config.animationDuration + 0.2
+        ) { [weak self] in
             guard let self, self.slide?.until == until else { return }
             let screens = Screen.all()
             for id in outgoing where !self.visible.contains(id) { self.cornerPark(id, screens: screens) }
@@ -161,7 +163,7 @@ extension WindowManager {
             }
             let queue = DispatchQueue.global(qos: .userInitiated)
             animator.afterPendingWrites(pids: nil, completionQueue: queue, finish)
-            queue.asyncAfter(deadline: .now() + 2, execute: finish)
+            queue.asyncAfter(deadline: .now() + 2, execute: finish) // style-ok: limit for a hung app
         }
     }
 }

@@ -36,14 +36,18 @@ extension WindowManager {
                 self?.postMouse(.leftMouseUp, held)
                 Log.info("grabtest: \(point) \(grabbed ? "GRABS" : "no")")
                 if grabbed { self?.rememberGrab(window, point, frame: original) }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { next(rest.dropFirst()) }
+                DispatchQueue.main.asyncAfter( // style-ok: paces a developer test
+                    deadline: .now() + 0.3
+                ) { next(rest.dropFirst()) }
             }
         }
         next(points[...])
     }
 
     func holdUntilArrived(space number: Int, release: CGPoint, restore: CGPoint, settle: Double, attemptsLeft: Int) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + settle) { [weak self] in
+        DispatchQueue.main.asyncAfter( // style-ok: no event marks the last queued Desktop step
+            deadline: .now() + settle
+        ) { [weak self] in
             guard let self else { return }
             let point = mouseLocation()
             if attemptsLeft > 0, let screen = Screen.all().first(where: { $0.frame.contains(point) }),

@@ -212,7 +212,7 @@ extension WindowManager {
             do { return try await remove(space, screen) } catch DesktopTransitionError.occupied {
                 throw DesktopTransitionError.occupied
             } catch where attempt < 5 {
-                try await Task.sleep(nanoseconds: 200_000_000)
+                try await Task.sleep(nanoseconds: 200_000_000) // style-ok: a failed remove has no retry event
             }
         }
     }

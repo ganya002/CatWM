@@ -8,7 +8,7 @@ final class CursorRefresh {
         work?.cancel()
         let item = DispatchWorkItem { Self.post() }
         work = item
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: item)
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: item) // style-ok: debounce of cursor updates
     }
 
     private static func post() {

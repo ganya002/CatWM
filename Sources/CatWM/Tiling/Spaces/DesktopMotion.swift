@@ -59,7 +59,7 @@ import QuartzCore
             } catch { link.invalidate(); completion.finish(.failure(error)) }
         }
         let timeout = Task { @MainActor in
-            do { try await Task.sleep(for: .seconds(limit)) } catch { return }
+            do { try await Task.sleep(for: .seconds(limit)) } catch { return } // style-ok: limit for a stopped link
             completion.finish(.failure(DesktopTransitionError.check(message)))
         }
         defer { timeout.cancel(); link.invalidate(); callback = nil }
