@@ -15,7 +15,7 @@ enum TabStrip {
     static let height: CGFloat = Theme.rowHeight
     static let lights: TrafficLights.Buttons = [.close, .minimize]
     static let lightsInset: CGFloat = ((height - TrafficLights.lightDiameter) / 2).rounded()
-    static let lead: CGFloat = lightsInset + TrafficLights.size(for: lights).width + Theme.Space.medium
+    static let lead: CGFloat = lightsInset + TrafficLights.size(for: lights).width + lightsInset - Theme.Space.xxs
     static let radius: CGFloat = Theme.Radius.large
     static let closeSide: CGFloat = 20
     static let iconSide: CGFloat = 16
@@ -83,13 +83,11 @@ struct TabStripView: View {
             ZStack(alignment: .topLeading) {
                 if let hovered = model.hovered, hovered != model.active, model.dragged == nil,
                    let index = model.tabs.firstIndex(where: { $0.id == hovered }) {
-                    Rectangle().fill(Theme.ink.opacity(0.04))
-                        .frame(width: tabWidth, height: TabStrip.height)
+                    pill(Theme.ink.opacity(0.04), tabWidth: tabWidth)
                         .offset(x: model.slotX(index, width: width))
                 }
                 if let index = model.tabs.firstIndex(where: { $0.id == model.active }) {
-                    Rectangle().fill(Theme.ink.opacity(model.focused ? 0.1 : 0.06))
-                        .frame(width: tabWidth, height: TabStrip.height)
+                    pill(Theme.ink.opacity(model.focused ? 0.1 : 0.06), tabWidth: tabWidth)
                         .offset(x: offset(of: index, id: model.active, width: width))
                         .transaction { if model.dragged == model.active { $0.animation = nil } }
                 }
@@ -127,6 +125,12 @@ struct TabStripView: View {
     }
 
     private func fade(_ animation: Animation) -> Animation? { TabStrip.animated ? animation : nil }
+
+    private func pill(_ fill: Color, tabWidth: CGFloat) -> some View {
+        RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous).fill(fill)
+            .padding(Theme.Space.xxs)
+            .frame(width: tabWidth, height: TabStrip.height)
+    }
 
     private func offset(of index: Int, id: CGWindowID, width: CGFloat) -> CGFloat {
         model.slotX(index, width: width) + (model.dragged == id ? model.dragShift : 0)

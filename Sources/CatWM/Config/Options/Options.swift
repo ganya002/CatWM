@@ -74,10 +74,7 @@ enum Options {
         .choice("tab-strip-style", \.tabStripStyle, noun: "tab strip style")
             .documented(nil, "`inset` rests the strip on the straight part of the window top; "
                             + "`full` is as wide as the window and fills its rounded corners")
-            .note("How wide the tab strip is: inset (between the window corners) or full (the window width).")
-            .setting(.windows, "windows.tabStripStyle", "Tab strip style",
-                     help: "Inset sits between the window corners. Full spans the whole window width",
-                     keywords: "tabs group bar strip width full inset corners", section: "Tab groups"),
+            .note("How wide the tab strip is: inset (between the window corners) or full (the window width)."),
         .bool("tab-notification-badges", \.tabNotificationBadges)
             .documented("bool", "show a red badge with the unread count on each tab")
             .setting(.windows, "windows.tabNotificationBadges", "Show notification badges on tabs",
