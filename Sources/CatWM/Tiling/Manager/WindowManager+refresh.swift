@@ -13,7 +13,7 @@ extension WindowManager {
     }
 
     func refresh(instant instantLayout: Bool = false, placing only: Set<CGWindowID>? = nil) {
-        guard isStarted, !nativeDesktop.isRunning, !nativeCreationBusy else { return }
+        guard isStarted, !nativeDesktop.isRunning, !desktops.nativeCreationBusy else { return }
         let timing = TilingTiming("refresh", windows: windows.count)
         defer { timing.finish() }
         if scanner.lastScan == 0 { scheduleRefresh(after: 0) }
@@ -61,16 +61,16 @@ extension WindowManager {
             SplitHandle.shared.update(); TabStrips.shared.update(); notifyChange(); return
         }
         applyTileMoves(planTileMoves(screens: screens, only: only), instant: instantLayout)
-        SplitHandle.shared.update(instant: instantLayout || dividerDrag != nil)
-        TabStrips.shared.update(instant: instantLayout || dividerDrag != nil)
+        SplitHandle.shared.update(instant: instantLayout || dividerState.dividerDrag != nil)
+        TabStrips.shared.update(instant: instantLayout || dividerState.dividerDrag != nil)
         timing.checkpoint("apply")
         notifyChange()
         timing.checkpoint("notify")
     }
 
     private func refocusAfterCloseIfNeeded(hasFresh: Bool) {
-        guard let workspace = refocusAfterClose else { return }
-        refocusAfterClose = nil
+        guard let workspace = focusRequests.refocusAfterClose else { return }
+        focusRequests.refocusAfterClose = nil
         guard !hasFresh else { return }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
             self?.refocusRecent(on: workspace)
@@ -81,7 +81,7 @@ extension WindowManager {
         if !planned.moves.isEmpty {
             Log.debug("tile: moving \(planned.moves.map { "\($0.window.id)→\($0.target)" }.joined(separator: ", "))")
         }
-        if dividerDrag != nil {
+        if dividerState.dividerDrag != nil {
             animator.follow(planned.instant + planned.moves)
             return
         }
@@ -113,7 +113,7 @@ extension WindowManager {
             let spaces = scanner.desktop.spaces[id] ?? []
             return !spaces.isEmpty && currentSpaces.isDisjoint(with: spaces)
         }
-        let nativeSpaces = Set(nativeCatalog.entries.map(\.space))
+        let nativeSpaces = Set(desktops.nativeCatalog.entries.map(\.space))
         func managed(_ id: CGWindowID) -> Bool {
             config.virtualWorkspaces && !(scanner.desktop.spaces[id] ?? []).isDisjoint(with: nativeSpaces)
         }
@@ -187,8 +187,8 @@ extension WindowManager {
     }
 
     private func restoreSavedWorkspace(_ window: Window, titles: [CGWindowID: String?]) {
-        if savedOwnerOf[window.id] == owner(window) {
-            if let float = savedFloating[window.id] { window.userFloating = .chosen(float) }
+        if floats.savedOwnerOf[window.id] == owner(window) {
+            if let float = floats.savedFloating[window.id] { window.userFloating = .chosen(float) }
         }
         restoreNativeMigration(window)
         if let practice, window.pid == practice.pid,
@@ -226,7 +226,7 @@ extension WindowManager {
                 for member in [id] + tabStack(behind: id) {
                     targets[member] = target
                     if let only, !only.contains(member) { continue }
-                    if member == draggedTab || member != id && drags[id] != nil { continue }
+                    if member == tabUI.draggedTab || member != id && drags[id] != nil { continue }
                     guard let window = windows[member], member == id || !covered(window, by: target) else { continue }
                     planMove(window, to: target, on: screen, screens: screens, into: &planned)
                 }
@@ -283,10 +283,10 @@ extension WindowManager {
     }
 
     func refocusRecent(on workspace: String) {
-        guard isShown(workspace), pendingFocus == nil else { return }
+        guard isShown(workspace), focusRequests.pendingFocus == nil else { return }
         guard let pid = frontmostPID() else { return }
-        guard let report = reportedFocus, report.pid == pid else {
-            waitingRefocus = (workspace, pid)
+        guard let report = focusRequests.reportedFocus, report.pid == pid else {
+            focusRequests.waitingRefocus = (workspace, pid)
             requestFocusObservation()
             return
         }

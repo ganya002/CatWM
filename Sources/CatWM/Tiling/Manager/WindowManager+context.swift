@@ -68,14 +68,14 @@ extension WindowManager {
         }
         current.state.ratio = ratio
         corrections = [:]
-        ratioChange = (current.screen.uuid, Date() + (config.animate ? config.animationDuration : 0) + 0.6)
+        dividerState.ratioChange = (current.screen.uuid, Date() + (config.animate ? config.animationDuration : 0) + 0.6)
         refresh()
     }
 
     func toggleFloating() {
         guard let window = focusedWindow() else { return }
         window.userFloating = .chosen(!window.isFloating)
-        floatZoom[window.id] = nil
+        floats.floatZoom[window.id] = nil
         if window.isFloating {
             targets[window.id] = nil
         } else {
@@ -102,10 +102,10 @@ extension WindowManager {
         let fill = usableRect(screen).pixelAligned
         let frame = animator.destination(window.id) ?? window.cachedFrame
         let target: CGRect
-        if let saved = floatZoom.removeValue(forKey: window.id), frame.approxEqual(fill) {
+        if let saved = floats.floatZoom.removeValue(forKey: window.id), frame.approxEqual(fill) {
             target = saved
         } else {
-            floatZoom[window.id] = frame
+            floats.floatZoom[window.id] = frame
             target = fill
         }
         animator.animate([.init(window: window, to: target, bounds: screen.visible)],

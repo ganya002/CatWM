@@ -49,17 +49,17 @@ extension WindowManager {
     func handle(_ notification: String, _ element: AXUIElement) {
         switch notification {
         case kAXUIElementDestroyedNotification:
-            lastClose = Date()
+            closeAndSort.lastClose = Date()
             requestFocusObservation()
             scheduleRefresh()
             FocusDim.shared.update()
         case kAXWindowMovedNotification, kAXWindowResizedNotification:
             guard let window = windows.values.first(where: { CFEqual($0.element, element) }),
-                  !animator.isBusy(window.id), !movingToSpace, window.id != draggedTab else { return }
+                  !animator.isBusy(window.id), !desktops.movingToSpace, window.id != tabUI.draggedTab else { return }
             let id = window.id
             observeFrame(window)
             if NSEvent.pressedMouseButtons & 1 != 0 {
-                if drags.isEmpty { tabDropCancelled = false }
+                if drags.isEmpty { tabUI.tabDropCancelled = false }
                 drags[id] = (drags[id] ?? false) || notification == kAXWindowResizedNotification
             } else if !window.isFloating {
                 if notification == kAXWindowResizedNotification {
@@ -109,11 +109,11 @@ extension WindowManager {
         minSizes[id] = new
         corrections[id] = nil
         Log.info("window \(id) has a minimum size of \(Int(new.width))×\(Int(new.height)); re-tiling around it")
-        if let change = ratioChange, Date() < change.until {
-            ratioChange = nil
+        if let change = dividerState.ratioChange, Date() < change.until {
+            dividerState.ratioChange = nil
             warnTooSmall(id, on: Screen.all().first { $0.uuid == change.screen })
         }
-        if let drag = dividerDrag, let position = drag.position,
+        if let drag = dividerState.dividerDrag, let position = drag.position,
            let screen = Screen.all().first(where: { $0.uuid == drag.screen }) {
             moveDivider(on: screen, to: position)
         }
@@ -125,12 +125,12 @@ extension WindowManager {
         animator.forget(id)
         templateHiddenWindows[id] = nil
         let focused = focusClock > 0 && focusStamps[id] == focusClock
-        if !restoringTemplate, focused { refocusAfterClose = workspaceOf[id] }
+        if !restoringTemplate, focused { focusRequests.refocusAfterClose = workspaceOf[id] }
         showHeir(of: id, focused: focused)
-        if pendingFocus?.id == id { cancelFocusRequest() }
-        if reportedFocus?.id == id {
-            reportedFocus = nil
-            focusObservation += 1
+        if focusRequests.pendingFocus?.id == id { cancelFocusRequest() }
+        if focusRequests.reportedFocus?.id == id {
+            focusRequests.reportedFocus = nil
+            focusRequests.focusObservation += 1
         }
         windows[id] = nil
         Notifications.shared.forget(id)
@@ -138,12 +138,12 @@ extension WindowManager {
         dirtyFrames.remove(id)
         snapNextPlacement.remove(id)
         model.forget(id)
-        floatFrames[id] = nil; floatZoom[id] = nil; targets[id] = nil; minSizes[id] = nil
+        floats.floatFrames[id] = nil; floats.floatZoom[id] = nil; targets[id] = nil; minSizes[id] = nil
         corrections[id] = nil; drags[id] = nil
         displayOf[id] = nil
-        nativeMoveTargets[id] = nil
-        nativeMembership[id] = nil
-        closingNow.remove(id)
+        desktops.nativeMoveTargets[id] = nil
+        desktops.nativeMembership[id] = nil
+        closeAndSort.closingNow.remove(id)
         visible.remove(id)
     }
 
@@ -237,7 +237,8 @@ extension WindowManager {
     func claimForCurrentWorkspace(_ ids: [CGWindowID]) {
         guard config.virtualWorkspaces, !restoringTemplate, let here = currentWorkspace else { return }
         for id in ids where workspaceOf[id] != here {
-            guard let target = nativeCatalog.entry(here), Spaces.of(window: id).contains(target.space) else { continue }
+            guard let target = desktops.nativeCatalog.entry(here),
+                  Spaces.of(window: id).contains(target.space) else { continue }
             model.assign(id, to: here)
         }
     }

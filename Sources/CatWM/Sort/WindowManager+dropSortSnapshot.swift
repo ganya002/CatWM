@@ -1,7 +1,7 @@
 import AppKit
 
 extension WindowManager {
-    func dropSortSnapshot() { sortSnapshot = nil }
+    func dropSortSnapshot() { closeAndSort.sortSnapshot = nil }
 
     func sortDisplays() -> [SortDisplay] {
         guard config.virtualWorkspaces, isStarted else { return [] }
@@ -45,9 +45,9 @@ extension WindowManager {
 
     private func sortWorkspaces(_ mine: [CGWindowID], active: String?, display: String) -> [SortWorkspace] {
         var names = Set(mine.compactMap { workspaceOf[$0] })
-        names.formUnion(nativeCatalog.entries.filter { $0.display == display }.map(\.name))
+        names.formUnion(desktops.nativeCatalog.entries.filter { $0.display == display }.map(\.name))
         if let active { names.insert(active) }
-        names.subtract(nativeDroppedWorkspaces)
+        names.subtract(desktops.nativeDroppedWorkspaces)
         return names.sorted(by: workspaceSort).map { name in
             SortWorkspace(name: name, label: labels[name] ?? "",
                           layout: states[name]?.layout ?? config.layouts.first ?? .tall,
@@ -61,12 +61,13 @@ extension WindowManager {
         if config.virtualWorkspaces {
             guard let window = windows[id], !window.minimized, !window.fullscreen,
                   NSRunningApplication(processIdentifier: window.pid)?.isHidden != true,
-                  let name = workspaceOf[id], let entry = nativeCatalog.entry(name) else { return false }
-            return scanner.desktop.spaces[id]?.contains(entry.space) == true || nativeMembership[id] == entry.space
+                  let name = workspaceOf[id], let entry = desktops.nativeCatalog.entry(name) else { return false }
+            return scanner.desktop.spaces[id]?.contains(entry.space) == true
+                || desktops.nativeMembership[id] == entry.space
         }
         guard let window = windows[id], !window.minimized, !window.fullscreen,
               NSRunningApplication(processIdentifier: window.pid)?.isHidden != true,
-              let uuid = workspaceOf[id].flatMap({ monitorOf[$0] }), let home = homeSpace[uuid],
+              let uuid = workspaceOf[id].flatMap({ monitorOf[$0] }), let home = desktops.homeSpace[uuid],
               let screen = screens.first(where: { $0.uuid == uuid }), !isOnHomeSpace(screen) else { return false }
         return scanner.desktop.spaces[id]?.contains(home) == true
     }
@@ -87,15 +88,15 @@ extension WindowManager {
     }
 
     func beginSort() {
-        nativeSortNames = []
-        sortSnapshot = SortSnapshot(model: model.snapshot(), labels: labels, focused: focusedWindow()?.id)
-        sortSession = true
+        desktops.nativeSortNames = []
+        closeAndSort.sortSnapshot = SortSnapshot(model: model.snapshot(), labels: labels, focused: focusedWindow()?.id)
+        closeAndSort.sortSession = true
     }
 
     func liveWindowIDs() -> Set<CGWindowID> { Set(windows.keys) }
 
     func liveSort(_ plans: [SortApply]) {
-        guard config.virtualWorkspaces, isStarted, sortSession else { return }
+        guard config.virtualWorkspaces, isStarted, closeAndSort.sortSession else { return }
         let fullscreen = Set(model.fullscreenHost.values)
         let planned = plans.flatMap { $0.lanes.flatMap(\.ids) }
             .filter { windows[$0] != nil && !fullscreen.contains($0) }
@@ -107,17 +108,17 @@ extension WindowManager {
                 !kept.contains($0) && (monitorOf[$0] == nil || monitorOf[$0] == apply.display)
             })
         }
-        nativeDroppedWorkspaces.formUnion(gone.values.flatMap(\.self))
-        nativeDroppedWorkspaces.subtract(kept)
-        nativeSortNames.formUnion(kept)
-        nativeSortNames.subtract(nativeDroppedWorkspaces)
+        desktops.nativeDroppedWorkspaces.formUnion(gone.values.flatMap(\.self))
+        desktops.nativeDroppedWorkspaces.subtract(kept)
+        desktops.nativeSortNames.formUnion(kept)
+        desktops.nativeSortNames.subtract(desktops.nativeDroppedWorkspaces)
         let landing = landSortDisplays(plans, gone: gone, moving: moving, fullscreen: fullscreen)
         for apply in plans { applySortLanes(apply, gone: gone[apply.display] ?? [], fullscreen: fullscreen) }
         order = order.filter { !moving.contains($0) } + planned
         lastFocused = lastFocused.filter { !moving.contains($0.value) }
         corrections = [:]
-        quietWorkspaceHUD = true
-        defer { quietWorkspaceHUD = false }
+        closeAndSort.quietWorkspaceHUD = true
+        defer { closeAndSort.quietWorkspaceHUD = false }
         for (display, workspace) in landing where virtualShown[display] != workspace {
             virtualShown[display] = workspace
         }
@@ -176,14 +177,14 @@ extension WindowManager {
     }
 
     func finishSortAfterNative(closing ids: [CGWindowID], goTo: String?, focus: Bool, opening fullscreen: CGWindowID?) {
-        sortSession = false
+        closeAndSort.sortSession = false
         guard config.virtualWorkspaces, isStarted else { return releasePending() }
         let closing = ids.filter { windows[$0] != nil }
         Log.info("sort: finishing, \(ids.count) window(s) marked to close (\(closing.count) still known), "
             + "goTo=\(goTo ?? "-") focus=\(focus)")
         corrections = [:]
-        quietWorkspaceHUD = true
-        defer { quietWorkspaceHUD = false }
+        closeAndSort.quietWorkspaceHUD = true
+        defer { closeAndSort.quietWorkspaceHUD = false }
         if let id = fullscreen, let window = windows[id] {
             self.focus(window)
         } else if let workspace = goTo {
@@ -193,14 +194,14 @@ extension WindowManager {
             }
             showWorkspace(workspace, focusing: main.flatMap { windows[$0] })
         } else if focus {
-            let candidates = [sortSnapshot?.focused].compactMap(\.self) + order
+            let candidates = [closeAndSort.sortSnapshot?.focused].compactMap(\.self) + order
             if let id = candidates.first(where: { visible.contains($0) && !closing.contains($0) }),
                let window = windows[id] {
                 self.focus(window)
             }
         }
-        closingNow.formUnion(closing)
-        closingApps.formUnion(closing.compactMap { windows[$0]?.pid })
+        closeAndSort.closingNow.formUnion(closing)
+        closeAndSort.closingApps.formUnion(closing.compactMap { windows[$0]?.pid })
         releasePending()
         if !closing.isEmpty { closeMarked(closing, attempt: 0) }
         commitNativeRemovals()
@@ -213,4 +214,13 @@ extension WindowManager {
         var labels: [String: String]
         var focused: CGWindowID?
     }
+}
+
+struct CloseAndSortState {
+    var sortSnapshot: WindowManager.SortSnapshot?
+    var sortSession = false
+    var quietWorkspaceHUD = false
+    var closingNow: Set<CGWindowID> = []
+    var closingApps: Set<pid_t> = []
+    var lastClose = Date.distantPast
 }

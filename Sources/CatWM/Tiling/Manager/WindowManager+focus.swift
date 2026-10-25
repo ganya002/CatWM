@@ -3,10 +3,10 @@ import AppKit
 extension WindowManager {
     func focus(_ window: Window, warp: Bool = true) {
         let request = UUID()
-        pendingFocus = PendingFocus(id: window.id, pid: window.pid, origin: frontmostPID(), request: request)
+        focusRequests.pendingFocus = .init(id: window.id, pid: window.pid, origin: frontmostPID(), request: request)
         animator.focus(window) { [weak self] in
-            guard let self, self.pendingFocus?.request == request else { return }
-            self.pendingFocus?.executed = true
+            guard let self, self.focusRequests.pendingFocus?.request == request else { return }
+            self.focusRequests.pendingFocus?.executed = true
             self.requestFocusObservation()
         }
         noteFocus(window.id)
@@ -29,8 +29,8 @@ extension WindowManager {
     func noteFocus(_ id: CGWindowID) { model.noteFocus(id) }
 
     private func focusUnderMouse() {
-        guard focusFollowsMouseNow, !sortSession, Date() > ignoreMouseUntil, NSEvent.pressedMouseButtons == 0,
-              !movingToSpace else { return }
+        guard focusFollowsMouseNow, !closeAndSort.sortSession, Date() > ignoreMouseUntil,
+              NSEvent.pressedMouseButtons == 0, !desktops.movingToSpace else { return }
         let point = mouseLocation()
         guard let hit = CGWindowInfo.normalWindow(at: point), let window = windows[hit.id], visible.contains(window.id),
               focusedWindow()?.id != window.id else { return }
@@ -41,17 +41,17 @@ extension WindowManager {
     func mouseUp() {
         TabDropHint.shared.hide()
         let point = mouseLocation()
-        let joins = !tabDropCancelled
-        tabDropCancelled = false
+        let joins = !tabUI.tabDropCancelled
+        tabUI.tabDropCancelled = false
         let hovered = joins && drags.count == 1 ? drags.first.flatMap { settledTabHover(for: $0.key, at: point) } : nil
         let previewed = drags.first.flatMap { TabStrips.shared.endPreview(of: $0.key) }
         trackTabHover(nil)
-        if let previewed, let id = drags.first?.key, drags.count == 1, !movingToSpace {
+        if let previewed, let id = drags.first?.key, drags.count == 1, !desktops.movingToSpace {
             drags = [:]
             dropIntoStrip(id, group: previewed.group, at: previewed.index)
             return settleParkedTabs()
         }
-        guard !drags.isEmpty, !movingToSpace else {
+        guard !drags.isEmpty, !desktops.movingToSpace else {
             drags = [:]
             return settleParkedTabs()
         }
@@ -61,7 +61,7 @@ extension WindowManager {
         readFrames(dragged) { [weak self] in
             guard let self else { return }
             defer { self.settleParkedTabs() }
-            guard NSEvent.pressedMouseButtons & 1 == 0, !self.movingToSpace else { return }
+            guard NSEvent.pressedMouseButtons & 1 == 0, !self.desktops.movingToSpace else { return }
             self.finishMouseDrag(finished, at: point, hovered: hovered, joins: joins)
         }
     }

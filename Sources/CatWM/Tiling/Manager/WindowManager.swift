@@ -25,29 +25,9 @@ final class WindowManager {
 
     var windows: [CGWindowID: Window] = [:]
     var observedApps: [(pid: pid_t, bundleID: String?)] = []
-    var lastNativeCatalogSaved: [String: UInt64] = [:]
-    var lastNativeCatalogHomes: [String: String] = [:]
-    var lastNativeCatalogUUIDs: [String: String] = [:]
-    var nativeCatalog = NativeWorkspaceCatalog()
     let nativeDesktop = NativeDesktopController()
+    var desktops = NativeDesktopState()
     let nativeGestures = DesktopGestureTap()
-    var nativeGestureSign: Double?
-    var nativeMigration: [CGWindowID: String] = [:]
-    var nativeCreationBusy = false
-    var desktopRemovalScheduled = false
-    var desktopRemovalFailures: [UInt64: Date] = [:]
-    var nativeWorkspaceGeneration = 0
-    var nativeSortNames: Set<String> = []
-    var nativeDroppedWorkspaces: Set<String> = []
-    var nativeMoveTargets: [CGWindowID: String] = [:]
-    var nativeMembership: [CGWindowID: UInt64] = [:]
-    struct FollowMove {
-        let window: Window
-        let workspace: String
-        let space: UInt64
-        let from: String?
-    }
-    var followMoves: [CGWindowID: FollowMove] = [:]
     var arrivals: [CGWindowID: CGRect] = [:]
     var model = WorkspaceModel()
     var workspaceOf: [CGWindowID: String] { model.workspaceOf }
@@ -68,44 +48,17 @@ final class WindowManager {
     var focusStamps: [CGWindowID: Int] { model.focusStamps }
     var focusClock: Int { model.focusClock }
     var focusOrder: [CGWindowID] { model.focusOrder }
-    var homeSpace: [String: UInt64] = [:]
     var displayOf: [CGWindowID: String] = [:]
     var workspaceMoves: Set<CGWindowID> = []
     var snapNextPlacement: Set<CGWindowID> = []
     var restoredEarly: [CGWindowID: Date] = [:]
-    var minimizingTabs: Set<Int> = []
     var present: Set<CGWindowID> = []
     var leavingFullscreen: [CGWindowID: Date] = [:]
-    struct PendingFocus {
-        let id: CGWindowID
-        let pid: pid_t
-        let origin: pid_t?
-        let request: UUID
-        var executed = false
-    }
-    struct FocusCommand {
-        let pid: pid_t
-        let dispatcher: String
-        let arg: String
-        let inMode: Bool
-    }
-    var pendingFocus: PendingFocus?
-    var focusCommands: [FocusCommand] = []
-    var waitingRefocus: (workspace: String, pid: pid_t)?
-    var refocusAfterClose: String?
-var focusEcho: FocusEcho?
-    var lastClose = Date.distantPast
-    var floatFrames: [CGWindowID: CGRect] = [:]
-    var floatZoom: [CGWindowID: CGRect] = [:]
-    var savedOwnerOf: [CGWindowID: String] = [:]
-    var savedFloating: [CGWindowID: Bool] = [:]
+    var focusRequests = FocusRequests()
+    var closeAndSort = CloseAndSortState()
+    var floats = FloatState()
     var previousWorkspace: [String: String] = [:]
     var labels: [String: String] = [:]
-    var sortSnapshot: SortSnapshot?
-    var closingNow: Set<CGWindowID> = []
-    var closingApps: Set<pid_t> = []
-    var sortSession = false
-    var quietWorkspaceHUD = false
     struct Slide {
         let monitor: String
         let workspace: String
@@ -118,32 +71,20 @@ var focusEcho: FocusEcho?
     var autoSwitchAfter = Date.distantPast
     var lastSavedWorkspaces = ""
     var tilingRecovery = TilingRecovery()
+    var tabUI = TabInteraction()
     var lastSavedTilingRecovery = TilingRecovery()
-    var savedTabs: [SavedTabs] = []
-    var savedTabsUntil = Date.distantPast
     var startedAt = Date.distantPast
     var poweringOffAt = Date.distantPast
     var focusSink: NSWindow?
     var visible: Set<CGWindowID> = []
     var targets: [CGWindowID: CGRect] = [:]
-    var reportedFocus: (pid: pid_t, id: CGWindowID?)?
     var frontmostPID: () -> pid_t? = { NSWorkspace.shared.frontmostApplication?.processIdentifier }
-    var focusReader = FocusReader()
-    var focusObservation = 0
-    var focusReads: Set<pid_t> = []
     var frameReads: [CGWindowID: UUID] = [:]
     var dirtyFrames: Set<CGWindowID> = []
     var observing: [pid_t: UUID] = [:]
     var observers: [pid_t: AXObserver] = [:]
     var corrections: [CGWindowID: (target: CGRect, count: Int)] = [:]
     var drags: [CGWindowID: Bool] = [:]
-    var tabHover: (host: CGWindowID, settled: Bool)?
-    var tabHoverWork: DispatchWorkItem?
-    var draggedTab: CGWindowID?
-    var tabDropCancelled = false
-    var parkedTabs: Set<CGWindowID> = []
-    var closedTabs: [CGWindowID: Date] = [:]
-    var tabFollow: (previous: CGWindowID, at: Date)?
     var refreshWork: DispatchWorkItem?
     var minSizes: [CGWindowID: CGSize] = [:]
     struct MenuBarFloor {
@@ -152,24 +93,10 @@ var focusEcho: FocusEcho?
         func height(on visible: CGRect) -> CGFloat? { visible == self.visible ? height : nil }
     }
     var menuBarHeights: [String: MenuBarFloor] = [:]
-    var ratioChange: (screen: String, until: Date)?
-    struct DividerDrag {
-        let screen: String
-        let startRatio: CGFloat
-        var position: CGFloat?
-    }
-    var dividerDrag: DividerDrag?
+    var dividerState = DividerState()
     var refreshDeadline = DispatchTime.distantFuture
     var isStarted = false
     var ignoreMouseUntil = Date.distantPast
-    var movingToSpace = false
-    struct PendingSpace {
-        let display: String
-        let index: Int
-        let until: Date
-    }
-    var pendingSpace: PendingSpace?
-    var spaceGeneration = 0
     var animator = Animator()
     var notificationObservers: [NSObjectProtocol] = []
     let scanner = WindowScanner()

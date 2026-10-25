@@ -5,28 +5,28 @@ extension WindowManager {
 
     func markClosedTab(_ id: CGWindowID) {
         guard tabs.group(of: id) != nil else { return }
-        closedTabs[id] = Date()
+        tabUI.closedTabs[id] = Date()
         scheduleRefresh(after: 0.3)
     }
 
     func dropHiddenOnClose() {
-        closedTabs = closedTabs.filter { id, since in
+        tabUI.closedTabs = tabUI.closedTabs.filter { id, since in
             tabs.group(of: id) != nil && -since.timeIntervalSinceNow < Self.closedTabHold
         }
-        for id in closedTabs.keys where !present.contains(id) && windows[id]?.minimized == false {
-            closedTabs[id] = nil
+        for id in tabUI.closedTabs.keys where !present.contains(id) && windows[id]?.minimized == false {
+            tabUI.closedTabs[id] = nil
             model.leaveTab(id)
             Log.info("tabs: window \(id) hid when it was closed; it left its tabs")
         }
-        if !closedTabs.isEmpty { scheduleRefresh(after: 0.3) }
+        if !tabUI.closedTabs.isEmpty { scheduleRefresh(after: 0.3) }
     }
 }
 
 extension WindowManager {
     func cancelTabDrop() -> Bool {
-        guard let id = draggedTab ?? drags.first?.key, !tabDropCancelled,
+        guard let id = tabUI.draggedTab ?? drags.first?.key, !tabUI.tabDropCancelled,
               TabDropHint.shared.showing || TabStrips.shared.isPreviewing else { return false }
-        tabDropCancelled = true
+        tabUI.tabDropCancelled = true
         trackTabHover(nil)
         _ = TabStrips.shared.endPreview(of: id)
         TabDropHint.shared.hide()

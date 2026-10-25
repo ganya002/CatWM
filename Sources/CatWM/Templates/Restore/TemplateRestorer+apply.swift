@@ -149,7 +149,7 @@ extension TemplateRestorer {
             window.naturalFrame = frame
             manager.model.assign(window.id, to: manager.workspaceKey(for: screen))
             manager.displayOf[window.id] = screen.uuid
-            manager.floatFrames[window.id] = nil
+            manager.floats.floatFrames[window.id] = nil
             manager.targets[window.id] = nil
             manager.corrections[window.id] = nil
             manager.present.insert(window.id)

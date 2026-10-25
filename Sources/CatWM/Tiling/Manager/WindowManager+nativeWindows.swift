@@ -2,7 +2,7 @@ import AppKit
 
 extension WindowManager {
     func assignManagedWindow(_ id: CGWindowID, to workspace: String?) {
-        guard config.virtualWorkspaces, let workspace, nativeCatalog.entry(workspace) != nil,
+        guard config.virtualWorkspaces, let workspace, desktops.nativeCatalog.entry(workspace) != nil,
               let window = windows[id] else {
             model.assign(id, to: workspace)
             return
@@ -13,8 +13,8 @@ extension WindowManager {
     func moveNativeWindow(_ window: Window, to workspace: String, follow: Bool, from origin: String?? = nil) {
         updateNativeCatalog(Screen.all())
         guard !workspaceMoves.contains(window.id) else { return }
-        guard !window.fullscreenUnlessStalled else { nativeMoveTargets[window.id] = nil; return }
-        guard !nativeCreationBusy, let target = nativeCatalog.entry(workspace) else {
+        guard !window.fullscreenUnlessStalled else { desktops.nativeMoveTargets[window.id] = nil; return }
+        guard !desktops.nativeCreationBusy, let target = desktops.nativeCatalog.entry(workspace) else {
             createWorkspaceThenMove(window, to: workspace, follow: follow)
             return
         }
@@ -26,7 +26,8 @@ extension WindowManager {
         workspaceMoves.insert(window.id)
         if follow, !visibleTarget {
             animator.cancel(window.id)
-            followMoves[window.id] = .init(window: window, workspace: workspace, space: target.space, from: from)
+            desktops.followMoves[window.id] = .init(window: window, workspace: workspace, space: target.space,
+                                                    from: from)
             showWorkspace(workspace, focusing: window)
             return
         }
@@ -48,7 +49,7 @@ extension WindowManager {
                 guard let self else { displayBatch?.finish(); return }
                 defer { displayBatch?.finish() }
                 workspaceMoves.remove(window.id)
-                nativeMoveTargets[window.id] = nil
+                desktops.nativeMoveTargets[window.id] = nil
                 guard moved || Spaces.of(window: window.id) == [target.space], window.isValidUnlessStalled else {
                     rollBackNativeMove(window, from: from, known: known, frame: visibleTarget ? frame : nil)
                     return
@@ -56,15 +57,15 @@ extension WindowManager {
                 let held = Int(Date().timeIntervalSince(started) * 1000)
                 Log.info("native workspaces: moved window \(window.id) to workspace \(workspace) in \(held) ms")
                 completeNativeMigration(window.id, workspace: workspace)
-                nativeMembership[window.id] = target.space
+                desktops.nativeMembership[window.id] = target.space
                 assignWindow(window, toWorkspace: workspace, from: from, follow: follow, handOffFocus: hadFocus)
             }
         }
     }
 
-    @MainActor func completeFollowMove(_ move: FollowMove) async throws {
+    @MainActor func completeFollowMove(_ move: NativeDesktopState.FollowMove) async throws {
         let id = move.window.id
-        followMoves[id] = nil
+        desktops.followMoves[id] = nil
         let moved = await withCheckedContinuation { done in
             Spaces.move(window: id, to: move.space) { done.resume(returning: $0) }
         }
@@ -74,13 +75,13 @@ extension WindowManager {
         }
         Log.info("native workspaces: moved window \(id) to workspace \(move.workspace)")
         completeNativeMigration(id, workspace: move.workspace)
-        nativeMembership[id] = move.space
+        desktops.nativeMembership[id] = move.space
         assignWindow(move.window, toWorkspace: move.workspace, from: move.from, follow: false, handOffFocus: false)
     }
 
     func dropFollowMoves() {
-        workspaceMoves.subtract(followMoves.keys)
-        followMoves = [:]
+        workspaceMoves.subtract(desktops.followMoves.keys)
+        desktops.followMoves = [:]
         arrivals = [:]
     }
 
@@ -95,20 +96,20 @@ extension WindowManager {
 
     private func createWorkspaceThenMove(_ window: Window, to workspace: String, follow: Bool) {
         guard let screen = currentScreen() ?? Screen.all().first else { return }
-        nativeMoveTargets[window.id] = workspace
+        desktops.nativeMoveTargets[window.id] = workspace
         Task { @MainActor in
             do {
                 _ = try await self.ensureNativeWorkspace(workspace, on: screen, while: {
-                    self.nativeMoveTargets[window.id] == workspace
+                    self.desktops.nativeMoveTargets[window.id] == workspace
                 })
-                guard self.nativeMoveTargets[window.id] == workspace else { return }
-                self.nativeMoveTargets[window.id] = nil
+                guard self.desktops.nativeMoveTargets[window.id] == workspace else { return }
+                self.desktops.nativeMoveTargets[window.id] = nil
                 guard window.isValidUnlessStalled else { return }
                 self.moveNativeWindow(window, to: workspace, follow: follow)
             } catch is CancellationError { } catch {
                 Log.info("native workspaces: move \(window.id) to \(workspace) failed: "
                     + error.localizedDescription)
-                self.nativeMoveTargets[window.id] = nil
+                self.desktops.nativeMoveTargets[window.id] = nil
                 HUD.shared.show(error.localizedDescription, on: screen.nsScreen)
                 self.scheduleRefresh(after: 0)
             }
@@ -118,44 +119,46 @@ extension WindowManager {
     @MainActor func ensureNativeWorkspace(_ name: String, on screen: Screen,
                                           while current: () -> Bool = { true }) async throws
         -> NativeWorkspaceCatalog.Entry {
-        let free = await poll(5, every: 30_000_000) { !current() || !(nativeCreationBusy || nativeDesktop.isRunning) }
+        let free = await poll(5, every: 30_000_000) {
+            !current() || !(desktops.nativeCreationBusy || nativeDesktop.isRunning)
+        }
         guard current() else { throw CancellationError() }
         guard free else { throw DesktopTransitionError.check("The previous Desktop action did not finish") }
         guard let snapshot = updateNativeCatalog(Screen.all()) else {
             throw DesktopTransitionError.check("macOS could not read the Desktops")
         }
-        if let entry = nativeCatalog.entry(name) { return entry }
+        if let entry = desktops.nativeCatalog.entry(name) { return entry }
         guard !name.isEmpty, !isPending(name), isVirtual(name) else {
             throw DesktopTransitionError.check("This workspace name is unavailable")
         }
-        nativeCreationBusy = true
-        defer { nativeCreationBusy = false; scheduleRefresh(after: 0) }
+        desktops.nativeCreationBusy = true
+        defer { desktops.nativeCreationBusy = false; scheduleRefresh(after: 0) }
         let number = Int(WorkspaceKey.number(name)) ?? 0
         var latest = snapshot
         repeat {
-            let created = try await DesktopLifecycle.create(on: screen, snapshot: latest,
-                                                            before: nativeCatalog.successor(of: name, on: screen.uuid))
-            if !config.workspacesPerDisplay { nativeCatalog.bind(name, to: created.space, on: screen.uuid) }
+            let successor = desktops.nativeCatalog.successor(of: name, on: screen.uuid)
+            let created = try await DesktopLifecycle.create(on: screen, snapshot: latest, before: successor)
+            if !config.workspacesPerDisplay { desktops.nativeCatalog.bind(name, to: created.space, on: screen.uuid) }
             latest = created.snapshot
             updateNativeCatalog(Screen.all(), snapshot: latest)
-        } while config.workspacesPerDisplay && nativeCatalog.entry(name) == nil
-            && nativeCatalog.entries(on: screen.uuid).count < number
-        guard let entry = nativeCatalog.entry(name) else {
+        } while config.workspacesPerDisplay && desktops.nativeCatalog.entry(name) == nil
+            && desktops.nativeCatalog.entries(on: screen.uuid).count < number
+        guard let entry = desktops.nativeCatalog.entry(name) else {
             throw DesktopTransitionError.check("The Desktop disappeared")
         }
         return entry
     }
 
     func commitNativeRemovals() {
-        let removed = nativeDroppedWorkspaces
+        let removed = desktops.nativeDroppedWorkspaces
         guard !removed.isEmpty else { return }
         Task { @MainActor in
             guard await poll(5, every: 50_000_000, until: {
-                !self.nativeDesktop.isRunning && !self.nativeCreationBusy && self.workspaceMoves.isEmpty
+                !self.nativeDesktop.isRunning && !self.desktops.nativeCreationBusy && self.workspaceMoves.isEmpty
             }) else { return }
-            self.nativeCreationBusy = true
-            defer { self.nativeCreationBusy = false; self.scheduleRefresh(after: 0) }
-            let entries = removed.compactMap { self.nativeCatalog.entry($0) }
+            self.desktops.nativeCreationBusy = true
+            defer { self.desktops.nativeCreationBusy = false; self.scheduleRefresh(after: 0) }
+            let entries = removed.compactMap { self.desktops.nativeCatalog.entry($0) }
                 .sorted { (Int(WorkspaceKey.number($0.name)) ?? 0) > (Int(WorkspaceKey.number($1.name)) ?? 0) }
             for entry in entries {
                 guard let screen = Screen.all().first(where: { $0.uuid == entry.display }) else { continue }
@@ -166,7 +169,7 @@ extension WindowManager {
                     HUD.shared.show(error.localizedDescription, on: screen.nsScreen)
                 }
             }
-            self.nativeDroppedWorkspaces.subtract(removed)
+            self.desktops.nativeDroppedWorkspaces.subtract(removed)
         }
     }
 }

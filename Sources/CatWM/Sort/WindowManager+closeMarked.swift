@@ -7,7 +7,7 @@ extension WindowManager {
         for id in ids {
             guard let window = windows[id], window.isValidUnlessStalled else { continue }
             let name = NSRunningApplication(processIdentifier: window.pid)?.bundleIdentifier ?? "pid \(window.pid)"
-            lastClose = Date()
+            closeAndSort.lastClose = Date()
             var outcome = window.close()
             if outcome != "pressed", attempt > 0, focusedWindow()?.id == id {
                 outcome += window.closeFromMenu() ? ", menu Close Window chosen" : ", no menu item"
@@ -67,7 +67,7 @@ extension WindowManager {
                 continue
             }
             Log.info("sort: force quitting \(name) for window \(id)")
-            lastClose = Date()
+            closeAndSort.lastClose = Date()
             NSRunningApplication(processIdentifier: window.pid)?.forceTerminate()
             forced.insert(id)
         }
@@ -117,24 +117,24 @@ extension WindowManager {
     }
 
     func stopClosing(_ ids: [CGWindowID]) {
-        closingNow.subtract(ids)
+        closeAndSort.closingNow.subtract(ids)
         releasePending(Set(ids))
         quitWindowless()
     }
 
     func quitWindowless() {
-        for pid in closingApps {
+        for pid in closeAndSort.closingApps {
             guard let app = NSRunningApplication(processIdentifier: pid), !app.isTerminated else {
-                closingApps.remove(pid)
+                closeAndSort.closingApps.remove(pid)
                 continue
             }
             guard app.activationPolicy == .regular, app.bundleIdentifier != "com.apple.finder" else {
-                closingApps.remove(pid)
+                closeAndSort.closingApps.remove(pid)
                 continue
             }
             let known = windows.values.contains { $0.pid == pid && $0.isValidUnlessStalled }
             guard !known, Self.hasNoWindows(pid) else { continue }
-            closingApps.remove(pid)
+            closeAndSort.closingApps.remove(pid)
             let name = app.bundleIdentifier ?? "pid \(pid)"
             Log.info("sort: \(name) has no windows left; quitting it")
             app.terminate()
@@ -147,15 +147,15 @@ extension WindowManager {
     }
 
     func revertSort() {
-        sortSession = false
-        if let snapshot = sortSnapshot { restoreSort(snapshot) }
-        sortSnapshot = nil
+        closeAndSort.sortSession = false
+        if let snapshot = closeAndSort.sortSnapshot { restoreSort(snapshot) }
+        closeAndSort.sortSnapshot = nil
         releasePending()
     }
 
     func releasePending(_ ids: Set<CGWindowID>? = nil) {
         let waiting = workspaceOf.filter {
-            isPending($0.value) && (ids?.contains($0.key) ?? !closingNow.contains($0.key))
+            isPending($0.value) && (ids?.contains($0.key) ?? !closeAndSort.closingNow.contains($0.key))
         }
         let screens = Screen.all()
         for (id, key) in waiting {
@@ -172,23 +172,24 @@ extension WindowManager {
     }
 
     func endSort() {
-        sortSession = false
+        closeAndSort.sortSession = false
         releasePending()
     }
 
     @discardableResult
     func undoSort() -> Bool {
-        guard config.virtualWorkspaces, !sortSession, let snapshot = sortSnapshot else { return false }
-        sortSnapshot = nil
+        guard config.virtualWorkspaces, !closeAndSort.sortSession,
+              let snapshot = closeAndSort.sortSnapshot else { return false }
+        closeAndSort.sortSnapshot = nil
         restoreSort(snapshot)
         return true
     }
 
     func restoreSort(_ snapshot: SortSnapshot) {
-        nativeDroppedWorkspaces = []
+        desktops.nativeDroppedWorkspaces = []
         let saved = snapshot.model
         var moves: [CGWindowID: String] = [:]
-        for (id, workspace) in saved.workspaceOf where windows[id] != nil && !closingNow.contains(id) {
+        for (id, workspace) in saved.workspaceOf where windows[id] != nil && !closeAndSort.closingNow.contains(id) {
             if workspaceOf[id] != workspace, let window = windows[id] {
                 moveNativeWindow(window, to: workspace, follow: false)
             }
@@ -213,8 +214,8 @@ extension WindowManager {
             lastFocused[workspace] = id
         }
         corrections = [:]
-        quietWorkspaceHUD = true
-        defer { quietWorkspaceHUD = false }
+        closeAndSort.quietWorkspaceHUD = true
+        defer { closeAndSort.quietWorkspaceHUD = false }
         for (display, workspace) in saved.virtualShown where virtualShown[display] != workspace {
             showWorkspace(workspace, focus: false)
         }

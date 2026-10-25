@@ -68,11 +68,12 @@ extension WindowManager {
             forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
         ) { [weak self] note in
             let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
-            if let self, let echo = focusEcho, echo.matches(app?.processIdentifier), let window = windows[echo.id] {
+            if let self, let echo = focusRequests.focusEcho, echo.matches(app?.processIdentifier),
+               let window = windows[echo.id] {
                 focus(window, warp: false)
                 return
             }
-            if self?.pendingFocus == nil { self?.animator.cancelFocus() }
+            if self?.focusRequests.pendingFocus == nil { self?.animator.cancelFocus() }
             self?.requestFocusObservation()
         })
     }
@@ -97,7 +98,7 @@ extension WindowManager {
         observing.removeValue(forKey: pid)
         windows.values.filter { $0.pid == pid }.forEach { self.forget($0.id, keepRecovery: true) }
         animator.terminated(pid)
-        focusReader.terminated(pid)
+        focusRequests.focusReader.terminated(pid)
         scheduleRefresh()
     }
 
@@ -168,8 +169,8 @@ extension WindowManager {
         Switcher.shared.install()
         nativeGestures.enabled = { [weak self] in
             guard let self else { return false }
-            return self.config.virtualWorkspaces && !Hotkeys.shared.paused && !self.sortSession
-                && !self.nativeCreationBusy
+            return self.config.virtualWorkspaces && !Hotkeys.shared.paused && !self.closeAndSort.sortSession
+                && !self.desktops.nativeCreationBusy
         }
         nativeGestures.receive = { [weak self] in self?.handleNativeSwipe($0) }
         nativeGestures.interrupted = { [weak self] in self?.nativeDesktop.endGesture(commit: false) }
@@ -187,7 +188,7 @@ extension WindowManager {
             tilingRecovery = TilingRecovery()
             if wasVirtual { restoreHiddenWindows() }
             model.resetWorkspaces()
-            labels = [:]; sortSnapshot = nil; closingNow = []; closingApps = []
+            labels = [:]; closeAndSort.sortSnapshot = nil; closeAndSort.closingNow = []; closeAndSort.closingApps = []
             SortPanel.shared.abandon()
             Log.info("workspaces: \(config.virtualWorkspaces ? "CatWM workspaces" : "macOS Spaces")")
         } else if wasPerDisplay != config.workspacesPerDisplay {

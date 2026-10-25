@@ -1,8 +1,19 @@
 import AppKit
 
+struct DividerState {
+    struct DividerDrag {
+        let screen: String
+        let startRatio: CGFloat
+        var position: CGFloat?
+    }
+
+    var dividerDrag: DividerDrag?
+    var ratioChange: (screen: String, until: Date)?
+}
+
 extension WindowManager {
     func splitDivider(on screen: Screen) -> SplitDivider? {
-        guard config.splitHandle, isStarted, tilingEnabled, !sortSession else { return nil }
+        guard config.splitHandle, isStarted, tilingEnabled, !closeAndSort.sortSession else { return nil }
         let screenState = state(for: screen)
         guard screenState.zoomed == nil else { return nil }
         let ids = splitIDs(on: screen)
@@ -15,13 +26,14 @@ extension WindowManager {
     }
 
     func beginDividerDrag(on screen: Screen) {
-        dividerDrag = DividerDrag(screen: screen.uuid, startRatio: state(for: screen).ratio)
+        dividerState.dividerDrag = .init(screen: screen.uuid, startRatio: state(for: screen).ratio)
     }
 
     func moveDivider(on screen: Screen, to position: CGFloat) {
-        guard var drag = dividerDrag, drag.screen == screen.uuid, let divider = splitDivider(on: screen) else { return }
+        guard var drag = dividerState.dividerDrag, drag.screen == screen.uuid,
+              let divider = splitDivider(on: screen) else { return }
         drag.position = position
-        dividerDrag = drag
+        dividerState.dividerDrag = drag
         let screenState = state(for: screen), ids = splitIDs(on: screen)
         let wanted = divider.ratio(at: position, in: usableRect(screen), gap: windowGap(count: ids.count))
         let ratio = allowedRatio(from: drag.startRatio, to: wanted, ids: ids, on: screen, screenState)
@@ -32,8 +44,8 @@ extension WindowManager {
     }
 
     func endDividerDrag() {
-        guard dividerDrag != nil else { return }
-        dividerDrag = nil
+        guard dividerState.dividerDrag != nil else { return }
+        dividerState.dividerDrag = nil
         animator.endFollow()
         corrections = [:]
         refresh()

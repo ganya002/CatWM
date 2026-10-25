@@ -49,7 +49,7 @@ final class TabStrips {
             for screen in Screen.all() {
                 for id in manager.tiled(on: screen) {
                     guard let group = manager.tabs.group(of: id), let target = manager.targets[id],
-                          !placed.contains(group.id), !manager.minimizingTabs.contains(group.id) else { continue }
+                          !placed.contains(group.id), !manager.tabUI.minimizingTabs.contains(group.id) else { continue }
                     placed.insert(group.id)
                     let strip = strips[group.id] ?? Strip()
                     strips[group.id] = strip
