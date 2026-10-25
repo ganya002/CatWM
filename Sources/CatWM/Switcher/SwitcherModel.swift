@@ -12,6 +12,7 @@ final class SwitcherModel: ObservableObject {
     @Published var peeking = false
     @Published var selection = 0
     @Published var shown = false
+    var barLimit: CGFloat?
     var onPick: ((SwitcherItem) -> Void)?
     var onDismiss: (() -> Void)?
     private var icons: [pid_t: NSImage] = [:]

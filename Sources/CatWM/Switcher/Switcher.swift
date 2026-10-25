@@ -230,6 +230,9 @@ final class Switcher {
     private func layout() {
         guard let panel, let screen = WindowManager.shared.focusedScreen ?? CatWMPanel.pointerScreen() else { return }
         let visible = screen.visibleFrame
+        let millimeters = screen.displayID.map { CGDisplayScreenSize($0).width } ?? 0
+        model.barLimit = millimeters > 0
+            ? SwitcherView.Tile.widestMillimeters * screen.frame.width / millimeters : nil
         panel.place(size: visible.size, on: screen, anchor: .origin(visible.origin))
     }
 

@@ -2,15 +2,19 @@ import AppKit
 import SwiftUI
 
 extension SwitcherView {
-    func bar(height: CGFloat, room: CGSize) -> some View {
+    func bar(_ layout: BarLayout) -> some View {
         VStack(spacing: Theme.Space.extraSmall) {
-            HStack(spacing: 0) {
-                ForEach(Array(model.results.enumerated()), id: \.element.id) { index, item in
-                    barTile(item, size: Self.tileSize(item, height: height, room: room),
-                            selected: index == model.selection)
+            if layout.scrolls {
+                ScrollViewReader { proxy in
+                    ScrollView(.horizontal) { tiles(layout) }
+                        .scrollIndicators(.never)
+                        .onChange(of: model.selection) { _, _ in
+                            if let id = model.selected?.id { withAnimation(change) { proxy.scrollTo(id) } }
+                        }
                 }
+            } else {
+                tiles(layout)
             }
-            .animation(change, value: model.selection)
             if model.selected == nil {
                 Text("No windows").textStyle(.caption).foregroundStyle(Theme.inkMuted).frame(height: Theme.rowHeight)
             } else {
@@ -30,6 +34,16 @@ extension SwitcherView {
                 }
             }
         }
+    }
+
+    private func tiles(_ layout: BarLayout) -> some View {
+        HStack(spacing: 0) {
+            ForEach(Array(zip(model.results, layout.widths).enumerated()), id: \.element.0.id) { index, tile in
+                barTile(tile.0, size: CGSize(width: tile.1, height: layout.height), selected: index == model.selection)
+                    .id(tile.0.id)
+            }
+        }
+        .animation(change, value: model.selection)
     }
 
     private func barTile(_ item: SwitcherItem, size: CGSize, selected: Bool) -> some View {
@@ -71,6 +85,8 @@ extension SwitcherView {
                 shape.fill(Theme.well)
                 if let shot = model.previews[item.id] {
                     Image(nsImage: shot).resizable().interpolation(.medium).scaledToFit()
+                        .frame(maxWidth: item.size.width > 0 ? item.size.width : nil,
+                               maxHeight: item.size.height > 0 ? item.size.height : nil)
                         .clipShape(shape)
                         .matchedGeometryEffect(id: "shot\(item.id)", in: morph)
                         .transition(.opacity)

@@ -12,6 +12,10 @@ struct SwitcherView: View {
         static let inner = Theme.Space.small
         static let barShare: CGFloat = 1 / 3
         static let barWidthShare: CGFloat = 2 / 3
+        static let widestMillimeters: CGFloat = 600
+        static let shortestShare: CGFloat = 1 / 3
+        static let narrowShare: CGFloat = 0.09
+        static let wideShare: CGFloat = 0.3
         static let iconShare: CGFloat = 1 / 2
         static let badgeShare: CGFloat = 1 / 5
     }
@@ -45,22 +49,43 @@ struct SwitcherView: View {
         return size.width / size.height
     }
 
-    static func barHeight(_ items: [SwitcherItem], room: CGSize) -> CGFloat {
-        let wide = (room.width * Tile.barWidthShare - CGFloat(items.count) * Tile.inner * 2)
-            / max(items.map { aspect($0, room: room) }.reduce(0, +), 1)
-        return min(wide, (room.height - Theme.rowHeight) * Tile.barShare).rounded(.down)
+    struct BarLayout {
+        let height: CGFloat
+        let widths: [CGFloat]
+        let width: CGFloat
+        let scrolls: Bool
     }
 
-    static func tileSize(_ item: SwitcherItem, height: CGFloat, room: CGSize) -> CGSize {
-        CGSize(width: (height * aspect(item, room: room)).rounded(.down) + Tile.inner * 2,
-               height: height + Tile.inner * 2)
+    static func barLayout(_ items: [SwitcherItem], room: CGSize, limit: CGFloat?) -> BarLayout {
+        let widest = min(room.width * Tile.barWidthShare, limit ?? room.width)
+        let aspects = items.map { aspect($0, room: room) }
+        func widths(_ height: CGFloat) -> [CGFloat] {
+            aspects.map { aspect in
+                min(max(height * aspect, widest * Tile.narrowShare), widest * Tile.wideShare).rounded(.down)
+                    + Tile.inner * 2
+            }
+        }
+        let tallest = ((room.height - Theme.rowHeight) * Tile.barShare).rounded(.down)
+        var low = (tallest * Tile.shortestShare).rounded(.down), high = tallest
+        if widths(high).reduce(0, +) <= widest { low = high }
+        while high - low > 1 {
+            let middle = ((low + high) / 2).rounded(.down)
+            if widths(middle).reduce(0, +) <= widest { low = middle } else { high = middle }
+        }
+        let tiles = widths(low), total = tiles.reduce(0, +)
+        return BarLayout(height: low + Tile.inner * 2, widths: tiles, width: min(total, widest),
+                         scrolls: total > widest)
+    }
+
+    static func barCardHeight(_ layout: BarLayout) -> CGFloat {
+        layout.height + Theme.Space.extraSmall + Theme.rowHeight + inset * 2
     }
 
     var mode: Mode { model.searching ? .search : model.peeking ? .peek : .bar }
 
     var body: some View {
         GeometryReader { space in
-            ZStack {
+            ZStack(alignment: .top) {
                 Color.clear.contentShape(Rectangle()).onTapGesture { model.onDismiss?() }
                 card(room: Self.room(space.size))
                     .opacity(model.shown ? 1 : 0)
@@ -68,7 +93,7 @@ struct SwitcherView: View {
                     .animation(animated ? model.shown ? Motion.fade : Motion.exit : nil, value: model.shown)
             }
             .padding(Self.margin)
-            .frame(width: space.size.width, height: space.size.height)
+            .frame(width: space.size.width, height: space.size.height, alignment: .top)
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Window switcher")
@@ -79,27 +104,33 @@ struct SwitcherView: View {
     var fade: Animation? { animated ? Motion.fade : nil }
 
     private func card(room: CGSize) -> some View {
-        let height = Self.barHeight(model.results, room: room)
+        let layout = Self.barLayout(model.results, room: room, limit: model.barLimit)
         let peekScale = Self.peekScale(model.results, room: room)
         let peek = model.selected.map { Self.scaled(Self.windowSize($0, room: room), by: peekScale) } ?? .zero
+        let space = room.height + Self.inset * 2
+        let top: CGFloat = switch mode {
+        case .bar: (space - Self.barCardHeight(layout)) / 2
+        case .search: (space - Self.barCardHeight(Self.barLayout(model.pool, room: room, limit: model.barLimit))) / 2
+        case .peek: (space - peek.height - Self.inset * 2) / 2
+        }
         return VStack(spacing: 0) {
             switch mode {
-            case .bar: bar(height: height, room: room)
+            case .bar: bar(layout)
             case .search: search(room: room)
             case .peek: self.peek(peek)
             }
         }
         .transition(.opacity)
-        .frame(width: width(height: height, peek: peek, room: room))
+        .frame(width: width(layout, peek: peek))
         .surface(.medium)
+        .padding(.top, max(top.rounded(), 0))
         .animation(change, value: mode)
+        .animation(change, value: top)
     }
 
-    private func width(height: CGFloat, peek: CGSize, room: CGSize) -> CGFloat? {
+    private func width(_ layout: BarLayout, peek: CGSize) -> CGFloat? {
         switch mode {
-        case .bar:
-            model.results.isEmpty ? nil
-                : model.results.map { Self.tileSize($0, height: height, room: room).width }.reduce(0, +)
+        case .bar: model.results.isEmpty ? nil : layout.width
         case .search: Self.searchWidth - Self.inset * 2
         case .peek: peek.width
         }

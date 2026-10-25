@@ -44,15 +44,31 @@ import Testing
     }
 
     @Test func barTilesShareOneHeightAndFitTheRoom() {
-        let room = CGSize(width: 1000, height: 900)
+        let room = CGSize(width: 3000, height: 900)
         let items = [CGSize(width: 1600, height: 1000), CGSize(width: 400, height: 500)].enumerated().map {
             SwitcherItem(id: CGWindowID($0 + 1), pid: 1, app: "App", title: "", size: $1)
         }
-        let height = SwitcherView.barHeight(items, room: room)
-        let tiles = items.map { SwitcherView.tileSize($0, height: height, room: room) }
-        #expect(tiles.map(\.width).reduce(0, +) <= room.width * SwitcherView.Tile.barWidthShare)
-        #expect(tiles[0].height == tiles[1].height)
-        #expect(tiles[0].width > tiles[1].width * 1.9)
+        let layout = SwitcherView.barLayout(items, room: room, limit: nil)
+        #expect(layout.widths.reduce(0, +) <= room.width * SwitcherView.Tile.barWidthShare)
+        #expect(!layout.scrolls)
+        #expect(layout.widths[0] > layout.widths[1] * 1.9)
+        #expect(SwitcherView.barLayout(items, room: room, limit: 300).width <= 300)
+    }
+
+    @Test func barTileWidthsStayInTheirLimitsAndManyTilesScroll() {
+        let room = CGSize(width: 1500, height: 900), widest = room.width * SwitcherView.Tile.barWidthShare
+        let wide = SwitcherItem(id: 1, pid: 1, app: "App", title: "", size: CGSize(width: 4000, height: 500))
+        let thin = SwitcherItem(id: 2, pid: 1, app: "App", title: "", size: CGSize(width: 100, height: 1000))
+        let layout = SwitcherView.barLayout([wide, thin], room: room, limit: nil)
+        let inner = SwitcherView.Tile.inner * 2
+        #expect(layout.widths[0] - inner <= widest * SwitcherView.Tile.wideShare)
+        #expect(layout.widths[1] - inner >= (widest * SwitcherView.Tile.narrowShare).rounded(.down))
+        let many = (1...40).map { SwitcherItem(id: CGWindowID($0), pid: 1, app: "App", title: "", size: wide.size) }
+        let crowded = SwitcherView.barLayout(many, room: room, limit: nil)
+        #expect(crowded.scrolls)
+        #expect(crowded.width == widest)
+        #expect(crowded.height - inner == (((room.height - Theme.rowHeight) * SwitcherView.Tile.barShare).rounded(.down)
+            * SwitcherView.Tile.shortestShare).rounded(.down))
     }
 
     private static func fakeWindow(index: Int, size: CGSize) -> NSImage {
