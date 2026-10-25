@@ -141,6 +141,7 @@ var focusEcho: FocusEcho?
     var draggedTab: CGWindowID?
     var tabDropCancelled = false
     var parkedTabs: Set<CGWindowID> = []
+    var closedTabs: [CGWindowID: Date] = [:]
     var tabFollow: (previous: CGWindowID, at: Date)?
     var refreshWork: DispatchWorkItem?
     var minSizes: [CGWindowID: CGSize] = [:]

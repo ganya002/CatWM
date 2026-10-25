@@ -124,6 +124,7 @@ extension WindowManager {
     }
 
     func settleTabs() {
+        dropHiddenOnClose()
         guard !tabs.isEmpty else { return }
         for group in tabs.groups {
             for member in group.members where windows[member]?.isFloating != false {

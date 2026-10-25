@@ -114,6 +114,7 @@ extension WindowManager {
 func closeWindow(_ id: CGWindowID) -> Bool {
         guard let window = windows[id] else { return false }
         lastClose = Date()
+        markClosedTab(id)
         scanner.run(window.pid) { window.close() }
         return true
     }
