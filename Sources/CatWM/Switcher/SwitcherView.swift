@@ -11,6 +11,7 @@ struct SwitcherView: View {
     enum Tile {
         static let inner = Theme.Space.small
         static let barShare: CGFloat = 1 / 3
+        static let barWidthShare: CGFloat = 2 / 3
         static let iconShare: CGFloat = 1 / 2
         static let badgeShare: CGFloat = 1 / 5
     }
@@ -45,7 +46,7 @@ struct SwitcherView: View {
     }
 
     static func barHeight(_ items: [SwitcherItem], room: CGSize) -> CGFloat {
-        let wide = (room.width - CGFloat(items.count) * Tile.inner * 2)
+        let wide = (room.width * Tile.barWidthShare - CGFloat(items.count) * Tile.inner * 2)
             / max(items.map { aspect($0, room: room) }.reduce(0, +), 1)
         return min(wide, (room.height - Theme.rowHeight) * Tile.barShare).rounded(.down)
     }

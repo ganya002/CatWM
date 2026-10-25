@@ -50,7 +50,7 @@ import Testing
         }
         let height = SwitcherView.barHeight(items, room: room)
         let tiles = items.map { SwitcherView.tileSize($0, height: height, room: room) }
-        #expect(tiles.map(\.width).reduce(0, +) <= room.width)
+        #expect(tiles.map(\.width).reduce(0, +) <= room.width * SwitcherView.Tile.barWidthShare)
         #expect(tiles[0].height == tiles[1].height)
         #expect(tiles[0].width > tiles[1].width * 1.9)
     }
