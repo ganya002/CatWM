@@ -39,11 +39,11 @@ private final class RecordingSurface: TilingSurface {
 
 @Suite struct TilingSurfaceTests {
     @Test @MainActor func theEngineRunsHeadlessByDefault() {
-        #expect(WindowManager().surface is HeadlessSurface)
+        #expect(WindowManager(config: .parse(defaultText)).surface is HeadlessSurface)
     }
 
     @Test @MainActor func toggleTilingShowsItsStateOnTheSurface() {
-        let manager = WindowManager()
+        let manager = WindowManager(config: .parse(defaultText))
         let surface = RecordingSurface()
         manager.surface = surface
         manager.toggleTiling()
@@ -52,7 +52,7 @@ private final class RecordingSurface: TilingSurface {
     }
 
     @Test @MainActor func dispatchReadsTheModeFromTheSurface() {
-        let manager = WindowManager()
+        let manager = WindowManager(config: .parse(defaultText))
         let surface = RecordingSurface()
         manager.surface = surface
         var modes: [Bool] = []
@@ -65,7 +65,7 @@ private final class RecordingSurface: TilingSurface {
     }
 
     @Test @MainActor func escapeCancelsAShownTabDrop() {
-        let manager = WindowManager()
+        let manager = WindowManager(config: .parse(defaultText))
         let surface = RecordingSurface()
         manager.surface = surface
         manager.drags[7] = false

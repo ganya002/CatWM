@@ -81,7 +81,7 @@ extension WindowManager {
             group.enter()
             scanner.run(window.pid) { [weak self] in
                 let readAt = Date()
-                let frame = window.element.frame
+                let frame = window.backend.frame(of: window)
                 DispatchQueue.main.async {
                     if let self, self.windows[window.id] === window, !self.animator.isBusy(window.id) {
                         window.remember(frame, ifRevision: revision, readAt: readAt)
@@ -100,7 +100,7 @@ extension WindowManager {
         let revision = window.frameRevision
         scanner.run(window.pid) { [weak self] in
             let readAt = Date()
-            let frame = window.element.frame
+            let frame = window.backend.frame(of: window)
             DispatchQueue.main.async {
                 guard let self, self.frameReads[window.id] == token else { return }
                 self.frameReads[window.id] = nil

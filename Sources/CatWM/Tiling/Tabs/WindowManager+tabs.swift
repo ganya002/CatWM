@@ -142,7 +142,7 @@ extension WindowManager {
               !window.cachedFrame.isNull else { return }
         let offset = CGVector(dx: window.cachedFrame.minX - slot.minX, dy: window.cachedFrame.minY - slot.minY)
         let travelled = abs(offset.dx) + abs(offset.dy)
-        let screens = Screen.all()
+        let screens = backend.screens()
         for member in group.members where member != window.id && !tabUI.parkedTabs.contains(member) {
             guard let tab = windows[member], !tab.minimized, !tab.isFloating,
                   tab.pid != window.pid || travelled > Self.tabDragSlack else { continue }
@@ -283,7 +283,9 @@ extension WindowManager {
     }
 
     func tiledSlotOwner(at point: CGPoint) -> CGWindowID? {
-        guard tilingEnabled, let screen = Screen.all().first(where: { $0.frame.contains(point) }) else { return nil }
+        guard tilingEnabled, let screen = backend.screens().first(where: { $0.frame.contains(point) }) else {
+            return nil
+        }
         return tiled(on: screen).first { targets[$0]?.contains(point) == true }
     }
 
@@ -295,7 +297,9 @@ extension WindowManager {
 
     private func tabHost(for id: CGWindowID, at point: CGPoint,
                          zone: (CGWindowID, CGRect) -> CGRect) -> CGWindowID? {
-        guard tilingEnabled, let screen = Screen.all().first(where: { $0.frame.contains(point) }) else { return nil }
+        guard tilingEnabled, let screen = backend.screens().first(where: { $0.frame.contains(point) }) else {
+            return nil
+        }
         return tiled(on: screen).first { host in
             guard host != id, tabs.group(of: host)?.members.contains(id) != true,
                   let slot = targets[host] else { return false }

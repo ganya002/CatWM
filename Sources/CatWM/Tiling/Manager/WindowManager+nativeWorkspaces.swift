@@ -91,7 +91,7 @@ extension WindowManager {
     var sharesSpaces: Bool { config.virtualWorkspaces && desktops.nativeCatalog.sharedSpaces }
 
     private func showCurrentWorkspaces(_ screens: [Screen]) {
-        let spaces = screens.map { Spaces.current(display: $0.uuid) }
+        let spaces = screens.map { backend.currentSpace(display: $0.uuid) }
         let current = zip(screens, spaces).map { screen, space in
             (display: screen.uuid, space: desktops.nativeCatalog.sharedSpaces ? spaces[0] : space)
         }
@@ -116,10 +116,10 @@ extension WindowManager {
 
     func showNativeWorkspace(_ workspace: String, focusing preferred: Window?, focus takesFocus: Bool, quiet: Bool) {
         let requestedAt = CACurrentMediaTime()
-        updateNativeCatalog(Screen.all())
+        updateNativeCatalog(backend.screens())
         desktops.nativeWorkspaceGeneration += 1
         let generation = desktops.nativeWorkspaceGeneration
-        let screen = currentScreen() ?? Screen.all().first
+        let screen = currentScreen() ?? backend.screens().first
         guard !desktops.nativeCreationBusy, let entry = desktops.nativeCatalog.entry(workspace) else {
             guard let screen else { return }
             nativeDesktop.stop()
@@ -155,7 +155,8 @@ extension WindowManager {
             scanner.desktop.spaces[window.id].flatMap { $0.count == 1 ? $0.first : nil }
         })
         let empty = desktops.nativeCatalog.entries.filter {
-            !held.contains($0.name) && !occupied.contains($0.space) && Spaces.current(display: $0.display) != $0.space
+            !held.contains($0.name) && !occupied.contains($0.space)
+                && backend.currentSpace(display: $0.display) != $0.space
         }
         if config.workspacesPerDisplay {
             func number(_ entry: NativeWorkspaceCatalog.Entry) -> Int { Int(WorkspaceKey.number(entry.name)) ?? 0 }
@@ -184,8 +185,8 @@ extension WindowManager {
             desktops.nativeCreationBusy = true
             defer { self.desktops.nativeCreationBusy = false; self.scheduleRefresh(after: 0) }
             for entry in targets {
-                guard let screen = Screen.all().first(where: { $0.uuid == entry.display }),
-                      Spaces.current(display: entry.display) != entry.space else { continue }
+                guard let screen = backend.screens().first(where: { $0.uuid == entry.display }),
+                      backend.currentSpace(display: entry.display) != entry.space else { continue }
                 do {
                     try await self.removeDesktop(entry.space, on: screen)
                     if self.config.workspacesPerDisplay {
@@ -243,8 +244,10 @@ extension WindowManager {
 
     func showMaximised(_ window: Window) -> Bool {
         guard config.virtualWorkspaces, window.fullscreen, let space = Spaces.of(window: window.id).first,
-              let screen = Screen.all().first(where: { Spaces.list(display: $0.uuid)?.ids.contains(space) == true }),
-              Spaces.current(display: screen.uuid) != space else { return false }
+              let screen = backend.screens().first(where: {
+                  Spaces.list(display: $0.uuid)?.ids.contains(space) == true
+              }),
+              backend.currentSpace(display: screen.uuid) != space else { return false }
         desktops.nativeWorkspaceGeneration += 1
         configureNativeController(focusing: window, focus: true, quiet: true)
         nativeDesktop.request(.init(workspace: Self.spaceWorkspace(display: screen.uuid, space: space),
@@ -269,9 +272,9 @@ extension WindowManager {
             self.scheduleRefresh(after: 0)
             DispatchQueue.main.async {
                 guard self.nativeDesktop.requested == nil,
-                      Spaces.current(display: request.display) == request.space else { return }
+                      self.backend.currentSpace(display: request.display) == request.space else { return }
                 self.refresh(placing: [])
-                guard let screen = Screen.all().first(where: { $0.uuid == request.display }) else { return }
+                guard let screen = self.backend.screens().first(where: { $0.uuid == request.display }) else { return }
                 if takesFocus { self.focusShownWorkspace(request.workspace, preferred: preferred, on: screen) }
                 if changed, !quiet, self.config.enablesLayoutHUD, self.config.enablesLayoutHUDOnSpaceChange {
                     self.showWorkspaceHUD(request.workspace, on: screen)
@@ -292,28 +295,6 @@ extension WindowManager {
             Log.info("native workspaces: \(message)")
             self?.surface.showHUD(message, on: self?.currentScreen()?.nsScreen)
             self?.scheduleRefresh(after: 0)
-        }
-    }
-
-    func handleNativeSwipe(_ sample: DesktopGestureTap.Sample) {
-        if sample.phase == 1 { desktops.nativeGestureSign = nil }
-        if desktops.nativeGestureSign == nil, abs(sample.progress) > 0.001, !nativeDesktop.isRunning {
-            guard let screen = Screen.all().first(where: { $0.frame.contains(mouseLocation()) }) else { return }
-            updateNativeCatalog(Screen.all())
-            guard let source = desktops.nativeCatalog.entry(space: Spaces.current(display: screen.uuid)) else { return }
-            let direction = sample.progress > 0 ? 1 : -1
-            guard let name = desktops.nativeCatalog.step(from: source.name, by: direction),
-                  let target = desktops.nativeCatalog.entry(name) else { return }
-            desktops.nativeGestureSign = Double(direction)
-            configureNativeController(focusing: nil, focus: true, quiet: false)
-            nativeDesktop.beginGesture(.init(workspace: name, display: target.display, space: target.space))
-        }
-        guard let sign = desktops.nativeGestureSign else { return }
-        let progress = min(1, max(0, sample.progress * sign))
-        nativeDesktop.scrub(progress)
-        if sample.phase == 4 || sample.phase == 8 {
-            nativeDesktop.endGesture(commit: sample.phase != 8 && (progress >= 0.5 || sample.velocity * sign > 0.5))
-            desktops.nativeGestureSign = nil
         }
     }
 
@@ -356,13 +337,13 @@ extension WindowManager {
     }
 
     func layoutGroups(_ ids: [CGWindowID], on display: String) -> [(screen: Screen, ids: [CGWindowID])] {
-        let screens = Screen.all()
+        let screens = backend.screens()
         guard sharesSpaces else { return screens.filter { $0.uuid == display }.map { ($0, ids) } }
         return screens.map { screen in (screen, ids.filter { (displayOf[$0] ?? display) == screen.uuid }) }
     }
 
     func placeArrivals(on display: String) {
-        let screen = Screen.all().first { $0.uuid == display }
+        let screen = backend.screens().first { $0.uuid == display }
         let moves = arrivals.compactMap { id, frame -> Animator.Move? in
             guard let window = windows[id], let screen else { return nil }
             targets[id] = frame

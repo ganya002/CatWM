@@ -136,7 +136,7 @@ extension WindowManager {
         let held = desktops.movingToSpace || NSEvent.pressedMouseButtons & 1 != 0
         let observation = WorkspaceObservation(
             displays: screens.map {
-                .init(id: $0.uuid, frame: $0.frame, space: Spaces.current(display: $0.uuid),
+                .init(id: $0.uuid, frame: $0.frame, space: backend.currentSpace(display: $0.uuid),
                       spaces: Set(Spaces.list(display: $0.uuid)?.ids ?? []))
             },
             frames: windows.mapValues(\.cachedFrame), present: present,
@@ -169,7 +169,7 @@ extension WindowManager {
 
     func makeCurrentSpaceHome() {
         guard config.virtualWorkspaces else { return }
-        updateNativeCatalog(Screen.all())
+        updateNativeCatalog(backend.screens())
         refresh()
         surface.showHUD("CatWM controls this Desktop", on: currentScreen()?.nsScreen)
     }

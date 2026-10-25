@@ -68,7 +68,7 @@ extension WindowManager {
 
     private func finishMouseDrag(_ finished: [CGWindowID: Bool], at point: CGPoint, hovered: CGWindowID?,
                                  joins: Bool) {
-        let screens = Screen.all()
+        let screens = backend.screens()
         for (id, resized) in finished {
             guard let window = windows[id], let src = screen(of: window, in: screens) else { continue }
             let band = joins && holds(window, at: point) ? tabDropTarget(for: id, at: point) : nil

@@ -4,7 +4,7 @@ import Testing
 
 @MainActor @Suite struct WindowCreationTimingTests {
     @Test func creationSchedulesDiscoveryWithoutTheRefreshDebounce() {
-        let manager = WindowManager()
+        let manager = WindowManager(config: .parse(defaultText))
         defer { manager.refreshWork?.cancel() }
         manager.handle(kAXWindowCreatedNotification, AXUIElementCreateApplication(-1))
         #expect(manager.refreshWork != nil)
@@ -12,7 +12,7 @@ import Testing
     }
 
     @Test func creationAdvancesAnAlreadyScheduledRefresh() {
-        let manager = WindowManager()
+        let manager = WindowManager(config: .parse(defaultText))
         defer { manager.refreshWork?.cancel() }
         manager.scheduleRefresh(after: 1)
         manager.handle(kAXWindowCreatedNotification, AXUIElementCreateApplication(-1))

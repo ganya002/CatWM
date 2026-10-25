@@ -96,11 +96,11 @@ import Testing
         let defaults = try #require(UserDefaults(suiteName: name))
         defer { defaults.removePersistentDomain(forName: name) }
         let visible = CGRect(x: 0, y: 0, width: 1000, height: 700)
-        let original = WindowManager()
+        let original = WindowManager(config: .parse(defaultText))
         original.config.virtualWorkspaces = true
         original.menuBarHeights["display"] = .init(height: 38, visible: visible)
         original.saveTilingRecovery(defaults: defaults)
-        let restarted = WindowManager()
+        let restarted = WindowManager(config: .parse(defaultText))
         restarted.loadTilingRecovery(defaults: defaults)
         #expect(restarted.menuBarHeights["display"]?.height(on: visible) == 38)
         #expect(restarted.menuBarHeights["display"]?.height(on: visible.insetBy(dx: 0, dy: 10)) == nil)
@@ -112,7 +112,7 @@ import Testing
         defer { defaults.removePersistentDomain(forName: name) }
         let first = Window(id: 1, element: AXUIElementCreateApplication(-1), pid: 11, bundleID: "test.app")
         let second = Window(id: 2, element: AXUIElementCreateApplication(-1), pid: 12, bundleID: "test.app")
-        let original = WindowManager()
+        let original = WindowManager(config: .parse(defaultText))
         original.config.virtualWorkspaces = true
         original.windows = [1: first, 2: second]
         original.order = [1, 2]
@@ -120,7 +120,7 @@ import Testing
         original.model.assign(2, to: "left")
         original.state(workspace: "left").zoomed = 2
         original.saveTilingRecovery(defaults: defaults)
-        let restarted = WindowManager()
+        let restarted = WindowManager(config: .parse(defaultText))
         restarted.config.virtualWorkspaces = true
         restarted.loadTilingRecovery(defaults: defaults)
         restarted.windows = [2: second]
@@ -137,7 +137,7 @@ import Testing
         #expect(restarted.order == [1, 2])
         restarted.forget(2)
         restarted.saveTilingRecovery(defaults: defaults)
-        let again = WindowManager()
+        let again = WindowManager(config: .parse(defaultText))
         again.loadTilingRecovery(defaults: defaults)
         #expect(again.tilingRecovery.order.map(\.id) == [1] && again.tilingRecovery.zoomed.isEmpty)
     }
@@ -148,13 +148,13 @@ import Testing
         defer { defaults.removePersistentDomain(forName: name) }
         let entry = identity(1)
         let saved = TilingRecovery(order: [entry], zoomed: ["left": entry])
-        let manager = WindowManager()
+        let manager = WindowManager(config: .parse(defaultText))
         manager.config.virtualWorkspaces = true
         manager.tilingRecovery = saved
         manager.lastSavedTilingRecovery = saved
         manager.tilingRecovery.zoomed["left"] = nil
         manager.saveTilingRecovery(defaults: defaults)
-        let restarted = WindowManager()
+        let restarted = WindowManager(config: .parse(defaultText))
         restarted.loadTilingRecovery(defaults: defaults)
         #expect(restarted.tilingRecovery.order == [entry] && restarted.tilingRecovery.zoomed.isEmpty)
     }
@@ -164,7 +164,7 @@ import Testing
         let defaults = try #require(UserDefaults(suiteName: name))
         defer { defaults.removePersistentDomain(forName: name) }
         let entry = identity(1)
-        let manager = WindowManager()
+        let manager = WindowManager(config: .parse(defaultText))
         manager.config.virtualWorkspaces = true
         manager.tilingRecovery = .init(order: [entry], zoomed: ["left": entry])
         manager.lastSavedTilingRecovery = manager.tilingRecovery
@@ -172,7 +172,7 @@ import Testing
         #expect(manager.tilingRecovery == TilingRecovery())
         manager.restoringTemplate = false
         manager.saveTilingRecovery(defaults: defaults)
-        let restarted = WindowManager()
+        let restarted = WindowManager(config: .parse(defaultText))
         restarted.loadTilingRecovery(defaults: defaults)
         #expect(restarted.tilingRecovery == TilingRecovery())
     }
@@ -224,7 +224,7 @@ import Testing
 
     @Test @MainActor func relaunchedAppWindowsGetTheirOrderFloatingAndTabsBack() {
         let first = identity(1, pid: 11), second = identity(2, pid: 11), other = identity(3, pid: 12)
-        let manager = WindowManager()
+        let manager = WindowManager(config: .parse(defaultText))
         manager.config.virtualWorkspaces = true
         manager.startedAt = Date()
         manager.tilingRecovery = TilingRecovery(

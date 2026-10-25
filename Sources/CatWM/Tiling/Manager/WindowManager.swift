@@ -1,9 +1,10 @@
 import AppKit
 
 final class WindowManager {
-    static let shared = WindowManager()
+    static let shared = WindowManager(config: Config.load())
 
-    var config = Config.load()
+    let backend: any WindowBackend
+    var config: Config
     var tilingEnabled = true
     var restoringTemplate = false {
         didSet {
@@ -80,7 +81,7 @@ final class WindowManager {
     var focusSink: NSWindow?
     var visible: Set<CGWindowID> = []
     var targets: [CGWindowID: CGRect] = [:]
-    var frontmostPID: () -> pid_t? = { NSWorkspace.shared.frontmostApplication?.processIdentifier }
+    var frontmostPID: () -> pid_t?
     var frameReads: [CGWindowID: UUID] = [:]
     var dirtyFrames: Set<CGWindowID> = []
     var observing: [pid_t: UUID] = [:]
@@ -88,6 +89,8 @@ final class WindowManager {
     var corrections: [CGWindowID: (target: CGRect, count: Int)] = [:]
     var drags: [CGWindowID: Bool] = [:]
     var refreshWork: DispatchWorkItem?
+    var scanRequests = 0
+    var scanWaiters: [(request: Int, done: () -> Void)] = []
     var minSizes: [CGWindowID: CGSize] = [:]
     struct MenuBarFloor {
         let height: CGFloat
@@ -99,12 +102,22 @@ final class WindowManager {
     var refreshDeadline = DispatchTime.distantFuture
     var isStarted = false
     var ignoreMouseUntil = Date.distantPast
-    var animator = Animator()
+    var animator: Animator
     var notificationObservers: [NSObjectProtocol] = []
-    let scanner = WindowScanner()
+    let scanner: WindowScanner
     let dockWindowPull = DockWindowPull()
     let dockArea = DockArea()
     let cursorRefresh = CursorRefresh()
+
+    init(backend: any WindowBackend = AXBackend.shared, config: Config) {
+        self.backend = backend
+        self.config = config
+        frontmostPID = { backend.frontmostPID() }
+        animator = Animator(backend: backend)
+        scanner = WindowScanner(read: { backend.scan($0, discovered: $1) }, readDesktop: { backend.desktop(known: $0) },
+                                readApplications: { backend.applications() })
+        focusRequests.focusReader = FocusReader { backend.focusedWindow(pid: $0) }
+    }
 
     var currentLayoutTitle: String {
         guard let screen = currentScreen() else { return "" }

@@ -15,7 +15,7 @@ import Testing
     }
 
     @MainActor private func manager() -> WindowManager {
-        let manager = WindowManager()
+        let manager = WindowManager(config: .parse(defaultText))
         manager.isStarted = true
         manager.frontmostPID = { -1 }
         manager.config.virtualWorkspaces = false

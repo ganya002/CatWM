@@ -11,14 +11,17 @@ extension WindowManager {
         DispatchQueue.main.asyncAfter(deadline: deadline, execute: work) // style-ok: debounce of refresh requests
     }
 
-    func scanAndRefresh() {
+    func scanAndRefresh(then done: (() -> Void)? = nil) {
         refreshWork = nil
-        guard isStarted, !nativeDesktop.isRunning, !desktops.nativeCreationBusy else { return }
-        scanner.observeDesktop(known: Set(windows.keys)) { [weak self] in self?.scanAppsAndRefresh() }
+        guard isStarted, !nativeDesktop.isRunning, !desktops.nativeCreationBusy else { done?(); return }
+        scanRequests += 1
+        let request = scanRequests
+        if let done { scanWaiters.append((request, done)) }
+        scanner.observeDesktop(known: Set(windows.keys)) { [weak self] in self?.scanAppsAndRefresh(request) }
     }
 
-    private func scanAppsAndRefresh() {
-        guard isStarted, !nativeDesktop.isRunning, !desktops.nativeCreationBusy else { return }
+    private func scanAppsAndRefresh(_ request: Int) {
+        guard isStarted, !nativeDesktop.isRunning, !desktops.nativeCreationBusy else { return finishScan(request) }
         let listed = config.virtualWorkspaces ? scanner.desktop.allWindows : scanner.desktop.windows
         let pidsOnScreen = Set(listed.map(\.pid))
         var known: [pid_t: [CGWindowID: Window]] = [:]
@@ -34,7 +37,18 @@ extension WindowManager {
             jobs.append(.init(pid: pid, listWindows: list, known: known[pid] ?? [:]))
         }
         let refresh: () -> Void = { [weak self] in self?.refresh() }
-        scanner.scan(jobs, done: refresh, updated: refresh)
+        let readAll: ((Bool) -> Void)? = scanWaiters.isEmpty ? nil : { [weak self] all in
+            guard let self else { return }
+            if all { finishScan(request) } else { scanner.whenIdle { [weak self] in self?.scanAndRefresh() } }
+        }
+        scanner.scan(jobs, done: refresh, updated: refresh, readAll: readAll)
+    }
+
+    private func finishScan(_ request: Int) {
+        guard !scanWaiters.isEmpty else { return }
+        let ready = scanWaiters.filter { $0.request <= request }
+        scanWaiters.removeAll { $0.request <= request }
+        ready.forEach { $0.done() }
     }
 
     func finishTemplateRestore() {

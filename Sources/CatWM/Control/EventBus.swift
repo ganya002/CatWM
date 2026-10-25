@@ -157,7 +157,7 @@ extension WindowManager {
         snapshot.windows = windows.mapValues { StateSnapshot.Entry(app: $0.bundleID, title: $0.title) }
         snapshot.tiling = tilingEnabled
         snapshot.mode = Hotkeys.shared.submap
-        for screen in Screen.all() {
+        for screen in backend.screens() {
             snapshot.workspaces[screen.uuid] = shown[screen.uuid] ?? ""
             let layout = states[workspaceKey(for: screen)]?.layout ?? config.layouts.first
             snapshot.layouts[screen.uuid] = layout?.rawValue

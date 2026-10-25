@@ -10,7 +10,7 @@ import Testing
         defer { defaults.removePersistentDomain(forName: name) }
         let first = Window(id: 1, element: AXUIElementCreateApplication(-1), pid: 11, bundleID: "test.app")
         let second = Window(id: 2, element: AXUIElementCreateApplication(-1), pid: 12, bundleID: "test.app")
-        let original = WindowManager()
+        let original = WindowManager(config: .parse(defaultText))
         original.config.virtualWorkspaces = true
         original.windows = [1: first, 2: second]
         original.order = [1, 2]
@@ -20,7 +20,7 @@ import Testing
         first.remember(try #require(frames[1]))
         second.remember(try #require(frames[2]))
         original.saveTilingRecovery(defaults: defaults)
-        let manager = WindowManager()
+        let manager = WindowManager(config: .parse(defaultText))
         manager.config.virtualWorkspaces = true
         manager.loadTilingRecovery(defaults: defaults)
         manager.windows = [1: first, 2: second]
@@ -40,7 +40,7 @@ import Testing
     @Test(arguments: [false, true], [false, true]) @MainActor
     func tabGroupsKeepOneTileAndTheirStripBeforeTheSwitch(activeAppHidden: Bool, autoHide: Bool) async throws {
         guard let screen = Screen.all().first else { return }
-        let manager = WindowManager()
+        let manager = WindowManager(config: .parse(defaultText))
         manager.config.autoHideTabStrip = autoHide
         let first = Window(id: .max - 50, element: AXUIElementCreateApplication(-1), pid: -1, bundleID: nil)
         let second = Window(id: .max - 51, element: AXUIElementCreateApplication(-2), pid: -2, bundleID: nil)
@@ -71,7 +71,7 @@ import Testing
 
     @Test @MainActor func windowsOfHiddenAppsGetNoSlotBeforeTheSwitch() async throws {
         guard let screen = Screen.all().first else { return }
-        let manager = WindowManager()
+        let manager = WindowManager(config: .parse(defaultText))
         manager.config.windowMargins = false
         let shown = Window(id: 1, element: AXUIElementCreateApplication(-1), pid: -1, bundleID: nil)
         let hidden = Window(id: 2, element: AXUIElementCreateApplication(-2), pid: -2, bundleID: nil)

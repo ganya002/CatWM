@@ -7,9 +7,10 @@ struct Screen {
     let frame: CGRect
     let visible: CGRect
     let isBuiltin: Bool
-    let nsScreen: NSScreen
+    let nsScreen: NSScreen?
 
     var center: CGPoint { CGPoint(x: frame.midX, y: frame.midY) }
+    var name: String { nsScreen?.localizedName ?? uuid }
 
     static func all() -> [Screen] {
         guard let primary = NSScreen.screens.first else { return [] }

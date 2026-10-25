@@ -4,7 +4,7 @@ import Testing
 
 @Suite struct TabTilingTests {
     @MainActor private func manager(on screen: Screen, windows ids: [CGWindowID]) -> WindowManager {
-        let manager = WindowManager()
+        let manager = WindowManager(config: .parse(defaultText))
         manager.config.windowMargins = false
         manager.shown[screen.uuid] = "1"
         for id in ids {

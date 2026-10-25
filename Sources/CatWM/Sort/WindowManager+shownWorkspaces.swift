@@ -3,11 +3,13 @@ import AppKit
 extension WindowManager {
     func shownWorkspaces() -> [ShownWorkspace] {
         guard config.virtualWorkspaces, isStarted else { return [] }
-        let screens = Screen.all()
+        let screens = backend.screens()
         let focus = currentScreen()?.uuid
         return (screens.filter { $0.uuid == focus } + screens.filter { $0.uuid != focus }).compactMap { screen in
-            guard let workspace = shown[screen.uuid], isVirtual(workspace) else { return nil }
-            return ShownWorkspace(workspace: workspace, count: tiledCount(in: workspace), screen: screen.nsScreen)
+            guard let nsScreen = screen.nsScreen, let workspace = shown[screen.uuid], isVirtual(workspace) else {
+                return nil
+            }
+            return ShownWorkspace(workspace: workspace, count: tiledCount(in: workspace), screen: nsScreen)
         }
     }
 

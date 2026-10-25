@@ -15,7 +15,7 @@ struct NativePlacementTests {
     private func fixture(id: CGWindowID = .max - 30) throws -> Fixture {
         _ = NSApplication.shared
         let screen = try #require(Screen.all().first)
-        let manager = WindowManager()
+        let manager = WindowManager(config: .parse(defaultText))
         manager.tilingEnabled = true
         let window = Window(id: id, element: AXUIElementCreateApplication(-1), pid: -1, bundleID: nil)
         manager.windows[window.id] = window

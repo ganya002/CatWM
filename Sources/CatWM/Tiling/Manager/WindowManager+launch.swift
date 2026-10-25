@@ -37,7 +37,7 @@ extension WindowManager {
     }
 
     private func place(_ window: Window, _ launch: PendingLaunch) {
-        let screens = Screen.all()
+        let screens = backend.screens()
         let origin = screens.first { $0.uuid == launch.source } ?? currentScreen()
         let display = launch.request.display.flatMap { spec in
             origin.flatMap { screen(from: $0, spec: spec, in: screens) }

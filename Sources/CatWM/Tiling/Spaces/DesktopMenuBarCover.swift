@@ -89,7 +89,8 @@ final class DesktopMenuBarCover {
     }
 
     private static func menuHeight(_ screen: Screen) -> CGFloat {
-        screen.nsScreen.frame.maxY - screen.nsScreen.visibleFrame.maxY
+        guard let nsScreen = screen.nsScreen else { return 0 }
+        return nsScreen.frame.maxY - nsScreen.visibleFrame.maxY
     }
 
     @MainActor private static func image(on screen: Screen) -> Task<CGImage?, Never>? {
@@ -124,9 +125,8 @@ final class DesktopMenuBarCover {
     }
 
     private static func panelFrame(on screen: Screen) -> CGRect {
-        let height = menuHeight(screen)
-        return CGRect(x: screen.nsScreen.frame.minX, y: screen.nsScreen.frame.maxY - height,
-                      width: screen.frame.width, height: height)
+        let height = menuHeight(screen), frame = screen.nsScreen?.frame ?? .zero
+        return CGRect(x: frame.minX, y: frame.maxY - height, width: screen.frame.width, height: height)
     }
 
     @MainActor func prewarm(on screen: Screen) {

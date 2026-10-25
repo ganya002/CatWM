@@ -30,7 +30,7 @@ extension WindowManager {
             if let next = order.first(where: { workspaceOf[$0] == from && visible.contains($0) })
                 .flatMap({ windows[$0] }) {
                 focus(next)
-            } else if let screen = Screen.all().first(where: { $0.uuid == monitorOf[from] }) {
+            } else if let screen = backend.screens().first(where: { $0.uuid == monitorOf[from] }) {
                 parkFocus(on: screen)
             } else {
                 parkFocus()
@@ -54,12 +54,12 @@ extension WindowManager {
     }
 
     private func windowsOffDesktop() -> [pid_t: Set<CGWindowID>] {
-        let screens = Screen.all()
+        let screens = backend.screens()
         let desktops = Set(screens.flatMap { screen -> [UInt64] in
             guard let info = Spaces.list(display: screen.uuid) else { return [] }
             return info.desktops.map { info.ids[$0] }
         })
-        let homes = Set(Screen.all().map { Spaces.current(display: $0.uuid) })
+        let homes = Set(backend.screens().map { backend.currentSpace(display: $0.uuid) })
         var offDesktop: [pid_t: Set<CGWindowID>] = [:]
         let list = CGWindowListCopyWindowInfo([.optionAll, .excludeDesktopElements], kCGNullWindowID)
             as? [[String: Any]] ?? []
@@ -91,7 +91,8 @@ extension WindowManager {
                   !candidate.flag(kAXMinimizedAttribute),
                   !candidate.flag("AXFullScreen") else { continue }
             let window = windows[id]
-                ?? Window(id: id, element: candidate, pid: app.processIdentifier, bundleID: app.bundleIdentifier)
+                ?? Window(id: id, element: candidate, pid: app.processIdentifier, bundleID: app.bundleIdentifier,
+                          backend: backend)
             if window.naturalFrame.isNull {
                 readDirectActionFacts(window)
                 window.autoFloating = shouldFloat(window)

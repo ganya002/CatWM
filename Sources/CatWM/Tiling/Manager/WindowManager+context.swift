@@ -143,7 +143,7 @@ extension WindowManager {
         )
         guard done else { return }
         if let id, !isOn {
-            for screen in Screen.all() where state(for: screen).zoomed == id { state(for: screen).zoomed = nil }
+            for screen in backend.screens() where state(for: screen).zoomed == id { state(for: screen).zoomed = nil }
         }
         scheduleRefresh(after: 0.8)
     }

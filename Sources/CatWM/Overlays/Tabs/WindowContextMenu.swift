@@ -78,7 +78,7 @@ enum WindowContextMenu {
                     manager.screen(from: source, spec: $0.rawValue, in: screens)?.uuid == screen.uuid
                 }
                 let shortcut = direction.map { keys(WindowActions.movewindow.name, "mon:\($0.rawValue)") } ?? []
-                displays.append(Display(index: index, name: screen.nsScreen.localizedName, keys: shortcut))
+                displays.append(Display(index: index, name: screen.name, keys: shortcut))
             }
         }
         return Input(floating: window.isFloating, grouped: manager.tabs.isGrouped(window.id),

@@ -2,7 +2,7 @@ import AppKit
 
 extension WindowManager {
     func status() -> Status {
-        let screens = Screen.all()
+        let screens = backend.screens()
         let managed = visible.compactMap { windows[$0] }
         return Status(trusted: Permission.accessibility.isGranted, keybindsActive: surface.keybindsActive,
                       running: isStarted,
@@ -11,14 +11,14 @@ extension WindowManager {
                       inputMonitoring: Permission.inputMonitoring.isGranted,
                       tiled: managed.filter { !$0.isFloating }.count, floating: managed.filter(\.isFloating).count,
                       screens: isStarted ? screens.map { screen in
-                          ScreenStatus(uuid: screen.uuid, name: screen.nsScreen.localizedName,
+                          ScreenStatus(uuid: screen.uuid, name: screen.name,
                                        layout: state(for: screen).layout,
                                        workspace: isVirtual(shown[screen.uuid]) ? (shown[screen.uuid] ?? "") : "")
                       } : [])
     }
 
     func setLayout(_ layout: Layout, screen uuid: String) {
-        guard let screen = Screen.all().first(where: { $0.uuid == uuid }) else { return }
+        guard let screen = backend.screens().first(where: { $0.uuid == uuid }) else { return }
         setLayout(layout, on: screen)
     }
 
@@ -37,10 +37,10 @@ extension WindowManager {
             "state: trusted=\(Permission.accessibility.isGranted) keybinds=\(surface.keybindsActive) "
                 + "tiling=\(tilingEnabled) focused=\(focusedWindow()?.id ?? 0)"
         ]
-        for screen in Screen.all() {
+        for screen in backend.screens() {
             let screenState = state(for: screen)
             lines.append(
-                "  screen \(screen.nsScreen.localizedName) workspace=\(shown[screen.uuid] ?? "?") "
+                "  screen \(screen.name) workspace=\(shown[screen.uuid] ?? "?") "
                     + "home=\(isOnHomeSpace(screen)) layout=\(screenState.layout.rawValue) "
                     + "ratio=\(screenState.ratio) main=\(screenState.mainCount) usable=\(usableRect(screen))"
             )

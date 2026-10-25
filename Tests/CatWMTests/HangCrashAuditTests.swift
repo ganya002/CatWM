@@ -32,7 +32,7 @@ import Testing
     }
 
     @Test func aHugeMonitorStepDoesNotOverflow() {
-        let manager = WindowManager()
+        let manager = WindowManager(config: .parse(defaultText))
         guard let first = Screen.all().first else { return }
         #expect(manager.screen(from: first, spec: "+\(Int.max)", in: [first])?.uuid == first.uuid)
         #expect(manager.screen(from: first, spec: "-\(Int.max)", in: [first])?.uuid == first.uuid)

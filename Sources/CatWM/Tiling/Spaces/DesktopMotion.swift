@@ -3,10 +3,10 @@ import QuartzCore
 
 @MainActor final class DesktopMotion: NSObject {
     private var preparedTarget: CFTimeInterval?
-    private let screen: NSScreen
+    private let screen: NSScreen?
     private var callback: ((CADisplayLink) -> Void)?
 
-    init(screen: NSScreen) { self.screen = screen }
+    init(screen: NSScreen?) { self.screen = screen }
 
     func animate(from: Double, to target: Double, with settings: NativeDesktopController.Settings,
                  update: @escaping (Double) throws -> Void) async throws {
@@ -51,7 +51,9 @@ import QuartzCore
     private func run(limit: Double, message: String, fast: Bool,
                      tick: @escaping (CADisplayLink) throws -> Bool) async throws {
         let completion = Completion()
-        let link = screen.displayLink(target: self, selector: #selector(step))
+        guard let link = screen?.displayLink(target: self, selector: #selector(step)) else {
+            throw DesktopTransitionError.check("The display has no screen")
+        }
         if fast { link.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 120, preferred: 120) }
         callback = { link in
             do {

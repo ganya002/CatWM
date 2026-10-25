@@ -156,7 +156,7 @@ extension WindowManager {
         let waiting = workspaceOf.filter {
             isPending($0.value) && (ids?.contains($0.key) ?? !closeAndSort.closingNow.contains($0.key))
         }
-        let screens = Screen.all()
+        let screens = backend.screens()
         for (id, key) in waiting {
             let display = String(key.dropFirst(Self.pendingPrefix.count))
             model.assign(id, to: virtualShown[display]
@@ -231,7 +231,7 @@ extension WindowManager {
     }
 
     func tiledCount(in workspace: String) -> Int {
-        let screens = Screen.all()
+        let screens = backend.screens()
         return order.reduce(0) { total, id in
             total + (workspaceOf[id] == workspace && windows[id]?.isFloating == false && !tabs.isBehind(id)
                 && (present.contains(id) || isSortable(id, screens: screens)) ? 1 : 0)

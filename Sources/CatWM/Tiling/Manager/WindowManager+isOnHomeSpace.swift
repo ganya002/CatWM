@@ -11,7 +11,7 @@ extension WindowManager {
     func isOnHomeSpace(_ screen: Screen) -> Bool {
         if config.virtualWorkspaces { return !Spaces.isFullscreen(display: screen.uuid) }
         guard let home = desktops.homeSpace[screen.uuid] else { return true }
-        return Spaces.current(display: screen.uuid) == home
+        return backend.currentSpace(display: screen.uuid) == home
     }
 
     func isParked(_ frame: CGRect, _ screens: [Screen]) -> Bool {
@@ -97,7 +97,7 @@ extension WindowManager {
 
     func beginSlide(from previous: String, to workspace: String, on screen: Screen) {
         if let old = slide {
-            for id in old.outgoing where !visible.contains(id) { cornerPark(id, screens: Screen.all()) }
+            for id in old.outgoing where !visible.contains(id) { cornerPark(id, screens: backend.screens()) }
         }
         slide = nil
         guard config.animate, config.animationDuration >= 0.01 else { return }
@@ -111,7 +111,7 @@ extension WindowManager {
             deadline: .now() + config.animationDuration + 0.2
         ) { [weak self] in
             guard let self, self.slide?.until == until else { return }
-            let screens = Screen.all()
+            let screens = backend.screens()
             for id in outgoing where !self.visible.contains(id) { self.cornerPark(id, screens: screens) }
             self.slide = nil
         }
@@ -130,7 +130,7 @@ extension WindowManager {
             if let completion { RunLoop.main.perform(inModes: [.common, .modalPanel]) { completion() } }
         }
         guard config.virtualWorkspaces || !shown.isEmpty else { deliver(); return }
-        let screens = Screen.all()
+        let screens = backend.screens()
         guard !screens.isEmpty else { deliver(); return }
         saveWorkspaces()
         saveTilingRecovery()

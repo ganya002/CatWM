@@ -3,21 +3,17 @@ import AppKit
 extension WindowManager {
     func start() {
         guard !isStarted else { return }
-        isStarted = true
-        startedAt = Date()
+        startEngine()
         loadWorkspaces()
         loadTabs()
         if config.virtualWorkspaces { DesktopUI.prepare() }
         Log.verbose = config.debugLogging || Log.verboseLaunch
         Log.info(
             "start: trusted=\(Permission.accessibility.isGranted) "
-                + "windowServerFocus=\(WindowServerFocus.isAvailable) screens=\(Screen.all().count)"
+                + "windowServerFocus=\(WindowServerFocus.isAvailable) screens=\(backend.screens().count)"
         )
         config.errors.forEach { Log.info("config: \($0)") }
         AXUIElementSetMessagingTimeout(AXUIElementCreateSystemWide(), 1.0)
-        animator.onMinimumSize = { [weak self] id, size in self?.learnMinimum(id, size) }
-        animator.onTopRefused = { [weak self] target, actual in self?.learnMenuBar(target, actual) }
-        animator.onLanded = { [weak self] in self?.cursorRefresh.soon() }
 
         observeApplicationNotifications()
         observeSpaceAndScreenNotifications()
@@ -34,6 +30,14 @@ extension WindowManager {
                 deadline: .now() + delay
             ) { [weak self] in self?.scheduleRefresh() }
         }
+    }
+
+    func startEngine() {
+        isStarted = true
+        startedAt = Date()
+        animator.onMinimumSize = { [weak self] id, size in self?.learnMinimum(id, size) }
+        animator.onTopRefused = { [weak self] target, actual in self?.learnMenuBar(target, actual) }
+        animator.onLanded = { [weak self] in self?.cursorRefresh.soon() }
     }
 
     private func observeApplicationNotifications() {
