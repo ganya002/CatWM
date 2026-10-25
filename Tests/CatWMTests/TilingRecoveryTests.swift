@@ -176,4 +176,75 @@ import Testing
         restarted.loadTilingRecovery(defaults: defaults)
         #expect(restarted.tilingRecovery == TilingRecovery())
     }
+
+    @Test func aQuitAppKeepsItsPlaceUntilItExpires() {
+        let quit = identity(1), open = identity(2)
+        let saved = TilingRecovery(order: [quit, open], zoomed: ["left": quit], memos: [quit: .init(title: "one")])
+        let now = Date()
+        let kept = saved.capturing(order: [2], windows: [2: open], zooms: [:], available: [:],
+                                   departing: { $0 == quit }, now: now)
+        #expect(kept.order == [quit, open] && kept.zoomed == ["left": quit] && kept.departed == [quit: now])
+        #expect(kept.memos[quit]?.title == "one")
+        let later = now.addingTimeInterval(TilingRecovery.departedLifetime + 1)
+        let expired = kept.capturing(order: [2], windows: [2: open], zooms: [:], available: [:],
+                                     departing: { _ in true }, now: later)
+        #expect(expired.order == [open] && expired.zoomed.isEmpty && expired.departed.isEmpty)
+    }
+
+    @Test func aRelaunchedWindowTakesTheOldPlaceByTitleThenFrame() {
+        let first = identity(1, pid: 11), second = identity(2, pid: 11), other = identity(3, pid: 12)
+        var saved = TilingRecovery(
+            order: [first, other, second], zoomed: ["left": second],
+            memos: [first: .init(title: "one", frame: CGRect(x: 0, y: 0, width: 100, height: 100)),
+                    second: .init(title: "two", frame: CGRect(x: 500, y: 0, width: 100, height: 100),
+                                  tabs: [first, second])],
+            departed: [first: Date(), second: Date()])
+        let renamed = identity(7, pid: 21), titled = identity(8, pid: 21), stranger = identity(9, pid: 22,
+                                                                                               bundleID: "other.app")
+        let pairs = saved.rebind([
+            .init(identity: renamed, title: "new title", frame: CGRect(x: 5, y: 0, width: 100, height: 100)),
+            .init(identity: titled, title: "two", frame: CGRect(x: 0, y: 0, width: 100, height: 100)),
+            .init(identity: stranger, title: "one", frame: nil)
+        ])
+        #expect(pairs == [first: renamed, second: titled])
+        #expect(saved.order == [renamed, other, titled] && saved.zoomed == ["left": titled])
+        #expect(saved.memos[titled]?.tabs == [renamed, titled] && saved.departed.isEmpty)
+        #expect(saved.restoredOrder([9, 8, 7, 3], arriving: [7, 8], windows: [7: renamed, 8: titled, 3: other])
+            == [9, 7, 3, 8])
+    }
+
+    @Test func aReusedWindowIDKeepsBothTheNewWindowAndTheQuitApp() {
+        let quit = identity(1, pid: 11), reused = identity(1, pid: 40, bundleID: "other.app")
+        let saved = TilingRecovery(order: [quit], departed: [quit: Date()])
+        let found = saved.capturing(order: [1], windows: [1: reused], zooms: [:], available: [1: 40])
+        #expect(found.order == [reused, quit] && found.departed.keys.contains(quit))
+        let decoded = try? JSONDecoder().decode(TilingRecovery.self, from: JSONEncoder().encode(found)).validated
+        #expect(decoded == found)
+    }
+
+    @Test @MainActor func relaunchedAppWindowsGetTheirOrderFloatingAndTabsBack() {
+        let first = identity(1, pid: 11), second = identity(2, pid: 11), other = identity(3, pid: 12)
+        let manager = WindowManager()
+        manager.config.virtualWorkspaces = true
+        manager.startedAt = Date()
+        manager.tilingRecovery = TilingRecovery(
+            order: [first, other, second],
+            memos: [first: .init(title: "one", tabs: [first, second], activeTab: true),
+                    second: .init(title: "two", tabs: [first, second]),
+                    other: .init(title: "", chosen: .floating)],
+            departed: [first: Date(), second: Date()])
+        let tiled = Window(id: 3, element: AXUIElementCreateApplication(-1), pid: 12, bundleID: "test.app")
+        let one = Window(id: 7, element: AXUIElementCreateApplication(-1), pid: 21, bundleID: "test.app")
+        let two = Window(id: 8, element: AXUIElementCreateApplication(-1), pid: 21, bundleID: "test.app")
+        one.title = "one"; two.title = "two"
+        manager.windows = [3: tiled, 7: one, 8: two]
+        manager.order = [3, 8, 7]
+        for id: CGWindowID in [3, 7, 8] { manager.model.assign(id, to: "left") }
+        manager.restoreTilingRecovery([two, one])
+        #expect(manager.order == [7, 3, 8])
+        manager.restoreTilingRecovery([tiled])
+        #expect(tiled.isFloating)
+        manager.restoreTabs()
+        #expect(manager.tabs.group(of: 7)?.members == [7, 8] && manager.tabs.group(of: 7)?.active == 7)
+    }
 }

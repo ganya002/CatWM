@@ -8,9 +8,7 @@ extension WindowManager {
             $0 as? UInt64
         }
         nativeCatalog.homes = defaults.dictionary(forKey: "ws.nativeDisplays") as? [String: String] ?? [:]
-        for (key, value) in defaults.dictionary(forKey: "ws.windows") as? [String: String] ?? [:] {
-            if let id = CGWindowID(key) { savedWorkspaceOf[id] = value }
-        }
+        nativeCatalog.uuids = defaults.dictionary(forKey: "ws.nativeSpaceUUIDs") as? [String: String] ?? [:]
         for (key, value) in defaults.dictionary(forKey: "ws.owners") as? [String: String] ?? [:] {
             if let id = CGWindowID(key) { savedOwnerOf[id] = value }
         }
@@ -24,6 +22,7 @@ extension WindowManager {
             if let id = CGWindowID(key) { savedFloating[id] = value }
         }
         loadNativeMigration(defaults)
+        ["ws.windows", "ws.owners", "ws.floating"].forEach(defaults.removeObject(forKey:))
         loadWorkspaceLayouts(defaults)
         loadTilingRecovery(defaults: defaults)
         monitorOf = monitorOf.filter { isVirtual($0.key) }
@@ -49,47 +48,25 @@ extension WindowManager {
 
     func saveWorkspaces() {
         guard config.virtualWorkspaces else { return }
-        let windowsMap = Dictionary(
-            workspaceOf
-                .filter { windows[$0.key] != nil && isVirtual($0.value) && !isPending($0.value) }
-                .map { (String($0.key), $0.value) },
-            uniquingKeysWith: { first, _ in first })
         let monitors = monitorOf.filter { isVirtual($0.key) && !isPending($0.key) }
-        let floating = Dictionary(
-            windowsMap.keys.compactMap { key -> (String, Bool)? in
-                guard let window = CGWindowID(key).flatMap({ windows[$0] }),
-                      case .chosen(let floating) = window.userFloating else { return nil }
-                return (key, floating)
-            },
-            uniquingKeysWith: { first, _ in first })
         let layouts = Dictionary(
             states.filter { isVirtual($0.key) && !isPending($0.key) }
                 .map { ($0.key, "\($0.value.layout.rawValue) \($0.value.ratio) \($0.value.mainCount)") },
             uniquingKeysWith: { first, _ in first })
         let key = [
-            "\(windowsMap.sorted { $0.key < $1.key })",
             "\(monitors.sorted { $0.key < $1.key })",
             "\(virtualShown.sorted { $0.key < $1.key })",
             "\(homeSpace.sorted { $0.key < $1.key })",
             "\(labels.sorted { $0.key < $1.key })",
-            "\(floating.sorted { $0.key < $1.key })",
             "\(layouts.sorted { $0.key < $1.key })"
         ].joined(separator: "|")
         guard key != lastSavedWorkspaces else { return }
         lastSavedWorkspaces = key
         let defaults = UserDefaults.standard
-        defaults.set(windowsMap, forKey: "ws.windows")
-        let owners = Dictionary(
-            windowsMap.keys.compactMap { key in
-                CGWindowID(key).flatMap { windows[$0] }.map { (key, owner($0)) }
-            },
-            uniquingKeysWith: { first, _ in first })
-        defaults.set(owners, forKey: "ws.owners")
         defaults.set(monitors, forKey: "ws.monitors")
         defaults.set(virtualShown, forKey: "ws.shown")
         defaults.set(homeSpace, forKey: "ws.home")
         defaults.set(labels, forKey: "ws.labels")
-        defaults.set(floating, forKey: "ws.floating")
         defaults.set(layouts, forKey: "ws.layouts")
     }
 

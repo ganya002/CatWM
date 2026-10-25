@@ -56,7 +56,6 @@ extension WindowManager {
 
         restoreTabs()
         settleTabs()
-        saveTabs()
         saveTilingRecovery()
         guard tilingEnabled else {
             SplitHandle.shared.update(); TabStrips.shared.update(); notifyChange(); return
@@ -201,9 +200,9 @@ extension WindowManager {
 
     private func forgetGoneWindows(present: Set<CGWindowID>) {
         for (id, window) in windows where !present.contains(id) {
-            if NSRunningApplication(processIdentifier: window.pid) == nil
-                || scanner.results[window.pid]?.gone.contains(id) == true {
-                forget(id)
+            let appGone = NSRunningApplication(processIdentifier: window.pid) == nil
+            if appGone || scanner.results[window.pid]?.gone.contains(id) == true {
+                forget(id, keepRecovery: appGone || isPoweringOff)
             }
         }
     }

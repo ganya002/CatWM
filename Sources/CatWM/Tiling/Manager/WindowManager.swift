@@ -27,6 +27,7 @@ final class WindowManager {
     var observedApps: [(pid: pid_t, bundleID: String?)] = []
     var lastNativeCatalogSaved: [String: UInt64] = [:]
     var lastNativeCatalogHomes: [String: String] = [:]
+    var lastNativeCatalogUUIDs: [String: String] = [:]
     var nativeCatalog = NativeWorkspaceCatalog()
     let nativeDesktop = NativeDesktopController()
     let nativeGestures = DesktopGestureTap()
@@ -96,7 +97,6 @@ var focusEcho: FocusEcho?
     var lastClose = Date.distantPast
     var floatFrames: [CGWindowID: CGRect] = [:]
     var floatZoom: [CGWindowID: CGRect] = [:]
-    var savedWorkspaceOf: [CGWindowID: String] = [:]
     var savedOwnerOf: [CGWindowID: String] = [:]
     var savedFloating: [CGWindowID: Bool] = [:]
     var previousWorkspace: [String: String] = [:]
@@ -121,7 +121,8 @@ var focusEcho: FocusEcho?
     var lastSavedTilingRecovery = TilingRecovery()
     var savedTabs: [SavedTabs] = []
     var savedTabsUntil = Date.distantPast
-    var lastSavedTabs: [String]?
+    var startedAt = Date.distantPast
+    var poweringOffAt = Date.distantPast
     var focusSink: NSWindow?
     var visible: Set<CGWindowID> = []
     var targets: [CGWindowID: CGRect] = [:]

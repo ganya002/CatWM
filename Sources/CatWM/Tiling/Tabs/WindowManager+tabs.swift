@@ -102,7 +102,7 @@ extension WindowManager {
     func reorderTab(_ id: CGWindowID, to position: Int) {
         model.tabs.move(id, to: position)
         TabStrips.shared.update()
-        saveTabs()
+        saveTilingRecovery()
     }
 
     private func activateTab(_ id: CGWindowID, previous: CGWindowID, retile: Bool = true) {

@@ -10,15 +10,20 @@ struct NativeWorkspaceCatalog {
         let id: String
         let spaces: [UInt64]
         var current: UInt64?
+        var uuids: [UInt64: String] = [:]
     }
     private(set) var entries: [Entry] = []
     var saved: [String: UInt64] = [:]
     var homes: [String: String] = [:]
+    var uuids: [String: String] = [:]
     var perDisplay = false
     var sharedSpaces = false
 
     mutating func synchronize(_ displays: [Display]) {
         if perDisplay { return follow(displays) }
+        let spaceOf = Dictionary(displays.flatMap { $0.uuids.map { ($0.value, $0.key) } },
+                                 uniquingKeysWith: { first, _ in first })
+        for (name, uuid) in uuids { if let space = spaceOf[uuid] { saved[name] = space } }
         let live = Set(displays.flatMap(\.spaces).filter { $0 != 0 })
         let connected = Set(displays.map(\.id))
         saved = saved.filter { live.contains($0.value) || homes[$0.key].map { !connected.contains($0) } == true }
@@ -38,10 +43,13 @@ struct NativeWorkspaceCatalog {
         }
         for entry in entries { homes[entry.name] = entry.display }
         homes = homes.filter { saved[$0.key] != nil }
+        let uuidOf = Dictionary(displays.flatMap(\.uuids), uniquingKeysWith: { first, _ in first })
+        for entry in entries { uuids[entry.name] = uuidOf[entry.space] }
+        uuids = uuids.filter { saved[$0.key] != nil }
     }
 
     private mutating func follow(_ displays: [Display]) {
-        saved = [:]; homes = [:]
+        saved = [:]; homes = [:]; uuids = [:]
         entries = displays.flatMap { display in
             display.spaces.filter { $0 != 0 }.enumerated().map { index, space in
                 Entry(name: WorkspaceKey.make(String(index + 1), on: display.id, perDisplay: true),
@@ -54,6 +62,7 @@ struct NativeWorkspaceCatalog {
         saved = saved.filter { $0.value != space && $0.key != name }
         saved[name] = space
         homes[name] = display
+        uuids = uuids.filter { saved[$0.key] != nil && $0.key != name }
         entries.removeAll { $0.space == space || $0.name == name }
         entries.append(Entry(name: name, display: display, space: space))
     }

@@ -79,6 +79,18 @@ import Testing
         #expect(catalog.entry("3")?.space == 22)
     }
 
+    @Test func namesFollowTheDesktopUUIDWhenItsSpaceIDChanges() {
+        var catalog = NativeWorkspaceCatalog()
+        catalog.synchronize([.init(id: "screen", spaces: [11, 12], uuids: [11: "A", 12: "B"])])
+        catalog.bind("writing", to: 13, on: "screen")
+        catalog.synchronize([.init(id: "screen", spaces: [11, 12, 13], uuids: [11: "A", 12: "B", 13: "C"])])
+        #expect(catalog.uuids == ["1": "A", "2": "B", "writing": "C"])
+        catalog.synchronize([.init(id: "screen", spaces: [42, 41, 13], uuids: [41: "A", 42: "B", 13: "C"])])
+        #expect(catalog.entry("1")?.space == 41)
+        #expect(catalog.entry("2")?.space == 42)
+        #expect(catalog.entry("writing")?.space == 13)
+    }
+
     @Test func newNamedWorkspaceKeepsItsCreatedDesktop() {
         var catalog = NativeWorkspaceCatalog()
         catalog.synchronize([.init(id: "screen", spaces: [11, 12])])
