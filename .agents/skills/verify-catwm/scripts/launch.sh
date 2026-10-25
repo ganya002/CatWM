@@ -23,7 +23,7 @@ save_state LOG_OFFSET "$(wc -c < "$LOG" 2>/dev/null | tr -d ' ' || echo 0)"
 git -C "$ROOT" rev-parse HEAD > "$RUN/commit.txt"
 git -C "$ROOT" status --short >> "$RUN/commit.txt"
 
-open -n -g --env "CATWM_INSTANCE=$INSTANCE" "$APP" --args --verbose 8>&-
+open -n -g --env "CATWM_INSTANCE=$INSTANCE" "$APP" --args --verbose --unscoped 8>&-
 i=0
 while [ $i -lt 100 ]; do
   PID=$("$CLI" ping --json 2>/dev/null | jq -r '.pid // empty' || true)

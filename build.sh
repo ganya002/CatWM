@@ -11,11 +11,34 @@ if [ -n "${CATWM_INSTANCE+set}" ]; then
     exit 2
   fi
 fi
+CONFIG=release
+REPLACE=
+for ARG in "$@"; do
+  case "$ARG" in
+    --dev) CONFIG=debug ;;
+    --replace) REPLACE=1 ;;
+  esac
+done
+INSTANCES="$HOME/.config/catwm/instances"
+DEFAULT_PIDS=
+if [ -z "${CATWM_INSTANCE+set}" ]; then
+  NAMED=" "
+  for FILE in "$INSTANCES"/*/catwm.pid; do
+    if [ -f "$FILE" ]; then NAMED="$NAMED$(tr -d ' \n' < "$FILE") "; fi
+  done
+  for PID in $(pgrep -x CatWM || true); do
+    PARENT=$(ps -o ppid= -p "$PID" 2>/dev/null | tr -d ' ')
+    case "$NAMED" in *" $PID "* | *" ${PARENT:-0} "*) ;; *) DEFAULT_PIDS="$DEFAULT_PIDS $PID" ;; esac
+  done
+  if [ -n "$DEFAULT_PIDS" ] && [ -z "$REPLACE" ]; then
+    echo "build: CatWM is running (pid$DEFAULT_PIDS) and this build would stop it." >&2
+    echo "build: pass --replace to stop it, or set CATWM_INSTANCE=<id> to build an instance next to it." >&2
+    exit 3
+  fi
+fi
 Tools/install-hooks.sh
 Tools/check-style.sh
 Tools/swiftlint.sh
-CONFIG=release
-if [ "$1" = "--dev" ]; then CONFIG=debug; fi
 if [ "$CONFIG" = "debug" ]; then
   swift build -c debug --build-system native
 else
@@ -24,7 +47,6 @@ fi
 ".build/$CONFIG/CatWM" --write-schema
 ".build/$CONFIG/CatWM" --write-config-docs
 python3 Tools/generate-clients.py
-INSTANCES="$HOME/.config/catwm/instances"
 stop_catwm() {
   case "$(ps -o comm= -p "$1" 2>/dev/null)" in */CatWM) ;; *) return 0 ;; esac
   kill "$1" 2>/dev/null || return 0
@@ -35,14 +57,7 @@ if [ -n "${CATWM_INSTANCE+set}" ]; then
   PID=$(cat "$INSTANCES/$CATWM_INSTANCE/catwm.pid" 2>/dev/null || true)
   if [ -n "$PID" ]; then stop_catwm "$PID"; fi
 else
-  NAMED=" "
-  for FILE in "$INSTANCES"/*/catwm.pid; do
-    if [ -f "$FILE" ]; then NAMED="$NAMED$(tr -d ' \n' < "$FILE") "; fi
-  done
-  for PID in $(pgrep -x CatWM || true); do
-    PARENT=$(ps -o ppid= -p "$PID" 2>/dev/null | tr -d ' ')
-    case "$NAMED" in *" $PID "* | *" ${PARENT:-0} "*) ;; *) kill "$PID" 2>/dev/null || true ;; esac
-  done
+  for PID in $DEFAULT_PIDS; do kill "$PID" 2>/dev/null || true; done
   pkill -x Hyprthyst 2>/dev/null || true
 fi
 APP=build/CatWM.app

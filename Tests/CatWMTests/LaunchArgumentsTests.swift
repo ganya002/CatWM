@@ -31,4 +31,15 @@ import Testing
         }
         #expect(message.contains("--verbose"))
     }
+
+    @Test func aNamedInstanceWithoutScopeNeedsTheFlag() {
+        #expect(LaunchArguments.startRefusal(named: true, scoped: false, arguments: ["CatWM"]) != nil)
+        #expect(LaunchArguments.startRefusal(named: true, scoped: false, arguments: ["CatWM", "--unscoped"]) == nil)
+        #expect(LaunchArguments.startRefusal(named: true, scoped: true, arguments: ["CatWM"]) == nil)
+        #expect(LaunchArguments.startRefusal(named: false, scoped: false, arguments: ["CatWM"]) == nil)
+    }
+
+    @Test func theUnscopedFlagIsAStartFlag() {
+        #expect(LaunchArguments.decide(["--unscoped"]) == .start)
+    }
 }

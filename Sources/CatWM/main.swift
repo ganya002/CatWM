@@ -35,7 +35,12 @@ if CommandLine.arguments.dropFirst().first == "--write-schema" {
 if !Instance.isNamed { Migrations.run() }
 
 switch LaunchArguments.decide(Array(CommandLine.arguments.dropFirst())) {
-case .start: break
+case .start:
+    if let message = LaunchArguments.startRefusal(
+        named: Instance.isNamed, scoped: Instance.scope != nil, arguments: CommandLine.arguments) {
+        FileHandle.standardError.write(Data((message + "\n").utf8))
+        exit(2)
+    }
 case .cli(let words): ControlCLI.run(words)
 case .usage(let message):
     FileHandle.standardError.write(Data((message + "\n").utf8))

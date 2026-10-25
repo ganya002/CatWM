@@ -89,7 +89,7 @@ Do not commit implementation plans, research notes, or agent scratch files. Keep
 
 ## Checks
 
-- Build: run `./build.sh --dev`. Run `./build.sh` only for a release build.
+- Build: run `./build.sh --dev`. Run `./build.sh` only for a release build. A build stops the running CatWM only with `--replace`. Set `CATWM_INSTANCE=<id>` to build next to it.
 - Lint: `Tools/check-style.sh` and `Tools/swiftlint.sh` must pass. The pre-commit hook and the `lint` GitHub Actions workflow run them.
 - `Tools/check-style.sh` also rejects a raw AX app element (use `axApp`), `NSLog` and `print` (use `Log`), a `try?` that drops a write failure (use `Log.attempt`), and a `UserDefaults` key literal (use `DefaultsKey`). It also rejects a timer wait (`asyncAfter`, `Task.sleep`) in `Tiling/` unless the line ends with `// style-ok: <why no event exists>`, a stored `static var`, `@unchecked Sendable`, `MainActor.assumeIsolated`, a sleep in a test, a discarded run error, a discarded directory creation error, and a fixed run-loop wait in a test. Its message names the fix.
 - `./build.sh` writes the schema, the clients and the config docs. Add the changed generated files to your change. Read `docs/internals/add-a-setting.md` before you add or change a setting.
