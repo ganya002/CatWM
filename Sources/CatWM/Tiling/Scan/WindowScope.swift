@@ -55,10 +55,13 @@ struct WindowScope: Equatable {
         config.cursorActions = false
         config.dimOtherWindows = false
         config.blurOtherWindows = false
+        config.bindings.removeAll { !allows($0.dispatcher) }
         return config
     }
 
-    func allows(_ command: String) -> Bool { !Self.refusedCommands.contains(command) }
+    func allows(_ command: String) -> Bool {
+        !Self.refusedCommands.contains(WindowActions.named(command)?.name ?? command)
+    }
 
     static let allowedCommands: Set<String> = [
         "ping", "commands", "dispatch", "subscribe", "unsubscribe",
@@ -68,13 +71,13 @@ struct WindowScope: Equatable {
         "togglefloating", "fullscreen", "minimize", "killactive",
         "moveintogroup", "moveoutofgroup", "changegroupactive", "movegroupwindow",
         "layoutmsg", "splitratio", "cyclelayout", "layout", "toggletiling", "retile",
-        "submap", "reload", "exit"
+        "reload", "exit"
     ]
 
     static let refusedCommands: Set<String> = [
         "nativefullscreen", "focusmonitor", "workspace", "movetoworkspace", "movetoworkspacesilent", "sethomespace",
         "sort", "sort-undo", "switcher", "exec", "launch", "toggledim", "toggleblur",
-        "grabtest", "modefx", "panelfx", "intro", "introlab"
+        "grabtest", "modefx", "panelfx", "intro", "introlab", "submap"
     ]
 }
 

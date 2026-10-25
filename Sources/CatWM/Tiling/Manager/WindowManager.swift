@@ -131,9 +131,8 @@ final class WindowManager {
     }
 
     func scopeRefusal(_ command: String) -> String? {
-        guard let scope else { return nil }
+        guard let scope, !scope.allows(command) else { return nil }
         let name = WindowActions.named(command)?.name ?? command
-        guard !scope.allows(name) else { return nil }
         return "`\(name)` is not available in a scoped instance: "
             + "it would act on windows, Desktops or input outside the scope"
     }

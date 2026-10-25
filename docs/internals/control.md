@@ -52,6 +52,9 @@ A scoped instance:
   - `toggledim` and `toggleblur` put panels over the windows of all apps.
   - `grabtest` moves the pointer and posts mouse events.
   - `modefx`, `panelfx`, `intro` and `introlab` show panels over the windows of all apps.
+  - `submap` starts the mode effect panels on all displays and sets the pointer image of all apps (`ModeFX`, `ModeCursor`). Without `CATWM_KEYS=on` the key event tap is off, so a key mode has no use.
+
+`WindowScope.restrict` also removes each key bind of a refused dispatcher. A `submap` key bind does not go through `WindowManager.dispatch`, and with `CATWM_KEYS=on` it can start a key mode.
 
 A focus command can still make the app of the target window active. The other windows of that app can then come to the front.
 

@@ -91,7 +91,9 @@ import Testing
     @Test func aScopedInstanceRefusesACommandBeforeItRuns() {
         let scoped = WindowManager(scope: WindowScope(pids: [10]), config: Config())
         let calls: [(String, [String: JSON])] = [
-            ("grabtest", [:]), ("launch", [:]), ("dispatch", ["dispatcher": .string("Workspace")])
+            ("grabtest", [:]), ("launch", [:]), ("dispatch", ["dispatcher": .string("Workspace")]),
+            ("submap", ["name": .string("window")]),
+            ("dispatch", ["dispatcher": .string("submap"), "arg": .string("window")])
         ]
         for (name, args) in calls {
             #expect(throws: ControlError.self) { try CommandRegistry.execute(name, args, client: nil, manager: scoped) }
@@ -114,9 +116,18 @@ import Testing
         #expect(scoped.focusSink == nil)
     }
 
+    @Test func aScopedManagerDropsTheKeyBindsOfARefusedDispatcher() {
+        let config = Config.parse("bind = ALT, w, submap, window\nbind = ALT, 2, workspace, 2\n"
+            + "bind = ALT, h, movefocus, l\nsubmap = window\nbind = , escape, submap, reset\nsubmap = reset")
+        let scoped = WindowManager(scope: WindowScope(pids: [10]), config: config)
+        #expect(scoped.config.bindings.map(\.dispatcher) == ["movefocus"])
+        let unscoped = WindowManager(scope: nil, config: config)
+        #expect(unscoped.config.bindings.count == 4)
+    }
+
     @Test func aScopedManagerRefusesWhatActsOutsideTheScope() {
         let scoped = WindowManager(scope: WindowScope(pids: [10]), config: Config())
-        for name in ["nativefullscreen", "workspace", "movetoworkspace", "toggledim", "toggleblur", "switcher"] {
+        for name in WindowScope.refusedCommands.sorted() {
             #expect(scoped.scopeRefusal(name)?.contains("not available in a scoped instance") == true)
         }
         #expect(scoped.scopeRefusal("movefocus") == nil)
