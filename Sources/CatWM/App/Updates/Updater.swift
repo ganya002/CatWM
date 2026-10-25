@@ -20,7 +20,7 @@ final class Updater: NSObject, SPUUpdaterDelegate, ObservableObject {
     func start() {
         guard isConfigured, controller == nil else { return }
         let channel = Bundle.main.infoDictionary?["CatWMUpdateChannel"] as? String
-        UserDefaults.standard.register(defaults: [Self.betaKey: channel == "beta"])
+        Instance.defaults.register(defaults: [Self.betaKey: channel == "beta"])
         controller = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: self, userDriverDelegate: nil)
         lastChecked = controller?.updater.lastUpdateCheckDate
     }
@@ -43,8 +43,8 @@ final class Updater: NSObject, SPUUpdaterDelegate, ObservableObject {
     }
 
     var receivesBeta: Bool {
-        get { UserDefaults.standard.bool(forKey: Self.betaKey) }
-        set { objectWillChange.send(); UserDefaults.standard.set(newValue, forKey: Self.betaKey) }
+        get { Instance.defaults.bool(forKey: Self.betaKey) }
+        set { objectWillChange.send(); Instance.defaults.set(newValue, forKey: Self.betaKey) }
     }
 
     func allowedChannels(for _: SPUUpdater) -> Set<String> {

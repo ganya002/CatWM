@@ -10,22 +10,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         self.statusItem = statusItem
         statusItem.button?.image = NSImage(systemSymbolName: "rectangle.split.3x1", accessibilityDescription: "CatWM")
+        statusItem.button?.toolTip = Instance.id.map { "CatWM (\($0))" }
         statusItem.button?.target = self
         statusItem.button?.action = #selector(toggleMenu)
         statusItem.button?.sendAction(on: [.leftMouseDown, .rightMouseDown])
         StatusMenu.shared.button = statusItem.button
 
         NSApp.mainMenu = makeMainMenu()
-        Updater.shared.start()
+        if !Instance.isNamed { Updater.shared.start() }
         CrashWatch.start()
         PerfMonitor.shared.start()
         WindowManager.shared.surface = AppSurface()
         WindowManager.shared.onChange = { [weak self] in
             self?.scheduleStatusUpdate()
         }
-        let firstRun = UserDefaults.standard.object(forKey: DefaultsKey.didSetUpLaunchAtLogin) == nil
-        LoginItem.shared.enableOnFirstLaunch()
-        CommandLineTool.install()
+        let firstRun = Instance.defaults.object(forKey: DefaultsKey.didSetUpLaunchAtLogin) == nil
+        if !Instance.isNamed {
+            LoginItem.shared.enableOnFirstLaunch()
+            CommandLineTool.install()
+        }
         Onboarding.shared.statusButton = statusItem.button
 
         let watcher = PermissionWatcher.shared
@@ -37,14 +40,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Log.info("launch: Accessibility not granted")
             WindowManager.shared.prewarm()
         }
-        if Onboarding.shouldShow(firstRun: firstRun, trusted: trusted)
+        if !Instance.isNamed && Onboarding.shouldShow(firstRun: firstRun, trusted: trusted)
             || LaunchFlag.onboarding.isSet {
             Onboarding.shared.start()
         } else if !trusted {
             Permission.accessibility.request()
         }
-        Tips.shared.launched()
-        WhatsNew.shared.launched()
+        if !Instance.isNamed {
+            Tips.shared.launched()
+            WhatsNew.shared.launched()
+        }
         #if DEBUG
         if LaunchFlag.gallery.isSet { DesignGallery.shared.open() }
         #endif
@@ -53,13 +58,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func closePreviousInstances() {
-        let ownPid = ProcessInfo.processInfo.processIdentifier
         let myExe = Bundle.main.executableURL?.resolvingSymlinksInPath()
-        let others = NSWorkspace.shared.runningApplications.filter { app in
-            guard app.processIdentifier != ownPid, !app.isTerminated else { return false }
+        let running = NSWorkspace.shared.runningApplications.filter { app in
+            guard !app.isTerminated else { return false }
             if let id = Bundle.main.bundleIdentifier, app.bundleIdentifier == id { return true }
             return myExe != nil && app.executableURL?.resolvingSymlinksInPath() == myExe
         }
+        let otherInstances = Instance.isNamed ? [] : Instance.paths.namedPidFiles().compactMap(InstancePaths.readPid)
+        let pids = InstancePaths.pidsToClose(own: getpid(), named: Instance.isNamed,
+                                             recorded: InstancePaths.readPid(Instance.pidFile),
+                                             running: running.map(\.processIdentifier),
+                                             otherInstances: Set(otherInstances))
+        let others = running.filter { pids.contains($0.processIdentifier) }
+        defer { Instance.writePid() }
         guard !others.isEmpty else { return }
         Log.info("launch: closing \(others.count) previous instance(s)")
         others.forEach { $0.terminate() }
@@ -121,6 +132,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_: Notification) {
         CrashWatch.cleanExit()
+        Instance.removePid()
     }
 
     private func scheduleStatusUpdate() {

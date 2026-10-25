@@ -17,10 +17,14 @@ final class LoginItem {
         }
     }
 
+    static let isAvailable = !Instance.isNamed
+
     @discardableResult
-    func set(_ enabled: Bool) -> Bool {
+    func set(_ enabled: Bool, available: Bool = LoginItem.isAvailable,
+             service: (Bool) throws -> Void = LoginItem.applyToMainApp) -> Bool {
+        guard available else { return false }
         do {
-            if enabled { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
+            try service(enabled)
             status = SMAppService.mainApp.status
             Log.info("launch at login \(enabled ? "on" : "off") (status \(status.rawValue))")
             return true
@@ -30,10 +34,14 @@ final class LoginItem {
         }
     }
 
+    static func applyToMainApp(_ enabled: Bool) throws {
+        if enabled { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
+    }
+
     func enableOnFirstLaunch() {
         let key = "didSetUpLaunchAtLogin"
-        guard !UserDefaults.standard.bool(forKey: key) else { return }
-        UserDefaults.standard.set(true, forKey: key)
+        guard !Instance.defaults.bool(forKey: key) else { return }
+        Instance.defaults.set(true, forKey: key)
         set(true)
     }
 

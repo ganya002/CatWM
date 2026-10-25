@@ -31,7 +31,7 @@ final class Tips: ObservableObject {
     static let paneOpens = 5, menuClicks = 8, modeEntriesNeeded = 15
     static let paneDelay: TimeInterval = 8
 
-    let defaults = UserDefaults.standard
+    let defaults = Instance.defaults
     static let seenKey = "tips.seen", offKey = "tips.off", clicksKey = "tips.clicks"
     static let daysKey = "tips.days", lastKey = "tips.last", panesKey = "tips.panes"
 

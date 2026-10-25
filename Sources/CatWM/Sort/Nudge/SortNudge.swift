@@ -17,9 +17,9 @@ final class SortNudge {
     }
 
     func markOffered(_ workspace: String) {
-        var days = UserDefaults.standard.dictionary(forKey: Self.key) as? [String: String] ?? [:]
+        var days = Instance.defaults.dictionary(forKey: Self.key) as? [String: String] ?? [:]
         days[workspace] = Self.today()
-        UserDefaults.standard.set(days, forKey: Self.key)
+        Instance.defaults.set(days, forKey: Self.key)
     }
 
     func offer(workspace: String, count: Int, on screen: NSScreen) {
@@ -27,7 +27,7 @@ final class SortNudge {
         guard panel == nil, manager.tilingEnabled, manager.config.sortNudge > 0, count > manager.config.sortNudge,
               !Onboarding.shared.isRunning, !SortPanel.shared.isOpen, !StatusMenu.shared.isOpen,
               let button = Onboarding.shared.statusButton, let buttonWindow = button.window else { return }
-        let days = UserDefaults.standard.dictionary(forKey: Self.key) as? [String: String] ?? [:]
+        let days = Instance.defaults.dictionary(forKey: Self.key) as? [String: String] ?? [:]
         guard days[workspace] != Self.today() else { return }
         markOffered(workspace)
 

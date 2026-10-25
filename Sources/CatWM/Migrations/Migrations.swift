@@ -9,7 +9,7 @@ enum Migrations {
         let home = FileManager.default.homeDirectoryForCurrentUser
         moveOuchConfigFolder(home: home)
         copyHyprthystConfig(home: home)
-        migrateDefaults(.standard)
+        migrateDefaults(Instance.defaults)
     }
 
     static func isLegacyBundle(_ bundle: String) -> Bool {

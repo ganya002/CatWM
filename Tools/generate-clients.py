@@ -153,7 +153,9 @@ def py_client(schema, enums):
 
 
 PY_TRANSPORT = '''def default_path() -> str:
-    return os.environ.get("CATWM_SOCKET") or os.path.expanduser("~/.config/catwm/catwm.sock")
+    instance = os.environ.get("CATWM_INSTANCE")
+    folder = "~/.config/catwm" if instance is None else f"~/.config/catwm/instances/{instance}"
+    return os.environ.get("CATWM_SOCKET") or os.path.expanduser(f"{folder}/catwm.sock")
 
 
 class CatWM:
@@ -304,7 +306,9 @@ TS_TRANSPORT = '''export class CatWMError extends Error {
 type Listener = (event: CatWMEvent) => void;
 
 export function defaultPath(): string {
-  return process.env.CATWM_SOCKET ?? `${os.homedir()}/.config/catwm/catwm.sock`;
+  const instance = process.env.CATWM_INSTANCE;
+  const folder = instance === undefined ? ".config/catwm" : `.config/catwm/instances/${instance}`;
+  return process.env.CATWM_SOCKET ?? `${os.homedir()}/${folder}/catwm.sock`;
 }
 
 export class CatWM {
@@ -568,8 +572,9 @@ public enum JSONValue: Codable, Equatable, Sendable {
 /// A connection to the running CatWM app. Calls block until the answer arrives and are safe from many threads.
 public final class CatWM: @unchecked Sendable {
     public static var defaultPath: String {
-        ProcessInfo.processInfo.environment["CATWM_SOCKET"]
-            ?? NSString(string: "~/.config/catwm/catwm.sock").expandingTildeInPath
+        let environment = ProcessInfo.processInfo.environment
+        let folder = environment["CATWM_INSTANCE"].map { "~/.config/catwm/instances/\\($0)" } ?? "~/.config/catwm"
+        return environment["CATWM_SOCKET"] ?? NSString(string: "\\(folder)/catwm.sock").expandingTildeInPath
     }
 
     private let fd: Int32

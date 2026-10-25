@@ -10,7 +10,7 @@ extension Onboarding {
         guard !isRunning else { return }
         let resuming = Self.isStarted && !LaunchFlag.onboarding.isSet
         firstRun = true
-        UserDefaults.standard.set(true, forKey: Self.startedKey)
+        Instance.defaults.set(true, forKey: Self.startedKey)
         guard let screen = CatWMPanel.pointerScreen() else { return }
         let card = makeWelcome(on: screen)
         guard !resuming, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return showWelcome() }

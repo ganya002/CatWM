@@ -228,8 +228,9 @@ public enum JSONValue: Codable, Equatable, Sendable {
 /// A connection to the running CatWM app. Calls block until the answer arrives and are safe from many threads.
 public final class CatWM: @unchecked Sendable {
     public static var defaultPath: String {
-        ProcessInfo.processInfo.environment["CATWM_SOCKET"]
-            ?? NSString(string: "~/.config/catwm/catwm.sock").expandingTildeInPath
+        let environment = ProcessInfo.processInfo.environment
+        let folder = environment["CATWM_INSTANCE"].map { "~/.config/catwm/instances/\($0)" } ?? "~/.config/catwm"
+        return environment["CATWM_SOCKET"] ?? NSString(string: "\(folder)/catwm.sock").expandingTildeInPath
     }
 
     private let fd: Int32

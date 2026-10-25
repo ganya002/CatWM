@@ -8,7 +8,7 @@ export PYTHONPATH="$(catwm docs)/python"     # the library ships inside the app
 python3 -c "from catwm import CatWM; print(CatWM().status())"
 ```
 
-CatWM must run. `CatWM()` raises `CatWMError` with code `not_running` when it does not. The library connects to `~/.config/catwm/catwm.sock`. Set `CATWM_SOCKET` to use another path.
+CatWM must run. `CatWM()` raises `CatWMError` with code `not_running` when it does not. The library connects to `~/.config/catwm/catwm.sock`. With `CATWM_INSTANCE=<id>` it connects to `~/.config/catwm/instances/<id>/catwm.sock`. Set `CATWM_SOCKET` to use another path.
 
 ## Call commands
 

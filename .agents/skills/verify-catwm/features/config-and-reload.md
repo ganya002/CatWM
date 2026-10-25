@@ -1,6 +1,6 @@
 # Config and reload
 
-The user changes an option in Settings, in `~/.config/catwm/catwm.conf` or with the CLI, and CatWM applies it at once. A HUD shows "Config reloaded" or the number of errors.
+The user changes an option in Settings, in the config file (`$CONF` for the verify instance) or with the CLI, and CatWM applies it at once. A HUD shows "Config reloaded" or the number of errors.
 
 ## Sub-features
 
@@ -11,7 +11,7 @@ The user changes an option in Settings, in `~/.config/catwm/catwm.conf` or with 
 ## How to get to it (user POV)
 
 - Change an option in Settings (menu bar > Settings…, or ⌘, ).
-- Edit `~/.config/catwm/catwm.conf`, then press Shift R in window mode, or run `catwm reload`.
+- Edit `$CONF` (the config of the verify instance), then press Shift R in window mode, or run `catwm reload`.
 - Run `catwm config.set <key> <value>` and `catwm config.get <key>`.
 
 ## Driving it with the catwm CLI
@@ -19,12 +19,12 @@ The user changes an option in Settings, in `~/.config/catwm/catwm.conf` or with 
 Preconditions:
 
 - The baseline preconditions in the README are true.
-- Copy the config before you start: `cp ~/.config/catwm/catwm.conf "$RUN/catwm.conf.before"`.
+- Copy the config before you start: `cp "$CONF" "$RUN/catwm.conf.before"`.
 - Use the option `window-margins` (bool). Record its value: `$CLI config.get window-margins`.
 
-- **Set.** Start `$CLI events config.reloaded > $RUN/config.jsonl &` and record `$!`. Run `$CLI config.set window-margins false`. A `config.reloaded` line arrives. `$CLI config.get window-margins` prints `false`. `grep '^window-margins' ~/.config/catwm/catwm.conf` shows `false`. In `dump`, the test windows touch each other with no gaps.
+- **Set.** Start `$CLI events config.reloaded > $RUN/config.jsonl &` and record `$!`. Run `$CLI config.set window-margins false`. A `config.reloaded` line arrives. `$CLI config.get window-margins` prints `false`. `grep '^window-margins' "$CONF"` shows `false`. In `dump`, the test windows touch each other with no gaps.
 - **Proof.** Run `$S/evidence.sh config-set-after`.
-- **Put it back.** Run `$CLI config.set window-margins <recorded value>`. `diff "$RUN/catwm.conf.before" ~/.config/catwm/catwm.conf` prints nothing.
+- **Put it back.** Run `$CLI config.set window-margins <recorded value>`. `diff "$RUN/catwm.conf.before" "$CONF"` prints nothing.
 - **Reload.** Run `$CLI reload`. The exit code is 0, and a new `config.reloaded` line arrives.
 - Kill the events pid that you recorded.
 

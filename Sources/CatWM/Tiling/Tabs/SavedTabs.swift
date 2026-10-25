@@ -40,7 +40,7 @@ extension WindowManager {
     private static let legacyTabsKey = "tabs.groups"
 
     func loadTabs() {
-        let defaults = UserDefaults.standard
+        let defaults = Instance.defaults
         tabUI.savedTabs = (defaults.stringArray(forKey: Self.legacyTabsKey) ?? []).compactMap(SavedTabs.init)
         defaults.removeObject(forKey: Self.legacyTabsKey)
         tabUI.savedTabsUntil = Date().addingTimeInterval(SavedTabs.wait)

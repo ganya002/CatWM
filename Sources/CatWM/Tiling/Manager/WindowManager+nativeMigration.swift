@@ -23,7 +23,7 @@ extension WindowManager {
 
     func restoreNativeMigration(_ window: Window) {
         guard let workspace = desktops.nativeMigration[window.id] else { return }
-        let owners = UserDefaults.standard.dictionary(forKey: DefaultsKey.wsLegacyOwners) as? [String: String] ?? [:]
+        let owners = Instance.defaults.dictionary(forKey: DefaultsKey.wsLegacyOwners) as? [String: String] ?? [:]
         guard owners[String(window.id)] == owner(window), isVirtual(workspace), !isPending(workspace) else {
             completeNativeMigration(window.id, workspace: workspace)
             return
@@ -38,7 +38,7 @@ extension WindowManager {
     func completeNativeMigration(_ id: CGWindowID, workspace: String) {
         guard desktops.nativeMigration[id] == workspace else { return }
         desktops.nativeMigration[id] = nil
-        UserDefaults.standard.set(Dictionary(uniqueKeysWithValues: desktops.nativeMigration.map {
+        Instance.defaults.set(Dictionary(uniqueKeysWithValues: desktops.nativeMigration.map {
             (String($0.key), $0.value)
         }), forKey: DefaultsKey.wsNativeMigration)
     }

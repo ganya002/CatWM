@@ -53,8 +53,7 @@ struct Config {
     var currentSubmap = ""
     var errors: [String] = []
 
-    static let url = FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent(".config/catwm/catwm.conf")
+    static let url = Instance.configFolder.appendingPathComponent("catwm.conf")
 
     static func load() -> Config {
         let fileManager = FileManager.default

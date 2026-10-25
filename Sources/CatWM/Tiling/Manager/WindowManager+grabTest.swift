@@ -91,7 +91,7 @@ extension WindowManager {
         let saved = grabHints.mapValues {
             [Double($0.fromLeft.x), Double($0.fromLeft.y), Double($0.fromRight.x), Double($0.fromRight.y)]
         }
-        UserDefaults.standard.set(saved, forKey: DefaultsKey.grabHints)
+        Instance.defaults.set(saved, forKey: DefaultsKey.grabHints)
     }
 
     func grabPoints(for window: Window, frame: CGRect) -> [CGPoint] {

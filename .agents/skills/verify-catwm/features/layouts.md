@@ -23,7 +23,7 @@ Preconditions:
 - Record the start state: `$CLI status --json | jq -r '.screens[0].layout'` and the `ratio=` value in `$CLI dump`.
 
 - **Set a layout.** Run `$S/evidence.sh layouts-set-before`, then `$CLI layout tall`. In `dump`, the screen line shows `layout=tall`, and each test window is `tiled ... OK`. In `windows --json`, one test window has the full height of the left part, and the others are stacked on the right.
-- **Cycle.** Read the list: `grep '^layouts' ~/.config/catwm/catwm.conf` (`config.get` does not know `layouts`). Run `$CLI cyclelayout next`. `status.screens[0].layout` is the next name in that list. If the old layout is not in the list, CatWM goes to the first entry (seen: `tall` → `bsp` with `layouts = bsp, wide, floating, fullscreen`).
+- **Cycle.** Read the list: `grep '^layouts' "$CONF"` (`config.get` does not know `layouts`). Run `$CLI cyclelayout next`. `status.screens[0].layout` is the next name in that list. If the old layout is not in the list, CatWM goes to the first entry (seen: `tall` → `bsp` with `layouts = bsp, wide, floating, fullscreen`).
 - **Ratio.** Run `$CLI layout tall`, then `$CLI splitratio exact 0.6`. In `dump`, `ratio=0.6`, and the main window width is about 60 % of `usable` minus the gaps.
 - **Retile.** Run `$CLI retile`. Each test window is `OK` in `dump`.
 - **Proof.** Run `$S/evidence.sh layouts-set-after`. Then put back the start layout and the ratio. The ratio belongs to the workspace and stays when you change the layout, so set it back with `splitratio exact <start ratio>`.

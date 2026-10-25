@@ -16,8 +16,7 @@ final class ConfigLibrary: ObservableObject {
     var observer: AnyCancellable?
     var applying = false
 
-    static let url = FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent(".config/catwm/configs.json")
+    static let url = Instance.configFolder.appendingPathComponent("configs.json")
 
     struct Stored: Codable { var custom: [SavedConfig]; var active: [String: String]; var edited: [SavedConfig]? }
 

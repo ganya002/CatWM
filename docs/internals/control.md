@@ -6,11 +6,28 @@ One registry feeds every way to control CatWM from outside the app. Key binds, t
 
 - `Command.swift`: `Command` (name, group, summary, typed arguments, result shape, access, `run`). It also holds the argument check.
 - `CommandRegistry.swift`, `Commands+dispatchers.swift`, `Commands+state.swift`: the list of commands. `Commands+dispatchers.swift` makes one dispatcher entry from each `WindowAction`. A dispatcher entry calls `WindowManager.dispatch`. A query entry builds JSON from the window manager.
-- `ControlServer.swift`: the Unix socket (`~/.config/catwm/catwm.sock`, mode `0600`, `CATWM_SOCKET` overrides it). It reads on a background queue and runs each command on the main queue, in order.
+- `ControlServer.swift`: the Unix socket (`catwm.sock` in `Instance.configFolder`, mode `0600`, `CATWM_SOCKET` overrides it). It reads on a background queue and runs each command on the main queue, in order. It refuses a path that is longer than `sun_path` (104 bytes). It does not cut the path.
 - `ControlConnection.swift`: one client. It frames lines, writes without blocking, and drops a client that falls 1 MB behind.
 - `EventBus.swift`: the event list and the subscriptions. `WindowManager.notifyChange()` replaced the old `onChange?()` calls. When someone subscribes, it compares a state snapshot with the last one and emits the difference. With no subscriber it does nothing.
 - `ControlCLI.swift`: the `catwm` command line. It reads the registry to parse arguments and print help. `main.swift` calls it for any first argument that does not start with `-`.
 - `ControlSchema.swift`: writes `Clients/schema.json` from the registry.
+
+## Instances
+
+`CATWM_INSTANCE=<id>` starts a separate CatWM instance. The id is 1 to 24 characters of `a-z`, `0-9` and `-`. CatWM stops with exit code 2 on a bad id. It does not use the default instance, because the default instance quits the user's CatWM. `Sources/CatWM/App/Instance.swift` holds each path of an instance. Use `Instance` for a new file, folder or `UserDefaults` value. `Tools/check-style.sh` rejects `UserDefaults.standard`.
+
+| | Default instance | Named instance `<id>` |
+|---|---|---|
+| Config folder (config, configs, templates, socket, pid file) | `~/.config/catwm/` | `~/.config/catwm/instances/<id>/` |
+| Log | `~/Library/Logs/CatWM.log` | `~/Library/Logs/CatWM-<id>.log` |
+| Support and cache folders | `~/Library/Application Support/CatWM/`, `~/Library/Caches/catwm/` | the same folders with `instances/<id>/` |
+| Defaults | the app domain `local.catwm` | the suite `local.catwm.instance.<id>` |
+
+Each instance writes its pid to `catwm.pid` in its config folder. At start, `AppDelegate.closePreviousInstances` stops the pid in that file if it is a CatWM. The default instance also stops each other process with the bundle ID `local.catwm`, but not a pid in `instances/*/catwm.pid`. `build.sh` does the same.
+
+A named instance does not register a login item, link the `catwm` command, start the updater, send crash or performance reports, show onboarding, tips or What's New, or run migrations. The bundle ID and the signature do not change, so the macOS permissions of the app apply to each instance.
+
+The CLI and the libraries read `CATWM_INSTANCE` too. `CATWM_SOCKET` wins over it.
 
 ## Add a command
 

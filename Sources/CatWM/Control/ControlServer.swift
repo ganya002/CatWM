@@ -74,12 +74,12 @@ final class ControlServer {
         return response.encoded() + Data("\n".utf8)
     }
 
-    private static func listen(on path: String) -> Int32? {
+    static func listen(on path: String, log: (String) -> Void = { Log.info($0) }) -> Int32? {
         var address = sockaddr_un()
         address.sun_family = sa_family_t(AF_UNIX)
         let capacity = MemoryLayout.size(ofValue: address.sun_path)
         guard path.utf8.count < capacity else {
-            Log.info("control: socket path is too long: \(path)")
+            log("control: socket path is too long: \(path)")
             return nil
         }
         withUnsafeMutableBytes(of: &address.sun_path) { buffer in
@@ -90,7 +90,7 @@ final class ControlServer {
                                                     withIntermediateDirectories: true)
         }
         if Self.isAlive(address) {
-            Log.info("control: another CatWM listens on \(path)")
+            log("control: another CatWM listens on \(path)")
             return nil
         }
         unlink(path)
@@ -104,7 +104,7 @@ final class ControlServer {
         }
         umask(previous)
         guard bound == 0, Darwin.listen(descriptor, 16) == 0 else {
-            Log.info("control: cannot listen on \(path): \(String(cString: strerror(errno)))")
+            log("control: cannot listen on \(path): \(String(cString: strerror(errno)))")
             Darwin.close(descriptor)
             return nil
         }

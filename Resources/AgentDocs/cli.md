@@ -10,7 +10,7 @@ $CATWM dump
 
 CatWM links itself as `catwm` in `/usr/local/bin` (or `~/.local/bin` if that is not writable) when the installed app starts. Then `catwm <command>` works from any shell.
 
-The CLI is a client. It sends one request to the running app through a Unix socket (`~/.config/catwm/catwm.sock`, mode `0600`). It prints the answer and exits. The exit code is `0` when the command worked. It is `1` when the app refused the command or does not run. It is `2` when the command line is wrong. Set `CATWM_SOCKET` to use another socket path.
+The CLI is a client. It sends one request to the running app through a Unix socket (`~/.config/catwm/catwm.sock`, mode `0600`). It prints the answer and exits. The exit code is `0` when the command worked. It is `1` when the app refused the command or does not run. It is `2` when the command line is wrong. Set `CATWM_INSTANCE=<id>` to talk to a separate CatWM instance (socket `~/.config/catwm/instances/<id>/catwm.sock`). Set `CATWM_SOCKET` to use another socket path. It wins over `CATWM_INSTANCE`.
 
 The CLI, the Python, TypeScript and Swift libraries (`Clients/`) and the key binds all use the same command registry. Run `catwm help` for the full list and `catwm help <command>` for the arguments. Add `--json` to print compact JSON.
 
