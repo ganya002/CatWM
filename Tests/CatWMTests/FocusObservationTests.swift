@@ -201,7 +201,7 @@ import Testing
         manager.onChange = nil
     }
 
-    @Test @MainActor func aPendingFocusDoesNotExpireWhileItsWriteIsBlocked() async {
+    @Test @MainActor func aPendingFocusStaysWhileItsWriteIsBlocked() async {
         let manager = manager()
         let tracked = window(7)
         manager.windows[tracked.id] = tracked

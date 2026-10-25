@@ -71,7 +71,7 @@ extension WindowManager {
         guard let workspace = focusRequests.refocusAfterClose else { return }
         focusRequests.refocusAfterClose = nil
         guard !hasFresh else { return }
-        DispatchQueue.main.asyncAfter( // style-ok: macOS picks the next focus with no event
+        DispatchQueue.main.asyncAfter( // style-ok: grace time for the app to pick its own next window
             deadline: .now() + 0.1
         ) { [weak self] in
             self?.refocusRecent(on: workspace)
