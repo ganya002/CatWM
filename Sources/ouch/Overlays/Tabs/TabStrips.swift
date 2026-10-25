@@ -133,15 +133,17 @@ final class TabStrips {
 
         func contains(_ point: CGPoint) -> Bool {
             let primaryHeight = NSScreen.screens.first?.frame.height ?? 0
+            let bar = NSRect(x: panel.frame.minX, y: panel.frame.minY + TabStrip.corner,
+                             width: panel.frame.width, height: TabStrip.height)
             return panel.isVisible && panel.alphaValue > 0
-                && panel.frame.contains(NSPoint(x: point.x, y: primaryHeight - point.y))
+                && bar.contains(NSPoint(x: point.x, y: primaryHeight - point.y))
         }
 
         func preview(_ window: Window, at point: CGPoint) {
             let x = point.x - panel.frame.minX
             let width = panel.frame.width
             if !model.tabs.contains(where: { $0.id == window.id }) {
-                let step = max(0, width - TabStrip.lead) / CGFloat(model.tabs.count + 1)
+                let step = model.span(width) / CGFloat(model.tabs.count + 1)
                 let wanted = step > 0 ? Int(((x - TabStrip.lead) / step).rounded(.down)) : 0
                 withAnimation(TabStrip.motion) {
                     model.tabs.insert(.init(id: window.id, title: Self.title(of: window), pid: window.pid),
@@ -259,8 +261,8 @@ final class TabStrips {
 
         private static func frame(above slot: CGRect) -> NSRect {
             let primaryHeight = NSScreen.screens.first?.frame.height ?? 0
-            return NSRect(x: slot.minX + TabStrip.inset, y: primaryHeight - slot.minY,
-                          width: max(0, slot.width - TabStrip.inset * 2), height: TabStrip.height).integral
+            return NSRect(x: slot.minX, y: primaryHeight - slot.minY - TabStrip.corner,
+                          width: max(0, slot.width), height: TabStrip.panelHeight).integral
         }
     }
 }

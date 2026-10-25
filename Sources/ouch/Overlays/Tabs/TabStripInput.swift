@@ -41,7 +41,8 @@ final class TabStripInput: NSView {
         super.layout()
         host.frame = bounds
         let size = TrafficLights.size(for: TabStrip.lights)
-        lights.frame = NSRect(origin: NSPoint(x: TabStrip.lightsInset, y: TabStrip.lightsInset), size: size)
+        let x = bounds.width - TabStrip.lightsInset - size.width
+        lights.frame = NSRect(origin: NSPoint(x: x, y: TabStrip.corner + TabStrip.lightsInset), size: size)
     }
 
     override func acceptsFirstMouse(for _: NSEvent?) -> Bool { true }
@@ -49,7 +50,7 @@ final class TabStripInput: NSView {
     override func hitTest(_ point: NSPoint) -> NSView? {
         let local = convert(point, from: superview)
         if lights.frame.contains(local) { return lights }
-        return bounds.contains(local) ? self : nil
+        return bar.contains(local) ? self : nil
     }
 
     override func updateTrackingAreas() {
@@ -68,6 +69,8 @@ final class TabStripInput: NSView {
         model.closeHovered = false
     }
 
+    private var bar: NSRect { NSRect(x: 0, y: TabStrip.corner, width: bounds.width, height: TabStrip.height) }
+
     private func local(_ event: NSEvent) -> CGPoint {
         let point = convert(event.locationInWindow, from: nil)
         return CGPoint(x: point.x, y: bounds.height - point.y)
@@ -76,7 +79,7 @@ final class TabStripInput: NSView {
     private func hover(_ event: NSEvent) {
         guard model.dragged == nil else { return }
         let point = local(event)
-        guard let index = model.index(at: point.x, width: bounds.width) else {
+        guard point.y <= TabStrip.height, let index = model.index(at: point.x, width: bounds.width) else {
             model.hovered = nil
             return
         }
@@ -92,7 +95,7 @@ final class TabStripInput: NSView {
         let onClose = model.closeRect(index, width: bounds.width).contains(point)
         press = Press(point: NSEvent.mouseLocation, id: model.tabs[index].id,
                       grab: point.x - model.slotX(index, width: bounds.width),
-                      hold: CGPoint(x: point.x + TabStrip.inset, y: point.y), onClose: onClose)
+                      hold: CGPoint(x: point.x, y: point.y), onClose: onClose)
     }
 
     override func mouseDragged(with event: NSEvent) {
@@ -103,7 +106,8 @@ final class TabStripInput: NSView {
             model.dragged = press.id
             model.hovered = nil
         }
-        let lifted = !bounds.insetBy(dx: 0, dy: -Self.liftSlack).contains(local(event))
+        let strip = CGRect(x: 0, y: 0, width: bounds.width, height: TabStrip.height)
+        let lifted = !strip.insetBy(dx: 0, dy: -Self.liftSlack).contains(local(event))
         if lifted {
             WindowManager.shared.dragTab(press.id, grab: press.hold, to: mouseLocation())
         } else if model.lifted {
@@ -130,7 +134,7 @@ final class TabStripInput: NSView {
             if lifted, let from = model.tabs.firstIndex(where: { $0.id == id }) {
                 liftedTab = model.tabs.remove(at: from)
             } else if !lifted, let tab = liftedTab {
-                let step = max(0, bounds.width - TabStrip.lead) / CGFloat(model.tabs.count + 1)
+                let step = model.span(bounds.width) / CGFloat(model.tabs.count + 1)
                 let wanted = step > 0 ? Int(((x - TabStrip.lead) / step).rounded()) : 0
                 model.tabs.insert(tab, at: min(model.tabs.count, max(0, wanted)))
                 liftedTab = nil
