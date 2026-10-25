@@ -20,7 +20,7 @@ extension WindowManager {
             case .unavailable:
                 guard !self.focusRequests.focusCommands.isEmpty || self.focusRequests.waitingRefocus != nil
                         || self.focusRequests.pendingFocus?.executed == true else { return }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                self.focusRequests.retryRead { [weak self] in
                     guard let self, self.focusRequests.focusObservation == generation,
                           self.frontmostPID() == pid else { return }
                     self.requestFocusObservation()

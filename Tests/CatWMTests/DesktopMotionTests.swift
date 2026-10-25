@@ -30,9 +30,10 @@ struct DesktopMotionTests {
     }
 
     @Test func anExpiredPreparedFrameKeepsTheFullAnimation() async throws {
-        let motion = DesktopMotion(screen: try #require(NSScreen.screens.first))
+        let screen = try #require(NSScreen.screens.first)
+        let motion = DesktopMotion(screen: screen)
         try await motion.frames(2)
-        try await Task.sleep(for: .milliseconds(80))
+        try await DesktopMotion(screen: screen).frames(2)
         var values: [Double] = []
         let start = CACurrentMediaTime()
         try await motion.animate(from: 0, to: 1, with: settings) { values.append($0) }

@@ -130,10 +130,6 @@ struct DesktopLifecycleTests {
     }
 
     private func discard(_ space: UInt64, on screen: Screen) async throws {
-        for _ in 0..<20 {
-            if (try? await DesktopLifecycle.remove(space, on: screen)) != nil { return }
-            try await Task.sleep(nanoseconds: 50_000_000)
-        }
-        try await DesktopLifecycle.remove(space, on: screen)
+        try await WindowManager().removeDesktop(space, on: screen)
     }
 }

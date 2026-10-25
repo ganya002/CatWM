@@ -26,4 +26,7 @@ struct FocusRequests {
     var focusReader = FocusReader()
     var focusObservation = 0
     var focusReads: Set<pid_t> = []
+    var retryRead: (@escaping () -> Void) -> Void = { read in
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: read) // style-ok: a busy app sends no AX event
+    }
 }
