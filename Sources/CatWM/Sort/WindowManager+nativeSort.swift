@@ -11,7 +11,7 @@ extension WindowManager {
     }
 
     @MainActor private func commitNativeSort() async {
-        for name in nativeSortNames.sorted(by: workspaceSort) {
+        for name in desktops.nativeSortNames.sorted(by: workspaceSort) {
             guard let display = monitorOf[name], let screen = Screen.all().first(where: { $0.uuid == display }) else {
                 continue
             }
@@ -21,7 +21,7 @@ extension WindowManager {
         }
         let assignments = workspaceOf
         for (id, name) in assignments {
-            guard let target = nativeCatalog.entry(name), let window = windows[id], !window.fullscreen,
+            guard let target = desktops.nativeCatalog.entry(name), let window = windows[id], !window.fullscreen,
                   Spaces.of(window: id) != [target.space] else { continue }
             workspaceMoves.insert(id)
             animator.cancel(id)
@@ -29,11 +29,11 @@ extension WindowManager {
                 Spaces.move(window: id, to: target.space) { continuation.resume(returning: $0) }
             }
             workspaceMoves.remove(id)
-            if moved { nativeMembership[id] = target.space } else {
+            if moved { desktops.nativeMembership[id] = target.space } else {
                 HUD.shared.show("macOS couldn't move a window to workspace \(name)", on: currentScreen()?.nsScreen)
             }
         }
-        nativeSortNames = []
+        desktops.nativeSortNames = []
     }
 
     @MainActor func leaveFullscreen(_ id: CGWindowID, to workspace: String) async {
@@ -61,7 +61,7 @@ extension WindowManager {
                 if !moved { try await Task.sleep(nanoseconds: 100_000_000) }
             } while !moved && window.isValidUnlessStalled && ProcessInfo.processInfo.systemUptime < deadline
             guard moved else { throw DesktopTransitionError.check("macOS couldn't move this window") }
-            nativeMembership[id] = target.space
+            desktops.nativeMembership[id] = target.space
             model.assign(id, to: workspace)
             model.fullscreenHost = model.fullscreenHost.filter { $0.value != id }
             leavingFullscreen[id] = Date()

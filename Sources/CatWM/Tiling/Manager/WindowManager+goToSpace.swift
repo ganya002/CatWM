@@ -5,7 +5,7 @@ extension WindowManager {
     func goToSpace(_ number: Int, autoCorrect: Bool = true) -> Int? {
         if let combo = SystemShortcut.desktop(number) {
             Hotkeys.post(keyCode: combo.keyCode, flags: combo.flags)
-            pendingSpace = nil
+            desktops.pendingSpace = nil
             return 1
         }
         let screens = Screen.all()
@@ -19,7 +19,9 @@ extension WindowManager {
             HUD.shared.show("There is no space \(number)", on: screen.nsScreen)
             return nil
         }
-        if let pending = pendingSpace, pending.display == screen.uuid, Date() < pending.until { cur = pending.index }
+        if let pending = desktops.pendingSpace, pending.display == screen.uuid, Date() < pending.until {
+            cur = pending.index
+        }
         let delta = info.desktops[number - 1] - cur
         guard delta != 0 else { return 0 }
         guard let combo = SystemShortcut.step(right: delta > 0) else {
@@ -32,10 +34,10 @@ extension WindowManager {
         )
         for _ in 0..<abs(delta) { Hotkeys.post(keyCode: combo.keyCode, flags: combo.flags) }
         let settle = 0.6 + 0.15 * Double(abs(delta))
-        pendingSpace = PendingSpace(display: screen.uuid, index: info.desktops[number - 1],
-                                    until: Date().addingTimeInterval(settle))
-        spaceGeneration += 1
-        let generation = spaceGeneration
+        desktops.pendingSpace = .init(display: screen.uuid, index: info.desktops[number - 1],
+                                      until: Date().addingTimeInterval(settle))
+        desktops.spaceGeneration += 1
+        let generation = desktops.spaceGeneration
         guard autoCorrect else { return abs(delta) }
         DispatchQueue.main.asyncAfter(deadline: .now() + settle) { [weak self] in
             self?.correctSpace(display: screen.uuid, target: info.desktops[number - 1], generation: generation,
@@ -47,21 +49,21 @@ extension WindowManager {
     func switchSpace(_ number: Int) { goToSpace(number) }
 
     func correctSpace(display: String, target: Int, generation: Int, attemptsLeft: Int) {
-        guard generation == spaceGeneration, attemptsLeft > 0,
+        guard generation == desktops.spaceGeneration, attemptsLeft > 0,
               let info = Spaces.list(display: display), let cur = info.current, cur != target,
               let combo = SystemShortcut.step(right: target > cur) else { return }
         let delta = target - cur
         Log.info("spaces: landed on \(cur + 1) instead of \(target + 1); correcting by \(delta)")
         for _ in 0..<abs(delta) { Hotkeys.post(keyCode: combo.keyCode, flags: combo.flags) }
         let settle = 0.6 + 0.15 * Double(abs(delta))
-        pendingSpace = PendingSpace(display: display, index: target, until: Date().addingTimeInterval(settle))
+        desktops.pendingSpace = .init(display: display, index: target, until: Date().addingTimeInterval(settle))
         DispatchQueue.main.asyncAfter(deadline: .now() + settle) { [weak self] in
             self?.correctSpace(display: display, target: target, generation: generation, attemptsLeft: attemptsLeft - 1)
         }
     }
 
     func moveToSpace(_ number: Int) {
-        guard !movingToSpace, let window = focusedWindow() else { return }
+        guard !desktops.movingToSpace, let window = focusedWindow() else { return }
         let frame = window.frameUnlessStalled
         guard !frame.isNull else { return }
         let points = grabPoints(for: window, frame: frame)
@@ -70,7 +72,7 @@ extension WindowManager {
             Log.info("move to space: no grab point for \(window.bundleID ?? "pid \(window.pid)")")
             return
         }
-        movingToSpace = true
+        desktops.movingToSpace = true
         focus(window, warp: false)
         tryGrab(window, points[...], space: number, restore: mouseLocation())
     }

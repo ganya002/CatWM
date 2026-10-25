@@ -3,7 +3,8 @@ import AppKit
 extension WindowManager {
     func prepareDockPull(at point: CGPoint) -> (() -> Void)? {
         let deadline = Date().addingTimeInterval(0.15)
-        guard isStarted, config.virtualWorkspaces, !sortSession, dockArea.contains(point), Spaces.canMoveWindows,
+        guard isStarted, config.virtualWorkspaces, !closeAndSort.sortSession, dockArea.contains(point),
+              Spaces.canMoveWindows,
               let display = Screen.all().first(where: { $0.frame.contains(point) }),
               isOnHomeSpace(display), let workspace = virtualShown[display.uuid],
               let app = dockApplication(at: point),
@@ -71,17 +72,17 @@ extension WindowManager {
 
     func followFocus() {
         guard isStarted, !restoringTemplate, let window = reportedFocusedWindow() else { return }
-        if let pending = pendingFocus {
+        if let pending = focusRequests.pendingFocus {
             guard pending.id == window.id else { return }
-            if pending.executed { pendingFocus = nil }
+            if pending.executed { focusRequests.pendingFocus = nil }
         }
         noteFocus(window.id)
-        guard !sortSession else { return }
+        guard !closeAndSort.sortSession else { return }
         guard config.virtualWorkspaces, let workspace = workspaceOf[window.id], isVirtual(workspace) else { return }
         if isShown(workspace) { lastFocused[workspace] = window.id; return }
         guard Date() > autoSwitchAfter else { return }
         guard isParked(window.cachedFrame, Screen.all()) else { scheduleRefresh(); return }
-        if config.stayOnWorkspaceAfterClose, Date().timeIntervalSince(lastClose) < 1.0 {
+        if config.stayOnWorkspaceAfterClose, Date().timeIntervalSince(closeAndSort.lastClose) < 1.0 {
             Log.debug("workspaces: ignoring focus on \(workspace) right after a close")
             refocusCurrentWorkspace()
             return

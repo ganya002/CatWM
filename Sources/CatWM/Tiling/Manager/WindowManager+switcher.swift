@@ -66,12 +66,12 @@ extension WindowManager {
     }
 
     private func workspace(on space: UInt64) -> String? {
-        config.virtualWorkspaces ? nativeCatalog.entry(space: space)?.name : nil
+        config.virtualWorkspaces ? desktops.nativeCatalog.entry(space: space)?.name : nil
     }
 
     func switchTo(_ item: SwitcherItem) {
         if let space = Spaces.of(window: item.id).first, let workspace = workspace(on: space),
-           let display = nativeCatalog.entry(workspace)?.display, Spaces.current(display: display) != space {
+           let display = desktops.nativeCatalog.entry(workspace)?.display, Spaces.current(display: display) != space {
             lastFocused[workspace] = item.id
             showWorkspace(workspace, focusing: windows[item.id])
             return
@@ -113,7 +113,7 @@ extension WindowManager {
 
 func closeWindow(_ id: CGWindowID) -> Bool {
         guard let window = windows[id] else { return false }
-        lastClose = Date()
+        closeAndSort.lastClose = Date()
         markClosedTab(id)
         scanner.run(window.pid) { window.close() }
         return true

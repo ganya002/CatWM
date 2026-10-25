@@ -119,7 +119,7 @@ extension FocusDim {
         var id: CGWindowID?
         if app.processIdentifier == getpid() {
             if let number = NSApp.keyWindow?.windowNumber, number > 0, !owns(number) { id = CGWindowID(number) }
-        } else if let report = WindowManager.shared.reportedFocus, report.pid == app.processIdentifier {
+        } else if let report = WindowManager.shared.focusRequests.reportedFocus, report.pid == app.processIdentifier {
             id = report.id
         }
         if id == nil { id = CGWindowInfo.onScreen().first { $0.pid == app.processIdentifier }?.id }

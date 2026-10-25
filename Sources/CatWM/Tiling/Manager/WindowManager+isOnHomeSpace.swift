@@ -1,9 +1,16 @@
 import AppKit
 
+struct FloatState {
+    var floatFrames: [CGWindowID: CGRect] = [:]
+    var floatZoom: [CGWindowID: CGRect] = [:]
+    var savedOwnerOf: [CGWindowID: String] = [:]
+    var savedFloating: [CGWindowID: Bool] = [:]
+}
+
 extension WindowManager {
     func isOnHomeSpace(_ screen: Screen) -> Bool {
         if config.virtualWorkspaces { return !Spaces.isFullscreen(display: screen.uuid) }
-        guard let home = homeSpace[screen.uuid] else { return true }
+        guard let home = desktops.homeSpace[screen.uuid] else { return true }
         return Spaces.current(display: screen.uuid) == home
     }
 
@@ -40,13 +47,13 @@ extension WindowManager {
             let x = slide.forward ? screen.frame.minX - frame.width + 1 : screen.frame.maxX - 1
             let edge = CGRect(x: x, y: frame.minY, width: frame.width, height: frame.height)
             guard !frame.approxEqual(edge, tolerance: 2), !animator.isMoving(id, to: edge) else { return }
-            floatFrames[id] = floatsFreely(id) ? frame : nil
+            floats.floatFrames[id] = floatsFreely(id) ? frame : nil
             animator.animate([.init(window: window, to: edge, bounds: screen.visible)],
                              duration: config.animationDuration, curve: config.animationCurve,
                              bounce: config.animationBounce)
             return
         }
-        floatFrames[id] = floatsFreely(id) ? frame : nil
+        floats.floatFrames[id] = floatsFreely(id) ? frame : nil
         cornerPark(id, screens: screens)
     }
 
@@ -69,11 +76,11 @@ extension WindowManager {
         guard let window = windows[id] else { return }
         let frame = animator.destination(id) ?? window.cachedFrame
         guard isParked(frame, screens) else {
-            floatFrames[id] = nil
+            floats.floatFrames[id] = nil
             return
         }
         guard let screen = screen(of: window, in: screens) ?? screens.first else { return }
-        var rect = floatFrames.removeValue(forKey: id) ?? targets[id]
+        var rect = floats.floatFrames.removeValue(forKey: id) ?? targets[id]
             ?? CGRect(x: screen.visible.midX - frame.width / 2, y: screen.visible.midY - frame.height / 2,
                       width: frame.width, height: frame.height)
         rect.origin.x = max(screen.visible.minX, min(rect.origin.x, screen.visible.maxX - rect.width))
@@ -130,7 +137,7 @@ extension WindowManager {
             animator.cancel(id)
             guard isParked(frame, screens) else { continue }
             guard let screen = screen(of: window, in: screens) ?? screens.first else { continue }
-            var rect = floatFrames[id] ?? targets[id]
+            var rect = floats.floatFrames[id] ?? targets[id]
                 ?? CGRect(x: screen.visible.midX - frame.width / 2, y: screen.visible.midY - frame.height / 2,
                           width: frame.width, height: frame.height)
             rect.size.width = min(rect.width, screen.visible.width)

@@ -21,13 +21,13 @@ extension WindowManager {
     ]
 
     func grabTest() {
-        guard !movingToSpace, let window = focusedWindow() else {
+        guard !desktops.movingToSpace, let window = focusedWindow() else {
             Log.info("grabtest: no focused window")
             return
         }
         let points = grabPoints(for: window, frame: window.frame)
         Log.info("grabtest: \(window.bundleID ?? "pid \(window.pid)") frame \(window.frame) candidates \(points)")
-        movingToSpace = true
+        desktops.movingToSpace = true
         let restore = mouseLocation()
         func next(_ rest: ArraySlice<CGPoint>) {
             guard let point = rest.first else { finishMove(restore: restore); return }
@@ -67,7 +67,7 @@ extension WindowManager {
         CGWarpMouseCursorPosition(restore)
         CursorRefresh.soon()
         drags = [:]
-        movingToSpace = false
+        desktops.movingToSpace = false
         scheduleRefresh(after: 0.2)
     }
 

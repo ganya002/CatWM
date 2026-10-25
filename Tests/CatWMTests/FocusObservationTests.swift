@@ -45,7 +45,7 @@ import Testing
         manager.visible = [tracked.id]
         let release = DispatchSemaphore(value: 0)
         let reads = Counter()
-        manager.focusReader = FocusReader { _ in
+        manager.focusRequests.focusReader = FocusReader { _ in
             if reads.next() == 1 { _ = release.wait(timeout: .now() + 3) }
             return .focused(tracked.id)
         }
@@ -62,12 +62,12 @@ import Testing
             manager.dispatch("minimize", "", inMode: true)
             manager.dispatch("minimize", "", inMode: false)
             #expect(dispatched.isEmpty)
-            #expect(manager.focusCommands.count == 2)
+            #expect(manager.focusRequests.focusCommands.count == 2)
             release.signal()
         }
         #expect(dispatched.map(\.0) == ["minimize", "minimize"])
         #expect(dispatched.map(\.1) == [true, false])
-        #expect(manager.focusCommands.isEmpty)
+        #expect(manager.focusRequests.focusCommands.isEmpty)
         manager.onDispatch = nil
     }
 
@@ -76,7 +76,7 @@ import Testing
         let tracked = window(7)
         manager.windows[tracked.id] = tracked
         let reads = Counter()
-        manager.focusReader = FocusReader { _ in reads.next() == 1 ? .unavailable : .focused(tracked.id) }
+        manager.focusRequests.focusReader = FocusReader { _ in reads.next() == 1 ? .unavailable : .focused(tracked.id) }
         await withCheckedContinuation { continuation in
             manager.onDispatch = { [weak manager] _, _, _ in
                 manager?.isStarted = false
@@ -85,14 +85,14 @@ import Testing
             manager.dispatch("minimize", "")
         }
         #expect(reads.value == 2)
-        #expect(manager.reportedFocus?.id == tracked.id)
+        #expect(manager.focusRequests.reportedFocus?.id == tracked.id)
         manager.onDispatch = nil
     }
 
     @Test @MainActor func aFocusedElementWithoutAWindowIDDoesNotRetry() async throws {
         let manager = manager()
         let reads = Counter()
-        manager.focusReader = FocusReader { _ in
+        manager.focusRequests.focusReader = FocusReader { _ in
             _ = reads.next()
             return FocusReader.resolve(AXUIElementCreateApplication(-1))
         }
@@ -103,9 +103,9 @@ import Testing
             manager.dispatch("minimize", "")
         }
         manager.onChange = nil
-        #expect(manager.reportedFocus?.pid == -1)
-        #expect(manager.reportedFocus?.id == nil)
-        #expect(manager.focusCommands.isEmpty)
+        #expect(manager.focusRequests.reportedFocus?.pid == -1)
+        #expect(manager.focusRequests.reportedFocus?.id == nil)
+        #expect(manager.focusRequests.focusCommands.isEmpty)
         #expect(dispatched == 1)
         try await Task.sleep(for: .milliseconds(250))
         #expect(reads.value == 1)
@@ -118,7 +118,7 @@ import Testing
         var active: pid_t = -1
         manager.frontmostPID = { active }
         let release = DispatchSemaphore(value: 0)
-        manager.focusReader = FocusReader { pid in
+        manager.focusRequests.focusReader = FocusReader { pid in
             if pid == -1 { _ = release.wait(timeout: .now() + 3) }
             return .focused(nil)
         }
@@ -135,7 +135,7 @@ import Testing
             manager.requestFocusObservation()
         }
         #expect(!dispatched)
-        #expect(manager.focusCommands.isEmpty)
+        #expect(manager.focusRequests.focusCommands.isEmpty)
         manager.onChange = nil
         manager.onDispatch = nil
     }
@@ -150,10 +150,10 @@ import Testing
         manager.model.show("1", on: "display")
         manager.model.noteFocus(remaining.id)
         manager.model.noteFocus(closed.id)
-        manager.reportedFocus = (-1, closed.id)
+        manager.focusRequests.reportedFocus = (-1, closed.id)
         let release = DispatchSemaphore(value: 0)
         let reads = Counter()
-        manager.focusReader = FocusReader { _ in
+        manager.focusRequests.focusReader = FocusReader { _ in
             if reads.next() == 1 {
                 _ = release.wait(timeout: .now() + 3)
                 return .focused(closed.id)
@@ -170,12 +170,12 @@ import Testing
             })
             manager.requestFocusObservation()
             manager.forget(closed.id)
-            #expect(manager.reportedFocus == nil)
+            #expect(manager.focusRequests.reportedFocus == nil)
             manager.refocusRecent(on: "1")
-            #expect(manager.waitingRefocus?.workspace == "1")
+            #expect(manager.focusRequests.waitingRefocus?.workspace == "1")
             release.signal()
         }
-        #expect(manager.pendingFocus?.id == remaining.id)
+        #expect(manager.focusRequests.pendingFocus?.id == remaining.id)
         #expect(reads.value == 2)
     }
 
@@ -185,7 +185,7 @@ import Testing
         manager.windows[tracked.id] = tracked
         let release = DispatchSemaphore(value: 0)
         manager.scanner.run(tracked.pid) { _ = release.wait(timeout: .now() + 3) }
-        manager.focusReader = FocusReader { _ in .focused(tracked.id) }
+        manager.focusRequests.focusReader = FocusReader { _ in .focused(tracked.id) }
         await withCheckedContinuation { continuation in
             manager.onChange = { [weak manager] in
                 manager?.isStarted = false
@@ -193,7 +193,7 @@ import Testing
             }
             manager.requestFocusObservation()
         }
-        #expect(manager.reportedFocus?.id == tracked.id)
+        #expect(manager.focusRequests.reportedFocus?.id == tracked.id)
         release.signal()
         manager.onChange = nil
     }
@@ -209,18 +209,18 @@ import Testing
         manager.acceptFocus(pid: tracked.pid, id: tracked.id)
         try await Task.sleep(for: .milliseconds(600))
         #expect(manager.focusedWindow()?.id == tracked.id)
-        #expect(manager.pendingFocus?.id == tracked.id)
+        #expect(manager.focusRequests.pendingFocus?.id == tracked.id)
         manager.isStarted = false
         release.signal()
     }
 
     @Test @MainActor func restorationCancelsPendingFocusAndCommands() {
         let manager = manager()
-        manager.pendingFocus = WindowManager.PendingFocus(id: 7, pid: -1, origin: -1, request: UUID())
-        manager.focusCommands = [WindowManager.FocusCommand(pid: -1, dispatcher: "minimize", arg: "", inMode: false)]
+        manager.focusRequests.pendingFocus = FocusRequests.PendingFocus(id: 7, pid: -1, origin: -1, request: UUID())
+        manager.focusRequests.focusCommands = [.init(pid: -1, dispatcher: "minimize", arg: "", inMode: false)]
         manager.restoreHiddenWindows()
-        #expect(manager.pendingFocus == nil)
-        #expect(manager.focusCommands.isEmpty)
+        #expect(manager.focusRequests.pendingFocus == nil)
+        #expect(manager.focusRequests.focusCommands.isEmpty)
     }
 
     @Test @MainActor func aNewAppInvalidatesAPendingFocusRequest() {
@@ -228,10 +228,10 @@ import Testing
         let tracked = window(7)
         manager.windows[tracked.id] = tracked
         manager.visible = [tracked.id]
-        manager.pendingFocus = WindowManager.PendingFocus(id: tracked.id, pid: tracked.pid, origin: -1, request: UUID())
+        manager.focusRequests.pendingFocus = .init(id: tracked.id, pid: tracked.pid, origin: -1, request: UUID())
         manager.frontmostPID = { -2 }
         #expect(manager.focusedWindow() == nil)
-        #expect(manager.pendingFocus == nil)
+        #expect(manager.focusRequests.pendingFocus == nil)
     }
 
     @Test @MainActor func focusWritesDoNotWaitForPlacementWrites() {

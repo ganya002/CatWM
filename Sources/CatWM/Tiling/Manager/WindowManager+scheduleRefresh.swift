@@ -13,12 +13,12 @@ extension WindowManager {
 
     func scanAndRefresh() {
         refreshWork = nil
-        guard isStarted, !nativeDesktop.isRunning, !nativeCreationBusy else { return }
+        guard isStarted, !nativeDesktop.isRunning, !desktops.nativeCreationBusy else { return }
         scanner.observeDesktop(known: Set(windows.keys)) { [weak self] in self?.scanAppsAndRefresh() }
     }
 
     private func scanAppsAndRefresh() {
-        guard isStarted, !nativeDesktop.isRunning, !nativeCreationBusy else { return }
+        guard isStarted, !nativeDesktop.isRunning, !desktops.nativeCreationBusy else { return }
         let listed = config.virtualWorkspaces ? scanner.desktop.allWindows : scanner.desktop.windows
         let pidsOnScreen = Set(listed.map(\.pid))
         var known: [pid_t: [CGWindowID: Window]] = [:]

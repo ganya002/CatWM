@@ -85,7 +85,7 @@ extension WindowActions {
         name: "killactive", group: "window", summary: "Close the focused window"
     ) { context in
         let manager = context.manager
-        manager.lastClose = Date()
+        manager.closeAndSort.lastClose = Date()
         _ = manager.focusedWindow().map { manager.closeWindow($0.id) }
     }
 

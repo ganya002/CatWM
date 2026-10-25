@@ -58,7 +58,7 @@ extension WindowManager {
             .init(identity: recoveryIdentity(window), title: window.title ?? "", frame: window.cachedFrame)
         })
         guard !pairs.isEmpty else { return }
-        savedTabs = savedTabs.map { saved in
+        tabUI.savedTabs = tabUI.savedTabs.map { saved in
             var saved = saved
             saved.members = saved.members.map { member in
                 pairs[member.identity].map { .init(id: $0.id, pid: $0.pid, bundleID: $0.bundleID) } ?? member
@@ -70,11 +70,13 @@ extension WindowManager {
 
     private func queueSavedTabs(_ memo: TilingRecovery.Memo) {
         guard memo.tabs.count > 1,
-              !savedTabs.contains(where: { $0.members.contains { memo.tabs.contains($0.identity) } }) else { return }
+              !tabUI.savedTabs.contains(where: { $0.members.contains { memo.tabs.contains($0.identity) } }) else {
+            return
+        }
         let active = memo.tabs.first { tilingRecovery.memos[$0]?.activeTab == true } ?? memo.tabs[0]
-        savedTabs.append(SavedTabs(members: memo.tabs.map { .init(id: $0.id, pid: $0.pid, bundleID: $0.bundleID) },
-                                   active: active.id))
-        savedTabsUntil = max(savedTabsUntil, Date().addingTimeInterval(SavedTabs.wait))
+        let members = memo.tabs.map { SavedTabs.Member(id: $0.id, pid: $0.pid, bundleID: $0.bundleID) }
+        tabUI.savedTabs.append(SavedTabs(members: members, active: active.id))
+        tabUI.savedTabsUntil = max(tabUI.savedTabsUntil, Date().addingTimeInterval(SavedTabs.wait))
     }
 
     func saveTilingRecovery(defaults: UserDefaults = .standard) {
@@ -108,7 +110,7 @@ extension WindowManager {
             let frame = (targets[window.id] ?? window.cachedFrame).integral
             var memo = TilingRecovery.Memo(title: window.title ?? "", frame: frame)
             if case .chosen(let floating) = window.userFloating { memo.chosen = floating ? .floating : .tiled }
-            if !savedTabs.isEmpty {
+            if !tabUI.savedTabs.isEmpty {
                 memo.tabs = tilingRecovery.memos[identity]?.tabs ?? []
                 memo.activeTab = tilingRecovery.memos[identity]?.activeTab ?? false
             } else if let group = tabs.group(of: window.id) {

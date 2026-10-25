@@ -41,16 +41,16 @@ extension WindowManager {
 
     func loadTabs() {
         let defaults = UserDefaults.standard
-        savedTabs = (defaults.stringArray(forKey: Self.legacyTabsKey) ?? []).compactMap(SavedTabs.init)
+        tabUI.savedTabs = (defaults.stringArray(forKey: Self.legacyTabsKey) ?? []).compactMap(SavedTabs.init)
         defaults.removeObject(forKey: Self.legacyTabsKey)
-        savedTabsUntil = Date().addingTimeInterval(SavedTabs.wait)
+        tabUI.savedTabsUntil = Date().addingTimeInterval(SavedTabs.wait)
     }
 
     func restoreTabs() {
         rejoinMaximisedTabs()
-        guard !savedTabs.isEmpty else { return }
-        let late = Date() >= savedTabsUntil
-        savedTabs.removeAll { saved in
+        guard !tabUI.savedTabs.isEmpty else { return }
+        let late = Date() >= tabUI.savedTabsUntil
+        tabUI.savedTabs.removeAll { saved in
             let back = saved.members.filter { member in
                 windows[member.id].map { window in
                     window.pid == member.pid && (member.bundleID == nil || window.bundleID == member.bundleID)
@@ -82,8 +82,8 @@ extension WindowManager {
         }
         var saved = SavedTabs(members: members, active: group.active)
         saved.workspace = workspace
-        savedTabs.append(saved)
-        savedTabsUntil = Date().addingTimeInterval(SavedTabs.wait)
+        tabUI.savedTabs.append(saved)
+        tabUI.savedTabsUntil = Date().addingTimeInterval(SavedTabs.wait)
         for member in group.members where member != id { move(member, false) }
         move(id, true)
     }

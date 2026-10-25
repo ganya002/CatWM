@@ -60,7 +60,7 @@ import Testing
             Screen(id: 0, uuid: uuid, frame: .zero, visible: .zero, isBuiltin: false, nsScreen: nsScreen)
         }
         let manager = WindowManager()
-        manager.nativeCatalog.sharedSpaces = true
+        manager.desktops.nativeCatalog.sharedSpaces = true
         for id: CGWindowID in [1, 2] {
             let window = Window(id: id, element: AXUIElementCreateApplication(-1), pid: -1, bundleID: nil)
             manager.windows[id] = window
@@ -72,7 +72,7 @@ import Testing
         manager.displayOf = [1: "left", 2: "right"]
         #expect(manager.tiled(on: screen("left")) == [1])
         #expect(manager.tiled(on: screen("right")) == [2])
-        manager.nativeCatalog.sharedSpaces = false
+        manager.desktops.nativeCatalog.sharedSpaces = false
         #expect(manager.tiled(on: screen("left")) == [1, 2])
     }
 }

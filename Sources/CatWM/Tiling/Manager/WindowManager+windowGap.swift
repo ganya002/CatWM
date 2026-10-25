@@ -115,13 +115,13 @@ extension WindowManager {
 
     func focusedWindowState() -> (floating: Bool, fullscreen: Bool)? {
         guard let window = focusedWindow() else { return nil }
-        if floatsFreely(window.id) { return (window.isFloating, floatZoom[window.id] != nil) }
+        if floatsFreely(window.id) { return (window.isFloating, floats.floatZoom[window.id] != nil) }
         let zoomed = screen(of: window).map { state(for: $0).zoomed == window.id } ?? false
         return (window.isFloating, zoomed)
     }
 
     func focusedWindow() -> Window? {
-        if let pending = pendingFocus {
+        if let pending = focusRequests.pendingFocus {
             let pid = frontmostPID()
             if pid == pending.pid || pid == pending.origin, let window = windows[pending.id],
                visible.contains(pending.id) { return window }
@@ -132,7 +132,7 @@ extension WindowManager {
 
     func reportedFocusedWindow() -> Window? {
         guard let pid = frontmostPID(),
-              let report = reportedFocus, report.pid == pid,
+              let report = focusRequests.reportedFocus, report.pid == pid,
               let id = report.id else { return nil }
         return windows[id]
     }

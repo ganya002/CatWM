@@ -4,22 +4,22 @@ extension WindowManager {
     func loadWorkspaces() {
         guard config.virtualWorkspaces else { return }
         let defaults = UserDefaults.standard
-        nativeCatalog.saved = (defaults.dictionary(forKey: "ws.nativeSpaces") ?? [:]).compactMapValues {
+        desktops.nativeCatalog.saved = (defaults.dictionary(forKey: "ws.nativeSpaces") ?? [:]).compactMapValues {
             $0 as? UInt64
         }
-        nativeCatalog.homes = defaults.dictionary(forKey: "ws.nativeDisplays") as? [String: String] ?? [:]
-        nativeCatalog.uuids = defaults.dictionary(forKey: "ws.nativeSpaceUUIDs") as? [String: String] ?? [:]
+        desktops.nativeCatalog.homes = defaults.dictionary(forKey: "ws.nativeDisplays") as? [String: String] ?? [:]
+        desktops.nativeCatalog.uuids = defaults.dictionary(forKey: "ws.nativeSpaceUUIDs") as? [String: String] ?? [:]
         for (key, value) in defaults.dictionary(forKey: "ws.owners") as? [String: String] ?? [:] {
-            if let id = CGWindowID(key) { savedOwnerOf[id] = value }
+            if let id = CGWindowID(key) { floats.savedOwnerOf[id] = value }
         }
         monitorOf = defaults.dictionary(forKey: "ws.monitors") as? [String: String] ?? [:]
         labels = defaults.dictionary(forKey: "ws.labels") as? [String: String] ?? [:]
         virtualShown = defaults.dictionary(forKey: "ws.shown") as? [String: String] ?? [:]
         for (key, value) in defaults.dictionary(forKey: "ws.home") ?? [:] {
-            if let space = value as? UInt64 { homeSpace[key] = space }
+            if let space = value as? UInt64 { desktops.homeSpace[key] = space }
         }
         for (key, value) in defaults.dictionary(forKey: "ws.floating") as? [String: Bool] ?? [:] {
-            if let id = CGWindowID(key) { savedFloating[id] = value }
+            if let id = CGWindowID(key) { floats.savedFloating[id] = value }
         }
         loadNativeMigration(defaults)
         ["ws.windows", "ws.owners", "ws.floating"].forEach(defaults.removeObject(forKey:))
@@ -56,7 +56,7 @@ extension WindowManager {
         let key = [
             "\(monitors.sorted { $0.key < $1.key })",
             "\(virtualShown.sorted { $0.key < $1.key })",
-            "\(homeSpace.sorted { $0.key < $1.key })",
+            "\(desktops.homeSpace.sorted { $0.key < $1.key })",
             "\(labels.sorted { $0.key < $1.key })",
             "\(layouts.sorted { $0.key < $1.key })"
         ].joined(separator: "|")
@@ -65,7 +65,7 @@ extension WindowManager {
         let defaults = UserDefaults.standard
         defaults.set(monitors, forKey: "ws.monitors")
         defaults.set(virtualShown, forKey: "ws.shown")
-        defaults.set(homeSpace, forKey: "ws.home")
+        defaults.set(desktops.homeSpace, forKey: "ws.home")
         defaults.set(labels, forKey: "ws.labels")
         defaults.set(layouts, forKey: "ws.layouts")
     }
@@ -74,7 +74,7 @@ extension WindowManager {
         _ workspace: String, focusing preferred: Window? = nil, focus takesFocus: Bool = true
     ) {
         guard config.virtualWorkspaces else { return }
-        showNativeWorkspace(workspace, focusing: preferred, focus: takesFocus, quiet: quietWorkspaceHUD)
+        showNativeWorkspace(workspace, focusing: preferred, focus: takesFocus, quiet: closeAndSort.quietWorkspaceHUD)
     }
 
     func showWorkspaceHUD(_ workspace: String, on monitor: Screen) {
