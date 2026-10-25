@@ -8,14 +8,14 @@ struct SortClosedHeader: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Text(group.number).font(Theme.display(15)).monospacedDigit().foregroundStyle(Theme.inkFaint).fixedSize()
+            Text(group.number).textStyle(.sectionTitle).monospacedDigit().foregroundStyle(Theme.inkFaint).fixedSize()
             Text(group.name.isEmpty ? "Workspace \(group.number)" : group.name).font(Theme.body(13.5, .medium))
                 .foregroundStyle(Theme.inkMuted).strikethrough(true, color: Theme.danger).oneLine()
             Spacer(minLength: 0)
             Text(group.ids.isEmpty ? "" : "\(group.ids.count)")
                 .textStyle(.caption).monospacedDigit().foregroundStyle(Theme.inkFaint).fixedSize()
         }
-        .padding(.leading, 5).padding(.trailing, 8)
+        .padding(.leading, Theme.Space.extraSmall).padding(.trailing, 8)
         .frame(height: SortMetrics.rowHeight)
         .background(RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
             .fill(hover.isOn ? Theme.hover : .clear))

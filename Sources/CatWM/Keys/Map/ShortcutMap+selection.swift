@@ -85,7 +85,7 @@ extension ShortcutMap {
                     .frame(maxWidth: .infinity).padding(.vertical, 12)
             } else {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 300), spacing: 40, alignment: .top)],
-                          alignment: .leading, spacing: 28) {
+                          alignment: .leading, spacing: Theme.Space.extraLarge) {
                     ForEach(sections, id: \.group) { section in
                         VStack(alignment: .leading, spacing: 2) {
                             OSectionHeader(section.group.title, tone: Theme.inkMuted, dot: section.group.color)

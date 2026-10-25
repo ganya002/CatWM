@@ -37,7 +37,7 @@ struct WelcomeView: View {
             Text("Welcome to CatWM").textStyle(.largeTitle).oneLine()
                 .padding(.top, 16).padding(.bottom, 8)
             Text("Each button opens System Settings, with steps beside it.")
-                .font(Theme.body(13.5)).lineSpacing(2).foregroundStyle(Theme.inkMuted)
+                .font(Theme.body()).lineSpacing(2).foregroundStyle(Theme.inkMuted)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.bottom, 16)
             OGroup {
@@ -67,7 +67,6 @@ struct WelcomeView: View {
                 OButton("Skip setup", variant: .ghost, action: model.skip)
                 OButton("Continue", variant: .primary, size: .large, shortcut: ["↩"], action: model.next)
                     .disabled(!model.accessibility)
-                    .tooltip(model.accessibility ? "" : "Allow Accessibility first")
                     .keyboardShortcut(model.page == .permissions ? .defaultAction : nil)
             }
         }
@@ -94,8 +93,8 @@ struct WelcomeView: View {
                 .frame(width: 22)
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 6) {
-                    Text(item.title).font(Theme.body(14)).oneLine()
-                    Text(required ? "Required" : "Optional").font(Theme.body(11.5, .medium))
+                    Text(item.title).font(Theme.body()).oneLine()
+                    Text(required ? "Required" : "Optional").font(TextStyle.caption.font.weight(.medium))
                         .foregroundStyle(required ? Theme.ink : Theme.inkMuted).oneLine()
                 }
                 Text(item.detail).textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine()
@@ -104,7 +103,6 @@ struct WelcomeView: View {
             ZStack(alignment: .leading) {
                 if granted, let test = item.test {
                     OButton("Test Image", size: .small, action: test)
-                        .tooltip("Takes one image so macOS asks now, not later")
                 } else if granted {
                     OStatus(kind: .success, text: symbol == "power" ? "On" : "Granted")
                         .transition(.opacity.combined(with: .scale(scale: 0.9)))
@@ -122,9 +120,9 @@ struct WelcomeView: View {
             Text("CatWM shortcut guide").textStyle(.largeTitle).oneLine()
                 .padding(.top, 2).padding(.bottom, 8)
             Text("Like Vim, Photoshop or Blender, it takes some time to learn. Then you work faster.")
-                .font(Theme.body(13.5)).lineSpacing(2).foregroundStyle(Theme.inkMuted)
+                .font(Theme.body()).lineSpacing(2).foregroundStyle(Theme.inkMuted)
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.bottom, 22)
+                .padding(.bottom, Theme.Space.extraLarge)
             HStack(spacing: 12) {
                 ForEach(KeyStyle.allCases, id: \.self) { style in
                     KeyStyleTile(style: style, selected: model.style == style) {

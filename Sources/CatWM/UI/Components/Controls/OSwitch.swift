@@ -6,6 +6,7 @@ struct OSwitch: View {
     let label: String
     @StateObject private var state = SwitchState()
     @Environment(\.isEnabled) private var enabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     final class SwitchState: ObservableObject {
         @Published var pressed = false
@@ -17,7 +18,7 @@ struct OSwitch: View {
         let width: CGFloat = state.pressed ? 18 : 14
         let x = state.drag.map { min($0, 14 - (width - 14)) } ?? (isOn ? 14 - (width - 14) : 0)
         ZStack(alignment: .leading) {
-            Capsule().fill(shownOn ? Theme.accent : Theme.well)
+            Capsule().fill(shownOn ? Theme.accent : Theme.surfaceSunken)
             Capsule().strokeBorder(Theme.borderControl, lineWidth: 1).opacity(shownOn ? 0 : 1)
             Capsule().fill(shownOn ? Theme.onAccent : Theme.borderControl)
                 .frame(width: width, height: 14)
@@ -25,8 +26,8 @@ struct OSwitch: View {
         }
         .frame(width: 34, height: 20)
         .contentShape(Capsule())
-        .animation(Motion.spring, value: isOn)
-        .animation(Motion.spring, value: state.pressed)
+        .animation(reduceMotion ? Motion.fade : Motion.spring, value: isOn)
+        .animation(reduceMotion ? Motion.fade : Motion.spring, value: state.pressed)
         .animation(Motion.fade, value: shownOn)
         .gesture(DragGesture(minimumDistance: 0)
             .onChanged { gesture in

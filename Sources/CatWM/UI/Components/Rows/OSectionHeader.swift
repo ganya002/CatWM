@@ -11,7 +11,7 @@ struct OSectionHeader: View {
     }
 
     var body: some View {
-        HStack(spacing: 7) {
+        HStack(spacing: Theme.Space.small) {
             if let dot { Circle().fill(dot).frame(width: 7, height: 7) }
             Text(title).textStyle(.sectionTitle).foregroundStyle(tone).oneLine()
         }

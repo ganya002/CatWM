@@ -9,15 +9,15 @@ struct WhatsNewView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
+                OIconButton(symbol: "xmark", label: "Close", action: model.close).padding(.leading, -6)
                 Image(systemName: "sparkles").font(Theme.symbol()).foregroundStyle(Theme.accentInk)
                 Text("New in \(model.versions)").kicker().oneLine()
-                Spacer(minLength: 8)
-                OIconButton(symbol: "xmark", label: "Close", action: model.close).padding(.trailing, -6)
+                Spacer(minLength: 0)
             }
             .frame(minHeight: 22)
             Text("What's new in CatWM").textStyle(.title).oneLine().padding(.top, 12).padding(.bottom, 6)
             ForEach(Array(model.features.enumerated()), id: \.element.id) { i, feature in
-                row(feature).padding(.vertical, 10)
+                row(feature).padding(.vertical, Theme.Space.small)
                     .overlay(alignment: .top) { if i > 0 { Rectangle().fill(Theme.hairline).frame(height: 1) } }
             }
             HStack {
@@ -26,7 +26,7 @@ struct WhatsNewView: View {
                         action: model.canTour ? model.tour : model.close)
                     .keyboardShortcut(.defaultAction)
             }
-            .padding(.top, 10)
+            .padding(.top, Theme.Space.small)
         }
         .frame(width: Self.width - 40)
         .surface(.large, caret: model.caret.map { .top($0) } ?? .none)
@@ -35,7 +35,7 @@ struct WhatsNewView: View {
     }
 
     private func row(_ feature: Release.Feature) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
+        HStack(alignment: .firstTextBaseline, spacing: Theme.Space.medium) {
             Image(systemName: feature.symbol).font(Theme.symbol()).foregroundStyle(Theme.inkMuted).frame(width: 18)
             VStack(alignment: .leading, spacing: 2) {
                 Text(feature.title).font(Theme.heading()).oneLine()

@@ -16,6 +16,7 @@ struct MenuRoot: View {
             column(0, width: rootWidth)
                 .padding(.leading, rootX).padding(.top, fromBottom ? 0 : top).padding(.bottom, fromBottom ? top : 0)
                 .frame(height: fromBottom ? size.height : nil, alignment: .bottom)
+                .transaction { $0.animation = nil }
                 .scaleEffect(model.appeared || reduceMotion ? 1 : 0.97, anchor: fromBottom ? .bottom : .top)
                 .opacity(model.appeared ? 1 : 0)
             ForEach(Array(model.path.enumerated()), id: \.element) { i, id in

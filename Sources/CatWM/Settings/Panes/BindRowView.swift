@@ -26,7 +26,7 @@ struct BindRowView: View {
                 HStack(spacing: 12) {
                     Recorder(doc: doc, settingsUI: settingsUI, row: row)
                     if isRange {
-                        Text(summary?.title ?? "Custom range").font(Theme.body(14)).oneLine(.middle)
+                        Text(summary?.title ?? "Custom range").font(Theme.body()).oneLine(.middle)
                             .foregroundStyle(summary == nil ? Theme.inkMuted : Theme.ink)
                         Spacer(minLength: 0)
                     } else {
@@ -68,7 +68,7 @@ struct BindRowView: View {
             .frame(minHeight: 48)
             .padding(.vertical, 6)
             .background {
-                RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous).fill(Theme.accentSoft)
+                RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous).fill(Theme.hover)
                     .padding(.horizontal, -12)
                     .opacity(settingsUI.reveal == rowID ? 1 : 0)
             }
@@ -108,9 +108,9 @@ struct BindRowView: View {
         } label: {
             Image(systemName: "slider.horizontal.3")
                 .font(Theme.symbol(Theme.Icon.small))
-                .foregroundStyle(open ? Theme.accentInk : Theme.inkMuted)
+                .foregroundStyle(open ? Theme.ink : Theme.inkMuted)
                 .frame(width: 24, height: 24)
-                .background(Circle().fill(open ? Theme.accentSoft : .clear))
+                .background(Circle().fill(open ? Theme.hover : .clear))
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
@@ -150,8 +150,8 @@ struct BindRowView: View {
                 }
             }
         }, label: {
-            HStack(spacing: 5) {
-                Text(action?.title ?? "Custom").font(Theme.body(14)).oneLine()
+            HStack(spacing: Theme.Space.extraSmall) {
+                Text(action?.title ?? "Custom").font(Theme.body()).oneLine()
                 Image(systemName: "chevron.up.chevron.down").font(Theme.symbol(Theme.Icon.extraSmall, .semibold))
                     .foregroundStyle(Theme.inkMuted)
             }

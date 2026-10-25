@@ -238,7 +238,6 @@ extension OptionRows {
         )
         .padding(.vertical, 12)
         .disabled(!config.animate || !config.animationCurve.usesBounce)
-        .tooltip(bounce.help ?? "")
         .setting(bounce.id, settingsUI)
     }
 

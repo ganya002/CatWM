@@ -24,12 +24,12 @@ struct SymbolGrid: View {
                                     .fill(selection == symbol ? Theme.accent : .clear))
                                 .contentShape(Rectangle())
                         }
-                        .buttonStyle(.plain).tooltip(symbol).accessibilityLabel(symbol)
+                        .buttonStyle(.plain).accessibilityLabel(symbol)
                     }
                 }
             }
             .frame(height: 190)
-            if shown.isEmpty { Text("No icons match").font(Theme.body(12.5)).foregroundStyle(Theme.inkMuted) }
+            if shown.isEmpty { Text("No icons match").textStyle(.caption).foregroundStyle(Theme.inkMuted) }
             OButton("Use the default icon", variant: .ghost, size: .small) { selection = nil; close() }
         }
         .padding(12).frame(width: 300)

@@ -3,7 +3,7 @@ import SwiftUI
 
 extension WindowsPane {
     @ViewBuilder var body: some View {
-        VStack(alignment: .leading, spacing: 30) {
+        VStack(alignment: .leading, spacing: Theme.Space.xxl) {
             OGroup("Focus") {
                 OptionRows(pane: .windows, section: "Focus", doc: doc, settingsUI: settingsUI)
             }

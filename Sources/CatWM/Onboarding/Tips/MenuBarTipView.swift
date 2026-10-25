@@ -6,7 +6,7 @@ struct MenuBarTipView: View {
     static var inset: EdgeInsets { EdgeInsets(all: Elevation.popover.room) }
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
+        HStack(alignment: .firstTextBaseline, spacing: Theme.Space.medium) {
             Image(systemName: model.state == .good ? "checkmark.circle.fill" : "lightbulb")
                 .font(Theme.symbol(Theme.Icon.large))
                 .foregroundStyle(model.state == .good ? Theme.success : Theme.accentInk)
@@ -15,12 +15,12 @@ struct MenuBarTipView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(Theme.heading()).oneLine()
                 if let detail {
-                    Text(detail).font(Theme.body(12.5)).lineSpacing(1.5).foregroundStyle(Theme.inkMuted)
+                    Text(detail).textStyle(.caption).lineSpacing(1.5).foregroundStyle(Theme.inkMuted)
                         .lineLimit(2).fixedSize(horizontal: false, vertical: true)
                 }
             }
         }
-        .padding(.horizontal, 10).padding(.vertical, 8)
+        .padding(.horizontal, Theme.Space.medium).padding(.vertical, 8)
         .frame(width: model.state == .good ? nil : 288, alignment: .leading)
         .surface(.medium, caret: model.caret.map { .top($0 - Self.inset.leading) } ?? .none)
         .padding(Self.inset)

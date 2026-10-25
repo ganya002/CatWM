@@ -8,11 +8,11 @@ struct SortNudgeView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
+                OIconButton(symbol: "xmark", label: "Close tip", action: model.later)
                 Image(systemName: "lightbulb").font(Theme.symbol(Theme.Icon.large)).foregroundStyle(Theme.accentInk)
                     .breatheEffect().frame(width: 16)
                 Text("Workspace \(WorkspaceKey.number(model.workspace)) is packed").font(Theme.heading()).oneLine()
                 Spacer(minLength: 4)
-                OIconButton(symbol: "xmark", label: "Close tip", action: model.later).padding(.trailing, -4)
             }
             Text("\(model.count) windows on one screen. Split them into workspaces by task.")
                 .font(Theme.body(13.5)).foregroundStyle(Theme.inkMuted).lineSpacing(1.5)
@@ -20,7 +20,7 @@ struct SortNudgeView: View {
             HStack(spacing: 2) {
                 ForEach(0..<min(model.count, 40), id: \.self) { _ in Capsule().fill(Theme.tint).frame(height: 4) }
             }
-            .padding(.top, 10).padding(.bottom, 12)
+            .padding(.top, Theme.Space.small).padding(.bottom, 12)
             HStack(spacing: 4) {
                 OButton("Open Overview", variant: .primary, shortcut: model.keys, action: model.sort)
                 OButton("Not now", variant: .ghost, action: model.later)

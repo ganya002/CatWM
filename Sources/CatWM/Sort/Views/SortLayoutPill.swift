@@ -14,7 +14,8 @@ struct SortLayoutPill: View {
                 Text(layout == .bsp ? "BSP" : layout.title).textStyle(.caption).oneLine()
             }
             .foregroundStyle(hover.isOn ? Theme.ink : Theme.inkMuted)
-            .padding(.leading, 7).padding(.trailing, 10).frame(height: 24)
+            .padding(.leading, Theme.Space.small).padding(.trailing, Theme.Space.medium)
+            .frame(height: Theme.controlHeight)
             .background(Capsule().fill(hover.isOn ? Theme.well : .clear))
             .overlay(Capsule().strokeBorder(Theme.borderControl, lineWidth: 1))
             .contentShape(Capsule())

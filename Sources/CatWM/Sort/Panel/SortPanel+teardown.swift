@@ -4,6 +4,7 @@ import SwiftUI
 extension SortPanel {
     func teardown() {
         dismiss.stop()
+        Popup.shared.closeAll()
         pruneTimer?.invalidate()
         pruneTimer = nil
         guard active else { return }
@@ -33,7 +34,7 @@ extension SortPanel {
     }
 
     func windowDidResignKey(_: Notification) {
-        guard active else { return }
+        guard active, !Popup.shared.isOpen else { return }
         if Date() < applyingUntil {
             DispatchQueue.main.async { [weak self] in
                 guard let self, active, let panel else { return }

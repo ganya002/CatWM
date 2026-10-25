@@ -18,10 +18,10 @@ struct StatusPill: View {
         Group {
             if let message {
                 label(message)
-                    .padding(.horizontal, 14)
+                    .padding(.horizontal, Theme.Space.medium)
                     .frame(height: 36)
                     .floatingGlass(Capsule())
-                    .padding(.bottom, 14)
+                    .padding(.bottom, Theme.Space.medium)
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
         }
@@ -31,7 +31,7 @@ struct StatusPill: View {
     @ViewBuilder private func label(_ message: Message) -> some View {
         switch message {
         case .error(let err):
-            OStatus(kind: .danger, text: "Couldn't save: \(err)").tooltip(err)
+            OStatus(kind: .danger, text: "Couldn't save: \(err)")
         case .problems(let count):
             OStatus(kind: .warning, text: "Fix \(count) shortcut\(count == 1 ? "" : "s") to save")
         case .skipped(let count):

@@ -9,10 +9,10 @@ struct ResultRow: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 10) {
+            HStack(spacing: Theme.Space.medium) {
                 Image(systemName: entry.bind != nil ? "command" : entry.pane.icon)
-                    .font(Theme.symbol()).foregroundStyle(Theme.accentInk).frame(width: 18)
-                Text(entry.title).font(Theme.body(14)).oneLine()
+                    .font(Theme.symbol()).foregroundStyle(Theme.inkMuted).frame(width: 18)
+                Text(entry.title).font(Theme.body()).oneLine()
                 if entry.advanced {
                     Text("Advanced").textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine()
                 }
@@ -22,10 +22,10 @@ struct ResultRow: View {
                     .foregroundStyle(Theme.inkMuted)
                     .opacity(hover.isOn ? 1 : 0)
             }
-            .padding(.horizontal, 10).frame(height: 40)
+            .padding(.horizontal, Theme.Space.medium).frame(height: 40)
             .background(RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous)
-                .fill(hover.isOn ? Theme.well : .clear))
-            .padding(.horizontal, -10)
+                .fill(hover.isOn ? Theme.hover : .clear))
+            .padding(.horizontal, -Theme.Space.medium)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

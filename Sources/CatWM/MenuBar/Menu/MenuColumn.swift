@@ -51,7 +51,8 @@ struct MenuColumn: View {
     @ViewBuilder private func row(_ i: MenuItem) -> some View {
         switch i.kind {
         case .separator:
-            Rectangle().fill(Theme.hairline).frame(height: 1).padding(.horizontal, 10).padding(.vertical, 4)
+            Rectangle().fill(Theme.hairline).frame(height: 1)
+                .padding(.horizontal, Theme.Space.medium).padding(.vertical, 4)
         case .label:
             HStack(spacing: 6) {
                 Text(i.label).oneLine()
@@ -59,7 +60,7 @@ struct MenuColumn: View {
                 if !i.shortcut.isEmpty { Text(i.shortcut.joined()).font(Theme.keys(12, .medium)).tracking(1) }
             }
             .font(Theme.body(11.5, .medium)).foregroundStyle(Theme.inkMuted)
-            .padding(.horizontal, 10).padding(.top, 8).padding(.bottom, 4)
+            .padding(.horizontal, Theme.Space.medium).padding(.top, 8).padding(.bottom, 4)
         case .essentials:
             EssentialsRow(model: model, enabled: i.enabled)
         case .workspaces:
@@ -79,13 +80,13 @@ struct MenuColumn: View {
             }
             .padding(.horizontal, 4).padding(.bottom, 4)
         case .attention:
-            HStack(spacing: 10) {
+            HStack(spacing: Theme.Space.medium) {
                 Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.warning)
                 Text(i.label).font(Theme.body(13, .medium)).oneLine()
                 Spacer(minLength: 4)
                 OButton("Grant Access", variant: .primary, size: .small) { model.run(i) }
             }
-            .padding(.horizontal, 10).padding(.vertical, 8)
+            .padding(.horizontal, Theme.Space.medium).padding(.vertical, 8)
         default:
             MenuRowView(model: model, item: i, level: level)
         }

@@ -19,9 +19,9 @@ struct Recorder: View {
                         Image(systemName: "record.circle").font(Theme.symbol(Theme.Icon.small, .semibold))
                         Text(BindRange.isRange(row.key) ? "Press modifiers…" : "Press keys…")
                     }
-                    .font(Theme.body(12.5, .medium)).foregroundStyle(Theme.accentInk).oneLine()
+                    .font(TextStyle.caption.font).foregroundStyle(Theme.accentInk).oneLine()
                 } else if row.key.isEmpty {
-                    Text("Click to record").font(Theme.body(12.5)).foregroundStyle(Theme.inkFaint).oneLine()
+                    Text("Click to record").font(TextStyle.caption.font).foregroundStyle(Theme.inkFaint).oneLine()
                 } else {
                     Kbd(keys: doc.prettyShortcut(row)).squish(on: row.mods + row.key, anchor: .center)
                 }
@@ -37,8 +37,6 @@ struct Recorder: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .tooltip(recording ? (row.submap.isEmpty || BindRange.isRange(row.key) ? "Esc cancels" : "Click to cancel")
-              : "Click to record a new shortcut")
         .accessibilityLabel(recording
                             ? "Recording shortcut"
                             : "Shortcut \(doc.prettyShortcut(row).joined()). Click to record")

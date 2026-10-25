@@ -7,9 +7,9 @@ import Testing
 @Suite struct CursorHoverTests {
     @Test func rowUnderPointerFollowsRowsAndTheDivider() {
         let actions = [
-            QuickAction(id: "save", title: "Save", symbol: "plus") {},
-            QuickAction(id: "one", title: "One", symbol: "rectangle.3.group") {},
-            QuickAction(id: "close", title: "Close", symbol: "xmark", destructive: true) {}
+            QuickAction(id: "save", title: "Save") {},
+            QuickAction(id: "one", title: "One") {},
+            QuickAction(id: "close", title: "Close", destructive: true) {}
         ]
         let row = Theme.rowHeight
         #expect(CursorActionsView.rowID(at: 0, actions: actions) == "save")
@@ -25,7 +25,7 @@ import Testing
     }
 
     @Test func pointerMissesRowsHiddenOutsideTheViewport() {
-        let actions = (0..<12).map { QuickAction(id: "\($0)", title: "\($0)", symbol: "plus") {} }
+        let actions = (0..<12).map { QuickAction(id: "\($0)", title: "\($0)") {} }
         let row = Theme.rowHeight
         let visible = 0..<(9 * row)
         #expect(CursorActionsView.rowUnderPointer(
@@ -47,8 +47,8 @@ import Testing
         let model = CursorActionsModel()
         model.open = true
         model.actions = [
-            QuickAction(id: "save", title: "Save", symbol: "plus") {},
-            QuickAction(id: "one", title: "One", symbol: "rectangle.3.group") {}
+            QuickAction(id: "save", title: "Save") {},
+            QuickAction(id: "one", title: "One") {}
         ]
         let size = CursorActionsView.menuSize(for: model.actions)
         let host = NSHostingView(rootView: CursorActionsView(model: model))
@@ -74,7 +74,7 @@ import Testing
     @Test func pointerBelowTheViewportMissesHiddenRows() throws {
         let model = CursorActionsModel()
         model.open = true
-        model.actions = (0..<12).map { QuickAction(id: "\($0)", title: "Row \($0)", symbol: "plus") {} }
+        model.actions = (0..<12).map { QuickAction(id: "\($0)", title: "Row \($0)") {} }
         let size = CursorActionsView.menuSize(for: model.actions)
         let host = NSHostingView(rootView: CursorActionsView(model: model))
         host.frame = NSRect(x: 0, y: 0, width: size.width + 80, height: size.height + 80)

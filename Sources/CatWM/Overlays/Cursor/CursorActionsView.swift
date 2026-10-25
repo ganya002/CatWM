@@ -50,8 +50,6 @@ struct CursorActionsView: View {
 
     var body: some View {
         let size = Self.menuSize(for: model.actions, editing: model.templateDraft != nil)
-        let grow = UnitPoint(x: min(max((model.anchor.x + Self.markOffset.width - Self.margin) / size.width, 0), 1),
-                             y: min(max((model.anchor.y + Self.markOffset.height - Self.margin) / size.height, 0), 1))
         ZStack(alignment: .topLeading) {
             VStack(alignment: .leading, spacing: 0) {
                 head
@@ -64,7 +62,7 @@ struct CursorActionsView: View {
             .padding(Self.inset - 4)
             .frame(width: size.width, alignment: .leading)
             .surface(.medium)
-            .modifier(MenuEntrance(shown: model.open, from: grow))
+            .modifier(MenuEntrance(shown: model.open))
             .allowsHitTesting(model.open)
             .offset(x: Self.margin, y: Self.margin)
             .accessibilityElement(children: .contain)
@@ -75,7 +73,7 @@ struct CursorActionsView: View {
 
     private var head: some View {
         OSectionHeader(model.templateDraft == nil ? model.title : "Save workspace", tone: Theme.inkMuted)
-            .padding(.horizontal, 10)
+            .padding(.horizontal, Theme.Space.medium)
             .frame(maxWidth: .infinity, minHeight: Self.headHeight, alignment: .leading)
             .accessibilityHidden(true)
     }
@@ -89,8 +87,7 @@ struct CursorActionsView: View {
                             Rectangle().fill(Theme.hairline).frame(height: 1)
                                 .padding(.vertical, Theme.Space.extraSmall).padding(.horizontal, Theme.Space.extraSmall)
                         }
-                        ActionRow(action: action, hovered: model.hovered == action.id, shown: model.open,
-                                  index: min(i, 8),
+                        ActionRow(action: action, hovered: model.hovered == action.id,
                                   remove: action.remove == nil ? nil : { model.onDelete?(action) }) {
                             model.onPick?(action)
                         }

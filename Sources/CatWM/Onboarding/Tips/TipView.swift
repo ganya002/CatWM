@@ -10,14 +10,14 @@ struct TipView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
+                OIconButton(symbol: "xmark", label: "Close tip") { Tips.shared.dismiss(tip) }.padding(.leading, -4)
                 Image(systemName: "lightbulb").font(Theme.symbol(Theme.Icon.large)).foregroundStyle(Theme.accentInk)
                     .breatheEffect().frame(width: 16)
                 Text(tip.title).font(Theme.heading()).oneLine()
-                Spacer(minLength: 4)
-                OIconButton(symbol: "xmark", label: "Close tip") { Tips.shared.dismiss(tip) }.padding(.trailing, -4)
+                Spacer(minLength: 0)
             }
             if let body = tip.body {
-                Text(body).font(Theme.body(13.5)).foregroundStyle(Theme.inkMuted).lineSpacing(1.5)
+                Text(body).font(Theme.body()).foregroundStyle(Theme.inkMuted).lineSpacing(1.5)
                     .lineLimit(3).fixedSize(horizontal: false, vertical: true).padding(.top, 4)
             }
             if !tip.chords.isEmpty {
@@ -27,7 +27,7 @@ struct TipView: View {
                         Kbd(keys: keys)
                     }
                 }
-                .padding(.top, 10)
+                .padding(.top, Theme.Space.small)
             }
             HStack(spacing: 4) {
                 OButton("No more tips", variant: .ghost, size: .small) { Tips.shared.noMore() }

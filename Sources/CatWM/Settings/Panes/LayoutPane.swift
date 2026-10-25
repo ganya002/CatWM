@@ -17,14 +17,14 @@ struct LayoutPane: View {
     var body: some View {
         let config = doc.config
         let status = settingsUI.status
-        VStack(alignment: .leading, spacing: 30) {
+        VStack(alignment: .leading, spacing: Theme.Space.xxl) {
             if status.trusted && !status.screens.isEmpty {
                 OGroup("Displays") {
                     ForEach(status.screens, id: \.uuid) { screen in
-                        HStack(spacing: 14) {
+                        HStack(spacing: Theme.Space.medium) {
                             ScreenThumbnail(layout: screen.layout).frame(width: 56)
                             VStack(alignment: .leading, spacing: 1) {
-                                Text(screen.name).font(Theme.body(14)).oneLine()
+                                Text(screen.name).font(Theme.body()).oneLine()
                                 Text(screen.workspace.isEmpty ? "Current layout" : "Workspace \(screen.workspace)")
                                     .textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine()
                             }
@@ -54,13 +54,13 @@ struct LayoutPane: View {
                                       remove: { remove(layout) })
                         }
                     }
-                    .padding(.vertical, 10).padding(.horizontal, 8)
+                    .padding(.vertical, Theme.Space.small).padding(.horizontal, 8)
                     .coordinateSpace(name: CycleChip.space)
                 }
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 6), spacing: 6) {
                     ForEach(Layout.allCases, id: \.self) { cell($0) }
                 }
-                .padding(.vertical, 10)
+                .padding(.vertical, Theme.Space.small)
             }
             .setting(LayoutPane.searchCycle.id, settingsUI)
 

@@ -18,7 +18,7 @@ struct OMenuPicker<T: Hashable>: View {
             }
         }, label: {
             HStack(spacing: 8) {
-                Text(options.first { $0.value == selection }?.label ?? "").font(Theme.body(13, .medium)).oneLine()
+                Text(options.first { $0.value == selection }?.label ?? "").font(Theme.body(13.5, .medium)).oneLine()
                 Image(systemName: "chevron.up.chevron.down").font(Theme.symbol(Theme.Icon.extraSmall, .semibold))
                     .foregroundStyle(Theme.inkMuted)
             }

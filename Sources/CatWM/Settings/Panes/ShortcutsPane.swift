@@ -23,20 +23,18 @@ struct ShortcutsPane: View {
         let sections = ActionCategory.allCases
             .map { cat in (cat, doc.binds.filter { category($0) == cat && matches($0) }) }
             .filter { !$0.1.isEmpty }
-        VStack(alignment: .leading, spacing: 30) {
-            HStack(spacing: 10) {
+        VStack(alignment: .leading, spacing: Theme.Space.xxl) {
+            HStack(spacing: Theme.Space.medium) {
+                addMenu
                 if doc.submaps.count > 1 {
                     OSegmented(title: "Shortcut set",
                                options: doc.submaps.map { ($0, $0.isEmpty ? "Global" : "\($0.capitalized) mode") },
                                selection: Binding(
                                    get: { settingsUI.shortcutMode(in: doc) },
                                    set: { settingsUI.bindMode = $0 }))
-                        .tooltip("Global shortcuts work everywhere. "
-                            + "Mode shortcuts only work in the mode, so single keys are fine.")
                 }
                 OTextField(placeholder: "Filter shortcuts", text: $settingsUI.shortcutFilter).frame(maxWidth: 200)
                 Spacer(minLength: 0)
-                addMenu
                 OIconButton(symbol: "keyboard", label: "Shortcut map", variant: .secondary) {
                     withAnimation(Motion.snap) { settingsUI.showMap = true }
                 }
@@ -95,10 +93,10 @@ struct ShortcutsPane: View {
                          action: { add("workspace", "1..5", key: "1..5", expand: true) })
             ]
             return ActionMenuItems.items { action in add(action.dispatcher, action.args) } + [
-                MenuItem(id: "ranges", kind: .sub, label: "Ranges", symbol: "ellipsis.rectangle",
+                MenuItem(id: "ranges", kind: .sub, label: "Ranges",
                          width: MenuItem.fitWidth(ranges), children: ranges),
                 .sep("s"),
-                MenuItem(id: "custom", label: "Custom Dispatcher…", symbol: "terminal",
+                MenuItem(id: "custom", label: "Custom Dispatcher…",
                          action: { add("layoutmsg", "") })
             ]
         }, label: {

@@ -3,6 +3,7 @@ import SwiftUI
 
 struct SwitcherView: View {
     @ObservedObject var model: SwitcherModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     static let width: CGFloat = 360
     static let visibleRows = 10
@@ -27,7 +28,7 @@ struct SwitcherView: View {
         .frame(width: Self.width - Self.inset * 2)
         .surface(.medium)
         .opacity(model.shown ? 1 : 0)
-        .scaleEffect(model.shown ? 1 : 0.97)
+        .scaleEffect(model.shown || reduceMotion ? 1 : 0.97)
         .animation(model.shown ? Motion.fade : Motion.exit, value: model.shown)
         .padding(Self.margin)
         .frame(maxHeight: .infinity, alignment: .top)
@@ -47,7 +48,7 @@ struct SwitcherView: View {
                 Text(app.app).textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine()
             }
         }
-        .padding(.horizontal, 10)
+        .padding(.horizontal, Theme.Space.medium)
         .frame(height: Self.headHeight)
         .accessibilityElement(children: .combine)
     }

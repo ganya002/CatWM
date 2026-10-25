@@ -19,14 +19,18 @@ extension Hotkeys {
         modeChord = target.isEmpty ? []
             : CGEventSource.flagsState(.combinedSessionState).intersection(Self.tapMods).subtracting(.maskShift)
         tapDown = nil
-        DispatchQueue.main.async { [weak self] in self?.onSubmapChange?(target) }
+        DispatchQueue.main.async { [weak self] in
+            Popup.shared.closeAll()
+            self?.onSubmapChange?(target)
+        }
     }
 
     @discardableResult
     func start() -> Bool {
         if tap != nil { return true }
         let mask = CGEventMask(1 << CGEventType.keyDown.rawValue) | CGEventMask(1 << CGEventType.flagsChanged.rawValue)
-            | CGEventMask(1 << CGEventType.scrollWheel.rawValue)
+            | CGEventMask(1 << CGEventType.scrollWheel.rawValue) | CGEventMask(1 << CGEventType.rightMouseDown.rawValue)
+            | CGEventMask(1 << CGEventType.rightMouseUp.rawValue)
         guard let newTap = CGEvent.tapCreate(tap: .cghidEventTap, place: .headInsertEventTap,
                                              options: .defaultTap, eventsOfInterest: mask, callback: tapCallback,
                                              userInfo: nil) else { return false }

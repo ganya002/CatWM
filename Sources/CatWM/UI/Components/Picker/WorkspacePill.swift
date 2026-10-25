@@ -7,6 +7,7 @@ struct WorkspacePill: View {
     let occupied: Bool
     let action: () -> Void
     @StateObject private var hover = Flag()
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Button(action: action) {
@@ -20,9 +21,8 @@ struct WorkspacePill: View {
         }
         .buttonStyle(PressScale(scale: 0.88))
         .onHover { hover.isOn = $0 }
-        .animation(Motion.spring, value: current)
-        .animation(Motion.spring, value: occupied)
-        .tooltip("Workspace \(name)")
+        .animation(reduceMotion ? Motion.fade : Motion.spring, value: current)
+        .animation(reduceMotion ? Motion.fade : Motion.spring, value: occupied)
         .accessibilityLabel("Workspace \(name)\(occupied ? ", has windows" : "")")
         .accessibilityAddTraits(current ? .isSelected : [])
     }

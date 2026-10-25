@@ -45,7 +45,6 @@ struct EssentialTile: View {
         .buttonStyle(PressScale())
         .onHover { model.hover = $0 }
         .animation(Motion.fadeMedium, value: isOn)
-        .tooltip(label, keys: shortcut)
         .accessibilityLabel(label)
         .accessibilityAddTraits(!toggles ? [] : isOn ? [.isToggle, .isSelected] : .isToggle)
     }

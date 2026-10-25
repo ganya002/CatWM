@@ -19,9 +19,9 @@ struct CycleChip: View {
         VStack(spacing: 6) {
             LayoutThumbnail(layout: layout, selected: true).frame(width: 72)
                 .overlay(alignment: .topLeading) {
-                    Text("\(index + 1)").font(Theme.body(11, .medium)).foregroundStyle(Theme.onAccent)
+                    Text("\(index + 1)").font(Theme.body(11, .medium)).foregroundStyle(Theme.background)
                         .contentTransition(.numericText())
-                        .frame(width: 18, height: 18).background(Circle().fill(Theme.accent))
+                        .frame(width: 18, height: 18).background(Circle().fill(Theme.ink))
                         .offset(x: -6, y: -6)
                 }
                 .overlay(alignment: .topTrailing) {

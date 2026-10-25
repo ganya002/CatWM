@@ -16,6 +16,7 @@ final class TabStripInput: NSView {
     }
 
     private var press: Press?
+    private var menuTab: CGWindowID?
     private var liftedTab: TabStripModel.Tab?
     private let host: NSView
     let lights = TrafficLights(buttons: TabStrip.lights)
@@ -63,7 +64,7 @@ final class TabStripInput: NSView {
     override func mouseEntered(with event: NSEvent) { hover(event) }
 
     override func mouseExited(with _: NSEvent) {
-        guard model.dragged == nil else { return }
+        guard model.dragged == nil, menuTab == nil else { return }
         model.hovered = nil
         model.closeHovered = false
     }
@@ -74,7 +75,7 @@ final class TabStripInput: NSView {
     }
 
     private func hover(_ event: NSEvent) {
-        guard model.dragged == nil else { return }
+        guard model.dragged == nil, menuTab == nil else { return }
         let point = local(event)
         guard let index = model.index(at: point.x, width: bounds.width) else {
             model.hovered = nil
@@ -87,6 +88,7 @@ final class TabStripInput: NSView {
     }
 
     override func mouseDown(with event: NSEvent) {
+        if event.modifierFlags.contains(.control) { return openMenu(event) }
         let point = local(event)
         guard let index = model.index(at: point.x, width: bounds.width) else { return }
         let onClose = model.closeRect(index, width: bounds.width).contains(point)
@@ -94,6 +96,8 @@ final class TabStripInput: NSView {
                       grab: point.x - model.slotX(index, width: bounds.width),
                       hold: CGPoint(x: point.x + TabStrip.inset, y: point.y), onClose: onClose)
     }
+
+    override func rightMouseDown(with event: NSEvent) { openMenu(event) }
 
     override func mouseDragged(with event: NSEvent) {
         guard let press, !press.onClose else { return }
@@ -171,6 +175,21 @@ final class TabStripInput: NSView {
     override func otherMouseUp(with event: NSEvent) {
         guard event.buttonNumber == 2, let index = model.index(at: local(event).x, width: bounds.width) else { return }
         _ = WindowManager.shared.closeWindow(model.tabs[index].id)
+    }
+
+    private func openMenu(_ event: NSEvent) {
+        guard model.dragged == nil, let index = model.index(at: local(event).x, width: bounds.width) else { return }
+        let id = model.tabs[index].id
+        let items = TabMenu.items(for: id)
+        guard !items.isEmpty else { return }
+        press = nil
+        Popup.shared.context({ items }, onClose: { [weak self] in
+            self?.menuTab = nil
+            self?.model.hovered = nil
+        })
+        menuTab = id
+        model.hovered = id
+        model.closeHovered = false
     }
 
     func cancelDrag() {

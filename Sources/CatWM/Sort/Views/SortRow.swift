@@ -12,17 +12,19 @@ struct SortRow: View {
     let closing: Bool
     var indented = false
     var tab: Tab?
+    @StateObject private var menu = Flag()
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let pointed = model.hover == item.id
-        let lit = pointed || model.selected == item.id
+        let lit = pointed || model.selected == item.id || menu.isOn
         let lead: CGFloat = tab != nil ? SortMetrics.tabIndent : indented ? 5 + SortMetrics.closedIndent : 5
         SortRowFace(item: item, closing: closing)
             .padding(.leading, lead).padding(.trailing, 8)
             .frame(height: SortMetrics.rowHeight)
             .background(alignment: .leading) { if let tab { SortTabBracket(last: tab == .last) } }
             .background(RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
-                .fill((closing ? pointed : lit) ? Theme.hover : .clear))
+                .fill((closing ? pointed || menu.isOn : lit) ? Theme.hover : .clear))
             .overlay(alignment: .trailing) {
                 if pointed && model.drag == nil {
                     RemoveButton(help: closing ? "Bring back" : "Close window", variant: closing ? .restore : .close,
@@ -47,6 +49,11 @@ struct SortRow: View {
             .gesture(DragGesture(minimumDistance: 4, coordinateSpace: .named("sort"))
                 .onChanged { model.dragChanged(item, $0) }
                 .onEnded { _ in model.dragEnded() })
+            .oContextMenu(opened: { menu.isOn = $0 }, items: {
+                model.windowMenu(item, closing: closing, tabbed: tab != nil) { change in
+                    withAnimation(PanelMotion.windowAnimation(reduceMotion: reduceMotion), change)
+                }
+            })
             .accessibilityLabel("\(item.title), \(item.app)")
     }
 }

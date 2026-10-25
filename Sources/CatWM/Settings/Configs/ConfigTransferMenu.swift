@@ -8,10 +8,9 @@ struct ConfigTransferMenu: View {
     var body: some View {
         OMenuButton(style: OButtonStyle(variant: .secondary, iconOnly: true), items: {
             [
-                MenuItem(id: "import", label: "Import Config…", symbol: "square.and.arrow.down",
+                MenuItem(id: "import", label: "Import config…",
                          action: { library.runImportPanel(only: kind == .full ? nil : kind) }),
-                MenuItem(id: "export", label: "Export \(kind == .full ? "Full" : kind.title) Config…",
-                         symbol: "square.and.arrow.up",
+                MenuItem(id: "export", label: "Export \(kind == .full ? "full" : kind.title.lowercased()) config…",
                          action: { library.sheet = .export(kind: kind) })
             ]
         }, label: {

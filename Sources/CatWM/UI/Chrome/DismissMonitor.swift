@@ -20,7 +20,7 @@ final class DismissMonitor {
         if let monitor = NSEvent.addLocalMonitorForEvents(matching: click, handler: { event in
             if keeps(event.window) { return event }
             close()
-            return swallowsClick ? nil : event
+            return swallowsClick && event.type != .rightMouseDown ? nil : event
         }) { monitors.append(monitor) }
         if screens {
             screenObserver = NotificationCenter.default.addObserver(

@@ -28,7 +28,7 @@ struct OSearchField: View {
                 Kbd(keys: shortcut)
             }
         }
-        .padding(.horizontal, 10)
+        .padding(.horizontal, Theme.Space.medium)
         .frame(height: 34)
         .accessibilityElement(children: .contain)
     }

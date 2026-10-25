@@ -27,8 +27,8 @@ struct AdvancedSection<Content: View>: View {
             .buttonStyle(.plain)
             .accessibilityLabel(open ? "Hide advanced settings" : "Show advanced settings")
             if open {
-                VStack(alignment: .leading, spacing: 30) { content }
-                    .padding(.top, 10)
+                VStack(alignment: .leading, spacing: Theme.Space.xxl) { content }
+                    .padding(.top, Theme.Space.small)
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }

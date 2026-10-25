@@ -14,7 +14,7 @@ struct OSegment<Lead: View>: View {
     var body: some View {
         let ink = selected ? Theme.onAccent : hot ? Theme.accentInk : Theme.inkMuted
         Button(action: action) {
-            HStack(spacing: 5) {
+            HStack(spacing: Theme.Space.extraSmall) {
                 lead(ink)
                 if let keys { Text(keys).font(Theme.keys(12.5, .medium)) }
                 if !label.isEmpty { Text(label).font(Theme.body(12.5, selected ? .medium : .regular)).oneLine() }
@@ -24,7 +24,7 @@ struct OSegment<Lead: View>: View {
                 }
             }
             .foregroundStyle(ink)
-            .padding(.horizontal, label.isEmpty ? 9 : 12).frame(height: 24)
+            .padding(.horizontal, label.isEmpty ? Theme.Space.small : 12).frame(height: 26)
             .background {
                 if selected {
                     if let thumb {

@@ -37,7 +37,6 @@ struct IntroLabView: View {
                 model.music(arrangement)
             }
             Button("Intro", systemImage: "play.fill") { model.intro(arrangement) }
-                .help("Plays the whole intro with this music. Click anywhere to skip.")
         }
         .padding(.horizontal, 8).padding(.vertical, 8)
         .background(

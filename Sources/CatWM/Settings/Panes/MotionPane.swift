@@ -32,7 +32,7 @@ struct MotionPane: View {
 
     var body: some View {
         let config = doc.config
-        VStack(alignment: .leading, spacing: 30) {
+        VStack(alignment: .leading, spacing: Theme.Space.xxl) {
             OGroup("Style") {
                 HStack(spacing: 12) {
                     VStack(spacing: 8) {
@@ -54,7 +54,7 @@ struct MotionPane: View {
                         .setting(MotionPane.searchPreview.id, settingsUI)
                 }
                 .frame(height: 170)
-                .padding(.vertical, 10)
+                .padding(.vertical, Theme.Space.small)
                 ORow("Play it again", description: "Plays with exactly the curve windows use") {
                     OButton("Play", icon: "play.fill", size: .small, action: play)
                 }
@@ -85,10 +85,10 @@ struct MotionPane: View {
             let width = geo.size.width, height = geo.size.height, flipped = settingsUI.previewFlipped
             ZStack(alignment: .topLeading) {
                 RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous).fill(GapsPreview.wallpaper)
-                DemoWindow(app: Self.previewApps[0], main: true, corner: 5)
+                DemoWindow(app: Self.previewApps[0], main: true, corner: Theme.Radius.extraSmall)
                     .frame(width: max(1, (flipped ? width * 0.35 : width * 0.6) - 12), height: height - 16)
                     .offset(x: flipped ? width * 0.65 + 4 : 8, y: 8)
-                DemoWindow(app: Self.previewApps[1], corner: 5)
+                DemoWindow(app: Self.previewApps[1], corner: Theme.Radius.extraSmall)
                     .frame(width: max(1, (flipped ? width * 0.65 : width * 0.4) - 12), height: height - 16)
                     .offset(x: flipped ? 8 : width * 0.6 + 4, y: 8)
             }

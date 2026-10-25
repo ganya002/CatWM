@@ -7,13 +7,15 @@ struct SortTabHeader: View {
     let count: Int
     var closing = false
     @StateObject private var hover = Flag()
+    @StateObject private var menu = Flag()
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         SortTabHeaderFace(count: count)
-            .padding(.leading, 5).padding(.trailing, 8)
+            .padding(.leading, Theme.Space.extraSmall).padding(.trailing, 8)
             .frame(height: SortMetrics.rowHeight)
             .background(RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
-                .fill(closing && hover.isOn ? Theme.hover : .clear))
+                .fill((closing && hover.isOn) || menu.isOn ? Theme.hover : .clear))
             .overlay(alignment: .trailing) {
                 if closing && hover.isOn && model.drag == nil {
                     RemoveButton(help: "Bring back", variant: .restore, tooltip: false) { model.restore(lead.id) }
@@ -30,6 +32,11 @@ struct SortTabHeader: View {
             .gesture(DragGesture(minimumDistance: 4, coordinateSpace: .named("sort"))
                 .onChanged { model.dragChanged(lead, $0, group: true) }
                 .onEnded { _ in model.dragEnded() })
+            .oContextMenu(opened: { menu.isOn = $0 }, items: {
+                model.tabGroupMenu(lead: lead.id, closing: closing) { change in
+                    withAnimation(PanelMotion.windowAnimation(reduceMotion: reduceMotion), change)
+                }
+            })
             .accessibilityLabel("Tab group, \(count) tabs")
             .accessibilityAddTraits(closing ? .isButton : [])
     }

@@ -17,7 +17,7 @@ struct PresetTile: View {
                            instant: !preset.animate, lineWidth: 2, color: Theme.accent)
                     .frame(width: 56, height: 28)
             }
-            .padding(.horizontal, 14)
+            .padding(.horizontal, Theme.Space.medium)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous)
                 .fill(selected ? Theme.accentSoft : hover.isOn ? Theme.wellHover : Theme.well))

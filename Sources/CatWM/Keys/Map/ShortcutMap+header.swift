@@ -7,7 +7,7 @@ extension ShortcutMap {
         let flags = model.flags
         let layer = all.filter { $0.flags == flags }
         ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
+            VStack(alignment: .leading, spacing: Theme.Space.extraLarge) {
                 header(all)
                 keyboard(layer)
                     .frame(maxWidth: 940)
@@ -15,7 +15,7 @@ extension ShortcutMap {
                     .zIndex(1)
                 list(layer)
             }
-            .padding(.horizontal, 28).padding(.top, 22).padding(.bottom, 40)
+            .padding(.horizontal, Theme.Space.extraLarge).padding(.top, 22).padding(.bottom, 40)
         }
         .onAppear {
             model.mode = doc.submaps.contains(settings.bindMode) ? settings.bindMode : ""
@@ -53,7 +53,7 @@ extension ShortcutMap {
                 }
                 .textStyle(.caption).foregroundStyle(Theme.inkMuted)
             }
-            .padding(.top, 14)
+            .padding(.top, Theme.Space.medium)
         }
     }
 
@@ -86,18 +86,17 @@ extension ShortcutMap {
                     model.selected = nil
                     withAnimation(Motion.fade) { model.picked = item.flags }
                 } label: {
-                    HStack(spacing: 5) {
+                    HStack(spacing: Theme.Space.extraSmall) {
                         Text(name).font(Theme.keys(12, .medium))
                         Text("\(item.count)").font(Theme.body(11.5)).monospacedDigit()
                             .foregroundStyle(active ? Theme.background.opacity(0.7) : Theme.inkMuted)
                     }
                     .foregroundStyle(active ? Theme.background : Theme.ink)
-                    .padding(.horizontal, 10).frame(height: 26)
+                    .padding(.horizontal, Theme.Space.medium).frame(height: 26)
                     .background(Capsule().fill(active ? Theme.ink : Theme.well))
                     .contentShape(Capsule())
                 }
                 .buttonStyle(PressScale())
-                .tooltip("Show \(name == "None" ? "shortcuts without modifiers" : name + " shortcuts")")
                 .accessibilityLabel("\(name), \(item.count) shortcuts")
                 .accessibilityAddTraits(active ? .isSelected : [])
             }

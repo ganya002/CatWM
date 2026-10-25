@@ -4,6 +4,7 @@ import SwiftUI
 struct SortView: View {
     @ObservedObject var model: SortModel
     let width: CGFloat
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     static var inset: EdgeInsets {
         EdgeInsets(top: Elevation.float.room, leading: Elevation.float.room, bottom: 0, trailing: Elevation.float.room)
     }
@@ -27,8 +28,9 @@ struct SortView: View {
                 closedColumn(plan, rows: rows)
             }
             .overlay(alignment: .trailing) { dropZone }
-            .animation(PanelMotion.windowAnimation, value: model.carriesToClose)
-            .animation(PanelMotion.windowAnimation, value: plan.close.isEmpty && plan.closedLanes.isEmpty)
+            .animation(PanelMotion.windowAnimation(reduceMotion: reduceMotion), value: model.carriesToClose)
+            .animation(PanelMotion.windowAnimation(reduceMotion: reduceMotion),
+                       value: plan.close.isEmpty && plan.closedLanes.isEmpty)
             .padding(.top, hasHeader ? Theme.Space.small : 0).padding(.horizontal, -8)
             actions
         }

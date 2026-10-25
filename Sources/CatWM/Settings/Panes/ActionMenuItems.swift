@@ -9,16 +9,16 @@ enum ActionMenuItems {
                      checked: action.id == current?.id,
                      action: { pick(action) })
         }
-        func sub(_ id: String, _ label: String, symbol: String?, _ children: [MenuItem]) -> MenuItem {
-            MenuItem(id: id, kind: .sub, label: label, symbol: symbol, width: MenuItem.fitWidth(children),
+        func sub(_ id: String, _ label: String, _ children: [MenuItem]) -> MenuItem {
+            MenuItem(id: id, kind: .sub, label: label, width: MenuItem.fitWidth(children),
                      children: children)
         }
         return Actions.byCategory.map { cat, actions in
-            sub("c.\(cat.rawValue)", cat.rawValue, symbol: cat.symbol, Actions.menuEntries(actions).map { entry in
+            sub("c.\(cat.rawValue)", cat.rawValue, Actions.menuEntries(actions).map { entry in
                 switch entry {
                 case .action(let action): row(action, action.title)
                 case .group(let name, let list):
-                    sub("g.\(name)", name, symbol: nil, list.map { row($0, $0.short ?? $0.title) })
+                    sub("g.\(name)", name, list.map { row($0, $0.short ?? $0.title) })
                 }
             })
         }

@@ -5,6 +5,7 @@ struct CoachCardView: View {
     @ObservedObject var model: CoachModel
     static let width: CGFloat = 344
     static var inset: EdgeInsets { EdgeInsets(all: Elevation.float.room) }
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         if let summary = model.summary {
@@ -17,31 +18,31 @@ struct CoachCardView: View {
     private var step: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
+                if model.canHead {
+                    OIconButton(symbol: model.headSymbol ?? "xmark", label: model.headLabel, action: model.headAction)
+                        .padding(.leading, -6)
+                }
                 Image(systemName: model.recall ? "brain" : "keyboard")
                     .font(Theme.symbol())
                     .contentTransition(.symbolEffect(.replace))
-                Spacer(minLength: 8)
-                if model.canHead {
-                    OIconButton(symbol: model.headSymbol ?? "xmark", label: model.headLabel, action: model.headAction)
-                        .padding(.trailing, -6)
-                }
+                Spacer(minLength: 0)
             }
             .frame(minHeight: 22)
             Text(model.title).textStyle(.title).fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 12).padding(.bottom, 4)
             if !model.text.isEmpty {
-                Text(model.text).font(Theme.body(13.5)).lineSpacing(2).opacity(0.86)
+                Text(model.text).font(Theme.body()).lineSpacing(2).opacity(0.86)
                     .fixedSize(horizontal: false, vertical: true)
             }
             if !model.caps.isEmpty { keys.padding(.top, 16) }
             if let warning = model.warning {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.warning)
-                    Text(warning).font(Theme.body(12.5)).fixedSize(horizontal: false, vertical: true)
+                    Text(warning).textStyle(.caption).fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.horizontal, 12).padding(.vertical, 8)
                 .background(RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous).fill(Theme.well))
-                .padding(.top, 14)
+                .padding(.top, Theme.Space.medium)
             }
             if let button = model.button {
                 HStack {
@@ -58,7 +59,7 @@ struct CoachCardView: View {
                 }
             }
             .frame(height: 3)
-            .padding(.top, 14)
+            .padding(.top, Theme.Space.medium)
             .animation(Motion.spring, value: model.progress)
         }
         .frame(width: Self.width - 40)
@@ -80,11 +81,10 @@ struct CoachCardView: View {
                     }
                 }
                 .buttonStyle(OButtonStyle(variant: .ghost, size: .small))
-                .tooltip("Show the keys")
             } else {
                 Button(action: model.tryKeys) { caps.fixedSize().contentShape(Rectangle()) }
                     .buttonStyle(.plain)
-                    .tooltip("Press the keys, or click them.")
+                    .accessibilityLabel("Press the keys, or click them")
                 if model.button == nil { status }
             }
         }
@@ -121,15 +121,15 @@ struct CoachCardView: View {
                 .accessibilityLabel("Done")
                 .transition(.opacity.combined(with: .scale(scale: 0.8)))
         } else {
-            let icon = Image(systemName: "cursorarrow.rays").symbolEffect(.pulse)
+            let icon = Image(systemName: "cursorarrow.rays").symbolEffect(.pulse, isActive: !reduceMotion)
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 6) {
                     icon
-                    Text("Press it now").font(Theme.body(13)).oneLine().fixedSize()
+                    Text("Press it now").font(Theme.body()).oneLine().fixedSize()
                 }
                 icon
             }
-            .tooltip("Press it now")
+            .accessibilityLabel("Press it now")
             .opacity(0.8)
         }
     }

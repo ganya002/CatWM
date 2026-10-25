@@ -18,7 +18,7 @@ struct SideItem: View {
             action()
         } label: {
             HStack(spacing: 8) {
-                Text(pane.rawValue).font(Theme.body(13.5, selected ? .semibold : .medium)).oneLine()
+                Text(pane.rawValue).font(Theme.body(13.5, .medium)).oneLine()
                 Spacer(minLength: 0)
                 switch badge {
                 case .attention:

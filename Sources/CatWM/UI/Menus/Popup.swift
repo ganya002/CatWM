@@ -10,6 +10,7 @@ final class Popup: NSObject, NSWindowDelegate {
         weak var parent: NSWindow?
         var onClose: (() -> Void)?
         let keys: (NSEvent) -> Bool
+        let model: MenuModel?
     }
 
     private var stack: [Entry] = []
@@ -17,6 +18,22 @@ final class Popup: NSObject, NSWindowDelegate {
     private static var margin: CGFloat { Elevation.popover.room }
 
     var isOpen: Bool { !stack.isEmpty }
+
+    func owns(_ window: NSWindow?) -> Bool { stack.contains { $0.panel === window } }
+
+    var windowNumbers: Set<Int> { Set(stack.map(\.panel.windowNumber)) }
+
+    func hitsMenu(at point: CGPoint) -> Bool {
+        guard let height = NSScreen.screens.first?.frame.height else { return false }
+        return stack.contains { entry in
+            guard let model = entry.model else { return false }
+            let frame = entry.panel.frame
+            let local = CGPoint(x: point.x - frame.minX, y: frame.maxY - (height - point.y))
+            let slack = Theme.Space.small
+            return model.rowFrames.values.contains { $0.insetBy(dx: -slack, dy: -slack).contains(local) }
+        }
+    }
+
     private(set) var generation = 0
 
     func menu(_ items: @escaping () -> [MenuItem], from anchor: NSRect, minWidth: CGFloat = 0,
@@ -44,8 +61,15 @@ final class Popup: NSObject, NSWindowDelegate {
                             size: frame.size, rootWidth: width, fromBottom: fromBottom)
         let next = generation + 1
         model.close = { [weak self] in self?.close(generation: next) }
-        show(AnyView(view), frame: frame, onClose: onClose) { event in Self.menuKey(event, model) }
-        DispatchQueue.main.async { withAnimation(Motion.easeOut) { model.appeared = true } }
+        show(AnyView(view), frame: frame, onClose: onClose, model: model) { event in Self.menuKey(event, model) }
+        let reduce = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        DispatchQueue.main.async { withAnimation(reduce ? Motion.fade : Motion.easeOut) { model.appeared = true } }
+    }
+
+    func context(_ items: @escaping () -> [MenuItem], onClose: (() -> Void)? = nil) {
+        closeAll()
+        let point = NSEvent.mouseLocation
+        menu(items, from: NSRect(x: point.x + 4, y: point.y + 4, width: 0, height: 0), onClose: onClose)
     }
 
     func popover<Content: View>(from anchor: NSRect, onClose: (() -> Void)? = nil,
@@ -63,16 +87,23 @@ final class Popup: NSObject, NSWindowDelegate {
         show(AnyView(host.rootView), frame: frame, onClose: onClose) { _ in false }
     }
 
-    private func show(_ view: AnyView, frame: NSRect, onClose: (() -> Void)?, keys: @escaping (NSEvent) -> Bool) {
+    private func show(_ view: AnyView, frame: NSRect, onClose: (() -> Void)?, model: MenuModel? = nil,
+                      keys: @escaping (NSEvent) -> Bool) {
         let key = NSApp.keyWindow
         if !stack.contains(where: { $0.panel === key }) { closeAll() }
         generation += 1
         let panel = makePanel()
         let current = generation
         panel.onClose = { [weak self] in self?.close(generation: current) }
-        stack.append(Entry(panel: panel, generation: generation, parent: key, onClose: onClose, keys: keys))
-        panel.contentView = CatWMHostingView(rootView: view)
-        panel.setFrame(frame, display: true)
+        stack.append(Entry(panel: panel, generation: generation, parent: key, onClose: onClose, keys: keys,
+                           model: model))
+        let host = CatWMHostingView(rootView: view)
+        host.sizingOptions = []
+        panel.setFrame(frame, display: false)
+        panel.contentView = host
+        host.layoutSubtreeIfNeeded()
+        panel.displayIfNeeded()
+        CATransaction.flush()
         panel.makeKeyAndOrderFront(nil)
         installMonitors()
     }
@@ -92,7 +123,7 @@ final class Popup: NSObject, NSWindowDelegate {
             let done = entry.onClose
             entry.onClose = nil
             NSAnimationContext.runAnimationGroup({ ctx in
-                ctx.duration = 0.12
+                ctx.duration = Theme.fast
                 panel.animator().alphaValue = 0
             }, completionHandler: {
                 panel.orderOut(nil)
