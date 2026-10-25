@@ -2,10 +2,11 @@ import Foundation
 
 enum SwitcherSearch {
     static func results(_ items: [SwitcherItem], query: String) -> [SwitcherItem] {
-        let needle = fold(query)
-        guard !needle.isEmpty else { return items }
+        let words = fold(query).split(separator: " ").map(String.init)
+        guard !words.isEmpty else { return items }
         let scored: [(item: SwitcherItem, score: Int)] = items.compactMap { item in
-            score(item, needle).map { (item, $0) }
+            let scores = words.map { score(item, $0) }
+            return scores.contains(nil) ? nil : (item, scores.compactMap(\.self).reduce(0, +))
         }
         return scored.enumerated()
             .sorted { lhs, rhs in

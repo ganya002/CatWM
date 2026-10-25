@@ -15,13 +15,15 @@ final class Switcher {
     private var orderOutWork: DispatchWorkItem?
     private var releaseWork: DispatchWorkItem?
     private var clickMonitor: Any?
+    private var previewTask: Task<Void, Never>?
+    private var peekTask: Task<Void, Never>?
     private static let holdDelay = 0.15
     private static let releaseDelay = 0.3
-    private static let rowKeys: [UInt16: Int] = [18: 0, 19: 1, 20: 2, 21: 3, 23: 4, 22: 5, 26: 6, 28: 7, 25: 8]
 
     func install() {
         Hotkeys.shared.intercept = { [weak self] type, event in self?.intercept(type, event) ?? false }
         model.onPick = { [weak self] item in self?.confirm(item) }
+        model.onDismiss = { [weak self] in self?.cancel() }
     }
 
     func open(backward: Bool) {
@@ -36,7 +38,15 @@ final class Switcher {
         active = true
         sticky = false
         holdMods = held
-        model.begin(items, selection: start)
+        var still = Transaction()
+        still.disablesAnimations = true
+        withTransaction(still) {
+            model.begin(items, selection: start, displays: NSScreen.screens.count,
+                        previews: ScreenRecording.shared.isGranted)
+        }
+        previewTask = SwitcherPreviews.capture(items.map(\.id), pixels: SwitcherPreviews.thumbPixels) { [weak self] in
+            self?.model.setPreview($1, for: $0)
+        }
         let work = DispatchWorkItem { [weak self] in
             guard let self else { return }
             if CGEventSource.flagsState(.combinedSessionState).contains(holdMods) { reveal() } else { released() }
@@ -84,33 +94,64 @@ final class Switcher {
         let command = flags.contains(.maskCommand), extra = flags.subtracting(holdMods)
         switch code {
         case 48: move(flags.contains(.maskShift) ? -1 : 1)
-        case 125: move(1)
-        case 126: move(-1)
+        case 124, 125: move(1)
+        case 123, 126: move(-1)
         case 53 where !isRepeat: cancel()
         case 36, 76: if !isRepeat, let item = model.selected { confirm(item) }
         case 51: edit { model.erase(all: !extra.isDisjoint(with: [.maskCommand, .maskAlternate])) }
         case 50: if !isRepeat { model.toggleAppFilter(); reveal() }
         case 49 where !model.query.isEmpty: edit { model.type(" ") }
-        case 13 where command: if !isRepeat { act(wholeApp: false) { WindowManager.shared.closeWindow($0.id) } }
-        case 12 where command:
-            if !isRepeat { act(wholeApp: true) { Self.app($0)?.terminate() ?? false } }
-        case 4 where command:
-            if !isRepeat { act(wholeApp: true) { Self.app($0)?.hide() ?? false } }
+        case 49: if !isRepeat { togglePeek() }
         default:
-            if command, let row = Self.rowKeys[code] {
-                if !isRepeat, model.results.indices.contains(row) { confirm(model.results[row]) }
-            } else if extra.isDisjoint(with: [.maskCommand, .maskControl]),
+            if command, commandKey(code, isRepeat: isRepeat) { return }
+            if extra.isDisjoint(with: [.maskCommand, .maskControl]),
                       let text = ConfigDocument.typedCharacter(keyCode: code, flags: extra.contains(.maskShift)
                           ? .shift : []) {
                 edit { model.type(text) }
             }
         }
-        layout()
+    }
+
+    private func commandKey(_ code: UInt16, isRepeat: Bool) -> Bool {
+        guard [1, 4, 11, 12, 13, 46].contains(code) else { return false }
+        guard !isRepeat else { return true }
+        let manager = WindowManager.shared
+        switch code {
+        case 1: model.nextScope(); reveal()
+        case 11: bringHere()
+        case 46: act(wholeApp: false) { manager.minimizeSwitcherItem($0) }
+        case 13: act(wholeApp: false) { manager.closeWindow($0.id) }
+        case 12: act(wholeApp: true) { Self.app($0)?.terminate() ?? false }
+        default: act(wholeApp: true) { Self.app($0)?.hide() ?? false }
+        }
+        return true
     }
 
     private func move(_ delta: Int) {
         model.move(delta)
         reveal()
+        if model.peeking { capturePeek() }
+    }
+
+    private func togglePeek() {
+        guard model.previewing else { return }
+        model.peeking.toggle()
+        reveal()
+        if model.peeking { capturePeek() }
+    }
+
+    private func capturePeek() {
+        guard let id = model.selected?.id else { return }
+        peekTask?.cancel()
+        peekTask = SwitcherPreviews.capture([id], pixels: SwitcherPreviews.peekPixels) { [weak self] in
+            self?.model.setPreview($1, for: $0)
+        }
+    }
+
+    private func bringHere() {
+        guard let item = model.selected else { return }
+        cancel()
+        if !WindowManager.shared.bringSwitcherItemHere(item) { WindowManager.shared.switchTo(item) }
     }
 
     private func edit(_ change: () -> Void) {
@@ -132,7 +173,7 @@ final class Switcher {
 
     private func armJump() {
         let config = WindowManager.shared.config
-        guard config.switcherInstantJump, let target = SwitcherSearch.soleJump(model.scope, query: model.query) else {
+        guard config.switcherInstantJump, let target = SwitcherSearch.soleJump(model.pool, query: model.query) else {
             return
         }
         guard config.switcherJumpDelay > 0 else { confirm(target); return }
@@ -157,6 +198,8 @@ final class Switcher {
         showWork?.cancel()
         jumpWork?.cancel()
         releaseWork?.cancel()
+        previewTask?.cancel()
+        peekTask?.cancel()
         if let clickMonitor { NSEvent.removeMonitor(clickMonitor); self.clickMonitor = nil }
         guard revealed else { return }
         revealed = false
@@ -184,12 +227,11 @@ final class Switcher {
     }
 
     private func layout() {
-        guard let panel, active,
-              let screen = WindowManager.shared.focusedScreen ?? CatWMPanel.pointerScreen() else { return }
-        let size = SwitcherView.size(rows: model.results.count)
-        let tallest = CatWMPanel.frame(size: SwitcherView.size(rows: SwitcherView.visibleRows), on: screen,
-                                      anchor: .center(dy: screen.visibleFrame.height / 10))
-        panel.place(size: size, on: screen, anchor: .origin(NSPoint(x: tallest.minX, y: tallest.maxY - size.height)))
+        guard let panel, let screen = WindowManager.shared.focusedScreen ?? CatWMPanel.pointerScreen() else { return }
+        let visible = screen.visibleFrame, size = SwitcherView.size(width: visible.width * 0.9)
+        let top = visible.maxY - visible.height * 0.2 + SwitcherView.margin
+        panel.place(size: size, on: screen, anchor: .origin(NSPoint(x: visible.midX - size.width / 2,
+                                                                    y: top - size.height)))
     }
 
     private func makePanel() -> CatWMPanel {

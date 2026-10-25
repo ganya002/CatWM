@@ -18,6 +18,10 @@ extension WindowManager {
         lastFocused[workspace] = window.id
         if let from, lastFocused[from] == window.id { lastFocused[from] = nil }
         corrections[window.id] = nil
+        if isShown(workspace) {
+            restoredEarly[window.id] = Date()
+            scheduleRefresh(after: 0)
+        }
         if follow, isShown(workspace) {
             refresh()
             focus(window, warp: false)
@@ -108,9 +112,9 @@ extension WindowManager {
         window.resizable = window.element.isSettable(kAXSizeAttribute)
     }
 
-    func bringWindowHere(_ window: Window) {
+    func bringWindowHere(_ window: Window, focusing: Bool = false) {
         guard let screen = currentScreen(), isOnHomeSpace(screen),
               let workspace = virtualShown[screen.uuid] else { return }
-        moveWindow(window, toWorkspace: workspace, follow: false)
+        moveWindow(window, toWorkspace: workspace, follow: focusing)
     }
 }

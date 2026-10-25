@@ -92,3 +92,46 @@ private let all = [safari, slack, notes, safariTwo]
         11: "Desktop 1", 12: "Desktop 2", 13: "Full Screen", 14: "Desktop 3", 21: "Desktop 1"
     ])
 }
+
+@Suite struct SwitcherSearchModeTests {
+    @Test func typingOpensSearchAndErasingClosesIt() {
+        let model = SwitcherModel()
+        model.begin(all, selection: 1)
+        #expect(!model.searching)
+        model.type("s")
+        #expect(model.searching)
+        model.erase(all: false)
+        #expect(!model.searching)
+        #expect(model.results == all)
+    }
+}
+
+@Suite struct SwitcherScopeTests {
+    private let here = SwitcherItem(id: 1, pid: 10, app: "Safari", title: "Apple", here: true, onFocusedDisplay: true)
+    private let sameDisplay = SwitcherItem(id: 2, pid: 20, app: "Slack", title: "general", onFocusedDisplay: true)
+    private let otherDisplay = SwitcherItem(id: 3, pid: 30, app: "Notes", title: "Shopping list")
+
+    @Test func wordsMatchInAnyOrder() {
+        #expect(SwitcherSearch.results(all, query: "forums swift").map(\.id) == [4])
+        #expect(SwitcherSearch.results(all, query: "safari list").isEmpty)
+    }
+
+    @Test func scopeStepsThroughWorkspaceAndDisplay() {
+        let model = SwitcherModel()
+        model.begin([here, sameDisplay, otherDisplay], selection: 0, displays: 2)
+        model.nextScope()
+        #expect(model.scope == .workspace && model.results.map(\.id) == [1])
+        model.nextScope()
+        #expect(model.scope == .display && model.results.map(\.id) == [1, 2])
+        model.nextScope()
+        #expect(model.scope == .all && model.results.count == 3)
+    }
+
+    @Test func oneDisplaySkipsTheDisplayScope() {
+        let model = SwitcherModel()
+        model.begin([here, sameDisplay], selection: 0, displays: 1)
+        model.nextScope()
+        model.nextScope()
+        #expect(model.scope == .all)
+    }
+}

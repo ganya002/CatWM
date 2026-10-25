@@ -6,21 +6,32 @@ extension WindowManager {
         defer { timing.finish() }
         let apps = Dictionary(NSWorkspace.shared.runningApplications.map { ($0.processIdentifier, $0) },
                               uniquingKeysWith: { first, _ in first })
-        func item(_ id: CGWindowID, _ pid: pid_t, title: String, workspace: String) -> SwitcherItem? {
+        let screens = backend.screens()
+        let focusedDisplay = currentScreen()?.uuid
+        let sizes = Dictionary(scanner.desktop.allWindows.map { ($0.id, $0.bounds.size) },
+                               uniquingKeysWith: { first, _ in first })
+        func item(_ id: CGWindowID, _ pid: pid_t, title: String, workspace: String, display: String?,
+                  here: Bool = false) -> SwitcherItem? {
             guard pid != getpid(), let app = apps[pid], app.activationPolicy == .regular, !app.isHidden,
                   !(app.bundleIdentifier.map { Config.lists($0, in: config.switcherExclude) } ?? false)
             else { return nil }
-            return SwitcherItem(id: id, pid: pid, app: app.localizedName ?? "", title: title, workspace: workspace)
+            let onFocused = display != nil && display == focusedDisplay
+            return SwitcherItem(id: id, pid: pid, app: app.localizedName ?? "", title: title, workspace: workspace,
+                                here: here && onFocused, onFocusedDisplay: onFocused, size: sizes[id] ?? .zero)
         }
         let place = Dictionary(order.enumerated().map { ($1, $0) }, uniquingKeysWith: { first, _ in first })
         var items = windows.values
             .filter { present.contains($0.id) && !$0.minimized }
             .sorted { (place[$0.id] ?? .max, $0.id) < (place[$1.id] ?? .max, $1.id) }
-            .compactMap { item($0.id, $0.pid, title: $0.title ?? "", workspace: switcherWorkspace($0.id)) }
+            .compactMap { window in
+                item(window.id, window.pid, title: window.title ?? "", workspace: switcherWorkspace(window.id),
+                     display: screen(of: window, in: screens)?.uuid, here: visible.contains(window.id))
+            }
         timing.checkpoint("here")
         let listed = Set(items.map(\.id))
         items += windowsOnOtherSpaces().filter { !listed.contains($0.info.id) }.compactMap { window in
-            item(window.info.id, window.info.pid, title: windows[window.info.id]?.title ?? "", workspace: window.space)
+            item(window.info.id, window.info.pid, title: windows[window.info.id]?.title ?? "", workspace: window.space,
+                 display: window.display)
         }
         timing.checkpoint("elsewhere")
         let focused = focusedWindow()?.id
@@ -30,8 +41,19 @@ extension WindowManager {
             .map(\.element)
     }
 
-    private func windowsOnOtherSpaces() -> [(info: CGWindowInfo, space: String)] {
-        let displays = backend.screens().compactMap { Spaces.list(display: $0.uuid) }
+    private struct ElsewhereWindow {
+        let info: CGWindowInfo
+        let space: String
+        let display: String?
+    }
+
+    private func windowsOnOtherSpaces() -> [ElsewhereWindow] {
+        let listed = backend.screens().compactMap { screen in
+            Spaces.list(display: screen.uuid).map { (screen.uuid, $0) }
+        }
+        let displays = listed.map(\.1)
+        let displayOf = Dictionary(listed.flatMap { uuid, info in info.ids.map { ($0, uuid) } },
+                                   uniquingKeysWith: { first, _ in first })
         let names = Self.spaceLabels(displays)
         let current = Set(displays.compactMap { display in display.current.map { display.ids[$0] } })
         let desktop = scanner.desktop
@@ -41,7 +63,7 @@ extension WindowManager {
                   let spaces = desktop.spaces[info.id], spaces.count == 1, let space = spaces.first,
                   !current.contains(space),
                   let label = workspace(on: space).map(workspaceLabel) ?? names[space] else { return nil }
-            return (info, label)
+            return ElsewhereWindow(info: info, space: label, display: displayOf[space])
         }
     }
 
@@ -96,6 +118,20 @@ extension WindowManager {
         } else if !WindowServerFocus.focus(pid: item.pid, window: item.id) {
             NSRunningApplication(processIdentifier: item.pid)?.activate()
         }
+    }
+
+    func minimizeSwitcherItem(_ item: SwitcherItem) -> Bool {
+        guard let window = windows[item.id] else { return false }
+        minimize(window)
+        return true
+    }
+
+    func bringSwitcherItemHere(_ item: SwitcherItem) -> Bool {
+        guard let window = windows[item.id] ?? windowsOnOtherDesktops().first(where: { $0.id == item.id }) else {
+            return false
+        }
+        bringWindowHere(window, focusing: true)
+        return true
     }
 
     private static let spaceSettle = 0.6
