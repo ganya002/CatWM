@@ -22,10 +22,23 @@ extension SwitcherView {
                     }
                 }
             }
-            if let item = model.selected {
-                titleLine(item)
-            } else {
+            if model.selected == nil {
                 Text("No windows").textStyle(.caption).foregroundStyle(Theme.inkMuted).frame(height: Theme.rowHeight)
+            } else {
+                Color.clear.frame(height: Theme.rowHeight)
+            }
+        }
+        .overlayPreferenceValue(SelectedTile.self) { anchor in
+            GeometryReader { space in
+                if let anchor, let item = model.selected {
+                    let width = space.size.width, center = space[anchor].midX
+                    titleLine(item)
+                        .alignmentGuide(.leading) { label in
+                            label.width / 2 - min(max(center, label.width / 2), width - label.width / 2)
+                        }
+                        .frame(width: width, height: space.size.height, alignment: .bottomLeading)
+                        .animation(change, value: model.selection)
+                }
             }
         }
     }
@@ -47,6 +60,7 @@ extension SwitcherView {
             }
             .frame(width: tileWidth(item), height: tile.height)
             .contentShape(Rectangle())
+            .anchorPreference(key: SelectedTile.self, value: .bounds) { selected ? $0 : nil }
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label(item))
@@ -81,4 +95,9 @@ extension SwitcherView {
                 .offset(x: -Theme.Space.extraSmall, y: Theme.Space.extraSmall)
         }
     }
+}
+
+private struct SelectedTile: PreferenceKey {
+    static let defaultValue: Anchor<CGRect>? = nil
+    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) { value = value ?? nextValue() }
 }

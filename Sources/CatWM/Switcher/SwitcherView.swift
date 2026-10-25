@@ -38,7 +38,7 @@ struct SwitcherView: View {
 
     static func size(width: CGFloat) -> CGSize {
         let search = headHeight + 1 + inset + CGFloat(visibleRows) * Theme.rowHeight
-        let peek = peekSize(room(width)).height + Theme.Space.extraSmall + Theme.rowHeight
+        let peek = peekSize(room(width)).height
         let bar = Tile.preview.height + Theme.Space.extraSmall + Theme.rowHeight
         return CGSize(width: width, height: max(search, peek, bar) + (inset + margin) * 2)
     }

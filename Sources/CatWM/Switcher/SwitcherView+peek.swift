@@ -3,14 +3,11 @@ import SwiftUI
 
 extension SwitcherView {
     func peek(_ size: CGSize) -> some View {
-        VStack(spacing: Theme.Space.extraSmall) {
-            ZStack {
-                if let item = model.selected { shot(item).id(item.id).transition(.opacity) }
-            }
-            .frame(width: size.width, height: size.height)
-            .animation(fade, value: model.selected?.id)
-            if let item = model.selected { titleLine(item) }
+        ZStack {
+            if let item = model.selected { shot(item).id(item.id).transition(.opacity) }
         }
+        .frame(width: size.width, height: size.height)
+        .animation(fade, value: model.selected?.id)
     }
 
     @ViewBuilder private func shot(_ item: SwitcherItem) -> some View {
