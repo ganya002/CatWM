@@ -120,8 +120,8 @@ extension WindowManager {
         scheduleRefresh()
     }
 
-    func forget(_ id: CGWindowID) {
-        tilingRecovery.forget(id)
+    func forget(_ id: CGWindowID, keepRecovery: Bool = false) {
+        if !keepRecovery, let window = windows[id] { tilingRecovery.forget(recoveryIdentity(window)) }
         animator.forget(id)
         templateHiddenWindows[id] = nil
         let focused = focusClock > 0 && focusStamps[id] == focusClock

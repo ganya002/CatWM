@@ -32,6 +32,7 @@ enum Spaces {
         let ids: [UInt64]
         let desktops: [Int]
         let current: Int?
+        var uuids: [String?] = []
     }
 
     struct Snapshot {
@@ -63,7 +64,8 @@ enum Spaces {
             let ids = spaces.map { ($0["ManagedSpaceID"] as? UInt64) ?? 0 }
             let desktops = spaces.indices.filter { (spaces[$0]["type"] as? Int ?? 0) == 0 }
             let current = (entry["Current Space"] as? [String: Any])?["ManagedSpaceID"] as? UInt64
-            return DisplaySpaces(ids: ids, desktops: desktops, current: current.flatMap { ids.firstIndex(of: $0) })
+            return DisplaySpaces(ids: ids, desktops: desktops, current: current.flatMap { ids.firstIndex(of: $0) },
+                                 uuids: spaces.map { ($0["uuid"] as? String).flatMap { $0.isEmpty ? nil : $0 } })
         }
     }
 
