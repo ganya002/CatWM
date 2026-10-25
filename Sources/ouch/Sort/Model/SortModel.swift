@@ -24,6 +24,7 @@ final class SortModel: ObservableObject {
     @Published var focusName: UUID?
     @Published var moreToRight = false
     @Published var shown = false
+    @Published var ghostShift = CGSize.zero
     var motion = PanelMotion.current
 
     var layouts: [Layout] = [.tall]

@@ -6,7 +6,6 @@ struct SortLayoutPill: View {
     let next: () -> Void
     let previous: () -> Void
     @StateObject private var hover = Flag()
-    private let help = "Click for next layout, right-click for previous"
 
     var body: some View {
         Button(action: next) {
@@ -24,7 +23,6 @@ struct SortLayoutPill: View {
         .overlay(SortRightClick(action: previous))
         .onHover { hover.isOn = $0 }
         .animation(Motion.fade, value: hover.isOn)
-        .tooltip(help)
         .accessibilityLabel("Layout: \(layout.title)")
         .accessibilityAction(named: "Previous layout", previous)
     }

@@ -35,14 +35,12 @@ struct SortLaneView: View {
             Text(lane.number).font(Theme.display(22)).monospacedDigit().tracking(-0.4)
                 .foregroundStyle(filled ? Theme.ink : Theme.inkFaint).fixedSize()
                 .contentShape(Rectangle())
-                .onTapGesture(count: 2) { model.finish(lane.workspace) }
                 .onTapGesture {
                     number.draft = lane.number
                     number.isEditing = true
                     DispatchQueue.main.async { numberFocus = true }
                 }
                 .gesture(carry)
-                .tooltip("Click to change the number, double-click to go to workspace \(lane.number)")
         }
     }
 
@@ -51,7 +49,7 @@ struct SortLaneView: View {
     private func commitNumber() {
         guard number.isEditing else { return }
         number.isEditing = false
-        withAnimation(Motion.spring) { model.renumber(lane.id, to: number.draft) }
+        withAnimation(PanelMotion.windowAnimation) { model.renumber(lane.id, to: number.draft) }
     }
 
     var body: some View {
@@ -71,8 +69,8 @@ struct SortLaneView: View {
                     .textStyle(.caption).monospacedDigit().foregroundStyle(Theme.inkFaint).fixedSize()
                     .gesture(carry)
                 if model.plan.lanes.count > 1 {
-                    RemoveButton(help: "Remove workspace \(lane.number)", variant: .close) {
-                        withAnimation(Motion.easeOut) { model.removeLane(index) }
+                    RemoveButton(help: "Close workspace \(lane.number)", variant: .close, tooltip: false) {
+                        withAnimation(PanelMotion.windowAnimation) { model.closeLane(lane.id) }
                     }
                         .opacity(hover.isOn || editing ? 1 : 0)
                         .padding(.vertical, -4)
@@ -85,9 +83,8 @@ struct SortLaneView: View {
                       mainCount: model.plan.geometry[lane.workspace]?.mainCount ?? 1)
                 .padding(.horizontal, 4)
                 .contentShape(Rectangle())
-                .onTapGesture(count: 2) { model.finish(lane.workspace) }
+                .onTapGesture { model.finish(lane.workspace) }
                 .gesture(carry)
-                .tooltip("Double-click to go to workspace \(lane.number)")
             SortLayoutPill(layout: lane.layout,
                            next: { model.cycleLayout(of: index) },
                            previous: { model.cycleLayout(of: index, by: -1) })

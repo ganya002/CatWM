@@ -8,6 +8,8 @@ extension SortPanel {
         pruneTimer = nil
         guard active else { return }
         active = false
+        ghostPanel?.orderOut(nil)
+        ghostPanel?.contentView = nil
         Hotkeys.shared.paused = wasPaused
         model.end()
     }
@@ -58,10 +60,7 @@ extension SortPanel {
             finish()
             return true
         }
-        if flags == .command {
-            if event.keyCode == 6 { model.undoRemove() }
-            return event.keyCode == 6
-        }
+        if flags == .command { return event.keyCode == 6 }
         switch event.keyCode {
         case 53: revert(); return true
         case 36, 76: if flags.isEmpty { finish(focus: true); return true }

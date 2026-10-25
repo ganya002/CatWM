@@ -19,10 +19,10 @@ extension SortPlan {
         return position
     }
 
+    @discardableResult
     mutating func closeLane(at i: Int) -> Int? {
         guard lanes.count > 1, lanes.indices.contains(i) else { return nil }
         let lane = lanes.remove(at: i)
-        guard !lane.ids.isEmpty else { return 0 }
         closedLanes.append(SortClosedLane(workspace: lane.workspace, name: lane.name,
                                           layout: lane.layout, ids: lane.ids))
         close += lane.ids
@@ -32,11 +32,17 @@ extension SortPlan {
     mutating func restore(_ id: CGWindowID, avoiding other: Set<String>) {
         guard isClosing(id) else { return }
         if let group = closedLanes.first(where: { $0.ids.contains(id) }) { return reopen(group.id, avoiding: other) }
-        if let from = origin[id], let laneIndex = lanes.firstIndex(where: { $0.workspace == from.workspace }) {
-            place(id, inLane: laneIndex, at: from.at)
-        } else {
-            place(id, inLane: activeLane)
+        let grouped = Set(closedLanes.flatMap(\.ids))
+        let members = tabs(of: id).filter { isClosing($0) && !grouped.contains($0) }
+        for member in members {
+            if let from = origin[member],
+               let laneIndex = lanes.firstIndex(where: { $0.workspace == from.workspace }) {
+                place(member, inLane: laneIndex, at: from.at)
+            } else {
+                place(member, inLane: activeLane)
+            }
         }
+        keepTabsTogether()
     }
 
     mutating func reopen(_ group: UUID, avoiding other: Set<String>) {
@@ -78,15 +84,7 @@ extension SortPlan {
         for (key, from) in origin where from.workspace == old { origin[key] = (workspace, from.at) }
     }
 
-    mutating func removeLane(at i: Int) -> (target: Int, moved: Int)? {
-        guard lanes.count > 1, lanes.indices.contains(i) else { return nil }
-        let moved = lanes[i].ids
-        let target = i > 0 ? i - 1 : 1
-        lanes[target].ids += moved
-        lanes.remove(at: i)
-        return (i > 0 ? i - 1 : 0, moved.count)
-    }
-
+    @discardableResult
     mutating func mergeLane(_ i: Int, into j: Int) -> (target: Int, moved: Int)? {
         guard i != j, lanes.indices.contains(i), lanes.indices.contains(j) else { return nil }
         let moved = lanes[i].ids

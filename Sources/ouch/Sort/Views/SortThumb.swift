@@ -26,9 +26,14 @@ struct SortThumb: View {
         }
         .aspectRatio(16 / 10, contentMode: .fit)
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous))
-        .animation(Motion.snap(reduceMotion), value: layout)
-        .animation(Motion.snap(reduceMotion), value: ids)
+        .transaction(value: layout) { if let motion { $0.animation = motion } }
+        .transaction(value: ids) { if let motion { $0.animation = motion } }
         .accessibilityHidden(true)
+    }
+
+    private var motion: Animation? {
+        guard let animation = PanelMotion.windowAnimation else { return nil }
+        return reduceMotion ? Motion.fade : animation
     }
 
     static func frames(_ layout: Layout, _ count: Int, _ size: CGSize, ratio: CGFloat, mainCount: Int) -> [CGRect] {

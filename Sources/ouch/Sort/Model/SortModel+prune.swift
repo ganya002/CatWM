@@ -93,65 +93,26 @@ extension SortModel {
     }
 
     func closeLane(_ id: UUID) {
-        guard var displayPlan = plans[current],
-              displayPlan.lanes.count > 1,
-              let i = displayPlan.lanes.firstIndex(where: { $0.id == id }) else { return }
-        let before = displayPlan, title = displayPlan.title(of: i)
-        guard let count = displayPlan.closeLane(at: i) else { return }
-        displayPlan.touched = true
-        displayPlan.pending = true
-        plans[current] = displayPlan
-        changed()
-        let text = count > 0
-            ? "Closing \(title). Its \(count) window\(count == 1 ? "" : "s") will close when you finish."
-            : "Removed \(title)."
-        notice = SortNotice(text: text, undo: (current, before))
+        guard plan.lanes.count > 1, let i = plan.lanes.firstIndex(where: { $0.id == id }) else { return }
+        edit { $0.closeLane(at: i) }
     }
 
     func restore(_ id: CGWindowID) {
         let other = reserved()
-        edit { $0.restore(id, avoiding: other) }
+        withAnimation(Motion.easeOut) { edit { $0.restore(id, avoiding: other) } }
         show(id)
     }
 
     func reopen(_ group: UUID) {
         let other = reserved()
-        edit { $0.reopen(group, avoiding: other) }
-    }
-
-    func removeLane(_ i: Int) {
-        guard var displayPlan = plans[current], displayPlan.lanes.count > 1,
-              displayPlan.lanes.indices.contains(i) else { return }
-        let before = displayPlan, title = displayPlan.title(of: i)
-        guard let result = displayPlan.removeLane(at: i) else { return }
-        displayPlan.touched = true
-        displayPlan.pending = true
-        plans[current] = displayPlan
-        changed()
-        let moved = result.moved
-        let text = moved > 0
-            ? "Removed \(title). Its \(moved) window\(moved == 1 ? "" : "s") moved to "
-                + "\(displayPlan.lanes[result.target].number)."
-            : "Removed \(title)."
-        notice = SortNotice(text: text, undo: (current, before))
+        withAnimation(Motion.easeOut) { edit { $0.reopen(group, avoiding: other) } }
     }
 
     func mergeLane(_ id: UUID, into target: UUID) {
-        guard var displayPlan = plans[current], let i = displayPlan.lanes.firstIndex(where: { $0.id == id }),
-              let j = displayPlan.lanes.firstIndex(where: { $0.id == target }) else { return }
-        let before = displayPlan, title = displayPlan.title(of: i)
-        guard let result = displayPlan.mergeLane(i, into: j) else { return }
-        displayPlan.touched = true
-        displayPlan.pending = true
-        plans[current] = displayPlan
-        changed()
+        guard let i = plan.lanes.firstIndex(where: { $0.id == id }),
+              let j = plan.lanes.firstIndex(where: { $0.id == target }), i != j else { return }
+        edit { $0.mergeLane(i, into: j) }
         reveal = SortReveal(id: 0, lane: target, token: reveal.token + 1)
-        let moved = result.moved
-        let text = moved > 0
-            ? "Merged \(title) into \(displayPlan.title(of: result.target)). "
-                + "\(moved) window\(moved == 1 ? "" : "s") moved."
-            : "Removed \(title)."
-        notice = SortNotice(text: text, undo: (current, before))
     }
 
     func moveLane(_ id: UUID, toSlot slot: Int) {
@@ -160,20 +121,5 @@ extension SortModel {
         edit { moved = $0.moveLane(i, toSlot: slot) }
         guard moved != nil else { return }
         reveal = SortReveal(id: 0, lane: id, token: reveal.token + 1)
-    }
-
-    func undoRemove() {
-        guard let undo = notice?.undo else { return }
-        var restored = undo.plan
-        for (i, lane) in restored.lanes.enumerated() {
-            if let now = plans[undo.display]?.lanes.first(where: { $0.id == lane.id }) {
-                restored.lanes[i].name = now.name
-            }
-        }
-        plans[undo.display] = restored
-        plans[undo.display]?.touched = true
-        plans[undo.display]?.pending = true
-        notice = nil
-        changed()
     }
 }

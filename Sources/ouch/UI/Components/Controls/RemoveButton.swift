@@ -5,11 +5,12 @@ struct RemoveButton: View {
     enum Variant { case row, close, restore, badge }
     let help: String
     var variant: Variant = .row
+    var tooltip = true
     let action: () -> Void
     @StateObject private var hover = Flag()
 
-    init(help: String, variant: Variant = .row, action: @escaping () -> Void) {
-        self.help = help; self.variant = variant; self.action = action
+    init(help: String, variant: Variant = .row, tooltip: Bool = true, action: @escaping () -> Void) {
+        self.help = help; self.variant = variant; self.tooltip = tooltip; self.action = action
     }
 
     var body: some View {
@@ -39,7 +40,7 @@ struct RemoveButton: View {
         .buttonStyle(PressScale(scale: 0.88))
         .onHover { hover.isOn = $0 }
         .animation(Motion.fade, value: hover.isOn)
-        .tooltip(help)
+        .tooltip(tooltip ? help : "")
         .accessibilityLabel(help)
     }
 }

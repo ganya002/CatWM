@@ -93,8 +93,24 @@ extension SortPanel {
         let size = host.fittingSize
         guard size.height > 0 else { return }
         let frame = placed(size)
-        guard frame != panel.frame else { return }
-        panel.setFrame(frame, display: false)
+        if frame != panel.frame { panel.setFrame(frame, display: false) }
+        if let screen { showGhosts(on: screen) }
+    }
+
+    func showGhosts(on screen: NSScreen) {
+        guard ghostPanel?.contentView == nil else { return placeGhosts() }
+        let ghosts = ghostPanel ?? OuchPanel(role: .tooltip)
+        ghostPanel = ghosts
+        ghosts.contentView = OuchHostingView(rootView: SortGhosts(model: model))
+        ghosts.setFrame(screen.frame, display: false)
+        ghosts.orderFrontRegardless()
+        placeGhosts()
+    }
+
+    func placeGhosts() {
+        guard let panel, let screen else { return }
+        let shift = CGSize(width: panel.frame.minX - screen.frame.minX, height: screen.frame.maxY - panel.frame.maxY)
+        if model.ghostShift != shift { model.ghostShift = shift }
     }
 
     func revert() {

@@ -75,4 +75,31 @@ private func plan(_ lanes: [[CGWindowID]], tabs: [[CGWindowID]]) -> SortPlan {
         #expect(model.tabs.group(of: 1)?.members == [1, 2])
         #expect(!model.tabs.isGrouped(3))
     }
+
+    @Test func closedTabsShowAsOneGroup() {
+        var sortPlan = plan([[1, 2, 3], [4]], tabs: [[1, 2]])
+        [1, 2, 3].forEach { sortPlan.markClosing($0) }
+        #expect(sortPlan.closeBlocks(sortPlan.close) == [[1, 2], [3]])
+        #expect(sortPlan.closeRowCount == 4)
+    }
+
+    @Test func bringingBackOneClosedTabBringsBackTheGroup() {
+        var sortPlan = plan([[1, 2, 3], [4]], tabs: [[1, 2]])
+        sortPlan.markClosing(1)
+        sortPlan.markClosing(2)
+        sortPlan.restore(2, avoiding: [])
+        #expect(sortPlan.close.isEmpty)
+        #expect(sortPlan.lanes[0].ids == [1, 2, 3])
+        #expect(sortPlan.tabs == [[1, 2]])
+    }
+
+    @Test func draggingAClosedGroupMovesEveryClosedTab() {
+        var sortPlan = plan([[1, 2, 3], [4]], tabs: [[1, 2]])
+        sortPlan.markClosing(1)
+        sortPlan.markClosing(2)
+        sortPlan.placeTabs(1, inLane: 1)
+        sortPlan.keepTabsTogether()
+        #expect(sortPlan.close.isEmpty)
+        #expect(sortPlan.lanes[1].ids == [4, 1, 2])
+    }
 }
