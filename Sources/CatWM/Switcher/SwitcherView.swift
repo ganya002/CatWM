@@ -12,7 +12,6 @@ struct SwitcherView: View {
         let width: CGFloat, height: CGFloat, iconSize: CGFloat
         static let icon = Tile(width: 104, height: 104, iconSize: 72)
         static let preview = Tile(width: 264, height: 180, iconSize: 32)
-        static let fewest = 3
         static let inner = Theme.Space.small
     }
 
@@ -81,10 +80,10 @@ struct SwitcherView: View {
         .animation(change, value: mode)
     }
 
-    private func width(room: CGFloat) -> CGFloat {
+    private func width(room: CGFloat) -> CGFloat? {
         switch mode {
         case .bar:
-            min(max(model.results.map(tileWidth).reduce(0, +), CGFloat(Tile.fewest) * tile.width), room)
+            model.results.isEmpty ? nil : min(model.results.map(tileWidth).reduce(0, +), room)
         case .search: Self.searchWidth - Self.inset * 2
         case .peek: Self.peekSize(room).width
         }
@@ -105,9 +104,9 @@ struct SwitcherView: View {
 
     func titleLine(_ item: SwitcherItem) -> some View {
         HStack(spacing: Theme.Space.small) {
-            Text(item.title.isEmpty ? item.app : item.title).font(Theme.body(13.5, .medium)).oneLine()
+            Text(item.app).font(Theme.body(13.5, .bold)).oneLine().fixedSize()
             if !item.title.isEmpty {
-                Text(item.app).textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine().fixedSize()
+                Text(item.title).font(Theme.body(13.5)).foregroundStyle(Theme.inkMuted).oneLine()
             }
         }
         .padding(.horizontal, OMenuRowStyle.inset)
