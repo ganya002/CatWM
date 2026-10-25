@@ -121,7 +121,8 @@ final class WindowManager {
         animator = Animator(backend: backend)
         cursorRefresh = CursorRefresh(backend: backend)
         scanner = WindowScanner(read: { backend.scan($0, discovered: $1) }, readDesktop: { backend.desktop(known: $0) },
-                                readApplications: { backend.applications() }, scope: scope)
+                                readApplications: { backend.applications() }, scope: scope,
+                                claims: scope == nil ? ScopeClaims(folder: Instance.paths.instancesFolder) : nil)
         focusRequests.focusReader = FocusReader { backend.focusedWindow(pid: $0) }
     }
 

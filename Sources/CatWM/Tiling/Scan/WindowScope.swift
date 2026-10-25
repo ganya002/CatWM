@@ -31,15 +31,8 @@ struct WindowScope: Equatable {
         self.init(pids: pids, display: display)
     }
 
-    func filter(_ observation: WindowServerObservation) -> WindowServerObservation {
-        var observation = observation
-        observation.windows.removeAll { !pids.contains($0.pid) }
-        observation.allWindows.removeAll { !pids.contains($0.pid) }
-        return observation
-    }
-
-    func filter(_ applications: [RunningApplicationSnapshot]) -> [RunningApplicationSnapshot] {
-        applications.filter { pids.contains($0.pid) }
+    var text: String {
+        "pids:" + pids.sorted().map(String.init).joined(separator: ",") + (display.map { ";display:\($0)" } ?? "")
     }
 
     func filter(_ screens: [Screen]) -> [Screen] {

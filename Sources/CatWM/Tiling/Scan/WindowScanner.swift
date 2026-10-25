@@ -47,6 +47,7 @@ final class WindowScanner {
     private let readDesktop: (Set<CGWindowID>) -> WindowServerObservation
     private let readApplications: () -> [RunningApplicationSnapshot]
     private let scope: WindowScope?
+    private let claims: ScopeClaims?
     private(set) var lastScan: CFTimeInterval = 0
     private var busy: [pid_t: UUID] = [:]
     private var idleWaiters: [() -> Void] = []
@@ -58,12 +59,13 @@ final class WindowScanner {
          readDesktop: @escaping (Set<CGWindowID>) -> WindowServerObservation = { AXBackend.shared.desktop(known: $0) },
          readApplications: @escaping () -> [RunningApplicationSnapshot] = { AXBackend.shared.applications() },
          deadline: TimeInterval = WindowScanner.deadline,
-         scope: WindowScope? = nil) {
+         scope: WindowScope? = nil, claims: ScopeClaims? = nil) {
         self.read = read
         self.readDesktop = readDesktop
         self.readApplications = readApplications
         scanDeadline = deadline
         self.scope = scope
+        self.claims = claims
     }
 
     func observeDesktop(known: Set<CGWindowID>, done: @escaping () -> Void) {
@@ -72,13 +74,11 @@ final class WindowScanner {
             return
         }
         observingDesktop = true
-        DispatchQueue.global(qos: .userInitiated).async { [weak self, readDesktop, readApplications, scope] in
-            var observation = readDesktop(known)
-            var applications = readApplications()
-            if let scope {
-                observation = scope.filter(observation)
-                applications = scope.filter(applications)
-            }
+        DispatchQueue.global(qos: .userInitiated).async { [weak self, readDesktop, readApplications, scope, claims] in
+            let claimed = claims?.claimedPids() ?? []
+            let keep = { (pid: pid_t) in scope?.pids.contains(pid) ?? !claimed.contains(pid) }
+            let observation = readDesktop(known).keeping(keep)
+            let applications = readApplications().filter { keep($0.pid) }
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.desktop = observation

@@ -67,9 +67,11 @@ enum Instance {
     static let supportFolder = paths.supportFolder
     static let cacheFolder = paths.cacheFolder
     static let pidFile = paths.pidFile
+    static let scopeFile = paths.configFolder.appendingPathComponent("scope")
 
     static let scope: WindowScope? = {
         guard let text = ProcessInfo.processInfo.environment["CATWM_SCOPE"] else { return nil }
+        guard isNamed else { fail("CATWM_SCOPE needs CATWM_INSTANCE") }
         guard let scope = WindowScope(text) else {
             fail("CATWM_SCOPE must be pids:<pid>,<pid>... with an optional ;display:<display UUID>")
         }
@@ -94,12 +96,16 @@ enum Instance {
         Log.attempt("write \(pidFile.path)") {
             try FileManager.default.createDirectory(at: configFolder, withIntermediateDirectories: true)
             try Data("\(getpid())".utf8).write(to: pidFile, options: .atomic)
+            guard let scope else { return }
+            try Data(ScopeClaim(owner: getpid(), scope: scope).text.utf8).write(to: scopeFile, options: .atomic)
         }
     }
 
     static func removePid() {
         guard InstancePaths.readPid(pidFile) == getpid() else { return }
         Log.attempt("remove \(pidFile.path)") { try FileManager.default.removeItem(at: pidFile) }
+        guard scope != nil else { return }
+        Log.attempt("remove \(scopeFile.path)") { try FileManager.default.removeItem(at: scopeFile) }
     }
 
     private static func fail(_ message: String) -> Never {

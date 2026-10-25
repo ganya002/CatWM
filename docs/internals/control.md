@@ -31,7 +31,7 @@ The CLI and the libraries read `CATWM_INSTANCE` too. `CATWM_SOCKET` wins over it
 
 ## Window scope
 
-`CATWM_SCOPE=pids:<pid>,<pid>...[;display:<display UUID>]` gives an instance a window scope. Use it with `CATWM_INSTANCE` for a test. `Instance.scope` reads the value one time. CatWM stops with exit code 2 on a bad value, also on an empty value. A bad value never means "all windows".
+`CATWM_SCOPE=pids:<pid>,<pid>...[;display:<display UUID>]` gives an instance a window scope. It needs `CATWM_INSTANCE`. `Instance.scope` reads the value one time. CatWM stops with exit code 2 on a bad value, also on an empty value, and on a scope without `CATWM_INSTANCE`. A bad value never means "all windows".
 
 A scoped instance:
 
@@ -57,6 +57,8 @@ A scoped instance:
 `WindowScope.restrict` also removes each key bind of a refused dispatcher. A `submap` key bind does not go through `WindowManager.dispatch`, and with `CATWM_KEYS=on` it can start a key mode.
 
 A focus command can still make the app of the target window active. The other windows of that app can then come to the front.
+
+A scoped instance writes a claim to `scope` in its config folder: its own pid on the first line and its scope on the second line. It removes the file when it quits. An instance without a scope reads `~/.config/catwm/instances/*/scope` (`ScopeClaims`) on the background queue of `WindowScanner`, and leaves out the claimed pids. It reads a claim file again only when the modification time of the file changes. It ignores a claim when the owner pid does not run (`kill(pid, 0)`). It does not leave out the claimed display. So the user's CatWM can still tile its own windows on that display.
 
 Add a new switch for a scoped instance to `WindowScope.restrict` (a config option), to `GlobalInput` (an event tap, a system setting, the pointer or the key focus) or to `WindowScope.refusedCommands` (a command or a dispatcher). Do not add a check at the call site. Put each new command and dispatcher in `WindowScope.allowedCommands` or in `WindowScope.refusedCommands`. A test fails if a command is in no list.
 
