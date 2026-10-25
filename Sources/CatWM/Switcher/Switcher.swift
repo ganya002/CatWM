@@ -229,10 +229,10 @@ final class Switcher {
 
     private func layout() {
         guard let panel, let screen = WindowManager.shared.focusedScreen ?? CatWMPanel.pointerScreen() else { return }
-        let visible = screen.visibleFrame, size = SwitcherView.size(width: visible.width * 0.9)
+        let visible = screen.visibleFrame
         let top = visible.maxY - visible.height * 0.2 + SwitcherView.margin
-        panel.place(size: size, on: screen, anchor: .origin(NSPoint(x: visible.midX - size.width / 2,
-                                                                    y: top - size.height)))
+        panel.place(size: CGSize(width: visible.width, height: top - visible.minY), on: screen,
+                    anchor: .origin(visible.origin))
     }
 
     private func makePanel() -> CatWMPanel {

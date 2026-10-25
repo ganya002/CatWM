@@ -33,6 +33,23 @@ import Testing
         }
     }
 
+    @Test func peekKeepsTheWindowSizeAndShrinksOnlyToFit() {
+        let room = CGSize(width: 1600, height: 800)
+        #expect(SwitcherView.fit(CGSize(width: 800, height: 600), in: room) == CGSize(width: 800, height: 600))
+        #expect(SwitcherView.fit(CGSize(width: 1000, height: 1600), in: room) == CGSize(width: 500, height: 800))
+    }
+
+    @Test func barTilesShareOneScaleAndFitTheRoom() {
+        let room = CGSize(width: 1000, height: 900)
+        let items = [CGSize(width: 1600, height: 1000), CGSize(width: 800, height: 500)].enumerated().map {
+            SwitcherItem(id: CGWindowID($0 + 1), pid: 1, app: "App", title: "", size: $1)
+        }
+        let scale = SwitcherView.barScale(items, room: room)
+        let tiles = items.map { SwitcherView.tileSize($0, scale: scale, room: room) }
+        #expect(tiles.map(\.width).reduce(0, +) <= room.width + 1)
+        #expect(tiles[0].width - SwitcherView.Tile.inner * 2 == (tiles[1].width - SwitcherView.Tile.inner * 2) * 2)
+    }
+
     private static func fakeWindow(index: Int, size: CGSize) -> NSImage {
         NSImage(size: size, flipped: false) { rect in
             NSColor(hue: CGFloat(index) / 7, saturation: 0.5, brightness: 0.8, alpha: 1).setFill()
@@ -46,7 +63,7 @@ import Testing
     private func render(_ model: SwitcherModel) throws -> Data {
         let host = NSHostingView(rootView: SwitcherView(model: model).background(Color.gray))
         host.appearance = NSAppearance(named: .darkAqua)
-        host.frame = NSRect(origin: .zero, size: SwitcherView.size(width: 1710))
+        host.frame = NSRect(origin: .zero, size: CGSize(width: 1710, height: 900))
         host.layoutSubtreeIfNeeded()
         let rep = try #require(host.bitmapImageRepForCachingDisplay(in: host.bounds))
         host.cacheDisplay(in: host.bounds, to: rep)

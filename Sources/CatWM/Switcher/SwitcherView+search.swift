@@ -2,11 +2,11 @@ import AppKit
 import SwiftUI
 
 extension SwitcherView {
-    var search: some View {
+    func search(room: CGSize) -> some View {
         VStack(spacing: 0) {
             head
             Rectangle().fill(Theme.hairline).frame(height: 1).padding(.bottom, Self.inset)
-            list
+            list(room: room)
         }
     }
 
@@ -29,7 +29,7 @@ extension SwitcherView {
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
-    private var list: some View {
+    private func list(room: CGSize) -> some View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(spacing: 0) {
@@ -43,7 +43,8 @@ extension SwitcherView {
                 }
             }
             .scrollIndicators(.never)
-            .frame(height: CGFloat(min(max(model.results.count, 1), Self.visibleRows)) * Theme.rowHeight)
+            .frame(height: min(CGFloat(max(model.results.count, 1)) * Theme.rowHeight,
+                               room.height - Self.headHeight - 1 - Self.inset))
             .animation(change, value: model.results.count)
             .onChange(of: model.selection) { _, _ in
                 if let id = model.selected?.id { proxy.scrollTo(id) }
