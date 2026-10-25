@@ -18,7 +18,9 @@ enum CrashWatch {
 
     static func start() {
         let files = FileManager.default
-        try? files.createDirectory(at: support, withIntermediateDirectories: true)
+        Log.attempt("create crash marker folder") {
+            try files.createDirectory(at: support, withIntermediateDirectories: true)
+        }
         let previous = (try? files.attributesOfItem(atPath: marker.path))?[.modificationDate] as? Date
         try? files.removeItem(at: marker)
         files.createFile(atPath: marker.path, contents: Data("\(getpid())".utf8))

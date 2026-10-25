@@ -57,9 +57,11 @@ extension ConfigLibrary {
                             active: Dictionary(uniqueKeysWithValues: active.map { ($0.key.rawValue, $0.value) }),
                             edited: builtIns.filter(isEdited))
         guard let data = try? JSONEncoder().encode(stored) else { return }
-        try? FileManager.default.createDirectory(at: Self.url.deletingLastPathComponent(),
-                                                 withIntermediateDirectories: true)
-        Log.attempt("save configs") { try data.write(to: Self.url, options: .atomic) }
+        Log.attempt("save configs") {
+            try FileManager.default.createDirectory(at: Self.url.deletingLastPathComponent(),
+                                                    withIntermediateDirectories: true)
+            try data.write(to: Self.url, options: .atomic)
+        }
     }
 
     func adoptCurrentSettings() {

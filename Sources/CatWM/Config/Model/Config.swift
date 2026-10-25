@@ -59,8 +59,10 @@ struct Config {
     static func load() -> Config {
         let fileManager = FileManager.default
         if !fileManager.fileExists(atPath: url.path) {
-            try? fileManager.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-            Log.attempt("write default config") { try defaultText.write(to: url, atomically: true, encoding: .utf8) }
+            Log.attempt("write default config") {
+                try fileManager.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try defaultText.write(to: url, atomically: true, encoding: .utf8)
+            }
         }
         let config = parse((try? String(contentsOf: url, encoding: .utf8)) ?? defaultText)
         config.errors.forEach { Log.info("config: \($0)") }

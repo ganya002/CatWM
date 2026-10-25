@@ -6,7 +6,7 @@ extension WindowManager {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/sh")
         process.arguments = ["-c", cmd]
-        try? process.run()
+        Log.attempt("exec \(cmd)") { try process.run() }
     }
 
     func focusMonitor(_ spec: String) {

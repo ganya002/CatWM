@@ -20,7 +20,9 @@ enum Migrations {
         let old = home.appendingPathComponent(".config/ouch")
         let new = home.appendingPathComponent(".config/catwm")
         guard let names = try? fileManager.contentsOfDirectory(atPath: old.path) else { return }
-        try? fileManager.createDirectory(at: new, withIntermediateDirectories: true)
+        Log.attempt("create \(new.path)") {
+            try fileManager.createDirectory(at: new, withIntermediateDirectories: true)
+        }
         var moved = 0
         for name in names {
             let source = old.appendingPathComponent(name)
@@ -46,8 +48,9 @@ enum Migrations {
         let source = home.appendingPathComponent(".config/hyprthyst/hyprthyst.conf")
         let target = home.appendingPathComponent(".config/catwm/catwm.conf")
         guard !fileManager.fileExists(atPath: target.path), fileManager.fileExists(atPath: source.path) else { return }
-        try? fileManager.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
-        if (try? fileManager.copyItem(at: source, to: target)) != nil {
+        Log.attempt("migrate config from ~/.config/hyprthyst") {
+            try fileManager.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try fileManager.copyItem(at: source, to: target)
             Log.info("migrated config from ~/.config/hyprthyst")
         }
     }
