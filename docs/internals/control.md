@@ -31,7 +31,7 @@ The CLI and the libraries read `CATWM_INSTANCE` too. `CATWM_SOCKET` wins over it
 
 ## Window scope
 
-`CATWM_SCOPE=pids:<pid>,<pid>...[;display:<display UUID>]` gives an instance a window scope. It needs `CATWM_INSTANCE`. `Instance.scope` reads the value one time. CatWM stops with exit code 2 on a bad value, also on an empty value, and on a scope without `CATWM_INSTANCE`. A bad value never means "all windows".
+`CATWM_SCOPE=pids:<pid>,<pid>...[;display:<display UUID>]` gives an instance a window scope. It needs `CATWM_INSTANCE`. `Instance.scope` reads the value one time. CatWM stops with exit code 2 on a bad value, also on an empty value, and on a scope without `CATWM_INSTANCE`. A bad value never means "all windows". A named instance with no scope manages every window, so it stops with exit code 2 unless you pass `--unscoped`.
 
 A scoped instance:
 

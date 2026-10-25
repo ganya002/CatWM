@@ -7,7 +7,7 @@ This file is the rule set for every surface that CatWM draws: the menu bar menu,
 The Design Gallery is the visual reference. It draws every token and component with the real Swift code, so it cannot differ from the app. It is in debug builds only (`Sources/CatWM/UI/Gallery/`). Build and open it:
 
 ```text
-./build.sh --dev
+./build.sh --dev --replace
 open build/CatWM.app --args --gallery
 ```
 

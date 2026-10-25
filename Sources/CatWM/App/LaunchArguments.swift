@@ -6,6 +6,7 @@ enum LaunchFlag: String, CaseIterable {
     case gallery = "--gallery"
     case crashReport = "--crash-report"
     case afterCrash = "--after-crash"
+    case unscoped = "--unscoped"
 
     var isSet: Bool { CommandLine.arguments.contains(rawValue) }
 }
@@ -35,6 +36,12 @@ enum LaunchArguments {
                 + "Start flags: \(flags).")
         }
         return .start
+    }
+
+    static func startRefusal(named: Bool, scoped: Bool, arguments: [String]) -> String? {
+        guard named, !scoped, !arguments.contains(LaunchFlag.unscoped.rawValue) else { return nil }
+        return "catwm: an instance with CATWM_INSTANCE and no CATWM_SCOPE manages every window and fights the "
+            + "default CatWM. Set CATWM_SCOPE=pids:<pid>,..., or pass \(LaunchFlag.unscoped.rawValue) to accept this."
     }
 
     private static func isAppleDefault(_ word: String) -> Bool {

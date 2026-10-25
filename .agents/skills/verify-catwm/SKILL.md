@@ -58,7 +58,7 @@ It does these steps:
 
 1. It runs `./build.sh --dev` (lint, debug build, schema, clients, `build/CatWM.app`) with `CATWM_INSTANCE` set. The build log is `~/Library/Caches/CatWM-verify/<instance>/build.log`. A lint failure stops the launch. Fix the lint error.
 2. It makes the evidence folder `~/Library/Caches/CatWM-verify/<instance>/runs/<UTC time>/` and writes `commit.txt` (HEAD and `git status`).
-3. It runs `open -n -g --env CATWM_INSTANCE=<instance> build/CatWM.app --args --verbose`.
+3. It runs `open -n -g --env CATWM_INSTANCE=<instance> build/CatWM.app --args --verbose --unscoped`.
 4. Ready means: `catwm ping` answers with a pid whose executable is `build/CatWM.app/Contents/MacOS/CatWM`, and `status` shows `trusted` and `running` as `true`.
 
 If it stops with "not trusted", this build has no Accessibility permission. Only the user can grant it: System Settings > Privacy & Security > Accessibility > CatWM. Then run `doctor.sh`. Do not try to go around TCC.
