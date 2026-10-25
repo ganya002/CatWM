@@ -19,6 +19,7 @@ extension WindowManager {
         observeSpaceAndScreenNotifications()
         installEventMonitors()
         installInputHandlers()
+        scanner.watchClaims { DispatchQueue.main.async { [weak self] in self?.scheduleRefresh() } }
 
         ControlServer.shared.start()
 

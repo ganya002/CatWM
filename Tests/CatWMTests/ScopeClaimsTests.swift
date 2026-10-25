@@ -91,4 +91,80 @@ import Testing
         #expect(scanner.desktop.allWindows.map(\.pid) == [10])
         #expect(scanner.applications.map(\.pid) == [10])
     }
+
+    func claimedScanner(_ claims: ScopeClaims) -> WindowScanner {
+        let windows = [CGWindowInfo(id: 31, pid: 4242, bounds: .zero)]
+        return WindowScanner(readDesktop: { _ in
+            WindowServerObservation(windows: windows, allWindows: windows)
+        }, readApplications: {
+            [RunningApplicationSnapshot(pid: 4242, bundleID: nil, regular: true, hidden: false)]
+        }, claims: claims)
+    }
+
+    func scanDesktop(_ scanner: WindowScanner) async {
+        await withCheckedContinuation { continuation in
+            scanner.observeDesktop(known: []) { continuation.resume() }
+        }
+    }
+
+    @Test(.timeLimit(.minutes(1))) func aClaimChangeStartsAScanWithoutAnyOtherEvent() async throws {
+        let paths = try #require(InstancePaths(id: "a", home: folder))
+        let scanner = claimedScanner(ScopeClaims(folder: paths.instancesFolder, alive: { _ in true }))
+        let manager = WindowManager(scope: nil, config: Config(), scanner: scanner)
+        manager.windows = [31: Window(id: 31, element: AXUIElementCreateApplication(4242), pid: 4242, bundleID: nil)]
+        let (changes, change) = AsyncStream.makeStream(of: Void.self)
+        var changed = changes.makeAsyncIterator()
+        scanner.watchClaims { change.yield() }
+
+        try paths.writeClaim(ScopeClaim(owner: 1, scope: WindowScope(pids: [4242])))
+        await changed.next()
+        await scanDesktop(scanner)
+        manager.releaseClaimedApps()
+        #expect(manager.windows.isEmpty)
+        #expect(scanner.desktop.windows.isEmpty)
+        #expect(!scanner.keeps(4242))
+
+        try paths.removeClaim()
+        await changed.next()
+        await scanDesktop(scanner)
+        #expect(scanner.desktop.windows.map(\.pid) == [4242])
+        #expect(scanner.applications.map(\.pid) == [4242])
+        #expect(scanner.keeps(4242))
+    }
+
+    @Test(.timeLimit(.minutes(1))) func theExitOfAClaimOwnerStartsAScanAndTheScanKeepsItsPids() async throws {
+        let paths = try #require(InstancePaths(id: "a", home: folder))
+        let owner = Process()
+        owner.executableURL = URL(fileURLWithPath: "/bin/sleep")
+        owner.arguments = ["30"]
+        try owner.run()
+        try paths.writeClaim(ScopeClaim(owner: owner.processIdentifier, scope: WindowScope(pids: [4242])))
+        let scanner = claimedScanner(ScopeClaims(folder: paths.instancesFolder))
+        let (changes, change) = AsyncStream.makeStream(of: Void.self)
+        var changed = changes.makeAsyncIterator()
+        scanner.watchClaims { change.yield() }
+        await scanDesktop(scanner)
+        #expect(!scanner.keeps(4242))
+
+        kill(owner.processIdentifier, SIGKILL)
+        await changed.next()
+        #expect(FileManager.default.fileExists(atPath: paths.scopeFile.path))
+        await scanDesktop(scanner)
+        #expect(scanner.desktop.windows.map(\.pid) == [4242])
+        #expect(scanner.keeps(4242))
+    }
+
+    @Test func aFolderChangeWithoutAClaimChangeStartsNoScan() throws {
+        let paths = try #require(InstancePaths(id: "plain", home: folder))
+        let claims = ScopeClaims(folder: paths.instancesFolder, alive: { _ in true })
+        var scans = 0
+        claims.watch { scans += 1 }
+        try FileManager.default.createDirectory(at: paths.configFolder, withIntermediateDirectories: true)
+        try Data("1".utf8).write(to: paths.pidFile, options: .atomic)
+        claims.folderChanged()
+        #expect(scans == 0)
+        try paths.writeClaim(ScopeClaim(owner: 1, scope: WindowScope(pids: [10])))
+        claims.folderChanged()
+        #expect(scans == 1)
+    }
 }

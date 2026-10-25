@@ -94,6 +94,8 @@ final class WindowScanner {
         }
     }
 
+    func watchClaims(_ changed: @escaping () -> Void) { claims?.watch(changed) }
+
     func keeps(_ pid: pid_t) -> Bool { scope?.pids.contains(pid) ?? !claimed.contains(pid) }
 
     func scan(_ jobs: [Job], done: @escaping () -> Void, updated: @escaping () -> Void,
