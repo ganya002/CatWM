@@ -105,6 +105,11 @@ enum TabMenu {
         if let workspaces = workspaceMenu(id, manager) { out.append(workspaces) }
         out.append(.sep("s1"))
         out.append(MenuItem(id: "close", label: "Close tab", danger: true, action: { _ = manager.closeWindow(id) }))
+        let others = (manager.tabs.group(of: id)?.members ?? []).filter { $0 != id }
+        if !others.isEmpty {
+            out.append(MenuItem(id: "close-others", label: "Close other tabs", danger: true,
+                                action: { others.forEach { _ = manager.closeWindow($0) } }))
+        }
         return out
     }
 
