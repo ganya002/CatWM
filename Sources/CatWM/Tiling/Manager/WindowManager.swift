@@ -126,7 +126,7 @@ final class WindowManager {
     }
 
     lazy var grabHints: [String: (fromLeft: CGPoint, fromRight: CGPoint)] = {
-        let saved = UserDefaults.standard.dictionary(forKey: DefaultsKey.grabHints) as? [String: [Double]] ?? [:]
+        let saved = Instance.defaults.dictionary(forKey: DefaultsKey.grabHints) as? [String: [Double]] ?? [:]
         return saved.compactMapValues { values in
             values.count == 4 ? (CGPoint(x: values[0], y: values[1]), CGPoint(x: values[2], y: values[3])) : nil
         }

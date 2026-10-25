@@ -1,21 +1,22 @@
 ---
 name: verify-catwm
-description: Drive the real CatWM app (macOS tiling window manager) to prove that a change works. It builds this worktree, replaces the running CatWM, opens test windows on an empty workspace, runs commands through the catwm socket CLI and saves state JSON, tiling dumps, logs and screenshots as evidence. Use it after a change to tiling, layouts, focus, workspaces, floating, config or the control commands, when a unit test is not enough proof.
+description: Drive the real CatWM app (macOS tiling window manager) to prove that a change works. It builds this worktree, starts it as a separate named instance next to the user's CatWM, opens test windows on an empty workspace, runs commands through the catwm socket CLI and saves state JSON, tiling dumps, logs and screenshots as evidence. Use it after a change to tiling, layouts, focus, workspaces, floating, config or the control commands, when a unit test is not enough proof.
 ---
 
 # Verify CatWM
 
-CatWM is a menu bar app with no main window. A user touches it through key binds, the menu bar and the windows that it moves. An agent touches it through the `catwm` CLI. The CLI sends one command to the running app through the Unix socket `~/.config/catwm/catwm.sock`, and it runs the same command registry as the key binds (`docs/internals/control.md`, `Resources/AgentDocs/cli.md`).
+CatWM is a menu bar app with no main window. A user touches it through key binds, the menu bar and the windows that it moves. An agent touches it through the `catwm` CLI. The CLI sends one command to the running app through a Unix socket, and it runs the same command registry as the key binds (`docs/internals/control.md`, `Resources/AgentDocs/cli.md`).
 
 All scripts are in `.agents/skills/verify-catwm/scripts/`. Run them from the worktree root. `S=.agents/skills/verify-catwm/scripts` in the examples below.
 
-## Read this first: there is only one instance
+## Read this first: each worktree runs its own instance
 
-- CatWM cannot run two copies. At start, `AppDelegate.closePreviousInstances` quits every other process with the bundle ID `local.catwm`. `build.sh` also runs `pkill -x CatWM`.
-- The socket, `~/.config/catwm/catwm.conf` and `~/Library/Logs/CatWM.log` are shared with the user's CatWM. There is no other data folder.
-- So `launch.sh` QUITS THE USER'S WINDOW MANAGER and starts this worktree's build in its place. The user's real windows move when the new instance tiles them.
-- Before you run `launch.sh`, ask the user. Approval for one run does not apply to the next session.
-- If the user is typing or presenting, do not start. Another agent can drive CatWM at the same time from another worktree. If `doctor.sh` shows a CatWM from another worktree that you did not start, ask before you replace it.
+- The environment variable `CATWM_INSTANCE=<id>` gives a CatWM its own instance. The id is 1 to 24 characters of `a-z`, `0-9` and `-`. An instance has its own config folder `~/.config/catwm/instances/<id>/` (config, socket and pid file), its own log `~/Library/Logs/CatWM-<id>.log` and its own defaults. The CLI with the same `CATWM_INSTANCE` talks to that instance.
+- The scripts use `INSTANCE=verify-<worktree folder name>` (cut to 24 characters). Set `INSTANCE` before a script to use another id. `env.sh` exports `CATWM_INSTANCE`.
+- `launch.sh` does not stop the user's CatWM. With `CATWM_INSTANCE` set, `build.sh` and `AppDelegate.closePreviousInstances` stop only the CatWM in the pid file of that instance.
+- A named instance does not register a login item, link the `catwm` command, check for updates, send crash or performance reports, show onboarding, tips or What's New, or run migrations. Its menu bar icon shows the id in the tooltip.
+- CatWM has no window scope yet. A named instance tiles all windows and reads all key presses, the same as the user's CatWM. So two instances move the same windows. Before you run `launch.sh`, ask the user. Approval for one run does not apply to the next session.
+- If the user is typing or presenting, do not start.
 
 ## Launch
 
@@ -25,16 +26,14 @@ $S/launch.sh
 
 It does these steps:
 
-1. It records the executable of the CatWM that runs now (`PREV_EXE`) in `~/Library/Caches/CatWM-verify/state.env`.
-2. It runs `./build.sh --dev` (lint, debug build, schema, clients, `build/CatWM.app`). The build log is `~/Library/Caches/CatWM-verify/build.log`. A lint failure stops the launch. Fix the lint error.
-3. It makes the evidence folder `~/Library/Caches/CatWM-verify/runs/<UTC time>/` and writes `commit.txt` (HEAD and `git status`).
-4. It runs `open -g build/CatWM.app --args --verbose`.
-5. It shows the workspace that the old instance showed, because a new instance can start on another workspace.
-6. Ready means: `catwm ping` answers with a pid whose executable is `build/CatWM.app/Contents/MacOS/CatWM`, and `status` shows `trusted` and `running` as `true`.
+1. It runs `./build.sh --dev` (lint, debug build, schema, clients, `build/CatWM.app`) with `CATWM_INSTANCE` set. The build log is `~/Library/Caches/CatWM-verify/<instance>/build.log`. A lint failure stops the launch. Fix the lint error.
+2. It makes the evidence folder `~/Library/Caches/CatWM-verify/<instance>/runs/<UTC time>/` and writes `commit.txt` (HEAD and `git status`).
+3. It runs `open -n -g --env CATWM_INSTANCE=<instance> build/CatWM.app --args --verbose`.
+4. Ready means: `catwm ping` answers with a pid whose executable is `build/CatWM.app/Contents/MacOS/CatWM`, and `status` shows `trusted` and `running` as `true`.
 
 If it stops with "not trusted", this build has no Accessibility permission. Only the user can grant it: System Settings > Privacy & Security > Accessibility > CatWM. Then run `doctor.sh`. Do not try to go around TCC.
 
-The data folder is never empty, because it is the user's config. Do not delete or replace `~/.config/catwm`. A first-run check (onboarding) needs a separate macOS user account, which this skill does not cover.
+A new instance starts with the default config in its own folder. Do not delete or replace `~/.config/catwm/catwm.conf` or the other files of the user's CatWM. A first-run check (onboarding) needs a separate macOS user account, which this skill does not cover.
 
 ## Doctor
 
@@ -44,8 +43,8 @@ $S/doctor.sh
 
 It is read-only. It shows which CatWM processes run, and it fails when:
 
-- no CatWM runs, or more than one runs,
-- the socket answers from a process that is not this worktree's build,
+- the instance does not run (its pid file has no live pid of this worktree's build),
+- the socket answers from a pid that is not the pid in the pid file,
 - the pid is not the one `launch.sh` started,
 - the build number in `Info.plist` is not `git rev-list --count HEAD`,
 - `trusted`, `running` or `tilingEnabled` is false.
@@ -100,7 +99,7 @@ Proof rules:
 
 - Use the real user path: a dispatcher through the socket, a key press, a config edit and `reload`. Do not call internal setters. The `dev` commands (`grabtest`, `modefx`, `panelfx`, `poststyle`, `intro`, `introlab`) are only previews.
 - Capture the state before and after the action, not only the end state.
-- Check the side effects too: the frames in `dump` (each tiled window must be `OK`, not `MISMATCH`), the file `~/.config/catwm/catwm.conf` after `config.set`, and the log lines (`config:`, `ipc:`, `tiling:`).
+- Check the side effects too: the frames in `dump` (each tiled window must be `OK`, not `MISMATCH`), the file `$CONF` after `config.set`, and the log lines (`config:`, `ipc:`, `tiling:`).
 - For a speed change, use the timings in the log (`tiling: refresh windows 6 17.7ms`, `native workspaces: request to motion ...`), not your impression.
 - A screenshot shows the result, and JSON or `dump` proves it. Give both.
 
@@ -110,7 +109,7 @@ Proof rules:
 $S/cleanup.sh
 ```
 
-It closes the test windows, goes back to the workspace from before `desk.sh start`, quits the verify instance through `catwm exit` (CatWM puts parked windows back first), and starts the previous CatWM again with `open -g <its bundle>`. It stops only the pids that the scripts started. It never kills by process name. If the previous bundle is gone from disk (a deleted worktree), the dev build stays running, and the script prints a warning. Tell the user. The evidence folder stays. Give the user its path.
+It closes the test windows, goes back to the workspace from before `desk.sh start` and quits the verify instance through `catwm exit` (CatWM puts parked windows back first). It stops only the pid that `launch.sh` started. It never kills by process name, and it does not touch the user's CatWM. The evidence folder stays. Give the user its path.
 
 Run `cleanup.sh` after each failed attempt too. If a script stopped halfway, `doctor.sh` shows what still runs.
 
@@ -118,9 +117,9 @@ Run `cleanup.sh` after each failed attempt too. If a script stopped halfway, `do
 
 | Script | Use |
 |---|---|
-| `scripts/launch.sh` | build, replace the running CatWM, wait until it is ready |
+| `scripts/launch.sh` | build, start the named instance, wait until it is ready |
 | `scripts/doctor.sh` | read-only health check |
 | `scripts/desk.sh start [count]\|stop` | TextEdit test windows on a new workspace |
 | `scripts/evidence.sh <label>` | save state, dump, log and screenshot |
-| `scripts/cleanup.sh` | close the test windows, start the previous CatWM again, keep the evidence |
-| `scripts/env.sh` | `. scripts/env.sh` loads `CLI`, `RUN`, `DESK_PID` and the paths into your shell |
+| `scripts/cleanup.sh` | close the test windows, quit the named instance, keep the evidence |
+| `scripts/env.sh` | `. scripts/env.sh` loads `CLI`, `RUN`, `DESK_PID`, `INSTANCE`, `CONF` and the paths into your shell, and exports `CATWM_INSTANCE` |

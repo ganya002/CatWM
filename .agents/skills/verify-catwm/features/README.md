@@ -13,7 +13,7 @@ This folder is the maintained source for verifying what a CatWM user sees. Read 
 
 - Select test windows by `pid == DESK_PID`. Do not select by position in the list.
 - Check which window has the focus before a window command: `$CLI windows --json | jq '.[] | select(.focused)'`.
-- The key binds below are the default binds. The user's `~/.config/catwm/catwm.conf` can bind other keys. Read it before you send a key press.
+- The key binds below are the default binds. The config of the instance (`$CONF` from `env.sh`) can bind other keys. Read it before you send a key press.
 - Wait for a state, not for a time: poll `windows --json` or `dump`, or start `$CLI events <name>` before the action.
 - Put back each setting that you change (layout, ratio, config options). The config file is the user's real config.
 

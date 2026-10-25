@@ -2,31 +2,30 @@ import AppKit
 import SwiftUI
 
 enum CrashWatch {
-    private static let support = FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent("Library/Application Support/CatWM")
-    private static let marker = support.appendingPathComponent("running")
+    private static let marker = Instance.supportFolder.appendingPathComponent("running")
     private static let reports = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent("Library/Logs/DiagnosticReports")
     private static let seenKey = "lastCrashReportSeen"
     private static let pendingKey = "pendingCrashReport"
 
     private static var pending: URL? {
-        guard let path = UserDefaults.standard.string(forKey: pendingKey),
+        guard let path = Instance.defaults.string(forKey: pendingKey),
               FileManager.default.fileExists(atPath: path) else { return nil }
         return URL(fileURLWithPath: path)
     }
 
     static func start() {
+        guard !Instance.isNamed else { return }
         let files = FileManager.default
         Log.attempt("create crash marker folder") {
-            try files.createDirectory(at: support, withIntermediateDirectories: true)
+            try files.createDirectory(at: Instance.supportFolder, withIntermediateDirectories: true)
         }
         let previous = (try? files.attributesOfItem(atPath: marker.path))?[.modificationDate] as? Date
         try? files.removeItem(at: marker)
         files.createFile(atPath: marker.path, contents: Data("\(getpid())".utf8))
         startWatchdog()
 
-        let defaults = UserDefaults.standard
+        let defaults = Instance.defaults
         if defaults.object(forKey: seenKey) == nil { defaults.set(Date(), forKey: seenKey) }
         if LaunchFlag.crashReport.isSet, let latest = newestReport(after: .distantPast) {
             return found(latest)
@@ -46,15 +45,15 @@ enum CrashWatch {
     }
 
     private static func found(_ report: URL) {
-        UserDefaults.standard.set(Date(), forKey: seenKey)
-        UserDefaults.standard.set(report.path, forKey: pendingKey)
+        Instance.defaults.set(Date(), forKey: seenKey)
+        Instance.defaults.set(report.path, forKey: pendingKey)
         Log.info("crash watch: found \(report.lastPathComponent)")
         send(report)
     }
 
     private static func send(_ report: URL) {
         Feedback.sendCrash(report) { success in
-            if success { UserDefaults.standard.removeObject(forKey: pendingKey) }
+            if success { Instance.defaults.removeObject(forKey: pendingKey) }
         }
     }
 

@@ -13,7 +13,7 @@ extension WindowManager {
 
     var isPoweringOff: Bool { Date().timeIntervalSince(poweringOffAt) < Self.powerOffWindow }
 
-    func loadTilingRecovery(defaults: UserDefaults = .standard) {
+    func loadTilingRecovery(defaults: UserDefaults = Instance.defaults) {
         guard let data = defaults.data(forKey: Self.tilingRecoveryKey),
               let saved = try? JSONDecoder().decode(TilingRecovery.self, from: data) else { return }
         tilingRecovery = saved.validated
@@ -79,7 +79,7 @@ extension WindowManager {
         tabUI.savedTabsUntil = max(tabUI.savedTabsUntil, Date().addingTimeInterval(SavedTabs.wait))
     }
 
-    func saveTilingRecovery(defaults: UserDefaults = .standard) {
+    func saveTilingRecovery(defaults: UserDefaults = Instance.defaults) {
         guard !restoringTemplate else { return }
         let identities = recoveryIdentities
         let zooms = states.compactMapValues(\.zoomed).filter { workspace, id in

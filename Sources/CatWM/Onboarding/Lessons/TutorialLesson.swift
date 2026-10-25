@@ -17,12 +17,12 @@ final class TutorialLesson: Lesson {
     var count: Int { plan.count }
 
     static var paused: (id: String, name: String)? {
-        guard let saved = UserDefaults.standard.string(forKey: savedKey) else { return nil }
+        guard let saved = Instance.defaults.string(forKey: savedKey) else { return nil }
         let parts = saved.split(separator: "|", maxSplits: 1).map(String.init)
         return parts.count == 2 ? (parts[0], parts[1]) : nil
     }
-    static var finishedOnce: Bool { UserDefaults.standard.bool(forKey: doneKey) }
-    static func forget() { UserDefaults.standard.removeObject(forKey: savedKey) }
+    static var finishedOnce: Bool { Instance.defaults.bool(forKey: doneKey) }
+    static func forget() { Instance.defaults.removeObject(forKey: savedKey) }
 
     func prepare(_ coach: Coach) {
         func chapter(_ id: String, _ name: String, _ steps: [PlannedStep?]) {
@@ -57,7 +57,7 @@ final class TutorialLesson: Lesson {
     func step(_ i: Int, in coach: Coach) -> Coach.Step { plan[i].step.build(coach) }
 
     func ended(_ how: Coach.Ending, at index: Int) {
-        let defaults = UserDefaults.standard
+        let defaults = Instance.defaults
         switch how {
         case .finished, .tutorial:
             Self.forget()

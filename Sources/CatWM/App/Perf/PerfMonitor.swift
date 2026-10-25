@@ -34,7 +34,7 @@ final class PerfMonitor {
     private var uploading = false
     private var observers: [NSObjectProtocol] = []
 
-    var enabled: Bool { WindowManager.shared.config.perfReports }
+    var enabled: Bool { !Instance.isNamed && WindowManager.shared.config.perfReports }
 
     func begin(_ kind: String) -> FrameRun? {
         guard !asleep, let screen = NSScreen.main else { return nil }
@@ -112,7 +112,7 @@ final class PerfMonitor {
         guard enabled, event.tags.isDisjoint(with: ["thermal", "lowpower", "load"]),
               CACurrentMediaTime() - Self.launched > Self.settle, let endpoint = Self.endpoint else { return }
         let digest = Self.fingerprint(event)
-        let defaults = UserDefaults.standard
+        let defaults = Instance.defaults
         var counts = defaults.dictionary(forKey: DefaultsKey.perfCounts) as? [String: Int] ?? [:]
         let count = counts[digest, default: 0] + 1
         counts[digest] = count

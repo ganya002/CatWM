@@ -1,6 +1,16 @@
 #!/bin/sh
 set -e
 cd "$(dirname "$0")"
+if [ -n "${CATWM_INSTANCE+set}" ]; then
+  case "$CATWM_INSTANCE" in
+    "" | *[!a-z0-9-]*) BAD_INSTANCE=1 ;;
+    *) [ ${#CATWM_INSTANCE} -le 24 ] || BAD_INSTANCE=1 ;;
+  esac
+  if [ -n "$BAD_INSTANCE" ]; then
+    echo "build: CATWM_INSTANCE must be 1 to 24 characters of a-z, 0-9 and -" >&2
+    exit 2
+  fi
+fi
 Tools/install-hooks.sh
 Tools/check-style.sh
 Tools/swiftlint.sh
@@ -14,8 +24,27 @@ fi
 ".build/$CONFIG/CatWM" --write-schema
 ".build/$CONFIG/CatWM" --write-config-docs
 python3 Tools/generate-clients.py
-pkill -x CatWM 2>/dev/null || true
-pkill -x Hyprthyst 2>/dev/null || true
+INSTANCES="$HOME/.config/catwm/instances"
+stop_catwm() {
+  case "$(ps -o comm= -p "$1" 2>/dev/null)" in */CatWM) ;; *) return 0 ;; esac
+  kill "$1" 2>/dev/null || return 0
+  i=0
+  while kill -0 "$1" 2>/dev/null && [ $i -lt 50 ]; do i=$((i + 1)); sleep 0.1; done
+}
+if [ -n "${CATWM_INSTANCE+set}" ]; then
+  PID=$(cat "$INSTANCES/$CATWM_INSTANCE/catwm.pid" 2>/dev/null || true)
+  if [ -n "$PID" ]; then stop_catwm "$PID"; fi
+else
+  NAMED=" "
+  for FILE in "$INSTANCES"/*/catwm.pid; do
+    if [ -f "$FILE" ]; then NAMED="$NAMED$(tr -d ' \n' < "$FILE") "; fi
+  done
+  for PID in $(pgrep -x CatWM || true); do
+    PARENT=$(ps -o ppid= -p "$PID" 2>/dev/null | tr -d ' ')
+    case "$NAMED" in *" $PID "* | *" ${PARENT:-0} "*) ;; *) kill "$PID" 2>/dev/null || true ;; esac
+  done
+  pkill -x Hyprthyst 2>/dev/null || true
+fi
 APP=build/CatWM.app
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Frameworks" "$APP/Contents/Resources"

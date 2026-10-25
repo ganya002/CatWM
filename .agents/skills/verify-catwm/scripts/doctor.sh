@@ -1,18 +1,17 @@
 #!/bin/sh
-# Read-only: is the running CatWM the dev build of this worktree, and is it usable?
+# Read-only: is the instance $INSTANCE the dev build of this worktree, and is it usable?
 . "$(dirname "$0")/env.sh"
 fail=0
 bad() { echo "doctor: FAIL $*"; fail=1; }
 
-PIDS=$(catwm_main_pids)
-[ -n "$PIDS" ] || { echo "doctor: FAIL no CatWM runs. Run launch.sh."; exit 1; }
-[ "$(echo "$PIDS" | wc -l | tr -d ' ')" = 1 ] || bad "more than one CatWM runs: $(echo $PIDS)"
-for p in $PIDS; do echo "doctor: CatWM pid $p: $(pid_exe "$p")"; done
+PIDS=$(instance_pid)
+[ -n "$PIDS" ] || { echo "doctor: FAIL instance $INSTANCE does not run. Run launch.sh."; exit 1; }
+echo "doctor: instance $INSTANCE, pid $PIDS: $(pid_exe "$PIDS")"
 
 [ -x "$CLI" ] || { echo "doctor: FAIL $CLI is missing. Run launch.sh."; exit 1; }
 PID=$("$CLI" ping --json 2>/dev/null | jq -r '.pid // empty')
 [ -n "$PID" ] || { echo "doctor: FAIL the socket does not answer"; exit 1; }
-[ "$(pid_exe "$PID")" = "$EXE" ] || bad "the socket answers from pid $PID, which is not $EXE"
+[ "$PID" = "$PIDS" ] || bad "the socket answers from pid $PID, which is not the pid in $PID_FILE"
 [ -z "$OURS_PID" ] || [ "$OURS_PID" = "$PID" ] || bad "launch.sh started pid $OURS_PID, but pid $PID answers"
 
 BUILT=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$APP/Contents/Info.plist" 2>/dev/null)

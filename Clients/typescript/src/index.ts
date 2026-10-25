@@ -156,7 +156,9 @@ export class CatWMError extends Error {
 type Listener = (event: CatWMEvent) => void;
 
 export function defaultPath(): string {
-  return process.env.CATWM_SOCKET ?? `${os.homedir()}/.config/catwm/catwm.sock`;
+  const instance = process.env.CATWM_INSTANCE;
+  const folder = instance === undefined ? ".config/catwm" : `.config/catwm/instances/${instance}`;
+  return process.env.CATWM_SOCKET ?? `${os.homedir()}/${folder}/catwm.sock`;
 }
 
 export class CatWM {

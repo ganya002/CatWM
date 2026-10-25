@@ -2,7 +2,7 @@
 
 ## Where to look
 
-- Log: `~/Library/Logs/CatWM.log` (plain text, truncated past ~2 MB). Config problems appear as `config: …`; CLI commands as `ipc: …`.
+- Log: `~/Library/Logs/CatWM.log` (plain text, truncated past ~2 MB). An instance that runs with `CATWM_INSTANCE=<id>` writes `~/Library/Logs/CatWM-<id>.log`. Config problems appear as `config: …`; CLI commands as `ipc: …`.
 - More detail: relaunch with `open build/CatWM.app --args --verbose`.
 - State snapshot: `catwm dump`, then read the log.
 

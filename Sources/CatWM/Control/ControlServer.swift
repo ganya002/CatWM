@@ -74,7 +74,7 @@ final class ControlServer {
         return response.encoded() + Data("\n".utf8)
     }
 
-    private static func listen(on path: String) -> Int32? {
+    static func listen(on path: String) -> Int32? {
         var address = sockaddr_un()
         address.sun_family = sa_family_t(AF_UNIX)
         let capacity = MemoryLayout.size(ofValue: address.sun_path)

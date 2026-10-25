@@ -3,7 +3,7 @@ import AppKit
 extension WindowManager {
     func loadWorkspaces() {
         guard config.virtualWorkspaces else { return }
-        let defaults = UserDefaults.standard
+        let defaults = Instance.defaults
         desktops.nativeCatalog.saved = (defaults.dictionary(forKey: DefaultsKey.wsNativeSpaces) ?? [:])
             .compactMapValues { $0 as? UInt64 }
         desktops.nativeCatalog.homes = defaults.dictionary(forKey: DefaultsKey.wsNativeDisplays)
@@ -63,7 +63,7 @@ extension WindowManager {
         ].joined(separator: "|")
         guard key != lastSavedWorkspaces else { return }
         lastSavedWorkspaces = key
-        let defaults = UserDefaults.standard
+        let defaults = Instance.defaults
         defaults.set(monitors, forKey: DefaultsKey.wsMonitors)
         defaults.set(virtualShown, forKey: DefaultsKey.wsShown)
         defaults.set(desktops.homeSpace, forKey: DefaultsKey.wsHome)

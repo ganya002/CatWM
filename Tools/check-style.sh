@@ -41,6 +41,8 @@ IGNORED_DIRECTORY = re.compile(r"^\s*(?:_\s*=\s*)?try\?\s+\w+(?:\.\w+)*\.createD
 TEST_RUNLOOP = re.compile(r"^\s*RunLoop\.(?:main|current)\.run\s*\(\s*until\s*:\s*Date\(\)\.addingTimeInterval\s*\(")
 DEFAULTS_LITERAL = re.compile(r'\bforKey: *"')
 DEFAULTS_KEYS = "Sources/CatWM/App/DefaultsKey.swift"
+STANDARD_DEFAULTS = re.compile(r"\bUserDefaults\.standard\b|\bUserDefaults *= *\.standard\b")
+INSTANCE = "Sources/CatWM/App/Instance.swift"
 TOOLS = "// swift-tools-version:"
 OK = re.compile(r"^// style-ok: (\S.*\S)$")
 
@@ -123,6 +125,8 @@ def banned(path, code, uses_defaults=False):
         hits.append("try? drops a directory creation failure. Use do/catch and record the error with Log")
     if path.startswith("Tests/") and TEST_RUNLOOP.search(code):
         hits.append("fixed run-loop wait in a test. Wait on a condition or an injected clock")
+    if path.startswith("Sources/CatWM/") and path != INSTANCE and STANDARD_DEFAULTS.search(code):
+        hits.append("UserDefaults.standard. Use Instance.defaults, which keeps each CatWM instance apart")
     if uses_defaults and path.startswith("Sources/CatWM/") and path != DEFAULTS_KEYS and DEFAULTS_LITERAL.search(code):
         hits.append("UserDefaults key literal. Add it to DefaultsKey")
     return hits

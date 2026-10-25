@@ -2,7 +2,7 @@ import Foundation
 
 enum Log {
     static let url = NSClassFromString("XCTestCase") == nil
-        ? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/CatWM.log")
+        ? Instance.logURL
         : FileManager.default.temporaryDirectory.appendingPathComponent("CatWM-test-\(getpid()).log")
     static let verboseLaunch = LaunchFlag.verbose.isSet
 

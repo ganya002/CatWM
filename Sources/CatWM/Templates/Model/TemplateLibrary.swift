@@ -3,8 +3,7 @@ import Combine
 
 final class TemplateLibrary: ObservableObject {
     static let shared = TemplateLibrary()
-    static let url = FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent(".config/catwm/templates.json")
+    static let url = Instance.configFolder.appendingPathComponent("templates.json")
 
     @Published private(set) var templates: [WorkspaceTemplate] = []
     @Published var draft: WorkspaceTemplate?

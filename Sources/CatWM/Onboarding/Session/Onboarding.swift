@@ -7,8 +7,8 @@ final class Onboarding {
 
     static let startedKey = "onboardingStarted"
 
-    static var isDone: Bool { UserDefaults.standard.bool(forKey: doneKey) }
-    static var isStarted: Bool { UserDefaults.standard.bool(forKey: startedKey) }
+    static var isDone: Bool { Instance.defaults.bool(forKey: doneKey) }
+    static var isStarted: Bool { Instance.defaults.bool(forKey: startedKey) }
 
     weak var statusButton: NSStatusBarButton? {
         didSet { MenuBarTip.shared.statusButton = statusButton }
@@ -54,7 +54,7 @@ extension Onboarding {
                 HUD.shared.show("CatWM needs Accessibility first", on: nil)
                 MenuBarTip.shared.hide()
                 if firstRun, Permission.accessibility.isGranted {
-                    UserDefaults.standard.set(true, forKey: Self.doneKey)
+                    Instance.defaults.set(true, forKey: Self.doneKey)
                 }
                 firstRun = false
             }
@@ -89,7 +89,7 @@ extension Onboarding {
     func finish() {
         MenuBarTip.shared.hide()
         firstRun = false
-        UserDefaults.standard.set(true, forKey: Self.doneKey)
+        Instance.defaults.set(true, forKey: Self.doneKey)
         guard Permission.accessibility.isGranted else { return }
         HUD.shared.show("Tiling on", on: nil)
     }

@@ -12,7 +12,7 @@ final class WhatsNew {
     let model = WhatsNewModel()
     var panel: CatWMPanel?
 
-    init(defaults: UserDefaults = .standard, releases: [Release] = Release.all) {
+    init(defaults: UserDefaults = Instance.defaults, releases: [Release] = Release.all) {
         self.defaults = defaults
         self.releases = releases
     }

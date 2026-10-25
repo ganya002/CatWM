@@ -1,5 +1,7 @@
 import AppKit
 
+Instance.check()
+
 if CommandLine.arguments.dropFirst().first == "--native-desktop-guard" {
     DesktopGuard.run()
 }
@@ -30,7 +32,7 @@ if CommandLine.arguments.dropFirst().first == "--write-schema" {
     exit(0)
 }
 
-Migrations.run()
+if !Instance.isNamed { Migrations.run() }
 
 switch LaunchArguments.decide(Array(CommandLine.arguments.dropFirst())) {
 case .start: break
@@ -51,6 +53,7 @@ for sig in [SIGTERM, SIGINT, SIGHUP] {
         WindowManager.shared.restoreHiddenWindows {
             CapsLockChord.shared.restore()
             CrashWatch.cleanExit()
+            Instance.removePid()
             exit(0)
         }
     }

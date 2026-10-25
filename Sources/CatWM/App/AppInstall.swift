@@ -32,8 +32,8 @@ final class LoginItem {
 
     func enableOnFirstLaunch() {
         let key = "didSetUpLaunchAtLogin"
-        guard !UserDefaults.standard.bool(forKey: key) else { return }
-        UserDefaults.standard.set(true, forKey: key)
+        guard !Instance.defaults.bool(forKey: key) else { return }
+        Instance.defaults.set(true, forKey: key)
         set(true)
     }
 

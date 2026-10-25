@@ -211,6 +211,8 @@ class FailureRules(unittest.TestCase):
             ("Tests/CatWMTests/AnimatorTests.swift", "try await Task.sleep(for: .milliseconds(20))", False),
             (self.source, 'let saved = defaults.dictionary(forKey: "grabHints")', True),
             (self.source, 'UserDefaults.standard.set(true, forKey: "didSetUpLaunchAtLogin")', True),
+            (self.source, "let flag = UserDefaults.standard.bool(forKey: DefaultsKey.grabHints)", True),
+            (self.source, "func load(defaults: UserDefaults = .standard) {", True),
         ]
         for path, code, uses_defaults in cases:
             with self.subTest(code=code):
@@ -219,6 +221,9 @@ class FailureRules(unittest.TestCase):
     def test_accepts_the_safe_form(self):
         cases = [
             (self.source, "let app = axApp(pid, timeout: 0.1)", False),
+            (self.source, "let flag = Instance.defaults.bool(forKey: DefaultsKey.grabHints)", True),
+            (self.source, "init(_ arrangement: Arrangement = .standard) {", False),
+            ("Sources/CatWM/App/Instance.swift", "guard let suite else { return UserDefaults.standard }", True),
             (self.source, "DispatchQueue.main.async { run() }", False),
             ("Sources/CatWM/Keys/Help/KeyHelp.swift", "DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)", False),
             (self.source, "static var defaultValue: [Int: CGFloat] = [:]", False),

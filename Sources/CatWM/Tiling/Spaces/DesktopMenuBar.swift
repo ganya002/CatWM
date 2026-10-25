@@ -3,8 +3,8 @@ import AppKit
 enum DesktopMenuBar {
     private static let freshKey = "ws.freshDesktops"
     @MainActor private static var fresh: Set<String> {
-        get { Set(UserDefaults.standard.stringArray(forKey: freshKey) ?? []) }
-        set { UserDefaults.standard.set(Array(newValue), forKey: freshKey) }
+        get { Set(Instance.defaults.stringArray(forKey: freshKey) ?? []) }
+        set { Instance.defaults.set(Array(newValue), forKey: freshKey) }
     }
 
     @MainActor static func created(_ space: UInt64, in snapshot: Spaces.Snapshot) {
@@ -67,10 +67,7 @@ enum DesktopMenuBar {
         }
     }
 
-    static var journal: URL? {
-        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?
-            .appendingPathComponent("catwm/desktop-menu-restore.json")
-    }
+    static var journal: URL? { Instance.cacheFolder.appendingPathComponent("desktop-menu-restore.json") }
 
     static func recover() {
         guard let path = journal, let data = try? Data(contentsOf: path),

@@ -197,7 +197,9 @@ EVENTS = ["focus.changed", "window.added", "window.removed", "workspace.changed"
 
 
 def default_path() -> str:
-    return os.environ.get("CATWM_SOCKET") or os.path.expanduser("~/.config/catwm/catwm.sock")
+    instance = os.environ.get("CATWM_INSTANCE")
+    folder = "~/.config/catwm" if instance is None else f"~/.config/catwm/instances/{instance}"
+    return os.environ.get("CATWM_SOCKET") or os.path.expanduser(f"{folder}/catwm.sock")
 
 
 class CatWM:

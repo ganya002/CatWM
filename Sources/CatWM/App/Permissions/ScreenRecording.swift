@@ -10,7 +10,7 @@ final class ScreenRecording {
     var watching = false
 
     var isGranted: Bool { grantedLive.withLock { $0 } || CGPreflightScreenCaptureAccess() }
-    var isTestDone: Bool { UserDefaults.standard.bool(forKey: Self.testDoneKey) }
+    var isTestDone: Bool { Instance.defaults.bool(forKey: Self.testDoneKey) }
 
     func refresh() {
         guard watching, !isGranted, !checking else { return }
@@ -35,7 +35,7 @@ final class ScreenRecording {
             configuration.width = 64
             configuration.height = 64
             _ = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: configuration)
-            UserDefaults.standard.set(true, forKey: Self.testDoneKey)
+            Instance.defaults.set(true, forKey: Self.testDoneKey)
             Log.info("screen recording test image taken")
             return true
         } catch {
