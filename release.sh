@@ -5,6 +5,6 @@ NOTES=
 case "${1:-}" in -*) ;; *) NOTES=${1:-}; [ $# -gt 0 ] && shift ;; esac
 ./build.sh
 if [ -n "$NOTES" ]; then
-  exec amore release build/ouch.app --release-notes "$NOTES" "$@"
+  exec amore release build/CatWM.app --release-notes "$NOTES" "$@"
 fi
-exec amore release build/ouch.app "$@"
+exec amore release build/CatWM.app "$@"

@@ -1,6 +1,6 @@
 # Dispatchers
 
-Used as `bind = MODS, key, <dispatcher>, <args>` or `ouch dispatch <dispatcher> <args>`.
+Used as `bind = MODS, key, <dispatcher>, <args>` or `catwm dispatch <dispatcher> <args>`.
 
 | Dispatcher | Args | Effect |
 |---|---|---|
@@ -36,5 +36,5 @@ Used as `bind = MODS, key, <dispatcher>, <args>` or `ouch dispatch <dispatcher> 
 | `sethomespace` | | no effect: each macOS Desktop is a workspace. Old configs can keep it |
 | `exit` | | quit CatWM (parked windows are restored first) |
 
-Unknown dispatchers and bad args are ignored silently; check the log with `ouch dump` or `--verbose`.
+Unknown dispatchers and bad args are ignored silently; check the log with `catwm dump` or `--verbose`.
 With `virtual-workspaces = false`, `workspace`/`movetoworkspace` use macOS Spaces and need "Switch to Desktop N" enabled on Ctrl+N in System Settings → Keyboard → Shortcuts → Mission Control.

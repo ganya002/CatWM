@@ -10,7 +10,7 @@ REGISTRATION = re.compile(r"static\s+let\s+(\w+)\s*=\s*GalleryExample\(\s*order:
 
 def gallery_examples():
     examples = []
-    for path in sorted((ROOT / "Sources/ouch/UI").rglob("*.swift")):
+    for path in sorted((ROOT / "Sources/CatWM/UI").rglob("*.swift")):
         for match in REGISTRATION.finditer(path.read_text()):
             if "Gallery" in path.parts:
                 raise ValueError(f"{path}: put the example in its control file")
@@ -23,7 +23,7 @@ def gallery_examples():
 
 
 def dispatcher_names():
-    path = ROOT / "Sources/ouch/Tiling/Manager/WindowManager+status.swift"
+    path = ROOT / "Sources/CatWM/Tiling/Manager/WindowManager+status.swift"
     source = path.read_text().split("        switch dispatcher {", 1)[1].split("        default:", 1)[0]
     return [name for line in source.splitlines() if line.startswith("        case ")
             for name in re.findall(r'"([^"\\]+)"', line.split(":", 1)[0])]
@@ -44,23 +44,23 @@ def render():
     names = ",\n".join("        " + name for order, name in gallery_examples())
     gallery = "#if DEBUG\nextension GalleryExamples {\n    static let all: [GalleryExample] = [\n" + names + "\n    ]\n}\n#endif\n"
     dispatchers = ", ".join('"' + name + '"' for name in dispatcher_names())
-    palette = (ROOT / "Sources/ouch/UI/Theme/Palette.swift").read_text()
+    palette = (ROOT / "Sources/CatWM/UI/Theme/Palette.swift").read_text()
     colors = [name.strip() for fields in re.findall(r"^    var ([\w, ]+): Pair$", palette, re.M) for name in fields.split(",")]
     tokens = ",\n".join('        ColorToken(name: "' + name + '", path: \\.' + name + ')' for name in colors)
     settings = []
-    for path in sorted((ROOT / "Sources/ouch/Settings").rglob("*.swift")):
+    for path in sorted((ROOT / "Sources/CatWM/Settings").rglob("*.swift")):
         if "Search" in path.parts:
             continue
         for match in re.finditer(r"static\s+let\s+(search\w+)\s*=\s*SettingEntry\(", path.read_text()):
             settings.append(path.stem + "." + match[1])
     placements = []
     pattern = r'OptionRows\s*\(\s*pane:\s*\.(\w+)\s*,\s*section:\s*"([^"]+)"(?:\s*,\s*advanced:\s*(true|false))?'
-    for path in sorted((ROOT / "Sources/ouch/Settings/Panes").glob("*.swift")):
+    for path in sorted((ROOT / "Sources/CatWM/Settings/Panes").glob("*.swift")):
         for pane, section, advanced in re.findall(pattern, path.read_text()):
             placements.append('        OptionPlacement(pane: .' + pane + ', section: "' + section + '", advanced: ' + (advanced or "false") + ')')
     placement_rows = ",\n".join(placements)
     entries = ",\n".join("        " + entry for entry in settings)
-    theme = (ROOT / "Sources/ouch/UI/Theme/Theme.swift").read_text()
+    theme = (ROOT / "Sources/CatWM/UI/Theme/Theme.swift").read_text()
     metrics = []
     for kind, name in [("Radius", "radii"), ("Space", "spaces"), ("Icon", "icons")]:
         body = theme.split("    enum " + kind + " {", 1)[1].split("}", 1)[0]

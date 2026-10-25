@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 cd "$(dirname "$0")"
-export OUCH_CHANNEL=beta
+export CATWM_CHANNEL=beta
 NOTES=
 case "${1:-}" in -*) ;; *) NOTES=${1:-}; [ $# -gt 0 ] && shift ;; esac
 if security find-identity -v -p codesigning | grep -q "Developer ID Application"; then

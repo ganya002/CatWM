@@ -1,4 +1,4 @@
-# Contributing to Ouch
+# Contributing to CatWM
 
 Thank you for your help. This page tells you how to set up, check and submit a change. It also tells how to install a local build, run the feedback relay and make a release.
 
@@ -10,17 +10,17 @@ Thank you for your help. This page tells you how to set up, check and submit a c
 
 ## Build and run
 
-- `./build.sh --dev` makes a fast debug build in `build/ouch.app`. Use it while you work. It takes a few seconds, not approximately a minute.
+- `./build.sh --dev` makes a fast debug build in `build/CatWM.app`. Use it while you work. It takes a few seconds, not approximately a minute.
 - `./build.sh` makes a release build. Do not ship a `--dev` build.
-- `open build/ouch.app` starts the app.
+- `open build/CatWM.app` starts the app.
 - `./install.sh` installs a beta build to `/Applications/CatWM.app` and opens it. Add `--stable` to remove the beta channel marker.
-- The app is ad-hoc signed. Each rebuild cancels its Accessibility permission. Ouch shows ⚠️ in the menu bar and opens Settings. Click **Reset Permission**, then turn Ouch on again.
+- The app is ad-hoc signed. Each rebuild cancels its Accessibility permission. CatWM shows ⚠️ in the menu bar and opens Settings. Click **Reset Permission**, then turn CatWM on again.
 
 ### Launch arguments
 
-- `open build/ouch.app --args --onboarding` plays the onboarding again.
-- `open build/ouch.app --args --verbose` writes a detailed log. The old `debug-logging` config key also works.
-- `open build/ouch.app --args --crash-report` sends the newest crash report, to test the upload.
+- `open build/CatWM.app --args --onboarding` plays the onboarding again.
+- `open build/CatWM.app --args --verbose` writes a detailed log. The old `debug-logging` config key also works.
+- `open build/CatWM.app --args --crash-report` sends the newest crash report, to test the upload.
 
 ## Check your change
 
@@ -75,13 +75,13 @@ npx wrangler deploy
 npx wrangler secret put LINEAR_API_KEY   # Linear → Settings → Security & access → Personal API keys
 ```
 
-Set `LINEAR_TEAM_ID` in `wrangler.toml` to the UUID of the team. Put the URL of the worker plus `/report` into `OuchReportURL` in `Info.plist`.
+Set `LINEAR_TEAM_ID` in `wrangler.toml` to the UUID of the team. Put the URL of the worker plus `/report` into `CatWMReportURL` in `Info.plist`.
 
-`PerfMonitor` (`Sources/ouch/App/Perf/PerfMonitor.swift`) measures the frames while Ouch moves windows and plays its panels. It also measures the AX cost for each app and main-thread hangs of more than 250 ms. Each slowdown goes to `ouch.log` as a `perf:` line. With `perf-reports = true` (off by default), Ouch sends a slowdown to the `/perf` route after it occurs 5 times, or 2 times for a hang of more than 1 s. Ouch logs, but does not send, runs on a hot, low-power or loaded Mac. It sends each fingerprint one time in 7 days, a maximum of one time each day and 5 times each week.
+`PerfMonitor` (`Sources/CatWM/App/Perf/PerfMonitor.swift`) measures the frames while CatWM moves windows and plays its panels. It also measures the AX cost for each app and main-thread hangs of more than 250 ms. Each slowdown goes to `CatWM.log` as a `perf:` line. With `perf-reports = true` (off by default), CatWM sends a slowdown to the `/perf` route after it occurs 5 times, or 2 times for a hang of more than 1 s. CatWM logs, but does not send, runs on a hot, low-power or loaded Mac. It sends each fingerprint one time in 7 days, a maximum of one time each day and 5 times each week.
 
 The relay makes one Linear issue for each fingerprint (`[perf:<id>]` in the title) and adds a comment for each repeat, to a maximum of 10. Its API key needs the read and create comment scopes, and the create issues scope. Set `LINEAR_PERF_LABEL_ID` to add a label to the issues.
 
-After a crash, a small watchdog opens Ouch again when macOS has written the crash report. Ouch then sends the crash report, the log up to the crash, the config and the Mac setup to the relay. If the send fails, it tries again at the next launch.
+After a crash, a small watchdog opens CatWM again when macOS has written the crash report. CatWM then sends the crash report, the log up to the crash, the config and the Mac setup to the relay. If the send fails, it tries again at the next launch.
 
 ## Releasing
 
@@ -92,7 +92,7 @@ One-time setup:
 ```sh
 amore login
 ./build.sh
-amore setup build/ouch.app --hosting amore --generate-sparkle-key
+amore setup build/CatWM.app --hosting amore --generate-sparkle-key
 ```
 
 Put the feed URL and the public key that it prints into `SUFeedURL` and `SUPublicEDKey` in `Info.plist`. Until you do this, the app does not check for updates.

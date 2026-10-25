@@ -16,9 +16,9 @@
 curl -fsSL https://catwm.perwko.com/install.sh | sh -s -- --beta
 ```
 
-## How to use ouch
+## How to use CatWM
 
-The central concept of ouch is "Window mode", think of it as Vim's visual mode, the build mode in a game, or the tool keys in a drawing app. You enter it with `⌘ + tab`. This is where you can move windows, displays, change layouts and more.
+The central concept of CatWM is "Window mode", think of it as Vim's visual mode, the build mode in a game, or the tool keys in a drawing app. You enter it with `⌘ + tab`. This is where you can move windows, displays, change layouts and more.
 
 Here is a overview of what key binds are available within window mode. (This is openable by pressing `?` within window mode)
 
@@ -29,10 +29,10 @@ Here is a overview of what key binds are available within window mode. (This is 
 
 ### Workspaces
 
-Unlike all the other macOS tilers I've ever seen, ouch uses native spaces. This works well because ouch uses SkyLight, the private macOS interface that Mission Control uses. It lets ouch create and switch Desktops and move windows between them.
+Unlike all the other macOS tilers I've ever seen, CatWM uses native spaces. This works well because CatWM uses SkyLight, the private macOS interface that Mission Control uses. It lets CatWM create and switch Desktops and move windows between them.
 
 <p align="center">
-  <img src="docs/assets/readme/workspaces.webp" width="760" alt="Switching macOS Desktops with ouch workspaces">
+  <img src="docs/assets/readme/workspaces.webp" width="760" alt="Switching macOS Desktops with CatWM workspaces">
 </p>
 
 ### Layouts
@@ -62,16 +62,16 @@ Reorder your windows without dealing with the native macOS fuss.
 
 ### Callable via cli
 
-Agents (and humans) can call ouch via cli. Every bind is a dispatcher, and the cli runs the same ones. Python, TypeScript and Swift libraries (see [Clients](Clients/README.md)) use the same commands and can listen for events.
+Agents (and humans) can call CatWM via cli. Every bind is a dispatcher, and the cli runs the same ones. Python, TypeScript and Swift libraries (see [Clients](Clients/README.md)) use the same commands and can listen for events.
 
 ```sh
-ouch workspace 2
-ouch movefocus left
-ouch windows
-ouch events focus.changed
+catwm workspace 2
+catwm movefocus left
+catwm windows
+catwm events focus.changed
 ```
 
-<sub>We do not plan to add full support if any for urls (ouch://), if we do this anyone can close windows and etc.</sub>
+<sub>We do not plan to add full support if any for urls (catwm://), if we do this anyone can close windows and etc.</sub>
 
 ## Contributing
 

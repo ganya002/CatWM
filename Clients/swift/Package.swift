@@ -2,8 +2,8 @@
 import PackageDescription
 
 let package = Package(
-    name: "OuchClient",
+    name: "CatWMClient",
     platforms: [.macOS(.v13)],
-    products: [.library(name: "OuchClient", targets: ["OuchClient"])],
-    targets: [.target(name: "OuchClient")]
+    products: [.library(name: "CatWMClient", targets: ["CatWMClient"])],
+    targets: [.target(name: "CatWMClient")]
 )

@@ -1,5 +1,5 @@
 // The state the stage animates and the reducers behind each key. Every reducer
-// follows the matching dispatcher in Sources/ouch/Tiling/Manager.
+// follows the matching dispatcher in Sources/CatWM/Tiling/Manager.
 
 import {
   type Direction,

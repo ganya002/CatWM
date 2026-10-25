@@ -42,8 +42,8 @@ class CatalogRules(unittest.TestCase):
         ]
         for path, source in cases:
             with self.subTest(path=path, source=source):
-                self.assertTrue(style.catalog_violations("Sources/ouch/" + path, source))
-                self.assertTrue(style.catalog_violations("Sources/ouch/" + path, source + " // style-ok: deliberate catalog duplicate"))
+                self.assertTrue(style.catalog_violations("Sources/CatWM/" + path, source))
+                self.assertTrue(style.catalog_violations("Sources/CatWM/" + path, source + " // style-ok: deliberate catalog duplicate"))
 
     def test_stale_docs_change_the_fingerprint(self):
         generator_spec = importlib.util.spec_from_file_location("generator", ROOT / "Tools/generate-catalogs.py")
@@ -72,7 +72,7 @@ class CatalogRules(unittest.TestCase):
             ("UI/Components/Rows/TemplateRow.swift", 'static let templates = GalleryExample(order: 15) {}\nQuickAction(id: "x", title: "Save") {}'),
         ]
         for path, source in cases:
-            self.assertFalse(style.catalog_violations("Sources/ouch/" + path, source))
+            self.assertFalse(style.catalog_violations("Sources/CatWM/" + path, source))
 
 
 if __name__ == "__main__":

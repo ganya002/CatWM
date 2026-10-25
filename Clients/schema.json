@@ -15,18 +15,18 @@
           },
           {
             "name" : "version",
-            "summary" : "Ouch version",
+            "summary" : "CatWM version",
             "type" : "string"
           },
           {
             "name" : "pid",
-            "summary" : "Process ID of Ouch",
+            "summary" : "Process ID of CatWM",
             "type" : "int"
           }
         ],
         "kind" : "object"
       },
-      "summary" : "Check that Ouch answers"
+      "summary" : "Check that CatWM answers"
     },
     {
       "args" : [
@@ -614,7 +614,7 @@
       "result" : {
         "kind" : "none"
       },
-      "summary" : "Quit Ouch"
+      "summary" : "Quit CatWM"
     },
     {
       "args" : [
@@ -668,7 +668,7 @@
           },
           {
             "name" : "launchAtLogin",
-            "summary" : "Ouch opens at login",
+            "summary" : "CatWM opens at login",
             "type" : "bool"
           },
           {
@@ -698,7 +698,7 @@
           },
           {
             "name" : "workspaces",
-            "summary" : "`ouch` or `macos`",
+            "summary" : "`catwm` or `macos`",
             "type" : "string"
           },
           {
@@ -709,7 +709,7 @@
         ],
         "kind" : "object"
       },
-      "summary" : "Read the state of Ouch"
+      "summary" : "Read the state of CatWM"
     },
     {
       "args" : [
@@ -782,7 +782,7 @@
         ],
         "kind" : "list"
       },
-      "summary" : "List the windows that Ouch knows"
+      "summary" : "List the windows that CatWM knows"
     },
     {
       "args" : [
@@ -1004,7 +1004,7 @@
         }
       ],
       "name" : "window.added",
-      "summary" : "Ouch found a new window"
+      "summary" : "CatWM found a new window"
     },
     {
       "data" : [
@@ -1116,7 +1116,7 @@
         }
       ],
       "name" : "config.reloaded",
-      "summary" : "Ouch read the config file again"
+      "summary" : "CatWM read the config file again"
     }
   ],
   "protocol" : 1

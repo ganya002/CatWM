@@ -99,9 +99,9 @@ export const CARDS: Card[] = [
     line: "Every bind is a command. The CLI runs the same ones.",
     hold: 2400,
     scenes: [
-      { typed: "ouch dispatch layout wide", shift: 0, tiles: tiled(ABCD, "wide", "a") },
-      { typed: "ouch dispatch fullscreen", shift: 0, tiles: tiled(["a"], "fullscreen", "a") },
-      { typed: "ouch dispatch layout tall", shift: 0, tiles: tiled(ABCD, "tall", "a") },
+      { typed: "catwm dispatch layout wide", shift: 0, tiles: tiled(ABCD, "wide", "a") },
+      { typed: "catwm dispatch fullscreen", shift: 0, tiles: tiled(["a"], "fullscreen", "a") },
+      { typed: "catwm dispatch layout tall", shift: 0, tiles: tiled(ABCD, "tall", "a") },
     ],
   },
 ];

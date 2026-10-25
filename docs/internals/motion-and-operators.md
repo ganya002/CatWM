@@ -85,6 +85,6 @@ Add a case to the rules in `MotionResolver` and to `resolve`. Every operator the
 
 ## Tests
 
-`Tests/ouchTests/MotionResolverTests.swift` covers: a neighbor in each direction, a monitor before wrap in both vertical directions, an offset monitor that does not block wrap, wrap in all four directions, and a stack cycle.
+`Tests/CatWMTests/MotionResolverTests.swift` covers: a neighbor in each direction, a monitor before wrap in both vertical directions, an offset monitor that does not block wrap, wrap in all four directions, and a stack cycle.
 
 The tests check the pure rules. The live behavior with real windows and several monitors needs a manual test.
