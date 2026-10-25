@@ -208,7 +208,8 @@ private struct TabCell: View {
                     Image(systemName: "xmark")
                         .font(Theme.symbol(Theme.Icon.extraSmall, .bold))
                         .frame(width: TabStrip.closeSide, height: TabStrip.closeSide)
-                        .background(Circle().fill(closeHovered ? Theme.well : .clear))
+                        .background(RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
+                            .fill(closeHovered ? Theme.well : .clear))
                         .accessibilityLabel("Close tab")
                         .transition(.opacity)
                 }
