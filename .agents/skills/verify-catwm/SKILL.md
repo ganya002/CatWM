@@ -15,7 +15,9 @@ All scripts are in `.agents/skills/verify-catwm/scripts/`. Run them from the wor
 - The scripts use `INSTANCE=verify-<worktree folder name>` (cut to 24 characters). Set `INSTANCE` before a script to use another id. `env.sh` exports `CATWM_INSTANCE`.
 - `launch.sh` does not stop the user's CatWM. With `CATWM_INSTANCE` set, `build.sh` and `AppDelegate.closePreviousInstances` stop only the CatWM in the pid file of that instance.
 - A named instance does not register a login item, link the `catwm` command, check for updates, send crash or performance reports, show onboarding, tips or What's New, or run migrations. Its menu bar icon shows the id in the tooltip.
-- CatWM has no window scope yet. A named instance tiles all windows and reads all key presses, the same as the user's CatWM. So two instances move the same windows. Before you run `launch.sh`, ask the user. Approval for one run does not apply to the next session.
+- Without a window scope, a named instance tiles all windows and reads all key presses, the same as the user's CatWM. So two instances move the same windows. Before you run `launch.sh` without a scope, ask the user. Approval for one run does not apply to the next session.
+- `CATWM_SCOPE=pids:<pid>,<pid>...` makes the instance manage only the windows of these pids. A scoped instance does not use macOS Desktops, does not read key presses (`CATWM_KEYS=on` turns them on), does not change Caps Lock and does not move the pointer. A bad value stops CatWM with exit code 2. Read "Window scope" in `docs/internals/control.md`.
+- The user's CatWM still tiles the windows of a scoped instance. Two instances then write the same frames.
 - If the user is typing or presenting, do not start.
 
 ## Launch

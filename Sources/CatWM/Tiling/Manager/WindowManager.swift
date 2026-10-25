@@ -1,9 +1,11 @@
 import AppKit
 
 final class WindowManager {
-    static let shared = WindowManager(config: Config.load())
+    static let shared = WindowManager(config: Config.load(), scope: Instance.scope)
 
     let backend: any WindowBackend
+    let scope: WindowScope?
+    let input: GlobalInput
     var config: Config
     var tilingEnabled = true
     var restoringTemplate = false {
@@ -108,16 +110,37 @@ final class WindowManager {
     let dockWindowPull = DockWindowPull()
     let dockArea = DockArea()
     let cursorRefresh: CursorRefresh
+    var warp: (CGPoint) -> Void = { CGWarpMouseCursorPosition($0) }
 
-    init(backend: any WindowBackend = AXBackend.shared, config: Config) {
+    init(backend: any WindowBackend = AXBackend.shared, config: Config, scope: WindowScope? = nil) {
         self.backend = backend
-        self.config = config
+        self.scope = scope
+        input = GlobalInput(scope: scope, keys: Instance.keys)
+        self.config = scope?.restrict(config) ?? config
         frontmostPID = { backend.frontmostPID() }
         animator = Animator(backend: backend)
         cursorRefresh = CursorRefresh(backend: backend)
         scanner = WindowScanner(read: { backend.scan($0, discovered: $1) }, readDesktop: { backend.desktop(known: $0) },
-                                readApplications: { backend.applications() })
+                                readApplications: { backend.applications() }, scope: scope)
         focusRequests.focusReader = FocusReader { backend.focusedWindow(pid: $0) }
+    }
+
+    static func loadConfig(scope: WindowScope?) -> Config {
+        let config = Config.load()
+        return scope?.restrict(config) ?? config
+    }
+
+    func scopeRefusal(_ command: String) -> String? {
+        guard let scope, !scope.allows(command) else { return nil }
+        let name = WindowActions.named(command)?.name ?? command
+        return "`\(name)` is not available in a scoped instance: "
+            + "it would act on windows, Desktops or input outside the scope"
+    }
+
+    func warpPointer(to point: CGPoint) {
+        guard input.pointerAndFocus else { return }
+        warp(point)
+        cursorRefresh.soon()
     }
 
     var currentLayoutTitle: String {

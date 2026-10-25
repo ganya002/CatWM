@@ -7,7 +7,7 @@ extension WindowManager {
     }
 
     func observe(pid: pid_t) {
-        guard pid != getpid(), observers[pid] == nil else { return }
+        guard pid != getpid(), observers[pid] == nil, scope?.pids.contains(pid) ?? true else { return }
         guard observing[pid] == nil else { return }
         let token = UUID()
         observing[pid] = token

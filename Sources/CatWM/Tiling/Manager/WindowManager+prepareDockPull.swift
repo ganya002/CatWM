@@ -116,6 +116,7 @@ extension WindowManager {
     }
 
     func parkFocus() {
+        guard input.pointerAndFocus else { return }
         cancelFocusRequest()
         prepareFocusSink()
         guard let sink = focusSink else { return }
@@ -132,7 +133,6 @@ extension WindowManager {
     func parkFocus(on screen: Screen) {
         parkFocus()
         guard !screen.frame.contains(mouseLocation()) else { return }
-        CGWarpMouseCursorPosition(screen.center)
-        cursorRefresh.soon()
+        warpPointer(to: screen.center)
     }
 }

@@ -11,10 +11,14 @@ enum CommandRegistry {
 
     static var published: [Command] { all.filter { $0.access == .public } }
 
-    static func execute(_ name: String, _ args: [String: JSON], client: ControlConnection?) throws -> JSON {
+    static func execute(_ name: String, _ args: [String: JSON], client: ControlConnection?,
+                        manager: WindowManager = .shared) throws -> JSON {
         guard let command = command(named: name) else { throw ControlError.unknownCommand(name) }
         guard command.access != .keybindOnly else { throw ControlError.forbidden(name) }
-        return try command.run(Invocation(args: command.validate(args), client: client))
+        let call = try Invocation(args: command.validate(args), client: client)
+        let target = command.name == "dispatch" ? call.text("dispatcher").lowercased() : command.name
+        if let refusal = manager.scopeRefusal(target) { throw ControlError.failed(refusal) }
+        return try command.run(call)
     }
 
     private static let meta: [Command] = [

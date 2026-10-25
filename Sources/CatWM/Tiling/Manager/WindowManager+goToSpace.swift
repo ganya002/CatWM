@@ -82,7 +82,8 @@ extension WindowManager {
     }
 
     func postMouse(_ type: CGEventType, _ point: CGPoint) {
-        guard let event = CGEvent(mouseEventSource: CGEventSource(stateID: .hidSystemState), mouseType: type,
+        guard input.pointerAndFocus,
+              let event = CGEvent(mouseEventSource: CGEventSource(stateID: .hidSystemState), mouseType: type,
                                   mouseCursorPosition: point, mouseButton: .left) else { return }
         event.setIntegerValueField(.eventSourceUserData, value: Hotkeys.syntheticMarker)
         event.post(tap: .cghidEventTap)

@@ -12,9 +12,10 @@ extension WindowManager {
         noteFocus(window.id)
         if warp, config.mouseFollowsFocus {
             ignoreMouseUntil = Date().addingTimeInterval(0.3)
-            CGWarpMouseCursorPosition(navFrame(window).center)
+            warpPointer(to: navFrame(window).center)
+        } else {
+            cursorRefresh.soon()
         }
-        cursorRefresh.soon()
     }
 
     func mouseMoved() {

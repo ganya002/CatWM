@@ -21,6 +21,7 @@ struct AppSurface: TilingSurface {
     }
 
     private func startKeyTap() {
+        guard Instance.input.keys else { return Log.info("start: key binds off in a scoped instance (CATWM_KEYS=on)") }
         guard !Hotkeys.shared.start() else { return }
         Log.info("start: could not create the keyboard event tap")
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
