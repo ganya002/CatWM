@@ -135,4 +135,26 @@ import Testing
         #expect(result.model.workspaceOf[7] == nil)
         #expect(result.model.fullscreenHost.isEmpty)
     }
+
+    @Test func aTabThatGoesFullscreenJoinsItsGroupAgainWhenItLeaves() {
+        var model = WorkspaceModel()
+        model.virtualShown = ["A": "1"]
+        model.monitorOf = ["1": "A"]
+        model.assign(7, to: "1"); model.assign(8, to: "1")
+        model.joinTab(8, onto: 7)
+        let entering = WorkspaceObservation(displays: [.init(id: "A", frame: displayA, space: 1, spaces: [1, 5])],
+                                            frames: [7: displayA], present: [7], held: [], fullscreen: [8: 5])
+        var result = WorkspaceReconciliation.reconcile(
+            entering, model: model, virtual: true, homeSpace: [:], displayOf: [:]
+        )
+        #expect(!result.model.tabs.isGrouped(8))
+        let leaving = WorkspaceObservation(displays: [.init(id: "A", frame: displayA, space: 1, spaces: [1])],
+                                           frames: [7: displayA, 8: displayA], present: [7, 8], held: [])
+        result = WorkspaceReconciliation.reconcile(
+            leaving, model: result.model, virtual: true, homeSpace: [:], displayOf: [:]
+        )
+        model = result.model
+        #expect(model.rejoinMaximisedTabs { _ in true } == [8])
+        #expect(model.tabs.group(of: 7)?.members == [7, 8])
+    }
 }

@@ -15,6 +15,7 @@ struct WorkspaceModel {
     var focusClock = 0
     var focusOrder: [CGWindowID] = []
     var tabs = TabGroups()
+    var maximisedTabs: [CGWindowID: MaximisedTab] = [:]
     private(set) var shownSet: Set<String> = []
 
     func isShown(_ workspace: String?) -> Bool { workspace.map(shownSet.contains) ?? false }
@@ -51,13 +52,14 @@ struct WorkspaceModel {
         focusOrder.removeAll { $0 == id }
         lastFocused = lastFocused.filter { $0.value != id }
         fullscreenHost = fullscreenHost.filter { $0.value != id }
+        maximisedTabs[id] = nil
     }
 
     mutating func show(_ workspace: String?, on display: String) { shown[display] = workspace }
 
     mutating func resetWorkspaces() {
         workspaceOf = [:]; monitorOf = [:]; shown = [:]; virtualShown = [:]
-        states = [:]; lastFocused = [:]; fullscreenHost = [:]; tabs = TabGroups()
+        states = [:]; lastFocused = [:]; fullscreenHost = [:]; tabs = TabGroups(); maximisedTabs = [:]
     }
 
     mutating func noteFocus(_ id: CGWindowID) {

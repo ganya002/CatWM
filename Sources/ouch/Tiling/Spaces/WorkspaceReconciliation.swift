@@ -103,7 +103,7 @@ struct WorkspaceReconciliation {
         for (id, space) in observation.fullscreen.sorted(by: { $0.key < $1.key }) {
             guard let owner = observation.displays.first(where: { $0.spaces.contains(space) }) else { continue }
             let workspace = WindowManager.spaceWorkspace(display: owner.id, space: space)
-            model.assign(id, to: workspace)
+            model.hostMaximised(id, in: workspace)
             model.monitorOf[workspace] = owner.id
             model.fullscreenHost[workspace] = id
         }
