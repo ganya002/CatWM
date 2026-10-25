@@ -70,8 +70,7 @@ extension WindowManager {
     }
 
     func finishMove(restore: CGPoint) {
-        CGWarpMouseCursorPosition(restore)
-        cursorRefresh.soon()
+        warpPointer(to: restore)
         drags = [:]
         desktops.movingToSpace = false
         scheduleRefresh(after: 0.2)

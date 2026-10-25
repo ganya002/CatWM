@@ -5,6 +5,7 @@ final class WindowManager {
 
     let backend: any WindowBackend
     let scope: WindowScope?
+    let input: GlobalInput
     var config: Config
     var tilingEnabled = true
     var restoringTemplate = false {
@@ -109,10 +110,12 @@ final class WindowManager {
     let dockWindowPull = DockWindowPull()
     let dockArea = DockArea()
     let cursorRefresh: CursorRefresh
+    var warp: (CGPoint) -> Void = { CGWarpMouseCursorPosition($0) }
 
     init(backend: any WindowBackend = AXBackend.shared, config: Config, scope: WindowScope? = nil) {
         self.backend = backend
         self.scope = scope
+        input = GlobalInput(scope: scope, keys: Instance.keys)
         self.config = scope?.restrict(config) ?? config
         frontmostPID = { backend.frontmostPID() }
         animator = Animator(backend: backend)
@@ -127,11 +130,18 @@ final class WindowManager {
         return scope?.restrict(config) ?? config
     }
 
-    func scopeRefusal(_ dispatcher: String) -> String? {
+    func scopeRefusal(_ command: String) -> String? {
         guard let scope else { return nil }
-        let name = WindowActions.named(dispatcher)?.name ?? dispatcher
+        let name = WindowActions.named(command)?.name ?? command
         guard !scope.allows(name) else { return nil }
-        return "`\(name)` is not available in a scoped instance: it would change windows or Desktops outside the scope"
+        return "`\(name)` is not available in a scoped instance: "
+            + "it would act on windows, Desktops or input outside the scope"
+    }
+
+    func warpPointer(to point: CGPoint) {
+        guard input.pointerAndFocus else { return }
+        warp(point)
+        cursorRefresh.soon()
     }
 
     var currentLayoutTitle: String {

@@ -41,7 +41,8 @@ A scoped instance:
 - does not use macOS Desktops (`virtual-workspaces` is off). It does not make, remove or show a Desktop.
 - turns off focus follows mouse, mouse follows focus, quick actions and the dimming and blur panels (`WindowScope.restrict`).
 - does not start the key event tap, the Caps Lock change (`hidutil`), the Desktop swipe tap or the Dock window pull tap (`GlobalInput`). `CATWM_KEYS=on` starts the key event tap again. Then the instance reads all key presses, the same as the user's CatWM. Caps Lock stays off.
-- refuses the dispatchers in `WindowScope.refusedDispatchers`. `WindowManager.dispatch` stops them, and the socket command gives the error `failed`. These dispatchers can change windows, Desktops or input outside the scope:
+- does not move the pointer, post mouse events or take key focus with its own focus window (`GlobalInput.pointerAndFocus`). `WindowManager.warpPointer`, `postMouse`, `parkFocus` and `CursorRefresh` do nothing. For example, `movefocus` toward a display with no window of the scope does nothing.
+- refuses the commands in `WindowScope.refusedCommands`. `CommandRegistry.execute` stops them before they run, for each socket command, and for the dispatcher name of `dispatch`. `WindowManager.dispatch` stops the dispatchers of a key bind. The socket gives the error `failed`. These commands can change windows, Desktops or input outside the scope:
   - `nativefullscreen` reads the focused window of any app and makes a macOS Desktop.
   - `focusmonitor` moves the pointer when the display has no window.
   - `workspace`, `movetoworkspace`, `movetoworkspacesilent` and `sethomespace` change macOS Desktops. Without CatWM workspaces they send the Desktop shortcut or move the pointer.
@@ -49,10 +50,12 @@ A scoped instance:
   - `switcher` shows and focuses the windows of all apps.
   - `exec` and `launch` run commands and open other apps.
   - `toggledim` and `toggleblur` put panels over the windows of all apps.
+  - `grabtest` moves the pointer and posts mouse events.
+  - `modefx`, `panelfx`, `intro` and `introlab` show panels over the windows of all apps.
 
 A focus command can still make the app of the target window active. The other windows of that app can then come to the front.
 
-Add a new switch for a scoped instance to `WindowScope.restrict` (a config option), to `GlobalInput` (an event tap or a system setting) or to `WindowScope.refusedDispatchers` (a dispatcher). Do not add a check at the call site. Put each new dispatcher in `WindowScope.allowedDispatchers` or in `WindowScope.refusedDispatchers`. A test fails if a dispatcher is in no list.
+Add a new switch for a scoped instance to `WindowScope.restrict` (a config option), to `GlobalInput` (an event tap, a system setting, the pointer or the key focus) or to `WindowScope.refusedCommands` (a command or a dispatcher). Do not add a check at the call site. Put each new command and dispatcher in `WindowScope.allowedCommands` or in `WindowScope.refusedCommands`. A test fails if a command is in no list.
 
 ## Add a command
 

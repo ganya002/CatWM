@@ -79,13 +79,39 @@ import Testing
         #expect(input.keys && input.capsLock && input.mouseTaps)
     }
 
-    @Test func eachDispatcherIsAllowedOrRefusedInAScopedInstance() {
-        let names = WindowActions.all.map(\.name) + FocusDim.features.map(\.pointer.dispatcher)
-        let allowed = WindowScope.allowedDispatchers, refused = WindowScope.refusedDispatchers
+    @Test func eachCommandIsAllowedOrRefusedInAScopedInstance() {
+        let names = CommandRegistry.all.map(\.name)
+        let allowed = WindowScope.allowedCommands, refused = WindowScope.refusedCommands
         for name in names {
             #expect(allowed.contains(name) != refused.contains(name), "decide if \(name) runs in a scoped instance")
         }
         #expect(allowed.union(refused) == Set(names))
+    }
+
+    @Test func aScopedInstanceRefusesACommandBeforeItRuns() {
+        let scoped = WindowManager(scope: WindowScope(pids: [10]), config: Config())
+        let calls: [(String, [String: JSON])] = [
+            ("grabtest", [:]), ("launch", [:]), ("dispatch", ["dispatcher": .string("Workspace")])
+        ]
+        for (name, args) in calls {
+            #expect(throws: ControlError.self) { try CommandRegistry.execute(name, args, client: nil, manager: scoped) }
+        }
+        #expect(throws: Never.self) { try CommandRegistry.execute("ping", [:], client: nil, manager: scoped) }
+    }
+
+    @Test func aScopedManagerDoesNotMoveThePointerOrTakeFocus() throws {
+        let scoped = WindowManager(scope: WindowScope(pids: [10]), config: Config())
+        #expect(!scoped.input.pointerAndFocus)
+        let display = try #require(NSScreen.screens.first)
+        let away = CGRect(x: 90000, y: 90000, width: 100, height: 100)
+        let empty = Screen(id: 0, uuid: "outside", frame: away, visible: away, isBuiltin: false, nsScreen: display)
+        var warps: [CGPoint] = []
+        scoped.warp = { warps.append($0) }
+        scoped.focus(.monitor(empty))
+        scoped.refocusCurrentWorkspace()
+        scoped.warpPointer(to: away.origin)
+        #expect(warps.isEmpty)
+        #expect(scoped.focusSink == nil)
     }
 
     @Test func aScopedManagerRefusesWhatActsOutsideTheScope() {

@@ -76,7 +76,8 @@ enum Instance {
         return scope
     }()
 
-    static let input = GlobalInput(scope: scope, keys: ProcessInfo.processInfo.environment["CATWM_KEYS"])
+    static let keys = ProcessInfo.processInfo.environment["CATWM_KEYS"]
+    static let input = GlobalInput(scope: scope, keys: keys)
 
     static let defaults: UserDefaults = {
         guard let suite = paths.defaultsSuite else { return .standard }

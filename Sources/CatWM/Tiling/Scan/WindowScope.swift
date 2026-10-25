@@ -58,9 +58,12 @@ struct WindowScope: Equatable {
         return config
     }
 
-    func allows(_ dispatcher: String) -> Bool { !Self.refusedDispatchers.contains(dispatcher) }
+    func allows(_ command: String) -> Bool { !Self.refusedCommands.contains(command) }
 
-    static let allowedDispatchers: Set<String> = [
+    static let allowedCommands: Set<String> = [
+        "ping", "commands", "dispatch", "subscribe", "unsubscribe",
+        "status", "windows", "workspaces", "screens", "dump", "config.get", "config.set", "config.options",
+        "poststyle",
         "movefocus", "cyclenext", "movewindow", "movewindowtomonitor", "swapwindow", "swapnext",
         "togglefloating", "fullscreen", "minimize", "killactive",
         "moveintogroup", "moveoutofgroup", "changegroupactive", "movegroupwindow",
@@ -68,9 +71,10 @@ struct WindowScope: Equatable {
         "submap", "reload", "exit"
     ]
 
-    static let refusedDispatchers: Set<String> = [
+    static let refusedCommands: Set<String> = [
         "nativefullscreen", "focusmonitor", "workspace", "movetoworkspace", "movetoworkspacesilent", "sethomespace",
-        "sort", "sort-undo", "switcher", "exec", "launch", "toggledim", "toggleblur"
+        "sort", "sort-undo", "switcher", "exec", "launch", "toggledim", "toggleblur",
+        "grabtest", "modefx", "panelfx", "intro", "introlab"
     ]
 }
 
@@ -78,10 +82,12 @@ struct GlobalInput: Equatable {
     let keys: Bool
     let capsLock: Bool
     let mouseTaps: Bool
+    let pointerAndFocus: Bool
 
     init(scope: WindowScope?, keys: String?) {
         self.keys = scope == nil || keys == "on"
         capsLock = scope == nil
         mouseTaps = scope == nil
+        pointerAndFocus = scope == nil
     }
 }
