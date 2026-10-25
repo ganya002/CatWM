@@ -37,7 +37,7 @@ import Testing
     }
 
     @Test func anUnknownDispatcherIsIgnored() {
-        let manager = WindowManager()
+        let manager = WindowManager(config: .parse(defaultText))
         var dispatched: [String] = []
         manager.onDispatch = { name, _, _ in dispatched.append(name) }
         manager.dispatch("nothing", "")
@@ -46,7 +46,7 @@ import Testing
     }
 
     @Test func aHandlerRunsByNameAndByAlias() throws {
-        let manager = WindowManager()
+        let manager = WindowManager(config: .parse(defaultText))
         manager.corrections = [1: (target: .zero, count: 1)]
         try #require(WindowActions.named("retile")).run(ActionContext(manager: manager, arg: ""))
         #expect(manager.corrections.isEmpty)

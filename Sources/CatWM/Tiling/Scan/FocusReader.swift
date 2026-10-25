@@ -6,7 +6,7 @@ final class FocusReader {
     private let read: (pid_t) -> Result
     private var queues: [pid_t: DispatchQueue] = [:]
 
-    init(read: @escaping (pid_t) -> Result = FocusReader.read) {
+    init(read: @escaping (pid_t) -> Result = { AXBackend.shared.focusedWindow(pid: $0) }) {
         self.read = read
     }
 
@@ -23,7 +23,7 @@ final class FocusReader {
 
     var queueCount: Int { queues.count }
 
-    private static func read(_ pid: pid_t) -> Result {
+    static func read(_ pid: pid_t) -> Result {
         dispatchPrecondition(condition: .notOnQueue(.main))
         var value: CFTypeRef?
         let result = AXUIElementCopyAttributeValue(axApp(pid), kAXFocusedWindowAttribute as CFString, &value)

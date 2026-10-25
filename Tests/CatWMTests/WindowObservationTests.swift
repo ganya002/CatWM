@@ -8,7 +8,7 @@ import Testing
     }
 
     @Test @MainActor func emptyRestorationRepliesDuringTheTerminationRunLoop() {
-        let manager = WindowManager()
+        let manager = WindowManager(config: .parse(defaultText))
         manager.config.virtualWorkspaces = false
         var returned = false
         var completed = false
@@ -25,7 +25,7 @@ import Testing
     }
 
     @Test @MainActor func floatingFocusUsesThePendingUnparkDestination() {
-        let manager = WindowManager()
+        let manager = WindowManager(config: .parse(defaultText))
         let tracked = window()
         tracked.userFloating = .chosen(true)
         tracked.remember(CGRect(x: 1999, y: 799, width: 300, height: 200))
@@ -59,7 +59,7 @@ import Testing
     }
 
     @Test @MainActor func replayingAScanCannotUndoANewerFrame() {
-        let manager = WindowManager()
+        let manager = WindowManager(config: .parse(defaultText))
         let tracked = window()
         let frame = CGRect(x: 10, y: 20, width: 100, height: 200)
         let placed = CGRect(x: 50, y: 60, width: 300, height: 400)

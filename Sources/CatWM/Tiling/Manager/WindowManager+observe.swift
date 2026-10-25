@@ -27,7 +27,7 @@ extension WindowManager {
             DispatchQueue.main.async {
                 guard let self, self.observing[pid] == token else { return }
                 self.observing[pid] = nil
-                guard let registered, NSRunningApplication(processIdentifier: pid) != nil else { return }
+                guard let registered, self.backend.isRunning(pid) else { return }
                 CFRunLoopAddSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(registered), .defaultMode)
                 self.observers[pid] = registered
                 self.windows.values.filter { $0.pid == pid }.forEach(self.watch)
@@ -98,7 +98,7 @@ extension WindowManager {
         guard height > 0, height <= 60,
               height > menuBarHeights[screen.uuid]?.height(on: screen.visible) ?? 0 else { return }
         menuBarHeights[screen.uuid] = MenuBarFloor(height: height, visible: screen.visible)
-        Log.info("\(screen.nsScreen.localizedName) keeps windows \(Int(height)) pt below its top; tiling below it")
+        Log.info("\(screen.name) keeps windows \(Int(height)) pt below its top; tiling below it")
         corrections = [:]
         refresh()
     }
@@ -113,10 +113,10 @@ extension WindowManager {
         Log.info("window \(id) has a minimum size of \(Int(new.width))×\(Int(new.height)); re-tiling around it")
         if let change = dividerState.ratioChange, Date() < change.until {
             dividerState.ratioChange = nil
-            warnTooSmall(id, on: Screen.all().first { $0.uuid == change.screen })
+            warnTooSmall(id, on: backend.screens().first { $0.uuid == change.screen })
         }
         if let drag = dividerState.dividerDrag, let position = drag.position,
-           let screen = Screen.all().first(where: { $0.uuid == drag.screen }) {
+           let screen = backend.screens().first(where: { $0.uuid == drag.screen }) {
             moveDivider(on: screen, to: position)
         }
         scheduleRefresh()

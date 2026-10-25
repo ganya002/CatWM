@@ -59,7 +59,7 @@ import Testing
         func screen(_ uuid: String) -> Screen {
             Screen(id: 0, uuid: uuid, frame: .zero, visible: .zero, isBuiltin: false, nsScreen: nsScreen)
         }
-        let manager = WindowManager()
+        let manager = WindowManager(config: .parse(defaultText))
         manager.desktops.nativeCatalog.sharedSpaces = true
         for id: CGWindowID in [1, 2] {
             let window = Window(id: id, element: AXUIElementCreateApplication(-1), pid: -1, bundleID: nil)

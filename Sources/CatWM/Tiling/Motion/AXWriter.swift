@@ -11,6 +11,7 @@ final class AXWriter {
     struct Stats { var size = Stat(), position = Stat(), land = Stat(), skipped = 0 }
 
     let pid: pid_t
+    private let backend: any WindowBackend
     private let queue: DispatchQueue
     private let lock = NSLock()
     private var pending: [CGWindowID: Pending] = [:]
@@ -22,9 +23,10 @@ final class AXWriter {
     private var stepCosts: [CGWindowID: StepCost] = [:]
     private var enhancedUI: EnhancedUI
 
-    init(pid: pid_t) {
+    init(pid: pid_t, backend: any WindowBackend = AXBackend.shared) {
         self.pid = pid
-        enhancedUI = EnhancedUI(pid: pid)
+        self.backend = backend
+        enhancedUI = EnhancedUI(pid: pid, backend: backend)
         queue = DispatchQueue(label: "catwm.ax.\(pid)", qos: .userInteractive)
     }
 
@@ -115,7 +117,7 @@ final class AXWriter {
 
     private func apply(_ item: Pending) {
         let window = item.window
-        if window.placementSuspended || WindowPlacementState.blocksPlacement(window.element) {
+        if window.placementSuspended || backend.blocksPlacement(window) {
             if animating.remove(window.id) != nil { enhancedUI.resume() }
             switch item.operation {
             case let .land(_, done), let .position(_, done): DispatchQueue.main.async { done(false) }

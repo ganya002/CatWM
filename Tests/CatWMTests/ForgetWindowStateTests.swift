@@ -4,7 +4,7 @@ import Testing
 
 @Suite struct ForgetWindowStateTests {
     @Test @MainActor func forgettingAWindowReleasesItsNativeMove() {
-        let manager = WindowManager()
+        let manager = WindowManager(config: .parse(defaultText))
         manager.config.virtualWorkspaces = false
         let window = Window(id: 41, element: AXUIElementCreateApplication(-1), pid: -1, bundleID: nil)
         manager.windows[window.id] = window

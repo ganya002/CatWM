@@ -50,7 +50,7 @@ extension WindowManager {
         ) { [weak self] in
             guard let self else { return }
             let point = mouseLocation()
-            if attemptsLeft > 0, let screen = Screen.all().first(where: { $0.frame.contains(point) }),
+            if attemptsLeft > 0, let screen = backend.screens().first(where: { $0.frame.contains(point) }),
                let info = Spaces.list(display: screen.uuid), let cur = info.current,
                info.desktops.indices.contains(number - 1),
                cur != info.desktops[number - 1],

@@ -18,7 +18,7 @@ extension WindowManager {
     }
 
     func focus(on screen: Screen) {
-        let screens = Screen.all()
+        let screens = backend.screens()
         let topmost = CGWindowInfo.onScreen().first { info in
             guard visible.contains(info.id), let window = windows[info.id] else { return false }
             return self.screen(of: window, in: screens)?.uuid == screen.uuid

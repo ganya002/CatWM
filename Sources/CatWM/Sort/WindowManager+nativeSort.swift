@@ -20,7 +20,8 @@ extension WindowManager {
 
     @MainActor private func commitNativeSort() async {
         for name in desktops.nativeSortNames.sorted(by: workspaceSort) {
-            guard let display = monitorOf[name], let screen = Screen.all().first(where: { $0.uuid == display }) else {
+            guard let display = monitorOf[name],
+                  let screen = backend.screens().first(where: { $0.uuid == display }) else {
                 continue
             }
             do { _ = try await ensureNativeWorkspace(name, on: screen) } catch {
@@ -45,7 +46,7 @@ extension WindowManager {
     }
 
     @MainActor func leaveFullscreen(_ id: CGWindowID, to workspace: String) async {
-        guard let window = windows[id], let screen = Screen.all().first(where: {
+        guard let window = windows[id], let screen = backend.screens().first(where: {
             $0.uuid == monitorOf[workspace]
         }), window.unlessStalled(false, { window.element.set("AXFullScreen", kCFBooleanFalse) }) else {
             Log.info("sort: \(id) refused to leave full screen")

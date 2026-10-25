@@ -71,14 +71,14 @@ extension WindowManager {
 
     private func makeRequest() throws -> TemplateCaptureRequest {
         guard isStarted else { throw TemplateError.notReady }
-        let screens = Screen.all()
+        let screens = backend.screens()
         guard !screens.isEmpty else { throw TemplateError.notReady }
         let mainID = NSScreen.screens.first?.displayID
         var displays: [WorkspaceTemplate.Display] = []
         var zoomed: [String: CGWindowID] = [:]
         for screen in screens {
             let state = state(for: screen)
-            displays.append(.init(id: screen.uuid, name: screen.nsScreen.localizedName, frame: screen.frame,
+            displays.append(.init(id: screen.uuid, name: screen.name, frame: screen.frame,
                                   visible: screen.visible, isMain: screen.id == mainID, layout: state.layout.rawValue,
                                   ratio: state.ratio, mainCount: state.mainCount))
             if let id = state.zoomed { zoomed[screen.uuid] = id }
@@ -97,7 +97,7 @@ extension WindowManager {
             if let monitor = monitorOf[workspace], displayIDs.contains(monitor) { monitors[id] = monitor }
         }
         let facts = TemplateCaptureFacts(tilingEnabled: tilingEnabled, displays: displays, zoomed: zoomed, order: order,
-                                         currentSpaces: Set(screens.map { Spaces.current(display: $0.uuid) }),
+                                         currentSpaces: Set(screens.map { backend.currentSpace(display: $0.uuid) }),
                                          hiddenWorkspaceWindows: hidden, monitorForTiled: monitors,
                                          virtualWorkspaces: config.virtualWorkspaces, knownFloating: knownFloating,
                                          naturalFrames: naturalFrames, fallbackFocus: model.mostRecent(of: visible))
@@ -108,7 +108,7 @@ extension WindowManager {
                                        name: app.localizedName ?? bundleID, launchDate: app.launchDate)
         }
         return TemplateCaptureRequest(facts: facts, apps: apps,
-                                      frontmostPID: NSWorkspace.shared.frontmostApplication?.processIdentifier)
+                                      frontmostPID: frontmostPID())
     }
 
     private func finish(_ batch: WindowBatch, facts: TemplateCaptureFacts) throws -> WorkspaceTemplate {

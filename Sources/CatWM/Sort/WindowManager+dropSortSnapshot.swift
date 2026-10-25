@@ -5,7 +5,7 @@ extension WindowManager {
 
     func sortDisplays() -> [SortDisplay] {
         guard config.virtualWorkspaces, isStarted else { return [] }
-        let screens = Screen.all()
+        let screens = backend.screens()
         guard let first = screens.first else { return [] }
         var rank: [CGWindowID: Int] = [:]
         let focusRanked = [focusedWindow()?.id].compactMap(\.self) + focusOrder
@@ -23,7 +23,8 @@ extension WindowManager {
         for (i, name) in names.enumerated() where names.filter({ $0 == name }).count > 1 {
             shorts[i] = "\(name) \(names[..<i].filter { $0 == name }.count + 1)"
         }
-        return screens.enumerated().map { index, screen in
+        return screens.enumerated().compactMap { index, screen in
+            guard let nsScreen = screen.nsScreen else { return nil }
             let mine = tiledIDs.filter { home($0) == screen.uuid }
             let items = mine.compactMap { sortItem($0, rank: rank) }
             let fullscreen = model.fullscreenHost.filter { monitorOf[$0.key] == screen.uuid }.values
@@ -34,9 +35,9 @@ extension WindowManager {
             let taken = Set(elsewhere.keys)
                 .union(virtualShown.filter { $0.key != screen.uuid }.values)
                 .union(tiledIDs.filter { home($0) != screen.uuid }.compactMap { workspaceOf[$0] })
-            return SortDisplay(id: screen.uuid, name: screen.nsScreen.localizedName, short: shorts[index],
+            return SortDisplay(id: screen.uuid, name: screen.name, short: shorts[index],
                                isLaptop: screen.isBuiltin, aspect: screen.frame.width / max(screen.frame.height, 1),
-                               screen: screen.nsScreen, items: items, fullscreen: fullscreen,
+                               screen: nsScreen, items: items, fullscreen: fullscreen,
                                workspaces: sortWorkspaces(mine, active: active, display: screen.uuid),
                                active: active, taken: taken, perDisplay: config.workspacesPerDisplay,
                                tabs: tabs.groups.map(\.activeFirst))
@@ -83,8 +84,8 @@ extension WindowManager {
 
     static func shortName(_ screen: Screen) -> String {
         if screen.isBuiltin { return "Built-in" }
-        let words = screen.nsScreen.localizedName.split(separator: " ").filter { $0.lowercased() != "display" }
-        return words.isEmpty ? screen.nsScreen.localizedName : words.joined(separator: " ")
+        let words = screen.name.split(separator: " ").filter { $0.lowercased() != "display" }
+        return words.isEmpty ? screen.name : words.joined(separator: " ")
     }
 
     func beginSort() {

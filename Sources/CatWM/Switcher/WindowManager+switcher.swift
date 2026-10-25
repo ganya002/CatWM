@@ -31,7 +31,7 @@ extension WindowManager {
     }
 
     private func windowsOnOtherSpaces() -> [(info: CGWindowInfo, space: String)] {
-        let displays = Screen.all().compactMap { Spaces.list(display: $0.uuid) }
+        let displays = backend.screens().compactMap { Spaces.list(display: $0.uuid) }
         let names = Self.spaceLabels(displays)
         let current = Set(displays.compactMap { display in display.current.map { display.ids[$0] } })
         let desktop = scanner.desktop
@@ -71,7 +71,8 @@ extension WindowManager {
 
     func switchTo(_ item: SwitcherItem) {
         if let space = Spaces.of(window: item.id).first, let workspace = workspace(on: space),
-           let display = desktops.nativeCatalog.entry(workspace)?.display, Spaces.current(display: display) != space {
+           let display = desktops.nativeCatalog.entry(workspace)?.display,
+           backend.currentSpace(display: display) != space {
             lastFocused[workspace] = item.id
             showWorkspace(workspace, focusing: windows[item.id])
             return
@@ -101,7 +102,7 @@ extension WindowManager {
 
     private func stepToSpace(of id: CGWindowID) -> Bool {
         guard let space = Spaces.of(window: id).first else { return false }
-        for screen in Screen.all() {
+        for screen in backend.screens() {
             guard let info = Spaces.list(display: screen.uuid), let target = info.ids.firstIndex(of: space),
                   let cur = info.current, cur != target, let combo = SystemShortcut.step(right: target > cur)
             else { continue }

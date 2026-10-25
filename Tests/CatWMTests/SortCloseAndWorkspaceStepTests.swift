@@ -28,7 +28,7 @@ import Testing
     }
 
     @Test @MainActor func aRemovedWorkspaceForgetsItsLabel() {
-        let manager = WindowManager()
+        let manager = WindowManager(config: .parse(defaultText))
         manager.labels["3"] = "Mail"
         manager.lastFocused["3"] = 7
         manager.forgetRemovedWorkspace("3")

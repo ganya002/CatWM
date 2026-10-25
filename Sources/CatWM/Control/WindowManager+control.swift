@@ -19,7 +19,7 @@ extension WindowManager {
 
     func windowsJSON() -> JSON {
         let focused = focusedWindow()?.id
-        let screens = Screen.all()
+        let screens = backend.screens()
         let ranked = order.enumerated().reduce(into: [CGWindowID: Int]()) { $0[$1.element] = $1.offset }
         let known = windows.values.sorted { (ranked[$0.id] ?? .max, $0.id) < (ranked[$1.id] ?? .max, $1.id) }
         return .array(known.map { window in
@@ -54,10 +54,10 @@ extension WindowManager {
 
     func screensJSON() -> JSON {
         let focused = currentScreen()?.uuid
-        return .array(Screen.all().map { screen in
+        return .array(backend.screens().map { screen in
             let screenState = state(for: screen)
             return [
-                "uuid": .string(screen.uuid), "name": .string(screen.nsScreen.localizedName),
+                "uuid": .string(screen.uuid), "name": .string(screen.name),
                 "frame": .rect(screen.frame), "usable": .rect(usableRect(screen)),
                 "layout": .string(screenState.layout.rawValue), "ratio": .number(Double(screenState.ratio)),
                 "mainCount": .int(screenState.mainCount), "workspace": .string(shown[screen.uuid] ?? ""),

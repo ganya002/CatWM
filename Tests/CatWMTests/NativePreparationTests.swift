@@ -16,7 +16,7 @@ struct NativePreparationTests {
     private func preparation(blockedPID: pid_t, shouldWait: Bool) async throws {
         _ = NSApplication.shared
         let screen = try #require(Screen.all().first)
-        let manager = WindowManager()
+        let manager = WindowManager(config: .parse(defaultText))
         manager.tilingEnabled = true
         let frame = CGRect(x: 10, y: 20, width: 300, height: 200)
         func window(_ id: CGWindowID, pid: pid_t) -> Window {

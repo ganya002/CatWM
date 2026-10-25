@@ -5,7 +5,7 @@ import Testing
 @MainActor @Suite(.serialized) struct DesktopRemovalTests {
     @Test func anOccupiedDesktopIsNotRetried() async throws {
         guard let screen = Screen.all().first else { return }
-        let manager = WindowManager()
+        let manager = WindowManager(config: .parse(defaultText))
         var attempts = 0
         do {
             try await manager.removeDesktop(0, on: screen) { _, _ in
@@ -19,7 +19,7 @@ import Testing
 
     @Test func aTransientRemovalFailureStillRetries() async throws {
         guard let screen = Screen.all().first else { return }
-        let manager = WindowManager()
+        let manager = WindowManager(config: .parse(defaultText))
         var attempts = 0
         try await manager.removeDesktop(0, on: screen) { _, _ in
             attempts += 1
@@ -52,7 +52,7 @@ import Testing
             try #require(held)
             let start = ProcessInfo.processInfo.systemUptime
             do {
-                try await WindowManager().removeDesktop(space, on: screen)
+                try await WindowManager(config: .parse(defaultText)).removeDesktop(space, on: screen)
                 Issue.record("The occupied Desktop was removed")
             } catch DesktopTransitionError.occupied { }
             let elapsed = (ProcessInfo.processInfo.systemUptime - start) * 1000

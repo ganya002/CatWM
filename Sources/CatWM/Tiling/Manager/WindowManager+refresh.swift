@@ -17,7 +17,7 @@ extension WindowManager {
         let timing = TilingTiming("refresh", windows: windows.count)
         defer { timing.finish() }
         if scanner.lastScan == 0 { scheduleRefresh(after: 0) }
-        let screens = Screen.all()
+        let screens = backend.screens()
         timing.checkpoint("screens")
         guard !screens.isEmpty else { return }
         if config.virtualWorkspaces {
@@ -109,7 +109,7 @@ extension WindowManager {
     private func observeWindows(screens: [Screen], onScreen: [CGWindowInfo]) -> ObservedWindows {
         let onScreenIDs = Set(onScreen.map(\.id))
         let pidsOnScreen = Set(onScreen.map(\.pid))
-        let currentSpaces = Set(screens.map { Spaces.current(display: $0.uuid) })
+        let currentSpaces = Set(screens.map { backend.currentSpace(display: $0.uuid) })
         func onOtherSpace(_ id: CGWindowID) -> Bool {
             let spaces = scanner.desktop.spaces[id] ?? []
             return !spaces.isEmpty && currentSpaces.isDisjoint(with: spaces)
@@ -137,7 +137,7 @@ extension WindowManager {
                     continue
                 }
                 guard let found = scan.found[id], !found.frame.isNull else { continue }
-                let window = Window(id: id, element: found.element, pid: pid, bundleID: app.bundleID)
+                let window = Window(id: id, element: found.element, pid: pid, bundleID: app.bundleID, backend: backend)
                 accept(found, from: scan, for: window)
                 if !maximised { window.naturalFrame = found.frame }
                 window.autoFloating = shouldFloat(window, title: found.title, resizable: found.resizable || maximised)
@@ -201,7 +201,7 @@ extension WindowManager {
 
     private func forgetGoneWindows(present: Set<CGWindowID>) {
         for (id, window) in windows where !present.contains(id) {
-            let appGone = NSRunningApplication(processIdentifier: window.pid) == nil
+            let appGone = !backend.isRunning(window.pid)
             if appGone || scanner.results[window.pid]?.gone.contains(id) == true {
                 forget(id, keepRecovery: appGone || isPoweringOff)
             }

@@ -8,7 +8,7 @@ extension WindowManager {
             desktops.pendingSpace = nil
             return 1
         }
-        let screens = Screen.all()
+        let screens = backend.screens()
         let point = mouseLocation()
         guard let screen = screens.first(where: { $0.frame.contains(point) }) ?? currentScreen(),
               let info = Spaces.list(display: screen.uuid), var cur = info.current else {

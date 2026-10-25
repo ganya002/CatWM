@@ -11,6 +11,7 @@ final class Window {
     let element: AXUIElement
     let pid: pid_t
     let bundleID: String?
+    let backend: any WindowBackend
     var autoFloating = false
     var userFloating = FloatingChoice.automatic
     var naturalFrame = CGRect.null
@@ -26,8 +27,9 @@ final class Window {
 
     static let messagingTimeout: Float = 0.5
 
-    init(id: CGWindowID, element: AXUIElement, pid: pid_t, bundleID: String?) {
-        self.id = id; self.element = element; self.pid = pid; self.bundleID = bundleID
+    init(id: CGWindowID, element: AXUIElement, pid: pid_t, bundleID: String?,
+         backend: any WindowBackend = AXBackend.shared) {
+        self.id = id; self.element = element; self.pid = pid; self.bundleID = bundleID; self.backend = backend
         AXUIElementSetMessagingTimeout(element, Self.messagingTimeout)
     }
 
@@ -45,7 +47,7 @@ final class Window {
     var frame: CGRect {
         let version = frameRevision
         let readAt = Date()
-        let current = element.frame
+        let current = backend.frame(of: self)
         remember(current, ifRevision: version, readAt: readAt)
         return current
     }
@@ -78,14 +80,12 @@ final class Window {
     var frameUnlessStalled: CGRect { unlessStalled(.null) { frame } }
 
     func setPosition(_ origin: CGPoint) {
-        var point = origin
-        if let value = AXValueCreate(.cgPoint, &point), element.set(kAXPositionAttribute, value) {
-            frameLock.withLock { if !lastFrame.isNull { lastFrame.origin = point; frameVersion += 1 } }
+        if backend.setPosition(self, origin) {
+            frameLock.withLock { if !lastFrame.isNull { lastFrame.origin = origin; frameVersion += 1 } }
         }
     }
-    func setSize(_ newSize: CGSize) {
-        var size = newSize
-        if let value = AXValueCreate(.cgSize, &size), element.set(kAXSizeAttribute, value) {
+    func setSize(_ size: CGSize) {
+        if backend.setSize(self, size) {
             frameLock.withLock { if !lastFrame.isNull { lastFrame.size = size; frameVersion += 1 } }
         }
     }
@@ -95,17 +95,7 @@ final class Window {
         setSize(rect.size)
     }
 
-    func focus(ifCurrent: () -> Bool = { true }) {
-        guard ifCurrent() else { return }
-        if !WindowServerFocus.focus(pid: pid, window: id) {
-            axApp(pid).set(kAXFrontmostAttribute, kCFBooleanTrue)
-            NSRunningApplication(processIdentifier: pid)?.activate()
-        }
-        guard ifCurrent() else { return }
-        element.set(kAXMainAttribute, kCFBooleanTrue)
-        guard ifCurrent() else { return }
-        element.perform(kAXRaiseAction)
-    }
+    func focus(ifCurrent: () -> Bool = { true }) { backend.focus(self, ifCurrent: ifCurrent) }
 
     @discardableResult
     func close() -> String {

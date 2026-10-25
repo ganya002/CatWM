@@ -52,9 +52,9 @@ final class WindowScanner {
     private let read: (Job, (AppScan) -> Void) -> AppScan
     private let scanDeadline: TimeInterval
 
-    init(read: @escaping (Job, (AppScan) -> Void) -> AppScan = WindowScanner.read,
-         readDesktop: @escaping (Set<CGWindowID>) -> WindowServerObservation = WindowServerObservation.read,
-         readApplications: @escaping () -> [RunningApplicationSnapshot] = RunningApplicationSnapshot.read,
+    init(read: @escaping (Job, (AppScan) -> Void) -> AppScan = { AXBackend.shared.scan($0, discovered: $1) },
+         readDesktop: @escaping (Set<CGWindowID>) -> WindowServerObservation = { AXBackend.shared.desktop(known: $0) },
+         readApplications: @escaping () -> [RunningApplicationSnapshot] = { AXBackend.shared.applications() },
          deadline: TimeInterval = WindowScanner.deadline) {
         self.read = read
         self.readDesktop = readDesktop

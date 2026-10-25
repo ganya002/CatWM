@@ -10,13 +10,13 @@ extension WindowManager {
     }
 
     func focusMonitor(_ spec: String) {
-        guard let src = currentScreen(), let dst = screen(from: src, spec: spec, in: Screen.all()) else { return }
+        guard let src = currentScreen(), let dst = screen(from: src, spec: spec, in: backend.screens()) else { return }
         focus(on: dst)
     }
 
     func moveToMonitor(_ spec: String) {
         guard !restoringTemplate else { return }
-        let screens = Screen.all()
+        let screens = backend.screens()
         guard let window = focusedWindow(), let src = screen(of: window, in: screens),
               let dst = screen(from: src, spec: spec, in: screens), dst.uuid != src.uuid else { return }
         if window.isFloating {

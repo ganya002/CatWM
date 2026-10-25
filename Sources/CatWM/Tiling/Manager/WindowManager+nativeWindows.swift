@@ -11,7 +11,7 @@ extension WindowManager {
     }
 
     func moveNativeWindow(_ window: Window, to workspace: String, follow: Bool, from origin: String?? = nil) {
-        updateNativeCatalog(Screen.all())
+        updateNativeCatalog(backend.screens())
         guard !workspaceMoves.contains(window.id) else { return }
         guard !window.fullscreenUnlessStalled else { desktops.nativeMoveTargets[window.id] = nil; return }
         guard !desktops.nativeCreationBusy, let target = desktops.nativeCatalog.entry(workspace) else {
@@ -22,7 +22,7 @@ extension WindowManager {
         let hadFocus = focusedWindow()?.id == window.id
         let known = windows[window.id] != nil
         let frame = window.frameUnlessStalled
-        let visibleTarget = Spaces.current(display: target.display) == target.space
+        let visibleTarget = backend.currentSpace(display: target.display) == target.space
         workspaceMoves.insert(window.id)
         if follow, !visibleTarget {
             animator.cancel(window.id)
@@ -95,7 +95,7 @@ extension WindowManager {
     }
 
     private func createWorkspaceThenMove(_ window: Window, to workspace: String, follow: Bool) {
-        guard let screen = currentScreen() ?? Screen.all().first else { return }
+        guard let screen = currentScreen() ?? backend.screens().first else { return }
         desktops.nativeMoveTargets[window.id] = workspace
         Task { @MainActor in
             do {
@@ -124,7 +124,7 @@ extension WindowManager {
         }
         guard current() else { throw CancellationError() }
         guard free else { throw DesktopTransitionError.check("The previous Desktop action did not finish") }
-        guard let snapshot = updateNativeCatalog(Screen.all()) else {
+        guard let snapshot = updateNativeCatalog(backend.screens()) else {
             throw DesktopTransitionError.check("macOS could not read the Desktops")
         }
         if let entry = desktops.nativeCatalog.entry(name) { return entry }
@@ -140,7 +140,7 @@ extension WindowManager {
             let created = try await DesktopLifecycle.create(on: screen, snapshot: latest, before: successor)
             if !config.workspacesPerDisplay { desktops.nativeCatalog.bind(name, to: created.space, on: screen.uuid) }
             latest = created.snapshot
-            updateNativeCatalog(Screen.all(), snapshot: latest)
+            updateNativeCatalog(backend.screens(), snapshot: latest)
         } while config.workspacesPerDisplay && desktops.nativeCatalog.entry(name) == nil
             && desktops.nativeCatalog.entries(on: screen.uuid).count < number
         guard let entry = desktops.nativeCatalog.entry(name) else {
@@ -161,7 +161,7 @@ extension WindowManager {
             let entries = removed.compactMap { self.desktops.nativeCatalog.entry($0) }
                 .sorted { (Int(WorkspaceKey.number($0.name)) ?? 0) > (Int(WorkspaceKey.number($1.name)) ?? 0) }
             for entry in entries {
-                guard let screen = Screen.all().first(where: { $0.uuid == entry.display }) else { continue }
+                guard let screen = backend.screens().first(where: { $0.uuid == entry.display }) else { continue }
                 do {
                     try await self.removeDesktop(entry.space, on: screen)
                     if self.config.workspacesPerDisplay { self.closeGap(after: entry) }
@@ -177,7 +177,7 @@ extension WindowManager {
 extension WindowManager {
     func adoptNativeZoom(_ window: Window) {
         scanner.run(window.pid) { [weak self] in
-            let frame = window.element.frame
+            let frame = window.backend.frame(of: window)
             DispatchQueue.main.async {
                 guard let self, self.windows[window.id] === window, !window.isFloating,
                       !self.animator.isBusy(window.id), !frame.isNull,

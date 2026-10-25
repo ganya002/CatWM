@@ -77,7 +77,8 @@ extension WindowManager {
     }
 
     func workspaceKey(for screen: Screen) -> String {
-        shown[screen.uuid] ?? Self.spaceWorkspace(display: screen.uuid, space: Spaces.current(display: screen.uuid))
+        shown[screen.uuid]
+            ?? Self.spaceWorkspace(display: screen.uuid, space: backend.currentSpace(display: screen.uuid))
     }
 
     func state(workspace key: String) -> ScreenState {
@@ -87,7 +88,9 @@ extension WindowManager {
         return created
     }
 
-    func screen(containing rect: CGRect, in screens: [Screen] = Screen.all()) -> Screen? {
+    func screen(containing rect: CGRect) -> Screen? { screen(containing: rect, in: backend.screens()) }
+
+    func screen(containing rect: CGRect, in screens: [Screen]) -> Screen? {
         guard !rect.isNull else { return screens.first }
         return screens.max { first, second in
             let firstOverlap = first.frame.intersection(rect), secondOverlap = second.frame.intersection(rect)
@@ -96,7 +99,9 @@ extension WindowManager {
         }
     }
 
-    func screen(of window: Window, in screens: [Screen] = Screen.all()) -> Screen? {
+    func screen(of window: Window) -> Screen? { screen(of: window, in: backend.screens()) }
+
+    func screen(of window: Window, in screens: [Screen]) -> Screen? {
         if sharesSpaces {
             if !window.isFloating, let uuid = displayOf[window.id],
                let match = screens.first(where: { $0.uuid == uuid }) { return match }
@@ -107,7 +112,7 @@ extension WindowManager {
     }
 
     func currentScreen() -> Screen? {
-        let screens = Screen.all()
+        let screens = backend.screens()
         if let window = focusedWindow(), let match = screen(of: window, in: screens) { return match }
         let point = mouseLocation()
         return screens.first { $0.frame.contains(point) } ?? screens.first

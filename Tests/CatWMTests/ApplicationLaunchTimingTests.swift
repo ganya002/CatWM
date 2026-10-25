@@ -4,7 +4,7 @@ import Testing
 
 @MainActor @Suite struct ApplicationLaunchTimingTests {
     @Test func launchSchedulesDiscoveryWithoutAnInitialWait() {
-        let manager = WindowManager()
+        let manager = WindowManager(config: .parse(defaultText))
         defer { manager.refreshWork?.cancel() }
         manager.applicationLaunched(.current)
         #expect(manager.refreshWork != nil)
@@ -12,7 +12,7 @@ import Testing
     }
 
     @Test func launchAdvancesAnAlreadyScheduledRefresh() {
-        let manager = WindowManager()
+        let manager = WindowManager(config: .parse(defaultText))
         defer { manager.refreshWork?.cancel() }
         manager.scheduleRefresh(after: 1)
         manager.applicationLaunched(.current)

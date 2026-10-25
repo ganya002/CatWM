@@ -38,6 +38,7 @@ final class Animator {
     private let focusLock = NSLock()
     private var focusGeneration = 0
     private var focusQueues: [pid_t: DispatchQueue] = [:]
+    private let backend: any WindowBackend
     private let makeWriter: (pid_t) -> AXWriter
     private let applyFocus: (Window, () -> Bool) -> Void
     private var timer: Timer?
@@ -47,9 +48,10 @@ final class Animator {
     var onTopRefused: ((_ target: CGRect, _ actual: CGRect) -> Void)?
     var onLanded: (() -> Void)?
 
-    init(makeWriter: @escaping (pid_t) -> AXWriter = AXWriter.init,
+    init(backend: any WindowBackend = AXBackend.shared, makeWriter: ((pid_t) -> AXWriter)? = nil,
          applyFocus: @escaping (Window, () -> Bool) -> Void = { $0.focus(ifCurrent: $1) }) {
-        self.makeWriter = makeWriter
+        self.backend = backend
+        self.makeWriter = makeWriter ?? { AXWriter(pid: $0, backend: backend) }
         self.applyFocus = applyFocus
     }
 
@@ -247,9 +249,9 @@ final class Animator {
               !window.placementSuspended else { return }
         quietUntil[window.id] = CACurrentMediaTime() + 0.4
         let writer = writer(window.pid)
-        writer.run(for: window.id) { [weak self] isCurrent in
+        writer.run(for: window.id) { [weak self, backend] isCurrent in
             var actual = window.frame
-            guard isCurrent(), !window.placementSuspended, !WindowPlacementState.blocksPlacement(window.element),
+            guard isCurrent(), !window.placementSuspended, !backend.blocksPlacement(window),
                   !actual.isNull, !actual.approxEqual(move.target, tolerance: 2) else { return }
             writer.suspendEnhancedUI()
             defer { writer.resumeEnhancedUI() }

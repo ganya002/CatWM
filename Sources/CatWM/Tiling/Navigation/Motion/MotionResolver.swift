@@ -113,7 +113,7 @@ enum MotionTarget {
 
 extension WindowManager {
     func resolve(_ direction: Direction, from window: Window, among candidates: [Window]) -> MotionTarget? {
-        let screens = Screen.all()
+        let screens = backend.screens()
         if let home = screen(of: window, in: screens), state(for: home).zoomed == window.id {
             return MotionResolver.cycle(window.id, in: tiled(on: home), direction)
                 .flatMap { windows[$0] }.map(MotionTarget.window)

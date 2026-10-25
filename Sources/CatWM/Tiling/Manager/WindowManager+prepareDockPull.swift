@@ -5,7 +5,7 @@ extension WindowManager {
         let deadline = Date().addingTimeInterval(0.15)
         guard isStarted, config.virtualWorkspaces, !closeAndSort.sortSession, dockArea.contains(point),
               Spaces.canMoveWindows,
-              let display = Screen.all().first(where: { $0.frame.contains(point) }),
+              let display = backend.screens().first(where: { $0.frame.contains(point) }),
               isOnHomeSpace(display), let workspace = virtualShown[display.uuid],
               let app = dockApplication(at: point),
               !AXStalls.shared.isStalled(app.processIdentifier) else { return nil }
@@ -20,7 +20,7 @@ extension WindowManager {
         }
         let candidates = [focusedWindow, appElement.element(kAXMainWindowAttribute)]
             .compactMap(\.self) + known + appElement.elements(kAXWindowsAttribute)
-        let desktops = Set(Screen.all().flatMap { screen -> [UInt64] in
+        let desktops = Set(backend.screens().flatMap { screen -> [UInt64] in
             guard let info = Spaces.list(display: screen.uuid) else { return [] }
             return info.desktops.map { info.ids[$0] }
         })
@@ -32,11 +32,12 @@ extension WindowManager {
             guard candidate.string(kAXSubroleAttribute) == kAXStandardWindowSubrole else { continue }
             let membership = Spaces.of(window: id)
             guard membership.count == 1, let source = membership.first,
-                  desktops.contains(source), source != Spaces.current(display: display.uuid),
+                  desktops.contains(source), source != backend.currentSpace(display: display.uuid),
                   !workspaceMoves.contains(id), !candidate.flag(kAXMinimizedAttribute),
                   !candidate.flag("AXFullScreen") else { return nil }
             let window = windows[id]
-                ?? Window(id: id, element: candidate, pid: app.processIdentifier, bundleID: app.bundleIdentifier)
+                ?? Window(id: id, element: candidate, pid: app.processIdentifier, bundleID: app.bundleIdentifier,
+                          backend: backend)
             return { [weak self] in
                 guard let self, config.virtualWorkspaces, virtualShown[display.uuid] == workspace,
                       isOnHomeSpace(display), window.isValid else { return }
@@ -79,7 +80,7 @@ extension WindowManager {
         guard config.virtualWorkspaces, let workspace = workspaceOf[window.id], isVirtual(workspace) else { return }
         if isShown(workspace) { lastFocused[workspace] = window.id; return }
         guard Date() > autoSwitchAfter else { return }
-        guard isParked(window.cachedFrame, Screen.all()) else { scheduleRefresh(); return }
+        guard isParked(window.cachedFrame, backend.screens()) else { scheduleRefresh(); return }
         if config.stayOnWorkspaceAfterClose, Date().timeIntervalSince(closeAndSort.lastClose) < 1.0 {
             Log.debug("workspaces: ignoring focus on \(workspace) right after a close")
             refocusCurrentWorkspace()
@@ -118,7 +119,7 @@ extension WindowManager {
         cancelFocusRequest()
         prepareFocusSink()
         guard let sink = focusSink else { return }
-        if sink.isKeyWindow, NSWorkspace.shared.frontmostApplication?.processIdentifier == getpid() {
+        if sink.isKeyWindow, frontmostPID() == getpid() {
             animator.focusSink(CGWindowID(sink.windowNumber))
             return
         }
