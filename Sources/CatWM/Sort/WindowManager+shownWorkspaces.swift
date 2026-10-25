@@ -26,7 +26,7 @@ extension WindowManager {
             }
         }
         crowdWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5, execute: work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10, execute: work)
     }
 
     private func isCrowded(_ screens: [Screen]) -> Bool {
