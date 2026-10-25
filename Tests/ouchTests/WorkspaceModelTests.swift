@@ -100,4 +100,37 @@ import Testing
         #expect(snap.order == [4])
         #expect(snap.lastFocused["1"] == 4)
     }
+
+    @Test func aMaximisedTabJoinsItsGroupAgainWhenItComesBack() {
+        var model = WorkspaceModel()
+        for id: CGWindowID in [1, 2, 3] { model.assign(id, to: "1") }
+        model.order = [1, 2, 3]
+        model.joinTab(2, onto: 1)
+        model.joinTab(3, onto: 2)
+        let maximised = WindowManager.spaceWorkspace(display: "A", space: 5)
+        model.hostMaximised(2, in: maximised)
+        #expect(model.tabs.group(of: 1)?.members == [1, 3])
+        #expect(model.rejoinMaximisedTabs { _ in true }.isEmpty)
+        model.assign(2, to: "1")
+        #expect(model.rejoinMaximisedTabs { _ in true } == [2])
+        #expect(model.tabs.group(of: 2)?.members == [1, 2, 3])
+        #expect(model.tabs.group(of: 2)?.active == 2)
+        #expect(model.maximisedTabs.isEmpty)
+    }
+
+    @Test func aMaximisedTabStaysAloneWhenItsGroupIsGone() {
+        var model = WorkspaceModel()
+        for id: CGWindowID in [1, 2, 3] { model.assign(id, to: "1") }
+        model.joinTab(2, onto: 1)
+        model.joinTab(3, onto: 2)
+        let maximised = WindowManager.spaceWorkspace(display: "A", space: 5)
+        model.hostMaximised(2, in: maximised)
+        model.leaveTab(3)
+        model.assign(2, to: "2")
+        #expect(model.rejoinMaximisedTabs { _ in true }.isEmpty)
+        #expect(model.maximisedTabs.isEmpty)
+        model.hostMaximised(1, in: maximised)
+        model.forget(1)
+        #expect(model.maximisedTabs.isEmpty && !model.tabs.isGrouped(2))
+    }
 }

@@ -11,6 +11,7 @@ extension WindowManager {
     }
 
     func restoreTabs() {
+        rejoinMaximisedTabs()
         guard !savedTabs.isEmpty else { return }
         let late = Date() >= savedTabsUntil
         savedTabs.removeAll { saved in
@@ -25,6 +26,13 @@ extension WindowManager {
             model.restoreTabs(ready, active: focused.flatMap { ready.contains($0) ? $0 : nil } ?? saved.active)
             Log.info("tabs: restored the tabs \(ready.map(String.init).joined(separator: " "))")
             return true
+        }
+    }
+
+    private func rejoinMaximisedTabs() {
+        guard !model.maximisedTabs.isEmpty else { return }
+        for id in model.rejoinMaximisedTabs(tabbable: { windows[$0]?.isFloating == false }) {
+            Log.info("tabs: \(windows[id]?.bundleID ?? "window \(id)") left full screen and joined its tabs again")
         }
     }
 

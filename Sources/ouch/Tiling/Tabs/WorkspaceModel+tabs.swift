@@ -1,6 +1,34 @@
 import CoreGraphics
 
+struct MaximisedTab: Equatable {
+    let workspace: String
+    let members: [CGWindowID]
+}
+
 extension WorkspaceModel {
+    mutating func hostMaximised(_ id: CGWindowID, in workspace: String) {
+        if workspaceOf[id] != workspace, let group = tabs.group(of: id) {
+            maximisedTabs[id] = MaximisedTab(workspace: workspace, members: group.members)
+        }
+        assign(id, to: workspace)
+    }
+
+    mutating func rejoinMaximisedTabs(tabbable: (CGWindowID) -> Bool) -> [CGWindowID] {
+        var rejoined: [CGWindowID] = []
+        for (id, saved) in maximisedTabs.sorted(by: { $0.key < $1.key }) {
+            guard let home = workspaceOf[id], home != saved.workspace else { continue }
+            maximisedTabs[id] = nil
+            let others = saved.members.filter { $0 != id }
+            guard tabbable(id), let anchor = others.first(where: {
+                workspaceOf[$0] == home && tabbable($0) && (others.count == 1 || tabs.isGrouped($0))
+            }) else { continue }
+            joinTab(id, onto: anchor)
+            tabs.move(id, to: saved.members.firstIndex(of: id) ?? 0)
+            rejoined.append(id)
+        }
+        return rejoined
+    }
+
     mutating func joinTab(_ id: CGWindowID, onto target: CGWindowID) {
         guard id != target, tabs.group(of: target)?.members.contains(id) != true else { return }
         leaveTab(id)
