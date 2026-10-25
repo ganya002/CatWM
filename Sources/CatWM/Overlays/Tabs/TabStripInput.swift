@@ -4,7 +4,7 @@ import SwiftUI
 
 final class TabStripInput: NSView {
     private static let dragThreshold: CGFloat = 3
-    private static let liftSlack: CGFloat = 5
+    private static let liftSlack: CGFloat = 20
 
     let model: TabStripModel
     private struct Press {
@@ -30,6 +30,8 @@ final class TabStripInput: NSView {
             let manager = WindowManager.shared
             let ids = self?.model.tabs.map(\.id) ?? []
             if light == .minimize { return manager.minimizeTabs(ids) }
+            let detail = "Every window in this group closes."
+            if ids.count > 1, !confirm("Close \(ids.count) tabs?", detail, button: "Close") { return }
             ids.forEach { _ = manager.closeWindow($0) }
         }
         addSubview(lights)

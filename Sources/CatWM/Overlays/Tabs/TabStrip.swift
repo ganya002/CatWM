@@ -13,6 +13,7 @@ enum TabStrip {
     static let closeSide: CGFloat = 20
     static let iconSide: CGFloat = 16
     static let closeInset = Theme.Space.small
+    static let roomyWidth: CGFloat = 120
     static let hoverFill = 0.04, activeFill = 0.1, unfocusedActiveFill = 0.06
     static let restingIcon = 0.7, liftedOpacity = 0.55
     static let shape = UnevenRoundedRectangle(topLeadingRadius: radius, topTrailingRadius: radius, style: .continuous)
@@ -103,7 +104,7 @@ struct TabStripView: View {
                     let dragged = model.dragged == tab.id
                     TabCell(tab: tab, active: tab.id == model.active, focused: model.focused,
                             hovered: model.hovered == tab.id && model.dragged == nil,
-                            closeHovered: model.closeHovered)
+                            closeHovered: model.closeHovered, roomy: tabWidth >= TabStrip.roomyWidth)
                         .frame(width: tabWidth, height: TabStrip.height)
                         .offset(x: offset(of: index, id: tab.id, width: width))
                         .opacity(dragged && model.lifted ? TabStrip.liftedOpacity : 1)
@@ -188,6 +189,7 @@ private struct TabCell: View {
     let focused: Bool
     let hovered: Bool
     let closeHovered: Bool
+    let roomy: Bool
 
     var body: some View {
         ZStack {
@@ -200,7 +202,7 @@ private struct TabCell: View {
                     .textStyle(.caption).fontWeight(active && focused ? .medium : .regular)
                     .oneLine()
             }
-            .padding(.horizontal, TabStrip.closeSide + Theme.Space.small)
+            .padding(.horizontal, roomy ? TabStrip.closeSide + Theme.Space.small : Theme.Space.small)
             HStack {
                 if hovered {
                     Image(systemName: "xmark")
