@@ -85,8 +85,10 @@ final class ControlServer {
         withUnsafeMutableBytes(of: &address.sun_path) { buffer in
             buffer.copyBytes(from: Array(path.utf8) + [0])
         }
-        try? FileManager.default.createDirectory(at: URL(fileURLWithPath: path).deletingLastPathComponent(),
-                                                 withIntermediateDirectories: true)
+        Log.attempt("control: create socket folder") {
+            try FileManager.default.createDirectory(at: URL(fileURLWithPath: path).deletingLastPathComponent(),
+                                                    withIntermediateDirectories: true)
+        }
         if Self.isAlive(address) {
             Log.info("control: another CatWM listens on \(path)")
             return nil

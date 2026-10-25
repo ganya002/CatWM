@@ -77,7 +77,12 @@ extension Process {
         process.arguments = args
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice
-        try? process.run()
+        do {
+            try process.run()
+        } catch {
+            Log.info("run \(path) failed: \(error)")
+            return
+        }
         if wait { process.waitUntilExit() }
     }
 }

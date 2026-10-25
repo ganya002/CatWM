@@ -50,7 +50,9 @@ enum CommandLineTool {
         let home = files.homeDirectoryForCurrentUser
         let folders = [URL(fileURLWithPath: "/usr/local/bin"), home.appendingPathComponent(".local/bin")]
         for folder in folders {
-            try? files.createDirectory(at: folder, withIntermediateDirectories: true)
+            Log.attempt("cli: create \(folder.path)") {
+                try files.createDirectory(at: folder, withIntermediateDirectories: true)
+            }
             guard files.isWritableFile(atPath: folder.path) else { continue }
             let path = folder.appendingPathComponent("catwm").path
             if let current = try? files.destinationOfSymbolicLink(atPath: path) {
