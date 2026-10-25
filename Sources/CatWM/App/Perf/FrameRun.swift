@@ -46,6 +46,6 @@ final class FrameRun: NSObject {
         ended = true
         link?.invalidate()
         link = nil
-        PerfMonitor.finish(self, apps: apps)
+        PerfMonitor.shared.finish(self, apps: apps)
     }
 }

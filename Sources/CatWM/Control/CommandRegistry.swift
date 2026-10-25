@@ -65,9 +65,9 @@ enum CommandRegistry {
         Command(name: "poststyle", group: "dev", summary: "Set the key post style",
                 args: [CommandArg(name: "style", kind: .int, summary: "Style number")], access: .dev) { call in
             if let style = call.args["style"]?.int.flatMap(Hotkeys.PostStyle.init(rawValue:)) {
-                Hotkeys.postStyle = style
+                WindowManager.shared.keyPostStyle = style
             }
-            Log.info("ipc: post style is now \(Hotkeys.postStyle)")
+            Log.info("ipc: post style is now \(WindowManager.shared.keyPostStyle)")
             return .null
         },
         Command(name: "modefx", group: "dev", summary: "Preview a mode effect",
@@ -77,7 +77,7 @@ enum CommandRegistry {
         },
         Command(name: "panelfx", group: "dev", summary: "Preview a panel motion",
                 args: [.text("style", "Motion name or `all`", required: false)], access: .dev) { call in
-            PanelMotionDemo.command(call.text("style").split(separator: " ").map(String.init))
+            PanelMotionDemo.shared.command(call.text("style").split(separator: " ").map(String.init))
             return .null
         },
         Command(name: "intro", group: "dev", summary: "Play the intro",

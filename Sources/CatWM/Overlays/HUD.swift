@@ -39,7 +39,7 @@ final class HUD {
         model.text = text
         model.layout = layout
         model.warning = warning
-        if !wasVisible { model.pops += 1; PerfMonitor.track("ui:hud", for: 0.5) }
+        if !wasVisible { model.pops += 1; PerfMonitor.shared.track("ui:hud", for: 0.5) }
         let host = host ?? NSHostingView(rootView: HUDView(model: model, margin: Self.margin))
         if self.host == nil { self.host = host; hud.contentView = host }
         host.layoutSubtreeIfNeeded()

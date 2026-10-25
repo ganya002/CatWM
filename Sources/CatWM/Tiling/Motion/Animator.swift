@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import os
 import QuartzCore
 
 final class Animator {
@@ -44,6 +45,7 @@ final class Animator {
     private var frameRun: FrameRun?
     var onMinimumSize: ((CGWindowID, CGSize) -> Void)?
     var onTopRefused: ((_ target: CGRect, _ actual: CGRect) -> Void)?
+    var onLanded: (() -> Void)?
 
     init(makeWriter: @escaping (pid_t) -> AXWriter = AXWriter.init,
          applyFocus: @escaping (Window, () -> Bool) -> Void = { $0.focus(ifCurrent: $1) }) {
@@ -132,7 +134,7 @@ final class Animator {
             let newTimer = Timer(timeInterval: 1.0 / 120.0, repeats: true) { [weak self] _ in self?.tick() }
             RunLoop.main.add(newTimer, forMode: .common)
             timer = newTimer
-            frameRun = PerfMonitor.begin("window-move")
+            frameRun = PerfMonitor.shared.begin("window-move")
             tick()
         }
     }
@@ -165,13 +167,6 @@ final class Animator {
             self.landing[window.id] = nil
             self.quiet(window.id)
         }
-    }
-
-    private func writer(_ pid: pid_t) -> AXWriter {
-        if let existing = writers[pid] { return existing }
-        let created = makeWriter(pid)
-        writers[pid] = created
-        return created
     }
 
     var activeWriterPids: Set<pid_t> { Set(writers.keys) }
@@ -238,9 +233,11 @@ final class Animator {
             guard let self, self.landing[id]?.number == number else { return }
             self.landing[id] = nil
             guard wrote else { return }
-            CursorRefresh.soon()
+            self.onLanded?()
             self.quietUntil[id] = CACurrentMediaTime() + 0.4
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in self?.verify(move, epoch: epoch) }
+            DispatchQueue.main.asyncAfter( // style-ok: an app that ignores a write sends no event
+                deadline: .now() + 0.12
+            ) { [weak self] in self?.verify(move, epoch: epoch) }
         }
     }
 
@@ -249,12 +246,13 @@ final class Animator {
         guard epochs[window.id, default: 0] == epoch, items[window.id] == nil, landing[window.id] == nil,
               !window.placementSuspended else { return }
         quietUntil[window.id] = CACurrentMediaTime() + 0.4
-        writer(window.pid).run(for: window.id) { [weak self] isCurrent in
+        let writer = writer(window.pid)
+        writer.run(for: window.id) { [weak self] isCurrent in
             var actual = window.frame
             guard isCurrent(), !window.placementSuspended, !WindowPlacementState.blocksPlacement(window.element),
                   !actual.isNull, !actual.approxEqual(move.target, tolerance: 2) else { return }
-            EnhancedUI.suspend(window.pid)
-            defer { EnhancedUI.resume(window.pid) }
+            writer.suspendEnhancedUI()
+            defer { writer.resumeEnhancedUI() }
             guard isCurrent(), !window.placementSuspended else { return }
             window.setFrame(move.target)
             actual = window.frame
@@ -279,6 +277,13 @@ final class Animator {
 }
 
 extension Animator {
+    private func writer(_ pid: pid_t) -> AXWriter {
+        if let existing = writers[pid] { return existing }
+        let created = makeWriter(pid)
+        writers[pid] = created
+        return created
+    }
+
     func forget(_ id: CGWindowID) {
         cancel(id)
         if let pid = owners.removeValue(forKey: id) { writers[pid]?.forget(id) }
@@ -294,11 +299,7 @@ extension Animator {
     }
 
     func terminated(_ pid: pid_t) {
-        if let writer = writers.removeValue(forKey: pid) {
-            writer.run { EnhancedUI.terminated(pid) }
-        } else {
-            EnhancedUI.terminated(pid)
-        }
+        writers[pid] = nil
         focusQueues[pid] = nil
     }
 }
@@ -329,7 +330,7 @@ extension Animator {
     @MainActor func waitForPendingWrites(pids: Set<pid_t>, timeout: TimeInterval = 1) async -> Bool {
         let completion = PendingWrites()
         let deadline = Task { @MainActor in
-            do { try await Task.sleep(for: .seconds(timeout)) } catch { return }
+            do { try await Task.sleep(for: .seconds(timeout)) } catch { return } // style-ok: a hung app never drains
             completion.finish(false)
         }
         defer { deadline.cancel() }
@@ -337,28 +338,36 @@ extension Animator {
             guard !Task.isCancelled else { return false }
             return await withCheckedContinuation { continuation in
                 completion.wait(continuation)
-                afterPendingWrites(pids: pids) {
-                    MainActor.assumeIsolated { completion.finish(true) }
-                }
+                afterPendingWrites(pids: pids) { completion.finish(true) }
             }
         } onCancel: {
-            Task { @MainActor in completion.finish(false) }
+            completion.finish(false)
         }
     }
+}
 
-    @MainActor private final class PendingWrites {
-        private var continuation: CheckedContinuation<Bool, Never>?
-        private var result: Result<Bool, Never>?
+private final class PendingWrites: Sendable {
+    private struct State: Sendable {
+        var continuation: CheckedContinuation<Bool, Never>?
+        var result: Result<Bool, Never>?
+    }
+    private let state = OSAllocatedUnfairLock(initialState: State())
 
-        func wait(_ continuation: CheckedContinuation<Bool, Never>) {
-            if let result { continuation.resume(with: result) } else { self.continuation = continuation }
+    func wait(_ continuation: CheckedContinuation<Bool, Never>) {
+        let result = state.withLock { state -> Result<Bool, Never>? in
+            if state.result == nil { state.continuation = continuation }
+            return state.result
         }
+        if let result { continuation.resume(with: result) }
+    }
 
-        func finish(_ result: Bool) {
-            guard self.result == nil else { return }
-            self.result = .success(result)
-            continuation?.resume(returning: result)
-            continuation = nil
+    func finish(_ result: Bool) {
+        let waiting = state.withLock { state -> CheckedContinuation<Bool, Never>? in
+            guard state.result == nil else { return nil }
+            state.result = .success(result)
+            defer { state.continuation = nil }
+            return state.continuation
         }
+        waiting?.resume(returning: result)
     }
 }

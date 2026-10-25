@@ -32,7 +32,7 @@ final class SettingsUI: ObservableObject {
         refreshStatus()
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            LoginItem.refresh { self?.refreshStatus() }
+            LoginItem.shared.refresh { self?.refreshStatus() }
         }
         timer?.tolerance = 0.2
     }

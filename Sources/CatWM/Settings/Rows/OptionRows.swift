@@ -252,10 +252,10 @@ extension OptionRows {
                         set: { raw in
                             guard let motion = PanelMotion(rawValue: raw) else { return }
                             doc.config.panelAnimation = motion
-                            PanelMotionDemo.play([motion], keyboardOnly: true)
+                            PanelMotionDemo.shared.play([motion], keyboardOnly: true)
                         }))
                 OButton("Play", icon: "play.fill", size: .small) {
-                    PanelMotionDemo.play([config.panelAnimation], keyboardOnly: true)
+                    PanelMotionDemo.shared.play([config.panelAnimation], keyboardOnly: true)
                 }
             }
         }

@@ -13,9 +13,9 @@ struct DesktopLifecycleTests {
         let focus = NSWorkspace.shared.frontmostApplication?.processIdentifier
         try #require(DesktopMenuBarNative.theme(current) == 1)
         try #require(CGPreflightScreenCaptureAccess())
-        DesktopMenuBarCover.prewarm(on: screen)
-        let prepared = DesktopMenuBarCover.panel(on: screen)
-        DesktopMenuBarCover.recycle(prepared)
+        DesktopMenuBarCover.shared.prewarm(on: screen)
+        let prepared = DesktopMenuBarCover.shared.panel(on: screen)
+        DesktopMenuBarCover.shared.recycle(prepared)
         let created = try await DesktopLifecycle.create(on: screen)
         var captured: CatWMPanel?
         do {
@@ -23,14 +23,14 @@ struct DesktopLifecycleTests {
                 Spaces.of(window: CGWindowID(prepared.windowNumber)) == [created.space]
             }
             #expect(moved && !prepared.isVisible)
-            captured = await DesktopMenuBarCover.capture(on: screen, source: current, target: created.space)
+            captured = await DesktopMenuBarCover.shared.capture(on: screen, source: current, target: created.space)
             let panel = try #require(captured)
             #expect(panel === prepared && panel.isVisible)
             #expect(Spaces.of(window: CGWindowID(panel.windowNumber)) == [created.space])
-            DesktopMenuBarCover.recycle(panel)
+            DesktopMenuBarCover.shared.recycle(panel)
             captured = nil
         } catch {
-            DesktopMenuBarCover.recycle(captured)
+            DesktopMenuBarCover.shared.recycle(captured)
             try await discard(created.space, on: screen)
             throw error
         }
@@ -130,10 +130,6 @@ struct DesktopLifecycleTests {
     }
 
     private func discard(_ space: UInt64, on screen: Screen) async throws {
-        for _ in 0..<20 {
-            if (try? await DesktopLifecycle.remove(space, on: screen)) != nil { return }
-            try await Task.sleep(nanoseconds: 50_000_000)
-        }
-        try await DesktopLifecycle.remove(space, on: screen)
+        try await WindowManager().removeDesktop(space, on: screen)
     }
 }

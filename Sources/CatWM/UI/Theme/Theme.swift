@@ -3,7 +3,7 @@ import CoreText
 import SwiftUI
 
 enum Theme {
-    static var palette = Palette.catwm
+    static let palette = Palette.catwm
 
     static func isDark(_ appearance: NSAppearance) -> Bool {
         appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua

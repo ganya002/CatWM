@@ -20,9 +20,11 @@ final class AXWriter {
     private var animating: Set<CGWindowID> = []
     private var lastSize: [CGWindowID: CGSize] = [:]
     private var stepCosts: [CGWindowID: StepCost] = [:]
+    private var enhancedUI: EnhancedUI
 
     init(pid: pid_t) {
         self.pid = pid
+        enhancedUI = EnhancedUI(pid: pid)
         queue = DispatchQueue(label: "catwm.ax.\(pid)", qos: .userInteractive)
     }
 
@@ -43,7 +45,7 @@ final class AXWriter {
         lock.withLock { pending[id] = nil; epochs[id, default: 0] += 1 }
         queue.async { [self] in
             lastSize[id] = nil
-            if animating.remove(id) != nil { EnhancedUI.resume(pid) }
+            if animating.remove(id) != nil { enhancedUI.resume() }
         }
     }
 
@@ -55,6 +57,9 @@ final class AXWriter {
     }
 
     func run(_ work: @escaping () -> Void) { queue.async(execute: work) }
+
+    func suspendEnhancedUI() { enhancedUI.suspend() }
+    func resumeEnhancedUI() { enhancedUI.resume() }
 
     func run(for id: CGWindowID, _ work: @escaping (_ isCurrent: () -> Bool) -> Void) {
         let epoch = lock.withLock { epochs[id] ?? 0 }
@@ -111,7 +116,7 @@ final class AXWriter {
     private func apply(_ item: Pending) {
         let window = item.window
         if window.placementSuspended || WindowPlacementState.blocksPlacement(window.element) {
-            if animating.remove(window.id) != nil { EnhancedUI.resume(pid) }
+            if animating.remove(window.id) != nil { enhancedUI.resume() }
             switch item.operation {
             case let .land(_, done), let .position(_, done): DispatchQueue.main.async { done(false) }
             case let .follow(_, done): DispatchQueue.main.async { done(nil) }
@@ -119,7 +124,7 @@ final class AXWriter {
             }
             return
         }
-        if animating.insert(window.id).inserted { EnhancedUI.suspend(pid) }
+        if animating.insert(window.id).inserted { enhancedUI.suspend() }
         switch item.operation {
         case let .step(frameAt):
             let frame = frameAt(CACurrentMediaTime() + (stepCosts[window.id]?.lead ?? 0))
@@ -135,7 +140,7 @@ final class AXWriter {
         case let .position(point, done):
             let elapsed = measure { window.setPosition(point) }
             animating.remove(window.id)
-            EnhancedUI.resume(pid)
+            enhancedUI.resume()
             lock.withLock { stats.position.add(elapsed) }
             DispatchQueue.main.async { done(true) }
         case let .land(frame, done):
@@ -143,7 +148,7 @@ final class AXWriter {
             stepCosts[window.id] = nil
             let elapsed = measure { sized ? window.setPosition(frame.origin) : window.setFrame(frame) }
             animating.remove(window.id)
-            EnhancedUI.resume(pid)
+            enhancedUI.resume()
             lock.withLock { stats.land.add(elapsed) }
             DispatchQueue.main.async { done(true) }
         }

@@ -38,7 +38,7 @@ struct NativePreparationTests {
         manager.model.assign(target.id, to: "test")
         var released = false
         let delayedRelease = Task { @MainActor in
-            try await Task.sleep(for: .milliseconds(300))
+            guard shouldWait else { return }
             released = true
             release.signal()
         }

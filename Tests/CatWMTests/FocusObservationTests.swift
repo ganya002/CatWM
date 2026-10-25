@@ -89,15 +89,16 @@ import Testing
         manager.onDispatch = nil
     }
 
-    @Test @MainActor func aFocusedElementWithoutAWindowIDDoesNotRetry() async throws {
+    @Test @MainActor func aFocusedElementWithoutAWindowIDDoesNotRetry() async {
         let manager = manager()
         let reads = Counter()
         manager.focusRequests.focusReader = FocusReader { _ in
             _ = reads.next()
             return FocusReader.resolve(AXUIElementCreateApplication(-1))
         }
-        var dispatched = 0
+        var dispatched = 0, retries = 0
         manager.onDispatch = { _, _, _ in dispatched += 1 }
+        manager.focusRequests.retryRead = { _ in retries += 1 }
         await withCheckedContinuation { continuation in
             manager.onChange = { continuation.resume() }
             manager.dispatch("minimize", "")
@@ -107,7 +108,9 @@ import Testing
         #expect(manager.focusRequests.reportedFocus?.id == nil)
         #expect(manager.focusRequests.focusCommands.isEmpty)
         #expect(dispatched == 1)
-        try await Task.sleep(for: .milliseconds(250))
+        await withCheckedContinuation { continuation in DispatchQueue.main.async { continuation.resume() } }
+        #expect(retries == 0)
+        #expect(manager.focusRequests.focusReads.isEmpty)
         #expect(reads.value == 1)
         manager.isStarted = false
         manager.onDispatch = nil
@@ -198,16 +201,21 @@ import Testing
         manager.onChange = nil
     }
 
-    @Test @MainActor func aPendingFocusDoesNotExpireWhileItsWriteIsBlocked() async throws {
+    @Test @MainActor func aPendingFocusStaysWhileItsWriteIsBlocked() async {
         let manager = manager()
         let tracked = window(7)
         manager.windows[tracked.id] = tracked
         manager.visible = [tracked.id]
         let release = DispatchSemaphore(value: 0)
-        manager.animator = Animator(applyFocus: { _, _ in _ = release.wait(timeout: .now() + 3) })
-        manager.focus(tracked, warp: false)
+        await withCheckedContinuation { continuation in
+            manager.animator = Animator(applyFocus: { _, _ in
+                continuation.resume()
+                _ = release.wait(timeout: .now() + 3)
+            })
+            manager.focus(tracked, warp: false)
+        }
         manager.acceptFocus(pid: tracked.pid, id: tracked.id)
-        try await Task.sleep(for: .milliseconds(600))
+        await withCheckedContinuation { continuation in DispatchQueue.main.async { continuation.resume() } }
         #expect(manager.focusedWindow()?.id == tracked.id)
         #expect(manager.focusRequests.pendingFocus?.id == tracked.id)
         manager.isStarted = false

@@ -17,6 +17,7 @@ extension WindowManager {
         AXUIElementSetMessagingTimeout(AXUIElementCreateSystemWide(), 1.0)
         animator.onMinimumSize = { [weak self] id, size in self?.learnMinimum(id, size) }
         animator.onTopRefused = { [weak self] target, actual in self?.learnMenuBar(target, actual) }
+        animator.onLanded = { [weak self] in self?.cursorRefresh.soon() }
 
         observeApplicationNotifications()
         observeSpaceAndScreenNotifications()
@@ -29,7 +30,9 @@ extension WindowManager {
         requestFocusObservation()
         refresh()
         for delay in [0.5, 1.5, 3.0, 6.0] {
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in self?.scheduleRefresh() }
+            DispatchQueue.main.asyncAfter( // style-ok: apps at login become readable with no event
+                deadline: .now() + delay
+            ) { [weak self] in self?.scheduleRefresh() }
         }
     }
 
@@ -79,7 +82,9 @@ extension WindowManager {
         observe(app)
         scheduleRefresh(after: 0)
         for delay in [0.3, 1.0, 2.5] {
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            DispatchQueue.main.asyncAfter( // style-ok: a new app becomes readable with no event
+                deadline: .now() + delay
+            ) { [weak self] in
                 self?.observe(app)
                 self?.scheduleRefresh()
             }

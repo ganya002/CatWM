@@ -159,7 +159,7 @@ enum DesktopMenuBar {
         panel?.orderOut(nil)
         state.restore()
         DesktopMenuBarNative.alpha(state.space, -1)
-        DesktopMenuBarCover.recycle(panel)
+        DesktopMenuBarCover.shared.recycle(panel)
         panel = nil
     }
 }

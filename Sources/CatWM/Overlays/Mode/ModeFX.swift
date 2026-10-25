@@ -60,7 +60,7 @@ final class ModeFX {
             layoutPanels()
             model.cursor = NSEvent.mouseLocation
             model.active = true
-            PerfMonitor.track("ui:modefx-\(style)", for: 0.6)
+            PerfMonitor.shared.track("ui:modefx-\(style)", for: 0.6)
             DispatchQueue.main.async { [weak self] in self?.model.enters += 1 }
         } else {
             model.active = false
