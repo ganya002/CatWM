@@ -3,6 +3,8 @@
 # The user's CatWM continues to run. This script does not stop it or start it.
 set -e
 . "$(dirname "$0")/env.sh"
+# The lock stops a launch while run-scoped.sh uses this instance id. It ends with this script.
+lock_instance launch
 
 if [ -n "$OURS_PID" ] && kill -0 "$OURS_PID" 2>/dev/null; then
   echo "launch: a verify instance already runs (pid $OURS_PID). Run doctor.sh, or cleanup.sh first." >&2
@@ -11,7 +13,7 @@ fi
 rm -f "$STATE"
 
 # With CATWM_INSTANCE set, build.sh stops only the CatWM in the pid file of this instance.
-(cd "$ROOT" && ./build.sh --dev) > "$VERIFY_HOME/build.log" 2>&1 || {
+(cd "$ROOT" && ./build.sh --dev) 8>&- > "$VERIFY_HOME/build.log" 2>&1 || {
   tail -30 "$VERIFY_HOME/build.log" >&2; echo "launch: build failed, full log: $VERIFY_HOME/build.log" >&2; exit 1; }
 
 RUN="$VERIFY_HOME/runs/$(date -u +%Y%m%dT%H%M%SZ)"
@@ -21,7 +23,7 @@ save_state LOG_OFFSET "$(wc -c < "$LOG" 2>/dev/null | tr -d ' ' || echo 0)"
 git -C "$ROOT" rev-parse HEAD > "$RUN/commit.txt"
 git -C "$ROOT" status --short >> "$RUN/commit.txt"
 
-open -n -g --env "CATWM_INSTANCE=$INSTANCE" "$APP" --args --verbose
+open -n -g --env "CATWM_INSTANCE=$INSTANCE" "$APP" --args --verbose 8>&-
 i=0
 while [ $i -lt 100 ]; do
   PID=$("$CLI" ping --json 2>/dev/null | jq -r '.pid // empty' || true)

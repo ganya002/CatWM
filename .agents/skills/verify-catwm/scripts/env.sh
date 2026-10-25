@@ -22,6 +22,19 @@ instance_pid() {
   return 0
 }
 
+# One run for each instance id: a second run would stop the instance of the first run (build.sh, or the pid file).
+# Take the flock(2) of this instance on fd 8, or stop with exit code 1. The lock stays until this shell and each
+# child that has fd 8 stop. Give a child that must not hold the lock `8>&-`.
+lock_instance() { # name of the script, for the message
+  exec 8>>"$VERIFY_HOME/run.flock"
+  if ! lockf -s -t 0 8; then
+    echo "$1: another run uses instance $INSTANCE ($(cat "$VERIFY_HOME/run.owner" 2>/dev/null))." \
+      "Wait for it, or set INSTANCE to another id." >&2
+    exit 1
+  fi
+  echo "pid $$ ($1) since $(date +%s)" > "$VERIFY_HOME/run.owner"
+}
+
 pid_exe() { ps -o args= -p "$1" 2>/dev/null | awk '{ print $1 }'; }
 
 save_state() { # key value
