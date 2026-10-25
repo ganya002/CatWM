@@ -39,3 +39,76 @@ struct PanelEntrance: ViewModifier {
         }
     }
 }
+
+extension View {
+    func panelEntrance(_ shown: Bool, style: PanelMotion, radius: CGFloat = Theme.Radius.extraLarge) -> some View {
+        modifier(PanelEntrance(shown: shown, style: style, radius: radius))
+    }
+
+    func tileItem(_ shown: Bool, style: PanelMotion, spread: CGSize) -> some View {
+        modifier(TileItem(shown: shown, style: style, spread: spread))
+    }
+}
+
+struct TileItem: ViewModifier {
+    let shown: Bool
+    let style: PanelMotion
+    let spread: CGSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        if style == .tile && !reduceMotion {
+            content.modifier(TileProgress(progress: shown ? 1 : 0, shown: shown, surface: false, spread: spread))
+                .animation(style.animation(in: shown), value: shown)
+        } else {
+            content
+        }
+    }
+}
+
+struct TileProgress: ViewModifier, Animatable {
+    var progress: Double
+    let shown: Bool
+    let surface: Bool
+    var spread: CGSize = .zero
+
+    var animatableData: Double {
+        get { progress }
+        set { progress = newValue }
+    }
+
+    func body(content: Content) -> some View {
+        let config = WindowManager.shared.config
+        let eased = CGFloat(shown ? config.animationCurve.progress(progress, bounce: config.animationBounce) : progress)
+        if surface {
+            content
+                .scaleEffect(x: 0.5 + 0.5 * eased, y: 0.35 + 0.65 * eased, anchor: .bottom)
+                .opacity(min(1, progress * 4))
+        } else {
+            content.offset(x: spread.width * (1 - eased), y: spread.height * (1 - eased))
+        }
+    }
+}
+
+enum KeyTile: Equatable {
+    case rise
+    case tile(shown: Bool)
+
+    var shown: Bool {
+        switch self {
+        case .rise: true
+        case let .tile(shown): shown
+        }
+    }
+
+    var style: PanelMotion { self == .rise ? .rise : .tile }
+}
+
+struct KeyTileKey: EnvironmentKey { static let defaultValue = KeyTile.rise }
+
+extension EnvironmentValues {
+    var keyTile: KeyTile {
+        get { self[KeyTileKey.self] }
+        set { self[KeyTileKey.self] = newValue }
+    }
+}

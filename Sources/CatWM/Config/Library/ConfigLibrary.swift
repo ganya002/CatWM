@@ -32,3 +32,7 @@ final class ConfigLibrary: ObservableObject {
             .sink { [weak self] in self?.reconcile() }
     }
 }
+
+extension UTType {
+    static let catwmConfig = UTType(filenameExtension: "catwmconfig", conformingTo: .json) ?? .json
+}

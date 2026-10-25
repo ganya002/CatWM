@@ -131,3 +131,37 @@ struct ConfigOption {
 
     static func norm(_ name: String) -> String { name.lowercased().replacingOccurrences(of: "-", with: "_") }
 }
+
+enum OptionGroup {
+    case general
+    case animation
+}
+
+struct SettingInfo {
+    let pane: Pane
+    let id: String
+    let label: String
+    var help: String?
+    var keywords = ""
+    var advanced = false
+    var range: ClosedRange<Double>?
+    var scale: Double = 1
+    var section = ""
+    var order = 0
+    var enabled: (Config) -> Bool = { _ in true }
+    var unit = " pt"
+    var width: CGFloat = 160
+}
+
+extension Pane {
+    var defaultSection: String {
+        switch self {
+        case .general: "General"
+        case .layout: "Gaps"
+        case .windows: "Focus"
+        case .motion: "Feel"
+        case .templates: "Saved templates"
+        case .shortcuts: "Keyboard"
+        }
+    }
+}

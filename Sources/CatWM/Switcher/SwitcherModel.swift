@@ -62,3 +62,11 @@ final class SwitcherModel: ObservableObject {
             ?? (id == nil ? 0 : min(index, max(results.count - 1, 0)))
     }
 }
+
+struct SwitcherItem: Equatable {
+    let id: CGWindowID
+    let pid: pid_t
+    let app: String
+    let title: String
+    var workspace = ""
+}

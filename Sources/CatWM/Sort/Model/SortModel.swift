@@ -52,3 +52,41 @@ final class SortModel: ObservableObject {
         keyCodes["\(digit)"].map { ($0, digit == 0 ? 10 : digit) }
     })
 }
+
+struct SortColumnDrag {
+    let lane: SortLane
+    let ratio: CGFloat
+    let mainCount: Int
+    var location: CGPoint
+    let grab: CGSize
+}
+
+struct SortDrag {
+    let item: SortItem
+    let closing: Bool
+    var location: CGPoint
+    let grab: CGSize
+    var group: [SortItem] = []
+    var id: CGWindowID { item.id }
+
+    func carries(_ other: CGWindowID) -> Bool { other == id || group.contains { $0.id == other } }
+}
+
+struct SortNotice {
+    var text: String
+}
+
+struct SortResult {
+    let changed: Bool
+    let closing: [CGWindowID]
+}
+
+struct SortReveal: Equatable {
+    var id: CGWindowID = 0
+    var lane: UUID?
+    var token = 0
+}
+
+enum SortZone: Hashable {
+    case lane(UUID), add, close, panel, display(String), row(CGWindowID), tabs(CGWindowID), scroller
+}

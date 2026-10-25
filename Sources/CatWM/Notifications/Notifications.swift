@@ -1,4 +1,5 @@
 import AppKit
+
 final class Notifications: NotificationSink {
     struct Change: Equatable {
         let window: CGWindowID
@@ -235,5 +236,19 @@ final class Notifications: NotificationSink {
             hit = window.id
         }
         return hit
+    }
+}
+
+extension Notifications {
+    func installBuiltIn() {
+        let dock = DockBadgeSource(), database = NotificationDatabase()
+        let banners = [BannerSource(reportsMessages: true), BannerSource(reportsMessages: false)]
+        database.changed = { [weak dock] in dock?.pollSoon() }
+        register(dock)
+        register(database)
+        for banner in banners {
+            banner.changed = { [weak dock] in dock?.pollSoon() }
+            register(banner)
+        }
     }
 }

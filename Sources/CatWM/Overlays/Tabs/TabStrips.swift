@@ -122,3 +122,63 @@ final class TabStrips {
         strips[group]?.shift(by: offset)
     }
 }
+
+struct TabStripStack {
+    enum Placement: Equatable {
+        case above(CGWindowID)
+        case below(CGWindowID)
+    }
+
+    private(set) var windows: [CGWindowID]
+
+    mutating func place(_ panel: CGWindowID, below members: [CGWindowID], fallback: CGWindowID? = nil)
+        -> Placement? {
+        guard let top = windows.first(where: members.contains) ?? fallback else { return nil }
+        guard let index = windows.firstIndex(of: top) else { return .below(top) }
+        guard let under = windows.dropFirst(index + 1).first(where: { $0 != panel }),
+              windows.dropFirst(index + 1).first != panel else { return nil }
+        windows.removeAll { $0 == panel }
+        guard let destination = windows.firstIndex(of: under) else { return nil }
+        windows.insert(panel, at: destination)
+        return .above(under)
+    }
+}
+
+final class TabStripFollow {
+    private struct Anchor {
+        let group: Int
+        let offset: CGVector
+        let cursor: CGPoint
+        let lowest: CGFloat
+    }
+
+    static let shared = TabStripFollow()
+    private var anchor: Anchor?
+    private var monitors: [Any] = []
+
+    func follow(_ group: Int, at offset: CGVector, lowest: CGFloat) {
+        anchor = Anchor(group: group, offset: offset, cursor: mouseLocation(), lowest: lowest)
+        TabStrips.shared.shift(group, by: offset)
+        guard monitors.isEmpty else { return }
+        let events: NSEvent.EventTypeMask = [.leftMouseDragged]
+        let local = NSEvent.addLocalMonitorForEvents(matching: events) { [weak self] event in
+            self?.moved()
+            return event
+        }
+        let global = NSEvent.addGlobalMonitorForEvents(matching: events) { [weak self] _ in self?.moved() }
+        monitors = [local, global].compactMap(\.self)
+    }
+
+    func end() {
+        monitors.forEach(NSEvent.removeMonitor)
+        monitors = []
+        anchor = nil
+    }
+
+    private func moved() {
+        guard let anchor else { return }
+        let cursor = mouseLocation()
+        let dy = max(anchor.lowest, anchor.offset.dy + cursor.y - anchor.cursor.y)
+        TabStrips.shared.shift(anchor.group, by: CGVector(dx: anchor.offset.dx + cursor.x - anchor.cursor.x, dy: dy))
+    }
+}

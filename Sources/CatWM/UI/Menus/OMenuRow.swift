@@ -68,3 +68,69 @@ extension GalleryContent {
     }
 }
 #endif
+
+extension OMenuRow where Trailing == EmptyView {
+    init(highlight: MenuRowHighlight = .followsHover, open: Bool = false, danger: Bool = false,
+         action: @escaping () -> Void, @ViewBuilder lead: () -> Lead, @ViewBuilder label: () -> Label) {
+        self.init(highlight: highlight, open: open, danger: danger, action: action, lead: lead, label: label) {
+            EmptyView()
+        }
+    }
+}
+
+extension OMenuRow where Lead == EmptyView {
+    init(highlight: MenuRowHighlight = .followsHover, open: Bool = false, danger: Bool = false,
+         action: @escaping () -> Void, @ViewBuilder label: () -> Label, @ViewBuilder trailing: () -> Trailing) {
+        self.init(highlight: highlight, open: open, danger: danger, action: action, lead: { EmptyView() },
+                  label: label, trailing: trailing)
+    }
+}
+
+enum MenuRowHighlight: Equatable {
+    case followsHover
+    case fixed(Bool)
+
+    func isLit(hovering: Bool) -> Bool {
+        switch self {
+        case .followsHover: hovering
+        case let .fixed(lit): lit
+        }
+    }
+}
+
+struct OMenuRowStyle: ButtonStyle {
+    static let inset: CGFloat = 10
+    var highlight = MenuRowHighlight.followsHover
+    var open = false
+    var danger = false
+    var bare = false
+
+    func makeBody(configuration: Configuration) -> some View { OMenuRowBody(configuration: configuration, style: self) }
+}
+
+struct OMenuRowBody: View {
+    let configuration: ButtonStyleConfiguration
+    let style: OMenuRowStyle
+    @StateObject private var hover = Flag()
+    @Environment(\.isEnabled) private var enabled
+
+    var body: some View {
+        let lit = enabled && style.highlight.isLit(hovering: hover.isOn)
+        let fill: Color = configuration.isPressed ? Theme.wellHover
+            : lit ? (style.danger ? Theme.dangerSoft : Theme.hover)
+            : style.open ? Theme.wellHover : .clear
+        Group {
+            if style.bare {
+                configuration.label
+            } else {
+                configuration.label
+                    .padding(.horizontal, OMenuRowStyle.inset)
+                    .frame(maxWidth: .infinity, minHeight: Theme.rowHeight, maxHeight: Theme.rowHeight,
+                           alignment: .leading)
+            }
+        }
+        .background(RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous).fill(fill))
+        .contentShape(Rectangle())
+        .onHover { hover.isOn = $0 }
+    }
+}

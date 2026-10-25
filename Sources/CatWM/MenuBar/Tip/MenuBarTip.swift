@@ -104,3 +104,9 @@ final class MenuBarTip {
         return frame.midX > screen.frame.midX ? .good : .move
     }
 }
+
+final class MenuBarTipModel: ObservableObject {
+    enum State { case move, good, hidden }
+    @Published var state = State.move
+    @Published var caret: CGFloat?
+}

@@ -48,3 +48,7 @@ extension GalleryContent {
     }
 }
 #endif
+
+extension OPageTitle where Trailing == EmptyView {
+    init(crumbs: [String]) { self.init(crumbs: crumbs) { EmptyView() } }
+}

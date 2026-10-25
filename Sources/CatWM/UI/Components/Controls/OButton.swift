@@ -63,3 +63,67 @@ extension GalleryContent {
     }
 }
 #endif
+
+enum ButtonSize { case small, regular, large }
+
+enum ButtonVariant { case primary, secondary, ghost, danger, ghostDanger }
+
+struct OButtonStyle: ButtonStyle {
+    var variant: ButtonVariant = .secondary
+    var size: ButtonSize = .regular
+    var iconOnly = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        OButtonBody(configuration: configuration, style: self)
+    }
+
+    var height: CGFloat { size == .small ? 26 : size == .large ? 36 : Theme.controlHeight }
+}
+
+struct PressScale: ButtonStyle {
+    var scale: CGFloat = 0.93
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? scale : 1)
+            .animation(Motion.spring, value: configuration.isPressed)
+    }
+}
+
+#if DEBUG
+extension GalleryContent {
+    @ViewBuilder var pressScaleExample: some View {
+        Button {} label: { Text("Press scale").padding(Theme.Space.medium).background(Capsule().fill(Theme.well)) }
+            .buttonStyle(PressScale())
+    }
+}
+#endif
+
+struct OIconButton: View {
+    let symbol: String
+    let label: String
+    var size: ButtonSize = .small
+    var variant: ButtonVariant = .ghost
+    var tip = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: symbol).font(Theme.symbol(size == .small ? Theme.Icon.medium : Theme.Icon.large))
+        }
+        .buttonStyle(OButtonStyle(variant: variant, size: size, iconOnly: true))
+        .tooltip(tip ? label : "")
+        .accessibilityLabel(label)
+    }
+}
+
+#if DEBUG
+extension GalleryContent {
+    @ViewBuilder var iconButtonExamples: some View {
+        HStack(spacing: Theme.Space.medium) {
+            OIconButton(symbol: "gearshape", label: "Settings") {}
+            OIconButton(symbol: "arrow.triangle.2.circlepath", label: "Retile", size: .regular, variant: .secondary) {}
+            OIconButton(symbol: "trash", label: "Remove", variant: .ghostDanger) {}
+        }
+    }
+}
+#endif

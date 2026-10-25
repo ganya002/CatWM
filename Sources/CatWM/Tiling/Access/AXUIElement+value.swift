@@ -1,5 +1,6 @@
 import AppKit
 import ApplicationServices
+import QuartzCore
 
 extension AXUIElement {
     func value(_ attr: String) -> CFTypeRef? {
@@ -55,3 +56,11 @@ extension AXUIElement {
         return id
     }
 }
+
+func axApp(_ pid: pid_t) -> AXUIElement {
+    let app = AXUIElementCreateApplication(pid)
+    AXUIElementSetMessagingTimeout(app, axTimeout)
+    return app
+}
+
+let axTimeout: Float = 0.3

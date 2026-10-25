@@ -44,3 +44,83 @@ struct SortPlan {
 
     var allIDs: [CGWindowID] { lanes.flatMap(\.ids) + close }
 }
+
+struct SortApply {
+    let display: String
+    var lanes: [SortApplyLane]
+    var close: [CGWindowID]
+    var dropped: [String]
+    var tabs: [[CGWindowID]] = []
+}
+
+struct SortApplyLane {
+    let name: String
+    let label: String
+    let layout: Layout
+    let ids: [CGWindowID]
+}
+
+struct SortClosedLane: Identifiable {
+    let id = UUID()
+    var workspace: String
+    var name: String
+    var layout: Layout
+    var ids: [CGWindowID]
+
+    var number: String { WorkspaceKey.number(workspace) }
+}
+
+struct SortDisplay: Identifiable {
+    let id: String
+    let name: String
+    let short: String
+    let isLaptop: Bool
+    let aspect: CGFloat
+    let screen: NSScreen
+    let items: [SortItem]
+    let fullscreen: [SortItem]
+    let workspaces: [SortWorkspace]
+    let active: String?
+    let taken: Set<String>
+    var perDisplay = false
+    var tabs: [[CGWindowID]] = []
+}
+
+struct SortItem: Identifiable {
+    let id: CGWindowID
+    let title: String
+    let app: String
+    let bundleID: String?
+    let icon: NSImage?
+    let recency: Int
+}
+
+struct SortLane: Identifiable {
+    let id = UUID()
+    var workspace: String
+    var name: String
+    var layout: Layout
+    var ids: [CGWindowID]
+
+    var number: String { WorkspaceKey.number(workspace) }
+}
+
+struct SortWorkspace {
+    let name: String
+    let label: String
+    let layout: Layout
+    let ratio: CGFloat
+    let mainCount: Int
+    let ids: [CGWindowID]
+}
+
+extension SortPlan {
+    var applied: SortApply {
+        SortApply(display: display,
+                  lanes: lanes.map {
+                      SortApplyLane(name: $0.workspace, label: $0.name.trimmingCharacters(in: .whitespaces),
+                                    layout: $0.layout, ids: $0.ids)
+                  },
+                  close: close, dropped: Array(claimed.union(existing)), tabs: tabs)
+    }
+}

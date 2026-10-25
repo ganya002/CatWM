@@ -85,3 +85,86 @@ final class Tooltip {
 
     private func makePanel() -> NSPanel { CatWMPanel(role: .tooltip) }
 }
+
+extension View {
+    func tooltip(_ text: String, keys: [String] = []) -> some View {
+        background(TooltipReader(text: text, chords: keys.isEmpty ? [] : [keys]))
+    }
+}
+
+struct TooltipReader: NSViewRepresentable {
+    let text: String
+    let chords: [[String]]
+
+    func makeNSView(context _: Context) -> TooltipTrackingView { TooltipTrackingView() }
+    func updateNSView(_ view: TooltipTrackingView, context _: Context) {
+        view.text = text
+        view.chords = chords
+    }
+    static func dismantleNSView(_ view: TooltipTrackingView, coordinator _: ()) { Tooltip.shared.leave(view) }
+}
+
+final class TooltipTrackingView: PassThroughView {
+    var text = ""
+    var chords: [[String]] = []
+    private var area: NSTrackingArea?
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let area { removeTrackingArea(area) }
+        let options: NSTrackingArea.Options = [.mouseEnteredAndExited, .activeAlways, .inVisibleRect]
+        let tracking = NSTrackingArea(rect: .zero, options: options, owner: self)
+        addTrackingArea(tracking)
+        area = tracking
+    }
+
+    override func mouseEntered(with _: NSEvent) { Tooltip.shared.hover(self, text: text, chords: chords) }
+    override func mouseExited(with _: NSEvent) { Tooltip.shared.leave(self) }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if window == nil { Tooltip.shared.leave(self) }
+    }
+}
+
+class PassThroughView: NSView {
+    override func hitTest(_: NSPoint) -> NSView? { nil }
+}
+
+struct OTooltip: View {
+    static let delay = 0.5
+    let text: String
+    var chords: [[String]] = []
+    var caret: Caret = .bottom
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Text(text).font(Theme.body(12.5)).oneLine()
+                .frame(maxWidth: 240, alignment: .leading)
+            if !chords.isEmpty {
+                HStack(spacing: 5) {
+                    ForEach(Array(chords.enumerated()), id: \.offset) { i, keys in
+                        if i > 0 { Text("then").font(Theme.body(11.5)).foregroundStyle(Theme.inkMuted).oneLine() }
+                        Kbd(keys: keys)
+                    }
+                }
+                .fixedSize()
+            }
+        }
+        .surface(.extraSmall, caret: caret)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+#if DEBUG
+extension GalleryContent {
+    @ViewBuilder var tooltipExamples: some View {
+        HStack(alignment: .top, spacing: Theme.Space.extraLarge) {
+            OTooltip(text: "Retile", chords: [["Z"]], caret: .none).fixedSize()
+            OTooltip(text: "Settings", chords: [["⌘", ","]], caret: .none).fixedSize()
+            OTooltip(text: "Send feedback", caret: .none).fixedSize()
+            OIconButton(symbol: "ladybug", label: "Send feedback", tip: true) {}
+        }
+    }
+}
+#endif

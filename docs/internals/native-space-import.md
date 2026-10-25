@@ -66,7 +66,7 @@ Compile the probe with the actual `Spaces.move` wrapper to check visibility at c
 cp Tools/SpaceMoveProbe.swift /tmp/catwm-space-check/main.swift
 swiftc -D CATWM_ARRIVAL_PROBE -module-cache-path /tmp/catwm-space-check/modules \
   Sources/CatWM/Tiling/Spaces/NativeSpaceMove.swift Sources/CatWM/Tiling/Spaces/WindowServerUpdates.swift \
-  Sources/CatWM/Tiling/Access/symbol.swift Sources/CatWM/Tiling/Access/Spaces.swift /tmp/catwm-space-check/main.swift \
+  Sources/CatWM/Tiling/Access/PrivateSymbols.swift Sources/CatWM/Tiling/Access/Spaces.swift /tmp/catwm-space-check/main.swift \
   -o /tmp/catwm-space-check/arrival-probe
 /tmp/catwm-space-check/arrival-probe --batch-updates
 ```

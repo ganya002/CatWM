@@ -132,3 +132,34 @@ enum DesktopMenuBar {
         snapshot.flatMap { spaces(in: $0).first { $0["ManagedSpaceID"] as? UInt64 == space }?["uuid"] as? String }
     }
 }
+
+@MainActor final class DesktopMenuBarLease {
+    let state: DesktopMenuBar.State
+    private var panel: CatWMPanel?
+    private var finished = false
+
+    init(state: DesktopMenuBar.State, panel: CatWMPanel?) {
+        self.state = state
+        self.panel = panel
+    }
+
+    func finish() async {
+        state.restore()
+        let restored = await poll(0.2, every: 1_000_000) { self.state.isRestored }
+        if restored { state.clear() }
+        restore()
+    }
+
+    func restore() {
+        guard !finished else { return }
+        finished = true
+        let batch = WindowServerUpdates.shared.begin()
+        defer { batch?.finish() }
+        if let panel { DesktopMenuBarNative.orderOut(CGWindowID(panel.windowNumber)) }
+        panel?.orderOut(nil)
+        state.restore()
+        DesktopMenuBarNative.alpha(state.space, -1)
+        DesktopMenuBarCover.recycle(panel)
+        panel = nil
+    }
+}

@@ -23,3 +23,33 @@ enum SettingsIndex {
         return settings + binds
     }
 }
+
+struct SettingEntry: Identifiable {
+    let id: String
+    let title: String
+    let pane: Pane
+    var advanced = false
+    var keywords = ""
+    var bind: BindRow?
+}
+
+struct SettingAnchor: ViewModifier {
+    let id: String
+    @ObservedObject var settingsUI: SettingsUI
+
+    func body(content: Content) -> some View {
+        content
+            .background {
+                RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous).fill(Theme.accentSoft)
+                    .padding(.horizontal, -12)
+                    .opacity(settingsUI.highlight == id ? 1 : 0)
+            }
+            .id(id)
+    }
+}
+
+extension View {
+    func setting(_ id: String, _ settingsUI: SettingsUI) -> some View {
+        modifier(SettingAnchor(id: id, settingsUI: settingsUI))
+    }
+}

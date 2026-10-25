@@ -22,4 +22,31 @@ final class GalleryModel: ObservableObject {
     @Published var catMoves = CatMoves()
 }
 
+struct ColorToken: Identifiable {
+    let name: String
+    let path: KeyPath<Palette, Palette.Pair>
+    var id: String { name }
+}
+
+enum GalleryAppearance: String, CaseIterable {
+    case system = "System", light = "Light", dark = "Dark"
+
+    var appearance: NSAppearance? {
+        switch self {
+        case .system: nil
+        case .light: NSAppearance(named: .aqua)
+        case .dark: NSAppearance(named: .darkAqua)
+        }
+    }
+}
+
+struct GallerySearch: View {
+    @Binding var text: String
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        OSearchField.galleryExample(text: $text, focus: $focused)
+    }
+}
+
 #endif
