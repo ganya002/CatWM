@@ -1,12 +1,12 @@
 # Window session
 
-The `WindowSession` module saves and opens app windows. The app imports it with `import WindowSession`. The module does not know about CatWM workspaces, layouts or Desktops. The code in `Sources/ouch/Templates/` uses the module and changes the CatWM state.
+The `WindowSession` module saves and opens app windows. The app imports it with `import WindowSession`. The module does not know about CatWM workspaces, layouts or Desktops. The code in `Sources/CatWM/Templates/` uses the module and changes the CatWM state.
 
 ## Module map
 
 ```mermaid
 flowchart TB
-    subgraph App["ouch target: Templates/ and Tiling/Manager/"]
+    subgraph App["catwm target: Templates/ and Tiling/Manager/"]
         direction LR
         Library["TemplateLibrary"]
         Capture["WindowManager+captureTemplate<br/>TemplateCaptureAssembler"]

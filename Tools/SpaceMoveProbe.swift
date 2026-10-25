@@ -1,6 +1,6 @@
 import AppKit
 
-#if OUCH_ARRIVAL_PROBE
+#if CATWM_ARRIVAL_PROBE
 final class FocusDim {
     static let shared = FocusDim()
     func owns(_: Int) -> Bool { false }
@@ -41,7 +41,7 @@ func wait(until condition: () -> Bool) -> Bool {
 }
 
 func move(window: CGWindowID, to destination: UInt64) -> Bool {
-#if OUCH_ARRIVAL_PROBE
+#if CATWM_ARRIVAL_PROBE
     let requireVisible = activeSpaces().contains(destination)
     var completed = false
     var succeeded = false
@@ -66,7 +66,7 @@ if CommandLine.arguments.dropFirst().first == "--child" {
     app.setActivationPolicy(.accessory)
     let window = NSWindow(contentRect: NSRect(x: 100, y: 100, width: 320, height: 180),
                           styleMask: [.titled], backing: .buffered, defer: false)
-    window.title = "Ouch disposable Space probe"
+    window.title = "CatWM disposable Space probe"
     window.orderFrontRegardless()
     let id = UInt32(window.windowNumber)
     guard let source = UInt64(CommandLine.arguments[2]) else { fatalError("Missing source Space") }

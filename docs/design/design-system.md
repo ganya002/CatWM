@@ -2,20 +2,18 @@
 
 This file is the rule set for every surface that CatWM draws: the menu bar menu, Settings, onboarding, tips and the HUD.
 
-Source: the CatWM design system artifact, https://claude.ai/artifact/GY1GAH7xBUwAzBP1B9mtfY.
-
 ## Visual reference and editing
 
-The Design Gallery is the visual reference. It draws every token and component with the real Swift code, so it cannot differ from the app. It is in debug builds only (`Sources/ouch/UI/Gallery/`). Build and open it:
+The Design Gallery is the visual reference. It draws every token and component with the real Swift code, so it cannot differ from the app. It is in debug builds only (`Sources/CatWM/UI/Gallery/`). Build and open it:
 
 ```text
 ./build.sh --dev
-open build/ouch.app --args --gallery
+open build/CatWM.app --args --gallery
 ```
 
-The Appearance control at the top switches between system, light and dark. When you add or change a component, add or change its example in the component’s own file. The build collects `GalleryExample` registrations. To get a picture without a window, run the test with `OUCH_GALLERY_PNG=/path/to/gallery.png swift test`.
+The Appearance control at the top switches between system, light and dark. When you add or change a component, add or change its example in the component’s own file. The build collects `GalleryExample` registrations. To get a picture without a window, run the test with `CATWM_GALLERY_PNG=/path/to/gallery.png swift test`.
 
-A change to a token or a component rule is not finished until `Sources/ouch/UI/Theme/`, the matching file in `UI/Components/`, the gallery and this file agree with it.
+A change to a token or a component rule is not finished until `Sources/CatWM/UI/Theme/`, the matching file in `UI/Components/`, the gallery and this file agree with it.
 
 ## Principles
 
@@ -24,8 +22,9 @@ A change to a token or a component rule is not finished until `Sources/ouch/UI/T
 3. **Two levels, then search.** Menus nest one level, two at most. Deeper items go behind the search field at the top of every menu.
 4. **Containers nest twice, then stop.** In Settings the content pane is one `surface` container on the ground, and each group of rows is one `surfaceRaised` container inside it (`OGroup`). Hairlines separate the rows inside a group. Nothing else gets a box. Floating things (menus, tips, tour cards, HUD) get depth from the `popover` and `float` elevations, not from borders.
 5. **Chrome is flat.** Window chrome and the Settings rail sit on `Theme.wash`, which is flat: `wash1` and `wash2` equal `background`, black in the dark theme and white in the light theme. Items sit on it as pills. The content is one rounded pane without a shadow (`.pane(shadow: false)`, `surface`, radius 14), inset 10 pt on the top, bottom and trailing sides.
-6. **Two faces.** Pilcrow Rounded for the wordmark, display, titles, headings and keycaps: Bold for the wordmark and display, Semibold for the rest. The system font for body text, labels, captions and menu rows. Nothing else.
+6. **Two faces.** Pilcrow Rounded for the wordmark and keycaps (Bold for the wordmark, Semibold for keycaps). Alpino Bold, the website heading face, for display, titles and headings. The system font for body text, labels, captions and menu rows. Nothing else.
 7. **Symbols move with meaning.** An SF Symbol effect always reports something: an action landed, a thing refused, the app is busy, a tip is waiting. Never decoration.
+8. **Close and create go on the left.** The close button and the create (add, new) button sit at the leading edge of a header, title bar or strip, as the macOS traffic lights do. Never put them at the trailing edge. If the button can go at the top or at the bottom of a container, put it at the top, in the top-left corner. Bad: a panel header with a close X on the right, after the count. Good: the close X at the left of the title bar, before the title.
 
 ## Colour
 
@@ -45,10 +44,10 @@ One palette, `Palette.catwm`, with a light and a dark theme. It comes from the C
 ## Type
 
 - `wordmark` Pilcrow Rounded Bold, tracking -0.03 em. `Theme.wordmark`.
-- `display` 44/48, Pilcrow Rounded Bold. Welcome title and showcase headlines. One per screen.
+- `display` 44/48, Alpino Bold. Welcome title and showcase headlines. One per screen.
 - `numeral` 34, weight 300, in `inkMuted`. Step numbers.
-- `title` 22/27, Pilcrow Rounded Semibold. Tour cards, pane titles, the HUD.
-- `heading` 15/20, Pilcrow Rounded Semibold. Group titles in Settings (`sectionTitle`) use it in `ink`. `body` 13.5/19, system font at 400. `body-medium` is `body` at 500. `caption` 12/16. `label` 12/16, weight 500.
+- `title` 22/27, Alpino Bold. Tour cards, pane titles, the HUD.
+- `heading` 15/20, Alpino Bold. Group titles in Settings (`sectionTitle`) use it in `ink`. `body` 13.5/19, system font at 400. `body-medium` is `body` at 500. `caption` 12/16. `label` 12/16, weight 500.
 - `kbd` is Pilcrow Rounded Semibold through `Theme.keys`. The face has no modifier glyphs, so the font cascades to the system font for ⌘ ⇧ ⌥ ⌃ ⇥ ↩. `kicker` is Pilcrow Rounded Semibold 12 in `inkMuted`, tracking 0.05 em, and the only uppercase text: "STEP 2 OF 6". `code` uses the mono face.
 
 Labels, captions, buttons, keys and menu rows never wrap. They are one line and truncate with an ellipsis (`.oneLine()`). Only body prose wraps. Keep it to two lines in floating surfaces.
@@ -65,7 +64,7 @@ Labels, captions, buttons, keys and menu rows never wrap. They are one line and 
 
 ```text
 head      lead symbol, kicker, trailing item, close
-title     title in Pilcrow Rounded Semibold (smaller at small and medium)
+title     title in Alpino Bold (smaller at small and medium)
 body      inkMuted body
 keys      large keycaps and live state ("Press it now", then "Nice")
 children  rows, menus, groups
@@ -74,13 +73,13 @@ progress  3 pt accent bar
 caret     optional: top, bottom or leading, pointing at the real target
 ```
 
-| Density | Use | Radius | Padding | Elevation |
-| --- | --- | --- | --- | --- |
-| `extraSmall` | Tooltip | `medium` 8 | 5 x 8 | popover |
-| `small` | Toast, "config reloaded" | `large` 12 | 12 x 16 | float, glass |
-| `medium` | Menus, submenus, command menu, inline tips | `large` 12 | 6 | popover |
-| `large` | Coach marks (tour steps), 344 pt wide | `extraLarge` 18 | 20 x 20 x 16 | float, glass |
-| `extraLarge` | Welcome card, 480 pt wide | 24 | 32 | float |
+| Density      | Use                                        | Radius          | Padding      | Elevation    |
+| ------------ | ------------------------------------------ | --------------- | ------------ | ------------ |
+| `extraSmall` | Tooltip                                    | `medium` 8      | 5 x 8        | popover      |
+| `small`      | Toast, "config reloaded"                   | `large` 12      | 12 x 16      | float, glass |
+| `medium`     | Menus, submenus, command menu, inline tips | `large` 12      | 6            | popover      |
+| `large`      | Coach marks (tour steps), 344 pt wide      | `extraLarge` 18 | 20 x 20 x 16 | float, glass |
+| `extraLarge` | Welcome card, 480 pt wide                  | 24              | 32           | float        |
 
 Choose the density by job, not by size. A tooltip never holds a button. Anything with a button is `medium` or larger. Tour cards always point with the caret at the real menu bar item or real window. They never dim or cover the desktop. Tips after onboarding are `medium` with a lead `lightbulb`, a close button and "No more tips". Nothing inside a surface gets its own box.
 
@@ -89,8 +88,10 @@ Choose the density by job, not by size. A tooltip never holds a button. Anything
 Each entry gives the design intent. The Swift type is in brackets.
 
 **Button** [`OButton`, `OIconButton`]. Variants: primary, secondary, ghost, danger, ghostDanger. Sizes: small, regular, large.
+
 - One primary per surface. It carries the return key shortcut.
 - Use ghost for Skip, Back, Close and other ways out.
+- Put Close and Create buttons at the top left of their header, title bar or strip (principle 8).
 - Use danger only for destructive actions, always with a verb ("Reset Shortcuts").
 - An icon-only button needs a label and a tooltip.
 
@@ -99,6 +100,7 @@ Each entry gives the design intent. The Swift type is in brackets.
 **Segmented** [`OSegmented`]. Picks one of two to four options with a sliding thumb. For more than four, use a menu submenu or the layout thumbnail grid.
 
 **Slider** [`OSlider`, `OBarSlider`, `OKnob`]. Sets a number by dragging. `OSlider` has a thin track and a thumb; its value reads at the trailing edge, and nothing floats above the thumb, so it never clips. `OBarSlider` is a pill whose fill is the indicator.
+
 - A press without movement jumps to the press point and springs there. A drag on the line follows the pointer. A drag on the bar is relative to the grab point, so it never jumps.
 - Only the value rounds to `step`. The fill follows the pointer.
 - Hold Option while dragging for a tenth of the speed.
@@ -119,6 +121,7 @@ Each entry gives the design intent. The Swift type is in brackets.
 **Tooltip** [`OTooltip`, `Tooltip`]. The smallest surface (`extraSmall`). One short phrase in sentence case, with no full stop. Never a button inside. Every icon-only button gets one. A shortcut is one chord at most. It points at its target with a small caret.
 
 **Menu** [`Popup`, `OMenuRow`, `OMenuButton`, `OMenuPicker`]. A dropdown with groups, checks, radios, switches, inline controls and nested submenus, with type-to-search. The picker button is an outlined pill (`borderControl`) with the current value in `body-medium` and the up-down chevron.
+
 - Menu rows carry no symbols. The lead column holds only a check, a radio dot or an app icon. A notification dot sits after the label.
 - The status menu root holds five rows: search, Layout, Workspaces, Settings and Help, then the footer with the version and Quit. The search row is a `well` row at the top. The workspace strip, Bring Window Here, What's New and the tutorial live one level down, in Workspaces and Help. Search finds them all.
 - Nest one level, two at most. Put the current choice of a radio group in the parent row's value.
@@ -130,7 +133,7 @@ Each entry gives the design intent. The Swift type is in brackets.
 
 **Settings window** [`SettingsView`, `Sidebar`, `SideItem`, `PaneHost`]. 880 by 620 pt by default, at least 760 by 520, at the normal window level, so it never floats above other windows. The rail is 196 pt: the animated cat mascot at 56 pt beside the 26 pt wordmark, then the search field, then the pages as text pills. The cat follows the cursor with its eyes while the cursor is over the rail. Its feeling and colour report the state: `content` in `ink` while CatWM runs, `sleepy` in `inkMuted` while tiling is paused, `annoyed` in `warning` while a shortcut has a problem, `alert` in `warning` while Accessibility or the event tap is missing, and `sad` in `danger` when the config cannot be saved. The pane shows the page title in `title`, then the groups. The status line at the top of General appears only when Accessibility or the event tap is missing. The only floating pill over the pane carries a save error, the shortcut problem count or skipped config lines.
 
-**Overview** [`SortView`]. A flat `surface` panel with the `float` elevation, not glass. Each workspace, the Close lane and each full screen window is a `surfaceRaised` container. The add lane is a dashed slot. A hovered or selected window row is a `hover` fill, and its window in the thumbnail is `ink`. Only a drop target uses `accent` (`accentSoft` fill, `dangerSoft` on Close). The layout pill is an outlined pill, like the picker.
+**Overview** [`SortView`]. A flat `surface` panel with the `float` elevation, not glass. Each workspace, the Close lane and each full screen window is a `surfaceRaised` container. The add lane is a dashed slot. A hovered or selected window row is a `hover` fill, and its window in the thumbnail is `ink`. Only a drop target uses `accent` (`accentSoft` fill, `dangerSoft` on Close). The layout pill is an outlined pill, like the picker. A window, tab group or workspace dropped outside the panel closes. While the cursor is outside the panel, the drag image follows it past the panel edge with a `danger` tint, and the Drop to close zone shows as the drop target.
 
 **Command menu**. A menu that opens with the search field first, 360 pt wide. Results group under their top-level parent and show the rest of the path as a breadcrumb. It shares its data with the menu so the two never disagree.
 
@@ -154,19 +157,19 @@ Each entry gives the design intent. The Swift type is in brackets.
 
 Use SF Symbols only, at the weight of the text, in hierarchical rendering. Use the real symbol name in the app.
 
-| Moment | Symbol | Effect |
-| --- | --- | --- |
-| Menu bar icon while windows animate | `rectangle.split.3x1` | `.variableColor.iterative` |
-| Tiling toggled off or on | `rectangle.split.3x1` and `macwindow.on.rectangle` | `.replace.magic(fallback: .downUp)` |
-| Retile, Reload Config | `arrow.triangle.2.circlepath` | `.rotate` |
-| Settings opened | `gearshape` | `.rotate.byLayer` |
-| Update found, tour step passed | `arrow.down.circle`, `checkmark.circle.fill` | `.bounce`, `.appear` |
-| Window refuses to resize | `exclamationmark.triangle.fill` | `.wiggle` |
-| Waiting for a key press in the tour | `cursorarrow.rays` | `.pulse` |
-| Tip available | `lightbulb` | `.breathe` |
-| Checkmark in menus, permission granted | `checkmark` | `.drawOn` (macOS 26), `.appear` before |
-| Menu row hovered | the row's symbol | `.scale.up` |
-| Layout, Window, Configs, Help | `square.grid.2x2`, `macwindow`, `slider.horizontal.3`, `questionmark.circle` | none |
+| Moment                                 | Symbol                                                                       | Effect                                 |
+| -------------------------------------- | ---------------------------------------------------------------------------- | -------------------------------------- |
+| Menu bar icon while windows animate    | `rectangle.split.3x1`                                                        | `.variableColor.iterative`             |
+| Tiling toggled off or on               | `rectangle.split.3x1` and `macwindow.on.rectangle`                           | `.replace.magic(fallback: .downUp)`    |
+| Retile, Reload Config                  | `arrow.triangle.2.circlepath`                                                | `.rotate`                              |
+| Settings opened                        | `gearshape`                                                                  | `.rotate.byLayer`                      |
+| Update found, tour step passed         | `arrow.down.circle`, `checkmark.circle.fill`                                 | `.bounce`, `.appear`                   |
+| Window refuses to resize               | `exclamationmark.triangle.fill`                                              | `.wiggle`                              |
+| Waiting for a key press in the tour    | `cursorarrow.rays`                                                           | `.pulse`                               |
+| Tip available                          | `lightbulb`                                                                  | `.breathe`                             |
+| Checkmark in menus, permission granted | `checkmark`                                                                  | `.drawOn` (macOS 26), `.appear` before |
+| Menu row hovered                       | the row's symbol                                                             | `.scale.up`                            |
+| Layout, Window, Configs, Help          | `square.grid.2x2`, `macwindow`, `slider.horizontal.3`, `questionmark.circle` | none                                   |
 
 - A discrete effect (bounce, wiggle, rotate) reports that something just happened. Bind it to a counter.
 - An indefinite effect (pulse, breathe, variable) reports a state that lasts. Stop it when the state ends.

@@ -159,7 +159,7 @@ function idleMotion(t: number) {
 
 const REST = resolvePose("content");
 
-// The moves, ported from Sources/ouch/UI/Theme/CatMotion.swift. Each move is
+// The moves, ported from Sources/CatWM/UI/Theme/CatMotion.swift. Each move is
 // keyframe tracks over seconds. lift is a share of the body height, stretch
 // squashes about the feet, lean is degrees, and lookX / lookY turn the face on
 // the head sphere, so a lookX of 2π is a full spin.

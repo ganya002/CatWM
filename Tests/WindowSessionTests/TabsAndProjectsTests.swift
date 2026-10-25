@@ -56,35 +56,35 @@ import Testing
 }
 
 @Suite struct ProjectGuessTests {
-    private let projects = [URL(fileURLWithPath: "/Users/a/Code/ouch"), URL(fileURLWithPath: "/Users/a/Code"),
+    private let projects = [URL(fileURLWithPath: "/Users/a/Code/catwm"), URL(fileURLWithPath: "/Users/a/Code"),
                             URL(fileURLWithPath: "/Users/a/site.code-workspace")]
 
     @Test func readsFoldersAndWorkspacesFromTheRecentList() {
         let json = """
-        {"entries":[{"folderUri":"file:///Users/a/Code/ouch"},{"fileUri":"file:///Users/a/notes.md"},
+        {"entries":[{"folderUri":"file:///Users/a/Code/catwm"},{"fileUri":"file:///Users/a/notes.md"},
         {"workspace":{"id":"1","configPath":"file:///Users/a/site.code-workspace"}},
         {"folderUri":"vscode-remote://ssh-remote%2Bbox/home/a"}]}
         """
         #expect(CodeEditorAdapter.recentProjects(json).map(\.absoluteString)
-            == ["file:///Users/a/Code/ouch", "file:///Users/a/site.code-workspace"])
+            == ["file:///Users/a/Code/catwm", "file:///Users/a/site.code-workspace"])
         #expect(CodeEditorAdapter.recentProjects("broken").isEmpty)
     }
 
     @Test func theDeepestFolderThatHoldsTheOpenFileWins() {
-        let found = ProjectGuess.pick(projects, title: "", document: "file:///Users/a/Code/ouch/Package.swift")
-        #expect(found?.absoluteString == "file:///Users/a/Code/ouch")
+        let found = ProjectGuess.pick(projects, title: "", document: "file:///Users/a/Code/catwm/Package.swift")
+        #expect(found?.absoluteString == "file:///Users/a/Code/catwm")
     }
 
     @Test func theTitleNamesTheFolderOrWorkspace() {
-        #expect(ProjectGuess.pick(projects, title: "main.swift — ouch — Cursor", document: nil)?.lastPathComponent
-            == "ouch")
+        #expect(ProjectGuess.pick(projects, title: "main.swift — catwm — Cursor", document: nil)?.lastPathComponent
+            == "catwm")
         #expect(ProjectGuess.pick(projects, title: "index.html - site (Workspace) - Visual Studio Code",
                                   document: nil)?.lastPathComponent == "site.code-workspace")
         #expect(ProjectGuess.pick(projects, title: "Welcome", document: nil) == nil)
     }
 
     @Test func findsTheXcodeProjectAboveAFile() throws {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent("ouch-\(UUID().uuidString)")
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("catwm-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: root) }
         let sources = root.appendingPathComponent("App/Sources")
         try FileManager.default.createDirectory(at: sources, withIntermediateDirectories: true)
@@ -99,7 +99,7 @@ import Testing
 
 @Suite struct SQLiteReadTests {
     @Test func readsTextRowsAndToleratesAMissingFile() {
-        let path = FileManager.default.temporaryDirectory.appendingPathComponent("ouch-\(UUID().uuidString).db").path
+        let path = FileManager.default.temporaryDirectory.appendingPathComponent("catwm-\(UUID().uuidString).db").path
         defer { try? FileManager.default.removeItem(atPath: path) }
         var database: OpaquePointer?
         #expect(sqlite3_open(path, &database) == SQLITE_OK)

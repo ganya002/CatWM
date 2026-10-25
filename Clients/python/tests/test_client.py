@@ -1,4 +1,4 @@
-"""Tests for the Python client against a fake Ouch server. Run: python3 -m unittest discover Clients/python/tests"""
+"""Tests for the Python client against a fake CatWM server. Run: python3 -m unittest discover Clients/python/tests"""
 import json
 import os
 import socket
@@ -9,8 +9,8 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from ouch import Ouch, OuchError  # noqa: E402
-from ouch.testing import Events, connect, find_windows, wait_for_window, wait_until  # noqa: E402
+from catwm import CatWM, CatWMError  # noqa: E402
+from catwm.testing import Events, connect, find_windows, wait_for_window, wait_until  # noqa: E402
 
 WINDOWS = [
     {"id": 1, "app": "com.apple.Safari", "title": "Docs", "focused": True, "workspace": "1", "floating": False},
@@ -18,12 +18,12 @@ WINDOWS = [
 ]
 
 
-class FakeOuch:
-    """Speaks the Ouch protocol. A `fake.emit` request pushes the events given in its args."""
+class FakeCatWM:
+    """Speaks the CatWM protocol. A `fake.emit` request pushes the events given in its args."""
 
     def __init__(self):
         self.directory = tempfile.TemporaryDirectory()
-        self.path = os.path.join(self.directory.name, "ouch.sock")
+        self.path = os.path.join(self.directory.name, "catwm.sock")
         self.requests = []
         self.subscribers = []
         self.server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -72,40 +72,40 @@ class FakeOuch:
 
 class ClientTests(unittest.TestCase):
     def setUp(self):
-        self.fake = FakeOuch()
+        self.fake = FakeCatWM()
         self.addCleanup(self.fake.close)
-        self.ouch = Ouch(self.fake.path, timeout=3)
-        self.addCleanup(self.ouch.close)
+        self.catwm = CatWM(self.fake.path, timeout=3)
+        self.addCleanup(self.catwm.close)
 
     def test_hello_and_result(self):
-        self.assertEqual(self.ouch.hello["version"], "test")
-        self.assertEqual(self.ouch.windows(), WINDOWS)
+        self.assertEqual(self.catwm.hello["version"], "test")
+        self.assertEqual(self.catwm.windows(), WINDOWS)
 
     def test_typed_method_sends_named_arguments_and_skips_none(self):
-        self.ouch.movefocus("left")
-        self.ouch.cyclenext()
+        self.catwm.movefocus("left")
+        self.catwm.cyclenext()
         sent = [(r["command"], r["args"]) for r in self.fake.requests]
         self.assertEqual(sent, [("movefocus", {"direction": "left"}), ("cyclenext", {})])
 
     def test_errors_become_exceptions(self):
-        with self.assertRaises(OuchError) as caught:
-            self.ouch.call("movefocus", {"direction": "sideways"})
+        with self.assertRaises(CatWMError) as caught:
+            self.catwm.call("movefocus", {"direction": "sideways"})
         self.assertEqual(caught.exception.code, "invalid_args")
 
     def test_not_running_skips_the_test(self):
         with self.assertRaises(unittest.SkipTest):
-            connect("/nonexistent/ouch.sock")
-        with self.assertRaises(OuchError) as caught:
-            Ouch("/nonexistent/ouch.sock")
+            connect("/nonexistent/catwm.sock")
+        with self.assertRaises(CatWMError) as caught:
+            CatWM("/nonexistent/catwm.sock")
         self.assertEqual(caught.exception.code, "not_running")
 
     def test_window_filters(self):
-        self.assertEqual([w["id"] for w in find_windows(self.ouch, app="com.apple.Safari")], [1])
-        self.assertEqual([w["id"] for w in find_windows(self.ouch, title="doc")], [1])
-        self.assertEqual([w["id"] for w in find_windows(self.ouch, floating=True)], [2])
-        self.assertEqual(wait_for_window(self.ouch, workspace="2")["id"], 2)
+        self.assertEqual([w["id"] for w in find_windows(self.catwm, app="com.apple.Safari")], [1])
+        self.assertEqual([w["id"] for w in find_windows(self.catwm, title="doc")], [1])
+        self.assertEqual([w["id"] for w in find_windows(self.catwm, floating=True)], [2])
+        self.assertEqual(wait_for_window(self.catwm, workspace="2")["id"], 2)
         with self.assertRaises(TimeoutError):
-            wait_for_window(self.ouch, timeout=0.2, app="nothing")
+            wait_for_window(self.catwm, timeout=0.2, app="nothing")
 
     def test_wait_until_returns_the_value(self):
         values = iter([None, 0, "ready"])
@@ -114,13 +114,13 @@ class ClientTests(unittest.TestCase):
 
 class EventTests(unittest.TestCase):
     def setUp(self):
-        self.fake = FakeOuch()
+        self.fake = FakeCatWM()
         self.addCleanup(self.fake.close)
-        self.ouch = Ouch(self.fake.path, timeout=3)
-        self.addCleanup(self.ouch.close)
+        self.catwm = CatWM(self.fake.path, timeout=3)
+        self.addCleanup(self.catwm.close)
 
     def emit(self, *events):
-        self.ouch.call("fake.emit", {"events": [{"event": n, "data": d} for n, d in events]})
+        self.catwm.call("fake.emit", {"events": [{"event": n, "data": d} for n, d in events]})
 
     def test_wait_filters_by_name_and_data(self):
         with Events("focus.changed", "mode.changed", path=self.fake.path) as events:
@@ -144,7 +144,7 @@ class EventTests(unittest.TestCase):
     def test_close_wakes_a_waiting_reader(self):
         events = Events("focus.changed", path=self.fake.path)
         threading.Timer(0.2, events.close).start()
-        with self.assertRaises(OuchError):
+        with self.assertRaises(CatWMError):
             events.wait("focus.changed", timeout=3)
 
 

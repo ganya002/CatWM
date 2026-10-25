@@ -1,0 +1,99 @@
+import AppKit
+import ApplicationServices
+
+enum Spaces {
+    static var canMoveWindows: Bool {
+        _ = conn?()
+        return NativeSpaceMove.isAvailable
+    }
+
+    static func move(window id: CGWindowID, to target: UInt64, waitUntilOnScreen: Bool = false,
+                     completion: @escaping (Bool) -> Void) {
+        guard target != 0, canMoveWindows else { completion(false); return }
+        let move = WindowSpaceMove(
+            membership: { of(window: id) }, submit: { NativeSpaceMove.move(window: id, to: target) },
+            isOnScreen: {
+                let info = CGWindowListCopyWindowInfo(.optionIncludingWindow, id) as? [[String: Any]]
+                return info?.first?[kCGWindowIsOnscreen as String] as? Bool == true
+            })
+        move.run(to: target, waitUntilOnScreen: waitUntilOnScreen, completion: completion)
+    }
+
+    private typealias ConnFn = @convention(c) () -> Int32
+    private typealias SpaceFn = @convention(c) (Int32, CFString) -> UInt64
+    private static let skylight = "/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight"
+    private static let conn: ConnFn? = symbol("SLSMainConnectionID", in: skylight)
+    private static let space: SpaceFn? = symbol("SLSManagedDisplayGetCurrentSpace", in: skylight)
+
+    private typealias CopySpacesFn = @convention(c) (Int32) -> Unmanaged<CFArray>?
+    private static let copySpaces: CopySpacesFn? = symbol("SLSCopyManagedDisplaySpaces", in: skylight)
+
+    struct DisplaySpaces {
+        let ids: [UInt64]
+        let desktops: [Int]
+        let current: Int?
+        var uuids: [String?] = []
+    }
+
+    struct Snapshot {
+        let displays: [[String: Any]]
+
+        var managedSpaceIDs: [UInt64: UInt64] {
+            var found: [UInt64: UInt64] = [:]
+            func add(_ space: [String: Any], parent: UInt64? = nil) {
+                guard let managed = space["ManagedSpaceID"] as? UInt64 ?? parent, managed != 0 else { return }
+                found[managed] = managed
+                if let raw = space["id64"] as? UInt64, raw != 0 { found[raw] = managed }
+            }
+            for display in displays {
+                for space in display["Spaces"] as? [[String: Any]] ?? [] {
+                    add(space)
+                    let parent = space["ManagedSpaceID"] as? UInt64
+                    if let wall = space["WallSpace"] as? [String: Any] { add(wall, parent: parent) }
+                    let layout = space["TileLayoutManager"] as? [String: Any]
+                    for tile in layout?["TileSpaces"] as? [[String: Any]] ?? [] { add(tile, parent: parent) }
+                }
+            }
+            return found
+        }
+
+        func list(display uuid: String) -> DisplaySpaces? {
+            let entry = displays.first { ($0["Display Identifier"] as? String) == uuid }
+                ?? (displays.count == 1 ? displays[0] : nil)
+            guard let entry, let spaces = entry["Spaces"] as? [[String: Any]] else { return nil }
+            let ids = spaces.map { ($0["ManagedSpaceID"] as? UInt64) ?? 0 }
+            let desktops = spaces.indices.filter { (spaces[$0]["type"] as? Int ?? 0) == 0 }
+            let current = (entry["Current Space"] as? [String: Any])?["ManagedSpaceID"] as? UInt64
+            return DisplaySpaces(ids: ids, desktops: desktops, current: current.flatMap { ids.firstIndex(of: $0) },
+                                 uuids: spaces.map { ($0["uuid"] as? String).flatMap { $0.isEmpty ? nil : $0 } })
+        }
+    }
+
+    static func snapshot() -> Snapshot? {
+        guard let conn, let copySpaces,
+              let arr = copySpaces(conn())?.takeRetainedValue() as? [[String: Any]] else { return nil }
+        return Snapshot(displays: arr)
+    }
+
+    static func list(display uuid: String) -> DisplaySpaces? { snapshot()?.list(display: uuid) }
+
+    static func isFullscreen(display uuid: String) -> Bool {
+        guard let spaces = list(display: uuid), let cur = spaces.current else { return false }
+        return !spaces.desktops.contains(cur)
+    }
+
+    private typealias WindowSpacesFn = @convention(c) (Int32, Int32, CFArray) -> Unmanaged<CFArray>?
+    private static let windowSpaces: WindowSpacesFn? = symbol("SLSCopySpacesForWindows", in: skylight)
+
+    static func of(window id: CGWindowID) -> [UInt64] {
+        guard let conn, let windowSpaces,
+              let arr = windowSpaces(conn(), 0x7, [id] as CFArray)?.takeRetainedValue() as? [UInt64]
+        else { return [] }
+        return arr
+    }
+
+    static func current(display uuid: String) -> UInt64 {
+        guard let conn, let space else { return 0 }
+        return space(conn(), uuid as CFString)
+    }
+}

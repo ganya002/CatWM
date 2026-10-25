@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Write the Python, TypeScript and Swift clients from Clients/schema.json.
 
-Run `swift run ouch --write-schema` first when the commands change.
+`./build.sh` runs `catwm --write-schema` before this script.
 """
 import json
 import re
@@ -110,7 +110,7 @@ def py_client(schema, enums):
            "import json", "import os", "import socket", "import threading",
            "from typing import Any, Iterator, Literal, TypedDict", "",
            f"PROTOCOL = {schema['protocol']}", "",
-           "", "class OuchError(Exception):",
+           "", "class CatWMError(Exception):",
            "    def __init__(self, code: str, message: str):",
            "        super().__init__(message)",
            "        self.code = code",
@@ -153,11 +153,11 @@ def py_client(schema, enums):
 
 
 PY_TRANSPORT = '''def default_path() -> str:
-    return os.environ.get("OUCH_SOCKET") or os.path.expanduser("~/.config/ouch/ouch.sock")
+    return os.environ.get("CATWM_SOCKET") or os.path.expanduser("~/.config/catwm/catwm.sock")
 
 
-class Ouch:
-    """A connection to the running Ouch app. Calls are safe to make from many threads."""
+class CatWM:
+    """A connection to the running CatWM app. Calls are safe to make from many threads."""
 
     def __init__(self, path: str | None = None, timeout: float | None = 10.0):
         self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -166,7 +166,7 @@ class Ouch:
             self._socket.connect(path or default_path())
         except OSError as error:
             self._socket.close()
-            raise OuchError("not_running", f"Ouch is not running: {error}") from error
+            raise CatWMError("not_running", f"CatWM is not running: {error}") from error
         self._reader = self._socket.makefile("r", encoding="utf-8", newline="\\n")
         self._lock = threading.Lock()
         self._next_id = 1
@@ -181,7 +181,7 @@ class Ouch:
         self._reader.close()
         self._socket.close()
 
-    def __enter__(self) -> "Ouch":
+    def __enter__(self) -> "CatWM":
         return self
 
     def __exit__(self, *exc: Any) -> None:
@@ -197,19 +197,19 @@ class Ouch:
             while True:
                 text = self._reader.readline()
                 if not text:
-                    raise OuchError("closed", "Ouch closed the connection")
+                    raise CatWMError("closed", "CatWM closed the connection")
                 reply = json.loads(text)
                 if reply.get("id") != request_id:
                     continue
                 if reply.get("ok"):
                     return reply.get("result")
                 error = reply.get("error") or {}
-                raise OuchError(error.get("code", "failed"), error.get("message", "The command failed"))
+                raise CatWMError(error.get("code", "failed"), error.get("message", "The command failed"))
 
     @staticmethod
     def events(*names: str, path: str | None = None) -> Iterator[Event]:
         """Yield events until the connection closes. This opens a connection of its own."""
-        with Ouch(path, timeout=None) as client:
+        with CatWM(path, timeout=None) as client:
             client.call("subscribe", {"events": list(names)})
             while True:
                 text = client._reader.readline()
@@ -223,15 +223,15 @@ class Ouch:
 
 def write_python(schema, enums):
     folder = CLIENTS / "python"
-    (folder / "ouch").mkdir(parents=True, exist_ok=True)
-    (folder / "ouch" / "__init__.py").write_text(py_client(schema, enums))
-    (folder / "ouch" / "py.typed").write_text("")
+    (folder / "catwm").mkdir(parents=True, exist_ok=True)
+    (folder / "catwm" / "__init__.py").write_text(py_client(schema, enums))
+    (folder / "catwm" / "py.typed").write_text("")
     (folder / ".gitignore").write_text("__pycache__\n*.egg-info\nbuild\n")
     (folder / "pyproject.toml").write_text(
         '[build-system]\nrequires = ["setuptools>=68"]\nbuild-backend = "setuptools.build_meta"\n\n'
-        '[project]\nname = "ouch-client"\nversion = "0.1.0"\n'
-        'description = "Control the Ouch tiling window manager"\nrequires-python = ">=3.10"\n\n'
-        '[tool.setuptools]\npackages = ["ouch"]\n\n[tool.setuptools.package-data]\nouch = ["py.typed"]\n'
+        '[project]\nname = "catwm-client"\nversion = "0.1.0"\n'
+        'description = "Control the CatWM tiling window manager"\nrequires-python = ">=3.10"\n\n'
+        '[tool.setuptools]\npackages = ["catwm"]\n\n[tool.setuptools.package-data]\ncatwm = ["py.typed"]\n'
     )
 
 
@@ -275,7 +275,7 @@ def ts_client(schema, enums):
         out += [f"  {field['name']}: {ts_type(field['type'])};" for field in event["data"]]
         out.append("}")
         names.append(f'{{ event: {json.dumps(event["name"])}; data: {name}Data }}')
-    out += ["", "export type OuchEvent =", "  | " + "\n  | ".join(names) + ";",
+    out += ["", "export type CatWMEvent =", "  | " + "\n  | ".join(names) + ";",
             f"export const EVENTS = {json.dumps([e['name'] for e in schema['events']])} as const;", "", TS_TRANSPORT]
     for command in schema["commands"]:
         kind, name, fields = result_info(command)
@@ -294,20 +294,20 @@ def ts_client(schema, enums):
     return "\n".join(out)
 
 
-TS_TRANSPORT = '''export class OuchError extends Error {
+TS_TRANSPORT = '''export class CatWMError extends Error {
   constructor(readonly code: string, message: string) {
     super(message);
-    this.name = "OuchError";
+    this.name = "CatWMError";
   }
 }
 
-type Listener = (event: OuchEvent) => void;
+type Listener = (event: CatWMEvent) => void;
 
 export function defaultPath(): string {
-  return process.env.OUCH_SOCKET ?? `${os.homedir()}/.config/ouch/ouch.sock`;
+  return process.env.CATWM_SOCKET ?? `${os.homedir()}/.config/catwm/catwm.sock`;
 }
 
-export class Ouch {
+export class CatWM {
   private nextId = 1;
   private buffer = "";
   private pending = new Map<number, { resolve: (value: unknown) => void; reject: (error: Error) => void }>();
@@ -319,19 +319,19 @@ export class Ouch {
     this.ready = new Promise((resolve) => (this.onHello = resolve));
     socket.setEncoding("utf8");
     socket.on("data", (chunk: string) => this.receive(chunk));
-    socket.on("close", () => this.fail(new OuchError("closed", "Ouch closed the connection")));
-    socket.on("error", (error) => this.fail(new OuchError("failed", error.message)));
+    socket.on("close", () => this.fail(new CatWMError("closed", "CatWM closed the connection")));
+    socket.on("error", (error) => this.fail(new CatWMError("failed", error.message)));
   }
 
   private onHello: () => void = () => undefined;
 
-  static connect(path: string = defaultPath()): Promise<Ouch> {
+  static connect(path: string = defaultPath()): Promise<CatWM> {
     return new Promise((resolve, reject) => {
       const socket = net.createConnection(path);
-      socket.once("error", (error) => reject(new OuchError("not_running", `Ouch is not running: ${error.message}`)));
+      socket.once("error", (error) => reject(new CatWMError("not_running", `CatWM is not running: ${error.message}`)));
       socket.once("connect", async () => {
         socket.removeAllListeners("error");
-        const client = new Ouch(socket);
+        const client = new CatWM(socket);
         await client.ready;
         resolve(client);
       });
@@ -359,8 +359,8 @@ export class Ouch {
   }
 
   /** Subscribe and yield events until the connection closes. */
-  async *events(...names: (typeof EVENTS)[number][]): AsyncGenerator<OuchEvent> {
-    const queue: OuchEvent[] = [];
+  async *events(...names: (typeof EVENTS)[number][]): AsyncGenerator<CatWMEvent> {
+    const queue: CatWMEvent[] = [];
     let wake: (() => void) | undefined;
     let closed = false;
     const off = this.onEvent((event) => {
@@ -399,12 +399,12 @@ export class Ouch {
       this.hello = message.hello;
       this.onHello();
     } else if (message.event) {
-      this.listeners.forEach((listener) => listener(message as OuchEvent));
+      this.listeners.forEach((listener) => listener(message as CatWMEvent));
     } else if (this.pending.has(message.id)) {
       const { resolve, reject } = this.pending.get(message.id)!;
       this.pending.delete(message.id);
       if (message.ok) resolve(message.result);
-      else reject(new OuchError(message.error?.code ?? "failed", message.error?.message ?? "The command failed"));
+      else reject(new CatWMError(message.error?.code ?? "failed", message.error?.message ?? "The command failed"));
     }
   }
 
@@ -420,7 +420,7 @@ def write_typescript(schema, enums):
     (folder / "src").mkdir(parents=True, exist_ok=True)
     (folder / "src" / "index.ts").write_text(ts_client(schema, enums))
     (folder / "package.json").write_text(json.dumps({
-        "name": "ouch-client", "version": "0.1.0", "description": "Control the Ouch tiling window manager",
+        "name": "catwm-client", "version": "0.1.0", "description": "Control the CatWM tiling window manager",
         "type": "module", "main": "dist/index.js", "types": "dist/index.d.ts", "files": ["dist"],
         "scripts": {"build": "tsc"}, "engines": {"node": ">=18"},
         "devDependencies": {"@types/node": "^22.0.0", "typescript": "^5.5.0"}}, indent=2) + "\n")
@@ -528,7 +528,7 @@ def swift_client(schema, enums):
     return "\n".join(out)
 
 
-SWIFT_TRANSPORT = '''public struct OuchError: Error, CustomStringConvertible, Sendable {
+SWIFT_TRANSPORT = '''public struct CatWMError: Error, CustomStringConvertible, Sendable {
     public let code: String
     public let message: String
     public var description: String { message }
@@ -565,11 +565,11 @@ public enum JSONValue: Codable, Equatable, Sendable {
     }
 }
 
-/// A connection to the running Ouch app. Calls block until the answer arrives and are safe from many threads.
-public final class Ouch: @unchecked Sendable {
+/// A connection to the running CatWM app. Calls block until the answer arrives and are safe from many threads.
+public final class CatWM: @unchecked Sendable {
     public static var defaultPath: String {
-        ProcessInfo.processInfo.environment["OUCH_SOCKET"]
-            ?? NSString(string: "~/.config/ouch/ouch.sock").expandingTildeInPath
+        ProcessInfo.processInfo.environment["CATWM_SOCKET"]
+            ?? NSString(string: "~/.config/catwm/catwm.sock").expandingTildeInPath
     }
 
     private let fd: Int32
@@ -578,11 +578,11 @@ public final class Ouch: @unchecked Sendable {
     private var nextID = 1
     public private(set) var hello: JSONValue = .null
 
-    public init(path: String = Ouch.defaultPath, timeout: TimeInterval = 10) throws {
+    public init(path: String = CatWM.defaultPath, timeout: TimeInterval = 10) throws {
         var address = sockaddr_un()
         address.sun_family = sa_family_t(AF_UNIX)
         guard path.utf8.count < MemoryLayout.size(ofValue: address.sun_path) else {
-            throw OuchError(code: "failed", message: "The socket path is too long")
+            throw CatWMError(code: "failed", message: "The socket path is too long")
         }
         withUnsafeMutableBytes(of: &address.sun_path) { $0.copyBytes(from: Array(path.utf8) + [0]) }
         fd = socket(AF_UNIX, SOCK_STREAM, 0)
@@ -595,7 +595,7 @@ public final class Ouch: @unchecked Sendable {
         }
         guard status == 0 else {
             Darwin.close(fd)
-            throw OuchError(code: "not_running", message: "Ouch is not running at \\(path)")
+            throw CatWMError(code: "not_running", message: "CatWM is not running at \\(path)")
         }
         var value = timeval(tv_sec: Int(timeout), tv_usec: 0)
         setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &value, socklen_t(MemoryLayout<timeval>.size))
@@ -616,24 +616,24 @@ public final class Ouch: @unchecked Sendable {
         let request: [String: Any] = ["id": id, "command": command, "args": args]
         let line = try JSONSerialization.data(withJSONObject: request) + Data("\\n".utf8)
         let sent = line.withUnsafeBytes { write(fd, $0.baseAddress, $0.count) }
-        guard sent == line.count else { throw OuchError(code: "closed", message: "Could not send the command") }
+        guard sent == line.count else { throw CatWMError(code: "closed", message: "Could not send the command") }
         while let data = try readLine() {
             guard let reply = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                   reply["id"] as? Int == id else { continue }
             if reply["ok"] as? Bool == true { return reply["result"] ?? NSNull() }
             let error = reply["error"] as? [String: Any]
-            throw OuchError(code: error?["code"] as? String ?? "failed",
+            throw CatWMError(code: error?["code"] as? String ?? "failed",
                             message: error?["message"] as? String ?? "The command failed")
         }
-        throw OuchError(code: "closed", message: "Ouch closed the connection")
+        throw CatWMError(code: "closed", message: "CatWM closed the connection")
     }
 
     /// Subscribe and receive events until the stream ends. This opens a connection of its own.
-    public static func events(_ names: [String] = [], path: String = Ouch.defaultPath) -> AsyncThrowingStream<Event, Error> {
+    public static func events(_ names: [String] = [], path: String = CatWM.defaultPath) -> AsyncThrowingStream<Event, Error> {
         AsyncThrowingStream { continuation in
-            let client: Ouch
+            let client: CatWM
             do {
-                client = try Ouch(path: path, timeout: 0)
+                client = try CatWM(path: path, timeout: 0)
                 _ = try client.call("subscribe", ["events": names])
             } catch {
                 continuation.finish(throwing: error)
@@ -672,7 +672,7 @@ public final class Ouch: @unchecked Sendable {
             var chunk = [UInt8](repeating: 0, count: 64 * 1024)
             let count = read(fd, &chunk, chunk.count)
             if count < 0, errno == EINTR { continue }
-            if count < 0, errno == EAGAIN { throw OuchError(code: "timeout", message: "Ouch did not answer in time") }
+            if count < 0, errno == EAGAIN { throw CatWMError(code: "timeout", message: "CatWM did not answer in time") }
             guard count > 0 else { return nil }
             buffer.append(contentsOf: chunk[0..<count])
         }
@@ -682,13 +682,13 @@ public final class Ouch: @unchecked Sendable {
 
 def write_swift(schema, enums):
     folder = CLIENTS / "swift"
-    (folder / "Sources" / "OuchClient").mkdir(parents=True, exist_ok=True)
-    (folder / "Sources" / "OuchClient" / "Ouch.swift").write_text(swift_client(schema, enums))
+    (folder / "Sources" / "CatWMClient").mkdir(parents=True, exist_ok=True)
+    (folder / "Sources" / "CatWMClient" / "CatWM.swift").write_text(swift_client(schema, enums))
     (folder / "Package.swift").write_text(
         "// swift-tools-version:5.9\nimport PackageDescription\n\n"
-        "let package = Package(\n    name: \"OuchClient\",\n    platforms: [.macOS(.v13)],\n"
-        "    products: [.library(name: \"OuchClient\", targets: [\"OuchClient\"])],\n"
-        "    targets: [.target(name: \"OuchClient\")]\n)\n"
+        "let package = Package(\n    name: \"CatWMClient\",\n    platforms: [.macOS(.v13)],\n"
+        "    products: [.library(name: \"CatWMClient\", targets: [\"CatWMClient\"])],\n"
+        "    targets: [.target(name: \"CatWMClient\")]\n)\n"
     )
 
 
