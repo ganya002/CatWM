@@ -44,6 +44,7 @@ final class Animator {
     private var frameRun: FrameRun?
     var onMinimumSize: ((CGWindowID, CGSize) -> Void)?
     var onTopRefused: ((_ target: CGRect, _ actual: CGRect) -> Void)?
+    var onLanded: (() -> Void)?
 
     init(makeWriter: @escaping (pid_t) -> AXWriter = AXWriter.init,
          applyFocus: @escaping (Window, () -> Bool) -> Void = { $0.focus(ifCurrent: $1) }) {
@@ -132,7 +133,7 @@ final class Animator {
             let newTimer = Timer(timeInterval: 1.0 / 120.0, repeats: true) { [weak self] _ in self?.tick() }
             RunLoop.main.add(newTimer, forMode: .common)
             timer = newTimer
-            frameRun = PerfMonitor.begin("window-move")
+            frameRun = PerfMonitor.shared.begin("window-move")
             tick()
         }
     }
@@ -165,13 +166,6 @@ final class Animator {
             self.landing[window.id] = nil
             self.quiet(window.id)
         }
-    }
-
-    private func writer(_ pid: pid_t) -> AXWriter {
-        if let existing = writers[pid] { return existing }
-        let created = makeWriter(pid)
-        writers[pid] = created
-        return created
     }
 
     var activeWriterPids: Set<pid_t> { Set(writers.keys) }
@@ -238,7 +232,7 @@ final class Animator {
             guard let self, self.landing[id]?.number == number else { return }
             self.landing[id] = nil
             guard wrote else { return }
-            CursorRefresh.soon()
+            self.onLanded?()
             self.quietUntil[id] = CACurrentMediaTime() + 0.4
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in self?.verify(move, epoch: epoch) }
         }
@@ -249,12 +243,13 @@ final class Animator {
         guard epochs[window.id, default: 0] == epoch, items[window.id] == nil, landing[window.id] == nil,
               !window.placementSuspended else { return }
         quietUntil[window.id] = CACurrentMediaTime() + 0.4
-        writer(window.pid).run(for: window.id) { [weak self] isCurrent in
+        let writer = writer(window.pid)
+        writer.run(for: window.id) { [weak self] isCurrent in
             var actual = window.frame
             guard isCurrent(), !window.placementSuspended, !WindowPlacementState.blocksPlacement(window.element),
                   !actual.isNull, !actual.approxEqual(move.target, tolerance: 2) else { return }
-            EnhancedUI.suspend(window.pid)
-            defer { EnhancedUI.resume(window.pid) }
+            writer.suspendEnhancedUI()
+            defer { writer.resumeEnhancedUI() }
             guard isCurrent(), !window.placementSuspended else { return }
             window.setFrame(move.target)
             actual = window.frame
@@ -279,6 +274,13 @@ final class Animator {
 }
 
 extension Animator {
+    private func writer(_ pid: pid_t) -> AXWriter {
+        if let existing = writers[pid] { return existing }
+        let created = makeWriter(pid)
+        writers[pid] = created
+        return created
+    }
+
     func forget(_ id: CGWindowID) {
         cancel(id)
         if let pid = owners.removeValue(forKey: id) { writers[pid]?.forget(id) }
@@ -294,11 +296,7 @@ extension Animator {
     }
 
     func terminated(_ pid: pid_t) {
-        if let writer = writers.removeValue(forKey: pid) {
-            writer.run { EnhancedUI.terminated(pid) }
-        } else {
-            EnhancedUI.terminated(pid)
-        }
+        writers[pid] = nil
         focusQueues[pid] = nil
     }
 }

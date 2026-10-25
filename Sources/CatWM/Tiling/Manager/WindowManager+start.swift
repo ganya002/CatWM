@@ -17,6 +17,7 @@ extension WindowManager {
         AXUIElementSetMessagingTimeout(AXUIElementCreateSystemWide(), 1.0)
         animator.onMinimumSize = { [weak self] id, size in self?.learnMinimum(id, size) }
         animator.onTopRefused = { [weak self] target, actual in self?.learnMenuBar(target, actual) }
+        animator.onLanded = { [weak self] in self?.cursorRefresh.soon() }
 
         observeApplicationNotifications()
         observeSpaceAndScreenNotifications()

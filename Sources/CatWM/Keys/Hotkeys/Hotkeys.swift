@@ -44,5 +44,4 @@ final class Hotkeys {
     }
 
     enum PostStyle: Int { case plain = 0, arrowFlags = 1, physical = 2 }
-    static var postStyle: PostStyle = .physical
 }

@@ -50,8 +50,7 @@ extension Hotkeys {
         return mods.rawValue | UInt64(code)
     }
 
-    static func post(keyCode: UInt16, flags: CGEventFlags, style: PostStyle? = nil) {
-        let style = style ?? postStyle
+    static func post(keyCode: UInt16, flags: CGEventFlags, style: PostStyle) {
         var flags = flags.intersection([.maskCommand, .maskAlternate, .maskControl, .maskShift,
                                         .maskSecondaryFn, .maskNumericPad])
         if style != .plain, (123...126).contains(keyCode) { flags.formUnion([.maskSecondaryFn, .maskNumericPad]) }

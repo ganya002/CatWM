@@ -53,7 +53,9 @@ extension WindowManager {
                let combo = SystemShortcut.step(right: info.desktops[number - 1] > cur) {
                 let delta = info.desktops[number - 1] - cur
                 Log.info("move to space: landed on \(cur + 1); stepping \(delta) more")
-                for _ in 0..<abs(delta) { Hotkeys.post(keyCode: combo.keyCode, flags: combo.flags) }
+                for _ in 0..<abs(delta) {
+                    Hotkeys.post(keyCode: combo.keyCode, flags: combo.flags, style: keyPostStyle)
+                }
                 holdUntilArrived(space: number, release: release, restore: restore,
                                  settle: 0.45 + 0.15 * Double(abs(delta) - 1), attemptsLeft: attemptsLeft - 1)
                 return
@@ -65,7 +67,7 @@ extension WindowManager {
 
     func finishMove(restore: CGPoint) {
         CGWarpMouseCursorPosition(restore)
-        CursorRefresh.soon()
+        cursorRefresh.soon()
         drags = [:]
         desktops.movingToSpace = false
         scheduleRefresh(after: 0.2)

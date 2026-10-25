@@ -1,30 +1,31 @@
 import AppKit
+import os
 import ScreenCaptureKit
 
-enum ScreenRecording {
+final class ScreenRecording {
+    static let shared = ScreenRecording()
     private static let testDoneKey = "screenRecordingTestDone"
-    private static let permissionLock = NSLock()
-    private static var grantedLive = false
-    private static var checking = false
-    static var watching = false
+    private let grantedLive = OSAllocatedUnfairLock(initialState: false)
+    private var checking = false
+    var watching = false
 
-    static var isGranted: Bool { permissionLock.withLock { grantedLive } || CGPreflightScreenCaptureAccess() }
-    static var isTestDone: Bool { UserDefaults.standard.bool(forKey: testDoneKey) }
+    var isGranted: Bool { grantedLive.withLock { $0 } || CGPreflightScreenCaptureAccess() }
+    var isTestDone: Bool { UserDefaults.standard.bool(forKey: Self.testDoneKey) }
 
-    static func refresh() {
+    func refresh() {
         guard watching, !isGranted, !checking else { return }
         checking = true
         Task { @MainActor in
             let content = try? await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
             let granted = content != nil
-            permissionLock.withLock { grantedLive = granted }
+            grantedLive.withLock { $0 = granted }
             checking = false
             if granted { watching = false }
         }
     }
 
     @MainActor
-    static func takeTestImage() async -> Bool {
+    func takeTestImage() async -> Bool {
         guard isGranted else { return false }
         do {
             let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
@@ -34,7 +35,7 @@ enum ScreenRecording {
             configuration.width = 64
             configuration.height = 64
             _ = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: configuration)
-            UserDefaults.standard.set(true, forKey: testDoneKey)
+            UserDefaults.standard.set(true, forKey: Self.testDoneKey)
             Log.info("screen recording test image taken")
             return true
         } catch {

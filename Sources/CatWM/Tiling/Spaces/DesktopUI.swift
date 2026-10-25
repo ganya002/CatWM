@@ -5,7 +5,7 @@ enum DesktopUI {
 
     static func prepare() {
         DesktopMenuBar.recover()
-        DesktopMenuBarCover.prepare()
+        DesktopMenuBarCover.shared.prepare()
         for screen in Screen.all() { _ = isSettled(screen) }
     }
 

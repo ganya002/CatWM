@@ -17,7 +17,7 @@ final class PermissionWatcher {
     private static func check() -> Set<Permission> { Set(Permission.allCases.filter(\.isGranted)) }
 
     init(read: @escaping () -> Set<Permission> = { PermissionWatcher.check() },
-         refreshScreenRecording: @escaping () -> Void = { ScreenRecording.refresh() }) {
+         refreshScreenRecording: @escaping () -> Void = { ScreenRecording.shared.refresh() }) {
         self.read = read
         self.refreshScreenRecording = refreshScreenRecording
         atLaunch = read()

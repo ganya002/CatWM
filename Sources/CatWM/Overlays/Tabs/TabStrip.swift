@@ -129,7 +129,7 @@ private struct TabCell: View {
     var body: some View {
         ZStack {
             HStack(spacing: Theme.Space.small - Theme.Space.xxs) {
-                Image(nsImage: AppIcons.icon(for: tab.pid))
+                Image(nsImage: AppIcons.shared.iconOrGeneric(for: tab.pid))
                     .resizable()
                     .frame(width: TabStrip.iconSide, height: TabStrip.iconSide)
                     .opacity(active || hovered ? 1 : 0.7)
@@ -152,17 +152,6 @@ private struct TabCell: View {
             .padding(.leading, Theme.Space.small)
         }
         .foregroundStyle(active && focused || hovered ? Theme.ink : Theme.inkMuted)
-    }
-}
-
-enum AppIcons {
-    private static var cache: [pid_t: NSImage] = [:]
-
-    static func icon(for pid: pid_t) -> NSImage {
-        if let cached = cache[pid] { return cached }
-        let icon = NSRunningApplication(processIdentifier: pid)?.icon ?? NSWorkspace.shared.icon(for: .application)
-        cache[pid] = icon
-        return icon
     }
 }
 

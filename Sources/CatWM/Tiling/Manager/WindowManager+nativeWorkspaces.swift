@@ -51,7 +51,7 @@ extension WindowManager {
 
     func syncNativeWorkspaces(screens: [Screen], present: Set<CGWindowID>) -> WorkspaceReconciliation {
         updateNativeCatalog(screens)
-        MainActor.assumeIsolated { DesktopGuardClient.prewarm() }
+        Task { @MainActor [nativeDesktop] in nativeDesktop.prewarmGuard() }
         let displays = Set(screens.map(\.uuid))
         shown = shown.filter { displays.contains($0.key) }
         virtualShown = virtualShown.filter { displays.contains($0.key) }

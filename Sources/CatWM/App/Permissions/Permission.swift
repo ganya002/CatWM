@@ -12,7 +12,7 @@ enum Permission: CaseIterable {
         switch self {
         case .accessibility: AXIsProcessTrusted()
         case .inputMonitoring: IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) == kIOHIDAccessTypeGranted
-        case .screenRecording: ScreenRecording.isGranted
+        case .screenRecording: ScreenRecording.shared.isGranted
         case .fullDiskAccess: NotificationDatabase.isReadable
         }
     }
@@ -46,7 +46,7 @@ enum Permission: CaseIterable {
 
     func request() {
         guard !isGranted else { return }
-        if self == .screenRecording { ScreenRecording.watching = true }
+        if self == .screenRecording { ScreenRecording.shared.watching = true }
         PermissionGuide.shared.show(self)
     }
 

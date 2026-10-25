@@ -9,21 +9,7 @@ import AppKit
     private var launched = false, contextID = 0
     private var waiting: [CheckedContinuation<Void, Never>] = []
 
-    private static var warm: DesktopGuardClient?
-
-    static func acquire() -> DesktopGuardClient {
-        defer { warm = nil }
-        if let warm, warm.process.isRunning { return warm }
-        return DesktopGuardClient()
-    }
-
-    static func prewarm() {
-        guard warm?.process.isRunning != true else { return }
-        let client = DesktopGuardClient()
-        if (try? client.launch()) != nil { warm = client }
-    }
-
-    private func launch() throws {
+    func launch() throws {
         guard !launched else { return }
         launched = true
         process.executableURL = URL(fileURLWithPath: CommandLine.arguments[0]).standardizedFileURL
@@ -37,6 +23,7 @@ import AppKit
             let data = handle.availableData
             Task { @MainActor in self?.receive(data) }
         }
+        process.terminationHandler = { [weak self] _ in Task { @MainActor in self?.wake() } }
         try process.run()
     }
 
@@ -77,7 +64,7 @@ import AppKit
         }
     }
 
-    func finish() async throws {
+    func release() async throws {
         let id = contextID
         send("RELEASE \(id)")
         try await wait { self.reply.released >= id || !self.process.isRunning }
@@ -86,14 +73,13 @@ import AppKit
         }
         heartbeat?.invalidate()
         heartbeat = nil
-        if Self.warm?.process.isRunning != true {
-            Self.warm = self
-        } else if Self.warm !== self {
-            send("DONE")
-            try await wait { self.reply.finished && !self.process.isRunning }
-            output.fileHandleForReading.readabilityHandler = nil
-            retainedReader = nil
-        }
+    }
+
+    func shutDown() async throws {
+        send("DONE")
+        try await wait { self.reply.finished && !self.process.isRunning }
+        output.fileHandleForReading.readabilityHandler = nil
+        retainedReader = nil
     }
 
     private func send(_ message: String) {
@@ -109,17 +95,18 @@ import AppKit
     }
 
     private func wait(_ condition: () -> Bool) async throws {
-        let deadline = ProcessInfo.processInfo.systemUptime + 3
+        let clock = ContinuousClock()
+        let deadline = clock.now + .seconds(3)
+        let timeout = Task { @MainActor [weak self] in
+            do { try await Task.sleep(until: deadline, clock: clock) } catch { return } // style-ok: handshake timeout
+            self?.wake()
+        }
+        defer { timeout.cancel() }
         while !condition() {
-            guard ProcessInfo.processInfo.systemUptime < deadline else {
+            guard clock.now < deadline else {
                 throw DesktopTransitionError.check("Desktop restore guard handshake timed out")
             }
-            await withCheckedContinuation { continuation in
-                waiting.append(continuation)
-                DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(5)) { [weak self] in
-                    MainActor.assumeIsolated { self?.wake() }
-                }
-            }
+            await withCheckedContinuation { waiting.append($0) }
         }
     }
 

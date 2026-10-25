@@ -4,7 +4,7 @@ extension WindowManager {
     @discardableResult
     func goToSpace(_ number: Int, autoCorrect: Bool = true) -> Int? {
         if let combo = SystemShortcut.desktop(number) {
-            Hotkeys.post(keyCode: combo.keyCode, flags: combo.flags)
+            Hotkeys.post(keyCode: combo.keyCode, flags: combo.flags, style: keyPostStyle)
             desktops.pendingSpace = nil
             return 1
         }
@@ -30,9 +30,9 @@ extension WindowManager {
         }
         Log.info(
             "spaces: desktop \(cur + 1) → \(number), stepping \(delta) with key \(combo.keyCode) "
-                + "flags \(combo.flags.rawValue) style \(Hotkeys.postStyle)"
+                + "flags \(combo.flags.rawValue) style \(keyPostStyle)"
         )
-        for _ in 0..<abs(delta) { Hotkeys.post(keyCode: combo.keyCode, flags: combo.flags) }
+        for _ in 0..<abs(delta) { Hotkeys.post(keyCode: combo.keyCode, flags: combo.flags, style: keyPostStyle) }
         let settle = 0.6 + 0.15 * Double(abs(delta))
         desktops.pendingSpace = .init(display: screen.uuid, index: info.desktops[number - 1],
                                       until: Date().addingTimeInterval(settle))
@@ -54,7 +54,7 @@ extension WindowManager {
               let combo = SystemShortcut.step(right: target > cur) else { return }
         let delta = target - cur
         Log.info("spaces: landed on \(cur + 1) instead of \(target + 1); correcting by \(delta)")
-        for _ in 0..<abs(delta) { Hotkeys.post(keyCode: combo.keyCode, flags: combo.flags) }
+        for _ in 0..<abs(delta) { Hotkeys.post(keyCode: combo.keyCode, flags: combo.flags, style: keyPostStyle) }
         let settle = 0.6 + 0.15 * Double(abs(delta))
         desktops.pendingSpace = .init(display: display, index: target, until: Date().addingTimeInterval(settle))
         DispatchQueue.main.asyncAfter(deadline: .now() + settle) { [weak self] in

@@ -1,12 +1,12 @@
 import AppKit
 import QuartzCore
 
-enum CursorRefresh {
-    private static var work: DispatchWorkItem?
+final class CursorRefresh {
+    private var work: DispatchWorkItem?
 
-    static func soon(after delay: Double = 0.08) {
+    func soon(after delay: Double = 0.08) {
         work?.cancel()
-        let item = DispatchWorkItem { post() }
+        let item = DispatchWorkItem { Self.post() }
         work = item
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: item)
     }

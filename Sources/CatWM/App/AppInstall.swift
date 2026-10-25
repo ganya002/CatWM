@@ -1,23 +1,24 @@
 import Foundation
 import ServiceManagement
 
-enum LoginItem {
-    private static var status = SMAppService.mainApp.status
-    static var isEnabled: Bool { status == .enabled }
-    static var needsApproval: Bool { status == .requiresApproval }
+final class LoginItem {
+    static let shared = LoginItem()
+    private var status = SMAppService.mainApp.status
+    var isEnabled: Bool { status == .enabled }
+    var needsApproval: Bool { status == .requiresApproval }
 
-    static func refresh(then done: @escaping () -> Void) {
+    func refresh(then done: @escaping () -> Void) {
         DispatchQueue.global(qos: .utility).async {
             let next = SMAppService.mainApp.status
             DispatchQueue.main.async {
-                status = next
+                self.status = next
                 done()
             }
         }
     }
 
     @discardableResult
-    static func set(_ enabled: Bool) -> Bool {
+    func set(_ enabled: Bool) -> Bool {
         do {
             if enabled { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
             status = SMAppService.mainApp.status
@@ -29,14 +30,14 @@ enum LoginItem {
         }
     }
 
-    static func enableOnFirstLaunch() {
+    func enableOnFirstLaunch() {
         let key = "didSetUpLaunchAtLogin"
         guard !UserDefaults.standard.bool(forKey: key) else { return }
         UserDefaults.standard.set(true, forKey: key)
         set(true)
     }
 
-    static func openSettings() { SMAppService.openSystemSettingsLoginItems() }
+    func openSettings() { SMAppService.openSystemSettingsLoginItems() }
 }
 
 enum CommandLineTool {

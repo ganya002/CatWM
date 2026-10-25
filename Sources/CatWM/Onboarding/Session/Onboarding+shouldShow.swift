@@ -41,16 +41,16 @@ extension Onboarding {
         welcomeModel.allowFullDiskAccess = { Permission.fullDiskAccess.request() }
         welcomeModel.takeTestImage = { [weak self] in
             Task { @MainActor in
-                guard await ScreenRecording.takeTestImage() else { return }
+                guard await ScreenRecording.shared.takeTestImage() else { return }
                 self?.welcomeModel.screenTestDone = true
                 self?.welcome?.makeKeyAndOrderFront(nil)
             }
         }
         welcomeModel.allowLogin = { [weak self] in
-            LoginItem.set(true)
-            if !LoginItem.isEnabled {
+            LoginItem.shared.set(true)
+            if !LoginItem.shared.isEnabled {
                 self?.openedLoginItems = true
-                LoginItem.openSettings()
+                LoginItem.shared.openSettings()
             }
         }
         PermissionGuide.shared.onGranted = { [weak self] in self?.welcome?.makeKeyAndOrderFront(nil) }
@@ -81,11 +81,11 @@ extension Onboarding {
     }
 
     func refreshWelcome() {
-        let accessibility = Permission.accessibility.isGranted, login = LoginItem.isEnabled
+        let accessibility = Permission.accessibility.isGranted, login = LoginItem.shared.isEnabled
         if welcomeModel.accessibility != accessibility { welcomeModel.accessibility = accessibility }
         let inputMonitoring = Permission.inputMonitoring.isGranted
         if welcomeModel.inputMonitoring != inputMonitoring { welcomeModel.inputMonitoring = inputMonitoring }
-        let screenRecording = Permission.screenRecording.isGranted, screenTestDone = ScreenRecording.isTestDone
+        let screenRecording = Permission.screenRecording.isGranted, screenTestDone = ScreenRecording.shared.isTestDone
         if welcomeModel.screenRecording != screenRecording { welcomeModel.screenRecording = screenRecording }
         if welcomeModel.screenTestDone != screenTestDone { welcomeModel.screenTestDone = screenTestDone }
         let fullDiskAccess = Permission.fullDiskAccess.isGranted
@@ -116,7 +116,7 @@ extension Onboarding {
             if self?.isRunning == true { MenuBarTip.shared.show() }
         }
         poll = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
-            LoginItem.refresh { self?.refreshWelcome() }
+            LoginItem.shared.refresh { self?.refreshWelcome() }
         }
         poll?.tolerance = 0.1
     }

@@ -8,8 +8,7 @@ enum PanelMotion: String, CaseIterable {
     case tile
     case draw
 
-    static var current: PanelMotion { preview ?? WindowManager.shared.config.panelAnimation }
-    static var preview: PanelMotion?
+    static var current: PanelMotion { PanelMotionDemo.shared.preview ?? WindowManager.shared.config.panelAnimation }
 
     var title: String {
         switch self {
