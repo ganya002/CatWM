@@ -107,13 +107,14 @@ final class WindowManager {
     let scanner: WindowScanner
     let dockWindowPull = DockWindowPull()
     let dockArea = DockArea()
-    let cursorRefresh = CursorRefresh()
+    let cursorRefresh: CursorRefresh
 
     init(backend: any WindowBackend = AXBackend.shared, config: Config) {
         self.backend = backend
         self.config = config
         frontmostPID = { backend.frontmostPID() }
         animator = Animator(backend: backend)
+        cursorRefresh = CursorRefresh(backend: backend)
         scanner = WindowScanner(read: { backend.scan($0, discovered: $1) }, readDesktop: { backend.desktop(known: $0) },
                                 readApplications: { backend.applications() })
         focusRequests.focusReader = FocusReader { backend.focusedWindow(pid: $0) }

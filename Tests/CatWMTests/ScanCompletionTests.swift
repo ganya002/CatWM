@@ -56,6 +56,7 @@ import Testing
         func suspendEnhancedUI(_: pid_t) -> Bool { false }
         func resumeEnhancedUI(_: pid_t) {}
         func focus(_: Window, ifCurrent _: () -> Bool) {}
+        func refreshCursor() {}
     }
 
     private func nextRefresh(_ backend: BlockingBackend) async {

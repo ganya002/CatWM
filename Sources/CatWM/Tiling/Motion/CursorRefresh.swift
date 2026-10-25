@@ -2,16 +2,19 @@ import AppKit
 import QuartzCore
 
 final class CursorRefresh {
+    private let backend: any WindowBackend
     private var work: DispatchWorkItem?
+
+    init(backend: any WindowBackend) { self.backend = backend }
 
     func soon(after delay: Double = 0.08) {
         work?.cancel()
-        let item = DispatchWorkItem { Self.post() }
+        let item = DispatchWorkItem { [backend] in backend.refreshCursor() }
         work = item
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: item) // style-ok: debounce of cursor updates
     }
 
-    private static func post() {
+    static func post() {
         guard NSEvent.pressedMouseButtons == 0,
               let here = CGEvent(source: nil)?.location,
               let event = CGEvent(mouseEventSource: CGEventSource(stateID: .hidSystemState), mouseType: .mouseMoved,
