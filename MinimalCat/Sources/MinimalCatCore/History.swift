@@ -3,10 +3,12 @@ import Foundation
 
 public struct Move: Equatable, Sendable {
     public let window: WindowID
-    public let from: CGRect
-    public let to: CGRect
-    public init(window: WindowID, from: CGRect, to: CGRect) { self.window = window; self.from = from; self.to = to }
-    public var reversed: Move { Move(window: window, from: to, to: from) }
+    public let start: CGRect
+    public let end: CGRect
+    public init(window: WindowID, start: CGRect, end: CGRect) {
+        self.window = window; self.start = start; self.end = end
+    }
+    public var reversed: Move { Move(window: window, start: end, end: start) }
 }
 
 /// One thing that moved windows, so one undo puts all of it back.

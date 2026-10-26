@@ -6,9 +6,14 @@ included:
   - Tests
   - Tools
   - Plugins
+  - MinimalCat/Package.swift
+  - MinimalCat/Sources
+  - MinimalCat/Tests
 excluded:
   - .build
   - build
+  - MinimalCat/.build
+  - MinimalCat/build
 opt_in_rules:
   - async_without_await
   - closure_end_indentation

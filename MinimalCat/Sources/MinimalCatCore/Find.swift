@@ -5,11 +5,12 @@ public enum Find {
     public static func rank(_ query: String, _ windows: [WindowInfo]) -> [WindowInfo] {
         let needle = fold(query)
         guard !needle.isEmpty else { return windows }
-        let scored = windows.enumerated().compactMap { index, window -> (WindowInfo, Int, Int)? in
-            let best = [score(needle, fold(window.app)), score(needle, fold(window.title))].compactMap { $0 }.max()
-            return best.map { (window, $0, index) }
+        struct Scored { let window: WindowInfo; let score: Int; let index: Int }
+        let scored = windows.enumerated().compactMap { index, window -> Scored? in
+            let best = [score(needle, fold(window.app)), score(needle, fold(window.title))].compactMap(\.self).max()
+            return best.map { Scored(window: window, score: $0, index: index) }
         }
-        return scored.sorted { ($0.1, -$0.2) > ($1.1, -$1.2) }.map(\.0)
+        return scored.sorted { ($0.score, -$0.index) > ($1.score, -$1.index) }.map(\.window)
     }
 
     static func score(_ needle: String, _ text: String) -> Int? {

@@ -109,13 +109,13 @@ public final class Engine {
         let target: CGRect
         var label = Command.place(place).title
         switch (place, current) {
-        case (.big, .big?) where beforeBig[window.id] != nil:
+        case (.big, _) where current == .big && beforeBig[window.id] != nil:
             target = beforeBig.removeValue(forKey: window.id) ?? window.frame
             label = "Put Back"
         case (.big, _):
             beforeBig[window.id] = window.frame
             target = Geometry.frame(for: .big, on: display)
-        case (.left, .left?), (.right, .right?):
+        case (.left, _) where current == .left, (.right, _) where current == .right:
             let side: Side = place == .left ? .left : .right
             guard let next = Geometry.neighbour(of: display, toward: side, in: displays) else { return .none }
             target = Geometry.frame(for: side == .left ? .right : .left, on: next)
@@ -124,7 +124,7 @@ public final class Engine {
         }
         guard !Geometry.approxEqual(target, window.frame, tolerance: 1) else { return .none }
         let step = Step(label: label, cause: cause, displays: DisplaySet(displays),
-                        moves: [Move(window: window.id, from: window.frame, to: target)])
+                        moves: [Move(window: window.id, start: window.frame, end: target)])
         apply(step.moves, on: displays)
         history.record(step)
         return .notice("\(label) · \(window.app)", visible: false)
@@ -142,7 +142,7 @@ public final class Engine {
 
     private func apply(_ moves: [Move], on displays: [Display]) {
         system.apply(moves)
-        let targets = Dictionary(moves.map { ($0.window, $0.to) }, uniquingKeysWith: { _, last in last })
+        let targets = Dictionary(moves.map { ($0.window, $0.end) }, uniquingKeysWith: { _, last in last })
         memory.save(windows().map { window in
             var moved = window
             moved.frame = targets[window.id] ?? window.frame

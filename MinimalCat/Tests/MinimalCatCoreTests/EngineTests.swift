@@ -1,6 +1,6 @@
 import CoreGraphics
-import Testing
 @testable import MinimalCatCore
+import Testing
 
 @MainActor
 struct EngineTests {

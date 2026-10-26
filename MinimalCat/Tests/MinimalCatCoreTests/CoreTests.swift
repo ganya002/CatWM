@@ -1,44 +1,44 @@
 import CoreGraphics
 import Foundation
-import Testing
 @testable import MinimalCatCore
+import Testing
 
 struct CatKeyTests {
     @Test func aQuickTapGoesBack() {
         var key = CatKey()
-        #expect(key.handle(.down(at: 0)) == [])
-        #expect(key.handle(.up(at: 0.1)) == [.previousWindow])
+        #expect(key.handle(.press(time: 0))?.isEmpty == true)
+        #expect(key.handle(.release(time: 0.1)) == [.previousWindow])
     }
 
     @Test func aHoldShowsTheOverlayAndReleaseHidesIt() {
         var key = CatKey()
-        _ = key.handle(.down(at: 0))
-        #expect(key.handle(.tick(at: 0.1)) == [])
-        #expect(key.handle(.tick(at: 0.25)) == [.showOverlay])
-        #expect(key.handle(.up(at: 0.4)) == [.hideOverlay])
+        _ = key.handle(.press(time: 0))
+        #expect(key.handle(.tick(time: 0.1))?.isEmpty == true)
+        #expect(key.handle(.tick(time: 0.25)) == [.showOverlay])
+        #expect(key.handle(.release(time: 0.4)) == [.hideOverlay])
     }
 
     @Test func aChordActsAtOnceAndIsNotATap() {
         var key = CatKey()
-        _ = key.handle(.down(at: 0))
+        _ = key.handle(.press(time: 0))
         #expect(key.handle(.key(123)) == [.act(123)])
         #expect(key.handle(.key(124)) == [.act(124)])
-        #expect(key.handle(.tick(at: 0.5)) == [])
-        #expect(key.handle(.up(at: 0.6)) == [])
+        #expect(key.handle(.tick(time: 0.5))?.isEmpty == true)
+        #expect(key.handle(.release(time: 0.6))?.isEmpty == true)
     }
 
     @Test func keysPassThroughWhenTheCatKeyIsUp() {
         var key = CatKey()
         #expect(key.handle(.key(0)) == nil)
-        _ = key.handle(.down(at: 0))
-        _ = key.handle(.up(at: 0.1))
+        _ = key.handle(.press(time: 0))
+        _ = key.handle(.release(time: 0.1))
         #expect(key.handle(.key(6)) == nil)
     }
 
     @Test func aSlowReleaseWithNoTickDoesNothing() {
         var key = CatKey()
-        _ = key.handle(.down(at: 0))
-        #expect(key.handle(.up(at: 0.3)) == [])
+        _ = key.handle(.press(time: 0))
+        #expect(key.handle(.release(time: 0.3))?.isEmpty == true)
     }
 }
 
@@ -70,7 +70,7 @@ struct HistoryTests {
 
     func step(_ id: UInt32) -> Step {
         Step(label: "Move", cause: .key, displays: displays,
-             moves: [Move(window: WindowID(id), from: .zero, to: CGRect(x: 1, y: 1, width: 1, height: 1))])
+             moves: [Move(window: WindowID(id), start: .zero, end: CGRect(x: 1, y: 1, width: 1, height: 1))])
     }
 
     @Test func keepsTheLastThirtySteps() {
@@ -96,7 +96,7 @@ struct DisplayMemoryTests {
         memory.save([saved], on: [FakeSystem.laptop])
         let reopened = FakeSystem.window(9, "Notes", CGRect(x: 300, y: 300, width: 400, height: 300), title: "Plan")
         let moves = memory.restore([reopened], on: [FakeSystem.laptop])
-        #expect(moves == [Move(window: WindowID(9), from: reopened.frame, to: saved.frame)])
+        #expect(moves == [Move(window: WindowID(9), start: reopened.frame, end: saved.frame)])
     }
 
     @Test func doesNotMatchAReusedIDFromAnotherApp() {

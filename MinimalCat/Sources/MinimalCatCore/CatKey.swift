@@ -5,10 +5,10 @@ public struct CatKey: Sendable {
     public static let tapLimit: TimeInterval = 0.25
 
     public enum Event: Equatable, Sendable {
-        case down(at: TimeInterval)
-        case up(at: TimeInterval)
+        case press(time: TimeInterval)
+        case release(time: TimeInterval)
         case key(UInt16)
-        case tick(at: TimeInterval)
+        case tick(time: TimeInterval)
     }
 
     public enum Output: Equatable, Sendable {
@@ -32,14 +32,14 @@ public struct CatKey: Sendable {
     /// Returns what to do. A `.key` while the cat key is up returns nil, so the key goes to the app.
     public mutating func handle(_ event: Event) -> [Output]? {
         switch (state, event) {
-        case (.idle, .down(let time)):
+        case (.idle, .press(let time)):
             state = .pressed(since: time)
             return []
         case (.idle, .key):
             return nil
         case (.idle, _):
             return []
-        case (.pressed(let since), .up(let time)):
+        case (.pressed(let since), .release(let time)):
             state = .idle
             return time - since < Self.tapLimit ? [.previousWindow] : []
         case (.pressed(let since), .tick(let time)):
@@ -49,12 +49,12 @@ public struct CatKey: Sendable {
         case (.pressed, .key(let code)):
             state = .held(showing: false)
             return [.act(code)]
-        case (.held(let showing), .up):
+        case (.held(let showing), .release):
             state = .idle
             return showing ? [.hideOverlay] : []
         case (.held, .key(let code)):
             return [.act(code)]
-        case (_, .down), (.held, .tick):
+        case (_, .press), (.held, .tick):
             return []
         }
     }
