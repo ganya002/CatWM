@@ -35,6 +35,23 @@ struct CatKeyTests {
         #expect(key.handle(.key(6)) == nil)
     }
 
+    @Test func anotherKeyOrAClickIsNotATap() {
+        var key = CatKey()
+        _ = key.handle(.press(time: 0))
+        #expect(key.handle(.interrupt)?.isEmpty == true)
+        #expect(key.handle(.tick(time: 0.3))?.isEmpty == true)
+        #expect(key.handle(.release(time: 0.1))?.isEmpty == true)
+    }
+
+    @Test func anotherKeyHidesTheOverlay() {
+        var key = CatKey()
+        _ = key.handle(.press(time: 0))
+        _ = key.handle(.tick(time: 0.3))
+        #expect(key.handle(.interrupt) == [.hideOverlay])
+        #expect(key.handle(.release(time: 0.5))?.isEmpty == true)
+        #expect(key.handle(.interrupt)?.isEmpty == true)
+    }
+
     @Test func aSlowReleaseWithNoTickDoesNothing() {
         var key = CatKey()
         _ = key.handle(.press(time: 0))

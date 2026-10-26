@@ -15,7 +15,6 @@ struct OverlayView: View {
     }
 
     let rows: [Row]
-    let keyName: String
     let undo: String
     let redo: String
 
@@ -82,7 +81,7 @@ struct OverlayView: View {
                 hint([undo], "Undo")
                 hint([redo], "Redo")
                 hint(["Space"], "Find")
-                Text("Tap \(keyName) to go back")
+                Text("Tap \(Command.catKey) alone to go back")
                     .font(Theme.caption).foregroundStyle(Theme.inkMuted)
             }
         }
@@ -102,10 +101,10 @@ final class Overlay {
     private let panel = FloatingPanel()
     var isShown: Bool { panel.isVisible }
 
-    func show(_ rows: [OverlayView.Row], keyName: String) {
+    func show(_ rows: [OverlayView.Row]) {
         let undo = Command.undo.binding.map(KeyLayout.label) ?? "Z"
         let redo = Command.redo.binding.map(KeyLayout.label) ?? "Y"
-        panel.show(OverlayView(rows: rows, keyName: keyName, undo: undo, redo: redo), on: activeScreen(), at: .center)
+        panel.show(OverlayView(rows: rows, undo: undo, redo: redo), on: activeScreen(), at: .center)
     }
 
     func hide() { panel.orderOut(nil) }

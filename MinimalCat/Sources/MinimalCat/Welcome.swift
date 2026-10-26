@@ -1,4 +1,5 @@
 import AppKit
+import MinimalCatCore
 import SwiftUI
 
 /// The first run: one permission, then the five keys. It moves on by itself when the permission arrives.
@@ -7,8 +8,8 @@ final class Welcome {
     private let model: WelcomeModel
     private let window: NSWindow
 
-    init(keyName: String, symbol: String, done: @escaping () -> Void) {
-        model = WelcomeModel(keyName: keyName, symbol: symbol)
+    init(done: @escaping () -> Void) {
+        model = WelcomeModel()
         window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 520, height: 460),
                           styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
         window.titlebarAppearsTransparent = true
@@ -41,15 +42,8 @@ final class Welcome {
 final class WelcomeModel: ObservableObject {
     enum Step { case permission, keys }
 
-    let keyName: String
-    let symbol: String
     @Published var step = Step.permission
     var finish: (() -> Void)?
-
-    init(keyName: String, symbol: String) {
-        self.keyName = keyName
-        self.symbol = symbol
-    }
 
     /// macOS 27 renamed the Accessibility pane. Name the one the user sees.
     var paneName: String {
@@ -102,21 +96,19 @@ struct WelcomeView: View {
 
     private var keys: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Hold \(model.keyName). That is all.").font(Theme.title).foregroundStyle(Theme.ink)
+            Text("Hold the right ⌘ key. That is all.").font(Theme.title).foregroundStyle(Theme.ink)
             Text("Hold it to see every window. Hold it and press one more key to act.")
                 .font(Theme.body).foregroundStyle(Theme.inkMuted)
             VStack(alignment: .leading, spacing: 10) {
-                row([model.symbol], "Tap: back to the last window")
-                row([model.symbol, "←", "→"], "Put a window on one side")
-                row([model.symbol, "↩"], "Make it big. Again puts it back")
-                row([model.symbol, "Space"], "Find a window by name")
-                row([model.symbol, "Z"], "Undo any change, also after a monitor change")
+                row([Command.catKey], "Tap: back to the last window")
+                row([Command.catKey, "←", "→"], "Put a window on one side")
+                row([Command.catKey, "↩"], "Make it big. Again puts it back")
+                row([Command.catKey, "Space"], "Find a window by name")
+                row([Command.catKey, "Z"], "Undo any change, also after a monitor change")
             }
             .padding(.top, 4)
-            Text("While Minimal Cat is on, Caps Lock is the cat key. "
-                + "Turn it off in the menu bar to get Caps Lock back.")
-                .font(Theme.caption).foregroundStyle(Theme.inkMuted).fixedSize(horizontal: false, vertical: true)
-                .opacity(model.symbol == "⇪" ? 1 : 0)
+            Text("The left ⌘ key works as before.")
+                .font(Theme.caption).foregroundStyle(Theme.inkMuted)
             Button("Ready") { model.finish?() }
                 .buttonStyle(.borderedProminent).controlSize(.large).keyboardShortcut(.defaultAction)
         }

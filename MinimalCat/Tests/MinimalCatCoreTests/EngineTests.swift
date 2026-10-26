@@ -135,7 +135,7 @@ struct EngineTests {
         system.list[0].frame = start
         engine.saveLayout()
         system.screens = [FakeSystem.laptop, FakeSystem.monitor]
-        #expect(engine.restoreLayout() == .notice("Put 1 window back · ⇪ Z undoes", visible: true))
+        #expect(engine.restoreLayout() == .notice("Put 1 window back · Right ⌘ Z undoes", visible: true))
         #expect(system.frame(1) == onMonitor)
         _ = engine.perform(.undo)
         #expect(system.frame(1) == start)

@@ -9,6 +9,9 @@ public struct CatKey: Sendable {
         case release(time: TimeInterval)
         case key(UInt16)
         case tick(time: TimeInterval)
+        /// A key that is not a command, a click or another modifier while the cat key is down. The user is
+        /// using the key as a plain modifier, so it is not a tap and shows nothing.
+        case interrupt
     }
 
     public enum Output: Equatable, Sendable {
@@ -49,6 +52,12 @@ public struct CatKey: Sendable {
         case (.pressed, .key(let code)):
             state = .held(showing: false)
             return [.act(code)]
+        case (.pressed, .interrupt):
+            state = .held(showing: false)
+            return []
+        case (.held(let showing), .interrupt):
+            state = .held(showing: false)
+            return showing ? [.hideOverlay] : []
         case (.held(let showing), .release):
             state = .idle
             return showing ? [.hideOverlay] : []

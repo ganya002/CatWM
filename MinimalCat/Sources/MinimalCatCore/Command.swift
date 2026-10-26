@@ -1,5 +1,8 @@
 /// Everything the cat key can do. The menu bar shows the same list, so each one also works without a held key.
 public enum Command: Hashable, Sendable {
+    /// The key held for every command.
+    public static let catKey = "Right ⌘"
+
     case place(Place)
     case focus(Side)
     case jump(Int)

@@ -4,15 +4,6 @@ import MinimalCatCore
 import MinimalCatSystem
 import ServiceManagement
 
-/// Which physical key is the cat key. Caps Lock needs a key mapping. F18 is for keyboards that have it and for
-/// VoiceOver, which owns Caps Lock.
-enum CatKeyChoice: String {
-    case capsLock, f18
-
-    var symbol: String { self == .capsLock ? "⇪" : "F18" }
-    var spoken: String { self == .capsLock ? "Caps Lock" : "F18" }
-}
-
 /// Owns every part of the running app and turns their events into engine calls.
 @MainActor
 final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
@@ -29,29 +20,18 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var commands: [UInt16: Command] = [:]
     private var statusItem: NSStatusItem?
     private var welcome: Welcome?
-    private var voiceOver: NSKeyValueObservation?
     private var trustPoll: Timer?
-    /// Only a mapping this app made is removed, so another tool's mapping survives Turn Off and Quit.
-    private var mappedCaps = false
-    /// The key choice the running parts were started with, or nil when they are stopped.
-    private var active: CatKeyChoice?
+    private var running = false
 
     private var paused: Bool {
         get { UserDefaults.standard.bool(forKey: "paused") }
         set { UserDefaults.standard.set(newValue, forKey: "paused") }
     }
 
-    private var choice: CatKeyChoice {
-        get {
-            if NSWorkspace.shared.isVoiceOverEnabled { return .f18 }
-            return CatKeyChoice(rawValue: UserDefaults.standard.string(forKey: "catKey") ?? "") ?? .capsLock
-        }
-        set { UserDefaults.standard.set(newValue.rawValue, forKey: "catKey") }
-    }
-
     func applicationDidFinishLaunching(_: Notification) {
         commands = KeyLayout.commands()
         keys.onOutput = { [weak self] in self?.handle($0) }
+        keys.isCommand = { [weak self] in self?.commands[$0] != nil }
         makeStatusItem()
         DistributedNotificationCenter.default().addObserver(
             self, selector: #selector(inputSourceChanged),
@@ -59,9 +39,6 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
         DistributedNotificationCenter.default().addObserver(
             self, selector: #selector(trustChanged), name: Notification.Name("com.apple.accessibility.api"),
             object: nil)
-        voiceOver = NSWorkspace.shared.observe(\.isVoiceOverEnabled) { [weak self] _, _ in
-            Task { @MainActor in self?.applyState() }
-        }
         if AXIsProcessTrusted(), UserDefaults.standard.bool(forKey: "welcomed") {
             applyState()
         } else {
@@ -71,50 +48,27 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func applicationWillTerminate(_: Notification) {
         saveLayout()
-        unmapCaps()
-    }
-
-    private func unmapCaps() {
-        guard mappedCaps else { return }
-        CapsMapping.remove()
-        mappedCaps = false
     }
 
     // MARK: - State
 
-    /// Starts or stops every part so the app matches `paused`, the key choice and the permission.
-    /// Off means off: when paused, no tap, no mapping, no watchers.
+    /// Starts or stops every part so the app matches `paused` and the permission.
+    /// Off means off: when paused, no tap and no watchers.
     private func applyState() {
-        let wanted: CatKeyChoice? = !paused && AXIsProcessTrusted() ? choice : nil
+        let run = !paused && AXIsProcessTrusted()
         defer { updateStatusIcon() }
-        guard wanted != active else { return }
-        active = wanted
-        guard let wanted else {
+        guard run != running else { return }
+        running = run
+        if run {
+            keys.start()
+            focusWatcher.start()
+            displayWatcher.start()
+        } else {
             keys.stop()
             focusWatcher.stop()
             displayWatcher.stop()
             overlay.hide()
-            unmapCaps()
-            return
         }
-        var key = wanted
-        if wanted == .capsLock {
-            switch CapsMapping.apply() {
-            case .applied: mappedCaps = true
-            case .othersMapping:
-                key = .f18
-                notify("Another app remaps Caps Lock. Minimal Cat uses F18 for now.", visible: true)
-            case .failed:
-                key = .f18
-                notify("Could not use Caps Lock. Minimal Cat uses F18 for now.", visible: true)
-            }
-        } else {
-            unmapCaps()
-        }
-        engine.keyName = key.symbol
-        keys.start()
-        focusWatcher.start()
-        displayWatcher.start()
     }
 
     @objc private func inputSourceChanged() { commands = KeyLayout.commands() }
@@ -174,7 +128,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
                                 app: window.app, icon: icons[window.id], focused: window.id == focused)
             }
             .sorted { ($0.number ?? 99) < ($1.number ?? 99) }
-        overlay.show(rows, keyName: engine.keyName)
+        overlay.show(rows)
     }
 
     private func icons(for windows: [WindowInfo]) -> [WindowID: NSImage] {
@@ -202,7 +156,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // MARK: - Welcome
 
     private func showWelcome() {
-        let welcome = Welcome(keyName: choice.spoken, symbol: choice.symbol) { [weak self] in
+        let welcome = Welcome { [weak self] in
             UserDefaults.standard.set(true, forKey: "welcomed")
             self?.welcome = nil
             self?.applyState()
@@ -262,19 +216,6 @@ extension AppController {
         let mode = NSMenuItem(title: paused ? "Turn On" : "Turn Off", action: #selector(togglePause), keyEquivalent: "")
         mode.target = self
         menu.addItem(mode)
-        let keyMenu = NSMenu()
-        for option in [CatKeyChoice.capsLock, .f18] {
-            let entry = NSMenuItem(title: "\(option.spoken) (\(option.symbol))", action: #selector(chooseKey(_:)),
-                                   keyEquivalent: "")
-            entry.target = self
-            entry.representedObject = option.rawValue
-            entry.state = choice == option ? .on : .off
-            entry.isEnabled = !NSWorkspace.shared.isVoiceOverEnabled
-            keyMenu.addItem(entry)
-        }
-        let keyItem = NSMenuItem(title: "Cat Key", action: nil, keyEquivalent: "")
-        keyItem.submenu = keyMenu
-        menu.addItem(keyItem)
         let login = NSMenuItem(title: "Open at Login", action: #selector(toggleLogin), keyEquivalent: "")
         login.target = self
         login.state = SMAppService.mainApp.status == .enabled ? .on : .off
@@ -297,7 +238,7 @@ extension AppController {
                               keyEquivalent: "")
         item.target = self
         item.representedObject = command
-        if let binding = command.binding { item.toolTip = "\(engine.keyName) \(KeyLayout.label(binding))" }
+        if let binding = command.binding { item.toolTip = "\(Command.catKey) \(KeyLayout.label(binding))" }
         return item
     }
 
@@ -311,12 +252,6 @@ extension AppController {
         paused.toggle()
         applyState()
         notify(paused ? "Minimal Cat is off" : "Minimal Cat is on", visible: true)
-    }
-
-    @objc private func chooseKey(_ sender: NSMenuItem) {
-        guard let raw = sender.representedObject as? String, let option = CatKeyChoice(rawValue: raw) else { return }
-        choice = option
-        applyState()
     }
 
     @objc private func toggleLogin() {

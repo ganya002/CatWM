@@ -2,13 +2,17 @@ import AppKit
 import Carbon.HIToolbox
 import MinimalCatCore
 
-/// Reads the cat key and its chords with one event tap. The cat key always arrives as F18: Caps Lock is mapped
-/// onto F18 by `CapsMapping`, and under VoiceOver the real F18 is used.
+/// Reads the cat key, the right Command key, and its chords with one event tap. Only command keys are taken.
+/// Every other key, such as Tab for Command-Tab, goes to the app as usual.
 @MainActor
 public final class KeyTap {
-    public static let catKeyCode = UInt16(kVK_F18)
+    public static let catKeyCode = UInt16(kVK_RightCommand)
+    /// The device bit for the right Command key. `CGEventSource.keyState` does not report modifier keys.
+    static let rightCommand: UInt64 = 0x10
 
     public var onOutput: ((CatKey.Output) -> Void)?
+    /// True for a key that runs a command while the cat key is down.
+    public var isCommand: (UInt16) -> Bool = { _ in false }
     public var isRunning: Bool { tap.map { CGEvent.tapIsEnabled(tap: $0) } ?? false }
 
     private var machine = CatKey()
@@ -22,7 +26,8 @@ public final class KeyTap {
     @discardableResult
     public func start() -> Bool {
         guard tap == nil else { return true }
-        let mask = (1 << CGEventType.keyDown.rawValue) | (1 << CGEventType.keyUp.rawValue)
+        let types: [CGEventType] = [.keyDown, .keyUp, .flagsChanged, .leftMouseDown, .rightMouseDown, .otherMouseDown]
+        let mask = types.reduce(0) { $0 | (1 << $1.rawValue) }
         guard let tap = CGEvent.tapCreate(tap: .cgSessionEventTap, place: .headInsertEventTap, options: .defaultTap,
                                           eventsOfInterest: CGEventMask(mask), callback: keyTapCallback,
                                           userInfo: Unmanaged.passUnretained(self).toOpaque()) else { return false }
@@ -52,9 +57,9 @@ public final class KeyTap {
     func handle(_ type: CGEventType, _ event: CGEvent) -> Bool {
         let code = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
         let now = ProcessInfo.processInfo.systemUptime
-        if code == Self.catKeyCode {
-            guard event.getIntegerValueField(.keyboardEventAutorepeat) == 0 else { return true }
-            if type == .keyDown {
+        switch type {
+        case .flagsChanged where code == Self.catKeyCode:
+            if event.flags.rawValue & Self.rightCommand != 0 {
                 emit(machine.handle(.press(time: now)))
                 tick?.invalidate()
                 tick = Timer.scheduledTimer(withTimeInterval: CatKey.tapLimit, repeats: false) { [weak self] _ in
@@ -67,18 +72,27 @@ public final class KeyTap {
                 tick?.invalidate()
                 emit(machine.handle(.release(time: now)))
             }
+            return false
+        case .flagsChanged, .leftMouseDown, .rightMouseDown, .otherMouseDown:
+            emit(machine.handle(.interrupt))
+            return false
+        case .keyUp:
+            return swallowedUps.remove(code) != nil
+        default:
+            if event.getIntegerValueField(.keyboardEventAutorepeat) != 0 { return swallowedUps.contains(code) }
+            // A tap timeout or secure input can hide the release. The modifier state still knows.
+            if machine.isHeld, CGEventSource.flagsState(.hidSystemState).rawValue & Self.rightCommand == 0 {
+                reset()
+            }
+            guard machine.isHeld, isCommand(code) else {
+                emit(machine.handle(.interrupt))
+                return false
+            }
+            guard let outputs = machine.handle(.key(code)) else { return false }
+            swallowedUps.insert(code)
+            emit(outputs)
             return true
         }
-        if type == .keyUp { return swallowedUps.remove(code) != nil }
-        if event.getIntegerValueField(.keyboardEventAutorepeat) != 0 { return swallowedUps.contains(code) }
-        // Secure input and a tap timeout hide the cat key's release. The keyboard state still knows.
-        if machine.isHeld, !CGEventSource.keyState(.hidSystemState, key: CGKeyCode(Self.catKeyCode)) {
-            reset()
-        }
-        guard let outputs = machine.handle(.key(code)) else { return false }
-        swallowedUps.insert(code)
-        emit(outputs)
-        return true
     }
 
     private func emit(_ outputs: [CatKey.Output]?) {

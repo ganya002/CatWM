@@ -23,12 +23,12 @@ enum Previews {
         nothing.query = "xcode"
         find.query = "ma"
         let surfaces: [(String, AnyView)] = [
-            ("overlay", AnyView(OverlayView(rows: rows, keyName: "⇪", undo: "Z", redo: "Y"))),
-            ("overlay-empty", AnyView(OverlayView(rows: [], keyName: "⇪", undo: "Z", redo: "Y"))),
-            ("hud", AnyView(HUDView(text: "Put 4 windows back · ⇪ Z undoes"))),
+            ("overlay", AnyView(OverlayView(rows: rows, undo: "Z", redo: "Y"))),
+            ("overlay-empty", AnyView(OverlayView(rows: [], undo: "Z", redo: "Y"))),
+            ("hud", AnyView(HUDView(text: "Put 4 windows back · Right ⌘ Z undoes"))),
             ("find", AnyView(FindView(model: find))),
             ("find-nothing", AnyView(FindView(model: nothing))),
-            ("overlay-many", AnyView(OverlayView(rows: (0..<15).map { many(rows, $0) }, keyName: "⇪", undo: "Z",
+            ("overlay-many", AnyView(OverlayView(rows: (0..<15).map { many(rows, $0) }, undo: "Z",
                                                  redo: "Y"))),
             ("welcome-permission", AnyView(WelcomeView(model: welcome(.permission)))),
             ("welcome-keys", AnyView(WelcomeView(model: welcome(.keys))))
@@ -59,7 +59,7 @@ enum Previews {
     }
 
     private static func welcome(_ step: WelcomeModel.Step) -> WelcomeModel {
-        let model = WelcomeModel(keyName: "Caps Lock", symbol: "⇪")
+        let model = WelcomeModel()
         model.step = step
         return model
     }

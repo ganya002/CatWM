@@ -52,7 +52,8 @@ struct Keycap: View {
     }
 
     static func spoken(_ text: String) -> String {
-        ["←": "Left Arrow", "→": "Right Arrow", "↑": "Up Arrow", "↓": "Down Arrow", "↩": "Return", "⇪": "Caps Lock",
+        ["←": "Left Arrow", "→": "Right Arrow", "↑": "Up Arrow", "↓": "Down Arrow", "↩": "Return",
+         "Right ⌘": "Right Command",
          ",": "Comma", ".": "Period"][text] ?? text
     }
 }

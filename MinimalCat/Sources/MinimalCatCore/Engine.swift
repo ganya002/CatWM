@@ -27,8 +27,6 @@ public final class Engine {
     public private(set) var memory: DisplayMemory
     public private(set) var slots = Slots()
     public private(set) var recents = Recents()
-    /// What the cat key is called in notices, such as "⇪".
-    public var keyName = "⇪"
     private var beforeBig: [WindowID: CGRect] = [:]
 
     public init(system: WindowSystem, memory: DisplayMemory = DisplayMemory()) {
@@ -96,7 +94,7 @@ public final class Engine {
         apply(step.moves, on: displays)
         history.record(step)
         let count = moves.count == 1 ? "1 window" : "\(moves.count) windows"
-        return .notice("Put \(count) back · \(keyName) Z undoes", visible: true)
+        return .notice("Put \(count) back · \(Command.catKey) Z undoes", visible: true)
     }
 
     private func move(to place: Place, cause: Cause) -> Effect {

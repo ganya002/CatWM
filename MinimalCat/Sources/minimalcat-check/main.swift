@@ -88,6 +88,59 @@ final class Check {
         moveAndFocus(first, second, on: display)
         restoreLayout(first, on: display, original: start)
         measureReads()
+        keys()
+    }
+
+    func post(_ code: CGKeyCode, down: Bool, flags: CGEventFlags, type: CGEventType? = nil) {
+        guard let event = CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: down) else { return }
+        if let type { event.type = type }
+        event.flags = flags
+        event.post(tap: .cghidEventTap)
+        _ = wait(0.03) { false }
+    }
+
+    func keys() {
+        let held = CGEventFlags(rawValue: CGEventFlags.maskCommand.rawValue | 0x10)
+        let tap = KeyTap()
+        var outputs: [CatKey.Output] = []
+        tap.onOutput = { outputs.append($0) }
+        tap.isCommand = { [123, 49].contains($0) }
+        guard tap.start() else { return report("key tap starts", false, "no tap") }
+        func press(_ steps: () -> Void) -> [CatKey.Output] {
+            outputs = []
+            post(54, down: true, flags: held, type: .flagsChanged)
+            steps()
+            post(54, down: false, flags: [], type: .flagsChanged)
+            _ = wait(0.05) { false }
+            return outputs
+        }
+        let tapped = press {}
+        report("a tap of right command goes back", tapped == [.previousWindow], "\(tapped)")
+        let hold = press { _ = wait(0.4) { false } }
+        report("a hold shows and hides the overlay", hold == [.showOverlay, .hideOverlay], "\(hold)")
+        let chord = press {
+            post(123, down: true, flags: held)
+            post(123, down: false, flags: held)
+        }
+        report("right command and left arrow acts", chord == [.act(123)], "\(chord)")
+        let other = press {
+            post(105, down: true, flags: held)
+            post(105, down: false, flags: held)
+        }
+        report("another key is not a tap", other.isEmpty, "\(other)")
+        let find = press {
+            post(49, down: true, flags: held)
+            post(49, down: false, flags: held)
+        }
+        let spotlight = (CGWindowListCopyWindowInfo(.optionOnScreenOnly, kCGNullWindowID) as? [[String: Any]] ?? [])
+            .contains { info in
+                info[kCGWindowOwnerName as String] as? String == "Spotlight"
+                    && info[kCGWindowLayer as String] as? Int ?? 0 > 0
+            }
+        report("right command and Space reaches Minimal Cat, not Spotlight", find == [.act(49)] && !spotlight,
+               "\(find), Spotlight open: \(spotlight)")
+        if spotlight { post(53, down: true, flags: []); post(53, down: false, flags: []) }
+        tap.stop()
     }
 
     func placeAndUndo(_ first: WindowInfo, on display: Display) {
@@ -137,7 +190,7 @@ final class Check {
         system.apply([Move(window: first.id, start: Geometry.frame(for: .right, on: display), end: scrambled)])
         expectFrame("scramble a window", first.id, scrambled)
         let effect = engine.restoreLayout()
-        report("restore names what it did", effect == .notice("Put 1 window back · ⇪ Z undoes", visible: true),
+        report("restore names what it did", effect == .notice("Put 1 window back · Right ⌘ Z undoes", visible: true),
                "\(effect)")
         expectFrame("restore puts it back", first.id, Geometry.frame(for: .right, on: display))
         _ = engine.perform(.undo)
