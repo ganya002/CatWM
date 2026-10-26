@@ -140,12 +140,8 @@ final class NativeDesktopController {
 
     @MainActor private func compose(_ state: DesktopGuard.Context, screen: Screen, forward desktopOrder: Bool,
                                     target: Request, recovery: DesktopGuardClient) async throws {
-        let timing = self.timing
         let fresh = DesktopMenuBar.isFresh(state.destination)
-        let menu = try await prepareMenuBar(state, on: screen, recovery: recovery)
-        timing?.checkpoint("menu")
-        defer { menu?.restore() }
-        guard wants(target) else { return }
+        DesktopWallpaperCover.shared.prepare(on: screen, source: state.source, target: state.destination, fresh: fresh)
         let forward = isForward(state.source, state.destination, desktopOrder)
         let width = screen.frame.width * (forward ? 1 : -1)
         var progress = 0.0
@@ -155,14 +151,25 @@ final class NativeDesktopController {
         try check(DesktopBridge.setVisible([state.destination], true), "Cannot show the destination Desktop")
         onMotion(target)
         let motion = DesktopMotion(screen: screen.nsScreen)
-        if fresh { try await motion.frames(2) }
-        timing?.checkpoint("show/frames")
+        let covered = DesktopWallpaperCover.shared.isReady(source: state.source, target: state.destination)
+        async let drawn: Void = fresh && !covered ? motion.frames(2) : ()
+        let menu = try await prepareMenuBar(state, on: screen, recovery: recovery)
+        self.timing?.checkpoint("menu")
+        defer { menu?.restore() }
+        guard wants(target) else { return }
+        try await drawn
+        let wallpaper = await DesktopWallpaperCover.shared.present(
+            source: state.source, target: state.destination, while: { self.wants(target) })
+        defer { wallpaper?.end(shown: Spaces.current(display: state.display) == state.destination, settings: settings) }
+        guard wants(target) else { return }
+        try checkCurrentSource(state)
+        self.timing?.checkpoint("show/frames")
         if gesture {
             try await motion.follow(until: { self.gestureEnded }, update: {
                 try self.check(recovery.process.isRunning, "Desktop recovery process stopped")
                 progress = self.gestureProgress
                 try self.apply(state, width: width, progress: progress)
-                if progress > 0 { timing?.motion() }
+                if progress > 0 { self.timing?.motion() }
             })
             gesture = false
         }
@@ -174,17 +181,19 @@ final class NativeDesktopController {
                     try self.check(recovery.process.isRunning, "Desktop recovery process stopped")
                     progress = value
                     try self.apply(state, width: width, progress: value)
-                    if value > 0 { timing?.motion() }
+                    if value > 0 { self.timing?.motion() }
                 }
                 break
             } catch Retarget.changed { continue }
         }
-        try check(Spaces.current(display: state.display) == state.source,
-                  "Native navigation interrupted Desktop motion")
-        if wants(target) { try await activate(state, menu: menu, screen: screen, target: target) }
+        try checkCurrentSource(state)
+        if wants(target) {
+            try await activate(state, menu: menu, wallpaper: wallpaper, screen: screen, target: target)
+        }
     }
 
     @MainActor private func activate(_ state: DesktopGuard.Context, menu: DesktopMenuBarLease?,
+                                     wallpaper: DesktopWallpaperCover.Lease?,
                                      screen: Screen, target: Request) async throws {
         let batch = WindowServerUpdates.shared.begin()
         if let menu, DesktopMenuBarNative.theme(state.destination) == menu.state.theme { menu.restore() }
@@ -194,6 +203,7 @@ final class NativeDesktopController {
         batch?.finish()
         let arrived = await poll(1) { Spaces.current(display: state.display) == state.destination }
         try check(arrived, "macOS did not activate the destination Desktop")
+        wallpaper?.end(shown: true, settings: settings)
         DesktopMenuBar.shown(state.destination)
         try await DesktopMenuBar.settle(menu?.state, on: screen, while: { self.wants(target) })
         await menu?.finish()
@@ -233,19 +243,6 @@ final class NativeDesktopController {
 
     private enum Retarget: Error { case changed }
 
-    private func wants(_ target: Request) -> Bool {
-        guard let requested else { return false }
-        return requested == target || requested.display != target.display
-    }
-
-    private func apply(_ state: DesktopGuard.Context, width: CGFloat, progress: Double) throws {
-        let pose = min(1, max(0, progress))
-        try check(DesktopBridge.transform(state.destination, x: (pose - 1) * width,
-                                          options: state.destinationOptions), "Cannot move the destination Desktop")
-        try check(DesktopBridge.transform(state.source, x: pose * width, options: state.sourceOptions),
-                  "Cannot move the source Desktop")
-    }
-
     @MainActor private func swipe(to target: Request) async throws {
         let deadline = ProcessInfo.processInfo.systemUptime + 5
         func remaining() -> TimeInterval { deadline - ProcessInfo.processInfo.systemUptime }
@@ -264,14 +261,33 @@ final class NativeDesktopController {
                             "macOS did not finish changing Desktop")
         }
     }
+}
+
+extension NativeDesktopController {
+    private func apply(_ state: DesktopGuard.Context, width: CGFloat, progress: Double) throws {
+        let pose = min(1, max(0, progress))
+        try check(DesktopBridge.transform(state.destination, x: (pose - 1) * width,
+                                          options: state.destinationOptions), "Cannot move the destination Desktop")
+        try check(DesktopBridge.transform(state.source, x: pose * width, options: state.sourceOptions),
+                  "Cannot move the source Desktop")
+    }
+
+    private func wants(_ target: Request) -> Bool {
+        guard let requested else { return false }
+        return requested == target || requested.display != target.display
+    }
+
+    private func checkCurrentSource(_ state: DesktopGuard.Context) throws {
+        try check(Spaces.current(display: state.display) == state.source,
+                  "Native navigation interrupted Desktop switching")
+    }
 
     private func check(_ condition: Bool, _ message: String) throws {
         if !condition { throw DesktopTransitionError.check(message) }
     }
-}
 
-extension NativeDesktopController {
     @MainActor func prewarmGuard() {
+        DesktopWallpaperCover.shared.prepare()
         guard warmGuard?.process.isRunning != true else { return }
         let client = DesktopGuardClient()
         if (try? client.launch()) != nil { warmGuard = client }

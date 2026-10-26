@@ -19,6 +19,7 @@ enum DesktopLifecycle {
         let created = ProcessInfo.processInfo.systemUptime
         if let current = before.current {
             DesktopMenuBarCover.shared.begin(on: screen, source: before.ids[current], target: space)
+            DesktopWallpaperCover.shared.prepare(on: screen, source: before.ids[current], target: space, fresh: true)
         }
         let covered = ProcessInfo.processInfo.systemUptime
         do {
@@ -75,6 +76,7 @@ enum DesktopLifecycle {
             throw DesktopTransitionError.occupied
         }
         let started = ProcessInfo.processInfo.systemUptime
+        DesktopWallpaperCover.shared.withdraw(from: space)
         guard DesktopBridge.remove(space) else {
             throw DesktopTransitionError.check("macOS could not remove the Desktop")
         }
