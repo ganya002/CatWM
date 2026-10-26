@@ -32,7 +32,6 @@ The Settings window writes options in this order. Aliases (after `/`) are read b
 | `mouse-resizes-windows` | bool | `true` | drag edges to resize |
 | `split-handle` | bool | `true` | a bar on the main split: drag it to resize, click it to swap the sides |
 | `auto-hide-tab-strip` | bool | `false` | hide each tab strip until the pointer reaches the top of its window |
-| `tab-strip-style` | `inset` `full` | `inset` | `inset` rests the strip on the straight part of the window top; `full` is as wide as the window and fills its rounded corners |
 | `tab-notification-badges` | bool | `true` | show a red badge with the unread count on each tab |
 | `new-windows-to-main` / `new_is_master` | bool | `false` | |
 | `float-small-windows` | bool | `true` | |
