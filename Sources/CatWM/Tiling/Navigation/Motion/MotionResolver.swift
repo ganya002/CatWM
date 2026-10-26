@@ -123,7 +123,7 @@ extension WindowManager {
         let hit = MotionResolver.resolve(from: navItem(window, in: screens), direction,
                                          among: candidates.map { navItem($0, in: screens) },
                                          displays: screens.map { .init(id: $0.uuid, frame: $0.frame) },
-                                         stamps: focusStamps, wraps: stripFrames[window.id] == nil)
+                                         stamps: focusStamps, wraps: stripFrame(window) == nil)
         switch hit {
         case let .window(id): return windows[id].map(MotionTarget.window)
         case let .monitor(uuid): return screens.first { $0.uuid == uuid }.map(MotionTarget.monitor)
@@ -132,8 +132,12 @@ extension WindowManager {
     }
 
     func navItem(_ window: Window, in screens: [Screen]) -> MotionResolver.Item {
-        let frame = window.isFloating ? navFrame(window) : stripFrames[window.id] ?? navFrame(window)
+        let frame = window.isFloating ? navFrame(window) : stripFrame(window) ?? navFrame(window)
         return .init(id: window.id, frame: frame, screen: screen(of: window, in: screens)?.uuid)
+    }
+
+    private func stripFrame(_ window: Window) -> CGRect? {
+        tilingEnabled ? stripFrames[window.id] : nil
     }
 }
 

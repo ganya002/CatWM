@@ -217,7 +217,25 @@ extension WindowManager {
     func toggleTiling() {
         tilingEnabled.toggle()
         surface.showHUD(tilingEnabled ? "Tiling on" : "Tiling off", on: currentScreen()?.nsScreen)
+        if !tilingEnabled { unparkStrips() }
         refresh()
+    }
+
+    private func unparkStrips() {
+        let screens = backend.screens()
+        var moves: [Animator.Move] = []
+        for screen in screens {
+            let rect = usableRect(screen)
+            for id in tiled(on: screen) {
+                guard let window = windows[id], let frame = stripFrames[id],
+                      isParked(window.cachedFrame, screens) || stripExits.contains(id) else { continue }
+                let x = max(rect.minX, min(frame.minX, rect.maxX - frame.width))
+                moves.append(.init(window: window, to: CGRect(origin: CGPoint(x: x, y: frame.minY), size: frame.size),
+                                   bounds: rect))
+            }
+        }
+        stripExits = []
+        animator.animate(moves, duration: 0)
     }
 
     func modeChanged(_ name: String) {

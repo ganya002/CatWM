@@ -100,4 +100,10 @@ import Testing
         model.reveal(1, in: rect, gap: 0, scroll: .minimum, centerSingle: false)
         #expect(model.frames(in: rect, gap: 0)[1]?.minX == rect.minX)
     }
+
+    @Test func fittedHeightsKeepEachMinimumWhenTheyFit() {
+        #expect(Strip.fitted([1, 1], minimums: [600, 100], in: 800) == [1.5, 0.5])
+        #expect(Strip.fitted([1, 1], minimums: [300, 100], in: 800) == [1, 1])
+        #expect(Strip.fitted([1, 1], minimums: [600, 300], in: 800) == [1, 1])
+    }
 }

@@ -125,6 +125,26 @@ struct Strip: Equatable {
         columns[index].heights[row] = wanted * others / (1 - wanted)
     }
 
+    static func fitted(_ weights: [CGFloat], minimums: [CGFloat], in length: CGFloat) -> [CGFloat] {
+        guard weights.count == minimums.count, minimums.reduce(0, +) <= length else { return weights }
+        var fixed = Set<Int>()
+        func free() -> CGFloat { length - fixed.reduce(0) { $0 + minimums[$1] } }
+        func share() -> CGFloat { weights.indices.filter { !fixed.contains($0) }.reduce(0) { $0 + weights[$1] } }
+        while true {
+            let space = free(), total = share()
+            let short = weights.indices.filter {
+                !fixed.contains($0) && weights[$0] / total * space < minimums[$0] - 0.5
+            }
+            guard !short.isEmpty else { break }
+            fixed.formUnion(short)
+        }
+        guard !fixed.isEmpty else { return weights }
+        let space = free(), total = share(), scale = weights.reduce(0, +) / length
+        return weights.indices.map {
+            (fixed.contains($0) ? minimums[$0] : weights[$0] / total * space) * scale
+        }
+    }
+
     func columnFrames(in rect: CGRect, gap: CGFloat) -> [CGRect] {
         let view = rect.insetBy(dx: -gap / 2, dy: -gap / 2)
         var x = view.minX - offset

@@ -244,13 +244,19 @@ extension WindowManager {
                 return true
             }
             var entry = move
-            entry.from = stripEntry(to: target, on: screen)
+            let from = stripEntry(to: target, on: screen)
+            if !crossesOtherScreen(from, of: screen, screens) { entry.from = from }
             planned.moves.append(entry)
             return true
         }
         guard isParked(target, screens) else { return false }
+        let exit = stripExit(from: current, on: screen)
+        guard !crossesOtherScreen(exit, of: screen, screens) else {
+            planned.instant.append(move)
+            return true
+        }
         stripExits.insert(id)
-        planned.moves.append(.init(window: move.window, to: stripExit(from: current, on: screen), bounds: move.bounds))
+        planned.moves.append(.init(window: move.window, to: exit, bounds: move.bounds))
         return true
     }
 

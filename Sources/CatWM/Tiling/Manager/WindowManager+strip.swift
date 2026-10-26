@@ -10,6 +10,9 @@ extension WindowManager {
             if needed > column.width {
                 screenState.strip.columns[index].width = min(Strip.widthRange.upperBound, needed)
             }
+            guard column.ids.count > 1 else { continue }
+            screenState.strip.columns[index].heights = Strip.fitted(
+                column.heights, minimums: column.ids.map { (minSizes[$0]?.height ?? 0) + gap }, in: rect.height + gap)
         }
         let focus = model.mostRecent(of: screenState.strip.ids)
         screenState.strip.reveal(focus, in: rect, gap: gap, scroll: config.columnScroll,
@@ -26,10 +29,11 @@ extension WindowManager {
 
     private func syncStrip(_ screenState: ScreenState, _ ids: [CGWindowID]) {
         let tiled = Set(ids)
+        var placed: Set<CGWindowID> = []
         for old in screenState.strip.ids where !tiled.contains(old) {
-            guard let member = tabs.group(of: old)?.members.first(where: {
-                tiled.contains($0) && screenState.strip.column(of: $0) == nil
-            }) else { continue }
+            guard let member = tabs.group(of: old)?.members.first(where: tiled.contains),
+                  placed.insert(member).inserted else { continue }
+            screenState.strip.remove(member)
             screenState.strip.replace(old, with: member)
         }
         screenState.strip.sync(ids, focus: model.mostRecent(of: screenState.strip.ids), width: config.columnWidth)
@@ -37,9 +41,12 @@ extension WindowManager {
 
     func stripPlacement(_ frame: CGRect, on screen: Screen, _ screens: [Screen]) -> CGRect {
         let overlap = frame.intersection(screen.frame)
-        let crosses = screens.contains { $0.uuid != screen.uuid && $0.frame.intersects(frame) }
-        if !overlap.isNull, overlap.width >= 1, !crosses { return frame }
+        if !overlap.isNull, overlap.width >= 1, !crossesOtherScreen(frame, of: screen, screens) { return frame }
         return CGRect(origin: parkingSpot(size: frame.size, on: screen, screens), size: frame.size)
+    }
+
+    func crossesOtherScreen(_ frame: CGRect, of screen: Screen, _ screens: [Screen]) -> Bool {
+        screens.contains { $0.uuid != screen.uuid && $0.frame.intersects(frame) }
     }
 
     func stripExit(from current: CGRect, on screen: Screen) -> CGRect {
