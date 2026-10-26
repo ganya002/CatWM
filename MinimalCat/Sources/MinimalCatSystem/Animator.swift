@@ -16,6 +16,8 @@ final class Animator {
     }
 
     private struct Flight { let target: Target; let start: CFTimeInterval }
+    /// Where each moving window goes, until its app confirms the last write. The window server lags behind.
+    private(set) var heading: [CGWindowID: CGRect] = [:]
     private var flights: [CGWindowID: Flight] = [:]
     private var timer: Timer?
     private var writers: [pid_t: Writer] = [:]
@@ -24,6 +26,7 @@ final class Animator {
         let instant = targets.count > Self.instantAbove || NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         let now = CACurrentMediaTime()
         for target in targets {
+            heading[target.id] = target.end
             if instant {
                 flights[target.id] = nil
                 writer(target.pid).write(target.element, id: target.id, frame: target.end, final: true)
@@ -59,7 +62,9 @@ final class Animator {
 
     private func writer(_ pid: pid_t) -> Writer {
         if let writer = writers[pid] { return writer }
-        let writer = Writer(pid: pid)
+        let writer = Writer(pid: pid) { [weak self] id, frame in
+            DispatchQueue.main.async { if self?.heading[id] == frame { self?.heading[id] = nil } }
+        }
         writers[pid] = writer
         return writer
     }
@@ -69,20 +74,22 @@ private final class Writer {
     private let pid: pid_t
     private let queue: DispatchQueue
     private let lock = NSLock()
-    private struct Pending { let element: AXUIElement; let frame: CGRect; let final: Bool }
+    private struct Pending { let id: CGWindowID; let element: AXUIElement; let frame: CGRect; let final: Bool }
     private var pending: [CGWindowID: Pending] = [:]
     private var draining = false
     private var enhancedWasOn = false
+    private let landed: (CGWindowID, CGRect) -> Void
 
-    init(pid: pid_t) {
+    init(pid: pid_t, landed: @escaping (CGWindowID, CGRect) -> Void) {
         self.pid = pid
+        self.landed = landed
         queue = DispatchQueue(label: "minimalcat.ax.\(pid)", qos: .userInteractive)
     }
 
     func write(_ element: AXUIElement, id: CGWindowID, frame: CGRect, final: Bool) {
         let start = lock.withLock { () -> Bool in
             let wasFinal = pending[id]?.final ?? false
-            pending[id] = Pending(element: element, frame: frame, final: final || wasFinal)
+            pending[id] = Pending(id: id, element: element, frame: frame, final: final || wasFinal)
             defer { draining = true }
             return !draining
         }
@@ -105,7 +112,12 @@ private final class Writer {
             }
             if batch.isEmpty { break }
             for item in batch {
-                if item.final { item.element.setFrame(item.frame) } else { item.element.setStep(item.frame) }
+                if item.final {
+                    item.element.setFrame(item.frame)
+                    landed(item.id, item.frame)
+                } else {
+                    item.element.setStep(item.frame)
+                }
             }
         }
         if enhancedWasOn {

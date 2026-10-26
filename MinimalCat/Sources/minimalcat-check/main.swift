@@ -60,6 +60,16 @@ final class Check {
         let actual = system.frame(of: window).map { "\($0)" } ?? "unknown"
         report(name, took != nil, took.map { String(format: "landed in %.0f ms", $0 * 1000) }
             ?? "wanted \(target), got \(actual)")
+        let seen = engine.windows().first { $0.id == window }?.frame
+        report("\(name), the engine sees it", seen.map { Geometry.approxEqual($0, target) } ?? false,
+               "saw \(seen.map { "\($0)" } ?? "nothing")")
+    }
+
+    func measureReads() {
+        let start = Date()
+        for _ in 0..<50 { engine.windows() }
+        let each = Date().timeIntervalSince(start) / 50 * 1000
+        print(String(format: "INFO  reading %d windows takes %.2f ms", engine.windows().count, each))
     }
 
     func run() {
@@ -77,6 +87,7 @@ final class Check {
         placeAndUndo(first, on: display)
         moveAndFocus(first, second, on: display)
         restoreLayout(first, on: display, original: start)
+        measureReads()
     }
 
     func placeAndUndo(_ first: WindowInfo, on display: Display) {

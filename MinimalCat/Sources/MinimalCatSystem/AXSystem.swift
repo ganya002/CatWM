@@ -2,6 +2,7 @@ import AppKit
 import MinimalCatCore
 
 /// The real Mac: windows come from the window server and Accessibility, and moves go through `Animator`.
+/// Frames come from Accessibility, because the window server list lags behind a move.
 @MainActor
 public final class AXSystem: WindowSystem {
     private struct Known { let element: AXUIElement; let pid: pid_t }
@@ -42,7 +43,7 @@ public final class AXSystem: WindowSystem {
             let app = NSRunningApplication(processIdentifier: pid)
             return WindowInfo(id: WindowID(id), pid: pid, app: app?.localizedName ?? owner,
                               bundleID: app?.bundleIdentifier, title: element.string(kAXTitleAttribute) ?? "",
-                              frame: frame)
+                              frame: animator.heading[id] ?? element.frame ?? frame)
         }
     }
 
