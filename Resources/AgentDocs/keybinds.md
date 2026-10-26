@@ -54,4 +54,26 @@ bind = $mod CTRL, swipe_left, workspace, +1
 
 ## Defaults
 
-The stock config binds `$mod`+`1..0` to workspaces, `SUPER`+`Caps Lock` to window mode, and `$mod`+`T` to `open -na Kitty`. Read the user's actual file before assuming; **Restore Defaults** (Settings → Shortcuts) resets binds.
+The stock config (`$mod` = Option) has these binds. Read the user's actual file before you think a bind exists. **Restore Defaults** (Settings → Shortcuts) resets the binds.
+
+Global binds:
+
+- `CTRL`+`1..0` and `CTRL`+`left|right`: show a workspace. Add `SHIFT` to move the focused window there.
+- `$mod`+`O`: Overview (`sort`). `$mod`+`Tab` and `$mod SHIFT`+`Tab`: window switcher.
+- `SUPER`+`Caps Lock`: window mode.
+- `$mod CTRL`+`H|J|K|L`: focus a neighbour. Add `SHIFT` to move the window.
+- `$mod CTRL`+`F`: `fullscreen`. `$mod CTRL`+`V`: `togglefloating`.
+
+Window mode (Vim set):
+
+- `H J K L` and arrows: focus. `SHIFT`: move. `1..0`: workspace. `SHIFT`+`1..0`: move to workspace.
+- `W` / `B`: next or previous display. `SHIFT`: move the window there.
+- `N` / `P` and `S` / `SHIFT S`: next or previous layout.
+- `,` / `.`: main pane size. `SHIFT`: main count. `M`: swap with main. `SHIFT M`: swap sides. `G`: focus main.
+- `Tab` / `SHIFT Tab`: next or previous window. `CTRL`+`H|J|K|L`: into a tab group. `T`: out of the group. `[` / `]`: tabs.
+- `F`: `fullscreen`. `SHIFT F`: macOS full screen. `V`: float. `X`: close. `-`: minimise.
+- `O`: Overview. `/`: window switcher. `` ` ``: previous workspace.
+- `D`: dim other windows. `SHIFT D`: blur other windows.
+- `Z`: retile. `SHIFT T`: pause tiling. `SHIFT R`: reload. `Esc`, `I`, `Return`: leave the mode.
+
+The WASD set uses `W A S D` for focus, `Q E` for workspaces, `R` for layouts, `C` to float and `G` to swap with main. It has `O`, `/`, `` ` ``, `X` and `-` too, but no keys for dim, blur, focus main and the `S` layout keys.

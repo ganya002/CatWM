@@ -195,6 +195,24 @@ extension Steps {
                  })
         }
     }
+
+    static func focusGlobal(_ coach: Coach) -> PlannedStep? {
+        guard let focus = coach.book.find([WindowActions.movefocus], coach.book.directions[3], global: true) else {
+            return nil
+        }
+        return PlannedStep { coach in
+            Step(title: "Focus a window from any app",
+                 text: "Hold the keys and use a direction. Window mode is not necessary.",
+                 target: .window, caps: KeyWords.caps(focus, long: true),
+                 accept: { event in
+                     if case .command(WindowActions.movefocus.name, _, false) = event { return "" }
+                     return nil
+                 }, simulate: {
+                     Hotkeys.shared.setSubmap("")
+                     coach.windowManager.dispatch(WindowActions.movefocus.name, focus.arg)
+                 })
+        }
+    }
 }
 
 extension Steps {
