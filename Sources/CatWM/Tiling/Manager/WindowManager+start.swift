@@ -227,11 +227,14 @@ extension WindowManager {
         for screen in screens {
             let rect = usableRect(screen)
             for id in tiled(on: screen) {
-                guard let window = windows[id], let frame = stripFrames[id],
-                      isParked(window.cachedFrame, screens) || stripExits.contains(id) else { continue }
+                guard let frame = stripFrames[id] else { continue }
                 let x = max(rect.minX, min(frame.minX, rect.maxX - frame.width))
-                moves.append(.init(window: window, to: CGRect(origin: CGPoint(x: x, y: frame.minY), size: frame.size),
-                                   bounds: rect))
+                let target = belowTabStrip(CGRect(origin: CGPoint(x: x, y: frame.minY), size: frame.size), for: id)
+                for member in [id] + tabStack(behind: id) {
+                    guard let window = windows[member],
+                          isParked(window.cachedFrame, screens) || stripExits.contains(member) else { continue }
+                    moves.append(.init(window: window, to: target, bounds: rect))
+                }
             }
         }
         stripExits = []

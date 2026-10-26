@@ -15,6 +15,25 @@ import Testing
         for id in ids { #expect(screen.visible.contains(fake.frame(of: id))) }
     }
 
+    @Test func turningTilingOffBringsEveryTabOfAParkedColumnBack() async throws {
+        let fake = FakeBackend()
+        let screen = fake.addScreen()
+        let manager = fake.makeManager()
+        let ids = [fake.addWindow(), fake.addWindow(pid: -101), fake.addWindow(pid: -102), fake.addWindow(pid: -103)]
+        await fake.settle(manager)
+        let order = manager.state(for: screen).strip.ids
+        manager.joinTab(order[3], onto: order[2])
+        let first = try #require(manager.windows[order[0]])
+        fake.userFocuses(first.id)
+        manager.focus(first, warp: false)
+        await fake.settle(manager)
+        #expect(screen.frame.intersection(fake.frame(of: order[2])).width <= 1)
+        #expect(screen.frame.intersection(fake.frame(of: order[3])).width <= 1)
+        manager.toggleTiling()
+        await fake.settle(manager)
+        for id in ids { #expect(screen.visible.contains(fake.frame(of: id))) }
+    }
+
     @Test func navigationUsesRealFramesWhenTilingIsOff() async throws {
         let fake = FakeBackend()
         _ = fake.addScreen()
@@ -69,6 +88,28 @@ import Testing
         await fake.settle(manager)
         #expect(fake.frame(of: ids[0]).height >= 600)
         #expect(!fake.frame(of: ids[0]).intersects(fake.frame(of: ids[1])))
+    }
+
+    @Test func anInactiveTabMinimumHeightCountsInItsColumn() async throws {
+        let fake = FakeBackend()
+        let screen = fake.addScreen()
+        let manager = fake.makeManager()
+        _ = fake.addWindow()
+        _ = fake.addWindow(pid: -101)
+        _ = fake.addWindow(pid: -102)
+        await fake.settle(manager)
+        let state = manager.state(for: screen)
+        let order = state.strip.ids
+        manager.joinTab(order[2], onto: order[0])
+        await fake.settle(manager)
+        let group = try #require(manager.tabs.group(of: order[0]))
+        let behind = try #require(group.members.first { $0 != group.active })
+        state.strip.columns = [Strip.Column([group.active, order[1]], width: 0.5)]
+        manager.minSizes[behind] = CGSize(width: 0, height: 600)
+        manager.refresh()
+        await fake.settle(manager)
+        #expect(fake.frame(of: group.active).height >= 600)
+        #expect(!fake.frame(of: group.active).intersects(fake.frame(of: order[1])))
     }
 
     @Test func edgeSlidesStayOffTheNextDisplay() async throws {

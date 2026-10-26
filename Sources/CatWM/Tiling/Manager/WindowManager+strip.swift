@@ -5,14 +5,15 @@ extension WindowManager {
         let rect = usableRect(screen), gap = windowGap(count: ids.count)
         syncStrip(screenState, ids)
         for (index, column) in screenState.strip.columns.enumerated() {
-            let widest = column.ids.compactMap { minSizes[$0]?.width }.max() ?? 0
+            let widest = column.ids.compactMap { slotMinimum($0)?.width }.max() ?? 0
             let needed = (widest + gap) / (rect.width + gap)
             if needed > column.width {
                 screenState.strip.columns[index].width = min(Strip.widthRange.upperBound, needed)
             }
             guard column.ids.count > 1 else { continue }
-            screenState.strip.columns[index].heights = Strip.fitted(
-                column.heights, minimums: column.ids.map { (minSizes[$0]?.height ?? 0) + gap }, in: rect.height + gap)
+            let minimums = column.ids.map { (slotMinimum($0)?.height ?? 0) + gap }
+            screenState.strip.columns[index].heights = Strip.fitted(column.heights, minimums: minimums,
+                                                                    in: rect.height + gap)
         }
         let focus = model.mostRecent(of: screenState.strip.ids)
         screenState.strip.reveal(focus, in: rect, gap: gap, scroll: config.columnScroll,
