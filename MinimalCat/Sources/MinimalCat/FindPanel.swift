@@ -90,7 +90,12 @@ struct FindView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
-            if !model.results.isEmpty { Divider().overlay(Theme.hairline) }
+            if !model.results.isEmpty || !model.query.isEmpty { Divider().overlay(Theme.hairline) }
+            if model.results.isEmpty, !model.query.isEmpty {
+                Text("No window matches “\(model.query)”")
+                    .font(Theme.body).foregroundStyle(Theme.inkMuted)
+                    .padding(.horizontal, 16).frame(height: 44)
+            }
             VStack(spacing: 2) {
                 ForEach(Array(model.results.enumerated()), id: \.element.id) { index, window in
                     row(window, selected: index == model.selected)

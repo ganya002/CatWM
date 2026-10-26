@@ -17,13 +17,19 @@ enum Previews {
             WindowInfo(id: WindowID(UInt32(index + 1)), pid: 1, app: app, bundleID: nil, title: "\(app) window",
                        frame: .zero)
         }
-        let find = FindModel(windows: windows, icons: [:])
+        let icons = Dictionary(uniqueKeysWithValues: rows.compactMap { row in row.icon.map { (row.id, $0) } })
+        let find = FindModel(windows: windows, icons: icons)
+        let nothing = FindModel(windows: windows, icons: icons)
+        nothing.query = "xcode"
         find.query = "ma"
         let surfaces: [(String, AnyView)] = [
             ("overlay", AnyView(OverlayView(rows: rows, keyName: "⇪", undo: "Z", redo: "Y"))),
             ("overlay-empty", AnyView(OverlayView(rows: [], keyName: "⇪", undo: "Z", redo: "Y"))),
             ("hud", AnyView(HUDView(text: "Put 4 windows back · ⇪ Z undoes"))),
             ("find", AnyView(FindView(model: find))),
+            ("find-nothing", AnyView(FindView(model: nothing))),
+            ("overlay-many", AnyView(OverlayView(rows: (0..<15).map { many(rows, $0) }, keyName: "⇪", undo: "Z",
+                                                 redo: "Y"))),
             ("welcome-permission", AnyView(WelcomeView(model: welcome(.permission)))),
             ("welcome-keys", AnyView(WelcomeView(model: welcome(.keys))))
         ]
@@ -44,6 +50,12 @@ enum Previews {
                 do { try data.write(to: url) } catch { FileHandle.standardError.write(Data("\(error)\n".utf8)) }
             }
         }
+    }
+
+    private static func many(_ rows: [OverlayView.Row], _ index: Int) -> OverlayView.Row {
+        let row = rows[index % rows.count]
+        return OverlayView.Row(id: WindowID(UInt32(index + 1)), number: index < 9 ? index + 1 : nil,
+                               title: row.title, app: row.app, icon: row.icon, focused: index == 1)
     }
 
     private static func welcome(_ step: WelcomeModel.Step) -> WelcomeModel {

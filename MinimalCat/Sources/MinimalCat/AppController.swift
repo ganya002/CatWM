@@ -33,6 +33,8 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var trustPoll: Timer?
     /// Only a mapping this app made is removed, so another tool's mapping survives Turn Off and Quit.
     private var mappedCaps = false
+    /// The key choice the running parts were started with, or nil when they are stopped.
+    private var active: CatKeyChoice?
 
     private var paused: Bool {
         get { UserDefaults.standard.bool(forKey: "paused") }
@@ -54,6 +56,9 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
         DistributedNotificationCenter.default().addObserver(
             self, selector: #selector(inputSourceChanged),
             name: Notification.Name(kTISNotifySelectedKeyboardInputSourceChanged as String), object: nil)
+        DistributedNotificationCenter.default().addObserver(
+            self, selector: #selector(trustChanged), name: Notification.Name("com.apple.accessibility.api"),
+            object: nil)
         voiceOver = NSWorkspace.shared.observe(\.isVoiceOverEnabled) { [weak self] _, _ in
             Task { @MainActor in self?.applyState() }
         }
@@ -80,34 +85,45 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
     /// Starts or stops every part so the app matches `paused`, the key choice and the permission.
     /// Off means off: when paused, no tap, no mapping, no watchers.
     private func applyState() {
-        let run = !paused && AXIsProcessTrusted()
-        if run {
-            if choice == .capsLock {
-                switch CapsMapping.apply() {
-                case .applied: mappedCaps = true
-                case .othersMapping:
-                    notify("Another app remaps Caps Lock. Minimal Cat uses F18 for now.", visible: true)
-                case .failed:
-                    notify("Could not use Caps Lock. Minimal Cat uses F18 for now.", visible: true)
-                }
-            } else {
-                unmapCaps()
-            }
-            engine.keyName = choice.symbol
-            keys.start()
-            focusWatcher.start()
-            displayWatcher.start()
-        } else {
+        let wanted: CatKeyChoice? = !paused && AXIsProcessTrusted() ? choice : nil
+        defer { updateStatusIcon() }
+        guard wanted != active else { return }
+        active = wanted
+        guard let wanted else {
             keys.stop()
             focusWatcher.stop()
             displayWatcher.stop()
             overlay.hide()
             unmapCaps()
+            return
         }
-        updateStatusIcon()
+        var key = wanted
+        if wanted == .capsLock {
+            switch CapsMapping.apply() {
+            case .applied: mappedCaps = true
+            case .othersMapping:
+                key = .f18
+                notify("Another app remaps Caps Lock. Minimal Cat uses F18 for now.", visible: true)
+            case .failed:
+                key = .f18
+                notify("Could not use Caps Lock. Minimal Cat uses F18 for now.", visible: true)
+            }
+        } else {
+            unmapCaps()
+        }
+        engine.keyName = key.symbol
+        keys.start()
+        focusWatcher.start()
+        displayWatcher.start()
     }
 
     @objc private func inputSourceChanged() { commands = KeyLayout.commands() }
+
+    /// macOS posts this when any app's permission changes. The new value can lag behind, so opening the menu
+    /// checks again.
+    @objc private func trustChanged() {
+        DispatchQueue.main.async { [weak self] in self?.applyState() }
+    }
 
     // MARK: - Keys
 
@@ -154,11 +170,11 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let icons = icons(for: windows)
         let rows = windows
             .map { window in
-                OverlayView.Row(id: window.id, number: engine.slots.numbers[window.id], title: window.name,
+                OverlayView.Row(id: window.id, number: engine.slots.number(of: window.id), title: window.name,
                                 app: window.app, icon: icons[window.id], focused: window.id == focused)
             }
             .sorted { ($0.number ?? 99) < ($1.number ?? 99) }
-        overlay.show(rows, keyName: choice.symbol)
+        overlay.show(rows, keyName: engine.keyName)
     }
 
     private func icons(for windows: [WindowInfo]) -> [WindowID: NSImage] {
@@ -226,6 +242,7 @@ extension AppController {
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
+        applyState()
         menu.removeAllItems()
         let ready = !paused && AXIsProcessTrusted()
         for command in [Command.place(.left), .place(.right), .place(.top), .place(.bottom), .place(.big)] {
@@ -280,7 +297,7 @@ extension AppController {
                               keyEquivalent: "")
         item.target = self
         item.representedObject = command
-        if let binding = command.binding { item.toolTip = "\(choice.symbol) \(KeyLayout.label(binding))" }
+        if let binding = command.binding { item.toolTip = "\(engine.keyName) \(KeyLayout.label(binding))" }
         return item
     }
 

@@ -19,6 +19,7 @@ struct OverlayView: View {
     let undo: String
     let redo: String
 
+    private static let shown = 12
     private let columns = [GridItem(.fixed(250), spacing: 8), GridItem(.fixed(250), spacing: 8)]
 
     var body: some View {
@@ -30,7 +31,11 @@ struct OverlayView: View {
                     .frame(width: 508, alignment: .leading)
             } else {
                 LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
-                    ForEach(rows.prefix(12)) { row in tile(row) }
+                    ForEach(rows.prefix(Self.shown)) { row in tile(row) }
+                }
+                if rows.count > Self.shown {
+                    Text("\(rows.count - Self.shown) more. Press Space to find one.")
+                        .font(Theme.caption).foregroundStyle(Theme.inkMuted)
                 }
             }
             Divider().overlay(Theme.hairline)
