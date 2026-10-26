@@ -37,6 +37,11 @@ public final class KeyTap {
         if let tap { CFMachPortInvalidate(tap) }
         tap = nil
         source = nil
+        swallowedUps = []
+        reset()
+    }
+
+    private func reset() {
         tick?.invalidate()
         if machine.isHeld { machine = CatKey(); onOutput?(.hideOverlay) }
     }
@@ -65,9 +70,14 @@ public final class KeyTap {
             return true
         }
         if type == .keyUp { return swallowedUps.remove(code) != nil }
+        if event.getIntegerValueField(.keyboardEventAutorepeat) != 0 { return swallowedUps.contains(code) }
+        // Secure input and a tap timeout hide the cat key's release. The keyboard state still knows.
+        if machine.isHeld, !CGEventSource.keyState(.hidSystemState, key: CGKeyCode(Self.catKeyCode)) {
+            reset()
+        }
         guard let outputs = machine.handle(.key(code)) else { return false }
         swallowedUps.insert(code)
-        if event.getIntegerValueField(.keyboardEventAutorepeat) == 0 { emit(outputs) }
+        emit(outputs)
         return true
     }
 

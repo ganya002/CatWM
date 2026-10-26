@@ -31,6 +31,8 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var welcome: Welcome?
     private var voiceOver: NSKeyValueObservation?
     private var trustPoll: Timer?
+    /// Only a mapping this app made is removed, so another tool's mapping survives Turn Off and Quit.
+    private var mappedCaps = false
 
     private var paused: Bool {
         get { UserDefaults.standard.bool(forKey: "paused") }
@@ -64,7 +66,13 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func applicationWillTerminate(_: Notification) {
         saveLayout()
+        unmapCaps()
+    }
+
+    private func unmapCaps() {
+        guard mappedCaps else { return }
         CapsMapping.remove()
+        mappedCaps = false
     }
 
     // MARK: - State
@@ -76,14 +84,14 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if run {
             if choice == .capsLock {
                 switch CapsMapping.apply() {
-                case .applied: break
+                case .applied: mappedCaps = true
                 case .othersMapping:
                     notify("Another app remaps Caps Lock. Minimal Cat uses F18 for now.", visible: true)
                 case .failed:
                     notify("Could not use Caps Lock. Minimal Cat uses F18 for now.", visible: true)
                 }
             } else {
-                CapsMapping.remove()
+                unmapCaps()
             }
             engine.keyName = choice.symbol
             keys.start()
@@ -94,7 +102,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
             focusWatcher.stop()
             displayWatcher.stop()
             overlay.hide()
-            CapsMapping.remove()
+            unmapCaps()
         }
         updateStatusIcon()
     }

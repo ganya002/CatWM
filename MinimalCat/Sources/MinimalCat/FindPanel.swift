@@ -10,12 +10,17 @@ final class FindPanel {
     private var resignObserver: NSObjectProtocol?
 
     func show(_ windows: [WindowInfo], icons: [WindowID: NSImage], choose: @escaping (WindowID) -> Void) {
+        close()
+        let previous = NSWorkspace.shared.frontmostApplication
         let model = FindModel(windows: windows, icons: icons)
         model.choose = { [weak self] id in
             self?.close()
             choose(id)
         }
-        model.cancel = { [weak self] in self?.close() }
+        model.cancel = { [weak self] in
+            self?.close()
+            if previous?.processIdentifier != ProcessInfo.processInfo.processIdentifier { previous?.activate() }
+        }
         NSApp.activate(ignoringOtherApps: true)
         panel.show(FindView(model: model), on: activeScreen(), at: .top)
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
