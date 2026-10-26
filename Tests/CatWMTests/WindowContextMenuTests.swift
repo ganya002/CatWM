@@ -16,11 +16,11 @@ import Testing
 
     @Test func plainTiledWindowGetsTheBasicRows() {
         let ids = WindowContextMenu.items(input()).map(\.id)
-        #expect(ids == ["float", "fullscreen", "swap", "s1", "retile"])
+        #expect(ids == ["float", "fullscreen", "width", "s1", "retile"])
     }
 
     @Test func floatingWindowHasNoSwapRow() {
-        #expect(!WindowContextMenu.items(input(tiled: false)).map(\.id).contains("swap"))
+        #expect(!WindowContextMenu.items(input(tiled: false)).map(\.id).contains("width"))
     }
 
     @Test func groupedWindowGetsMoveOutOfGroup() {

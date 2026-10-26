@@ -5,7 +5,7 @@ import Testing
 private func plan(_ lanes: [[CGWindowID]], tabs: [[CGWindowID]]) -> SortPlan {
     let ids = lanes.flatMap(\.self)
     let items = ids.map { SortItem(id: $0, title: "\($0)", app: "App", bundleID: nil, icon: nil, recency: Int($0)) }
-    let sortLanes = lanes.enumerated().map { SortLane(workspace: "\($0 + 1)", name: "", layout: .tall, ids: $1) }
+    let sortLanes = lanes.enumerated().map { SortLane(workspace: "\($0 + 1)", name: "", ids: $1) }
     var sortPlan = SortPlan(display: "D", items: Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) }),
                             lanes: sortLanes, existing: sortLanes.map(\.workspace), taken: [],
                             active: "1")

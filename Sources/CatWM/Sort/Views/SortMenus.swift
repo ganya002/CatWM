@@ -59,14 +59,9 @@ extension SortModel {
         ]
     }
 
-    func laneMenu(_ lane: SortLane, index: Int, rename: @escaping () -> Void, run: @escaping Run) -> [MenuItem] {
+    func laneMenu(_ lane: SortLane, rename: @escaping () -> Void, run: @escaping Run) -> [MenuItem] {
         var items = [
-            MenuItem(id: "rename", label: "Rename", action: rename),
-            MenuItem(id: "layout", kind: .sub, label: "Layout", children: layouts.map { layout in
-                MenuItem(id: "layout-\(layout.rawValue)", kind: .radio, label: layout == .bsp ? "BSP" : layout.title,
-                         checked: lane.layout == layout,
-                         action: { [weak self] in run { self?.setLayout(layout, of: index) } })
-            })
+            MenuItem(id: "rename", label: "Rename", action: rename)
         ]
         if plan.lanes.count > 1 {
             items.append(.sep("close-sep"))

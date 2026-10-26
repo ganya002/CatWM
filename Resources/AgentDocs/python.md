@@ -19,9 +19,9 @@ from catwm import CatWM, CatWMError
 
 with CatWM() as catwm:
     catwm.workspace("2")                 # same as the dispatcher
-    catwm.layout("wide")
+    catwm.columnwidth("cycle")
     windows = catwm.windows()            # list of dicts: id, app, title, focused, workspace, frame, ...
-    screens = catwm.screens()            # layout, ratio, workspace, usable area for each display
+    screens = catwm.screens()            # columns, scroll, workspace, usable area for each display
     catwm.config_set("gaps-in", "8")     # changes catwm.conf. Change it back after your test.
 ```
 
@@ -35,8 +35,8 @@ Tiling is asynchronous: a command returns when CatWM accepts it, not when the wi
 from catwm.testing import connect, wait_until, wait_for_window, find_windows
 
 catwm = connect()                        # skips the test when CatWM does not run
-catwm.layout("wide")
-wait_until(lambda: catwm.screens()[0]["layout"] == "wide", message="wide layout")
+catwm.columnwidth("100")
+wait_until(lambda: catwm.screens()[0]["columns"][0]["width"] == 1, message="full width column")
 safari = wait_for_window(catwm, app="com.apple.Safari")      # filters: app, title, focused, workspace, floating
 ```
 
@@ -57,6 +57,6 @@ with Events("focus.changed", "workspace.changed") as events:
 ## Rules for tests
 
 - The user works on the same desktop. Do not move their windows or take their focus. Open your own windows for a test, and close them after.
-- Put back what you change: layout, tiling on or off, workspace and config options.
+- Put back what you change: column widths, tiling on or off, workspace and config options.
 - Use `unittest` or `pytest`. `connect()` raises `unittest.SkipTest`, so both skip the test when CatWM does not run.
 - Read `catwm dump` or `~/Library/Logs/CatWM.log` when a test fails.

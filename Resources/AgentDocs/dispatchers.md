@@ -8,8 +8,11 @@ Used as `bind = MODS, key, <dispatcher>, <args>` or `catwm dispatch <dispatcher>
 | `movewindow` / `swapwindow` | `l r u d`, or `mon:l`, `mon:+1`, `mon:0` | move/swap a window in a direction, or to another display |
 | `movewindowtomonitor` | monitor spec | move the window to a display |
 | `cyclenext` / `swapnext` | none or `prev` | cycle focus / swap with the next window |
-| `layoutmsg` | `swapwithmaster`, `swapsides`, `focusmaster`, `addmaster`, `removemaster`, `cyclenext`, `cycleprev`, `swapnext`, `swapprev`, `mfact ±0.05`, `orientationnext`, `orientationprev` | layout-specific actions (main pane) |
-| `splitratio` | `+0.05`, `-0.05`, `exact 0.6` | resize the main split |
+| `columnwidth` | `cycle`, `max`, `+10`, `-10`, or a width such as `50` (percent of the screen) | change the width of the focused column. `cycle` steps through `column-widths`. `max` makes the column as wide as the screen, or gives it back the `column-width` |
+| `windowheight` | `+10`, `-10` (percent of the column) | change the height of the focused window in its column |
+| `centercolumn` | | scroll the focused column to the middle of the screen |
+| `consumeorexpel` | `left` / `right` | move the focused window into the column on that side. If its column has more windows, take it out to a new column on that side |
+| `togglecolumntabs` | | show the windows of the focused column as tabs, or as a stack again |
 | `togglefloating` | | float/tile the focused window |
 | `fullscreen` | | zoom the focused window |
 | `nativefullscreen` | | macOS Full Screen (the green button) for the focused window: it gets a Space of its own and leaves the tiling until it comes back |
@@ -24,8 +27,6 @@ Used as `bind = MODS, key, <dispatcher>, <args>` or `catwm dispatch <dispatcher>
 | `workspace` | `N`, `name:foo`, `previous`, `+1`, `-1`, `e+1`, `e-1` | switch workspace (`e±1`: next one that has windows) |
 | `movetoworkspace` | same as `workspace` | move the window and follow it |
 | `movetoworkspacesilent` | same | move without following |
-| `cyclelayout` | `next` / `prev` | step through the `layouts` list |
-| `layout` / `setlayout` | a layout name, e.g. `bsp` | set the layout of the focused display |
 | `toggletiling` | | pause/resume tiling |
 | `toggledim` | | dim other windows on/off until the setting changes |
 | `toggleblur` | | blur other windows on/off until the setting changes |

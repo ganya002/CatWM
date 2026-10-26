@@ -14,9 +14,9 @@ One line binds many keys; values pair with keys in order.
 
 ```
 bind = $mod, 1..0, workspace, 1..10                 # ⌥1…⌥9 → 1–9, ⌥0 → 10
-bind = $mod, f1..f4, layout, tall|wide|bsp|column   # a | list works too
+bind = $mod, f1..f4, workspace, 1|2|3|4             # a | list works too
 bind = $mod CTRL, h|j|k|l, movefocus, l|d|u|r
-bind = $mod, a..d, layout, bsp                      # one value is used for every key
+bind = $mod, a..d, columnwidth, cycle               # one value is used for every key
 ```
 
 `exec` arguments and any argument containing spaces are never expanded.
@@ -63,17 +63,19 @@ Global binds:
 - `SUPER`+`Caps Lock`: window mode.
 - `$mod CTRL`+`H|J|K|L`: focus a neighbour. Add `SHIFT` to move the window.
 - `$mod CTRL`+`F`: `fullscreen`. `$mod CTRL`+`V`: `togglefloating`.
+- `$mod CTRL`+`R`: next column width. `$mod CTRL`+`M`: maximize the column. `$mod CTRL`+`-` / `=`: narrower or wider.
+- `$mod CTRL`+`C`: center the column. `$mod CTRL`+`,` / `.`: move the window into or out of a column. `$mod CTRL`+`W`: column tabs.
 
 Window mode (Vim set):
 
 - `H J K L` and arrows: focus. `SHIFT`: move. `1..0`: workspace. `SHIFT`+`1..0`: move to workspace.
 - `W` / `B`: next or previous display. `SHIFT`: move the window there.
-- `N` / `P` and `S` / `SHIFT S`: next or previous layout.
-- `,` / `.`: main pane size. `SHIFT`: main count. `M`: swap with main. `SHIFT M`: swap sides. `G`: focus main.
+- `R`: next column width. `M`: maximize the column. `,` / `.`: narrower or wider. `SHIFT`: shorter or taller window.
+- `C`: center the column. `S` / `SHIFT S`: move the window into or out of the column on the left or right. `G`: column tabs.
 - `Tab` / `SHIFT Tab`: next or previous window. `CTRL`+`H|J|K|L`: into a tab group. `T`: out of the group. `[` / `]`: tabs.
 - `F`: `fullscreen`. `SHIFT F`: macOS full screen. `V`: float. `X`: close. `-`: minimise.
 - `O`: Overview. `/`: window switcher. `` ` ``: previous workspace.
 - `D`: dim other windows. `SHIFT D`: blur other windows.
 - `Z`: retile. `SHIFT T`: pause tiling. `SHIFT R`: reload. `Esc`, `I`, `Return`: leave the mode.
 
-The WASD set uses `W A S D` for focus, `Q E` for workspaces, `R` for layouts, `C` to float and `G` to swap with main. It has `O`, `/`, `` ` ``, `X` and `-` too, but no keys for dim, blur, focus main and the `S` layout keys.
+The WASD set uses `W A S D` for focus, `Q E` for workspaces, `R` for the next column width, `C` to float, `G` / `SHIFT G` to move a window into or out of a column, `T` for column tabs and `V` to center the column. It has `O`, `/`, `` ` ``, `X` and `-` too, but no keys for dim and blur.

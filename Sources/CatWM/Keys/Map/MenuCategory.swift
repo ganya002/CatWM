@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 enum MenuCategory: String, CaseIterable, Identifiable {
-    case focus = "Focus", move = "Move", workspace = "Workspace", layout = "Layout", window = "Window", mode = "Mode"
+    case focus = "Focus", move = "Move", workspace = "Workspace", columns = "Columns", window = "Window", mode = "Mode"
     case app = "App"
     var id: Self { self }
 
@@ -11,7 +11,7 @@ enum MenuCategory: String, CaseIterable, Identifiable {
         case .focus: "scope"
         case .move: "arrow.up.and.down.and.arrow.left.and.right"
         case .workspace: "square.stack.3d.up"
-        case .layout: "rectangle.split.3x1"
+        case .columns: "rectangle.split.3x1"
         case .window: "macwindow"
         case .mode: "keyboard"
         case .app: "gearshape"
@@ -24,7 +24,7 @@ enum MenuCategory: String, CaseIterable, Identifiable {
         case .move: self = .move
         case .displays: self = action.dispatcher == WindowActions.focusmonitor.name ? .focus : .move
         case .spaces: self = .workspace
-        case .layout: self = .layout
+        case .columns: self = .columns
         case .window, .commands: self = .window
         case .app, .custom: self = action.dispatcher == WindowActions.submap.name ? .mode : .app
         }

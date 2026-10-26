@@ -17,7 +17,7 @@ struct AppSurface: TilingSurface {
         Switcher.shared.install()
         startKeyTap()
         Notifications.shared.installBuiltIn()
-        HUD.shared.prepare(text: manager.currentWorkspace ?? "1", layout: manager.config.layouts.first)
+        HUD.shared.prepare(text: manager.currentWorkspace ?? "1")
     }
 
     private func startKeyTap() {
@@ -37,9 +37,7 @@ struct AppSurface: TilingSurface {
         Notifications.shared.setEnabled(config.tabNotificationBadges)
     }
 
-    func showHUD(_ text: String, layout: Layout?, on screen: NSScreen?) {
-        HUD.shared.show(text, layout: layout, on: screen)
-    }
+    func showHUD(_ text: String, on screen: NSScreen?) { HUD.shared.show(text, on: screen) }
 
     func warnHUD(_ text: String, on screen: NSScreen?) { HUD.shared.warn(text, on: screen) }
 
@@ -53,11 +51,9 @@ struct AppSurface: TilingSurface {
     }
 
     func tilesDidChange(instant: Bool) {
-        SplitHandle.shared.update(instant: instant)
         TabStrips.shared.update(instant: instant)
     }
 
-    func splitSwapped(on screen: String) { SplitHandle.shared.confirmSwap(on: screen) }
     func tabsDidChange(instant: Bool) { TabStrips.shared.update(instant: instant) }
     func batchTabChanges(_ changes: () -> Void) { TabStrips.shared.batch(changes) }
     func restackTabStrips() { TabStrips.shared.restack() }

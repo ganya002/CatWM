@@ -73,7 +73,7 @@ import Testing
         var model = WorkspaceModel()
         model.assign(1, to: "1"); model.order = [1]; model.noteFocus(1)
         model.show("1", on: "A"); model.virtualShown["A"] = "1"; model.monitorOf["1"] = "A"; model.lastFocused["1"] = 1
-        _ = model.states["1", default: ScreenState(layout: .tall)]
+        _ = model.states["1", default: ScreenState()]
         model.resetWorkspaces()
         #expect(
             model.workspaceOf.isEmpty && model.shown.isEmpty && model.virtualShown.isEmpty
@@ -85,16 +85,14 @@ import Testing
 
     @Test func aSnapshotDoesNotChangeWithTheModel() {
         var model = WorkspaceModel()
-        let state = ScreenState(layout: .tall)
-        state.ratio = 0.6; state.mainCount = 2; state.zoomed = 4
+        let state = ScreenState()
+        state.strip = Strip(columns: [.init([4], width: 0.5)]); state.zoomed = 4
         model.states["1"] = state
         model.assign(4, to: "1"); model.order = [4]; model.lastFocused["1"] = 4
         let snap = model.snapshot()
-        state.layout = .bsp; state.ratio = 0.3
+        state.strip.columns[0].width = 1
         model.assign(4, to: "2"); model.order = []; model.lastFocused["1"] = nil
-        #expect(snap.states["1"]?.layout == .tall)
-        #expect(snap.states["1"]?.ratio == 0.6)
-        #expect(snap.states["1"]?.mainCount == 2)
+        #expect(snap.states["1"]?.strip.columns[0].width == 0.5)
         #expect(snap.states["1"]?.zoomed == 4)
         #expect(snap.workspaceOf[4] == "1")
         #expect(snap.order == [4])

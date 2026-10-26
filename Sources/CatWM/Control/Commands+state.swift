@@ -43,9 +43,9 @@ extension CommandRegistry {
             Field(name: "name", type: "string", summary: "Display name"),
             Field(name: "frame", type: rect, summary: "Display frame"),
             Field(name: "usable", type: rect, summary: "Area for tiled windows"),
-            Field(name: "layout", type: "string", summary: "Layout name"),
-            Field(name: "ratio", type: "number", summary: "Main pane ratio"),
-            Field(name: "mainCount", type: "int", summary: "Number of main windows"),
+            Field(name: "columns", type: "object[]",
+                  summary: "Columns from left to right: `width` (a fraction of the usable width) and `windows`"),
+            Field(name: "scroll", type: "number", summary: "How far the columns are scrolled, in points"),
             Field(name: "workspace", type: "string", summary: "Workspace shown on the display"),
             Field(name: "focused", type: "bool", summary: "The display has focus")
         ])) { _ in WindowManager.shared.screensJSON() },

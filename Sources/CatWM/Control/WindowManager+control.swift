@@ -11,8 +11,7 @@ extension WindowManager {
             "floating": .int(current.floating), "mode": .string(Hotkeys.shared.submap),
             "workspaces": .string(config.virtualWorkspaces ? "catwm" : "macos"),
             "screens": .array(current.screens.map {
-                ["uuid": .string($0.uuid), "name": .string($0.name), "layout": .string($0.layout.rawValue),
-                 "workspace": .string($0.workspace)]
+                ["uuid": .string($0.uuid), "name": .string($0.name), "workspace": .string($0.workspace)]
             })
         ]
     }
@@ -59,8 +58,10 @@ extension WindowManager {
             return [
                 "uuid": .string(screen.uuid), "name": .string(screen.name),
                 "frame": .rect(screen.frame), "usable": .rect(usableRect(screen)),
-                "layout": .string(screenState.layout.rawValue), "ratio": .number(Double(screenState.ratio)),
-                "mainCount": .int(screenState.mainCount), "workspace": .string(shown[screen.uuid] ?? ""),
+                "columns": .array(screenState.strip.columns.map { column in
+                    ["width": .number(Double(column.width)), "windows": .array(column.ids.map { .int(Int($0)) })]
+                }),
+                "scroll": .number(Double(screenState.strip.offset)), "workspace": .string(shown[screen.uuid] ?? ""),
                 "focused": .bool(screen.uuid == focused)
             ]
         })

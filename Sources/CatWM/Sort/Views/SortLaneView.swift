@@ -85,23 +85,16 @@ struct SortLaneView: View {
             .padding(.horizontal, 4)
             .contentShape(Rectangle())
             .oContextMenu(opened: { menu.isOn = $0 }, items: {
-                model.laneMenu(lane, index: index, rename: { editing = true },
+                model.laneMenu(lane, rename: { editing = true },
                                run: { change in
                                    withAnimation(PanelMotion.windowAnimation(reduceMotion: reduceMotion), change)
                                })
             })
-            SortThumb(layout: lane.layout, ids: model.plan.tiles(lane.ids),
-                      lit: (model.hover ?? model.selected).flatMap(lead),
-                      ratio: model.plan.geometry[lane.workspace]?.ratio ?? 0.5,
-                      mainCount: model.plan.geometry[lane.workspace]?.mainCount ?? 1)
+            SortThumb(ids: model.plan.tiles(lane.ids), lit: (model.hover ?? model.selected).flatMap(lead))
                 .padding(.horizontal, 4)
                 .contentShape(Rectangle())
                 .onTapGesture { model.finish(lane.workspace) }
                 .gesture(carry)
-            SortLayoutPill(layout: lane.layout,
-                           next: { model.cycleLayout(of: index) },
-                           previous: { model.cycleLayout(of: index, by: -1) })
-                .padding(.leading, 4)
             SortList(model: model, ids: lane.ids, closing: false, rows: rows)
         }
         .padding(.vertical, 8).padding(.horizontal, 4)

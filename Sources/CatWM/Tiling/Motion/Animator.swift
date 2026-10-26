@@ -46,7 +46,7 @@ final class Animator {
     private var frameRun: FrameRun?
     var onMinimumSize: ((CGWindowID, CGSize) -> Void)?
     var onTopRefused: ((_ target: CGRect, _ actual: CGRect) -> Void)?
-    var onLanded: (() -> Void)?
+    var onLanded: ((CGWindowID) -> Void)?
 
     init(backend: any WindowBackend = AXBackend.shared, makeWriter: ((pid_t) -> AXWriter)? = nil,
          applyFocus: @escaping (Window, () -> Bool) -> Void = { $0.focus(ifCurrent: $1) }) {
@@ -235,7 +235,7 @@ final class Animator {
             guard let self, self.landing[id]?.number == number else { return }
             self.landing[id] = nil
             guard wrote else { return }
-            self.onLanded?()
+            self.onLanded?(id)
             self.quietUntil[id] = CACurrentMediaTime() + 0.4
             DispatchQueue.main.asyncAfter( // style-ok: an app that ignores a write sends no event
                 deadline: .now() + 0.12

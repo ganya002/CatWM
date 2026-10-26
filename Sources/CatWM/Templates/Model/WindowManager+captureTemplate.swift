@@ -80,8 +80,7 @@ extension WindowManager {
         for screen in screens {
             let state = state(for: screen)
             displays.append(.init(id: screen.uuid, name: screen.name, frame: screen.frame,
-                                  visible: screen.visible, isMain: screen.id == mainID, layout: state.layout.rawValue,
-                                  ratio: state.ratio, mainCount: state.mainCount))
+                                  visible: screen.visible, isMain: screen.id == mainID))
             if let id = state.zoomed { zoomed[screen.uuid] = id }
         }
         var knownFloating: [CGWindowID: Bool] = [:]

@@ -1,7 +1,7 @@
 import AppKit
 
 enum KeyWords {
-    enum RatioChange { case grow, shrink }
+    enum WidthChange { case grow, shrink }
 
     static func same(_ lhs: String, _ rhs: String) -> Bool {
         if let x = Direction(lhs), let y = Direction(rhs) { return x == y }
@@ -23,16 +23,12 @@ enum KeyWords {
         ["l": "left", "r": "right", "u": "up", "d": "down"][token] ?? token
     }
 
-    static func ratioDirection(_ dispatcher: String, _ arg: String) -> RatioChange? {
-        var amount = arg.lowercased().trimmingCharacters(in: .whitespaces)
-        if dispatcher == WindowActions.layoutmsg.name {
-            guard amount.hasPrefix("mfact") else { return nil }
-            amount = String(amount.dropFirst(5)).trimmingCharacters(in: .whitespaces)
-        } else if dispatcher != WindowActions.splitratio.name {
+    static func widthDirection(_ dispatcher: String, _ arg: String) -> WidthChange? {
+        let amount = arg.trimmingCharacters(in: .whitespaces)
+        guard dispatcher == WindowActions.columnwidth.name, let sign = amount.first, "+-".contains(sign) else {
             return nil
         }
-        guard !amount.hasPrefix("exact") else { return nil }
-        return amount.hasPrefix("-") ? .shrink : .grow
+        return sign == "-" ? .shrink : .grow
     }
 
     static func keyWord(_ binding: KeyBinding) -> String {

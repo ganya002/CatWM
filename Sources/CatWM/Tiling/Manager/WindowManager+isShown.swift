@@ -13,7 +13,6 @@ struct WorkspaceSummary {
 
 struct MenuBarState {
     let workspace: String?
-    let layout: Layout
     let pids: [pid_t]
 }
 
@@ -73,7 +72,7 @@ extension WindowManager {
         var seen = Set<pid_t>()
         let pids = (here.filter { !$0.isFloating } + here.filter(\.isFloating)).map(\.pid)
             .filter { seen.insert($0).inserted }
-        return MenuBarState(workspace: workspace, layout: state(for: screen).layout, pids: pids)
+        return MenuBarState(workspace: workspace, pids: pids)
     }
 
     func resolveWorkspace(_ raw: String) -> String? {

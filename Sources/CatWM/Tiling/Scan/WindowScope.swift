@@ -63,7 +63,7 @@ struct WindowScope: Equatable {
         "movefocus", "cyclenext", "movewindow", "movewindowtomonitor", "swapwindow", "swapnext",
         "togglefloating", "fullscreen", "minimize", "killactive",
         "moveintogroup", "moveoutofgroup", "changegroupactive", "movegroupwindow",
-        "layoutmsg", "splitratio", "cyclelayout", "layout", "toggletiling", "retile",
+        "columnwidth", "windowheight", "centercolumn", "consumeorexpel", "togglecolumntabs", "toggletiling", "retile",
         "reload", "exit"
     ]
 

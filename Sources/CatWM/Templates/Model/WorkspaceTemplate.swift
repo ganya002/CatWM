@@ -15,9 +15,6 @@ struct WorkspaceTemplate: Codable, Identifiable {
         var frame: CGRect
         var visible: CGRect
         var isMain: Bool
-        var layout: String
-        var ratio: CGFloat
-        var mainCount: Int
     }
 
     var summary: String {

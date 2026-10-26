@@ -33,11 +33,11 @@ One palette, `Palette.catwm`, with a light and a dark theme. It comes from the C
 
 - Paint window chrome with `background`. Put the content pane on `surface`. Float menus, dropdowns and tips on `surfaceRaised`, flat, with the `popover` elevation. Only the HUD uses glass.
 - Text is `ink`. Secondary text is `inkMuted`. Placeholders are `inkFaint`. Every pair meets 4.5:1 in both themes.
-- Sky is the accent. Use `accent` for one thing per view: the primary button, the switch that is on, the current workspace, the progress bar, the selected layout, a drop target. Its text is `onAccent`, black in both themes. Accent-coloured text uses `accentInk`, which is darker in the light theme so it meets 4.5:1. Everything else is neutral: row symbols, step numbers, workspace numbers in the overview, group titles and page titles are `ink` or `inkMuted`. A selected pill (a rail page, a modifier layer in the shortcut map) is `ink` with `background` text, never `accent`.
+- Sky is the accent. Use `accent` for one thing per view: the primary button, the switch that is on, the current workspace, the progress bar, a drop target. Its text is `onAccent`, black in both themes. Accent-coloured text uses `accentInk`, which is darker in the light theme so it meets 4.5:1. Everything else is neutral: row symbols, step numbers, workspace numbers in the overview, group titles and page titles are `ink` or `inkMuted`. A selected pill (a rail page, a modifier layer in the shortcut map) is `ink` with `background` text, never `accent`.
 - A hovered or highlighted row is a `hover` fill. Its text keeps its colour. Hover and keyboard highlight never use `accent`.
 - A selected rail item is an `ink` pill with `background` text: white on black in the dark theme, black on white in the light theme. Other items are `inkMuted` text and get a `surface` pill on hover. Rail items have no symbols.
 - Tour cards are plain raised surfaces. They are not filled with `accent`.
-- `tint` is for shapes only: layout thumbnails and illustrations. Never text.
+- `tint` is for shapes only: workspace thumbnails and illustrations. Never text.
 - `success`, `warning` and `danger` always come with a symbol and a word.
 - Focus is a 2 pt `focus` ring, offset 2 pt. It is 3:1 on every surface in every theme.
 - `borderControl` is the edge of an interactive control. `hairline` is decorative: never the only edge of a control.
@@ -98,7 +98,7 @@ Each entry gives the design intent. The Swift type is in brackets.
 
 **Switch** [`OSwitch`, `OSwitchRow`]. Toggles one setting at once. Off is `borderControl` on `surfaceSunken`. On is `accent` with an `onAccent` thumb that springs and stretches while pressed. The thumb follows a drag and springs to the nearer side. For a choice of two to four options, use Segmented.
 
-**Segmented** [`OSegmented`]. Picks one of two to four options with a sliding thumb. For more than four, use a menu submenu or the layout thumbnail grid.
+**Segmented** [`OSegmented`]. Picks one of two to four options with a sliding thumb. For more than four, use a menu submenu.
 
 **Slider** [`OSlider`, `OBarSlider`, `OKnob`]. Sets a number by dragging. `OSlider` has a thin track and a thumb; its value reads at the trailing edge, and nothing floats above the thumb, so it never clips. `OBarSlider` is a pill whose fill is the indicator.
 
@@ -131,7 +131,7 @@ Each entry gives the design intent. The Swift type is in brackets.
 **Menu** [`Popup`, `OMenuRow`, `OMenuButton`, `OMenuPicker`]. A dropdown with groups, checks, radios, switches, inline controls and nested submenus, with type-to-search. The picker button is an outlined pill (`borderControl`) with the current value in `body-medium` and the up-down chevron.
 
 - Menu rows carry no symbols. The lead column holds only a check, a radio dot or an app icon. A notification dot sits after the label.
-- The status menu root holds five rows: search, Layout, Workspaces, Settings and Help, then the footer with the version and Quit. The search row is a `well` row at the top. The workspace strip, Bring Window Here, What's New and the tutorial live one level down, in Workspaces and Help. Search finds them all.
+- The status menu root holds four rows: search, Workspaces, Settings and Help, then the footer with the version and Quit. The search row is a `well` row at the top. The workspace strip, Bring Window Here, What's New and the tutorial live one level down, in Workspaces and Help. Search finds them all.
 - Nest one level, two at most. Put the current choice of a radio group in the parent row's value.
 - Every actionable row shows its shortcut.
 - Give hidden aliases to commands that live inside a custom control, so search still finds them.
@@ -163,9 +163,7 @@ Each entry gives the design intent. The Swift type is in brackets.
 
 **Coach mark** [`.surface(.large, caret:)`]. One step of the keyboard tour: step dots, a title, a body, live keycaps and Next. A step completes only when the person presses the real key. Next appears, with the return key, after that. The kicker counts ("STEP 3 OF 6"). The done line is short ("Focus moved").
 
-**HUD**. Confirms a keyboard action in the middle of the screen: a glass surface with a layout thumbnail and its name. Shown for about one second. Never interactive. It ignores the mouse. The warning variant wiggles `exclamationmark.triangle.fill` and names the app that refused.
-
-**Layout picker and thumb** [`LayoutPicker`]. Picks a layout from a grid of thumbnails. The hovered layout's name and description show on one line below. Thumbnails carry no labels, so nothing wraps. Panes are `tint`. The main pane is a darker neutral. A selected main pane is `accent`. The hovered layout's description already shows below the grid, so thumbnails need no tooltips.
+**HUD**. Confirms a keyboard action in the middle of the screen: a glass surface with a short text. Shown for about one second. Never interactive. It ignores the mouse. The warning variant wiggles `exclamationmark.triangle.fill` and names the app that refused.
 
 **Tab strip** [`TabStripView`, `TabStrips`]. Sits on the top edge of a tab group, as wide as the window, flat on `surface` with an `ink` 4% tint and an outline, and `large` top corners. Two wedges under the strip fill the gap at the rounded corners of the window. Only the strip gets mouse input, so a click on a wedge goes to the window. The tabs share the width with no gap. The active tab is `ink` at 10% while the group has focus and at 8% when it does not, and the fill slides to the next tab with `Motion.easeOut`. A hovered tab is `ink` at 4%. A `hairline` separates two tabs when neither is active or hovered. Each tab fills the full strip height, so the whole tab is the hit target. The active and hovered fills are rounded pills (`medium` radius) with 2 pt padding. Native close and minimise lights (`NativeTrafficLight`) sit at the left, inset from the strip edge by the same distance as above and below them, and the first tab pill starts the same distance after them. They close or minimise every tab in the group (closing more than one tab asks first), and they are grey when no tab has focus. The active tab and a hovered tab show their close button at the left. Its hover fill is a rounded square (`small` radius), like the tab pills. A drag of the window title bar moves the whole group: the strip follows the cursor on each mouse event, the hidden tabs wait off the screen, and after the drop they go back behind the window in one step. A drop on another group adds every tab. A tab dragged out of the strip, or more than 20 pt above or below it, carries its window under the cursor, and the drop takes it out of the group. Held 0.4 s over another window, it shows the drop hint and the drop adds it there. Over its own group, the drop puts it back. Escape hides the drop hint and the strip preview, the drag goes on, and the release is a plain drop. While it is out, the other tabs fill the strip. A window dragged into a strip shows as a tab at the cursor, the strip stays under the window, and the other tabs make space. The drop adds it at that place. The strip and the lifted window move with the animation settings (duration, curve and bounce), like the tiled windows. The tabs move with `Motion.snap`, or `Motion.fade` when Reduce Motion is on. When animations are off, nothing animates. The strip is `rowHeight` tall. It stays on the Desktop of its group and moves with it, and Mission Control does not show it. With the "Auto-hide tab strip" setting on (off by default), every strip hides and its window fills the strip space, with or without focus. When the cursor comes above the window or into the empty title bar (`TitleBar.clearTop`, or 10 pt when the app does not tell), the strip comes back. The traffic lights, and a cursor that moves toward them, do not show it, so the person can reach them and the window moves down under it. The strip hides again 0.3 s after the cursor leaves.
 
@@ -195,7 +193,7 @@ Use SF Symbols only, at the weight of the text, in hierarchical rendering. Use t
 | Tip available                          | `lightbulb`                                                                  | `.breathe`                             |
 | Checkmark in menus, permission granted | `checkmark`                                                                  | `.drawOn` (macOS 26), `.appear` before |
 | Menu row hovered                       | the row's symbol                                                             | `.scale.up`                            |
-| Layout, Window, Configs, Help          | `square.grid.2x2`, `macwindow`, `slider.horizontal.3`, `questionmark.circle` | none                                   |
+| Workspaces, Window, Configs, Help      | `square.on.square`, `macwindow`, `slider.horizontal.3`, `questionmark.circle` | none                                   |
 
 - A discrete effect (bounce, wiggle, rotate) reports that something just happened. Bind it to a counter.
 - An indefinite effect (pulse, breathe, variable) reports a state that lasts. Stop it when the state ends.

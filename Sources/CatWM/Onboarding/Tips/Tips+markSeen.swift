@@ -82,10 +82,11 @@ extension Tips {
             tip = Tip(id: "settings.shortcuts", title: "Two sets of keys",
                       body: "Global keys work anywhere. The rest work in window mode, so they never clash with typing.",
                       chords: chord.isEmpty ? [] : [chord], place: place)
-        case .layout:
-            let next = keys.keys(WindowActions.cyclelayout.name, "next")
-            tip = next.isEmpty ? nil : Tip(id: "settings.layout", title: "Step through these layouts",
-                                           body: "In window mode, \(next.joined()) steps through this list.",
+        case .scrolling:
+            let next = keys.keys(WindowActions.columnwidth.name, "cycle")
+            tip = next.isEmpty ? nil : Tip(id: "settings.scrolling", title: "Change a column width",
+                                           body: "In window mode, \(next.joined()) gives the focused column "
+                                               + "the next width.",
                                            chords: chord.isEmpty ? [next] : [chord, next], place: place)
         case .windows:
             let float = keys.keys(WindowActions.togglefloating.name)

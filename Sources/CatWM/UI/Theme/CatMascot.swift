@@ -63,7 +63,7 @@ struct CatFrameView: View {
 
 #if DEBUG
 extension GalleryExamples {
-    static let catMascot = GalleryExample(order: 18) { AnyView(GalleryContent(model: $0).catMascot) }
+    static let catMascot = GalleryExample(order: 17) { AnyView(GalleryContent(model: $0).catMascot) }
 }
 
 extension GalleryContent {

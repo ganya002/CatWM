@@ -24,7 +24,7 @@ enum Motion {
 
 #if DEBUG
 extension GalleryExamples {
-    static let motion = GalleryExample(order: 14) { AnyView(GalleryContent(model: $0).motion) }
+    static let motion = GalleryExample(order: 13) { AnyView(GalleryContent(model: $0).motion) }
 }
 
 extension GalleryContent {

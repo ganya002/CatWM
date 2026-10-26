@@ -29,7 +29,6 @@ extension WindowManager {
 
         let onScreen = scanner.desktop.windows
         let onScreenIDs = Set(onScreen.map(\.id))
-        let firstRun = windows.isEmpty
         updateKnownWindows()
         timing.checkpoint("known windows")
         var observed = observeWindows(screens: screens, onScreen: onScreen)
@@ -41,7 +40,7 @@ extension WindowManager {
         }
         observed.present.formUnion(restoredEarly.keys)
 
-        placeArrivals(observed, onScreen: onScreen, firstRun: firstRun)
+        placeArrivals(observed, onScreen: onScreen)
         forgetGoneWindows(present: observed.present)
         self.present = observed.present
         let plan = syncWorkspaces(screens: screens, present: observed.present)
@@ -61,7 +60,7 @@ extension WindowManager {
             surface.tilesDidChange(instant: false); notifyChange(); return
         }
         applyTileMoves(planTileMoves(screens: screens, only: only), instant: instantLayout)
-        surface.tilesDidChange(instant: instantLayout || dividerState.dividerDrag != nil)
+        surface.tilesDidChange(instant: instantLayout)
         timing.checkpoint("apply")
         notifyChange()
         timing.checkpoint("notify")
@@ -81,10 +80,6 @@ extension WindowManager {
     private func applyTileMoves(_ planned: PlannedMoves, instant instantLayout: Bool) {
         if !planned.moves.isEmpty {
             Log.debug("tile: moving \(planned.moves.map { "\($0.window.id)→\($0.target)" }.joined(separator: ", "))")
-        }
-        if dividerState.dividerDrag != nil {
-            animator.follow(planned.instant + planned.moves)
-            return
         }
         animator.animate(planned.instant, duration: 0)
         let animated = !instantLayout && config.animate && planned.moves.count <= Self.maxAnimatedMoves
@@ -165,7 +160,7 @@ extension WindowManager {
         return !(scan.fullscreen.contains(id) || scan.minimized.contains(id))
     }
 
-    private func placeArrivals(_ observed: ObservedWindows, onScreen: [CGWindowInfo], firstRun: Bool) {
+    private func placeArrivals(_ observed: ObservedWindows, onScreen: [CGWindowInfo]) {
         let fresh = observed.fresh
         let stacking = Dictionary(onScreen.enumerated().map { ($1.id, $0) }, uniquingKeysWith: { first, _ in first })
         let arrivals = fresh.sorted(by: { (stacking[$0.id] ?? 0) < (stacking[$1.id] ?? 0) })
@@ -173,10 +168,9 @@ extension WindowManager {
             restoreSavedWorkspace(window, titles: observed.titles)
         }
         if !pendingLaunches.isEmpty { arrivals.forEach(claimLaunch) }
-        if config.newWindowsToMain && !firstRun {
-            order.insert(contentsOf: arrivals.map(\.id), at: 0)
-        } else {
-            order.append(contentsOf: arrivals.map(\.id))
+        order.append(contentsOf: arrivals.map(\.id))
+        if let focused = reportedFocusedWindow(), fresh.contains(where: { $0.id == focused.id }) {
+            model.noteFocus(focused.id)
         }
         for window in fresh {
             Log.debug(
@@ -236,6 +230,30 @@ extension WindowManager {
         return planned
     }
 
+    private func planEdgeMove(_ move: Animator.Move, from current: CGRect, on screen: Screen, screens: [Screen],
+                              into planned: inout PlannedMoves) -> Bool {
+        let id = move.window.id, target = move.target
+        let exited = stripExits.contains(id)
+        if exited {
+            if animator.destination(id) != nil { return true }
+            stripExits.remove(id)
+        }
+        if isParked(current, screens) {
+            if isParked(target, screens) {
+                if exited { planned.instant.append(move) }
+                return true
+            }
+            var entry = move
+            entry.from = stripEntry(to: target, on: screen)
+            planned.moves.append(entry)
+            return true
+        }
+        guard isParked(target, screens) else { return false }
+        stripExits.insert(id)
+        planned.moves.append(.init(window: move.window, to: stripExit(from: current, on: screen), bounds: move.bounds))
+        return true
+    }
+
     private func planMove(
         _ window: Window, to target: CGRect, on screen: Screen, screens: [Screen], into planned: inout PlannedMoves
     ) {
@@ -250,17 +268,12 @@ extension WindowManager {
             planned.instant.append(.init(window: window, to: target, bounds: screen.visible))
             return
         }
-        if isParked(current, screens) {
-            if let from = slideStart(id, to: target, on: screen) {
-                planned.moves.append(.init(window: window, to: target, bounds: screen.visible, from: from))
-            } else {
-                planned.instant.append(.init(window: window, to: target, bounds: screen.visible))
-            }
-            return
-        }
+        let bounds = screen.visible.union(target)
+        let edge = Animator.Move(window: window, to: target, bounds: bounds)
+        if planEdgeMove(edge, from: current, on: screen, screens: screens, into: &planned) { return }
         if animator.isMoving(id, to: target) { return }
         if animator.isBusy(id) {
-            planned.moves.append(.init(window: window, to: target, bounds: screen.visible))
+            planned.moves.append(.init(window: window, to: target, bounds: bounds))
             return
         }
         var correction = corrections[id] ?? (target, 0)
@@ -268,7 +281,7 @@ extension WindowManager {
         correction.count += 1
         corrections[id] = correction
         if correction.count > 3 { return }
-        planned.moves.append(.init(window: window, to: target, bounds: screen.visible))
+        planned.moves.append(.init(window: window, to: target, bounds: bounds))
     }
 
     func accept(_ found: WindowScanner.Found, from scan: WindowScanner.AppScan, for window: Window) {
@@ -297,16 +310,5 @@ extension WindowManager {
               let window = windows[id] else { return }
         Log.debug("focus: window closed; back to \(id)")
         focus(window)
-    }
-
-    func layoutTargets(_ ids: [CGWindowID], _ screenState: ScreenState, on screen: Screen) -> [CGWindowID: CGRect]? {
-        guard let (raw, gap) = rawSlots(ids, on: screen, screenState, ratio: screenState.ratio) else { return nil }
-        let slots = fitMinimums(raw, mins: ids.map(slotMinimum), gap: gap)
-        let zoomed = usableRect(screen).pixelAligned
-        let bounds = screen.visible
-        return Dictionary(zip(ids, slots).map { id, slot in
-            (id, id == screenState.zoomed ? zoomed : clampToMinimum(slot, min: slotMinimum(id), bounds: bounds))
-        },
-                          uniquingKeysWith: { first, _ in first })
     }
 }

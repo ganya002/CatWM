@@ -3,7 +3,6 @@ import SwiftUI
 
 struct GapsPreview: View {
     let config: Config
-    let layout: Layout
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     static let wallpaper = LinearGradient(colors: [Theme.accentSoft, Theme.tint],
@@ -49,10 +48,8 @@ struct GapsPreview: View {
                             width: area.width - (config.paddingLeft + config.paddingRight) * scale,
                             height: area.height - (config.paddingTop + config.paddingBottom) * scale)
         let gap = (config.windowMargins ? config.windowMarginSize : 0) * scale
-        guard usable.width > 4, usable.height > 4,
-              let frames = layout.frames(count: 3, in: usable.insetBy(dx: -gap / 2, dy: -gap / 2),
-                                         ratio: 0.5, mainCount: 1)
-        else { return [] }
-        return frames.map { $0.insetBy(dx: gap / 2, dy: gap / 2) }
+        guard usable.width > 4, usable.height > 4 else { return [] }
+        let strip = Strip(columns: [.init([1], width: config.columnWidth), .init([2, 3], width: config.columnWidth)])
+        return strip.frames(in: usable, gap: gap).sorted { $0.key < $1.key }.map(\.value)
     }
 }

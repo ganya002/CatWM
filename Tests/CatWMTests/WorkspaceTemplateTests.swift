@@ -6,11 +6,9 @@ import Testing
     func template() -> WorkspaceTemplate {
         WorkspaceTemplate(name: "Writing", tilingEnabled: true, displays: [
             .init(id: "external", name: "Desk", frame: CGRect(x: 0, y: 0, width: 2000, height: 1200),
-                  visible: CGRect(x: 0, y: 24, width: 2000, height: 1176), isMain: true,
-                  layout: "tall", ratio: 0.65, mainCount: 2),
+                  visible: CGRect(x: 0, y: 24, width: 2000, height: 1176), isMain: true),
             .init(id: "builtin", name: "Laptop", frame: CGRect(x: -1000, y: 0, width: 1000, height: 800),
-                  visible: CGRect(x: -1000, y: 24, width: 1000, height: 776), isMain: false,
-                  layout: "floating", ratio: 0.5, mainCount: 1)
+                  visible: CGRect(x: -1000, y: 24, width: 1000, height: 776), isMain: false)
         ], windows: [
             .init(bundleID: "com.example.editor", appName: "Editor", title: "Draft", document: "file:///tmp/draft.txt",
                   display: "external", frame: CGRect(x: 0, y: 24, width: 1300, height: 1176), floating: false,
@@ -19,13 +17,12 @@ import Testing
         ])
     }
 
-    @Test func roundTripKeepsLayoutAndWindowState() throws {
+    @Test func roundTripKeepsDisplaysAndWindowState() throws {
         var original = template()
         original.screenshot = Data([1, 2, 3, 4])
         let decoded = try JSONDecoder().decode(WorkspaceTemplate.self, from: JSONEncoder().encode(original))
         #expect(decoded.id == original.id)
-        #expect(decoded.displays[0].ratio == 0.65)
-        #expect(decoded.displays[0].mainCount == 2)
+        #expect(decoded.displays[0].isMain)
         #expect(decoded.displays[1].frame.minX == -1000)
         #expect(decoded.windows[0].document == "file:///tmp/draft.txt")
         #expect(decoded.windows[0].minimized)
@@ -77,7 +74,17 @@ import Testing
         #expect(template().displayMap(available: []).isEmpty)
     }
 
-    @Test func replacementMainDisplayGetsSavedMainLayout() {
+    @Test func aTemplateSavedWithLayoutsStillOpens() throws {
+        var json = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(template())) as? [String: Any])
+        var displays = try #require(json["displays"] as? [[String: Any]])
+        for i in displays.indices { displays[i].merge(["layout": "tall", "ratio": 0.65, "mainCount": 2]) { $1 } }
+        json["displays"] = displays
+        let data = try JSONSerialization.data(withJSONObject: json)
+        let decoded = try JSONDecoder().decode(WorkspaceTemplate.self, from: data)
+        #expect(decoded.displays.map(\.id) == ["external", "builtin"])
+    }
+
+    @Test func replacementMainDisplayGetsSavedMainDisplay() {
         let mapping = template().displayMap(available: [("left", false), ("main", true)])
         #expect(mapping["external"] == "main")
         #expect(mapping["builtin"] == "left")

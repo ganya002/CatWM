@@ -6,7 +6,7 @@ import Testing
     @Test func typingTheOwnNumberWithALeadingZeroChangesNothing() {
         let model = SortModel()
         let item = SortItem(id: 1, title: "A", app: "App", bundleID: nil, icon: nil, recency: 1)
-        let lane = SortLane(workspace: "1", name: "", layout: .tall, ids: [1])
+        let lane = SortLane(workspace: "1", name: "", ids: [1])
         model.plans = ["d": SortPlan(display: "d", items: [1: item], lanes: [lane],
                                          existing: ["1"], taken: [], active: "1")]
         model.current = "d"

@@ -10,10 +10,9 @@ final class HUD {
     private static var margin: CGFloat { Elevation.float.room }
     var avoid: NSRect?
 
-    func prepare(text: String, layout: Layout?) {
+    func prepare(text: String) {
         guard panel == nil else { return }
         model.text = text
-        model.layout = layout
         let panel = makePanel()
         let host = NSHostingView(rootView: HUDView(model: model, margin: Self.margin))
         panel.contentView = host
@@ -23,21 +22,20 @@ final class HUD {
         _ = host.fittingSize
     }
 
-    func show(_ text: String, layout: Layout? = nil, on screen: NSScreen?) {
-        show(text, layout: layout, warning: false, on: screen)
+    func show(_ text: String, on screen: NSScreen?) {
+        show(text, warning: false, on: screen)
     }
 
     func warn(_ text: String, on screen: NSScreen?) {
-        show(text, layout: nil, warning: true, on: screen)
+        show(text, warning: true, on: screen)
     }
 
-    private func show(_ text: String, layout: Layout?, warning: Bool, on screen: NSScreen?) {
+    private func show(_ text: String, warning: Bool, on screen: NSScreen?) {
         guard let screen = screen ?? NSScreen.main else { return }
         let hud = panel ?? makePanel()
         panel = hud
         let wasVisible = hud.isVisible && hud.alphaValue > 0.5
         model.text = text
-        model.layout = layout
         model.warning = warning
         if !wasVisible { model.pops += 1; PerfMonitor.shared.track("ui:hud", for: 0.5) }
         let host = host ?? NSHostingView(rootView: HUDView(model: model, margin: Self.margin))
@@ -67,7 +65,7 @@ final class HUD {
             })
         }
         hideWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + (warning ? 1.6 : layout == nil ? 0.8 : 1), execute: work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + (warning ? 1.6 : 0.8), execute: work)
     }
 
     private func makePanel() -> CatWMPanel { CatWMPanel(role: .hud) }
@@ -75,7 +73,6 @@ final class HUD {
 
 final class HUDModel: ObservableObject {
     @Published var text = ""
-    @Published var layout: Layout?
     @Published var warning = false
     @Published var pops = 0
 }
@@ -98,13 +95,8 @@ struct HUDView: View {
                 .padding(.horizontal, 17).padding(.vertical, 12)
                 .floatingGlass(Capsule())
             } else {
-                VStack(spacing: 12) {
-                    if let layout = model.layout {
-                        LayoutThumbnail(layout: layout, selected: true).frame(width: 120)
-                    }
-                    Text(model.text).textStyle(.title).oneLine().fixedSize()
-                }
-                .padding(.horizontal, 24).padding(.top, model.layout == nil ? 16 : 20).padding(.bottom, 16)
+                Text(model.text).textStyle(.title).oneLine().fixedSize()
+                    .padding(.horizontal, 24).padding(.vertical, 16)
                 .floatingGlass(RoundedRectangle(cornerRadius: Theme.Radius.hud, style: .continuous))
             }
         }

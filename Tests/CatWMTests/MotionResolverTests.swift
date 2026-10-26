@@ -5,14 +5,38 @@ import Testing
 typealias Item = MotionResolver.Item
 typealias Display = MotionResolver.Display
 
+private enum Shape { case tall, column, fullscreen }
+
+private func columns(_ rect: CGRect, _ count: Int) -> [CGRect] {
+    (0..<count).map {
+        CGRect(x: rect.minX + rect.width * CGFloat($0) / CGFloat(count), y: rect.minY,
+               width: rect.width / CGFloat(count), height: rect.height)
+    }
+}
+
+private func rows(_ rect: CGRect, _ count: Int) -> [CGRect] {
+    (0..<count).map {
+        CGRect(x: rect.minX, y: rect.minY + rect.height * CGFloat($0) / CGFloat(count),
+               width: rect.width, height: rect.height / CGFloat(count))
+    }
+}
+
 private func tiled(
-    _ layout: Layout,
+    _ shape: Shape,
     _ count: Int,
     screen: String = "A",
     in bounds: CGRect = CGRect(x: 0, y: 0, width: 1600, height: 1000),
     first: CGWindowID = 1
 ) -> [Item] {
-    let frames = layout.frames(count: count, in: bounds.insetBy(dx: -5, dy: -5), ratio: 0.5, mainCount: 1) ?? []
+    let rect = bounds.insetBy(dx: -5, dy: -5)
+    let frames: [CGRect]
+    switch shape {
+    case .column: frames = columns(rect, count)
+    case .fullscreen: frames = Array(repeating: rect, count: count)
+    case .tall:
+        let (main, rest) = rect.divided(atDistance: rect.width / 2, from: .minXEdge)
+        frames = count > 1 ? [main] + rows(rest, count - 1) : [rect]
+    }
     return frames.enumerated().map { i, frame in
         Item(id: first + CGWindowID(i), frame: frame.insetBy(dx: 5, dy: 5).pixelAligned, screen: screen)
     }

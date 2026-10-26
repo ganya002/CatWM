@@ -32,16 +32,7 @@ extension WindowManager {
     private func loadWorkspaceLayouts(_ defaults: UserDefaults) {
         let saved = defaults.dictionary(forKey: DefaultsKey.wsLayouts) as? [String: String] ?? [:]
         for (workspace, value) in saved where isVirtual(workspace) {
-            let parts = value.split(separator: " ").map(String.init)
-            guard let layout = parts.first.flatMap(Layout.init(rawValue:)) else { continue }
-            let screenState = state(workspace: workspace)
-            screenState.layout = layout
-            if parts.count > 1, let ratio = Double(parts[1]) {
-                screenState.ratio = min(0.9, max(0.1, CGFloat(ratio)))
-            }
-            if parts.count > 2, let mainCount = Int(parts[2]) {
-                screenState.mainCount = max(1, min(10, mainCount))
-            }
+            state(workspace: workspace).strip = loadStrip(value)
         }
     }
 
@@ -52,7 +43,7 @@ extension WindowManager {
         let monitors = monitorOf.filter { isVirtual($0.key) && !isPending($0.key) }
         let layouts = Dictionary(
             states.filter { isVirtual($0.key) && !isPending($0.key) }
-                .map { ($0.key, "\($0.value.layout.rawValue) \($0.value.ratio) \($0.value.mainCount)") },
+                .map { ($0.key, stripLine($0.value)) },
             uniquingKeysWith: { first, _ in first })
         let key = [
             "\(monitors.sorted { $0.key < $1.key })",
@@ -75,17 +66,7 @@ extension WindowManager {
         _ workspace: String, focusing preferred: Window? = nil, focus takesFocus: Bool = true
     ) {
         guard config.virtualWorkspaces else { return }
-        showNativeWorkspace(workspace, focusing: preferred, focus: takesFocus, quiet: closeAndSort.quietWorkspaceHUD)
-    }
-
-    func showWorkspaceHUD(_ workspace: String, on monitor: Screen) {
-        let number = workspaceNumber(workspace)
-        let text = labels[workspace].map { "\(number) · \($0)" } ?? number
-        let layout = state(workspace: workspace).layout
-        DispatchQueue.main.async { [weak self] in
-            guard self?.shown[monitor.uuid] == workspace else { return }
-            self?.surface.showHUD(text, layout: layout, on: monitor.nsScreen)
-        }
+        showNativeWorkspace(workspace, focusing: preferred, focus: takesFocus)
     }
 
     func focusShownWorkspace(_ workspace: String, preferred: Window?, on screen: Screen) {

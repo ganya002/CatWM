@@ -97,7 +97,7 @@ struct ShortcutsPane: View {
                          width: MenuItem.fitWidth(ranges), children: ranges),
                 .sep("s"),
                 MenuItem(id: "custom", label: "Custom Dispatcher…",
-                         action: { add("layoutmsg", "") })
+                         action: { add("exec", "") })
             ]
         }, label: {
             HStack(spacing: 6) {

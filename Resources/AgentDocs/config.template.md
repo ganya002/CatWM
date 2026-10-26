@@ -13,7 +13,6 @@ The Settings window writes options in this order. Aliases (after `/`) are read b
 | Option | Value | Default | Notes |
 |---|---|---|---|
 | `$mod` | `SUPER` / `ALT` / `CTRL` / `SHIFT` | `ALT` | variable used in binds |
-| `layouts` | comma list | `{{default-layouts}}` | the cycle; each layout once. Names below |
 | `floating` | comma list of bundle IDs | empty (first run: System Settings, Calculator) | apps that float (or the only ones that tile, see next). Wildcards such as `com.adobe.*` work |
 {{options}}
 | `bind` (also `binde`, `bindr`, `bindl`, `bindel`, `bindle`) | see [keybinds.md](keybinds.md) | | the `binde`/`bindel`/`bindle` forms repeat while held |
@@ -23,15 +22,15 @@ The animation options (`animate`, `animation-duration`, `animation-curve`, `anim
 
 `bindm` is accepted and ignored (dragging already moves and resizes tiles).
 
-## Layout names
+## Columns
 
-{{layouts}}.
+Each workspace is a strip of columns that scrolls left and right. A new window opens in a new column to the right of the focused column. A column holds one or more windows, one above the other. `columnwidth` changes the width of the focused column, and `consumeorexpel` moves a window into or out of a column.
 
 ## Minimal example
 
 ```
 $mod = ALT
-layouts = tall, bsp, fullscreen
+column-width = 50
 window-margin-size = 10
 screen-padding = 10
 animate = true
@@ -47,13 +46,13 @@ bind = $mod, return, exec, open -na Terminal
 
 ## Settings window and saved configs
 
-Menu bar → **Settings…** (⌘,). Panes: General, Layout, Windows, Motion, Templates, Shortcuts. Changes save and apply automatically. **Configs** (menu bar submenu / Settings) stores named keyboard, animation, and full presets in `~/.config/catwm/configs.json`; switching one rewrites the matching part of `catwm.conf`. Presets can be imported and exported.
+Menu bar → **Settings…** (⌘,). Panes: General, Scrolling, Windows, Motion, Templates, Shortcuts. Changes save and apply automatically. **Configs** (menu bar submenu / Settings) stores named keyboard, animation, and full presets in `~/.config/catwm/configs.json`; switching one rewrites the matching part of `catwm.conf`. Presets can be imported and exported.
 
 When editing by hand while the app runs, make the edit then run `catwm reload`. If the user also has Settings open, tell them: UI edits can overwrite hand edits.
 
 ## Workspace templates
 
-Settings → **Templates** lists saved workspaces with large screenshot previews. Click a screenshot to enlarge it. Open, rename, update, or delete a template here. A template stores app identities, document addresses when available, window frames, display sizes, layouts, main-pane ratios and counts, window order, tiling status, and floating, minimized, zoomed, or native full screen states. Templates are stored in `~/.config/catwm/templates.json`, separately from configs. Screenshots are stored in that file. Screen recording access is required to capture them. Saving still works without that access. Update an older template to add a screenshot.
+Settings → **Templates** lists saved workspaces with large screenshot previews. Click a screenshot to enlarge it. Open, rename, update, or delete a template here. A template stores app identities, document addresses when available, window frames, display sizes, window order, tiling status, and floating, minimized, zoomed, or native full screen states. Templates are stored in `~/.config/catwm/templates.json`, separately from configs. Screenshots are stored in that file. Screen recording access is required to capture them. Saving still works without that access. Update an older template to add a screenshot.
 
 With `template-app-scripting = true` (Settings → Templates → **Save tabs and folders**), a template also saves:
 

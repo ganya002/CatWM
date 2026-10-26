@@ -72,13 +72,6 @@ struct MenuColumn: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { model.refresh() }
             }
             .padding(.horizontal, 8).padding(.top, 2).padding(.bottom, 8)
-        case .layoutPicker:
-            let current = WindowManager.shared.menuBarState()?.layout
-            LayoutPicker(layouts: Layout.allCases, selection: current, columns: 4) { layout in
-                WindowManager.shared.dispatch("layout", layout.rawValue)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { model.close() }
-            }
-            .padding(.horizontal, 4).padding(.bottom, 4)
         case .attention:
             HStack(spacing: Theme.Space.medium) {
                 Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.warning)

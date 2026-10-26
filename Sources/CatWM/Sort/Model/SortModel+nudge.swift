@@ -22,11 +22,6 @@ extension SortModel {
         }
     }
 
-    func moveToTop(_ id: CGWindowID) {
-        edit { $0.moveToTop(id) }
-        show(id)
-    }
-
     func moveToDisplay(_ ids: [CGWindowID], _ uuid: String) {
         ids.forEach { moveToDisplay($0, uuid) }
         guard ids.count > 1, var dst = plans[uuid] else { return }
@@ -124,14 +119,6 @@ extension SortModel {
             return runMoveWindow(dispatcher: bind.dispatcher, arg: arg, on: windowID)
         case WindowActions.movetoworkspace.name, WindowActions.movetoworkspacesilent.name:
             return runMoveToWorkspace(arg: arg, on: windowID)
-        case WindowActions.cyclelayout.name:
-            guard let windowID, let lane = plan.lane(of: windowID) else { return false }
-            cycleLayout(of: lane, by: arg.hasPrefix("prev") ? -1 : 1)
-            return true
-        case WindowActions.layoutmsg.name:
-            guard arg == "swapwithmaster", let windowID, plan.lane(of: windowID) != nil else { return false }
-            moveToTop(windowID)
-            return true
         case WindowActions.focusmonitor.name:
             cycleDisplay(arg.hasPrefix("-") ? -1 : 1)
             return true

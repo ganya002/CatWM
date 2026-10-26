@@ -156,7 +156,7 @@ import Testing
         #expect(batch.windows.map(\.windowID) == [4, 9])
     }
 
-    @Test func savedWindowsKeepOrderMinimizedFullscreenAndLayout() throws {
+    @Test func savedWindowsKeepOrderMinimizedAndFullscreen() throws {
         var savedFacts = facts(order: [7, 3])
         savedFacts.zoomed = ["desk": 3]
         savedFacts.fallbackFocus = 7
@@ -167,9 +167,6 @@ import Testing
             batch: .init(windows: [minimized, fullscreen], focusedID: nil, complete: true)
         )
         #expect(template.tilingEnabled)
-        #expect(template.displays[0].layout == "tall")
-        #expect(template.displays[0].ratio == 0.65)
-        #expect(template.displays[0].mainCount == 2)
         #expect(template.windows.map(\.windowID) == [7, 3])
         #expect(template.windows[0].fullscreen)
         #expect(!template.windows[0].minimized)
@@ -256,13 +253,11 @@ private func facts(order: [CGWindowID] = []) -> TemplateCaptureFacts {
         displays: [
             .init(
                 id: "desk", name: "Desk", frame: CGRect(x: 0, y: 0, width: 1000, height: 800),
-                visible: CGRect(x: 0, y: 24, width: 1000, height: 776), isMain: true, layout: "tall",
-                ratio: 0.65, mainCount: 2
+                visible: CGRect(x: 0, y: 24, width: 1000, height: 776), isMain: true
             ),
             .init(
                 id: "lap", name: "Laptop", frame: CGRect(x: 1000, y: 0, width: 800, height: 600),
-                visible: CGRect(x: 1000, y: 24, width: 800, height: 576), isMain: false, layout: "floating",
-                ratio: 0.5, mainCount: 1
+                visible: CGRect(x: 1000, y: 24, width: 800, height: 576), isMain: false
             )
         ],
         zoomed: [:], order: order, currentSpaces: [1], hiddenWorkspaceWindows: [], monitorForTiled: [:],

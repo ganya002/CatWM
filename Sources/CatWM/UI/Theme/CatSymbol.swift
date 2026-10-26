@@ -74,7 +74,7 @@ struct CatSymbol: View {
 
 #if DEBUG
 extension GalleryExamples {
-    static let cat = GalleryExample(order: 17) { AnyView(GalleryContent(model: $0).cat) }
+    static let cat = GalleryExample(order: 16) { AnyView(GalleryContent(model: $0).cat) }
 }
 
 extension GalleryContent {

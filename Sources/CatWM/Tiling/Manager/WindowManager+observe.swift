@@ -111,20 +111,14 @@ extension WindowManager {
         minSizes[id] = new
         corrections[id] = nil
         Log.info("window \(id) has a minimum size of \(Int(new.width))×\(Int(new.height)); re-tiling around it")
-        if let change = dividerState.ratioChange, Date() < change.until {
-            dividerState.ratioChange = nil
-            warnTooSmall(id, on: backend.screens().first { $0.uuid == change.screen })
-        }
-        if let drag = dividerState.dividerDrag, let position = drag.position,
-           let screen = backend.screens().first(where: { $0.uuid == drag.screen }) {
-            moveDivider(on: screen, to: position)
-        }
         scheduleRefresh()
     }
 
     func forget(_ id: CGWindowID, keepRecovery: Bool = false) {
         if !keepRecovery, let window = windows[id] { tilingRecovery.forget(recoveryIdentity(window)) }
         animator.forget(id)
+        stripFrames[id] = nil
+        stripExits.remove(id)
         templateHiddenWindows[id] = nil
         let focused = focusClock > 0 && focusStamps[id] == focusClock
         if !restoringTemplate, focused { focusRequests.refocusAfterClose = workspaceOf[id] }

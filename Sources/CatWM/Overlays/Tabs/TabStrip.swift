@@ -227,7 +227,7 @@ private struct TabCell: View {
 
 #if DEBUG
 extension GalleryExamples {
-    static let tabStrip = GalleryExample(order: 19) { AnyView(GalleryContent(model: $0).tabStrip) }
+    static let tabStrip = GalleryExample(order: 18) { AnyView(GalleryContent(model: $0).tabStrip) }
 }
 
 extension GalleryContent {

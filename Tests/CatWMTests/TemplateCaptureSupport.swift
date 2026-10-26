@@ -5,8 +5,7 @@ func sampleTemplate(title: String = "Draft") -> WorkspaceTemplate {
     WorkspaceTemplate(name: "Writing", tilingEnabled: true, displays: [
         .init(
             id: "desk", name: "Desk", frame: CGRect(x: 0, y: 0, width: 1000, height: 800),
-            visible: CGRect(x: 0, y: 24, width: 1000, height: 776), isMain: true, layout: "tall",
-            ratio: 0.65, mainCount: 2
+            visible: CGRect(x: 0, y: 24, width: 1000, height: 776), isMain: true
         )
     ], windows: [
         .init(bundleID: "com.example.editor", appName: "Editor", title: title, document: "file:///tmp/draft.txt",

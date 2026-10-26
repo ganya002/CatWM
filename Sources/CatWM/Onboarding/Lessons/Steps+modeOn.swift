@@ -101,8 +101,7 @@ extension Steps {
                      if dispatcher == WindowActions.movewindow.name, !lowered.hasPrefix("mon:") {
                          return KeyWords.dirToken(argument) ?? ""
                      }
-                     if [WindowActions.swapwindow.name, WindowActions.swapnext.name].contains(dispatcher)
-                        || (dispatcher == WindowActions.layoutmsg.name && lowered.hasPrefix("swap")) {
+                     if [WindowActions.swapwindow.name, WindowActions.swapnext.name].contains(dispatcher) {
                          return ""
                      }
                      return nil
@@ -110,46 +109,16 @@ extension Steps {
         }
     }
 
-    static func main(_ coach: Coach) -> PlannedStep? {
-        guard let swap = coach.book.find([WindowActions.layoutmsg], "swapwithmaster") else { return nil }
+    static func stack(_ coach: Coach) -> PlannedStep? {
+        guard let left = coach.book.find([WindowActions.consumeorexpel], "left") else { return nil }
         return PlannedStep { coach in
-            Step(title: "Promote a window",
-                 text: "",
-                 target: .window, caps: KeyWords.caps(swap, long: false), needsMode: true,
+            Step(title: "Stack two windows",
+                 text: "This moves the window into the column on its left. Press it again to take it out.",
+                 target: .window, caps: KeyWords.caps(left, long: false), needsMode: true, count: 2,
                  accept: { event in
-                     if case .command(WindowActions.layoutmsg.name, let argument, _) = event,
-                        argument.lowercased() == "swapwithmaster" {
-                         return ""
-                     }
+                     if case .command(WindowActions.consumeorexpel.name, _, _) = event { return "" }
                      return nil
-                 }, simulate: { coach.windowManager.dispatch(WindowActions.layoutmsg.name, "swapwithmaster") })
-        }
-    }
-
-    static func mainCount(_ coach: Coach) -> PlannedStep? {
-        guard let add = coach.book.find([WindowActions.layoutmsg], "addmaster"),
-              let remove = coach.book.find([WindowActions.layoutmsg], "removemaster") else { return nil }
-        let text = "\(KeyWords.keyWord(add)) adds a window to the main pane, "
-            + "\(KeyWords.keyWord(remove)) takes one out. Try both."
-        let caps = KeyWords.caps(add, long: false) + [KeyWords.keyLabel(remove.keyCode, long: false)]
-        return PlannedStep { coach in
-            var adding = true
-            var seen: Set<String> = []
-            return Step(title: "More main windows",
-                        text: text,
-                        target: .window, caps: caps,
-                        tokens: [], needsMode: true, count: 2,
-                        accept: { event in
-                            guard case .command(WindowActions.layoutmsg.name, let argument, _) = event else {
-                                return nil
-                            }
-                            guard ["addmaster", "removemaster"].contains(argument.lowercased()) else { return nil }
-                            return seen.insert(argument.lowercased()).inserted ? "" : nil
-                        }, simulate: {
-                            let message = adding ? "addmaster" : "removemaster"
-                            coach.windowManager.dispatch(WindowActions.layoutmsg.name, message)
-                            adding.toggle()
-                        })
+                 }, simulate: { coach.windowManager.dispatch(WindowActions.consumeorexpel.name, "left") })
         }
     }
 }

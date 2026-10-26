@@ -15,7 +15,6 @@ struct StateSnapshot: Equatable {
     var focused: CGWindowID?
     var windows: [CGWindowID: Entry] = [:]
     var workspaces: [String: String] = [:]
-    var layouts: [String: String] = [:]
     var tiling = true
     var mode = ""
 }
@@ -41,10 +40,6 @@ final class EventBus {
         EventSpec(name: "workspace.changed", summary: "A display shows another workspace", data: [
             Field(name: "screen", type: "string", summary: "Display ID"),
             Field(name: "workspace", type: "string", summary: "Workspace name")
-        ]),
-        EventSpec(name: "layout.changed", summary: "A display uses another layout", data: [
-            Field(name: "screen", type: "string", summary: "Display ID"),
-            Field(name: "layout", type: "string", summary: "Layout name")
         ]),
         EventSpec(name: "tiling.changed", summary: "Tiling went on or off", data: [
             Field(name: "enabled", type: "bool", summary: "Tiling is on")
@@ -141,9 +136,6 @@ final class EventBus {
             out.append(("workspace.changed",
                         ["screen": .string(screen), "workspace": .string(new.workspaces[screen] ?? "")]))
         }
-        for screen in new.layouts.keys.sorted() where old.layouts[screen] != new.layouts[screen] {
-            out.append(("layout.changed", ["screen": .string(screen), "layout": .string(new.layouts[screen] ?? "")]))
-        }
         if old.tiling != new.tiling { out.append(("tiling.changed", ["enabled": .bool(new.tiling)])) }
         if old.mode != new.mode { out.append(("mode.changed", ["mode": .string(new.mode)])) }
         return out
@@ -159,8 +151,6 @@ extension WindowManager {
         snapshot.mode = Hotkeys.shared.submap
         for screen in backend.screens() {
             snapshot.workspaces[screen.uuid] = shown[screen.uuid] ?? ""
-            let layout = states[workspaceKey(for: screen)]?.layout ?? config.layouts.first
-            snapshot.layouts[screen.uuid] = layout?.rawValue
         }
         return snapshot
     }

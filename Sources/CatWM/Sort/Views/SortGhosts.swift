@@ -32,8 +32,7 @@ struct SortGhosts: View {
                         .font(Theme.heading()).oneLine()
                 }
                 .padding(.horizontal, 2)
-                SortThumb(layout: dragged.lane.layout, ids: dragged.lane.ids, lit: nil,
-                          ratio: dragged.ratio, mainCount: dragged.mainCount)
+                SortThumb(ids: dragged.lane.ids, lit: nil)
                     .padding(.horizontal, 2)
             }
             .padding(.vertical, 2)

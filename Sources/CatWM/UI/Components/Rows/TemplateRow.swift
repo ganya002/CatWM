@@ -62,7 +62,7 @@ struct TemplateRow: View {
 
 #if DEBUG
 extension GalleryExamples {
-    static let templates = GalleryExample(order: 15) { AnyView(GalleryContent(model: $0).templates) }
+    static let templates = GalleryExample(order: 14) { AnyView(GalleryContent(model: $0).templates) }
 }
 
 extension GalleryContent {

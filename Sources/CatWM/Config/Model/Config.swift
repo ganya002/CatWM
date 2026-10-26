@@ -1,7 +1,6 @@
 import AppKit
 
 struct Config {
-    var layouts: [Layout] = [.bsp, .wide, .floating, .fullscreen]
     var windowMargins = true
     var windowMarginSize: CGFloat = 10
     var smartWindowMargins = true
@@ -11,18 +10,17 @@ struct Config {
     var focusFollowsMouseInModeOnly = true
     var mouseSwapsWindows = true
     var mouseResizesWindows = true
-    var splitHandle = true
     var autoHideTabStrip = false
     var tabNotificationBadges = true
     var floating: [String] = []
     var floatingIsDenylist = true
     var floatSmallWindows = true
-    var newWindowsToMain = false
-    var enablesLayoutHUD = false
-    var enablesLayoutHUDOnSpaceChange = true
     var ignoreMenuBar = false
     var disablePaddingOnBuiltinDisplay = true
-    var windowResizeStep: CGFloat = 0.05
+    var columnWidth: CGFloat = 0.5
+    var columnWidths: [CGFloat] = [1.0 / 3, 0.5, 2.0 / 3]
+    var columnScroll: Strip.Scroll = .minimum
+    var centerSingleColumn = true
     var animate = true
     var animationDuration: Double = 0.12
     var animationCurve: AnimationCurve = .easeOut
@@ -157,12 +155,7 @@ struct Config {
             return parseBind(value, repeats: ["binde", "bindel", "bindle"].contains(key))
         case "bindm": return nil
         case "layouts":
-            var list: [Layout] = []
-            for name in value.split(separator: ",").map({ $0.trimmingCharacters(in: .whitespaces).lowercased() }) {
-                guard let layout = Layout(rawValue: name) else { return "unknown layout `\(name)`" }
-                if !list.contains(layout) { list.append(layout) }
-            }
-            if !list.isEmpty { layouts = list }
+            return "`layouts` is gone: CatWM places windows in columns that scroll. Remove this line"
         case "floating": floating = Self.listItems(value)
         case "gaps_in": return needNum { windowMarginSize = Self.clamped($0 * 2, \.windowMarginSize) }
         case "screen_padding", "gaps_out":

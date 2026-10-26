@@ -7,7 +7,7 @@ export const PROTOCOL = 1;
 
 export type Direction = "left" | "right" | "up" | "down";
 export type Step = "next" | "prev";
-export type Layout = "tall" | "tall-right" | "wide" | "middle-wide" | "fullscreen" | "column" | "row" | "floating" | "bsp" | "3column-left" | "3column-middle" | "3column-right" | "two-pane" | "two-pane-right" | "widescreen-tall" | "widescreen-tall-right";
+export type ConsumeorexpelDirection = "left" | "right";
 
 export interface Rect {
   x: number;
@@ -72,9 +72,8 @@ export interface ScreensItem {
   name: string;
   frame: Rect;
   usable: Rect;
-  layout: string;
-  ratio: number;
-  mainCount: number;
+  columns: Record<string, unknown>[];
+  scroll: number;
   workspace: string;
   focused: boolean;
 }
@@ -109,11 +108,6 @@ export interface WorkspaceChangedData {
   workspace: string;
 }
 
-export interface LayoutChangedData {
-  screen: string;
-  layout: string;
-}
-
 export interface TilingChangedData {
   enabled: boolean;
 }
@@ -139,12 +133,11 @@ export type CatWMEvent =
   | { event: "window.added"; data: WindowAddedData }
   | { event: "window.removed"; data: WindowRemovedData }
   | { event: "workspace.changed"; data: WorkspaceChangedData }
-  | { event: "layout.changed"; data: LayoutChangedData }
   | { event: "tiling.changed"; data: TilingChangedData }
   | { event: "mode.changed"; data: ModeChangedData }
   | { event: "window.notifications"; data: WindowNotificationsData }
   | { event: "config.reloaded"; data: ConfigReloadedData };
-export const EVENTS = ["focus.changed", "window.added", "window.removed", "workspace.changed", "layout.changed", "tiling.changed", "mode.changed", "window.notifications", "config.reloaded"] as const;
+export const EVENTS = ["focus.changed", "window.added", "window.removed", "workspace.changed", "tiling.changed", "mode.changed", "window.notifications", "config.reloaded"] as const;
 
 export class CatWMError extends Error {
   constructor(readonly code: string, message: string) {
@@ -373,24 +366,29 @@ export class CatWM {
     await this.call("movegroupwindow", { "step": step });
   }
 
-  /** Send a message to the layout */
-  async layoutmsg(message: string): Promise<void> {
-    await this.call("layoutmsg", { "message": message });
+  /** Change the width of the focused column */
+  async columnwidth(width: string): Promise<void> {
+    await this.call("columnwidth", { "width": width });
   }
 
-  /** Change the size of the main pane */
-  async splitratio(value: string): Promise<void> {
-    await this.call("splitratio", { "value": value });
+  /** Change the height of the focused window in its column */
+  async windowheight(change: string): Promise<void> {
+    await this.call("windowheight", { "change": change });
   }
 
-  /** Use the next or previous layout */
-  async cyclelayout(step?: Step): Promise<void> {
-    await this.call("cyclelayout", { "step": step });
+  /** Scroll the focused column to the middle of the screen */
+  async centercolumn(): Promise<void> {
+    await this.call("centercolumn");
   }
 
-  /** Use a layout on the current screen */
-  async layout(layout: Layout): Promise<void> {
-    await this.call("layout", { "layout": layout });
+  /** Move the focused window into the column next to it, or out of its column */
+  async consumeorexpel(direction: ConsumeorexpelDirection): Promise<void> {
+    await this.call("consumeorexpel", { "direction": direction });
+  }
+
+  /** Show the windows of the focused column as tabs */
+  async togglecolumntabs(): Promise<void> {
+    await this.call("togglecolumntabs");
   }
 
   /** Turn tiling on or off */

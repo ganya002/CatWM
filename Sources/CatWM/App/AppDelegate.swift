@@ -156,7 +156,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         AppIcons.shared.prune(keeping: Set(state.pids))
-        button.image = MenuBarIcon.image(mode: Hotkeys.shared.submap, workspace: state.workspace, layout: state.layout,
+        button.image = MenuBarIcon.image(mode: Hotkeys.shared.submap, workspace: state.workspace,
                                          pids: state.pids)
     }
 

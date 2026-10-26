@@ -4,8 +4,6 @@ import SwiftUI
 extension SortModel {
     func begin(displays: [SortDisplay], start: String, config: Config) {
         self.displays = displays
-        layouts = config.layouts.isEmpty ? [.tall] : config.layouts
-        nextLayout = layouts.contains(.tall) ? .tall : layouts[0]
         plans = [:]
         hover = nil
         selected = nil

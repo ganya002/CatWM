@@ -67,7 +67,7 @@ private var catalogRoot: URL {
             ]))
     #expect(
         preservesOriginalOrder(
-            OptionRows.options(pane: .layout, section: "Gaps", advanced: false).map(\.settingInfo.id),
+            OptionRows.options(pane: .scrolling, section: "Gaps", advanced: false).map(\.settingInfo.id),
             [
                 "layout.gaps", "layout.gapSize", "layout.smartGaps"
             ]))
@@ -77,7 +77,7 @@ private var catalogRoot: URL {
     #expect(
         preservesOriginalOrder(
             PointerActions.all.map(\.id),
-            ["float", "zoom", "native", "main", "layout", "display", "workspace", "dim", "blur", "minimize", "close"]))
+            ["float", "zoom", "native", "display", "workspace", "dim", "blur", "minimize", "close"]))
     #expect(Set(PointerActions.all.map(\.id)).count == PointerActions.all.count)
     for spec in PointerActions.all {
         #expect(Actions.dispatchers.contains(spec.dispatcher))
@@ -92,14 +92,14 @@ private var catalogRoot: URL {
 @Test func pointerAvailabilityKeepsWindowRules() {
     let floating = CursorShortcutSpec.Context(
         floating: true, tiled: false, zoomed: false, nativeFullscreen: false,
-        canMakeMain: false, multipleLayouts: false, multipleDisplays: false, virtualWorkspace: false)
+        multipleDisplays: false, virtualWorkspace: false)
     #expect(
         PointerActions.all.filter { $0.available(floating) && originalPointerIDs.contains($0.id) }.map(\.id) == [
             "float", "native", "dim", "blur", "minimize", "close"
         ])
     let tiled = CursorShortcutSpec.Context(
         floating: false, tiled: true, zoomed: true, nativeFullscreen: false,
-        canMakeMain: true, multipleLayouts: true, multipleDisplays: true, virtualWorkspace: true)
+        multipleDisplays: true, virtualWorkspace: true)
     #expect(
         PointerActions.all.filter {
             originalPointerIDs.contains($0.id)

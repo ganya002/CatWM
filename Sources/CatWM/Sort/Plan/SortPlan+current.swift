@@ -3,11 +3,11 @@ import AppKit
 extension SortPlan {
     static func current(of display: SortDisplay) -> SortPlan {
         var lanes = display.workspaces.map {
-            SortLane(workspace: $0.name, name: $0.label, layout: $0.layout, ids: $0.ids)
+            SortLane(workspace: $0.name, name: $0.label, ids: $0.ids)
         }
         if lanes.isEmpty {
             let first = WorkspaceKey.make("1", on: display.id, perDisplay: display.perDisplay)
-            lanes = [SortLane(workspace: first, name: "", layout: .tall, ids: [])]
+            lanes = [SortLane(workspace: first, name: "", ids: [])]
         }
         let items = Dictionary(display.items.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         var plan = SortPlan(display: display.id, items: items,
@@ -16,7 +16,6 @@ extension SortPlan {
         plan.perDisplay = display.perDisplay
         plan.tabs = display.tabs
         plan.keepTabsTogether()
-        for workspace in display.workspaces { plan.geometry[workspace.name] = (workspace.ratio, workspace.mainCount) }
         return plan
     }
 
@@ -41,22 +40,6 @@ extension SortPlan {
 
     func canAdd(avoiding other: Set<String>) -> Bool {
         lanes.count < Self.maxLanes && !available(avoiding: other).isEmpty
-    }
-
-    static func layout(forCount count: Int, in layouts: [Layout]) -> Layout {
-        let want: Layout
-        switch count {
-        case ...1: want = .fullscreen
-        case 2: want = .column
-        case 4: want = .bsp
-        default: want = .tall
-        }
-        return layouts.contains(want) ? want : layouts.first ?? .tall
-    }
-
-    static func fit(_ forced: Layout?, _ count: Int, _ layouts: [Layout]) -> Layout {
-        if let forced { return layouts.contains(forced) ? forced : layouts.first ?? .tall }
-        return layout(forCount: count, in: layouts)
     }
 
     mutating func closeDuplicates() {

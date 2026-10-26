@@ -35,7 +35,7 @@ import Testing
         #expect(requires("movetoworkspacesilent", "+1"))
         #expect(requires("movewindowtomonitor", "+2"))
         #expect(requires("swapwindow", "l"))
-        #expect(requires("setlayout", "bsp"))
+        #expect(requires("columnwidth", "cycle"))
     }
 
     @Test @MainActor func commandsWaitForFocusAfterActivation() async {

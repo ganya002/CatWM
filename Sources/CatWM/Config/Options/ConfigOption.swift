@@ -157,7 +157,7 @@ extension Pane {
     var defaultSection: String {
         switch self {
         case .general: "General"
-        case .layout: "Gaps"
+        case .scrolling: "Gaps"
         case .windows: "Focus"
         case .motion: "Feel"
         case .templates: "Saved templates"

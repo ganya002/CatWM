@@ -12,24 +12,8 @@ extension WindowManager {
                       tiled: managed.filter { !$0.isFloating }.count, floating: managed.filter(\.isFloating).count,
                       screens: isStarted ? screens.map { screen in
                           ScreenStatus(uuid: screen.uuid, name: screen.name,
-                                       layout: state(for: screen).layout,
                                        workspace: isVirtual(shown[screen.uuid]) ? (shown[screen.uuid] ?? "") : "")
                       } : [])
-    }
-
-    func setLayout(_ layout: Layout, screen uuid: String) {
-        guard let screen = backend.screens().first(where: { $0.uuid == uuid }) else { return }
-        setLayout(layout, on: screen)
-    }
-
-    func setLayout(_ layout: Layout, on screen: Screen) {
-        let screenState = state(for: screen)
-        tilingRecovery.zoomed[workspaceKey(for: screen)] = nil
-        screenState.layout = layout
-        screenState.zoomed = nil
-        corrections = [:]
-        refresh()
-        if config.enablesLayoutHUD { surface.showHUD(layout.title, layout: layout, on: screen.nsScreen) }
     }
 
     func dumpLines() -> [String] {
@@ -37,16 +21,20 @@ extension WindowManager {
             "state: trusted=\(Permission.accessibility.isGranted) keybinds=\(surface.keybindsActive) "
                 + "tiling=\(tilingEnabled) focused=\(focusedWindow()?.id ?? 0)"
         ]
-        for screen in backend.screens() {
+        let screens = backend.screens()
+        for screen in screens {
             let screenState = state(for: screen)
             lines.append(
                 "  screen \(screen.name) workspace=\(shown[screen.uuid] ?? "?") "
-                    + "home=\(isOnHomeSpace(screen)) layout=\(screenState.layout.rawValue) "
-                    + "ratio=\(screenState.ratio) main=\(screenState.mainCount) usable=\(usableRect(screen))"
+                    + "home=\(isOnHomeSpace(screen)) columns=\(stripLine(screenState)) "
+                    + "offset=\(screenState.strip.offset) usable=\(usableRect(screen))"
             )
             for id in tiled(on: screen) {
                 guard let window = windows[id] else { continue }
-                let matches = targets[id].map { window.frame.approxEqual($0, tolerance: 2) } ?? false
+                let matches = targets[id].map {
+                    window.frame.approxEqual($0, tolerance: 2)
+                        || isParked($0, screens) && isParked(window.frame, screens)
+                } ?? false
                 lines.append(
                     "    tiled \(id) \(window.bundleID ?? "pid \(window.pid)") target=\(targets[id] ?? .null) "
                         + "actual=\(window.frame) \(matches ? "OK" : "MISMATCH")"
@@ -79,6 +67,7 @@ extension WindowManager {
         guard let i = order.firstIndex(of: first), let j = order.firstIndex(of: second) else { return }
         order.swapAt(i, j)
         let firstWorkspace = workspaceOf[first], secondWorkspace = workspaceOf[second]
+        if let firstWorkspace, firstWorkspace == secondWorkspace { states[firstWorkspace]?.strip.swap(first, second) }
         model.swapWorkspaces(first, second)
         if config.virtualWorkspaces, firstWorkspace != secondWorkspace {
             if let name = secondWorkspace, let window = windows[first] {
@@ -123,12 +112,6 @@ extension WindowManager {
         }
     }
 
-    func setLayoutCommand(_ arg: String) {
-        if let layout = Layout(rawValue: arg.lowercased()), let screen = currentScreen() {
-            setLayout(layout, on: screen)
-        }
-    }
-
     func showWorkspaceCommand(_ arg: String) {
         if config.virtualWorkspaces {
             if let workspace = resolveWorkspace(arg) { showWorkspace(workspace) }
@@ -144,33 +127,12 @@ extension WindowManager {
             moveToSpace(number)
         }
     }
-
-    func layoutMessage(_ arg: String) {
-        let parts = arg.split(separator: " ").map(String.init)
-        guard let cmd = parts.first?.lowercased() else { return }
-        switch cmd {
-        case "swapwithmaster": swapWithMain()
-        case "swapsides": swapSides()
-        case "focusmaster": focusMain()
-        case "addmaster": changeMainCount(1)
-        case "removemaster": changeMainCount(-1)
-        case "cyclenext": cycleFocus(1)
-        case "cycleprev": cycleFocus(-1)
-        case "swapnext": cycleSwap(1)
-        case "swapprev": cycleSwap(-1)
-        case "mfact": adjustRatio(parts.dropFirst().joined(separator: " "))
-        case "orientationnext": cycleLayout(1)
-        case "orientationprev": cycleLayout(-1)
-        default: Log.info("unknown layoutmsg \(cmd)")
-        }
-    }
 }
 
 extension WindowManager {
     struct ScreenStatus: Equatable {
         var uuid: String
         var name: String
-        var layout: Layout
         var workspace: String
     }
 

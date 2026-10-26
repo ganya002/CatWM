@@ -24,8 +24,6 @@ struct CursorShortcutSpec: Identifiable {
         let tiled: Bool
         let zoomed: Bool
         let nativeFullscreen: Bool
-        let canMakeMain: Bool
-        let multipleLayouts: Bool
         let multipleDisplays: Bool
         let virtualWorkspace: Bool
     }
@@ -51,16 +49,6 @@ enum PointerActions {
                                           symbol: "arrow.up.left.and.down.right.and.arrow.up.right.and.down.left"),
                            title: "Native Full Screen", actionBefore: "sort ",
                            hint: "Max", selected: { $0.nativeFullscreen }),
-        CursorShortcutSpec(id: "main",
-                           action: Action(title: "Swap With Main Window", category: .move,
-                                          dispatcher: WindowActions.layoutmsg.name,
-                                          args: "swapwithmaster", symbol: "star.square"),
-                           title: "Make Main", actionBefore: "swapnext ", available: { $0.canMakeMain }),
-        CursorShortcutSpec(id: "layout",
-                           action: Action(title: "Next Layout", category: .layout,
-                                          dispatcher: WindowActions.cyclelayout.name,
-                                          args: "next", symbol: "rectangle.2.swap"),
-                           title: "Next Layout", actionBefore: "cyclelayout prev", available: { $0.multipleLayouts }),
         CursorShortcutSpec(id: "display",
                            action: Action(title: "Move Window to Next Display", category: .displays,
                                           dispatcher: WindowActions.movewindow.name, args: "mon:+1",

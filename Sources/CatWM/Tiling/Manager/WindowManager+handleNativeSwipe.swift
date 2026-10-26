@@ -12,7 +12,7 @@ extension WindowManager {
             guard let name = desktops.nativeCatalog.step(from: source.name, by: direction),
                   let target = desktops.nativeCatalog.entry(name) else { return }
             desktops.nativeGestureSign = Double(direction)
-            configureNativeController(focusing: nil, focus: true, quiet: false)
+            configureNativeController(focusing: nil, focus: true)
             nativeDesktop.beginGesture(.init(workspace: name, display: target.display, space: target.space))
         }
         guard let sign = desktops.nativeGestureSign else { return }

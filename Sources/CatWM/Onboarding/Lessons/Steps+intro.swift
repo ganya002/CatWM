@@ -55,11 +55,11 @@ extension Steps {
             let keys = moves.map { KeyWords.keyLabel($0.keyCode, long: false) }
             rows.append((KeyWords.modLabels(moves[0].mods, long: false) + keys, "Move the window"))
         }
-        if let swap = book.find([WindowActions.layoutmsg], "swapwithmaster") {
-            rows.append((cap(swap), "Swap with the main pane"))
+        if let stack = book.find([WindowActions.consumeorexpel], "left") {
+            rows.append((cap(stack), "Into or out of a column"))
         }
-        if let (grow, shrink) = book.resize { rows.append((cap(shrink) + cap(grow), "Shrink / grow")) }
-        if let next = book.find([WindowActions.cyclelayout], "next") { rows.append((cap(next), "Next layout")) }
+        if let (grow, shrink) = book.resize { rows.append((cap(shrink) + cap(grow), "Narrower / wider")) }
+        if let next = book.find([WindowActions.columnwidth], "cycle") { rows.append((cap(next), "Next column width")) }
         if let workspace = book.find([WindowActions.workspace], "1") {
             rows.append((KeyWords.modLabels(workspace.mods, long: false) + ["1–0"], "Switch workspace"))
         }

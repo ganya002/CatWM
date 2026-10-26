@@ -67,8 +67,8 @@ private func reply(_ text: String) throws -> JSON {
     }
 
     @Test func positionalWordsBindToArguments() throws {
-        let layoutmsg = try #require(CommandRegistry.command(named: "layoutmsg"))
-        #expect(try ControlCLI.bind(["mfact", "0.1"], to: layoutmsg) == ["message": "mfact 0.1"])
+        let width = try #require(CommandRegistry.command(named: "columnwidth"))
+        #expect(try ControlCLI.bind(["+10"], to: width) == ["width": "+10"])
         let set = try #require(CommandRegistry.command(named: "config.set"))
         #expect(try ControlCLI.bind(["gaps-in", "8"], to: set) == ["key": "gaps-in", "value": "8"])
         let focus = try #require(CommandRegistry.command(named: "movefocus"))

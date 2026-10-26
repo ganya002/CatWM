@@ -105,7 +105,7 @@ sequenceDiagram
     participant AD as AppAdapter
 
     UI->>WM: captureTemplate()
-    WM->>WM: makeRequest() reads displays, layouts, workspaces
+    WM->>WM: makeRequest() reads displays and workspaces
     WM->>Slot: run(within: 2.6 s)
     Slot->>WC: collect(apps, budget: 2 s) on a background task
     WC-->>Slot: WindowBatch
@@ -276,7 +276,7 @@ A save asks the user (`ask: true`). An open never asks (`ask: false`). If an ada
 
 ## Open a template
 
-`TemplateRestorer.restore()` has two phases. `discover()` finds or opens a window for each saved window. `apply()` moves the windows to their Desktops, sets the layouts and places the frames.
+`TemplateRestorer.restore()` has two phases. `discover()` finds or opens a window for each saved window. `apply()` moves the windows to their Desktops and places the frames.
 
 ```mermaid
 sequenceDiagram
@@ -303,7 +303,7 @@ sequenceDiagram
         R->>R: perform(request) for each request
     end
     R->>A: apply()
-    A->>A: unhide, move to Desktops, set layouts, place frames, hide again
+    A->>A: unhide, move to Desktops, place frames, hide again
     R-->>Lib: result text for the HUD
 ```
 

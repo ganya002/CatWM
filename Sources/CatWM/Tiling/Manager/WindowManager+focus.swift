@@ -27,7 +27,10 @@ extension WindowManager {
         config.focusFollowsMouse && (!config.focusFollowsMouseInModeOnly || surface.inMode)
     }
 
-    func noteFocus(_ id: CGWindowID) { model.noteFocus(id) }
+    func noteFocus(_ id: CGWindowID) {
+        model.noteFocus(id)
+        revealInStrip(id)
+    }
 
     private func focusUnderMouse() {
         guard focusFollowsMouseNow, !closeAndSort.sortSession, Date() > ignoreMouseUntil,
@@ -85,12 +88,17 @@ extension WindowManager {
                 continue
             }
             if resized {
-                if config.mouseResizesWindows { applyMouseResize(window, on: src) }
+                if config.mouseResizesWindows { resizeColumn(window, on: src) }
                 continue
             }
             let dst = screens.first { $0.frame.contains(point) } ?? src
             if config.mouseSwapsWindows,
                let hit = tiled(on: dst).first(where: { $0 != id && targets[$0]?.contains(point) == true }) {
+                if let frame = targets[hit], workspaceOf[hit] == workspaceOf[id],
+                   point.y < frame.minY + frame.height / 4 || point.y > frame.maxY - frame.height / 4,
+                   state(for: dst).strip.place(id, at: hit, below: point.y > frame.midY) {
+                    continue
+                }
                 swapOrder(id, hit)
             } else if dst.uuid != src.uuid {
                 assignTabs(of: id, to: shown[dst.uuid])
@@ -98,35 +106,5 @@ extension WindowManager {
         }
         corrections = [:]
         refresh()
-    }
-
-    private func applyMouseResize(_ window: Window, on screen: Screen) {
-        let screenState = state(for: screen)
-        let ids = tiled(on: screen)
-        let rect = usableRect(screen), frame = window.cachedFrame
-        guard !frame.isNull else { return }
-        let layout = screenState.layout
-        let mains = [.bsp, .twoPane, .twoPaneRight].contains(layout) ? 1 : screenState.mainCount
-        guard let idx = ids.firstIndex(of: window.id), ids.count > mains, var axis = layout.ratioAxis else { return }
-        if layout == .bsp { axis = (rect.width >= rect.height, true) }
-        let isMain = idx < mains
-        if layout == .widescreenTall, isMain, mains > 1, idx != mains - 1 { return }
-        if layout == .widescreenTallRight, isMain, mains > 1, idx != 0 { return }
-        if !isMain, [.threeColumnLeft, .threeColumnRight].contains(layout) { return }
-        let gap = windowGap(count: ids.count)
-        let total = axis.horizontal ? rect.width : rect.height
-        func boundary(_ slot: CGRect) -> CGFloat {
-            switch (axis.horizontal, axis.fromStart, isMain) {
-            case (true, true, true): slot.maxX - rect.minX + gap
-            case (true, true, false): slot.minX - rect.minX
-            case (true, false, true): rect.maxX - slot.minX + gap
-            case (true, false, false): rect.maxX - slot.maxX
-            case (false, _, true): slot.maxY - rect.minY + gap
-            case (false, _, false): slot.minY - rect.minY
-            }
-        }
-        if let slot = layoutTargets(ids, screenState, on: screen)?[window.id],
-           abs(boundary(slot) - screenState.ratio * (total + gap)) > 3 { return }
-        screenState.ratio = min(0.9, max(0.1, boundary(frame) / (total + gap)))
     }
 }

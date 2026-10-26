@@ -203,9 +203,7 @@ extension WindowManager {
         for name in Array(states.keys) where saved.states[name] == nil { states[name] = nil }
         for (name, savedState) in saved.states {
             let workspaceState = state(workspace: name)
-            workspaceState.layout = savedState.layout
-            workspaceState.ratio = savedState.ratio.isFinite ? min(0.9, max(0.1, savedState.ratio)) : 0.5
-            workspaceState.mainCount = savedState.mainCount
+            workspaceState.strip = savedState.strip
             workspaceState.zoomed = savedState.zoomed
         }
         for (workspace, id) in saved.lastFocused
@@ -213,8 +211,6 @@ extension WindowManager {
             lastFocused[workspace] = id
         }
         corrections = [:]
-        closeAndSort.quietWorkspaceHUD = true
-        defer { closeAndSort.quietWorkspaceHUD = false }
         for (display, workspace) in saved.virtualShown where virtualShown[display] != workspace {
             showWorkspace(workspace, focus: false)
         }

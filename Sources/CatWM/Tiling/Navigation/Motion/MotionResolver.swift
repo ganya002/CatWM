@@ -32,11 +32,13 @@ enum MotionResolver {
     }
 
     static func resolve(
-        from item: Item, _ dir: Direction, among candidates: [Item], displays: [Display], stamps: [CGWindowID: Int]
+        from item: Item, _ dir: Direction, among candidates: [Item], displays: [Display], stamps: [CGWindowID: Int],
+        wraps: Bool = true
     ) -> Hit? {
         if let next = neighbor(of: item, dir, among: candidates, stamps: stamps) { return .window(next) }
         if let here = displays.first(where: { $0.id == item.screen }),
            let next = display(from: here, dir, among: displays) { return .monitor(next) }
+        guard wraps else { return nil }
         return wrap(from: item, dir, among: candidates, stamps: stamps).map(Hit.window)
     }
 
@@ -121,7 +123,7 @@ extension WindowManager {
         let hit = MotionResolver.resolve(from: navItem(window, in: screens), direction,
                                          among: candidates.map { navItem($0, in: screens) },
                                          displays: screens.map { .init(id: $0.uuid, frame: $0.frame) },
-                                         stamps: focusStamps)
+                                         stamps: focusStamps, wraps: stripFrames[window.id] == nil)
         switch hit {
         case let .window(id): return windows[id].map(MotionTarget.window)
         case let .monitor(uuid): return screens.first { $0.uuid == uuid }.map(MotionTarget.monitor)
@@ -130,7 +132,8 @@ extension WindowManager {
     }
 
     func navItem(_ window: Window, in screens: [Screen]) -> MotionResolver.Item {
-        .init(id: window.id, frame: navFrame(window), screen: screen(of: window, in: screens)?.uuid)
+        let frame = window.isFloating ? navFrame(window) : stripFrames[window.id] ?? navFrame(window)
+        return .init(id: window.id, frame: frame, screen: screen(of: window, in: screens)?.uuid)
     }
 }
 

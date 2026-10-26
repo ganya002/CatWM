@@ -76,7 +76,7 @@ enum WindowActions {
         movefocus, cyclenext, focusmonitor, movewindow, movewindowtomonitor, swapwindow, swapnext,
         togglefloating, fullscreen, nativefullscreen, minimize, killactive,
         moveintogroup, moveoutofgroup, changegroupactive, movegroupwindow,
-        layoutmsg, splitratio, cyclelayout, layout, toggletiling, retile,
+        columnwidth, windowheight, centercolumn, consumeorexpel, togglecolumntabs, toggletiling, retile,
         workspace, movetoworkspace, movetoworkspacesilent, sethomespace,
         sort, sortUndo, switcher,
         submap, reload, exit, exec, launch

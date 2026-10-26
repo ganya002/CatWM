@@ -5,38 +5,6 @@ extension WindowManager {
         config.windowMargins && !(config.smartWindowMargins && count == 1) ? config.windowMarginSize : 0
     }
 
-    func rawSlots(
-        _ ids: [CGWindowID], on screen: Screen, _ screenState: ScreenState, ratio: CGFloat
-    ) -> ([CGRect], CGFloat)? {
-        let gap = windowGap(count: ids.count)
-        guard let raw = screenState.layout.frames(count: ids.count,
-                                                  in: usableRect(screen).insetBy(dx: -gap / 2, dy: -gap / 2),
-                                                  ratio: ratio, mainCount: screenState.mainCount) else { return nil }
-        let slots = raw.map { $0.insetBy(dx: gap / 2, dy: gap / 2).pixelAligned }
-        guard slots.allSatisfy({ [$0.minX, $0.minY, $0.width, $0.height].allSatisfy(\.isFinite) }) else { return nil }
-        return (slots, gap)
-    }
-
-    func windowRefusingRatio(
-        _ ratio: CGFloat, from old: CGFloat, ids: [CGWindowID], on screen: Screen, _ screenState: ScreenState
-    ) -> CGWindowID? {
-        guard ids.contains(where: { minSizes[$0] != nil }),
-              let (before, _) = rawSlots(ids, on: screen, screenState, ratio: old),
-              let (after, _) = rawSlots(ids, on: screen, screenState, ratio: ratio) else { return nil }
-        return zip(ids, zip(before, after)).first { id, slots in
-            guard let minimum = minSizes[id] else { return false }
-            let (previous, next) = slots
-            return (minimum.width > next.width + 1 && next.width < previous.width - 1)
-                || (minimum.height > next.height + 1 && next.height < previous.height - 1)
-        }?.0
-    }
-
-    func warnTooSmall(_ id: CGWindowID, on screen: Screen?) {
-        let name = windows[id].flatMap { NSRunningApplication(processIdentifier: $0.pid)?.localizedName }
-            ?? "This window"
-        surface.warnHUD("\(name) can't get any smaller", on: screen?.nsScreen)
-    }
-
     func tiled(on screen: Screen) -> [CGWindowID] {
         let shares = sharesSpaces
         return order.filter {
@@ -83,7 +51,7 @@ extension WindowManager {
 
     func state(workspace key: String) -> ScreenState {
         if let existing = states[key] { return existing }
-        let created = ScreenState(layout: config.layouts.first ?? .tall)
+        let created = ScreenState()
         states[key] = created
         return created
     }

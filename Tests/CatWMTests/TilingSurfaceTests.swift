@@ -10,14 +10,13 @@ private final class RecordingSurface: TilingSurface {
 
     func start(_: WindowManager) {}
     func apply(_: Config) {}
-    func showHUD(_ text: String, layout _: Layout?, on _: NSScreen?) { hud.append(text) }
+    func showHUD(_ text: String, on _: NSScreen?) { hud.append(text) }
     func warnHUD(_ text: String, on _: NSScreen?) { hud.append(text) }
     func leaveMode() {}
     var keybindsActive: Bool { false }
     var keysPaused: Bool { false }
     func setKeyTap(enabled _: Bool) {}
     func tilesDidChange(instant _: Bool) {}
-    func splitSwapped(on _: String) {}
     func tabsDidChange(instant _: Bool) {}
     func batchTabChanges(_ changes: () -> Void) { changes() }
     func restackTabStrips() {}

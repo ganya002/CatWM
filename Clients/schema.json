@@ -372,94 +372,82 @@
     {
       "args" : [
         {
-          "name" : "message",
+          "name" : "width",
           "required" : true,
-          "summary" : "`swapwithmaster`, `swapsides`, `focusmaster`, `addmaster`, `removemaster`, `mfact <value>`, `orientationnext` or `orientationprev`",
+          "summary" : "`cycle` (the next preset width), `max`, a change such as `+10` or `-10`, or a width such as `50`, in percent of the screen",
           "type" : "string"
         }
       ],
-      "group" : "layout",
-      "name" : "layoutmsg",
+      "group" : "columns",
+      "name" : "columnwidth",
       "result" : {
         "kind" : "none"
       },
-      "summary" : "Send a message to the layout"
+      "summary" : "Change the width of the focused column"
     },
     {
       "args" : [
         {
-          "name" : "value",
+          "name" : "change",
           "required" : true,
-          "summary" : "A change such as `+0.05` or `-0.05`, or `exact 0.6`",
+          "summary" : "A change such as `+10` or `-10`, in percent of the column",
           "type" : "string"
         }
       ],
-      "group" : "layout",
-      "name" : "splitratio",
+      "group" : "columns",
+      "name" : "windowheight",
       "result" : {
         "kind" : "none"
       },
-      "summary" : "Change the size of the main pane"
-    },
-    {
-      "args" : [
-        {
-          "choices" : [
-            "next",
-            "prev"
-          ],
-          "name" : "step",
-          "required" : false,
-          "summary" : "Which way to go. The default is `next`.",
-          "type" : "enum"
-        }
-      ],
-      "group" : "layout",
-      "name" : "cyclelayout",
-      "result" : {
-        "kind" : "none"
-      },
-      "summary" : "Use the next or previous layout"
-    },
-    {
-      "args" : [
-        {
-          "choices" : [
-            "tall",
-            "tall-right",
-            "wide",
-            "middle-wide",
-            "fullscreen",
-            "column",
-            "row",
-            "floating",
-            "bsp",
-            "3column-left",
-            "3column-middle",
-            "3column-right",
-            "two-pane",
-            "two-pane-right",
-            "widescreen-tall",
-            "widescreen-tall-right"
-          ],
-          "name" : "layout",
-          "required" : true,
-          "summary" : "Layout name",
-          "type" : "enum"
-        }
-      ],
-      "group" : "layout",
-      "name" : "layout",
-      "result" : {
-        "kind" : "none"
-      },
-      "summary" : "Use a layout on the current screen"
+      "summary" : "Change the height of the focused window in its column"
     },
     {
       "args" : [
 
       ],
-      "group" : "layout",
+      "group" : "columns",
+      "name" : "centercolumn",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Scroll the focused column to the middle of the screen"
+    },
+    {
+      "args" : [
+        {
+          "choices" : [
+            "left",
+            "right"
+          ],
+          "name" : "direction",
+          "required" : true,
+          "summary" : "Direction",
+          "type" : "enum"
+        }
+      ],
+      "group" : "columns",
+      "name" : "consumeorexpel",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Move the focused window into the column next to it, or out of its column"
+    },
+    {
+      "args" : [
+
+      ],
+      "group" : "columns",
+      "name" : "togglecolumntabs",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Show the windows of the focused column as tabs"
+    },
+    {
+      "args" : [
+
+      ],
+      "group" : "columns",
       "name" : "toggletiling",
       "result" : {
         "kind" : "none"
@@ -470,7 +458,7 @@
       "args" : [
 
       ],
-      "group" : "layout",
+      "group" : "columns",
       "name" : "retile",
       "result" : {
         "kind" : "none"
@@ -846,19 +834,14 @@
             "type" : "rect"
           },
           {
-            "name" : "layout",
-            "summary" : "Layout name",
-            "type" : "string"
+            "name" : "columns",
+            "summary" : "Columns from left to right: `width` (a fraction of the usable width) and `windows`",
+            "type" : "object[]"
           },
           {
-            "name" : "ratio",
-            "summary" : "Main pane ratio",
+            "name" : "scroll",
+            "summary" : "How far the columns are scrolled, in points",
             "type" : "number"
-          },
-          {
-            "name" : "mainCount",
-            "summary" : "Number of main windows",
-            "type" : "int"
           },
           {
             "name" : "workspace",
@@ -1037,22 +1020,6 @@
       ],
       "name" : "workspace.changed",
       "summary" : "A display shows another workspace"
-    },
-    {
-      "data" : [
-        {
-          "name" : "screen",
-          "summary" : "Display ID",
-          "type" : "string"
-        },
-        {
-          "name" : "layout",
-          "summary" : "Layout name",
-          "type" : "string"
-        }
-      ],
-      "name" : "layout.changed",
-      "summary" : "A display uses another layout"
     },
     {
       "data" : [

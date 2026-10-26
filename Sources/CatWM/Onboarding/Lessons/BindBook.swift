@@ -40,11 +40,11 @@ struct BindBook {
     var directions: [String] { wasd ? ["u", "l", "d", "r"] : ["l", "d", "u", "r"] }
 
     var resize: (grow: KeyBinding, shrink: KeyBinding)? {
-        let ratio = binds.filter { $0.submap == mode }.compactMap { bind in
-            KeyWords.ratioDirection(bind.dispatcher, bind.arg).map { (bind, $0) }
+        let widths = binds.filter { $0.submap == mode }.compactMap { bind in
+            KeyWords.widthDirection(bind.dispatcher, bind.arg).map { (bind, $0) }
         }
-        guard let grow = ratio.first(where: { $0.1 == .grow })?.0,
-              let shrink = ratio.first(where: { $0.1 == .shrink })?.0 else { return nil }
+        guard let grow = widths.first(where: { $0.1 == .grow })?.0,
+              let shrink = widths.first(where: { $0.1 == .shrink })?.0 else { return nil }
         return (grow, shrink)
     }
 }

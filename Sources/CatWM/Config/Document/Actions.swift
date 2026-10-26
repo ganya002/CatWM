@@ -58,26 +58,6 @@ enum Actions {
         if let action = WindowActions.named(dispatcher) { dispatcher = action.name }
         if dispatcher == "swapwindow" { dispatcher = "movewindow" }
         if dispatcher == "movewindowtomonitor" { dispatcher = "movewindow"; args = "mon:" + args }
-        if dispatcher == "layoutmsg" {
-            switch args {
-            case "cyclenext": dispatcher = "cyclenext"; args = ""
-            case "cycleprev": dispatcher = "cyclenext"; args = "prev"
-            case "swapnext": dispatcher = "swapnext"; args = ""
-            case "swapprev": dispatcher = "swapnext"; args = "prev"
-            case "orientationnext": dispatcher = "cyclelayout"; args = "next"
-            case "orientationprev": dispatcher = "cyclelayout"; args = "prev"
-            default: break
-            }
-        }
-        if dispatcher == "cyclelayout" && args.isEmpty { args = "next" }
-        if dispatcher == "splitratio", let ratio = Double(args.replacingOccurrences(of: "+", with: "")) {
-            args = ratio > 0 ? "+0.05" : "-0.05"
-        }
-        if dispatcher == "layoutmsg", args.hasPrefix("mfact"),
-           let ratio = Double(args.dropFirst(5).trimmingCharacters(in: .whitespaces)) {
-            dispatcher = "splitratio"; args = ratio > 0 ? "+0.05" : "-0.05"
-        }
-
         return (dispatcher, args)
     }
 

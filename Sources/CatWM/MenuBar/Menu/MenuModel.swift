@@ -48,7 +48,7 @@ final class MenuModel: ObservableObject {
 
 struct MenuItem: Identifiable {
     enum Kind {
-        case action, check, radio, sub, label, separator, essentials, workspaces, layoutPicker, attention, footer
+        case action, check, radio, sub, label, separator, essentials, workspaces, attention, footer
     }
 
     var id: String

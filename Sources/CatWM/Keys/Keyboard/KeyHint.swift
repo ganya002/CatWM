@@ -33,22 +33,6 @@ struct KeyHint: Identifiable, Equatable {
         var command = dispatcher.lowercased(), argument = arg.trimmingCharacters(in: .whitespaces).lowercased()
         if command == "swapwindow" { command = "movewindow" }
         if command == "movewindowtomonitor" { command = "movewindow"; argument = "mon:" + argument }
-        if command == "setlayout" { command = "layout" }
-        if command == "layoutmsg" {
-            switch argument {
-            case "cyclenext": command = "cyclenext"; argument = ""
-            case "cycleprev": command = "cyclenext"; argument = "prev"
-            case "swapnext": command = "swapnext"; argument = ""
-            case "swapprev": command = "swapnext"; argument = "prev"
-            case "orientationnext": command = "cyclelayout"; argument = "next"
-            case "orientationprev": command = "cyclelayout"; argument = "prev"
-            default:
-                if argument.hasPrefix("mfact") {
-                    command = "splitratio"
-                    argument = String(argument.dropFirst(5)).trimmingCharacters(in: .whitespaces)
-                }
-            }
-        }
         return (command, argument)
     }
 
@@ -72,18 +56,16 @@ struct KeyHint: Identifiable, Equatable {
             if let number = Int(argument) { return "\(number)" }
             if argument == "previous" { return "Back" }
             return back ? "‹ Prev" : "Next ›"
-        case "cyclelayout": return back ? "‹ Layout" : "Layout ›"
-        case "layout": return Layout(rawValue: argument)?.title ?? argument.capitalized
-        case "splitratio": return argument.hasPrefix("-") ? "Main −" : "Main +"
-        case "layoutmsg":
+        case "columnwidth":
             switch argument {
-            case "swapwithmaster": return "Swap"
-            case "swapsides": return "Sides"
-            case "focusmaster": return "Main"
-            case "addmaster": return "Mains +"
-            case "removemaster": return "Mains −"
-            default: return "Layout"
+            case "", "cycle", "next": return "Width"
+            case "max", "maximize", "full": return "Max"
+            default: return argument.hasPrefix("-") ? "Width −" : "Width +"
             }
+        case "windowheight": return argument.hasPrefix("-") ? "Height −" : "Height +"
+        case "centercolumn": return "Center"
+        case "consumeorexpel": return arrows[argument].map { "Join \($0)" } ?? "Join"
+        case "togglecolumntabs": return "Tabs"
         case "retile", "reevaluate": return "Retile"
         case "toggletiling": return "Tiling"
         case "reload": return "Reload"

@@ -17,7 +17,6 @@ struct SortPlan {
     let taken: Set<String>
     var active: String?
     var perDisplay = false
-    var geometry: [String: (ratio: CGFloat, mainCount: Int)] = [:]
     var tabs: [[CGWindowID]] = []
 
     func key(_ number: String) -> String { WorkspaceKey.make(number, on: display, perDisplay: perDisplay) }
@@ -56,7 +55,6 @@ struct SortApply {
 struct SortApplyLane {
     let name: String
     let label: String
-    let layout: Layout
     let ids: [CGWindowID]
 }
 
@@ -64,7 +62,6 @@ struct SortClosedLane: Identifiable {
     let id = UUID()
     var workspace: String
     var name: String
-    var layout: Layout
     var ids: [CGWindowID]
 
     var number: String { WorkspaceKey.number(workspace) }
@@ -99,7 +96,6 @@ struct SortLane: Identifiable {
     let id = UUID()
     var workspace: String
     var name: String
-    var layout: Layout
     var ids: [CGWindowID]
 
     var number: String { WorkspaceKey.number(workspace) }
@@ -108,9 +104,6 @@ struct SortLane: Identifiable {
 struct SortWorkspace {
     let name: String
     let label: String
-    let layout: Layout
-    let ratio: CGFloat
-    let mainCount: Int
     let ids: [CGWindowID]
 }
 
@@ -119,7 +112,7 @@ extension SortPlan {
         SortApply(display: display,
                   lanes: lanes.map {
                       SortApplyLane(name: $0.workspace, label: $0.name.trimmingCharacters(in: .whitespaces),
-                                    layout: $0.layout, ids: $0.ids)
+                                    ids: $0.ids)
                   },
                   close: close, dropped: Array(claimed.union(existing)), tabs: tabs)
     }

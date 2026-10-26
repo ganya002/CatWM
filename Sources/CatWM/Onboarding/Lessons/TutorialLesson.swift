@@ -35,10 +35,8 @@ final class TutorialLesson: Lesson {
         chapter("focus", "Focus",
                 [Steps.focus(coach), Steps.cycle(coach),
                  Steps.focusDrill(coach), Steps.focusDrill(coach), Steps.focusDrill(coach)])
-        chapter("move", "Moving windows",
-                [Steps.move(coach), Steps.main(coach), Steps.mainDrill(coach), Steps.mainDrill(coach)])
-        chapter("main", "The main pane", [Steps.mainCount(coach), Steps.resize(coach)])
-        chapter("layouts", "Layouts", [Steps.layouts(coach), Steps.layoutDrill(coach), Steps.layoutDrill(coach)])
+        chapter("move", "Moving windows", [Steps.move(coach), Steps.stack(coach)])
+        chapter("columns", "Columns", [Steps.resize(coach), Steps.widths(coach)])
         chapter("zoom", "Zoom and float", [Steps.zoom(coach), Steps.float(coach), Steps.retile(coach)])
         chapter("workspaces", "Workspaces",
                 [Steps.visit(coach), Steps.back(coach), Steps.neighbours(coach),

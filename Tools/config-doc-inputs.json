@@ -5,7 +5,7 @@
   ],
   "files": [
     "Sources/CatWM/Tiling/Focus/FocusDim.swift",
-    "Sources/CatWM/Tiling/Layout/Layout.swift",
+    "Sources/CatWM/Tiling/Layout/Strip.swift",
     "Resources/AgentDocs/config.template.md",
     "Resources/AgentDocs/config.md",
     "Tools/config-doc-inputs.json"

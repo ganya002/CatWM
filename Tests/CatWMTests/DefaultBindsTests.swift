@@ -48,9 +48,9 @@ private let sharedWindowAdditions: [Bind] = [
 ]
 
 private let vimOnlyWindowAdditions: [Bind] = [
-    bind("window", [], "g", "layoutmsg", "focusmaster"),
-    bind("window", [], "s", "layoutmsg", "orientationnext"),
-    bind("window", .maskShift, "s", "layoutmsg", "orientationprev"),
+    bind("window", [], "g", "togglecolumntabs"),
+    bind("window", [], "s", "consumeorexpel", "left"),
+    bind("window", .maskShift, "s", "consumeorexpel", "right"),
     bind("window", [], "d", "toggledim"),
     bind("window", .maskShift, "d", "toggleblur")
 ]
@@ -69,7 +69,7 @@ private let vimOnlyWindowAdditions: [Bind] = [
     }
     #expect(all.contains(bind("window", [], "s", "movefocus", "d")))
     #expect(all.contains(bind("window", [], "d", "movefocus", "r")))
-    #expect(all.contains(bind("window", [], "g", "layoutmsg", "swapwithmaster")))
+    #expect(all.contains(bind("window", [], "g", "consumeorexpel", "left")))
 }
 
 @Test(arguments: [defaultText, wasdText])

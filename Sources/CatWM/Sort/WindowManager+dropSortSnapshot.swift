@@ -51,8 +51,6 @@ extension WindowManager {
         names.subtract(desktops.nativeDroppedWorkspaces)
         return names.sorted(by: workspaceSort).map { name in
             SortWorkspace(name: name, label: labels[name] ?? "",
-                          layout: states[name]?.layout ?? config.layouts.first ?? .tall,
-                          ratio: states[name]?.ratio ?? 0.5, mainCount: states[name]?.mainCount ?? 1,
                           ids: mine.filter { workspaceOf[$0] == name })
         }
     }
@@ -118,8 +116,6 @@ extension WindowManager {
         order = order.filter { !moving.contains($0) } + planned
         lastFocused = lastFocused.filter { !moving.contains($0.value) }
         corrections = [:]
-        closeAndSort.quietWorkspaceHUD = true
-        defer { closeAndSort.quietWorkspaceHUD = false }
         for (display, workspace) in landing where virtualShown[display] != workspace {
             virtualShown[display] = workspace
         }
@@ -151,7 +147,6 @@ extension WindowManager {
             monitorOf[lane.name] = apply.display
             labels[lane.name] = lane.label.isEmpty ? nil : lane.label
             let laneState = state(workspace: lane.name)
-            laneState.layout = lane.layout
             if let zoomed = laneState.zoomed, !lane.ids.contains(zoomed) { laneState.zoomed = nil }
             for id in lane.ids where windows[id] != nil && !fullscreen.contains(id) { moves[id] = lane.name }
         }
@@ -184,8 +179,6 @@ extension WindowManager {
         Log.info("sort: finishing, \(ids.count) window(s) marked to close (\(closing.count) still known), "
             + "goTo=\(goTo ?? "-") focus=\(focus)")
         corrections = [:]
-        closeAndSort.quietWorkspaceHUD = true
-        defer { closeAndSort.quietWorkspaceHUD = false }
         if let id = fullscreen, let window = windows[id] {
             self.focus(window)
         } else if let workspace = goTo {
@@ -220,7 +213,6 @@ extension WindowManager {
 struct CloseAndSortState {
     var sortSnapshot: WindowManager.SortSnapshot?
     var sortSession = false
-    var quietWorkspaceHUD = false
     var closingNow: Set<CGWindowID> = []
     var closingApps: Set<pid_t> = []
     var lastClose = Date.distantPast

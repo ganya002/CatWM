@@ -76,9 +76,7 @@ extension SortModel {
         if columnDrag == nil {
             let start = value.startLocation
             let origin = zones[.lane(lane.id)]?.origin ?? CGPoint(x: start.x - 80, y: start.y - 20)
-            let geometry = plan.geometry[lane.workspace]
-            columnDrag = SortColumnDrag(lane: lane, ratio: geometry?.ratio ?? 0.5,
-                                        mainCount: geometry?.mainCount ?? 1, location: value.location,
+            columnDrag = SortColumnDrag(lane: lane, location: value.location,
                                         grab: CGSize(width: start.x - origin.x, height: start.y - origin.y))
             startEdgeTimer()
         }

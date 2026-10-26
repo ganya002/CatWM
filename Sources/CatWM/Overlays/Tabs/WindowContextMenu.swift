@@ -57,9 +57,9 @@ enum WindowContextMenu {
                                 action: { run(WindowActions.moveoutofgroup.name, "") }))
         }
         if input.tiled {
-            out.append(MenuItem(id: "swap", label: "Swap with master",
-                                shortcut: keys(WindowActions.layoutmsg.name, "swapwithmaster"),
-                                action: { run(WindowActions.layoutmsg.name, "swapwithmaster") }))
+            out.append(MenuItem(id: "width", label: "Next column width",
+                                shortcut: keys(WindowActions.columnwidth.name, "cycle"),
+                                action: { run(WindowActions.columnwidth.name, "cycle") }))
         }
         out.append(.sep("s1"))
         out.append(MenuItem(id: "retile", label: "Retile", shortcut: keys(WindowActions.retile.name, ""),

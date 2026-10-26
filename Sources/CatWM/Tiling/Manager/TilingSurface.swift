@@ -4,7 +4,7 @@ protocol TilingSurface {
     func start(_ manager: WindowManager)
     func apply(_ config: Config)
 
-    func showHUD(_ text: String, layout: Layout?, on screen: NSScreen?)
+    func showHUD(_ text: String, on screen: NSScreen?)
     func warnHUD(_ text: String, on screen: NSScreen?)
 
     var inMode: Bool { get }
@@ -14,7 +14,6 @@ protocol TilingSurface {
     func setKeyTap(enabled: Bool)
 
     func tilesDidChange(instant: Bool)
-    func splitSwapped(on screen: String)
     func tabsDidChange(instant: Bool)
     func batchTabChanges(_ changes: () -> Void)
     func restackTabStrips()
@@ -35,13 +34,12 @@ protocol TilingSurface {
 }
 
 extension TilingSurface {
-    func showHUD(_ text: String, on screen: NSScreen?) { showHUD(text, layout: nil, on: screen) }
 }
 
 struct HeadlessSurface: TilingSurface {
     func start(_: WindowManager) {}
     func apply(_: Config) {}
-    func showHUD(_: String, layout _: Layout?, on _: NSScreen?) {}
+    func showHUD(_: String, on _: NSScreen?) {}
     func warnHUD(_: String, on _: NSScreen?) {}
     var inMode: Bool { false }
     func leaveMode() {}
@@ -49,7 +47,6 @@ struct HeadlessSurface: TilingSurface {
     var keysPaused: Bool { false }
     func setKeyTap(enabled _: Bool) {}
     func tilesDidChange(instant _: Bool) {}
-    func splitSwapped(on _: String) {}
     func tabsDidChange(instant _: Bool) {}
     func batchTabChanges(_ changes: () -> Void) { changes() }
     func restackTabStrips() {}

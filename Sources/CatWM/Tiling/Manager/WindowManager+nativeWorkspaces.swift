@@ -114,7 +114,7 @@ extension WindowManager {
             in: screens.map { (id: $0.uuid, frame: $0.frame) })
     }
 
-    func showNativeWorkspace(_ workspace: String, focusing preferred: Window?, focus takesFocus: Bool, quiet: Bool) {
+    func showNativeWorkspace(_ workspace: String, focusing preferred: Window?, focus takesFocus: Bool) {
         let requestedAt = CACurrentMediaTime()
         updateNativeCatalog(backend.screens())
         desktops.nativeWorkspaceGeneration += 1
@@ -129,7 +129,7 @@ extension WindowManager {
                         self.desktops.nativeWorkspaceGeneration == generation
                     })
                     if self.desktops.nativeWorkspaceGeneration == generation {
-                        self.configureNativeController(focusing: preferred, focus: takesFocus, quiet: quiet)
+                        self.configureNativeController(focusing: preferred, focus: takesFocus)
                         self.nativeDesktop.request(.init(workspace: workspace, display: entry.display,
                                                          space: entry.space), since: requestedAt)
                     }
@@ -140,7 +140,7 @@ extension WindowManager {
             }
             return
         }
-        configureNativeController(focusing: preferred, focus: takesFocus, quiet: quiet)
+        configureNativeController(focusing: preferred, focus: takesFocus)
         nativeDesktop.request(.init(workspace: workspace, display: entry.display, space: entry.space),
                               since: requestedAt)
     }
@@ -249,13 +249,13 @@ extension WindowManager {
               }),
               backend.currentSpace(display: screen.uuid) != space else { return false }
         desktops.nativeWorkspaceGeneration += 1
-        configureNativeController(focusing: window, focus: true, quiet: true)
+        configureNativeController(focusing: window, focus: true)
         nativeDesktop.request(.init(workspace: Self.spaceWorkspace(display: screen.uuid, space: space),
                                     display: screen.uuid, space: space))
         return true
     }
 
-    func configureNativeController(focusing preferred: Window?, focus takesFocus: Bool, quiet: Bool) {
+    func configureNativeController(focusing preferred: Window?, focus takesFocus: Bool) {
         nativeDesktop.prepare = { [weak self] in try await self?.prepareNativeLayout($0) }
         nativeDesktop.settings = .init(duration: config.animate ? config.animationDuration : 0,
                                        curve: config.animationCurve, bounce: config.animationBounce)
@@ -276,9 +276,6 @@ extension WindowManager {
                 self.refresh(placing: [])
                 guard let screen = self.backend.screens().first(where: { $0.uuid == request.display }) else { return }
                 if takesFocus { self.focusShownWorkspace(request.workspace, preferred: preferred, on: screen) }
-                if changed, !quiet, self.config.enablesLayoutHUD, self.config.enablesLayoutHUDOnSpaceChange {
-                    self.showWorkspaceHUD(request.workspace, on: screen)
-                }
             }
         }
         nativeDesktop.onMotion = { [weak self] request in self?.placeArrivals(on: request.display) }

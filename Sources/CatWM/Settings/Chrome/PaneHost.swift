@@ -29,7 +29,7 @@ struct PaneHost: View {
                     header
                     switch settingsUI.pane {
                     case .general: GeneralPane(doc: doc, settingsUI: settingsUI)
-                    case .layout: LayoutPane(doc: doc, settingsUI: settingsUI)
+                    case .scrolling: ScrollingPane(doc: doc, settingsUI: settingsUI)
                     case .windows: WindowsPane(doc: doc, settingsUI: settingsUI)
                     case .templates: TemplatesPane(doc: doc, settingsUI: settingsUI)
                     case .motion: MotionPane(doc: doc, settingsUI: settingsUI)

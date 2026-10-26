@@ -88,43 +88,6 @@ extension Steps {
         }
     }
 
-    static func mainDrill(_ coach: Coach) -> PlannedStep? {
-        guard let swap = coach.book.find([WindowActions.layoutmsg], "swapwithmaster"), focus(coach) != nil else {
-            return nil
-        }
-        return PlannedStep { coach in
-            let target = coach.visibleTitles.filter { $0 != coach.mainTitle }.randomElement()
-            return Step(title: "Put \(target ?? "another window") in the main pane",
-                        text: "Focus it, then promote it.",
-                        target: .window, caps: KeyWords.caps(swap, long: false), needsMode: true, recall: true,
-                        accept: { event in
-                            guard case .command(let dispatcher, let argument, _) = event else { return nil }
-                            if let target { return coach.mainTitle == target ? "" : nil }
-                            let swapped = dispatcher == WindowActions.layoutmsg.name
-                                && argument.lowercased() == "swapwithmaster"
-                            return swapped ? "" : nil
-                        }, simulate: { coach.windowManager.dispatch(WindowActions.layoutmsg.name, "swapwithmaster") })
-        }
-    }
-
-    static func layoutDrill(_ coach: Coach) -> PlannedStep? {
-        guard let next = coach.book.find([WindowActions.cyclelayout], "next") else { return nil }
-        let options = coach.windowManager.config.layouts.filter { ![.fullscreen, .floating].contains($0) }
-        guard options.count > 1 else { return nil }
-        let prev = coach.book.find([WindowActions.cyclelayout], "prev")
-        let keys = [next, prev].compactMap(\.self).map { KeyWords.caps($0, long: false).joined() }
-        return PlannedStep { coach in
-            let now = coach.windowManager.menuBarState()?.layout
-            let target = options.filter { $0 != now }.randomElement() ?? options[0]
-            return Step(title: "Switch to \(target.title)", text: "From memory.",
-                        target: .window, caps: keys, needsMode: true, recall: true,
-                        accept: { event in
-                            guard case .command = event else { return nil }
-                            return coach.windowManager.menuBarState()?.layout == target ? "" : nil
-                        }, simulate: { coach.windowManager.dispatch(WindowActions.cyclelayout.name, "next") })
-        }
-    }
-
     static func workspaceDrill(_ coach: Coach) -> PlannedStep? {
         guard let desk = coach.desk, let other = coach.other, coach.book.find([WindowActions.workspace], other) != nil,
               let back = coach.book.find([WindowActions.workspace], desk) else { return nil }

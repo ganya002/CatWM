@@ -39,7 +39,7 @@ extension TemplateRestorer {
         guard !screens.isEmpty else { throw WindowManager.TemplateError.notReady }
         manager.syncWorkspaces(screens: screens, present: manager.present)
         let preferred = TemplatePlacementPlan.preferredDisplays(template, mapping: mapping)
-        applyDisplayLayouts(mapping: mapping, preferred: preferred, screens: screens)
+        resetZoom(mapping: mapping, preferred: preferred, screens: screens)
         var frames = register(ready, mapping: mapping, preferred: preferred, screens: screens)
         if template.tilingEnabled { addTiledFrames(&frames, screens: screens) }
         try await place(ready, frames: frames, screens: screens)
@@ -122,15 +122,11 @@ extension TemplateRestorer {
         }
     }
 
-    private func applyDisplayLayouts(mapping: [String: String], preferred: [String: String], screens: [Screen]) {
+    private func resetZoom(mapping: [String: String], preferred: [String: String], screens: [Screen]) {
         for display in template.displays where mapping[display.id].flatMap({ preferred[$0] }) == display.id {
             guard let target = mapping[display.id],
                   let screen = screens.first(where: { $0.uuid == target }) else { continue }
-            let state = manager.state(for: screen)
-            state.layout = Layout(rawValue: display.layout) ?? .tall
-            state.ratio = min(0.9, max(0.1, display.ratio))
-            state.mainCount = max(1, display.mainCount)
-            state.zoomed = nil
+            manager.state(for: screen).zoomed = nil
         }
     }
 

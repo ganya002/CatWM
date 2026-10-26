@@ -8,11 +8,7 @@ enum AgentConfigDocs {
             let notes = option.documentation.isEmpty ? "" : " " + option.documentation
             return "| \(names) | \(option.valueDescription) | `\(option.defaultText)` |\(notes) |"
         }.joined(separator: "\n")
-        let defaultLayouts = Config().layouts.map(\.rawValue).joined(separator: ", ")
-        let layouts = Layout.allCases.map { "`\($0.rawValue)`" }.joined(separator: ", ")
         return template.replacingOccurrences(of: "{{options}}", with: rows)
-            .replacingOccurrences(of: "{{default-layouts}}", with: defaultLayouts)
-            .replacingOccurrences(of: "{{layouts}}", with: layouts)
     }
 
     static func write(in root: URL) throws {

@@ -36,7 +36,7 @@ The CLI, the Python, TypeScript and Swift libraries (`Clients/`) and the key bin
 
 ## Events
 
-`catwm events` and the `subscribe` command send these events: `focus.changed`, `window.added`, `window.removed`, `workspace.changed`, `layout.changed`, `tiling.changed`, `mode.changed`, `window.notifications` and `config.reloaded`. Each event is one JSON line: `{"event": "focus.changed", "data": {...}}`. The app sends no events when nobody subscribes.
+`catwm events` and the `subscribe` command send these events: `focus.changed`, `window.added`, `window.removed`, `workspace.changed`, `tiling.changed`, `mode.changed`, `window.notifications` and `config.reloaded`. Each event is one JSON line: `{"event": "focus.changed", "data": {...}}`. The app sends no events when nobody subscribes.
 
 ## Protocol
 
@@ -44,7 +44,7 @@ One JSON object on each line. The app sends `{"hello": {...}}` when you connect.
 
 ## Reading `dump` output
 
-Each screen lists workspace, layout, ratio and usable rect; each tiled window shows `target` and `actual` frames and `OK` or `MISMATCH`; then floating windows and parked windows (on hidden workspaces).
+Each screen lists workspace, columns, scroll offset and usable rect; each tiled window shows `target` and `actual` frames and `OK` or `MISMATCH`; then floating windows and parked windows (on hidden workspaces).
 
 ```sh
 $CATWM dump

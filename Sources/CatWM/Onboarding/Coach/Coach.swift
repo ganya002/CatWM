@@ -84,14 +84,6 @@ final class Coach {
         .sorted { $0.1 < $1.1 }.map(\.0)
     }
 
-    var mainTitle: String? {
-        practiceWindows.compactMap { window -> (String, CGFloat)? in
-            guard let title = window.string(kAXTitleAttribute), let frame = onScreen(window) else { return nil }
-            return (title, frame.width * frame.height)
-        }
-        .max { $0.1 < $1.1 }?.0
-    }
-
     init?(lesson: Lesson, statusButton: NSStatusBarButton?, onEnd: @escaping (Ending) -> Void) {
         guard let screen = NSScreen.screens.first(where: { $0.frame.contains(NSEvent.mouseLocation) })
             ?? NSScreen.main ?? NSScreen.screens.first else { return nil }

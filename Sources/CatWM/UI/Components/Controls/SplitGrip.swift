@@ -58,7 +58,7 @@ struct SplitGrip: View {
 
 #if DEBUG
 extension GalleryExamples {
-    static let splitGrip = GalleryExample(order: 16) { AnyView(GalleryContent(model: $0).splitGrip) }
+    static let splitGrip = GalleryExample(order: 15) { AnyView(GalleryContent(model: $0).splitGrip) }
 }
 
 extension GalleryContent {

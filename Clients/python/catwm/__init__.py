@@ -19,7 +19,7 @@ class CatWMError(Exception):
 
 Direction = Literal["left", "right", "up", "down"]
 Step = Literal["next", "prev"]
-Layout = Literal["tall", "tall-right", "wide", "middle-wide", "fullscreen", "column", "row", "floating", "bsp", "3column-left", "3column-middle", "3column-right", "two-pane", "two-pane-right", "widescreen-tall", "widescreen-tall-right"]
+ConsumeorexpelDirection = Literal["left", "right"]
 
 
 class Rect(TypedDict):
@@ -85,9 +85,8 @@ class ScreensItem(TypedDict):
     name: str
     frame: Rect
     usable: Rect
-    layout: str
-    ratio: float
-    mainCount: int
+    columns: list[dict[str, Any]]
+    scroll: float
     workspace: str
     focused: bool
 
@@ -142,16 +141,6 @@ class WorkspaceChanged(TypedDict):
     data: WorkspaceChangedData
 
 
-class LayoutChangedData(TypedDict):
-    screen: str
-    layout: str
-
-
-class LayoutChanged(TypedDict):
-    event: Literal["layout.changed"]
-    data: LayoutChangedData
-
-
 class TilingChangedData(TypedDict):
     enabled: bool
 
@@ -192,8 +181,8 @@ class ConfigReloaded(TypedDict):
     data: ConfigReloadedData
 
 
-Event = FocusChanged | WindowAdded | WindowRemoved | WorkspaceChanged | LayoutChanged | TilingChanged | ModeChanged | WindowNotifications | ConfigReloaded
-EVENTS = ["focus.changed", "window.added", "window.removed", "workspace.changed", "layout.changed", "tiling.changed", "mode.changed", "window.notifications", "config.reloaded"]
+Event = FocusChanged | WindowAdded | WindowRemoved | WorkspaceChanged | TilingChanged | ModeChanged | WindowNotifications | ConfigReloaded
+EVENTS = ["focus.changed", "window.added", "window.removed", "workspace.changed", "tiling.changed", "mode.changed", "window.notifications", "config.reloaded"]
 
 
 def default_path() -> str:
@@ -392,30 +381,33 @@ class CatWM:
             args["step"] = step
         self.call("movegroupwindow", args)
 
-    def layoutmsg(self, message: str) -> None:
-        """Send a message to the layout"""
+    def columnwidth(self, width: str) -> None:
+        """Change the width of the focused column"""
         args: dict[str, Any] = {}
-        args["message"] = message
-        self.call("layoutmsg", args)
+        args["width"] = width
+        self.call("columnwidth", args)
 
-    def splitratio(self, value: str) -> None:
-        """Change the size of the main pane"""
+    def windowheight(self, change: str) -> None:
+        """Change the height of the focused window in its column"""
         args: dict[str, Any] = {}
-        args["value"] = value
-        self.call("splitratio", args)
+        args["change"] = change
+        self.call("windowheight", args)
 
-    def cyclelayout(self, step: Step | None = None) -> None:
-        """Use the next or previous layout"""
+    def centercolumn(self) -> None:
+        """Scroll the focused column to the middle of the screen"""
         args: dict[str, Any] = {}
-        if step is not None:
-            args["step"] = step
-        self.call("cyclelayout", args)
+        self.call("centercolumn", args)
 
-    def layout(self, layout: Layout) -> None:
-        """Use a layout on the current screen"""
+    def consumeorexpel(self, direction: ConsumeorexpelDirection) -> None:
+        """Move the focused window into the column next to it, or out of its column"""
         args: dict[str, Any] = {}
-        args["layout"] = layout
-        self.call("layout", args)
+        args["direction"] = direction
+        self.call("consumeorexpel", args)
+
+    def togglecolumntabs(self) -> None:
+        """Show the windows of the focused column as tabs"""
+        args: dict[str, Any] = {}
+        self.call("togglecolumntabs", args)
 
     def toggletiling(self) -> None:
         """Turn tiling on or off"""

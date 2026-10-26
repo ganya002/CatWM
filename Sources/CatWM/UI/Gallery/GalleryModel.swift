@@ -12,7 +12,6 @@ final class GalleryModel: ObservableObject {
     @Published var ratio = 50.0
     @Published var speed = 0.64
     @Published var text = ""
-    @Published var layout: Layout? = .tall
     @Published var workspace: String? = "2"
     @Published var search = ""
     @Published var popover = false

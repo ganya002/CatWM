@@ -4,7 +4,7 @@ import MacKeysUI
 import SwiftUI
 
 enum KeyGroup: CaseIterable, Identifiable {
-    case navigation, spaces, layout, window, leave
+    case navigation, spaces, columns, window, leave
     var id: Self { self }
 
     init(dispatcher: String, arg: String) {
@@ -13,7 +13,7 @@ enum KeyGroup: CaseIterable, Identifiable {
         case "movewindow": self = argument.hasPrefix("mon:") ? .spaces : .navigation
         case "movefocus", "cyclenext", "swapnext": self = .navigation
         case "workspace", "movetoworkspace", "movetoworkspacesilent", "focusmonitor", "sethomespace": self = .spaces
-        case "cyclelayout", "splitratio", "layoutmsg", "layout": self = .layout
+        case "columnwidth", "windowheight", "centercolumn", "consumeorexpel", "togglecolumntabs": self = .columns
         case "submap" where argument == "reset": self = .leave
         default: self = .window
         }
@@ -23,7 +23,7 @@ enum KeyGroup: CaseIterable, Identifiable {
         switch self {
         case .navigation: "Navigation"
         case .spaces: "Workspaces & displays"
-        case .layout: "Layout"
+        case .columns: "Columns"
         case .window: "Window"
         case .leave: "Leave mode"
         }
@@ -33,7 +33,7 @@ enum KeyGroup: CaseIterable, Identifiable {
         switch self {
         case .navigation: Theme.accent
         case .spaces: Theme.accentInk
-        case .layout: Theme.inkMuted
+        case .columns: Theme.inkMuted
         case .window: Theme.ink
         case .leave: Theme.inkFaint
         }
@@ -43,7 +43,7 @@ enum KeyGroup: CaseIterable, Identifiable {
         switch self {
         case .navigation: Theme.fixed(\.accent, dark: dark)
         case .spaces: Theme.fixed(\.accentInk, dark: dark)
-        case .layout: Theme.fixed(\.inkMuted, dark: dark)
+        case .columns: Theme.fixed(\.inkMuted, dark: dark)
         case .window: Theme.fixed(\.ink, dark: dark)
         case .leave: Theme.fixed(\.inkFaint, dark: dark)
         }

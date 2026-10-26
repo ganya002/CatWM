@@ -2,7 +2,7 @@
 
 With `virtual-workspaces = true`, CatWM workspaces use normal macOS Desktops. CatWM controls switching, window transfers, and overview. It does not park hidden windows at a screen edge.
 
-- Each workspace has one native Desktop. Its name, layout, and last focused window persist between switches.
+- Each workspace has one native Desktop. Its name, its columns, and its last focused window persist between switches.
 - Existing normal Desktops become numbered workspaces. Names stay attached to Desktop IDs when macOS reorders them.
 - Each display has its own Desktops. By default, workspace numbers are unique across all displays. A workspace on another display opens on that display, and keyboard focus goes to that display.
 - With `workspaces-per-display = true`, workspace N is the Nth macOS Desktop on that display, counted from the left in Mission Control. `workspace 2` and `movetoworkspace 2` use the second Desktop of the current display. A number above the next free one also creates the Desktops before it, so Desktops never have gaps. When you leave an empty workspace that has no used workspace after it, CatWM removes its Desktop after the switch animation ends, without opening Mission Control. An empty workspace before a used one stays, so workspace numbers never change. If you reorder Desktops in Mission Control, the workspace numbers follow. Overview numbers its columns in the same order, and a column number cannot be typed. Changing this option renumbers all workspaces and clears their names.
@@ -43,8 +43,8 @@ Desktop creation and removal use the same bridge. CatWM checks the native Deskto
 ## Tiling behavior
 
 - Windows that cannot resize float automatically. A window larger than its slot stays on screen.
-- Hidden Desktop windows and minimized windows do not leave holes in the active layout.
-- CatWM prepares the destination layout before Desktop motion begins.
+- Hidden Desktop windows and minimized windows do not leave holes in the columns.
+- CatWM prepares the destination columns before Desktop motion begins.
 - CatWM verifies window frames after placement. Corrections stop after three attempts.
 - CatWM temporarily disables `AXEnhancedUserInterface` while moving windows.
 - CatWM's own windows float. The onboarding tour uses a separate practice process.

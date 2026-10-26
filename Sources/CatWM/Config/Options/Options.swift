@@ -11,14 +11,14 @@ enum Options {
             .documented("bool", "gaps between windows")
             .section("gaps")
             .note("Hyprland names also work: gaps_in = per-window gap, gaps_out = screen padding.")
-            .setting(.layout, "layout.gaps", "Gaps between windows", keywords: "margin spacing"),
+            .setting(.scrolling, "layout.gaps", "Gaps between windows", keywords: "margin spacing"),
         .points("window-margin-size", \.windowMarginSize, valid: 0...100)
             .documented("0–100 points", "`gaps_in` is accepted and doubled")
-            .setting(.layout, "layout.gapSize", "Gap size", keywords: "margin spacing points", range: 0...60,
+            .setting(.scrolling, "layout.gapSize", "Gap size", keywords: "margin spacing points", range: 0...60,
                      enabled: { $0.windowMargins }, width: 180),
         .bool("smart-window-margins", \.smartWindowMargins)
             .documented("bool", "no gaps with a single window").aliases("smart-gaps")
-            .setting(.layout, "layout.smartGaps", "Smart gaps", help: "No gaps when a window is alone",
+            .setting(.scrolling, "layout.smartGaps", "Smart gaps", help: "No gaps when a window is alone",
                      keywords: "single window no gaps", enabled: { $0.windowMargins }),
         .points("screen-padding-left", \.paddingLeft, valid: 0...500)
             .documented("0–500 points", "`screen-padding` or `gaps_out` sets all four sides"),
@@ -30,11 +30,11 @@ enum Options {
             .documented("0–500 points", ""),
         .bool("disable-padding-on-builtin-display", \.disablePaddingOnBuiltinDisplay)
             .documented("bool", "")
-            .setting(.layout, "layout.builtin", "No padding on the built-in display", keywords: "laptop macbook",
+            .setting(.scrolling, "layout.builtin", "No padding on the built-in display", keywords: "laptop macbook",
                      section: "Padding"),
         .bool("ignore-menu-bar", \.ignoreMenuBar)
             .documented("bool", "tile over the menu bar area")
-            .setting(.layout, "layout.menuBar", "Ignore menu bar when tiling",
+            .setting(.scrolling, "layout.menuBar", "Ignore menu bar when tiling",
                      help: "Use this if you hide the menu bar", keywords: "tile over hidden menubar", advanced: true,
                      section: "Gaps and padding"),
 
@@ -58,14 +58,10 @@ enum Options {
                      keywords: "mouse move", section: "Mouse"),
         .bool("mouse-resizes-windows", \.mouseResizesWindows)
             .documented("bool", "drag edges to resize")
-            .setting(.windows, "windows.resizeMain", "Drag window edges to resize the main pane",
-                     help: "Resize a tiled window with the mouse, and the main pane follows", keywords: "mouse ratio",
+            .setting(.windows, "windows.resizeMain", "Drag window edges to resize the column",
+                     help: "Drag the edge of a tiled window to change its width or height",
+                     keywords: "mouse column width height",
                      section: "Mouse"),
-        .bool("split-handle", \.splitHandle)
-            .documented("bool", "a bar on the main split: drag it to resize, click it to swap the sides")
-            .setting(.windows, "windows.splitHandle", "Split handle",
-                     help: "Drag the bar between the sides to resize. Click it to swap the sides",
-                     keywords: "divider bar grip mouse ratio swap", section: "Mouse"),
         .bool("auto-hide-tab-strip", \.autoHideTabStrip)
             .documented("bool", "hide each tab strip until the pointer reaches the top of its window")
             .setting(.windows, "windows.autoHideTabStrip", "Auto-hide tab strip",
@@ -76,30 +72,11 @@ enum Options {
             .setting(.windows, "windows.tabNotificationBadges", "Show notification badges on tabs",
                      help: "A tab shows the unread count of its app or window",
                      keywords: "tabs unread count badge notification dock red", section: "Tab groups"),
-        .bool("new-windows-to-main", \.newWindowsToMain)
-            .documented("bool", "").aliases("new_is_master")
-            .setting(.windows, "windows.newMain", "New windows become main", keywords: "open", advanced: true,
-                     section: "Windows"),
         .bool("float-small-windows", \.floatSmallWindows)
             .documented("bool", "")
             .setting(.windows, "windows.floatSmall", "Float small windows", help: "Dialogs and panels stay put",
-                     keywords: "dialogs panels", advanced: true, section: "Windows"),
-        .number("window-resize-step", \.windowResizeStep, convert: { $0 >= 1 ? $0 / 100 : $0 }, make: { CGFloat($0) },
-                text: { String(format: "%g", Double($0 >= 0.01 ? $0 * 100 : $0)) }, number: { Double($0) })
-            .documented("number", "percent (`5`) or fraction (`0.05`); 1 or more is read as percent")
-            .note("How far the main pane grows or shrinks each time, in percent (5) or as a fraction (0.05).")
-            .setting(.layout, "layout.resizeStep", "Main pane resize step", help: "How much the split moves each time",
-                     keywords: "ratio grow shrink percent", range: 1...25, scale: 100, section: "Main pane", unit: "%"),
-        .bool("enables-layout-hud", \.enablesLayoutHUD)
-            .documented("bool", "HUD when the layout changes")
-            .setting(.layout, "layout.hud", "Show layout name on change",
-                     help: "A short card in the middle of the screen", keywords: "hud overlay", section: "Feedback"),
-        .bool("enables-layout-hud-on-space-change", \.enablesLayoutHUDOnSpaceChange)
-            .documented("bool", "")
-            .setting(.layout, "layout.hudSpaces", "Also when switching spaces",
-                     keywords: "show layout name hud desktop", advanced: true, section: "Feedback",
-                     enabled: { $0.enablesLayoutHUD })
-    ] + FocusDim.features.flatMap(\.options) + workspaces + [
+                     keywords: "dialogs panels", advanced: true, section: "Windows")
+    ] + columns + FocusDim.features.flatMap(\.options) + workspaces + [
         .bool("keyboard-help", \.keyboardHelp)
             .documented("bool", "on-screen keyboard help in window mode")
             .section("keyboard help")
@@ -234,12 +211,7 @@ enum Options {
             let head = "# ---- \(title) "
             return ["", head + String(repeating: "-", count: max(3, 78 - head.count))]
         }
-        var out = Array(heading("layouts").dropFirst()) + [
-            "# " + Layout.allCases.prefix(10).map(\.rawValue).joined(separator: ", ") + ",",
-            "# " + Layout.allCases.dropFirst(10).map(\.rawValue).joined(separator: ", "),
-            "layouts = " + config.layouts.map(\.rawValue).joined(separator: ", ")
-        ]
-        out += heading("floating apps") + [
+        var out = Array(heading("floating apps").dropFirst()) + [
             "# Bundle IDs to float (wildcards like com.adobe.* work). Set floating-is-blacklist = false",
             "# to make this a list of the ONLY apps that get tiled.",
             "floating = " + config.floating.joined(separator: ", ")
@@ -254,6 +226,48 @@ enum Options {
 }
 
 extension Options {
+    static let columns: [ConfigOption] = [
+        .number("column-width", \.columnWidth, valid: 0.1...1, convert: { $0 > 1 ? $0 / 100 : $0 },
+                make: { CGFloat($0) }, text: percentText,
+                number: { Double($0) })
+            .documented("10–100 percent", "width of a new column, in percent of the screen")
+            .section("columns")
+            .note("Each window opens in a new column to the right of the focused column.")
+            .setting(.scrolling, "scrolling.columnWidth", "New column width",
+                     help: "The width of a new window, in percent of the screen",
+                     keywords: "column size width percent new window", range: 10...100, scale: 100,
+                     section: "Columns", unit: "%"),
+        ConfigOption("column-widths", \Config.columnWidths, read: readWidths,
+                     text: { $0.map(percentText).joined(separator: ", ") })
+            .documented("percent list", "the widths that `columnwidth cycle` steps through"),
+        .choice("column-scroll", \.columnScroll, noun: "column scroll")
+            .documented(nil, "`minimum` scrolls only as far as the focused column needs; "
+                            + "`center` puts the focused column in the middle")
+            .setting(.scrolling, "scrolling.scroll", "Scroll the focused column",
+                     help: "Scroll only as far as needed, or put the focused column in the middle",
+                     keywords: "center centre scroll focus column",
+                     section: "Columns"),
+        .bool("center-single-column", \.centerSingleColumn)
+            .documented("bool", "put a column that is alone in the middle of the screen")
+            .setting(.scrolling, "scrolling.centerSingle", "Center a window that is alone",
+                     keywords: "center centre single one window column",
+                     section: "Columns")
+    ]
+
+    private static func percentText(_ width: CGFloat) -> String {
+        String(format: "%g", (Double(width) * 100).rounded())
+    }
+
+    private static func readWidths(_ value: String, _ raw: String) -> ([CGFloat]?, String?) {
+        let parts = value.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+        let widths = parts.compactMap(Double.init).map { CGFloat($0 > 1 ? $0 / 100 : $0) }
+            .filter { Strip.widthRange.contains($0) }
+        guard !widths.isEmpty, widths.count == parts.count else {
+            return (nil, "`\(raw)` needs widths in percent, such as 33, 50, 67")
+        }
+        return (Array(Set(widths)).sorted(), nil)
+    }
+
     static let workspaces: [ConfigOption] = [
         .bool("virtual-workspaces", \.virtualWorkspaces)
             .documented("bool", "true: CatWM controls native Desktops. false: macOS controls switching. "

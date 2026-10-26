@@ -34,7 +34,7 @@ struct OStatus: View {
 
 #if DEBUG
 extension GalleryExamples {
-    static let status = GalleryExample(order: 13) { AnyView(GalleryContent(model: $0).status) }
+    static let status = GalleryExample(order: 12) { AnyView(GalleryContent(model: $0).status) }
 }
 
 extension GalleryContent {

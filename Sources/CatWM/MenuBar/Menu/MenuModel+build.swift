@@ -8,7 +8,6 @@ extension MenuModel {
         let axGranted = Permission.accessibility.isGranted
         let trusted = axGranted && manager.isStarted
         let state = manager.menuBarState()
-        let layout = state?.layout
         var out: [MenuItem] = []
 
         if !axGranted {
@@ -23,7 +22,6 @@ extension MenuModel {
                             keywords: "enable disable pause toggle",
                             keepOpen: true, action: { manager.toggleTiling() }))
 
-        out.append(layoutMenu(manager, keys: keys, trusted: trusted, layout: layout))
         if let workspaces = workspacesMenu(manager, keys: keys, trusted: trusted, state: state) {
             out.append(workspaces)
         }
@@ -55,29 +53,6 @@ extension MenuModel {
                                 action: { manager.showWorkspaceNumber("\(number)") }))
         }
         return out
-    }
-
-    private static func layoutMenu(_ manager: WindowManager, keys: ShortcutIndex, trusted: Bool,
-                                   layout: Layout?) -> MenuItem {
-        var layoutItems: [MenuItem] = [
-            MenuItem(id: "picker", kind: .layoutPicker),
-            MenuItem(id: "next-layout", label: "Next Layout", symbol: "chevron.right",
-                     shortcut: keys.keys(WindowActions.cyclelayout.name, "next"),
-                     enabled: trusted, hidden: true, keepOpen: true,
-                     action: { manager.dispatch(WindowActions.cyclelayout.name, "next") }),
-            MenuItem(id: "prev-layout", label: "Previous Layout", symbol: "chevron.left",
-                     shortcut: keys.keys(WindowActions.cyclelayout.name, "prev"),
-                     enabled: trusted, hidden: true, keepOpen: true,
-                     action: { manager.dispatch(WindowActions.cyclelayout.name, "prev") })
-        ]
-        layoutItems += Layout.allCases.map { option in
-            MenuItem(id: "layout-\(option.rawValue)", kind: .radio, label: option.title,
-                     shortcut: keys.keys(WindowActions.layout.name, option.rawValue), checked: option == layout,
-                     enabled: trusted, hidden: true, keywords: "layout \(option.blurb)",
-                     action: { manager.dispatch(WindowActions.layout.name, option.rawValue) })
-        }
-        return MenuItem(id: "layout", kind: .sub, label: "Layout", symbol: "square.grid.2x2", value: layout?.title,
-                        enabled: trusted, width: 276, children: layoutItems)
     }
 
     private static func bringWindowMenu(_ manager: WindowManager, trusted: Bool) -> MenuItem? {

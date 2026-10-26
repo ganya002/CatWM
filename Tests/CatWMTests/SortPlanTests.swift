@@ -15,8 +15,8 @@ private func item(
 private func plan(items: [SortItem]? = nil, lanes: [SortLane]? = nil, taken: Set<String> = []) -> SortPlan {
     let items = items ?? [item(1, "Safari"), item(2, "Mail"), item(3, "Xcode")]
     let lanes = lanes ?? [
-        SortLane(workspace: "1", name: "", layout: .tall, ids: [1, 2]),
-        SortLane(workspace: "2", name: "", layout: .bsp, ids: [3])
+        SortLane(workspace: "1", name: "", ids: [1, 2]),
+        SortLane(workspace: "2", name: "", ids: [3])
     ]
     return SortPlan(display: "D", items: Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) }), lanes: lanes,
                     existing: lanes.map(\.workspace), taken: taken, active: "1")
@@ -50,19 +50,18 @@ private func plan(items: [SortItem]? = nil, lanes: [SortLane]? = nil, taken: Set
         sortPlan.restore(3, avoiding: [])
         #expect(sortPlan.lanes.map(\.workspace) == ["1", "2"])
         #expect(sortPlan.lanes[1].ids == [3])
-        #expect(sortPlan.lanes[1].layout == .bsp)
         #expect(sortPlan.close.isEmpty)
     }
 
     @Test func theLastLaneCannotBeClosedOrRemoved() {
-        var sortPlan = plan(lanes: [SortLane(workspace: "1", name: "", layout: .tall, ids: [1, 2, 3])])
+        var sortPlan = plan(lanes: [SortLane(workspace: "1", name: "", ids: [1, 2, 3])])
         #expect(sortPlan.closeLane(at: 0) == nil)
     }
 
     @Test func closingAnEmptyLaneListsItAndReopensIt() {
         var sortPlan = plan(lanes: [
-            SortLane(workspace: "1", name: "", layout: .tall, ids: [1, 2, 3]),
-            SortLane(workspace: "2", name: "Mail", layout: .bsp, ids: [])
+            SortLane(workspace: "1", name: "", ids: [1, 2, 3]),
+            SortLane(workspace: "2", name: "Mail", ids: [])
         ])
         #expect(sortPlan.closeLane(at: 1) == 0)
         #expect(sortPlan.closedLanes.map(\.name) == ["Mail"])
@@ -92,10 +91,10 @@ private func plan(items: [SortItem]? = nil, lanes: [SortLane]? = nil, taken: Set
 
     @Test func addLaneTakesTheFirstFreeNumberInOrder() {
         var sortPlan = plan(lanes: [
-            SortLane(workspace: "1", name: "", layout: .tall, ids: [1]),
-            SortLane(workspace: "3", name: "", layout: .tall, ids: [2, 3])
+            SortLane(workspace: "1", name: "", ids: [1]),
+            SortLane(workspace: "3", name: "", ids: [2, 3])
         ])
-        let index = sortPlan.addLane(layout: .bsp, avoiding: [])
+        let index = sortPlan.addLane(avoiding: [])
         #expect(index == 1)
         #expect(sortPlan.lanes.map(\.workspace) == ["1", "2", "3"])
     }
@@ -119,15 +118,10 @@ private func plan(items: [SortItem]? = nil, lanes: [SortLane]? = nil, taken: Set
         ]
         let sortPlan = plan(
             items: items,
-            lanes: [SortLane(workspace: "1", name: "", layout: .tall, ids: [1, 2, 3, 4, 5])]
+            lanes: [SortLane(workspace: "1", name: "", ids: [1, 2, 3, 4, 5])]
         )
         #expect(sortPlan.duplicates == [1])
         #expect(sortPlan.duplicateText == "Close 1 duplicate Finder window")
-    }
-
-    @Test func layoutForCountFallsBackToTheFirstEnabledLayout() {
-        #expect(SortPlan.layout(forCount: 2, in: Layout.allCases) == .column)
-        #expect(SortPlan.layout(forCount: 2, in: [.wide, .tall]) == .wide)
     }
 
     @Test func appliedListsDroppedWorkspaces() {
@@ -145,8 +139,8 @@ private func plan(items: [SortItem]? = nil, lanes: [SortLane]? = nil, taken: Set
             display: "D",
             items: [1: SortItem(id: 1, title: "", app: "Safari", bundleID: nil, icon: nil, recency: 1)],
             lanes: [
-                SortLane(workspace: "1", name: "", layout: .tall, ids: [1]),
-                SortLane(workspace: "2", name: "", layout: .tall, ids: [])
+                SortLane(workspace: "1", name: "", ids: [1]),
+                SortLane(workspace: "2", name: "", ids: [])
             ],
             existing: ["1", "2"], taken: [], active: "1"
         )

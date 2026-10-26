@@ -29,49 +29,6 @@ extension WindowManager {
         refresh()
     }
 
-    func swapWithMain() {
-        guard let current = context(), let window = current.window,
-              current.ids.count > 1, current.ids.contains(window.id) else { return }
-        swapOrder(window.id, current.ids[0] == window.id ? current.ids[1] : current.ids[0])
-        refresh()
-        focus(window)
-    }
-
-    func focusMain() {
-        guard let current = context(), let id = current.ids.first, let window = windows[id] else { return }
-        focus(window)
-    }
-
-    func changeMainCount(_ delta: Int) {
-        guard let current = context() else { return }
-        current.state.mainCount = max(1, min(10, current.state.mainCount + delta))
-        corrections = [:]
-        refresh()
-    }
-
-    func adjustRatio(_ arg: String) {
-        guard let current = context() else { return }
-        let parts = arg.lowercased().split(separator: " ")
-        var ratio = current.state.ratio
-        if parts.first == "exact", parts.count > 1, let value = Double(parts[1]) {
-            ratio = CGFloat(value)
-        } else {
-            let delta = Double(arg.replacingOccurrences(of: "+", with: "")).map { CGFloat($0) }
-                ?? config.windowResizeStep
-            ratio += delta
-        }
-        ratio = min(0.9, max(0.1, ratio))
-        if let stubborn = windowRefusingRatio(ratio, from: current.state.ratio, ids: current.ids,
-                                              on: current.screen, current.state) {
-            warnTooSmall(stubborn, on: current.screen)
-            return
-        }
-        current.state.ratio = ratio
-        corrections = [:]
-        dividerState.ratioChange = (current.screen.uuid, Date() + (config.animate ? config.animationDuration : 0) + 0.6)
-        refresh()
-    }
-
     func toggleFloating() {
         guard let window = focusedWindow() else { return }
         window.userFloating = .chosen(!window.isFloating)
@@ -146,15 +103,6 @@ extension WindowManager {
             for screen in backend.screens() where state(for: screen).zoomed == id { state(for: screen).zoomed = nil }
         }
         scheduleRefresh(after: 0.8)
-    }
-
-    func cycleLayout(_ delta: Int) {
-        guard let current = context(), !config.layouts.isEmpty else { return }
-        let layouts = config.layouts
-        let layout = current.state.layout
-        let i = layouts.firstIndex(of: layout) ?? layout.mirrored.flatMap { layouts.firstIndex(of: $0) }
-            ?? (delta > 0 ? -1 : 0)
-        setLayout(layouts[((i + delta) % layouts.count + layouts.count) % layouts.count], on: current.screen)
     }
 
     func closeWindow(_ id: CGWindowID) -> Bool {

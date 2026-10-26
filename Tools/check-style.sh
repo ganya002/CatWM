@@ -252,7 +252,7 @@ def main():
             keys.update(re.findall(r'(?:\.(?:bool|points|number|choice)|ConfigOption)\(\s*"([^"]+)"', source))
             keys.update(re.findall(r'\.aliases\(\s*"([^"]+)"', source))
         template = open(os.path.join(ROOT, "Resources/AgentDocs/config.template.md"), encoding="utf-8").read()
-        for marker in ("{{options}}", "{{layouts}}", "{{default-layouts}}"):
+        for marker in ("{{options}}",):
             if template.count(marker) != 1:
                 failures.append(("Resources/AgentDocs/config.template.md", 1,
                                  "catalog: keep one generated " + marker + " placeholder", ""))

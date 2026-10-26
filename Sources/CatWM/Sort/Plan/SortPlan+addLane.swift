@@ -2,7 +2,7 @@ import AppKit
 
 extension SortPlan {
     @discardableResult
-    mutating func addLane(layout: Layout, named: String? = nil, avoiding other: Set<String>) -> Int? {
+    mutating func addLane(named: String? = nil, avoiding other: Set<String>) -> Int? {
         let free = available(avoiding: other)
         guard lanes.count < Self.maxLanes else { return nil }
         let name: String
@@ -15,7 +15,7 @@ extension SortPlan {
             return nil
         }
         let position = lanes.firstIndex { Self.order(name, $0.workspace) } ?? lanes.count
-        lanes.insert(SortLane(workspace: name, name: "", layout: layout, ids: []), at: position)
+        lanes.insert(SortLane(workspace: name, name: "", ids: []), at: position)
         return position
     }
 
@@ -23,8 +23,7 @@ extension SortPlan {
     mutating func closeLane(at i: Int) -> Int? {
         guard lanes.count > 1, lanes.indices.contains(i) else { return nil }
         let lane = lanes.remove(at: i)
-        closedLanes.append(SortClosedLane(workspace: lane.workspace, name: lane.name,
-                                          layout: lane.layout, ids: lane.ids))
+        closedLanes.append(SortClosedLane(workspace: lane.workspace, name: lane.name, ids: lane.ids))
         close += lane.ids
         return lane.ids.count
     }
@@ -56,7 +55,7 @@ extension SortPlan {
         close.removeAll { closed.ids.contains($0) }
         for id in closed.ids { origin[id] = nil }
         closedLanes.removeAll { $0.id == group }
-        lanes.insert(SortLane(workspace: workspace, name: closed.name, layout: closed.layout, ids: closed.ids),
+        lanes.insert(SortLane(workspace: workspace, name: closed.name, ids: closed.ids),
                      at: lanes.firstIndex { Self.order(workspace, $0.workspace) } ?? lanes.count)
     }
 
@@ -68,8 +67,6 @@ extension SortPlan {
             lanes[i].workspace = key(String(i + 1))
         }
         guard renamed.contains(where: { $0.key != $0.value }) else { return }
-        geometry = Dictionary(geometry.map { (renamed[$0.key] ?? $0.key, $0.value) },
-                              uniquingKeysWith: { first, _ in first })
         origin = origin.mapValues { (renamed[$0.workspace] ?? $0.workspace, $0.at) }
         active = active.map { renamed[$0] ?? $0 }
     }
@@ -103,12 +100,6 @@ extension SortPlan {
         return position
     }
 
-    mutating func cycleLayout(of lane: Int, by delta: Int, in layouts: [Layout]) {
-        guard lanes.indices.contains(lane), !layouts.isEmpty else { return }
-        let i = layouts.firstIndex(of: lanes[lane].layout) ?? -1
-        lanes[lane].layout = layouts[((i + delta) % layouts.count + layouts.count) % layouts.count]
-    }
-
     mutating func reorder(_ id: CGWindowID, by delta: Int) {
         if let i = close.firstIndex(of: id) {
             let j = i + delta
@@ -120,10 +111,5 @@ extension SortPlan {
             blocks.swapAt(i, i + delta)
             lanes[laneIndex].ids = blocks.flatMap(\.self)
         }
-    }
-
-    mutating func moveToTop(_ id: CGWindowID) {
-        guard let laneIndex = lane(of: id) else { return }
-        place(id, inLane: laneIndex, at: 0)
     }
 }

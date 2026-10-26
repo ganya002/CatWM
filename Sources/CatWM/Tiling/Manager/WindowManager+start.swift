@@ -38,7 +38,10 @@ extension WindowManager {
         startedAt = Date()
         animator.onMinimumSize = { [weak self] id, size in self?.learnMinimum(id, size) }
         animator.onTopRefused = { [weak self] target, actual in self?.learnMenuBar(target, actual) }
-        animator.onLanded = { [weak self] in self?.cursorRefresh.soon() }
+        animator.onLanded = { [weak self] id in
+            self?.cursorRefresh.soon()
+            if self?.stripExits.contains(id) == true { self?.scheduleRefresh(after: 0) }
+        }
     }
 
     func watchClaims() {
@@ -131,10 +134,6 @@ extension WindowManager {
         ) { [weak self] _ in
             guard let self else { return }
             scheduleRefresh(after: 0.15)
-            if !config.virtualWorkspaces, config.enablesLayoutHUDOnSpaceChange, config.enablesLayoutHUD,
-               let screen = currentScreen() {
-                surface.showHUD(state(for: screen).layout.title, layout: state(for: screen).layout, on: screen.nsScreen)
-            }
         })
         notificationObservers.append(NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main

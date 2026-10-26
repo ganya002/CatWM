@@ -41,10 +41,6 @@ struct SortAddLane: View {
             .disabled(full)
             .onHover { hover.isOn = $0 }
             .accessibilityLabel("Add workspace \(next.map { WorkspaceKey.number($0) } ?? "")")
-            SortLayoutPill(layout: model.nextLayout,
-                           next: { model.cycleNextLayout() },
-                           previous: { model.cycleNextLayout(by: -1) })
-                .padding(.leading, 4)
             Color.clear.frame(height: CGFloat(rows) * SortMetrics.rowHeight)
         }
         .padding(.vertical, 8).padding(.horizontal, 4)

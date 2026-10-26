@@ -83,6 +83,8 @@ final class WindowManager {
     var focusSink: NSWindow?
     var visible: Set<CGWindowID> = []
     var targets: [CGWindowID: CGRect] = [:]
+    var stripFrames: [CGWindowID: CGRect] = [:]
+    var stripExits: Set<CGWindowID> = []
     var frontmostPID: () -> pid_t?
     var frameReads: [CGWindowID: UUID] = [:]
     var dirtyFrames: Set<CGWindowID> = []
@@ -100,7 +102,6 @@ final class WindowManager {
         func height(on visible: CGRect) -> CGFloat? { visible == self.visible ? height : nil }
     }
     var menuBarHeights: [String: MenuBarFloor] = [:]
-    var dividerState = DividerState()
     var refreshDeadline = DispatchTime.distantFuture
     var isStarted = false
     var ignoreMouseUntil = Date.distantPast
@@ -144,11 +145,6 @@ final class WindowManager {
         guard input.pointerAndFocus else { return }
         warp(point)
         cursorRefresh.soon()
-    }
-
-    var currentLayoutTitle: String {
-        guard let screen = currentScreen() else { return "" }
-        return state(for: screen).layout.title
     }
 
     lazy var grabHints: [String: (fromLeft: CGPoint, fromRight: CGPoint)] = {

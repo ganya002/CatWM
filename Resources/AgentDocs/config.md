@@ -13,7 +13,6 @@ The Settings window writes options in this order. Aliases (after `/`) are read b
 | Option | Value | Default | Notes |
 |---|---|---|---|
 | `$mod` | `SUPER` / `ALT` / `CTRL` / `SHIFT` | `ALT` | variable used in binds |
-| `layouts` | comma list | `bsp, wide, floating, fullscreen` | the cycle; each layout once. Names below |
 | `floating` | comma list of bundle IDs | empty (first run: System Settings, Calculator) | apps that float (or the only ones that tile, see next). Wildcards such as `com.adobe.*` work |
 | `floating-is-blacklist` | bool | `true` | true: listed apps float. false: only listed apps are tiled |
 | `window-margins` | bool | `true` | gaps between windows |
@@ -30,14 +29,13 @@ The Settings window writes options in this order. Aliases (after `/`) are read b
 | `focus-follows-mouse-in-mode-only` | bool | `true` | with `focus-follows-mouse` on, hovering focuses a window only while window mode is on |
 | `mouse-swaps-windows` | bool | `true` | drag a tile onto another to swap |
 | `mouse-resizes-windows` | bool | `true` | drag edges to resize |
-| `split-handle` | bool | `true` | a bar on the main split: drag it to resize, click it to swap the sides |
 | `auto-hide-tab-strip` | bool | `false` | hide each tab strip until the pointer reaches the top of its window |
 | `tab-notification-badges` | bool | `true` | show a red badge with the unread count on each tab |
-| `new-windows-to-main` / `new_is_master` | bool | `false` | |
 | `float-small-windows` | bool | `true` | |
-| `window-resize-step` | number | `5` | percent (`5`) or fraction (`0.05`); 1 or more is read as percent |
-| `enables-layout-hud` | bool | `false` | HUD when the layout changes |
-| `enables-layout-hud-on-space-change` | bool | `true` | |
+| `column-width` | 10–100 percent | `50` | width of a new column, in percent of the screen |
+| `column-widths` | percent list | `33, 50, 67` | the widths that `columnwidth cycle` steps through |
+| `column-scroll` | `minimum` `center` | `minimum` | `minimum` scrolls only as far as the focused column needs; `center` puts the focused column in the middle |
+| `center-single-column` | bool | `true` | put a column that is alone in the middle of the screen |
 | `dim-other-windows` / `dim_inactive` | bool | `false` | darken every window but the focused one |
 | `dim-strength` | 0–1 (or 0–100) | `0.5` | how dark; a value above 1 is read as percent |
 | `blur-other-windows` | bool | `false` | blur every window but the focused one; combines with dimming |
@@ -70,15 +68,15 @@ The animation options (`animate`, `animation-duration`, `animation-curve`, `anim
 
 `bindm` is accepted and ignored (dragging already moves and resizes tiles).
 
-## Layout names
+## Columns
 
-`tall`, `tall-right`, `wide`, `middle-wide`, `fullscreen`, `column`, `row`, `floating`, `bsp`, `3column-left`, `3column-middle`, `3column-right`, `two-pane`, `two-pane-right`, `widescreen-tall`, `widescreen-tall-right`.
+Each workspace is a strip of columns that scrolls left and right. A new window opens in a new column to the right of the focused column. A column holds one or more windows, one above the other. `columnwidth` changes the width of the focused column, and `consumeorexpel` moves a window into or out of a column.
 
 ## Minimal example
 
 ```
 $mod = ALT
-layouts = tall, bsp, fullscreen
+column-width = 50
 window-margin-size = 10
 screen-padding = 10
 animate = true
@@ -94,13 +92,13 @@ bind = $mod, return, exec, open -na Terminal
 
 ## Settings window and saved configs
 
-Menu bar → **Settings…** (⌘,). Panes: General, Layout, Windows, Motion, Templates, Shortcuts. Changes save and apply automatically. **Configs** (menu bar submenu / Settings) stores named keyboard, animation, and full presets in `~/.config/catwm/configs.json`; switching one rewrites the matching part of `catwm.conf`. Presets can be imported and exported.
+Menu bar → **Settings…** (⌘,). Panes: General, Scrolling, Windows, Motion, Templates, Shortcuts. Changes save and apply automatically. **Configs** (menu bar submenu / Settings) stores named keyboard, animation, and full presets in `~/.config/catwm/configs.json`; switching one rewrites the matching part of `catwm.conf`. Presets can be imported and exported.
 
 When editing by hand while the app runs, make the edit then run `catwm reload`. If the user also has Settings open, tell them: UI edits can overwrite hand edits.
 
 ## Workspace templates
 
-Settings → **Templates** lists saved workspaces with large screenshot previews. Click a screenshot to enlarge it. Open, rename, update, or delete a template here. A template stores app identities, document addresses when available, window frames, display sizes, layouts, main-pane ratios and counts, window order, tiling status, and floating, minimized, zoomed, or native full screen states. Templates are stored in `~/.config/catwm/templates.json`, separately from configs. Screenshots are stored in that file. Screen recording access is required to capture them. Saving still works without that access. Update an older template to add a screenshot.
+Settings → **Templates** lists saved workspaces with large screenshot previews. Click a screenshot to enlarge it. Open, rename, update, or delete a template here. A template stores app identities, document addresses when available, window frames, display sizes, window order, tiling status, and floating, minimized, zoomed, or native full screen states. Templates are stored in `~/.config/catwm/templates.json`, separately from configs. Screenshots are stored in that file. Screen recording access is required to capture them. Saving still works without that access. Update an older template to add a screenshot.
 
 With `template-app-scripting = true` (Settings → Templates → **Save tabs and folders**), a template also saves:
 

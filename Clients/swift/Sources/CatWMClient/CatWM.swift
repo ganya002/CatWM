@@ -16,23 +16,9 @@ public enum Step: String, CaseIterable, Sendable {
     case prev = "prev"
 }
 
-public enum Layout: String, CaseIterable, Sendable {
-    case tall = "tall"
-    case tallRight = "tall-right"
-    case wide = "wide"
-    case middleWide = "middle-wide"
-    case fullscreen = "fullscreen"
-    case column = "column"
-    case row = "row"
-    case floating = "floating"
-    case bsp = "bsp"
-    case _3columnLeft = "3column-left"
-    case _3columnMiddle = "3column-middle"
-    case _3columnRight = "3column-right"
-    case twoPane = "two-pane"
-    case twoPaneRight = "two-pane-right"
-    case widescreenTall = "widescreen-tall"
-    case widescreenTallRight = "widescreen-tall-right"
+public enum ConsumeorexpelDirection: String, CaseIterable, Sendable {
+    case left = "left"
+    case right = "right"
 }
 
 public struct Rect: Codable, Equatable, Sendable {
@@ -98,9 +84,8 @@ public struct ScreensItem: Codable, Equatable, Sendable {
     public let name: String
     public let frame: Rect
     public let usable: Rect
-    public let layout: String
-    public let ratio: Double
-    public let mainCount: Int
+    public let columns: [[String: JSONValue]]
+    public let scroll: Double
     public let workspace: String
     public let focused: Bool
 }
@@ -135,11 +120,6 @@ public struct WorkspaceChangedData: Codable, Equatable, Sendable {
     public let workspace: String
 }
 
-public struct LayoutChangedData: Codable, Equatable, Sendable {
-    public let screen: String
-    public let layout: String
-}
-
 public struct TilingChangedData: Codable, Equatable, Sendable {
     public let enabled: Bool
 }
@@ -165,7 +145,6 @@ public enum Event: Sendable {
     case windowAdded(WindowAddedData)
     case windowRemoved(WindowRemovedData)
     case workspaceChanged(WorkspaceChangedData)
-    case layoutChanged(LayoutChangedData)
     case tilingChanged(TilingChangedData)
     case modeChanged(ModeChangedData)
     case windowNotifications(WindowNotificationsData)
@@ -178,7 +157,6 @@ public enum Event: Sendable {
         case "window.added": return .windowAdded(try JSONDecoder().decode(WindowAddedData.self, from: data))
         case "window.removed": return .windowRemoved(try JSONDecoder().decode(WindowRemovedData.self, from: data))
         case "workspace.changed": return .workspaceChanged(try JSONDecoder().decode(WorkspaceChangedData.self, from: data))
-        case "layout.changed": return .layoutChanged(try JSONDecoder().decode(LayoutChangedData.self, from: data))
         case "tiling.changed": return .tilingChanged(try JSONDecoder().decode(TilingChangedData.self, from: data))
         case "mode.changed": return .modeChanged(try JSONDecoder().decode(ModeChangedData.self, from: data))
         case "window.notifications": return .windowNotifications(try JSONDecoder().decode(WindowNotificationsData.self, from: data))
@@ -480,32 +458,37 @@ public final class CatWM: @unchecked Sendable {
         _ = try call("movegroupwindow", args)
     }
 
-    /// Send a message to the layout
-    public func layoutmsg(message: String) throws {
+    /// Change the width of the focused column
+    public func columnwidth(width: String) throws {
         var args: [String: Any] = [:]
-        args["message"] = message
-        _ = try call("layoutmsg", args)
+        args["width"] = width
+        _ = try call("columnwidth", args)
     }
 
-    /// Change the size of the main pane
-    public func splitratio(value: String) throws {
+    /// Change the height of the focused window in its column
+    public func windowheight(change: String) throws {
         var args: [String: Any] = [:]
-        args["value"] = value
-        _ = try call("splitratio", args)
+        args["change"] = change
+        _ = try call("windowheight", args)
     }
 
-    /// Use the next or previous layout
-    public func cyclelayout(step: Step? = nil) throws {
-        var args: [String: Any] = [:]
-        if let value = step { args["step"] = value.rawValue }
-        _ = try call("cyclelayout", args)
+    /// Scroll the focused column to the middle of the screen
+    public func centercolumn() throws {
+        let args: [String: Any] = [:]
+        _ = try call("centercolumn", args)
     }
 
-    /// Use a layout on the current screen
-    public func layout(layout: Layout) throws {
+    /// Move the focused window into the column next to it, or out of its column
+    public func consumeorexpel(direction: ConsumeorexpelDirection) throws {
         var args: [String: Any] = [:]
-        args["layout"] = layout.rawValue
-        _ = try call("layout", args)
+        args["direction"] = direction.rawValue
+        _ = try call("consumeorexpel", args)
+    }
+
+    /// Show the windows of the focused column as tabs
+    public func togglecolumntabs() throws {
+        let args: [String: Any] = [:]
+        _ = try call("togglecolumntabs", args)
     }
 
     /// Turn tiling on or off

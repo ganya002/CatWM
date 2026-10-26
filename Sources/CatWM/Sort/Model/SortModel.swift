@@ -15,7 +15,6 @@ final class SortModel: ObservableObject {
     @Published var hover: CGWindowID?
     @Published var selected: CGWindowID?
     @Published var notice: SortNotice?
-    @Published var nextLayout: Layout = .tall
     @Published var drag: SortDrag?
     @Published var columnDrag: SortColumnDrag?
     @Published var over: SortZone?
@@ -27,7 +26,6 @@ final class SortModel: ObservableObject {
     @Published var ghostShift = CGSize.zero
     var motion = PanelMotion.current
 
-    var layouts: [Layout] = [.tall]
     var maxRows = 7
     var zones: [SortZone: CGRect] = [:]
     var finish: (String?) -> Void = { _ in }
@@ -55,8 +53,6 @@ final class SortModel: ObservableObject {
 
 struct SortColumnDrag {
     let lane: SortLane
-    let ratio: CGFloat
-    let mainCount: Int
     var location: CGPoint
     let grab: CGSize
 }

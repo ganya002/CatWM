@@ -24,7 +24,7 @@ struct SortFullscreenLane: View {
             .padding(.horizontal, 4)
             .contentShape(Rectangle())
             .gesture(carry)
-            SortThumb(layout: .fullscreen, ids: [item.id], lit: lit ? item.id : nil)
+            SortThumb(ids: [item.id], lit: lit ? item.id : nil)
                 .padding(.horizontal, 4)
                 .contentShape(Rectangle())
                 .onTapGesture { model.openFullscreen(item.id) }

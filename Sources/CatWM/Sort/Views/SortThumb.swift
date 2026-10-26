@@ -2,16 +2,13 @@ import AppKit
 import SwiftUI
 
 struct SortThumb: View {
-    let layout: Layout
     let ids: [CGWindowID]
     let lit: CGWindowID?
-    var ratio: CGFloat = 0.5
-    var mainCount = 1
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         GeometryReader { geo in
-            let frames = Self.frames(layout, ids.count, geo.size, ratio: ratio, mainCount: mainCount)
+            let frames = Self.frames(ids.count, geo.size)
             ZStack(alignment: .topLeading) {
                 RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous).fill(Theme.well)
                 ForEach(Array(ids.enumerated()), id: \.element) { j, id in
@@ -26,7 +23,6 @@ struct SortThumb: View {
         }
         .aspectRatio(16 / 10, contentMode: .fit)
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous))
-        .transaction(value: layout) { if let motion { $0.animation = motion } }
         .transaction(value: ids) { if let motion { $0.animation = motion } }
         .accessibilityHidden(true)
     }
@@ -36,25 +32,14 @@ struct SortThumb: View {
         return reduceMotion ? Motion.fade : animation
     }
 
-    static func frames(_ layout: Layout, _ count: Int, _ size: CGSize, ratio: CGFloat, mainCount: Int) -> [CGRect] {
+    static func frames(_ count: Int, _ size: CGSize) -> [CGRect] {
         guard count > 0 else { return [] }
         let scale = size.width / 140
         let inset = 4 * scale, gap = 3 * scale
         let rect = CGRect(x: inset, y: inset, width: size.width - 2 * inset, height: size.height - 2 * inset)
-        if layout == .fullscreen {
-            let step = 4 * scale, shrink = CGFloat(min(count - 1, 6)) * step
-            return (0..<count).map {
-                CGRect(x: rect.minX + CGFloat(min($0, 6)) * step, y: rect.minY + CGFloat(min($0, 6)) * step,
-                       width: rect.width - shrink, height: rect.height - shrink)
-            }
-        }
-        if let frames = layout.frames(count: count, in: rect.insetBy(dx: -gap / 2, dy: -gap / 2),
-                                      ratio: ratio, mainCount: mainCount) {
-            return frames.map { $0.insetBy(dx: gap / 2, dy: gap / 2) }
-        }
+        let width = (rect.width + gap) / CGFloat(min(count, 3))
         return (0..<count).map {
-            CGRect(x: rect.minX + CGFloat(min($0, 6)) * 6 * scale, y: rect.minY + CGFloat(min($0, 6)) * 6 * scale,
-                   width: rect.width * 0.6, height: rect.height * 0.6)
+            CGRect(x: rect.minX + CGFloat($0) * width, y: rect.minY, width: width - gap, height: rect.height)
         }
     }
 }

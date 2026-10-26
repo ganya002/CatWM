@@ -7,17 +7,17 @@ extension Steps {
         let growCaps = KeyWords.caps(grow, long: false)
         return PlannedStep { coach in
             var growing = true
-            return Step(title: "Resize the main pane",
+            return Step(title: "Make the column wider",
                  text: "",
                  target: .window, caps: shrinkCaps + growCaps,
                  tokens: shrinkCaps.count == 1 && growCaps.count == 1 ? ["shrink", "grow"] : [],
                  needsMode: true, count: 2,
                  accept: { event in
                      guard case .command(let dispatcher, let argument, _) = event,
-                           let change = KeyWords.ratioDirection(dispatcher, argument) else { return nil }
+                           let change = KeyWords.widthDirection(dispatcher, argument) else { return nil }
                      return change == .grow ? "grow" : "shrink"
                  }, simulate: {
-                     coach.windowManager.dispatch(WindowActions.splitratio.name, growing ? "+0.1" : "-0.1")
+                     coach.windowManager.dispatch(WindowActions.columnwidth.name, growing ? "+10" : "-10")
                      growing.toggle()
                  })
         }
@@ -65,19 +65,17 @@ extension Steps {
         }
     }
 
-    static func layouts(_ coach: Coach) -> PlannedStep? {
-        guard let next = coach.book.find([WindowActions.cyclelayout], "next") else { return nil }
-        let prev = coach.book.find([WindowActions.cyclelayout], "prev")
-        let keys = [next, prev].compactMap(\.self).map { KeyWords.caps($0, long: false).joined() }
+    static func widths(_ coach: Coach) -> PlannedStep? {
+        guard let next = coach.book.find([WindowActions.columnwidth], "cycle") else { return nil }
         return PlannedStep { coach in
-            Step(title: "Change layout",
-                 text: "",
-                 target: .window, caps: keys, tokens: keys.count > 1 ? ["next", "prev"] : [],
-                 needsMode: true, count: 2,
+            Step(title: "Change the column width",
+                 text: "Each press goes to the next width.",
+                 target: .window, caps: KeyWords.caps(next, long: false), needsMode: true, count: 2,
                  accept: { event in
-                     guard case .command(WindowActions.cyclelayout.name, let argument, _) = event else { return nil }
-                     return argument.lowercased().hasPrefix("prev") ? "prev" : "next"
-                 }, simulate: { coach.windowManager.dispatch(WindowActions.cyclelayout.name, "next") })
+                     guard case .command(WindowActions.columnwidth.name, let argument, _) = event,
+                           argument.lowercased() == "cycle" else { return nil }
+                     return ""
+                 }, simulate: { coach.windowManager.dispatch(WindowActions.columnwidth.name, "cycle") })
         }
     }
 

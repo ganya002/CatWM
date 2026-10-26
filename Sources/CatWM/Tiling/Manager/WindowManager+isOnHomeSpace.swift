@@ -16,14 +16,12 @@ extension WindowManager {
 
     func isParked(_ frame: CGRect, _ screens: [Screen]) -> Bool {
         guard !frame.isNull, frame.width > 0, frame.height > 0 else { return false }
-        let onScreen = screens.reduce(CGFloat(0)) { sum, screen in
-            let overlap = screen.frame.intersection(frame)
-            return sum + (overlap.isNull ? 0 : overlap.width * overlap.height)
-        }
-        return onScreen < 400
+        let overlaps = screens.map { $0.frame.intersection(frame) }.filter { !$0.isNull }
+        let onScreen = overlaps.reduce(CGFloat(0)) { $0 + $1.width * $1.height }
+        return onScreen < 400 || overlaps.allSatisfy { $0.width <= 2 || $0.height <= 2 }
     }
 
-    private func parkingSpot(size: CGSize, on screen: Screen, _ screens: [Screen]) -> CGPoint {
+    func parkingSpot(size: CGSize, on screen: Screen, _ screens: [Screen]) -> CGPoint {
         let right = CGPoint(x: screen.frame.maxX - 1, y: screen.frame.maxY - 1)
         let left = CGPoint(x: screen.frame.minX - size.width + 1, y: screen.frame.maxY - 1)
         for origin in [right, left] {
@@ -67,9 +65,7 @@ extension WindowManager {
 
     func floatsFreely(_ id: CGWindowID) -> Bool {
         guard let window = windows[id] else { return false }
-        if window.isFloating || !tilingEnabled { return true }
-        guard let workspace = workspaceOf[id] else { return false }
-        return (states[workspace]?.layout ?? config.layouts.first) == .floating
+        return window.isFloating || !tilingEnabled
     }
 
     func unpark(floating id: CGWindowID, screens: [Screen]) {

@@ -19,11 +19,11 @@ follow_mouse = 0
 focus-follows-mouse-in-mode-only = false
 mouse-swaps-windows = false
 mouse-resizes-windows = false
-new_is_master = on
 float-small-windows = false
-window-resize-step = 0.005
-enables-layout-hud = true
-enables-layout-hud-on-space-change = false
+column-width = 40
+column-widths = 25, 50, 75
+column-scroll = center
+center-single-column = false
 dim_inactive = true
 dim-strength = 45
 blur-other-windows = true
@@ -66,7 +66,7 @@ private func values(_ config: Config) -> [String: String] {
         let again = Config.parse(saved)
         #expect(again.errors.isEmpty, "\(again.errors)")
         #expect(values(again) == values(first))
-        #expect(again.layouts == first.layouts && again.floating == first.floating)
+        #expect(again.columnWidths == first.columnWidths && again.floating == first.floating)
         #expect(!saved.contains("doesn't recognise"))
     }
 }
