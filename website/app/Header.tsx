@@ -41,6 +41,11 @@ export function Header({ reveal = false }: { reveal?: boolean }) {
               Features
             </NavLink>
           </li>
+          <li>
+            <Link to="/features#agents" className="site__link">
+              For agents
+            </Link>
+          </li>
         </ul>
       </nav>
     </header>
