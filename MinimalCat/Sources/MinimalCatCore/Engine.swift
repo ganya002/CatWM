@@ -135,7 +135,16 @@ public final class Engine {
         case .empty: return .notice("Nothing to \(verb == "Undid" ? "undo" : "redo")", visible: true)
         case .otherDisplays: return .notice("That change was on other monitors", visible: true)
         case .step(let step):
-            apply(step.moves, on: system.displays())
+            let present = Set(windows().map(\.id))
+            let moves = step.moves.filter { present.contains($0.window) }
+            guard !moves.isEmpty else { return .notice("That window is not on screen", visible: true) }
+            let displays = system.displays()
+            for move in moves {
+                let big = Geometry.display(containing: move.end, in: displays)
+                    .map { Geometry.place(of: move.end, on: $0) == .big } ?? false
+                beforeBig[move.window] = big ? move.start : nil
+            }
+            apply(moves, on: displays)
             return .notice("\(verb) \(step.label)", visible: true)
         }
     }

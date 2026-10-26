@@ -41,6 +41,26 @@ struct EngineTests {
         #expect(system.frame(1) == start)
     }
 
+    @Test func bigWorksAgainAfterUndoingPutBack() {
+        let system = FakeSystem(windows: [FakeSystem.window(1, "Safari", start)])
+        let engine = Engine(system: system)
+        _ = engine.perform(.place(.big))
+        _ = engine.perform(.place(.big))
+        _ = engine.perform(.undo)
+        #expect(system.frame(1) == Geometry.frame(for: .big, on: FakeSystem.laptop))
+        _ = engine.perform(.place(.big))
+        #expect(system.frame(1) == start)
+    }
+
+    @Test func undoOfAWindowThatIsGoneSaysSo() {
+        let system = FakeSystem(windows: [FakeSystem.window(1, "Safari", start), FakeSystem.window(2, "Mail", start)])
+        let engine = Engine(system: system)
+        _ = engine.perform(.place(.left))
+        system.list.removeFirst()
+        #expect(engine.perform(.undo) == .notice("That window is not on screen", visible: true))
+        #expect(engine.history.undoSteps.isEmpty)
+    }
+
     @Test func undoAndRedoWalkTheSteps() {
         let system = FakeSystem(windows: [FakeSystem.window(1, "Safari", start)])
         let engine = Engine(system: system)

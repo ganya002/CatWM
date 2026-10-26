@@ -122,7 +122,7 @@ final class Check {
         report("tap goes back to the last window", wait { system.focusedWindow() == second.id } != nil,
                "focused \(String(describing: system.focusedWindow()))")
         engine.focused(second.id)
-        if let number = engine.slots.numbers[first.id] {
+        if let number = engine.slots.number(of: first.id) {
             _ = engine.perform(.jump(number))
             report("jump to window \(number)", wait { system.focusedWindow() == first.id } != nil,
                    "focused \(String(describing: system.focusedWindow()))")

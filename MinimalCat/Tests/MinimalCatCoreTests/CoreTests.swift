@@ -147,3 +147,29 @@ struct FindTests {
         #expect(Find.rank("", windows).map(\.id.raw) == [1, 2, 3, 4])
     }
 }
+
+struct SlotsTests {
+    func windows(_ ids: [UInt32]) -> [WindowInfo] {
+        ids.map { WindowInfo(id: WindowID($0), pid: 1, app: "App", bundleID: nil, title: "", frame: .zero) }
+    }
+
+    @Test func numbersSurviveAVisitToAnotherDesktop() {
+        var slots = Slots()
+        slots.update(windows([1, 2, 3]))
+        slots.update(windows([4]))
+        #expect(slots.numbers[WindowID(4)] == 1)
+        slots.update(windows([3, 1, 2]))
+        #expect(slots.numbers[WindowID(1)] == 1)
+        #expect(slots.numbers[WindowID(3)] == 3)
+        #expect(slots.window(1) == WindowID(1))
+    }
+
+    @Test func theFrontWindowKeepsANumberTwoWindowsClaim() {
+        var slots = Slots()
+        slots.update(windows([1]))
+        slots.update(windows([2]))
+        slots.update(windows([2, 1]))
+        #expect(slots.numbers[WindowID(2)] == 1)
+        #expect(slots.numbers[WindowID(1)] == 2)
+    }
+}
