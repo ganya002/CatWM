@@ -152,10 +152,12 @@ final class DesktopMenuBarCover {
         if spare == nil || spare === panel { spare = panel } else { panel.close() }
     }
 
-    @MainActor private static func makePanel(frame: CGRect) -> CatWMPanel {
+    @MainActor static func makePanel(
+        frame: CGRect, level: NSWindow.Level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.statusWindow)) + 1)
+    ) -> CatWMPanel {
         let panel = CatWMPanel(role: .fullscreenFX, frame: frame)
         panel.collectionBehavior = [.fullScreenAuxiliary, .ignoresCycle]
-        panel.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.statusWindow)) + 1)
+        panel.level = level
         let view = NSImageView(frame: CGRect(origin: .zero, size: frame.size))
         view.imageScaling = .scaleAxesIndependently
         panel.contentView = view
