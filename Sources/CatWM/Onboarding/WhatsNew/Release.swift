@@ -17,6 +17,10 @@ struct Release {
 extension Release {
     static let all = [
         Release(version: "0.4", features: [
+            Feature(id: "0.4.defaultbinds", symbol: "keyboard",
+                    title: "More keys out of the box",
+                    text: "Control Option H J K L moves focus from any app. Window mode has more keys too.",
+                    tour: { Steps.focusGlobal($0).map { [$0] } ?? [] }),
             Feature(id: "0.4.splitbar", symbol: "rectangle.split.2x1",
                     title: "Drag the split bar",
                     text: "Drag the split bar to resize the main pane. Click it to swap the sides."),

@@ -54,8 +54,8 @@ import Testing
         if activeAppHidden { manager.observedApps.removeAll { $0.pid == second.pid } }
         let slots = try #require(manager.layoutTargets([second.id], manager.state(workspace: "test"), on: screen))
         let tile = try #require(slots[second.id])
-        let frame = autoHide ? tile : CGRect(x: tile.minX, y: tile.minY + TabStrip.height,
-                                             width: tile.width, height: tile.height - TabStrip.height)
+        let frame = autoHide ? tile : CGRect(x: tile.minX, y: tile.minY + TabGeometry.stripHeight,
+                                             width: tile.width, height: tile.height - TabGeometry.stripHeight)
         first.remember(frame)
         second.remember(frame)
         var writers = 0
