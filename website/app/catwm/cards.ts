@@ -23,7 +23,7 @@ function slots(layout: LayoutName, n: number, ratio = 0.55, desktop = 0): Rect[]
   }));
 }
 
-function tiled(ids: string[], layout: LayoutName, focused: string, desktop = 0): Tile[] {
+export function tiled(ids: string[], layout: LayoutName, focused: string, desktop = 0): Tile[] {
   const fr = slots(layout, ids.length, 0.55, desktop);
   return ids.map((id, i) => ({ id, rect: fr[i], focused: id === focused }));
 }
