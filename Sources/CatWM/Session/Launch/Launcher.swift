@@ -59,8 +59,7 @@ enum Launcher {
     static func resolve(_ text: String) -> LaunchTarget? {
         let trimmed = text.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return nil }
-        if trimmed.contains("://") {
-            guard let url = URL(string: trimmed), url.scheme != nil else { return nil }
+        if let url = URL(string: trimmed), url.scheme != nil {
             return .open(url)
         }
         let expanded = trimmed == "~" || trimmed.hasPrefix("~/") ? NSHomeDirectory() + trimmed.dropFirst() : trimmed

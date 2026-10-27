@@ -28,6 +28,11 @@ import Testing
 }
 
 @Suite struct LauncherResolveTests {
+    @Test(arguments: ["mailto:hello@example.com", "tel:+4712345678", "obsidian:open?vault=Work&file=Today"])
+    func resolvesURLsWithoutDoubleSlashes(_ text: String) throws {
+        #expect(Launcher.resolve(text) == .open(try #require(URL(string: text))))
+    }
+
     @Test func resolvesURLsFilesAndApps() throws {
         #expect(Launcher.resolve("https://example.com") == .open(try #require(URL(string: "https://example.com"))))
         #expect(Launcher.resolve("/tmp") == .open(URL(fileURLWithPath: "/tmp")))

@@ -397,6 +397,8 @@ A window that a script opened can show another URL while it loads. A saved windo
 
 `LaunchRequest` reads the options from the end of the argument. A word with `=` that is not `workspace`, `display` or `frame` stays in the target, so a URL with a query works. The CLI cannot run `launch`, because it can open a `.command` file.
 
+`Launcher.resolve` accepts URLs with a scheme, including `mailto:hello@example.com`, `tel:+4712345678` and `obsidian:open?vault=Work`. A URL does not need `//` after the scheme.
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -423,7 +425,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    T["Target text"] --> U{"Has ://?"}
+    T["Target text"] --> U{"URL has a scheme?"}
     U -- Yes --> OpenURL[".open(URL)"]
     U -- No --> P{"Starts with / or ~?"}
     P -- Yes --> E{"File exists?"}
