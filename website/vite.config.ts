@@ -10,7 +10,10 @@ export default defineConfig({
     rules: { "vite-plus/prefer-vite-plus-imports": "error" },
     options: { typeAware: true, typeCheck: true },
   },
-  plugins: lazyPlugins(() => [voidPlugin(), tailwindcss(), reactRouter()]),
+  // The unit tests cover plain modules, so they run without the Worker and the router.
+  plugins: lazyPlugins(() =>
+    process.env.VITEST ? [] : [voidPlugin(), tailwindcss(), reactRouter()],
+  ),
   resolve: {
     tsconfigPaths: true,
   },

@@ -155,7 +155,8 @@ a {
   padding: 0;
   list-style: none;
 }
-.site__link {
+.site__link,
+.tab {
   display: inline-flex;
   align-items: center;
   height: 32px;
@@ -169,11 +170,14 @@ a {
     background-color 0.12s ease-out,
     color 0.12s ease-out;
 }
-.site__link:hover {
+.site__link:hover,
+.tab:hover {
   background: var(--hover);
   color: var(--white);
 }
-.site__link[aria-current="page"] {
+.site__link[aria-current="page"],
+.tab[aria-selected="true"],
+.tab[aria-checked="true"] {
   background: var(--white);
   color: var(--black);
 }
@@ -1122,5 +1126,471 @@ a {
   .rail__link::before,
   .rail__part {
     transition: none;
+  }
+}
+
+/* The roadmap: the four columns fill the screen under the header, and each column scrolls.
+   A column is one sunken pane, a card is one raised box in it. */
+.roadmap {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  height: calc(100svh - 56px);
+  min-height: 520px;
+  padding: clamp(16px, 3vw, 40px) clamp(8px, 2vw, 24px) clamp(8px, 2vw, 24px);
+  box-sizing: border-box;
+}
+.roadmap__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 20px;
+  padding: 0 4px;
+}
+.roadmap__title {
+  font-size: clamp(34px, 4.4vw, 60px);
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+.roadmap__line {
+  margin: 0;
+  padding: 0 4px;
+  color: var(--ink-muted);
+  font-size: 15px;
+}
+.roadmap__bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.roadmap__who {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  color: var(--ink-muted);
+  font-size: 14px;
+}
+
+.columns {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(240px, 1fr));
+  gap: 10px;
+  overflow-x: auto;
+}
+.column {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--sunken);
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+}
+.column__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px 10px;
+  font-size: 15px;
+  line-height: 20px;
+}
+.column__count {
+  color: var(--ink-faint);
+  font: 500 13px/1 var(--body);
+}
+.column__list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0 6px 6px;
+  overflow-y: auto;
+  list-style: none;
+  scrollbar-width: thin;
+}
+.column__empty {
+  padding: 12px 10px;
+  color: var(--ink-faint);
+  font-size: 14px;
+}
+.drop-line {
+  display: block;
+  height: 2px;
+  margin: 1px 6px;
+  border-radius: 1px;
+  background: var(--accent);
+}
+
+.bcard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 12px 10px;
+  background: var(--raised);
+  border-radius: 8px;
+}
+.bcard[role="button"] {
+  cursor: pointer;
+}
+.bcard[role="button"]:hover {
+  background: var(--hover);
+}
+.bcard[draggable="true"] {
+  cursor: grab;
+}
+.bcard[data-selected] {
+  box-shadow: inset 0 0 0 1px var(--border-control);
+}
+.bcard[data-dragging] {
+  opacity: 0.4;
+}
+.bcard__title {
+  font: 500 15px/20px var(--body);
+}
+.bcard__line,
+.bcard__note,
+.bcard__meta {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 19px;
+}
+.bcard__line {
+  color: var(--ink-muted);
+}
+.bcard__note {
+  padding-left: 8px;
+  border-left: 2px solid var(--tint);
+  color: var(--ink-faint);
+}
+.bcard__meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  color: var(--ink-faint);
+  font-size: 12px;
+  line-height: 16px;
+}
+.bcard__area {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bcard__area::before {
+  content: "";
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--hue);
+}
+.bcard__ref {
+  margin-left: auto;
+  color: var(--ink-muted);
+  font-family: var(--mono);
+  text-decoration: none;
+}
+a.bcard__ref:hover {
+  color: var(--white);
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+}
+.tab {
+  gap: 8px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.tab[data-target] {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.tab__count {
+  color: inherit;
+  opacity: 0.6;
+}
+
+/* Buttons: neutral by default, accent for the one primary action, danger to remove. */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--border-control);
+  border-radius: 999px;
+  background: none;
+  color: var(--white);
+  font: 500 14px/1 var(--body);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.12s ease-out;
+}
+.button:hover {
+  background: var(--hover);
+}
+.button--primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--black);
+}
+.button--primary:hover {
+  filter: brightness(1.12);
+}
+.button--danger {
+  border-color: var(--danger-soft);
+  color: var(--danger);
+}
+.button--danger:hover {
+  background: var(--danger-soft);
+}
+.button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.icon-button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+.icon-button:hover {
+  background: var(--hover);
+  color: var(--white);
+}
+.icon-button--small {
+  width: 22px;
+  height: 22px;
+  margin-left: -4px;
+}
+.icon-button svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+/* The developer roadmap: the columns and the open card side by side. */
+.roadmap__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 10px;
+}
+.roadmap__saved {
+  color: var(--ink-faint);
+  font-size: 13px;
+}
+.search {
+  box-sizing: border-box;
+  width: 220px;
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--border-control);
+  border-radius: 999px;
+  background: none;
+  color: var(--white);
+  font: 14px/1 var(--body);
+}
+.search::placeholder {
+  color: var(--ink-faint);
+}
+.quick-add {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  padding: 12px;
+  border: 1px solid var(--border-control);
+  border-radius: 8px;
+  background: var(--raised);
+  color: var(--white);
+  font: 500 15px/20px var(--body);
+}
+.quick-add::placeholder {
+  color: var(--ink-faint);
+  font-weight: 400;
+}
+
+/* The open card. A field looks like text until you point at it or type in it. */
+.panel {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 360px;
+  padding: 12px 14px 16px;
+  overflow-y: auto;
+  background: var(--sunken);
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  box-sizing: border-box;
+  scrollbar-width: thin;
+}
+.panel__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: -4px;
+}
+.panel__id {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink-faint);
+  font: 12px/16px var(--mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: all;
+}
+.panel__ref {
+  margin-left: auto;
+  color: var(--ink-muted);
+  font: 13px/1 var(--mono);
+  text-decoration: none;
+}
+a.panel__ref:hover {
+  color: var(--white);
+}
+.panel__group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.panel__label {
+  color: var(--ink-muted);
+  font: 500 12px/16px var(--body);
+}
+.panel__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+  cursor: pointer;
+}
+.panel__row:has(:focus-visible) .switch {
+  outline: 2px solid var(--sky);
+  outline-offset: 2px;
+}
+.panel__foot {
+  margin-top: auto;
+  padding-top: 8px;
+}
+.ifield {
+  box-sizing: border-box;
+  margin: 0 -8px;
+  width: calc(100% + 16px);
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  color: var(--white);
+  font: 14px/20px var(--body);
+  resize: none;
+  field-sizing: content;
+}
+.ifield:hover {
+  background: var(--raised);
+}
+.ifield:focus {
+  border-color: var(--border-control);
+  background: var(--raised);
+  outline: none;
+}
+.ifield::placeholder {
+  color: var(--ink-faint);
+}
+.ifield--title {
+  font: 700 22px/27px var(--display);
+}
+.ifield--mono {
+  font-family: var(--mono);
+}
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.tab--small {
+  height: 26px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+.pills__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--hue);
+}
+
+/* The developer roadmap before sign-in: one raised card in the middle. */
+.gate {
+  display: grid;
+  place-items: center;
+  min-height: calc(100svh - 56px);
+  padding: 16px;
+  box-sizing: border-box;
+}
+.gate__card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  width: min(400px, 100%);
+  padding: 28px;
+  border-radius: 14px;
+  background: var(--raised);
+  box-sizing: border-box;
+}
+.gate__title {
+  font-size: 22px;
+  line-height: 27px;
+}
+.gate__line {
+  margin: 0 0 8px;
+  color: var(--ink-muted);
+  font-size: 15px;
+}
+
+@media (max-width: 820px) {
+  .columns {
+    grid-template-columns: repeat(4, 85vw);
+    scroll-snap-type: x mandatory;
+  }
+  .column {
+    scroll-snap-align: start;
+  }
+  .roadmap__bar {
+    flex-wrap: wrap;
+  }
+  .roadmap__body {
+    flex-direction: column;
+  }
+  .panel {
+    width: auto;
+    max-height: 60%;
+  }
+}
+/* A phone has room for two page links. For agents is a part of Features. */
+@media (max-width: 480px) {
+  .site__nav li:has(> a[href="/features#agents"]) {
+    display: none;
   }
 }

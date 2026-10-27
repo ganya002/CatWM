@@ -77,7 +77,7 @@ Examples: session-recovery, fix-scroll-state, regenerate-sdk.
 
 Never make a pr unless you've been asked to.
 
-Write conventinal commit titles in plain english. `feat(animation): force windows to render faster`. Start the body by explaining the problem with 1-2 concise sentences. Under this add any media like screenshots (via `--attach`, never commit assets), benchmark results in a grid and or etc. Under `## changes` list what changes you've made in an ul, continue with a short section on how you verified. Omit things such as linter and style-check. Then watch the pr until it has been merged. Adress conflicts, and comments. Verify each reported bug or review issue before you fix it. Fix only a bug that you verified.
+Write conventinal commit titles in plain english. `feat(animation): force windows to render faster`. Start the body by explaining the problem with 1-2 concise sentences. Under this add any media like screenshots (via `--attach`, never commit assets), benchmark results in a grid and or etc. Under `## changes` list what changes you've made in an ul, continue with a short section on how you verified. Omit things such as linter and style-check. For a feature, link its roadmap card in the body with `Closes #n` or `Roadmap: <card id>` (see the `roadmap` skill). Then watch the pr until it has been merged. Adress conflicts, and comments. Verify each reported bug or review issue before you fix it. Fix only a bug that you verified.
 
 ## Documentation
 

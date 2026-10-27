@@ -347,12 +347,7 @@ export const USER: Category[] = [
         name: "Go to a workspace",
         line: "Ctrl and a number, from anywhere.",
         body: "Ctrl and a number, from any app. In window mode, the number alone. ` goes back to the last workspace.",
-        keys: [
-          ["⌃", "1"],
-          ["⌃", "←"],
-          ["⌃", "→"],
-          ["`"],
-        ],
+        keys: [["⌃", "1"], ["⌃", "←"], ["⌃", "→"], ["`"]],
         cli: ["catwm workspace 2", "catwm workspace previous"],
         media: demo("1, then 2", 2000, [
           {
@@ -564,11 +559,7 @@ export const USER: Category[] = [
         name: "Window switcher",
         line: "Every window on every workspace. Type to find one.",
         body: "Tap ⌥ Tab for the last window. Hold ⌥ and type to find any window. In window mode, press /.",
-        keys: [
-          ["⌥", "Tab"],
-          ["⌥", "⇧", "Tab"],
-          ["/"],
-        ],
+        keys: [["⌥", "Tab"], ["⌥", "⇧", "Tab"], ["/"]],
         cli: ["catwm switcher"],
         config: ["switcher-instant-jump = true", "switcher-jump-delay = 300", "switcher-exclude ="],
       },

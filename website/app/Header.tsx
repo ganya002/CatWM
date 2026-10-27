@@ -46,6 +46,11 @@ export function Header({ reveal = false }: { reveal?: boolean }) {
               For agents
             </Link>
           </li>
+          <li>
+            <NavLink to="/roadmap" className="site__link">
+              Roadmap
+            </NavLink>
+          </li>
         </ul>
       </nav>
     </header>

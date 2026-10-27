@@ -35,6 +35,7 @@ jobs:
       # typecheck runs react-router typegen first, and vp check needs those types.
       - run: pnpm typecheck
       - run: pnpm vp check
+      - run: pnpm vp test
       - run: pnpm build
       - run: pnpm exec wrangler deploy --config build/server/wrangler.json
         env:
