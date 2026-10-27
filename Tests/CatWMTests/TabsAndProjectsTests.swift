@@ -75,6 +75,19 @@ import Testing
         #expect(found?.absoluteString == "file:///Users/a/Code/catwm")
     }
 
+    @Test func aWorkspaceFileDoesNotOwnOtherFilesInItsParentFolder() {
+        #expect(ProjectGuess.pick(projects, title: "notes.md — Visual Studio Code",
+                                  document: "file:///Users/a/notes.md") == nil)
+        let other = URL(fileURLWithPath: "/Users/a/other.code-workspace")
+        #expect(ProjectGuess.pick(projects + [other], title: "notes.md — other (Workspace) — Cursor",
+                                  document: "file:///Users/a/notes.md") == other)
+    }
+
+    @Test func theOpenWorkspaceFileIdentifiesItsOwnProject() {
+        #expect(ProjectGuess.pick(projects, title: "", document: "file:///Users/a/site.code-workspace")
+            == projects[2])
+    }
+
     @Test func theTitleNamesTheFolderOrWorkspace() {
         #expect(ProjectGuess.pick(projects, title: "main.swift — catwm — Cursor", document: nil)?.lastPathComponent
             == "catwm")
