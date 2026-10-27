@@ -75,7 +75,7 @@ struct Config {
         let assignment = "\(key) = \(value.replacingOccurrences(of: "#", with: "##"))"
         var lines = text.components(separatedBy: "\n")
         func norm(_ name: String) -> String { name.lowercased().replacingOccurrences(of: "-", with: "_") }
-        let existing = lines.firstIndex { line in
+        let existing = lines.lastIndex { line in
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             guard !trimmed.hasPrefix("#"), let equals = trimmed.firstIndex(of: "=") else { return false }
             return norm(trimmed[..<equals].trimmingCharacters(in: .whitespaces)) == norm(key)
