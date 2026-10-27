@@ -68,10 +68,11 @@ struct Config {
         return config
     }
 
-    static func write(option key: String, _ value: String) {
+    static func write(option key: String, _ value: String, to url: URL = Self.url) {
         let read = try? String(contentsOf: url, encoding: .utf8)
         guard read != nil || !FileManager.default.fileExists(atPath: url.path) else { return }
         let text = read ?? defaultText
+        let assignment = "\(key) = \(value.replacingOccurrences(of: "#", with: "##"))"
         var lines = text.components(separatedBy: "\n")
         func norm(_ name: String) -> String { name.lowercased().replacingOccurrences(of: "-", with: "_") }
         let existing = lines.firstIndex { line in
@@ -80,10 +81,10 @@ struct Config {
             return norm(trimmed[..<equals].trimmingCharacters(in: .whitespaces)) == norm(key)
         }
         if let existing {
-            lines[existing] = "\(key) = \(value)"
+            lines[existing] = assignment
         } else {
             let firstBind = lines.firstIndex { $0.trimmingCharacters(in: .whitespaces).lowercased().hasPrefix("bind") }
-            lines.insert("\(key) = \(value)", at: firstBind ?? lines.count)
+            lines.insert(assignment, at: firstBind ?? lines.count)
         }
         Log.attempt("write config option \(key)") {
             try lines.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
