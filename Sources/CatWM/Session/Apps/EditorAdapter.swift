@@ -99,8 +99,14 @@ enum ProjectGuess {
     static func pick(_ projects: [URL], title: String, document: String?) -> URL? {
         if let url = document.flatMap(URL.init(string:)), url.isFileURL {
             let path = url.standardizedFileURL.path
-            let owners = projects.filter { path.hasPrefix(folderPath($0) + "/") }
-            if let owner = owners.max(by: { folderPath($0).count < folderPath($1).count }) { return owner }
+            let owners = projects.filter {
+                let projectPath = $0.standardizedFileURL.path
+                return path == projectPath
+                    || ($0.pathExtension != "code-workspace" && path.hasPrefix(projectPath + "/"))
+            }
+            if let owner = owners.max(by: { $0.standardizedFileURL.path.count < $1.standardizedFileURL.path.count }) {
+                return owner
+            }
         }
         let parts = Set(title.components(separatedBy: " — ").flatMap { $0.components(separatedBy: " - ") }
             .map { $0.trimmingCharacters(in: .whitespaces) })
@@ -128,11 +134,6 @@ enum ProjectGuess {
         guard let url = state.current.flatMap(URL.init(string:)), url.isFileURL,
               FileManager.default.fileExists(atPath: url.path) else { return false }
         return await Launcher.open(url, withApp: appURL)
-    }
-
-    private static func folderPath(_ url: URL) -> String {
-        let path = url.standardizedFileURL.path
-        return url.pathExtension == "code-workspace" ? url.deletingLastPathComponent().standardizedFileURL.path : path
     }
 
     private static func names(_ url: URL) -> [String] {
