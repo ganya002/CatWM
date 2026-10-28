@@ -73,7 +73,7 @@ struct Config {
             ? try String(contentsOf: url, encoding: .utf8) : defaultText
         let assignment = "\(key) = \(value.replacingOccurrences(of: "#", with: "##"))"
         var lines = text.components(separatedBy: "\n")
-        func norm(_ name: String) -> String { name.lowercased().replacingOccurrences(of: "-", with: "_") }
+        func norm(_ name: String) -> String { ConfigOption.named(name)?.key ?? ConfigOption.norm(name) }
         let existing = lines.lastIndex { line in
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             guard !trimmed.hasPrefix("#"), let equals = trimmed.firstIndex(of: "=") else { return false }
