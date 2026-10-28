@@ -68,10 +68,9 @@ struct Config {
         return config
     }
 
-    static func write(option key: String, _ value: String, to url: URL = Self.url) {
-        let read = try? String(contentsOf: url, encoding: .utf8)
-        guard read != nil || !FileManager.default.fileExists(atPath: url.path) else { return }
-        let text = read ?? defaultText
+    static func write(option key: String, _ value: String, to url: URL = Self.url) throws {
+        let text = FileManager.default.fileExists(atPath: url.path)
+            ? try String(contentsOf: url, encoding: .utf8) : defaultText
         let assignment = "\(key) = \(value.replacingOccurrences(of: "#", with: "##"))"
         var lines = text.components(separatedBy: "\n")
         func norm(_ name: String) -> String { ConfigOption.named(name)?.key ?? ConfigOption.norm(name) }
@@ -86,9 +85,7 @@ struct Config {
             let firstBind = lines.firstIndex { $0.trimmingCharacters(in: .whitespaces).lowercased().hasPrefix("bind") }
             lines.insert(assignment, at: firstBind ?? lines.count)
         }
-        Log.attempt("write config option \(key)") {
-            try lines.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
-        }
+        try lines.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
     }
 
     static func parse(_ text: String) -> Config {

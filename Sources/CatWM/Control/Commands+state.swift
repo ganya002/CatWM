@@ -77,7 +77,11 @@ extension CommandRegistry {
             if let problem = option.read(&probe, value, call.text("key")) {
                 throw ControlError.invalid(problem)
             }
-            Config.write(option: option.key, value)
+            do {
+                try Config.write(option: option.key, value)
+            } catch {
+                throw ControlError.failed("Could not save config: \(error.localizedDescription)")
+            }
             WindowManager.shared.reload(showHUD: false)
             return .null
         },
