@@ -3,6 +3,27 @@ import Foundation
 import Testing
 
 @Suite struct ConfigWriteTests {
+    @Test(arguments: ["smart-gaps", "follow_mouse", "new_is_master", "animations", "dim_inactive"], [false, true])
+    func writingAnOptionUpdatesItsLastAlias(_ alias: String, _ hasCanonicalAssignment: Bool) throws {
+        let option = try #require(ConfigOption.named(alias))
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".conf")
+        defer { Log.attempt("remove test config") { try FileManager.default.removeItem(at: url) } }
+        let prefix = hasCanonicalAssignment ? "\(option.key) = false\n" : ""
+        let bind = "bind = CTRL, h, movefocus, l\n"
+        let comment = "# \(alias) = true\n"
+        let original = prefix + bind + "\(alias.uppercased()) = true\n" + comment
+        try original.write(to: url, atomically: true, encoding: .utf8)
+        #expect(option.text(Config.parse(original)) == "true")
+
+        Config.write(option: option.key, "false", to: url)
+
+        let saved = try String(contentsOf: url, encoding: .utf8)
+        let config = Config.parse(saved)
+        #expect(config.errors.isEmpty)
+        #expect(option.text(config) == "false")
+        #expect(saved == prefix + bind + "\(option.key) = false\n" + comment)
+    }
+
     @Test(arguments: [
         "window-margins = false\nwindow-margins = true\n",
         "window-margins = false\nWINDOW_MARGINS = true\n",
