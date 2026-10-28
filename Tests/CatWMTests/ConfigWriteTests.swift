@@ -3,6 +3,26 @@ import Foundation
 import Testing
 
 @Suite struct ConfigWriteTests {
+    @Test func anUnreadableConfigReportsAnErrorAndKeepsItsContents() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".conf")
+        defer { Log.attempt("remove test config") { try FileManager.default.removeItem(at: url) } }
+        let original = Data([0xFF])
+        try original.write(to: url)
+
+        #expect(throws: (any Error).self) { try Config.write(option: "window-margins", "false", to: url) }
+
+        #expect(try Data(contentsOf: url) == original)
+    }
+
+    @Test func aFailedWriteReportsAnError() {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let url = folder.appendingPathComponent("catwm.conf")
+
+        #expect(throws: (any Error).self) { try Config.write(option: "window-margins", "false", to: url) }
+
+        #expect(!FileManager.default.fileExists(atPath: url.path))
+    }
+
     @Test(arguments: [
         "window-margins = false\nwindow-margins = true\n",
         "window-margins = false\nWINDOW_MARGINS = true\n",
@@ -14,7 +34,7 @@ import Testing
         try original.write(to: url, atomically: true, encoding: .utf8)
         #expect(Config.parse(original).windowMargins)
 
-        Config.write(option: "window-margins", "false", to: url)
+        try Config.write(option: "window-margins", "false", to: url)
 
         let saved = try String(contentsOf: url, encoding: .utf8)
         let config = Config.parse(saved)
@@ -30,7 +50,7 @@ import Testing
         defer { Log.attempt("remove test config") { try FileManager.default.removeItem(at: url) } }
         try original.write(to: url, atomically: true, encoding: .utf8)
 
-        Config.write(option: "keyboard-help-key", "#", to: url)
+        try Config.write(option: "keyboard-help-key", "#", to: url)
 
         let saved = try String(contentsOf: url, encoding: .utf8)
         let config = Config.parse(saved)
@@ -45,7 +65,7 @@ import Testing
         defer { Log.attempt("remove test config") { try FileManager.default.removeItem(at: url) } }
         try "switcher-exclude = com.example.old\n".write(to: url, atomically: true, encoding: .utf8)
 
-        Config.write(option: "switcher-exclude", bundle, to: url)
+        try Config.write(option: "switcher-exclude", bundle, to: url)
 
         let config = Config.parse(try String(contentsOf: url, encoding: .utf8))
         #expect(config.errors.isEmpty)
