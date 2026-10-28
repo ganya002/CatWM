@@ -221,11 +221,13 @@ struct Config {
         case .success(let found): pairs = found
         case .failure(let failure): return failure.message
         }
+        var parsed: [KeyBinding] = []
         for (key, arg) in pairs {
             guard let code = keyCodes[key.lowercased()] else { return "unknown key `\(key)`" }
-            bindings.append(KeyBinding(keyCode: code, mods: mods, dispatcher: dispatcher, arg: arg,
-                                       submap: currentSubmap, repeats: repeats))
+            parsed.append(KeyBinding(keyCode: code, mods: mods, dispatcher: dispatcher, arg: arg,
+                                     submap: currentSubmap, repeats: repeats))
         }
+        bindings.append(contentsOf: parsed)
         return nil
     }
 }
