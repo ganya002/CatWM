@@ -15,6 +15,7 @@ final class ConfigDocument: ObservableObject {
     var extraLines: [String] = []
     var unreadable = false
     var autosave: AnyCancellable?
+    var comboCache: ComboCache?
 
     static let modifierChoices: [(value: String, label: String)] = [
         ("ALT", "⌥ Option"), ("SUPER", "⌘ Command"), ("CTRL", "⌃ Control"),
@@ -46,6 +47,12 @@ final class ConfigDocument: ObservableObject {
     ]
 
     struct Combo: Hashable { let code: UInt16; let flags: UInt }
+
+    struct ComboCache {
+        let binds: [BindRow]
+        let vars: [VarRow]
+        let combos: [UUID: [Combo]]
+    }
 
     var submaps: [String] {
         var seen = [""]

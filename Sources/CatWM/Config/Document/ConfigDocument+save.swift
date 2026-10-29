@@ -104,6 +104,14 @@ extension ConfigDocument {
         return out
     }
 
+    func bindCombos() -> [UUID: [Combo]] {
+        if let cache = comboCache, cache.binds == binds, cache.vars == vars { return cache.combos }
+        var table: [UUID: [Combo]] = [:]
+        for bind in binds { table[bind.id] = combos(bind) }
+        comboCache = ComboCache(binds: binds, vars: vars, combos: table)
+        return table
+    }
+
     func title(_ row: BindRow) -> String {
         Actions.match(row)?.title ?? Actions.rangeSummary(row)?.title ?? "\(row.dispatcher) \(row.args)"
     }
@@ -121,9 +129,10 @@ extension ConfigDocument {
             return (.error, "Add ⌥, ⌃ or ⌘, or put this in window mode, otherwise it would block normal typing")
         }
         let mineSet = Set(mine)
+        let combosByBind = bindCombos()
         if let other = binds.first(where: { bind in
             bind.id != row.id && bind.submap == row.submap
-                && !(combos(bind).map { mineSet.isDisjoint(with: $0) } ?? true)
+                && !(combosByBind[bind.id].map { mineSet.isDisjoint(with: $0) } ?? true)
         }) {
             return (.error, "Overlaps “\(title(other))”")
         }
