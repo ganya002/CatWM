@@ -168,6 +168,40 @@ import Testing
         #expect(frames[1] == CGRect(x: 455, y: 0, width: 445, height: 295))
         #expect(frames[2] == CGRect(x: 455, y: 305, width: 445, height: 295))
     }
+
+    @Test func aTallMinimumInTheBottomRowTakesRoomFromTheMainRow() throws {
+        let wide = try #require(Layout.wide.frames(count: 3, in: CGRect(x: 0, y: 0, width: 1000, height: 600),
+                                                   ratio: 0.5, mainCount: 1))
+        let frames = fitMinimums(wide, mins: [nil, CGSize(width: 100, height: 400), nil], gap: 0)
+        #expect(frames == [CGRect(x: 0, y: 0, width: 1000, height: 200), CGRect(x: 0, y: 200, width: 500, height: 400),
+                           CGRect(x: 500, y: 200, width: 500, height: 400)])
+    }
+
+    @Test func oneLargeWindowNeverCoversAnotherInAGridLayout() {
+        let screen = CGRect(x: 0, y: 0, width: 1000, height: 600)
+        let stacked: [Layout] = [.floating, .fullscreen, .twoPane, .twoPaneRight, .bsp]
+        for layout in Layout.allCases where !stacked.contains(layout) {
+            for count in 2...5 {
+                for index in 0..<count {
+                    for min in [CGSize(width: 0, height: 380), CGSize(width: 600, height: 0)] {
+                        let raw = layout.frames(count: count, in: screen, ratio: 0.5, mainCount: 1) ?? []
+                        var mins = [CGSize?](repeating: nil, count: count)
+                        mins[index] = min
+                        let frames = zip(fitMinimums(raw, mins: mins, gap: 0), mins).map {
+                            clampToMinimum($0, min: $1, bounds: screen)
+                        }
+                        for i in frames.indices {
+                            for j in frames.indices where j > i {
+                                let overlap = frames[i].intersection(frames[j])
+                                #expect(overlap.isNull || overlap.width < 1 || overlap.height < 1,
+                                        "\(layout) with \(count) windows and \(min) on \(index)")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Suite struct SplitDividerTests {

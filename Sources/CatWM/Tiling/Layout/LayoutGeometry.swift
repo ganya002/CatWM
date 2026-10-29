@@ -9,8 +9,9 @@ func fitMinimums(_ frames: [CGRect], mins: [CGSize?], gap: CGFloat) -> [CGRect] 
     func key(_ value: CGFloat) -> String { "\(value.rounded() + 0)" }
     var out = frames
     for vertical in [true, false] {
-        let units = vertical ? out.indices.map { [$0] }
-            : Array(Dictionary(grouping: out.indices) { "\(key(out[$0].minX)):\(key(out[$0].width))" }.values)
+        let units = Array(Dictionary(grouping: out.indices) {
+            vertical ? "\(key(out[$0].minY)):\(key(out[$0].height))" : "\(key(out[$0].minX)):\(key(out[$0].width))"
+        }.values)
         let groups = Dictionary(grouping: units) { unit -> String in
             let span = unit.map { out[$0] }.reduce(CGRect.null) { $0.union($1) }
             return vertical ? "\(key(span.minX)):\(key(span.width))" : "\(key(span.minY)):\(key(span.height))"

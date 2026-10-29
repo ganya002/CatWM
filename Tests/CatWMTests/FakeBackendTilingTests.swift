@@ -103,6 +103,19 @@ import Testing
         expectTiles([fake.frame(of: wide), fake.frame(of: other)], fill: screen.visible)
     }
 
+    @Test func aTallMinimumPushesTheOtherRowInTheWideLayout() async {
+        let fake = FakeBackend()
+        let screen = fake.addScreen()
+        let manager = fake.makeManager { $0.layouts = [.wide] }
+        let tall = fake.addWindow(minSize: CGSize(width: 0, height: 600))
+        let ids = [tall, fake.addWindow(pid: -101), fake.addWindow(pid: -102)]
+        await fake.settle(manager)
+        #expect(await fake.wait(manager) { manager.minSizes[tall] != nil })
+        await fake.settle(manager)
+        #expect(fake.frame(of: tall).height == 600)
+        expectTiles(ids.map(fake.frame(of:)), fill: screen.visible)
+    }
+
     @Test func aUserDragIsTiledAgain() async {
         let fake = FakeBackend()
         fake.addScreen()
