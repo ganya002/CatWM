@@ -276,7 +276,9 @@ A save asks the user (`ask: true`). An open never asks (`ask: false`). If an ada
 
 ## Open a template
 
-`TemplateRestorer.restore()` has two phases. `discover()` finds or opens a window for each saved window. `apply()` moves the windows to their Desktops, sets the layouts and places the frames.
+`TemplateRestorer.restore()` has two phases. `discover()` finds or opens a window for each saved window. `apply()` selects the destination Desktops and interprets the saved display layouts and frames.
+
+Tiling owns placement. `WindowManager.registerPlacements` applies the display layouts, registers the windows and computes tiled frames. `placeWindows` writes and checks the frames through the existing window backend and Animator. `PlacementHolds` suspends hidden windows until a newer scan confirms that they are visible. Templates retain the restore sequence and app-specific failure messages.
 
 ```mermaid
 sequenceDiagram

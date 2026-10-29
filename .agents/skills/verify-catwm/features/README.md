@@ -36,5 +36,6 @@ Each feature file starts with an H1 title and one paragraph about the behavior t
 - [Workspaces](./workspaces.md): show a workspace, and send a window to another workspace.
 - [Floating and fullscreen](./floating-and-fullscreen.md): take a window out of the tiling, or let it fill the screen.
 - [Config and reload](./config-and-reload.md): change an option and read the config again.
+- [Template restore](./templates.md): restore existing windows through Settings and release a minimized window from its placement hold.
 
-Not mapped yet: the Overview (`sort`), the window switcher, window mode and its effects, the keyboard help, tabs (`moveintogroup`), templates, notifications, Settings and onboarding. Add a file when you verify one of them.
+Not mapped yet: the Overview (`sort`), the window switcher, window mode and its effects, the keyboard help, tabs (`moveintogroup`), template capture and other restore entry points, notifications, Settings and onboarding. Add a file when you verify one of them.

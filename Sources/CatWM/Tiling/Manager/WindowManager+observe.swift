@@ -125,7 +125,7 @@ extension WindowManager {
     func forget(_ id: CGWindowID, keepRecovery: Bool = false) {
         if !keepRecovery, let window = windows[id] { tilingRecovery.forget(recoveryIdentity(window)) }
         animator.forget(id)
-        templateHiddenWindows[id] = nil
+        placementHolds.forget(id)
         let focused = focusClock > 0 && focusStamps[id] == focusClock
         showHeir(of: id, focused: focused)
         if focusRequests.forget(id, refocusOn: !restoringTemplate && focused ? workspaceOf[id] : nil) {
@@ -140,8 +140,7 @@ extension WindowManager {
         floats.floatFrames[id] = nil; floats.floatZoom[id] = nil; targets[id] = nil; minSizes[id] = nil
         corrections[id] = nil; drags[id] = nil
         displayOf[id] = nil
-        desktops.nativeMoveTargets[id] = nil
-        desktops.nativeMembership[id] = nil
+        nativeMoves.forget(id)
         closeAndSort.closingNow.remove(id)
         visible.remove(id)
     }

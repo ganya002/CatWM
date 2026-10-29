@@ -12,8 +12,8 @@ extension WindowManager {
 
     func moveNativeWindow(_ window: Window, to workspace: String, follow: Bool, from origin: String?? = nil) {
         updateNativeCatalog(backend.screens())
-        guard !workspaceMoves.contains(window.id) else { return }
-        guard !window.fullscreenUnlessStalled else { desktops.nativeMoveTargets[window.id] = nil; return }
+        guard !nativeMoves.isMoving(window.id) else { return }
+        guard !window.fullscreenUnlessStalled else { nativeMoves.cancelRequest(window.id); return }
         guard !desktops.nativeCreationBusy, let target = desktops.nativeCatalog.entry(workspace) else {
             createWorkspaceThenMove(window, to: workspace, follow: follow)
             return
@@ -23,11 +23,11 @@ extension WindowManager {
         let known = windows[window.id] != nil
         let frame = window.frameUnlessStalled
         let visibleTarget = backend.currentSpace(display: target.display) == target.space
-        workspaceMoves.insert(window.id)
+        nativeMoves.begin(window.id)
         if follow, !visibleTarget {
             animator.cancel(window.id)
-            desktops.followMoves[window.id] = .init(window: window, workspace: workspace, space: target.space,
-                                                    from: from)
+            nativeMoves.follow(.init(window: window, workspace: workspace, space: target.space,
+                                                    from: from))
             showWorkspace(workspace, focusing: window)
             return
         }
@@ -48,8 +48,7 @@ extension WindowManager {
             Spaces.move(window: window.id, to: target.space, waitUntilOnScreen: visibleTarget) { [weak self] moved in
                 guard let self else { displayBatch?.finish(); return }
                 defer { displayBatch?.finish() }
-                workspaceMoves.remove(window.id)
-                desktops.nativeMoveTargets[window.id] = nil
+                nativeMoves.finish(window.id)
                 guard moved || Spaces.of(window: window.id) == [target.space], window.isValidUnlessStalled else {
                     rollBackNativeMove(window, from: from, known: known, frame: visibleTarget ? frame : nil)
                     return
@@ -57,32 +56,26 @@ extension WindowManager {
                 let held = Int(Date().timeIntervalSince(started) * 1000)
                 Log.info("native workspaces: moved window \(window.id) to workspace \(workspace) in \(held) ms")
                 completeNativeMigration(window.id, workspace: workspace)
-                desktops.nativeMembership[window.id] = target.space
+                nativeMoves.finish(window.id, on: target.space)
                 assignWindow(window, toWorkspace: workspace, from: from, follow: follow, handOffFocus: hadFocus)
             }
         }
     }
 
-    @MainActor func completeFollowMove(_ move: NativeDesktopState.FollowMove) async throws {
+    @MainActor func completeFollowMove(_ move: NativeWindowMoves.FollowMove) async throws {
         let id = move.window.id
-        desktops.followMoves[id] = nil
+        nativeMoves.begin(id)
         let moved = await withCheckedContinuation { done in
             Spaces.move(window: id, to: move.space) { done.resume(returning: $0) }
         }
-        workspaceMoves.remove(id)
+        nativeMoves.finish(id)
         guard moved || Spaces.of(window: id) == [move.space], move.window.isValidUnlessStalled else {
             throw DesktopTransitionError.check("macOS couldn't move this window")
         }
         Log.info("native workspaces: moved window \(id) to workspace \(move.workspace)")
         completeNativeMigration(id, workspace: move.workspace)
-        desktops.nativeMembership[id] = move.space
+        nativeMoves.finish(id, on: move.space)
         assignWindow(move.window, toWorkspace: move.workspace, from: move.from, follow: false, handOffFocus: false)
-    }
-
-    func dropFollowMoves() {
-        workspaceMoves.subtract(desktops.followMoves.keys)
-        desktops.followMoves = [:]
-        arrivals = [:]
     }
 
     private func rollBackNativeMove(_ window: Window, from: String?, known: Bool, frame: CGRect?) {
@@ -96,20 +89,20 @@ extension WindowManager {
 
     private func createWorkspaceThenMove(_ window: Window, to workspace: String, follow: Bool) {
         guard let screen = currentScreen() ?? backend.screens().first else { return }
-        desktops.nativeMoveTargets[window.id] = workspace
+        nativeMoves.requestWorkspace(window.id, workspace: workspace)
         Task { @MainActor in
             do {
                 _ = try await self.ensureNativeWorkspace(workspace, on: screen, while: {
-                    self.desktops.nativeMoveTargets[window.id] == workspace
+                    self.nativeMoves.requestedWorkspace(window.id) == workspace
                 })
-                guard self.desktops.nativeMoveTargets[window.id] == workspace else { return }
-                self.desktops.nativeMoveTargets[window.id] = nil
+                guard self.nativeMoves.requestedWorkspace(window.id) == workspace else { return }
+                self.nativeMoves.cancelRequest(window.id)
                 guard window.isValidUnlessStalled else { return }
                 self.moveNativeWindow(window, to: workspace, follow: follow)
             } catch is CancellationError { } catch {
                 Log.info("native workspaces: move \(window.id) to \(workspace) failed: "
                     + error.localizedDescription)
-                self.desktops.nativeMoveTargets[window.id] = nil
+                self.nativeMoves.cancelRequest(window.id)
                 surface.showHUD(error.localizedDescription, on: screen.nsScreen)
                 self.scheduleRefresh(after: 0)
             }
@@ -154,7 +147,7 @@ extension WindowManager {
         guard !removed.isEmpty else { return }
         Task { @MainActor in
             guard await poll(5, every: 50_000_000, until: {
-                !self.nativeDesktop.isRunning && !self.desktops.nativeCreationBusy && self.workspaceMoves.isEmpty
+                !self.nativeDesktop.isRunning && !self.desktops.nativeCreationBusy && self.nativeMoves.isEmpty
             }) else { return }
             self.desktops.nativeCreationBusy = true
             defer { self.desktops.nativeCreationBusy = false; self.scheduleRefresh(after: 0) }

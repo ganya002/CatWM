@@ -67,7 +67,7 @@ extension WindowManager {
         where (info[kCGWindowLayer as String] as? Int) == 0 && (info[kCGWindowIsOnscreen as String] as? Bool) != true {
             guard let number = info[kCGWindowNumber as String] as? Int,
                   let pid = info[kCGWindowOwnerPID as String] as? Int,
-                  !workspaceMoves.contains(CGWindowID(number)) else { continue }
+                  !nativeMoves.isMoving(CGWindowID(number)) else { continue }
             let membership = Spaces.of(window: CGWindowID(number))
             guard membership.count == 1, let space = membership.first, desktops.contains(space),
                   !homes.contains(space) else { continue }

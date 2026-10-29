@@ -26,7 +26,7 @@ final class TemplateRestorer {
     func restore() async throws -> String {
         guard manager.scope == nil else { throw WindowManager.TemplateError.scoped }
         guard manager.isStarted, !Screen.all().isEmpty else { throw WindowManager.TemplateError.notReady }
-        initialWindowIDs = Set(Self.windowList(.optionAll).map(\.id))
+        initialWindowIDs = Set(CGWindowInfo.onScreen(options: [.optionAll, .excludeDesktopElements]).map(\.id))
         manager.restoringTemplate = true
         defer { manager.finishTemplateRestore() }
         let started = Date()
@@ -288,23 +288,8 @@ enum TemplatePlacementPlan {
         return preferred
     }
 
-    static func releaseHeldWindow(scanStarted: Date, heldSince: Date, minimized: Bool, fullscreen: Bool,
-                                  restoring: Bool) -> Bool {
-        !restoring && scanStarted > heldSince && !minimized && !fullscreen
-    }
-
-    static func zoomedWindow(savedDisplay: String, window: CGWindowID, zoomed: Bool,
-                             preferredSavedDisplay: String?) -> CGWindowID? {
-        guard zoomed, savedDisplay == preferredSavedDisplay else { return nil }
-        return window
-    }
-
     static func desktopMove(membership: [UInt64], destination: UInt64) -> DesktopMove {
         if membership.isEmpty { return .unavailable }
         return membership.contains(destination) ? .stay : .move
-    }
-
-    static func writerBarrier<ID: Hashable>(placed: Set<ID>, busy: Set<ID>) -> Set<ID> {
-        placed.intersection(busy)
     }
 }

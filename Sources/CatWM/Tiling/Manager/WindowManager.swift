@@ -19,7 +19,7 @@ final class WindowManager {
             }
         }
     }
-    var templateHiddenWindows: [CGWindowID: Date] = [:]
+    var placementHolds = PlacementHolds()
     var pendingLaunches: [PendingLaunch] = []
     var onChange: (() -> Void)?
     var onDispatch: ((_ dispatcher: String, _ arg: String, _ inMode: Bool) -> Void)?
@@ -33,7 +33,7 @@ final class WindowManager {
     let nativeDesktop = NativeDesktopController()
     var desktops = NativeDesktopState()
     let nativeGestures = DesktopGestureTap()
-    var arrivals: [CGWindowID: CGRect] = [:]
+    var nativeMoves = NativeWindowMoves()
     var model = WorkspaceModel()
     var workspaceOf: [CGWindowID: String] { model.workspaceOf }
     var order: [CGWindowID] { get { model.order } set { model.order = newValue } _modify { yield &model.order } }
@@ -54,7 +54,6 @@ final class WindowManager {
     var focusClock: Int { model.focusClock }
     var focusOrder: [CGWindowID] { model.focusOrder }
     var displayOf: [CGWindowID: String] = [:]
-    var workspaceMoves: Set<CGWindowID> = []
     var snapNextPlacement: Set<CGWindowID> = []
     var restoredEarly: [CGWindowID: Date] = [:]
     var present: Set<CGWindowID> = []

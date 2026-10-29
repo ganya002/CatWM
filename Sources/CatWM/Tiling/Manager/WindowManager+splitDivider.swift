@@ -92,6 +92,6 @@ extension WindowManager {
     }
 
     func splitIDs(on screen: Screen) -> [CGWindowID] {
-        tiled(on: screen).filter { !workspaceMoves.contains($0) }
+        tiled(on: screen).filter { !nativeMoves.isMoving($0) }
     }
 }

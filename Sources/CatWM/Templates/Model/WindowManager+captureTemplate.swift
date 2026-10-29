@@ -53,7 +53,7 @@ extension WindowManager {
             AppStateCapture.Window(id: $0.windowID, bundleID: $0.bundleID, title: $0.title, frame: $0.frame,
                                    document: $0.document)
         }
-        let onScreen = Set(TemplateRestorer.windowList(.optionOnScreenOnly).map(\.id))
+        let onScreen = Set(CGWindowInfo.onScreen().map(\.id))
         let tabs = WindowTabs.background(windows.filter { AppAdapters.adapter(for: $0.bundleID) != nil },
                                          onScreen: onScreen)
         let started = Date()
