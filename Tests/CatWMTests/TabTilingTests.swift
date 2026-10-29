@@ -60,13 +60,13 @@ import Testing
         let slot = CGRect(x: screen.visible.minX + 600, y: screen.visible.minY + 40, width: 500, height: 500)
         let body = CGPoint(x: slot.midX, y: slot.midY)
         manager.targets[3] = slot
-        manager.tabUI.draggedTab = 2
-        manager.tabUI.tabHover = (3, true)
+        manager.tabUI.drag.beginLifted(2)
+        manager.tabUI.drag.track(3, schedule: { $0.perform() }, changed: {})
         manager.dropTab(2, at: body)
         #expect(manager.tabs.group(of: 3)?.members.contains(2) == true)
         #expect(manager.tabs.group(of: 1)?.members == [1, 4])
-        manager.tabUI.draggedTab = 4
-        manager.tabUI.tabHover = (3, false)
+        manager.tabUI.drag.beginLifted(4)
+        manager.tabUI.drag.track(3, schedule: { _ in }, changed: {})
         manager.dropTab(4, at: body)
         #expect(manager.tabs.group(of: 3)?.members.contains(4) == false)
     }
@@ -78,12 +78,12 @@ import Testing
         manager.model.joinTab(3, onto: 1)
         let slot = CGRect(x: screen.visible.minX + 600, y: screen.visible.minY + 40, width: 500, height: 500)
         manager.targets[1] = slot
-        manager.tabUI.draggedTab = 2
-        manager.tabUI.tabHover = (1, true)
+        manager.tabUI.drag.beginLifted(2)
+        manager.tabUI.drag.track(1, schedule: { $0.perform() }, changed: {})
         #expect(manager.settledTabHover(for: 2, at: CGPoint(x: slot.midX, y: slot.midY)) == 1)
         manager.dropTab(2, at: CGPoint(x: slot.midX, y: slot.midY))
         #expect(manager.tabs.group(of: 1)?.members.sorted() == [1, 2, 3])
-        manager.tabUI.tabHover = (1, true)
+        manager.tabUI.drag.track(1, schedule: { $0.perform() }, changed: {})
         #expect(manager.settledTabHover(for: 2, at: CGPoint(x: slot.midX, y: slot.midY)) == 1)
         #expect(manager.settledTabHover(for: 1, at: CGPoint(x: slot.midX, y: slot.midY)) == nil)
     }
@@ -107,9 +107,9 @@ import Testing
         manager.drags[2] = false
         #expect(!manager.cancelTabDrop())
         manager.drags = [:]
-        manager.tabUI.draggedTab = 2
+        manager.tabUI.drag.beginLifted(2)
         #expect(!manager.cancelTabDrop())
-        #expect(!manager.tabUI.tabDropCancelled)
+        #expect(manager.tabUI.drag.allowsJoin)
     }
 
     @Test @MainActor func aCancelledDropLeavesTheLiftedTabOutOfAnyGroup() {
@@ -118,13 +118,13 @@ import Testing
         manager.model.joinTab(2, onto: 1)
         let slot = CGRect(x: screen.visible.minX + 600, y: screen.visible.minY + 40, width: 500, height: 500)
         manager.targets[3] = slot
-        manager.tabUI.draggedTab = 2
-        manager.tabUI.tabHover = (3, true)
-        manager.tabUI.tabDropCancelled = true
+        manager.tabUI.drag.beginLifted(2)
+        manager.tabUI.drag.track(3, schedule: { $0.perform() }, changed: {})
+        _ = manager.tabUI.drag.cancelDrop(on: manager.surface)
         manager.dropTab(2, at: CGPoint(x: slot.midX, y: slot.minY + 10))
         #expect(manager.tabs.group(of: 2) == nil)
         #expect(manager.tabs.group(of: 3) == nil)
-        #expect(!manager.tabUI.tabDropCancelled)
+        #expect(manager.tabUI.drag.allowsJoin)
     }
 
     @Test @MainActor func aGroupNeedsRoomForItsLargestTabAndItsStrip() {

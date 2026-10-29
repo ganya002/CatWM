@@ -73,6 +73,33 @@ private final class RecordingSurface: TilingSurface {
         surface.showsTabDrop = true
         #expect(manager.cancelTabDrop())
         #expect(surface.calls == ["endTabPreview", "hideTabDropHint"])
-        #expect(manager.tabUI.tabDropCancelled)
+        #expect(!manager.tabUI.drag.allowsJoin)
+    }
+}
+
+@Suite struct TabDragLifecycleTests {
+    @Test func aCancelledDragCleansThePreviewAndANewDragCanJoin() {
+        let drag = TabDrag()
+        let surface = RecordingSurface()
+        #expect(drag.beginLifted(7))
+        #expect(drag.cancelDrop(on: surface) == 7)
+        #expect(drag.cancelDrop(on: surface) == nil)
+        #expect(surface.calls == ["endTabPreview", "hideTabDropHint"])
+        #expect(!drag.finish(7, on: surface).allowsJoin)
+        #expect(drag.lifted == nil)
+        #expect(drag.beginLifted(8))
+        #expect(drag.finish(8, on: surface).allowsJoin)
+    }
+
+    @Test func finishingADragDiscardsItsPendingHover() {
+        let drag = TabDrag()
+        var pending: DispatchWorkItem?
+        var hints = 0
+        drag.beginLifted(7)
+        drag.track(9, schedule: { pending = $0 }, changed: { hints += 1 })
+        drag.finish(7, on: HeadlessSurface())
+        pending?.perform()
+        #expect(hints == 0)
+        #expect(drag.hover == nil)
     }
 }

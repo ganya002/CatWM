@@ -122,7 +122,7 @@ struct OptionRows: View {
         let enter = doc.binds.first {
             $0.submap.isEmpty && $0.dispatcher == "submap" && $0.args.lowercased() != "reset"
         }
-        guard let enter, let flags = ConfigDocument.flags(doc.resolvedMods(enter.mods)) else {
+        guard let enter, let flags = ConfigText.flags(doc.resolvedMods(enter.mods)) else {
             return "Press \(doc.config.keyboardHelpKey) in window mode"
         }
         let hold = ConfigDocument.modifierCaps(flags.subtracting(.shift)).joined()

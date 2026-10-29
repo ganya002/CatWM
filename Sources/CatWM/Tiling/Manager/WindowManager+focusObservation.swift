@@ -3,25 +3,21 @@ import AppKit
 extension WindowManager {
     func requestFocusObservation() {
         guard isStarted, let pid = frontmostPID() else { return }
-        if focusRequests.reportedFocus?.pid != pid { focusRequests.reportedFocus = nil }
-        focusRequests.focusCommands.removeAll { $0.pid != pid }
-        if let waiting = focusRequests.waitingRefocus, waiting.pid != pid { focusRequests.waitingRefocus = nil }
-        if let pending = focusRequests.pendingFocus, pending.pid != pid, pending.origin != pid { cancelFocusRequest() }
-        focusRequests.focusObservation += 1
-        let generation = focusRequests.focusObservation
-        guard focusRequests.focusReads.insert(pid).inserted else { return }
+        let observation = focusRequests.beginObservation(pid: pid)
+        if observation.cancelledRequest { animator.cancelFocus() }
+        guard observation.shouldRead else { return }
+        let generation = observation.generation
         focusRequests.focusReader.observe(pid) { [weak self] result in
             guard let self else { return }
-            self.focusRequests.focusReads.remove(pid)
+            let current = self.focusRequests.finishObservation(pid: pid, generation: generation)
             guard self.isStarted, self.frontmostPID() == pid else { return }
-            guard self.focusRequests.focusObservation == generation else { self.requestFocusObservation(); return }
+            guard current else { self.requestFocusObservation(); return }
             switch result {
             case .focused(let id): self.acceptFocus(pid: pid, id: id, confirmsRequest: true)
             case .unavailable:
-                guard !self.focusRequests.focusCommands.isEmpty || self.focusRequests.waitingRefocus != nil
-                        || self.focusRequests.pendingFocus?.executed == true else { return }
+                guard self.focusRequests.needsObservation else { return }
                 self.focusRequests.retryRead { [weak self] in
-                    guard let self, self.focusRequests.focusObservation == generation,
+                    guard let self, self.focusRequests.isCurrent(generation),
                           self.frontmostPID() == pid else { return }
                     self.requestFocusObservation()
                 }
@@ -38,17 +34,14 @@ extension WindowManager {
     }
 
     private func acceptReportedFocus(pid: pid_t, id: CGWindowID?, confirmsRequest: Bool) {
-        focusRequests.reportedFocus = (pid, id)
-        if confirmsRequest, focusRequests.pendingFocus?.executed == true { focusRequests.pendingFocus = nil }
+        focusRequests.report(pid: pid, id: id, confirmsRequest: confirmsRequest)
         if let id, windows[id] == nil { scheduleRefresh(after: 0.1) }
         followFocus()
         followTabFocus(id)
-        if let waiting = focusRequests.waitingRefocus {
-            focusRequests.waitingRefocus = nil
+        if let waiting = focusRequests.takeWaitingRefocus() {
             if waiting.pid == pid { refocusRecent(on: waiting.workspace) }
         }
-        let commands = focusRequests.focusCommands
-        focusRequests.focusCommands = []
+        let commands = focusRequests.takeCommands()
         for command in commands where command.pid == frontmostPID() {
             dispatch(command.dispatcher, command.arg, inMode: command.inMode)
         }
@@ -61,16 +54,13 @@ extension WindowManager {
               focusRequests.reportedFocus?.pid != pid else { return false }
         if focusRequests.pendingFocus != nil, focusedWindow() != nil { return false }
         guard Actions.requiresFocus(BindRow(mods: "", key: "", dispatcher: dispatcher, args: arg)) else { return false }
-        focusRequests.focusCommands.append(.init(pid: pid, dispatcher: dispatcher, arg: arg, inMode: inMode))
+        focusRequests.enqueue(.init(pid: pid, dispatcher: dispatcher, arg: arg, inMode: inMode))
         requestFocusObservation()
         return true
     }
 
     func cancelFocusRequest() {
-        focusRequests.pendingFocus = nil
-        focusRequests.focusCommands = []
-        focusRequests.waitingRefocus = nil
-        focusRequests.focusObservation += 1
+        focusRequests.cancel()
         animator.cancelFocus()
     }
 
@@ -113,7 +103,7 @@ extension WindowManager {
     }
 
     func observeFocus(_ element: AXUIElement) {
-        focusRequests.focusObservation += 1
+        focusRequests.invalidateObservation()
         if let window = windows.values.first(where: { CFEqual($0.element, element) }),
            frontmostPID() == window.pid {
             acceptFocus(pid: window.pid, id: window.id)

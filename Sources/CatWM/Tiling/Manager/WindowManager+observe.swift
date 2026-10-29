@@ -55,11 +55,11 @@ extension WindowManager {
             FocusDim.shared.update()
         case kAXWindowMovedNotification, kAXWindowResizedNotification:
             guard let window = windows.values.first(where: { CFEqual($0.element, element) }),
-                  !animator.isBusy(window.id), !desktops.movingToSpace, window.id != tabUI.draggedTab else { return }
+                  !animator.isBusy(window.id), !desktops.movingToSpace, window.id != tabUI.drag.lifted else { return }
             let id = window.id
             observeFrame(window)
             if NSEvent.pressedMouseButtons & 1 != 0 {
-                if drags.isEmpty { tabUI.tabDropCancelled = false }
+                if drags.isEmpty { tabUI.drag.beginNative(id) }
                 drags[id] = (drags[id] ?? false) || notification == kAXWindowResizedNotification
             } else if !window.isFloating {
                 if notification == kAXWindowResizedNotification {
@@ -127,12 +127,9 @@ extension WindowManager {
         animator.forget(id)
         templateHiddenWindows[id] = nil
         let focused = focusClock > 0 && focusStamps[id] == focusClock
-        if !restoringTemplate, focused { focusRequests.refocusAfterClose = workspaceOf[id] }
         showHeir(of: id, focused: focused)
-        if focusRequests.pendingFocus?.id == id { cancelFocusRequest() }
-        if focusRequests.reportedFocus?.id == id {
-            focusRequests.reportedFocus = nil
-            focusRequests.focusObservation += 1
+        if focusRequests.forget(id, refocusOn: !restoringTemplate && focused ? workspaceOf[id] : nil) {
+            animator.cancelFocus()
         }
         windows[id] = nil
         surface.windowForgotten(id)

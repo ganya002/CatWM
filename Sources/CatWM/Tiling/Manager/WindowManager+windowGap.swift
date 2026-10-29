@@ -126,11 +126,12 @@ extension WindowManager {
     }
 
     func focusedWindow() -> Window? {
-        if let pending = focusRequests.pendingFocus {
-            let pid = frontmostPID()
-            if pid == pending.pid || pid == pending.origin, let window = windows[pending.id],
-               visible.contains(pending.id) { return window }
-            cancelFocusRequest()
+        switch focusRequests.resolvePending(frontmost: frontmostPID(), available: { id in
+            windows[id] != nil && visible.contains(id)
+        }) {
+        case .none: break
+        case .window(let id): return windows[id]
+        case .cancelled: animator.cancelFocus()
         }
         return reportedFocusedWindow()
     }

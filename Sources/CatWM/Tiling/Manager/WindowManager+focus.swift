@@ -2,11 +2,9 @@ import AppKit
 
 extension WindowManager {
     func focus(_ window: Window, warp: Bool = true) {
-        let request = UUID()
-        focusRequests.pendingFocus = .init(id: window.id, pid: window.pid, origin: frontmostPID(), request: request)
+        let request = focusRequests.begin(id: window.id, pid: window.pid, origin: frontmostPID())
         animator.focus(window) { [weak self] in
-            guard let self, self.focusRequests.pendingFocus?.request == request else { return }
-            self.focusRequests.pendingFocus?.executed = true
+            guard let self, self.focusRequests.executed(request) else { return }
             self.requestFocusObservation()
         }
         noteFocus(window.id)
@@ -40,13 +38,11 @@ extension WindowManager {
     }
 
     func mouseUp() {
-        surface.hideTabDropHint()
+        guard tabUI.drag.lifted == nil else { return }
         let point = mouseLocation()
-        let joins = !tabUI.tabDropCancelled
-        tabUI.tabDropCancelled = false
+        let joins = tabUI.drag.allowsJoin
         let hovered = joins && drags.count == 1 ? drags.first.flatMap { settledTabHover(for: $0.key, at: point) } : nil
-        let previewed = drags.first.flatMap { surface.endTabPreview(of: $0.key) }
-        trackTabHover(nil)
+        let previewed = tabUI.drag.finish(drags.first?.key, on: surface).preview
         if let previewed, let id = drags.first?.key, drags.count == 1, !desktops.movingToSpace {
             drags = [:]
             dropIntoStrip(id, group: previewed.group, at: previewed.index)

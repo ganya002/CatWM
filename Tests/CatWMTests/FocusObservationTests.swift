@@ -153,7 +153,7 @@ import Testing
         manager.model.show("1", on: "display")
         manager.model.noteFocus(remaining.id)
         manager.model.noteFocus(closed.id)
-        manager.focusRequests.reportedFocus = (-1, closed.id)
+        manager.focusRequests.report(pid: -1, id: closed.id)
         let release = DispatchSemaphore(value: 0)
         let reads = Counter()
         manager.focusRequests.focusReader = FocusReader { _ in
@@ -224,8 +224,8 @@ import Testing
 
     @Test @MainActor func restorationCancelsPendingFocusAndCommands() {
         let manager = manager()
-        manager.focusRequests.pendingFocus = FocusRequests.PendingFocus(id: 7, pid: -1, origin: -1, request: UUID())
-        manager.focusRequests.focusCommands = [.init(pid: -1, dispatcher: "minimize", arg: "", inMode: false)]
+        manager.focusRequests.begin(id: 7, pid: -1, origin: -1)
+        manager.focusRequests.enqueue(.init(pid: -1, dispatcher: "minimize", arg: "", inMode: false))
         manager.restoreHiddenWindows()
         #expect(manager.focusRequests.pendingFocus == nil)
         #expect(manager.focusRequests.focusCommands.isEmpty)
@@ -236,7 +236,7 @@ import Testing
         let tracked = window(7)
         manager.windows[tracked.id] = tracked
         manager.visible = [tracked.id]
-        manager.focusRequests.pendingFocus = .init(id: tracked.id, pid: tracked.pid, origin: -1, request: UUID())
+        manager.focusRequests.begin(id: tracked.id, pid: tracked.pid, origin: -1)
         manager.frontmostPID = { -2 }
         #expect(manager.focusedWindow() == nil)
         #expect(manager.focusRequests.pendingFocus == nil)

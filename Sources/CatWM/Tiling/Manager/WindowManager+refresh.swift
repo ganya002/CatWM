@@ -68,8 +68,7 @@ extension WindowManager {
     }
 
     private func refocusAfterCloseIfNeeded(hasFresh: Bool) {
-        guard let workspace = focusRequests.refocusAfterClose else { return }
-        focusRequests.refocusAfterClose = nil
+        guard let workspace = focusRequests.takeRefocusAfterClose() else { return }
         guard !hasFresh else { return }
         DispatchQueue.main.asyncAfter( // style-ok: grace time for the app to pick its own next window
             deadline: .now() + 0.1
@@ -227,7 +226,7 @@ extension WindowManager {
                 for member in [id] + tabStack(behind: id) {
                     targets[member] = target
                     if let only, !only.contains(member) { continue }
-                    if member == tabUI.draggedTab || member != id && drags[id] != nil { continue }
+                    if member == tabUI.drag.lifted || member != id && drags[id] != nil { continue }
                     guard let window = windows[member], member == id || !covered(window, by: target) else { continue }
                     planMove(window, to: target, on: screen, screens: screens, into: &planned)
                 }
@@ -287,7 +286,7 @@ extension WindowManager {
         guard isShown(workspace), focusRequests.pendingFocus == nil else { return }
         guard let pid = frontmostPID() else { return }
         guard let report = focusRequests.reportedFocus, report.pid == pid else {
-            focusRequests.waitingRefocus = (workspace, pid)
+            focusRequests.waitToRefocus(on: workspace, pid: pid)
             requestFocusObservation()
             return
         }
