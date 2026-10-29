@@ -15,5 +15,7 @@ extension CommandRegistry {
         }
     }
 
+    static let dispatcherNames: Set<String> = Set(dispatchers.map(\.name) + WindowActions.all.flatMap(\.aliases))
+
     static let keybindOnly: Set<String> = Set(dispatchers.filter { $0.access == .keybindOnly }.map(\.name))
 }

@@ -34,6 +34,9 @@ enum CommandRegistry {
                 args: [.text("dispatcher", "Dispatcher name"),
                        .text("arg", "Dispatcher argument", required: false)]) { call in
             let name = call.text("dispatcher").lowercased()
+            guard dispatcherNames.contains(name) else {
+                throw ControlError(code: "unknown_command", message: "Unknown dispatcher `\(name)`")
+            }
             guard !keybindOnly.contains(name) else { throw ControlError.forbidden(name) }
             WindowManager.shared.dispatch(name, call.text("arg"))
             return .null

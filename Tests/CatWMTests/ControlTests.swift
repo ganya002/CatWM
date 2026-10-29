@@ -42,6 +42,18 @@ private func reply(_ text: String) throws -> JSON {
                 == "invalid_args")
     }
 
+    @Test func dispatchRefusesAnUnknownDispatcher() throws {
+        for name in ["mvoefocus", "status", ""] {
+            let answer = try reply(#"{"id":1,"command":"dispatch","args":{"dispatcher":"\#(name)","arg":"left"}}"#)
+            #expect(answer["error"]?["code"] == "unknown_command", "\(name)")
+        }
+    }
+
+    @Test func dispatchKnowsAliasesAndFocusFeatures() {
+        let names = ["setlayout", "reevaluate"] + FocusDim.features.map(\.pointer.dispatcher)
+        #expect(names.allSatisfy(CommandRegistry.dispatcherNames.contains))
+    }
+
     @Test func hugeNumbersAreRefusedNotTrapped() throws {
         let answer = try reply(#"{"id":1,"command":"poststyle","args":{"style":1e100}}"#)
         #expect(answer["error"]?["code"] == "invalid_args")

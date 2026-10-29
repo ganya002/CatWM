@@ -19,7 +19,7 @@ The CLI, the Python, TypeScript and Swift libraries (`Clients/`) and the key bin
 | Command | Effect |
 |---|---|
 | `<dispatcher> [args]` | run a dispatcher, for example `catwm movefocus left` or `catwm workspace 3`. A bad argument gives an error. See [dispatchers.md](dispatchers.md). |
-| `dispatch <name> [args]` | run any dispatcher by name, as a key bind does. Name is case-insensitive. Bad arguments are ignored silently. |
+| `dispatch <name> [args]` | run any dispatcher by name, as a key bind does. Name is case-insensitive. An unknown name gives an error. Bad arguments are ignored silently. |
 | `status`, `windows`, `workspaces`, `screens` | print the state as JSON |
 | `config.get <key>`, `config.set <key> <value>`, `config.options` | read and change config options. `config.set` writes `catwm.conf` and reloads it. |
 | `reload` | re-read `catwm.conf` and rebind keys. Errors go to the log; a HUD shows "Config reloaded" or the error count. |
