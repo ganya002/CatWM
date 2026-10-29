@@ -123,7 +123,7 @@ struct BindRowView: View {
         guard case .success(let pairs) = BindRange.pairs(key: row.key, dispatcher: row.dispatcher, arg: row.args) else {
             return ""
         }
-        let mods = ConfigDocument.flags(doc.resolvedMods(row.mods))
+        let mods = ConfigText.flags(doc.resolvedMods(row.mods))
             .map { ConfigDocument.modifierCaps($0).joined() } ?? ""
         func one(_ pair: (key: String, arg: String)) -> String {
             let target = Actions.match(BindRow(mods: "", key: "", dispatcher: row.dispatcher, args: pair.arg))?.title

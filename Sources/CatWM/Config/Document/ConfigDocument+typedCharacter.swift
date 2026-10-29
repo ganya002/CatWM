@@ -34,7 +34,7 @@ extension ConfigDocument {
     }
 
     func prettyShortcut(_ row: BindRow) -> [String] {
-        guard let flags = Self.flags(resolvedMods(row.mods)) else { return [row.mods, row.key] }
+        guard let flags = ConfigText.flags(resolvedMods(row.mods)) else { return [row.mods, row.key] }
         var caps = Self.modifierCaps(flags)
         let cap = Self.capLabel
         if row.key.contains("|") {
@@ -64,7 +64,7 @@ extension ConfigDocument {
     func keyActions(in submap: String) -> [KeyAction] {
         var out: [KeyAction] = []
         for row in binds where row.submap == submap {
-            guard let flags = Self.flags(resolvedMods(row.mods)),
+            guard let flags = ConfigText.flags(resolvedMods(row.mods)),
                   case .success(let pairs) = BindRange.pairs(key: row.key, dispatcher: row.dispatcher, arg: row.args)
             else { continue }
             for pair in pairs {

@@ -71,10 +71,7 @@ extension WindowManager {
 
     func followFocus() {
         guard isStarted, !restoringTemplate, let window = reportedFocusedWindow() else { return }
-        if let pending = focusRequests.pendingFocus {
-            guard pending.id == window.id else { return }
-            if pending.executed { focusRequests.pendingFocus = nil }
-        }
+        guard focusRequests.confirm(window.id) else { return }
         noteFocus(window.id)
         guard !closeAndSort.sortSession else { return }
         guard config.virtualWorkspaces, let workspace = workspaceOf[window.id], isVirtual(workspace) else { return }

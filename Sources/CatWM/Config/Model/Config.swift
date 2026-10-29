@@ -71,67 +71,13 @@ struct Config {
     static func write(option key: String, _ value: String, to url: URL = Self.url) throws {
         let text = FileManager.default.fileExists(atPath: url.path)
             ? try String(contentsOf: url, encoding: .utf8) : defaultText
-        let assignment = "\(key) = \(value.replacingOccurrences(of: "#", with: "##"))"
-        var lines = text.components(separatedBy: "\n")
-        func norm(_ name: String) -> String { ConfigOption.named(name)?.key ?? ConfigOption.norm(name) }
-        let existing = lines.lastIndex { line in
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            guard !trimmed.hasPrefix("#"), let equals = trimmed.firstIndex(of: "=") else { return false }
-            return norm(trimmed[..<equals].trimmingCharacters(in: .whitespaces)) == norm(key)
-        }
-        if let existing {
-            lines[existing] = assignment
-        } else {
-            let firstBind = lines.firstIndex { $0.trimmingCharacters(in: .whitespaces).lowercased().hasPrefix("bind") }
-            lines.insert(assignment, at: firstBind ?? lines.count)
-        }
-        try lines.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
+        let edited = ConfigText(text).setting(option: key, to: value)
+        try edited.write(to: url, atomically: true, encoding: .utf8)
     }
 
-    static func parse(_ text: String) -> Config {
-        var config = Config()
-        var vars: [(String, String)] = []
-        var modVar: String?
-        var blocks: [String] = []
-        for (index, raw) in text.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline).enumerated() {
-            var line = stripComment(String(raw))
-            line = line.trimmingCharacters(in: .whitespaces)
-            if line.hasSuffix("{") {
-                blocks.append(String(line.dropLast()).trimmingCharacters(in: .whitespaces))
-                continue
-            }
-            if line == "}" { _ = blocks.popLast(); continue }
-            if line.isEmpty { continue }
-            guard let equals = line.firstIndex(of: "=") else {
-                config.errors.append("line \(index + 1): expected `key = value`")
-                continue
-            }
-            let key = line[..<equals].trimmingCharacters(in: .whitespaces)
-            var value = line[line.index(after: equals)...].trimmingCharacters(in: .whitespaces)
-            for (name, replacement) in vars { value = value.replacingOccurrences(of: name, with: replacement) }
-            if key.hasPrefix("$") {
-                vars.removeAll { $0.0 == key }
-                vars.append((key, value))
-                vars.sort { $0.0.count > $1.0.count }
-                if key.lowercased().contains("mod"), (modVar ?? key) == key, let flags = ConfigDocument.flags(value) {
-                    modVar = key
-                    config.mainMod = CGEventFlags(rawValue: UInt64(flags.rawValue))
-                }
-                continue
-            }
-            if key.lowercased() == "submap" {
-                config.currentSubmap = value.lowercased() == "reset" ? "" : value
-                continue
-            }
-            if let err = config.apply((blocks + [key]).joined(separator: ":"), value) {
-                config.errors.append("line \(index + 1): \(err)")
-            }
-        }
-        config.reportEmptySubmaps()
-        return config
-    }
+    static func parse(_ text: String) -> Config { ConfigText(text).config }
 
-    private mutating func reportEmptySubmaps() {
+    mutating func reportEmptySubmaps() {
         let modes = Set(bindings.map(\.submap))
         for bind in bindings where bind.dispatcher == "submap" && bind.arg.lowercased() != "reset"
             && !bind.arg.isEmpty && !modes.contains(bind.arg) {
@@ -199,22 +145,18 @@ struct Config {
     }
 
     private mutating func parseBind(_ value: String, repeats: Bool) -> String? {
-        let parts = value.split(separator: ",", maxSplits: 3, omittingEmptySubsequences: false)
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-        guard parts.count >= 3 else { return "bind needs `MODS, key, dispatcher[, args]`" }
-        var mods: CGEventFlags = []
-        for modifier in parts[0].uppercased().split(whereSeparator: { " _+".contains($0) }) {
-            switch modifier {
-            case "SUPER", "CMD", "COMMAND", "WIN", "META", "MOD4": mods.insert(.maskCommand)
-            case "ALT", "OPT", "OPTION", "MOD1": mods.insert(.maskAlternate)
-            case "CTRL", "CONTROL": mods.insert(.maskControl)
-            case "SHIFT": mods.insert(.maskShift)
-            default: return "unknown modifier `\(modifier)`"
-            }
+        guard let row = BindRow(value: value, kind: repeats ? "binde" : "bind", submap: currentSubmap) else {
+            return "bind needs `MODS, key, dispatcher[, args]`"
         }
-        let dispatcher = parts[2].lowercased()
+        guard let flags = ConfigText.flags(row.mods) else {
+            let unknown = row.mods.uppercased().split(whereSeparator: { " _+".contains($0) })
+                .first { ConfigText.flags(String($0)) == nil }
+            return "unknown modifier `\(unknown.map(String.init) ?? row.mods)`"
+        }
+        let mods = CGEventFlags(rawValue: UInt64(flags.rawValue))
+        let dispatcher = row.dispatcher
         let pairs: [(key: String, arg: String)]
-        switch BindRange.pairs(key: parts[1], dispatcher: dispatcher, arg: parts.count > 3 ? parts[3] : "") {
+        switch BindRange.pairs(key: row.key, dispatcher: dispatcher, arg: row.args) {
         case .success(let found): pairs = found
         case .failure(let failure): return failure.message
         }
@@ -240,18 +182,4 @@ extension Config {
         defaults.removeAll { configured.contains(Hotkeys.key($0.keyCode, $0.mods)) }
         return defaults + bindings
     }
-}
-
-func stripComment(_ line: String) -> String {
-    var out = ""
-    var iterator = line.makeIterator()
-    while let character = iterator.next() {
-        if character == "#" {
-            var peek = iterator
-            guard peek.next() == "#" else { break }
-            iterator = peek
-        }
-        out.append(character)
-    }
-    return out
 }

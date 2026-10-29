@@ -3,7 +3,6 @@ import AppKit
 extension WindowManager {
     static let tabTitleBand: CGFloat = 44
     static let minimizeHold: TimeInterval = 2
-    static let tabHoverDelay: TimeInterval = 0.4
     static let tabDragSlack: CGFloat = 40
     static let tabFollowWindow: TimeInterval = 1
 
@@ -88,7 +87,7 @@ extension WindowManager {
     }
 
     func followTabFocus(_ id: CGWindowID?) {
-        guard tabUI.draggedTab == nil, let id, let group = tabs.group(of: id), group.active != id,
+        guard tabUI.drag.lifted == nil, let id, let group = tabs.group(of: id), group.active != id,
               visible.contains(id) else {
             surface.tabsDidChange(instant: false)
             return
@@ -169,9 +168,7 @@ extension WindowManager {
     func dragTab(_ id: CGWindowID, grab: CGPoint, to point: CGPoint) {
         guard let window = windows[id], let slot = targets[id] else { return }
         let held = CGRect(origin: CGPoint(x: point.x - grab.x, y: point.y - grab.y), size: slot.size)
-        if tabUI.draggedTab != id {
-            tabUI.draggedTab = id
-            tabUI.tabDropCancelled = false
+        if tabUI.drag.beginLifted(id) {
             focus(window, warp: false)
             animator.animate([.init(window: window, to: held, bounds: held)],
                              duration: config.animate ? config.animationDuration : 0,
@@ -179,9 +176,9 @@ extension WindowManager {
         } else if !animator.retarget(window, to: held) {
             animator.position(window, at: held)
         }
-        guard !tabUI.tabDropCancelled else { return }
+        guard tabUI.drag.allowsJoin else { return }
         guard !surface.previewTabDrop(window, at: point) else {
-            trackTabHover(nil)
+            tabUI.drag.track(nil, changed: {})
             return surface.hideTabDropHint()
         }
         trackTabHover(for: id, at: point)
@@ -197,13 +194,10 @@ extension WindowManager {
     }
 
     func dropTab(_ id: CGWindowID, at point: CGPoint) {
-        let joins = !tabUI.tabDropCancelled
+        let joins = tabUI.drag.allowsJoin
         let hovered = joins ? settledTabHover(for: id, at: point) : nil
-        tabUI.draggedTab = nil
-        tabUI.tabDropCancelled = false
-        surface.hideTabDropHint()
-        trackTabHover(nil)
-        let previewed = surface.endTabPreview(of: id)
+        let completed = tabUI.drag.finish(id, on: surface)
+        let previewed = completed.preview
         if !joins {
             untab(id, droppedAt: point)
         } else if let previewed {
@@ -218,12 +212,8 @@ extension WindowManager {
     }
 
     func cancelTabDrag(_ id: CGWindowID) {
-        guard tabUI.draggedTab == id else { return }
-        tabUI.draggedTab = nil
-        tabUI.tabDropCancelled = false
-        trackTabHover(nil)
-        surface.hideTabDropHint()
-        _ = surface.endTabPreview(of: id)
+        guard tabUI.drag.lifted == id else { return }
+        tabUI.drag.finish(id, on: surface)
         returnTab(id)
     }
 
@@ -290,9 +280,9 @@ extension WindowManager {
     }
 
     func settledTabHover(for id: CGWindowID, at point: CGPoint) -> CGWindowID? {
-        guard let hover = tabUI.tabHover, hover.settled else { return nil }
+        guard let hover = tabUI.drag.hover, hover.settled else { return nil }
         let owner = tiledSlotOwner(at: point) ?? hover.host
-        return owner == hover.host && (owner != id || tabUI.draggedTab == id) ? hover.host : nil
+        return owner == hover.host && (owner != id || tabUI.drag.lifted == id) ? hover.host : nil
     }
 
     private func tabHost(for id: CGWindowID, at point: CGPoint,
@@ -309,24 +299,9 @@ extension WindowManager {
 
     private func trackTabHover(for id: CGWindowID, at point: CGPoint) {
         guard let owner = tiledSlotOwner(at: point) else { return }
-        trackTabHover(tabUI.draggedTab == id || !sharesTabs(owner, id) ? owner : nil)
-    }
-
-    func trackTabHover(_ host: CGWindowID?) {
-        guard host != tabUI.tabHover?.host else { return }
-        tabUI.tabHoverWork?.cancel()
-        tabUI.tabHoverWork = nil
-        tabUI.tabHover = host.map { ($0, false) }
-        guard let host else { return }
-        let work = DispatchWorkItem { [weak self] in
-            guard let self, self.tabUI.tabHover?.host == host else { return }
-            self.tabUI.tabHover?.settled = true
-            self.updateTabDropHint()
+        tabUI.drag.track(tabUI.drag.lifted == id || !sharesTabs(owner, id) ? owner : nil) { [weak self] in
+            self?.updateTabDropHint()
         }
-        tabUI.tabHoverWork = work
-        DispatchQueue.main.asyncAfter( // style-ok: hover dwell time
-            deadline: .now() + Self.tabHoverDelay, execute: work
-        )
     }
 
     func tabDropZone(_ host: CGWindowID, _ slot: CGRect) -> CGRect {
@@ -335,8 +310,8 @@ extension WindowManager {
     }
 
     func updateTabDropHint() {
-        guard !tabUI.tabDropCancelled else { return surface.hideTabDropHint() }
-        if let id = tabUI.draggedTab, let window = windows[id] {
+        guard tabUI.drag.allowsJoin else { return surface.hideTabDropHint() }
+        if let id = tabUI.drag.lifted, let window = windows[id] {
             let point = mouseLocation()
             return showTabDropHint(adding: window,
                                    onto: tabDropTarget(for: id, at: point) ?? settledTabHover(for: id, at: point))
@@ -348,7 +323,7 @@ extension WindowManager {
         }
         let point = mouseLocation()
         guard !surface.previewTabDrop(window, at: point) else {
-            trackTabHover(nil)
+            tabUI.drag.track(nil, changed: {})
             return surface.hideTabDropHint()
         }
         trackTabHover(for: id, at: point)

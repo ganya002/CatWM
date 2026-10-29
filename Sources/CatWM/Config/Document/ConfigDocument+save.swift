@@ -25,34 +25,13 @@ extension ConfigDocument {
     }
 
     func serialize(includeKeyboard: Bool = true, includeAnimation: Bool = true) -> String {
-        func esc(_ text: String) -> String { text.replacingOccurrences(of: "#", with: "##") }
-        var out = [
-            "# CatWM config. Written by the Settings window; editing by hand is fine too.",
-            "# SUPER = Command, ALT = Option, CTRL = Control.",
-            ""
-        ]
-        if includeKeyboard { out += vars.map { "\($0.name) = \(esc($0.value))" } }
-        out += [""] + Options.lines(config, includeAnimation: includeAnimation)
-        out += [
-            "",
-            "# bind = MODS, key, dispatcher, args. Binds inside `submap = name` … `submap = reset` only work in",
-            "# that mode (entered with the submap dispatcher); single keys are fine there, vim style."
-        ]
-        func line(_ row: BindRow) -> String {
-            "\(row.kind) = \(esc(row.mods)), \(esc(row.key)), \(row.dispatcher)"
-                + (row.args.isEmpty ? "" : ", \(esc(row.args))")
+        if includeKeyboard && includeAnimation {
+            return source.editing(config: config, vars: vars, binds: binds)
         }
-        guard includeKeyboard else {
-            let kept = extraLines.isEmpty ? [] : ["", "# Lines CatWM doesn't recognise, kept as-is"] + extraLines
-            return (out + kept).joined(separator: "\n") + "\n"
-        }
-        out += binds.filter(\.submap.isEmpty).map(line)
-        for mode in submaps where !mode.isEmpty {
-            out += ["", "submap = \(mode)"] + binds.filter { $0.submap == mode }.map(line) + ["submap = reset"]
-        }
-        if !extraLines.isEmpty {
-            out += ["", "# Lines CatWM doesn't recognise, kept as-is"] + extraLines
-        }
+        var out = ["# CatWM config. Written by the Settings window; editing by hand is fine too."]
+        if includeKeyboard { out.append(ConfigText.keyboard(vars: vars, binds: binds)) }
+        out += Options.lines(config, includeAnimation: includeAnimation)
+        out += extraLines
         return out.joined(separator: "\n") + "\n"
     }
 
@@ -64,24 +43,10 @@ extension ConfigDocument {
         return resolved
     }
 
-    static func flags(_ mods: String) -> NSEvent.ModifierFlags? {
-        var flags: NSEvent.ModifierFlags = []
-        for token in mods.uppercased().split(whereSeparator: { " _+".contains($0) }) {
-            switch token {
-            case "SUPER", "CMD", "COMMAND", "WIN", "META", "MOD4": flags.insert(.command)
-            case "ALT", "OPT", "OPTION", "MOD1": flags.insert(.option)
-            case "CTRL", "CONTROL": flags.insert(.control)
-            case "SHIFT": flags.insert(.shift)
-            default: return nil
-            }
-        }
-        return flags
-    }
-
     func modsString(for flags: NSEvent.ModifierFlags) -> String {
         var rest = flags
         var parts: [String] = []
-        if let main = Self.flags(modValue), !main.isEmpty, flags.isSuperset(of: main) {
+        if let main = ConfigText.flags(modValue), !main.isEmpty, flags.isSuperset(of: main) {
             parts.append(modVarName)
             rest.subtract(main)
         }
@@ -93,7 +58,7 @@ extension ConfigDocument {
     }
 
     func combos(_ row: BindRow) -> [Combo]? {
-        guard let flags = Self.flags(resolvedMods(row.mods)),
+        guard let flags = ConfigText.flags(resolvedMods(row.mods)),
               case .success(let pairs) = BindRange.pairs(key: row.key, dispatcher: row.dispatcher, arg: row.args)
         else { return nil }
         var out: [Combo] = []
@@ -109,7 +74,7 @@ extension ConfigDocument {
     }
 
     func issue(_ row: BindRow) -> (severity: Severity, message: String)? {
-        guard let flags = Self.flags(resolvedMods(row.mods)) else {
+        guard let flags = ConfigText.flags(resolvedMods(row.mods)) else {
             return (.error, "Unknown modifier in “\(row.mods)”")
         }
         if row.key.isEmpty { return (.error, "Click the shortcut and press the keys you want") }

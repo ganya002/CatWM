@@ -110,7 +110,7 @@ enum Options {
         ConfigOption("keyboard-help-key", \Config.keyboardHelpKey, read: { value, _ -> (String?, String?) in
             guard value.count == 1 else { return (nil, "keyboard-help-key must be a single character, such as ?") }
             return (value, nil)
-        }, text: { $0.replacingOccurrences(of: "#", with: "##") })
+        }, text: { $0 })
             .documented("one character", "toggles the keyboard help in window mode"),
         ConfigOption("keyboard-finish", \Config.keyboardFinish, read: { value, _ -> (String?, String?) in
             guard MacKeyboard.isValid(value) else {
@@ -242,12 +242,12 @@ enum Options {
         out += heading("floating apps") + [
             "# Bundle IDs to float (wildcards like com.adobe.* work). Set floating-is-blacklist = false",
             "# to make this a list of the ONLY apps that get tiled.",
-            "floating = " + config.floating.joined(separator: ", ")
+            "floating = " + ConfigText.escape(config.floating.joined(separator: ", "))
         ]
         for option in all where includeAnimation || option.group != .animation {
             if let section = option.section { out += heading(section) }
             if let note = option.note { out += note.components(separatedBy: "\n").map { "# " + $0 } }
-            out.append("\(option.key) = \(option.text(config))")
+            out.append("\(option.key) = \(ConfigText.escape(option.text(config)))")
         }
         return out
     }

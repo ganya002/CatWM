@@ -27,10 +27,7 @@ extension ConfigDocument {
     }
 
     func keyboardText() -> String {
-        let all = serialize().components(separatedBy: "\n")
-        let lines = vars.map { "\($0.name) = \($0.value.replacingOccurrences(of: "#", with: "##"))" } + [""]
-            + all.filter { $0.hasPrefix("bind") || $0.hasPrefix("submap") || $0.isEmpty }
-        return lines.joined(separator: "\n") + "\n"
+        ConfigText.keyboard(vars: vars, binds: binds)
     }
 
     func animationText() -> String {
@@ -75,78 +72,15 @@ extension ConfigDocument {
     }
 
     func apply(text: String) {
-        config = Config.parse(text)
-        var parse = ConfigTextParse()
-        for raw in text.components(separatedBy: .newlines) { parse.read(raw) }
-        if !parse.vars.contains(where: { $0.name.lowercased().contains("mod") }) {
-            parse.vars.insert(VarRow(name: "$mod", value: "ALT"), at: 0)
-        }
-        vars = parse.vars
-        binds = parse.binds
-        extraLines = parse.extra
+        source = ConfigText(text)
+        config = source.config
+        vars = source.vars
+        binds = source.binds
+        extraLines = source.extraLines
     }
 
     func autosaveIfNeeded() {
         guard isDirty, problemCount == 0 else { return }
         save()
-    }
-}
-
-private struct ConfigTextParse {
-    var vars: [VarRow] = []
-    var binds: [BindRow] = []
-    var extra: [String] = []
-    private var resolved: [(String, String)] = []
-    private var submap = ""
-    private var blocks: [String] = []
-
-    mutating func read(_ raw: String) {
-        var line = stripComment(raw)
-        line = line.trimmingCharacters(in: .whitespaces)
-        if line.hasSuffix("{") {
-            blocks.append(String(line.dropLast()).trimmingCharacters(in: .whitespaces))
-            return
-        }
-        if line == "}" { _ = blocks.popLast(); return }
-        if line.isEmpty { return }
-        guard let equals = line.firstIndex(of: "=") else { extra.append(raw); return }
-        let key = line[..<equals].trimmingCharacters(in: .whitespaces)
-        let value = line[line.index(after: equals)...].trimmingCharacters(in: .whitespaces)
-        let lower = key.lowercased()
-
-        if lower == "submap" {
-            submap = value.lowercased() == "reset" ? "" : value
-            return
-        }
-        if key.hasPrefix("$") {
-            vars.removeAll { $0.name == key }
-            vars.append(VarRow(name: key, value: value))
-            resolved.append((key, value))
-        } else if lower.hasPrefix("bind") {
-            readBind(raw, kind: lower, value: value)
-        } else {
-            readOption(raw, key: key, value: value)
-        }
-    }
-
-    private mutating func readBind(_ raw: String, kind: String, value: String) {
-        guard kind != "bindm" else { extra.append(raw); return }
-        let parts = value.split(separator: ",", maxSplits: 3, omittingEmptySubsequences: false)
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-        if parts.count >= 3 {
-            binds.append(BindRow(mods: parts[0], key: parts[1], dispatcher: parts[2].lowercased(),
-                                 args: parts.count > 3 ? parts[3] : "", submap: submap, kind: kind))
-        } else {
-            extra.append(raw)
-        }
-    }
-
-    private mutating func readOption(_ raw: String, key: String, value: String) {
-        var probe = Config()
-        var expanded = value
-        for (name, replacement) in resolved.sorted(by: { $0.0.count > $1.0.count }) {
-            expanded = expanded.replacingOccurrences(of: name, with: replacement)
-        }
-        if probe.apply((blocks + [key]).joined(separator: ":"), expanded) != nil { extra.append(raw) }
     }
 }
