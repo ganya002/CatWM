@@ -54,7 +54,8 @@ struct LaunchRequest: Equatable, Sendable {
 
 enum Launcher {
     static let appFolders = ["/Applications", "/Applications/Utilities", "/System/Applications",
-                             "/System/Applications/Utilities", NSHomeDirectory() + "/Applications"]
+                             "/System/Applications/Utilities", NSHomeDirectory() + "/Applications",
+                             "/System/Library/CoreServices", "/System/Library/CoreServices/Applications"]
 
     static func resolve(_ text: String) -> LaunchTarget? {
         let trimmed = text.trimmingCharacters(in: .whitespaces)

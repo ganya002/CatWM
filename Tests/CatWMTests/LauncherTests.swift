@@ -42,4 +42,10 @@ import Testing
         #expect(Launcher.resolve("/no/such/file") == nil)
         #expect(Launcher.resolve("No Such App 12345") == nil)
     }
+
+    @Test func resolvesSystemAppsOutsideTheApplicationsFolders() {
+        #expect(Launcher.resolve("Finder") == .app(URL(fileURLWithPath: "/System/Library/CoreServices/Finder.app")))
+        #expect(Launcher.resolve("Archive Utility")
+            == .app(URL(fileURLWithPath: "/System/Library/CoreServices/Applications/Archive Utility.app")))
+    }
 }

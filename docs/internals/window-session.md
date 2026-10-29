@@ -397,6 +397,8 @@ A window that a script opened can show another URL while it loads. A saved windo
 
 `LaunchRequest` reads the options from the end of the argument. A word with `=` that is not `workspace`, `display` or `frame` stays in the target, so a URL with a query works. The CLI cannot run `launch`, because it can open a `.command` file.
 
+An app name is looked up as `Name.app` in `/Applications`, `/System/Applications`, their `Utilities` folders, `~/Applications`, `/System/Library/CoreServices` (Finder) and `/System/Library/CoreServices/Applications` (Archive Utility, Keychain Access).
+
 `Launcher.resolve` accepts URLs with a scheme, including `mailto:hello@example.com`, `tel:+4712345678` and `obsidian:open?vault=Work`. A URL does not need `//` after the scheme.
 
 ```mermaid
