@@ -106,3 +106,25 @@ import Testing
     #expect(text == "keyboard-help-key = ## # toggle help\n")
     #expect(Config.parse(text).keyboardHelpKey == "#")
 }
+
+@Test(arguments: [
+    "$mod = CTRL\nbind = $mod, J, movefocus, d\n",
+    "$gap = 8\n$mod = CTRL\nbind = $mod, J, movefocus, d\n"
+])
+func aKeyboardImportKeepsSettingsThatUsedReplacedVariables(_ keyboard: String) {
+    let doc = ConfigDocument(text: """
+    $gap = 24
+    window-margin-size = $gap # spacing
+    $mod = ALT
+    bind = $mod, H, movefocus, l
+    """)
+    doc.applyKeyboard(keyboard)
+    let saved = doc.serialize()
+    let parsed = Config.parse(saved)
+    #expect(parsed.errors.isEmpty)
+    #expect(parsed.windowMarginSize == 24)
+    #expect(saved.contains("window-margin-size = 24 # spacing"))
+    #expect(parsed.bindings.count == 1)
+    #expect(parsed.bindings.first?.arg == "d")
+    #expect(parsed.bindings.first?.mods == .maskControl)
+}

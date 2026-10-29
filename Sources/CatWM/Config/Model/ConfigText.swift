@@ -25,6 +25,7 @@ struct ConfigText {
         var ending: String
         var assignment: Assignment?
         var bind: BindRow?
+        var settingValue: String?
 
         func removingAssignment() -> Self {
             var copy = self
@@ -92,12 +93,15 @@ struct ConfigText {
         if key.hasPrefix("$") { return readVariable(key, value: value, expanded: expanded, reader: &reader) }
         if key.lowercased() == "submap" {
             config.currentSubmap = expanded.lowercased() == "reset" ? "" : expanded
+            lines[index].settingValue = expanded == value ? nil : expanded
             return
         }
         if key.lowercased().hasPrefix("bind") { readBind(index, key: key, value: value) }
         if let error = config.apply(assignment.fullKey, expanded) {
             config.errors.append("line \(index + 1): \(error)")
             if lines[index].bind == nil { extraLines.append(raw) }
+        } else {
+            lines[index].settingValue = lines[index].bind == nil && expanded != value ? expanded : nil
         }
     }
 
@@ -171,6 +175,16 @@ struct ConfigText {
             }
         }
         return flags
+    }
+
+    func materializingSettings() -> Self {
+        var edited = lines
+        for index in lines.indices {
+            if let value = lines[index].settingValue {
+                edited[index] = lines[index].replacing(value: value)
+            }
+        }
+        return Self(Self.text(edited))
     }
 
     func setting(option key: String, to value: String) -> String {

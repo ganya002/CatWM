@@ -36,7 +36,9 @@ extension ConfigDocument {
     }
 
     func applyKeyboard(_ text: String) {
-        let other = ConfigDocument(text: text)
+        let other = ConfigText(text)
+        source = ConfigText(serialize()).materializingSettings()
+        config = source.config
         vars = other.vars
         binds = other.binds
     }
