@@ -11,26 +11,6 @@ extension TemplateRestorer {
         var frame: CGRect?
     }
 
-    struct ListedWindow {
-        var id: CGWindowID
-        var pid: Int
-        var size: CGSize
-
-        var isLargeEnough: Bool { size.width >= 100 && size.height >= 100 }
-    }
-
-    nonisolated static func windowList(_ options: CGWindowListOption) -> [ListedWindow] {
-        let list = CGWindowListCopyWindowInfo([options, .excludeDesktopElements], kCGNullWindowID)
-            as? [[String: Any]] ?? []
-        return list.compactMap { info in
-            guard (info[kCGWindowLayer as String] as? Int) == 0, let number = info[kCGWindowNumber as String] as? Int,
-                  let pid = info[kCGWindowOwnerPID as String] as? Int,
-                  let bounds = info[kCGWindowBounds as String] as? [String: CGFloat] else { return nil }
-            return ListedWindow(id: CGWindowID(truncatingIfNeeded: number), pid: pid,
-                                size: CGSize(width: bounds["Width"] ?? 0, height: bounds["Height"] ?? 0))
-        }
-    }
-
     func currentDesktop() -> UInt64? {
         (manager.currentScreen() ?? Screen.all().first).map { Spaces.current(display: $0.uuid) }
     }
@@ -57,13 +37,14 @@ extension TemplateRestorer {
     func pullOffDesktopWindows() async {
         guard let here = currentDesktop() else { return }
         let desktops = desktopSpaces()
-        let list = Self.windowList(.optionAll)
+        let list = CGWindowInfo.onScreen(options: [.optionAll, .excludeDesktopElements])
         for bundle in Set(template.windows.map(\.bundleID)).sorted() {
             let pids = Set(NSRunningApplication.runningApplications(withBundleIdentifier: bundle)
-                .map { Int($0.processIdentifier) })
+                .map(\.processIdentifier))
             var present = 0
             var elsewhere: [(id: CGWindowID, space: UInt64)] = []
-            for window in list where pids.contains(window.pid) && window.isLargeEnough {
+            for window in list where pids.contains(window.pid)
+                && window.bounds.width >= 100 && window.bounds.height >= 100 {
                 let membership = Spaces.of(window: window.id)
                 if membership.contains(here) {
                     present += 1
@@ -96,10 +77,11 @@ extension TemplateRestorer {
         let desktops = desktopSpaces()
         let pids = Set(template.windows.flatMap { saved in
             NSRunningApplication.runningApplications(withBundleIdentifier: saved.bundleID)
-                .map { Int($0.processIdentifier) }
+                .map(\.processIdentifier)
         })
-        for window in Self.windowList(.optionAll) where pids.contains(window.pid) && !initial.contains(window.id)
-            && !pulled.contains(window.id) && window.isLargeEnough {
+        let list = CGWindowInfo.onScreen(options: [.optionAll, .excludeDesktopElements])
+        for window in list where pids.contains(window.pid) && !initial.contains(window.id)
+            && !pulled.contains(window.id) && window.bounds.width >= 100 && window.bounds.height >= 100 {
             let membership = Spaces.of(window: window.id)
             if let space = membership.first {
                 guard membership.count == 1, space != here, desktops.contains(space) else { continue }

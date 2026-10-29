@@ -15,7 +15,7 @@ extension WindowManager {
             return
         }
         if request.placesWindow, let bundleID = Launcher.bundleID(for: target) {
-            let before = Set(TemplateRestorer.windowList(.optionAll).map(\.id))
+            let before = Set(CGWindowInfo.onScreen(options: [.optionAll, .excludeDesktopElements]).map(\.id))
             pendingLaunches.removeAll { $0.until < Date() }
             pendingLaunches.append(.init(bundleID: bundleID, before: before, request: request,
                                          source: currentScreen()?.uuid, until: Date().addingTimeInterval(15)))

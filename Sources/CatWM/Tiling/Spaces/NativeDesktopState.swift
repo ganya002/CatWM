@@ -2,13 +2,6 @@ import CoreGraphics
 import Foundation
 
 struct NativeDesktopState {
-    struct FollowMove {
-        let window: Window
-        let workspace: String
-        let space: UInt64
-        let from: String?
-    }
-
     struct PendingSpace {
         let display: String
         let index: Int
@@ -27,9 +20,6 @@ struct NativeDesktopState {
     var nativeWorkspaceGeneration = 0
     var nativeSortNames: Set<String> = []
     var nativeDroppedWorkspaces: Set<String> = []
-    var nativeMoveTargets: [CGWindowID: String] = [:]
-    var nativeMembership: [CGWindowID: UInt64] = [:]
-    var followMoves: [CGWindowID: FollowMove] = [:]
     var homeSpace: [String: UInt64] = [:]
     var pendingSpace: PendingSpace?
     var spaceGeneration = 0

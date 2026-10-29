@@ -34,7 +34,7 @@ extension WindowManager {
         timing.checkpoint("known windows")
         var observed = observeWindows(screens: screens, onScreen: onScreen)
         timing.checkpoint("observe")
-        observed.present.formUnion(workspaceMoves.filter { windows[$0] != nil })
+        observed.present.formUnion(nativeMoves.movingIDs.filter { windows[$0] != nil })
         restoredEarly = restoredEarly.filter { id, since in
             windows[id]?.minimized == false && !onScreenIDs.contains(id)
                 && Date().timeIntervalSince(since) < Self.restoreHold
@@ -125,7 +125,7 @@ extension WindowManager {
             }
             for id in scan.listed {
                 let maximised = scan.fullscreen.contains(id)
-                guard !workspaceMoves.contains(id),
+                guard !nativeMoves.isMoving(id),
                       maximised || managed(id) || (onScreenIDs.contains(id) && !onOtherSpace(id)) else {
                     continue
                 }
@@ -152,15 +152,12 @@ extension WindowManager {
 
     private func observeKnown(_ window: Window, id: CGWindowID, scan: WindowScanner.AppScan) -> Bool {
         if let found = scan.found[id] { accept(found, from: scan, for: window) }
-        if let since = templateHiddenWindows[id] {
-            let release = TemplatePlacementPlan.releaseHeldWindow(
-                scanStarted: scan.readAt, heldSince: since, minimized: scan.minimized.contains(id),
-                fullscreen: scan.fullscreen.contains(id), restoring: restoringTemplate)
-            guard release else { return false }
-            templateHiddenWindows[id] = nil
-            windows[id]?.placementSuspended = false
-            snapNextPlacement.insert(id)
+        let wasHeld = window.placementSuspended
+        guard placementHolds.observe(window, scanStarted: scan.readAt, minimized: scan.minimized.contains(id),
+                                     fullscreen: scan.fullscreen.contains(id), restoring: restoringTemplate) else {
+            return false
         }
+        if wasHeld && !window.placementSuspended { snapNextPlacement.insert(id) }
         return !(scan.fullscreen.contains(id) || scan.minimized.contains(id))
     }
 
@@ -211,7 +208,7 @@ extension WindowManager {
         var planned = PlannedMoves()
         for screen in screens {
             let screenState = state(for: screen)
-            let ids = tiled(on: screen).filter { !workspaceMoves.contains($0) }
+            let ids = tiled(on: screen).filter { !nativeMoves.isMoving($0) }
             if let zoomed = screenState.zoomed,
                windows[zoomed]?.isFloating != false || workspaceOf[zoomed] != shown[screen.uuid] {
                 screenState.zoomed = nil

@@ -33,7 +33,7 @@ extension WindowManager {
             let membership = Spaces.of(window: id)
             guard membership.count == 1, let source = membership.first,
                   desktops.contains(source), source != backend.currentSpace(display: display.uuid),
-                  !workspaceMoves.contains(id), !candidate.flag(kAXMinimizedAttribute),
+                  !nativeMoves.isMoving(id), !candidate.flag(kAXMinimizedAttribute),
                   !candidate.flag("AXFullScreen") else { return nil }
             let window = windows[id]
                 ?? Window(id: id, element: candidate, pid: app.processIdentifier, bundleID: app.bundleIdentifier,

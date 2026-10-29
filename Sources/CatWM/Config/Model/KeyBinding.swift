@@ -9,6 +9,47 @@ struct KeyBinding {
     var repeats = false
 }
 
+struct BindInterpretation {
+    enum Failure: Error {
+        case modifier(String)
+        case range(String)
+        case key(String)
+
+        var message: String {
+            switch self {
+            case .modifier(let name): return "unknown modifier `\(name)`"
+            case .range(let message): return message
+            case .key(let name): return "unknown key `\(name)`"
+            }
+        }
+    }
+
+    let flags: NSEvent.ModifierFlags
+    let bindings: [KeyBinding]
+
+    static func read(_ row: BindRow, mods: String? = nil) -> Result<Self, Failure> {
+        let modifiers = mods ?? row.mods
+        guard let flags = ConfigText.flags(modifiers) else {
+            let unknown = modifiers.uppercased().split(whereSeparator: { " _+".contains($0) })
+                .first { ConfigText.flags(String($0)) == nil }
+            return .failure(.modifier(unknown.map(String.init) ?? modifiers))
+        }
+        let pairs: [(key: String, arg: String)]
+        switch BindRange.pairs(key: row.key, dispatcher: row.dispatcher, arg: row.args) {
+        case .success(let found): pairs = found
+        case .failure(let failure): return .failure(.range(failure.message))
+        }
+        var bindings: [KeyBinding] = []
+        for (key, arg) in pairs {
+            guard let code = keyCodes[key.lowercased()] else { return .failure(.key(key)) }
+            bindings.append(KeyBinding(keyCode: code, mods: CGEventFlags(rawValue: UInt64(flags.rawValue)),
+                                       dispatcher: row.dispatcher, arg: arg, submap: row.submap,
+                                       repeats: ["binde", "bindel", "bindle"].contains(row.kind)))
+        }
+        return .success(Self(flags: flags, bindings: bindings))
+    }
+}
+
 enum SpecialKey {
     static let mouseUp: UInt16 = 0x1000, mouseDown: UInt16 = 0x1001
     static let mouseLeft: UInt16 = 0x1002, mouseRight: UInt16 = 0x1003

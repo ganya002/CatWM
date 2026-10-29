@@ -239,7 +239,7 @@ extension WindowManager {
     func tabStack(behind id: CGWindowID) -> [CGWindowID] {
         guard let group = tabs.group(of: id), group.active == id else { return [] }
         return group.members.filter {
-            $0 != id && visible.contains($0) && windows[$0]?.isFloating == false && !workspaceMoves.contains($0)
+            $0 != id && visible.contains($0) && windows[$0]?.isFloating == false && !nativeMoves.isMoving($0)
         }
     }
 

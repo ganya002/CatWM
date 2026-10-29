@@ -58,15 +58,14 @@ extension ConfigDocument {
     }
 
     func combos(_ row: BindRow) -> [Combo]? {
-        guard let flags = ConfigText.flags(resolvedMods(row.mods)),
-              case .success(let pairs) = BindRange.pairs(key: row.key, dispatcher: row.dispatcher, arg: row.args)
-        else { return nil }
-        var out: [Combo] = []
-        for pair in pairs {
-            guard let code = keyCodes[pair.key.lowercased()] else { return nil }
-            out.append(Combo(code: code, flags: flags.rawValue))
+        guard case .success(let interpreted) = BindInterpretation.read(row, mods: resolvedMods(row.mods)) else {
+            return nil
         }
-        return out
+        return combos(interpreted)
+    }
+
+    private func combos(_ interpreted: BindInterpretation) -> [Combo] {
+        interpreted.bindings.map { Combo(code: $0.keyCode, flags: interpreted.flags.rawValue) }
     }
 
     func bindCombos() -> [UUID: [Combo]] {
@@ -82,14 +81,22 @@ extension ConfigDocument {
     }
 
     func issue(_ row: BindRow) -> (severity: Severity, message: String)? {
-        guard let flags = ConfigText.flags(resolvedMods(row.mods)) else {
-            return (.error, "Unknown modifier in “\(row.mods)”")
+        let interpreted: BindInterpretation
+        switch BindInterpretation.read(row, mods: resolvedMods(row.mods)) {
+        case .success(let value): interpreted = value
+        case .failure(let failure):
+            switch failure {
+            case .modifier: return (.error, "Unknown modifier in “\(row.mods)”")
+            case .range(let message):
+                if row.key.isEmpty { return (.error, "Click the shortcut and press the keys you want") }
+                return (.error, message.prefix(1).uppercased() + message.dropFirst())
+            case .key:
+                return (.error, row.key.isEmpty ? "Click the shortcut and press the keys you want"
+                    : "Unknown key in “\(row.key)”")
+            }
         }
-        if row.key.isEmpty { return (.error, "Click the shortcut and press the keys you want") }
-        if case .failure(let failure) = BindRange.pairs(key: row.key, dispatcher: row.dispatcher, arg: row.args) {
-            return (.error, failure.message.prefix(1).uppercased() + failure.message.dropFirst())
-        }
-        guard let mine = combos(row) else { return (.error, "Unknown key in “\(row.key)”") }
+        let flags = interpreted.flags
+        let mine = combos(interpreted)
         if row.submap.isEmpty, flags.subtracting(.shift).isEmpty, !mine.allSatisfy({ SpecialKey.isSwipe($0.code) }) {
             return (.error, "Add ⌥, ⌃ or ⌘, or put this in window mode, otherwise it would block normal typing")
         }

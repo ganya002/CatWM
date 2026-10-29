@@ -140,7 +140,7 @@ extension WindowManager {
                       spaces: Set(Spaces.list(display: $0.uuid)?.ids ?? []))
             },
             frames: windows.mapValues(\.cachedFrame), present: present,
-            held: held ? present : workspaceMoves.union(present.filter { animator.isBusy($0) }),
+            held: held ? present : nativeMoves.movingIDs.union(present.filter { animator.isBusy($0) }),
             fullscreen: fullscreenSpaces())
         let plan = WorkspaceReconciliation.reconcile(observation, model: model, virtual: config.virtualWorkspaces,
                                                      homeSpace: desktops.homeSpace, displayOf: displayOf)

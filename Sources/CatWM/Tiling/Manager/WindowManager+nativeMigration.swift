@@ -29,7 +29,7 @@ extension WindowManager {
             return
         }
         model.assign(window.id, to: workspace)
-        desktops.nativeMoveTargets[window.id] = workspace
+        nativeMoves.requestWorkspace(window.id, workspace: workspace)
         DispatchQueue.main.async { [weak self] in
             self?.moveNativeWindow(window, to: workspace, follow: false)
         }

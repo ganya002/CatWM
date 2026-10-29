@@ -148,25 +148,10 @@ struct Config {
         guard let row = BindRow(value: value, kind: repeats ? "binde" : "bind", submap: currentSubmap) else {
             return "bind needs `MODS, key, dispatcher[, args]`"
         }
-        guard let flags = ConfigText.flags(row.mods) else {
-            let unknown = row.mods.uppercased().split(whereSeparator: { " _+".contains($0) })
-                .first { ConfigText.flags(String($0)) == nil }
-            return "unknown modifier `\(unknown.map(String.init) ?? row.mods)`"
-        }
-        let mods = CGEventFlags(rawValue: UInt64(flags.rawValue))
-        let dispatcher = row.dispatcher
-        let pairs: [(key: String, arg: String)]
-        switch BindRange.pairs(key: row.key, dispatcher: dispatcher, arg: row.args) {
-        case .success(let found): pairs = found
+        switch BindInterpretation.read(row) {
+        case .success(let interpreted): bindings.append(contentsOf: interpreted.bindings)
         case .failure(let failure): return failure.message
         }
-        var parsed: [KeyBinding] = []
-        for (key, arg) in pairs {
-            guard let code = keyCodes[key.lowercased()] else { return "unknown key `\(key)`" }
-            parsed.append(KeyBinding(keyCode: code, mods: mods, dispatcher: dispatcher, arg: arg,
-                                     submap: currentSubmap, repeats: repeats))
-        }
-        bindings.append(contentsOf: parsed)
         return nil
     }
 }

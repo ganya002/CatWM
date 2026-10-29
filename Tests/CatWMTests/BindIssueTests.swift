@@ -55,4 +55,17 @@ struct BindIssueTests {
         let candidate = BindRow(mods: "ALT", key: "h", dispatcher: "movefocus", args: "r")
         #expect(doc.issue(candidate)?.message.hasPrefix("Overlaps") == true)
     }
+
+    @Test(arguments: ["CTRL, H|L, movefocus, l|r", "CMD SHIFT, 1..3, workspace, 1..3",
+                      "MOD1, esc, submap, reset", ", swipe_left, workspace, r-1"])
+    func settingsAndRuntimeInterpretTheSameBind(_ value: String) throws {
+        let text = "bind = \(value)\n"
+        let config = Config.parse(text)
+        let doc = ConfigDocument(text: text)
+        let row = try #require(doc.binds.first)
+        let combos = try #require(doc.combos(row))
+        #expect(config.errors.isEmpty)
+        #expect(combos.map(\.code) == config.bindings.map(\.keyCode))
+        #expect(combos.map(\.flags) == config.bindings.map { UInt($0.mods.rawValue) })
+    }
 }

@@ -64,7 +64,7 @@ extension WindowManager {
                   NSRunningApplication(processIdentifier: window.pid)?.isHidden != true,
                   let name = workspaceOf[id], let entry = desktops.nativeCatalog.entry(name) else { return false }
             return scanner.desktop.spaces[id]?.contains(entry.space) == true
-                || desktops.nativeMembership[id] == entry.space
+                || nativeMoves.confirms(id, on: entry.space)
         }
         guard let window = windows[id], !window.minimized, !window.fullscreen,
               NSRunningApplication(processIdentifier: window.pid)?.isHidden != true,

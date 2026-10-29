@@ -66,12 +66,9 @@ extension WindowManager {
             return key
         }
         for (id, window) in windows
-        where !workspaceMoves.contains(id) && desktops.nativeMoveTargets[id] == nil && !closeAndSort.sortSession
+        where !nativeMoves.isBusy(id) && !closeAndSort.sortSession
             && !isPending(workspaceOf[id]) {
-            let membership = desktops.nativeMembership[id].map { Set([$0]) } ?? scanner.desktop.spaces[id] ?? []
-            if let override = desktops.nativeMembership[id], scanner.desktop.spaces[id] == [override] {
-                desktops.nativeMembership[id] = nil
-            }
+            let membership = nativeMoves.observedMembership(id, observed: scanner.desktop.spaces[id] ?? [])
             if let entry = desktops.nativeCatalog.entries.first(where: { membership.contains($0.space) }) {
                 model.assign(id, to: entry.name)
                 displayOf[id] = sharesSpaces ? sharedDisplay(of: window, in: screens) ?? entry.display : entry.display
@@ -147,8 +144,8 @@ extension WindowManager {
 
     private func releaseEmptyWorkspaces() {
         guard config.removesEmptyWorkspaces, !closeAndSort.sortSession, !restoringTemplate, !nativeDesktop.isRunning,
-              nativeDesktop.requested == nil, !desktops.nativeCreationBusy, workspaceMoves.isEmpty,
-              desktops.nativeMoveTargets.isEmpty, !scanner.desktop.allWindows.isEmpty else { return }
+              nativeDesktop.requested == nil, !desktops.nativeCreationBusy, nativeMoves.isEmpty,
+              !scanner.desktop.allWindows.isEmpty else { return }
         let held = Set(workspaceOf.filter { windows[$0.key] != nil }.values).union(virtualShown.values)
             .union(model.shownSet)
         let occupied = Set(scanner.desktop.allWindows.compactMap { window in
@@ -179,8 +176,8 @@ extension WindowManager {
         Task { @MainActor in
             defer { self.desktops.desktopRemovalScheduled = false }
             guard await poll(5, every: 50_000_000, until: {
-                !self.nativeDesktop.isRunning && self.nativeDesktop.requested == nil && self.workspaceMoves.isEmpty
-                    && self.desktops.nativeMoveTargets.isEmpty && !self.desktops.nativeCreationBusy
+                !self.nativeDesktop.isRunning && self.nativeDesktop.requested == nil && self.nativeMoves.isEmpty
+                    && !self.desktops.nativeCreationBusy
             }) else { return }
             desktops.nativeCreationBusy = true
             defer { self.desktops.nativeCreationBusy = false; self.scheduleRefresh(after: 0) }
@@ -288,7 +285,7 @@ extension WindowManager {
             return self.workspaceSort(from, into)
         }
         nativeDesktop.onIdle = { [weak self] in
-            self?.dropFollowMoves()
+            self?.nativeMoves.desktopBecameIdle()
             self?.scheduleRefresh(after: 0)
         }
         nativeDesktop.onFailure = { [weak self] message in
@@ -302,7 +299,7 @@ extension WindowManager {
         _ request: NativeDesktopController.Request,
         readFrames: (Set<CGWindowID>) -> [CGWindowID: CGRect]? = { WindowServerQuery.frames(for: $0) }
     ) async throws {
-        let arriving = desktops.followMoves.filter { $0.value.workspace == request.workspace }
+        let arriving = nativeMoves.following(to: request.workspace)
         let shownApps = Set(observedApps.map(\.pid))
         let eligible = order.filter {
             (workspaceOf[$0] == request.workspace || arriving[$0] != nil)
@@ -332,7 +329,7 @@ extension WindowManager {
         }
         for move in arriving.values {
             try await completeFollowMove(move)
-            if let slot = slots[move.window.id] { arrivals[move.window.id] = slot }
+            if let slot = slots[move.window.id] { nativeMoves.arrived(move.window.id, frame: slot) }
         }
     }
 
@@ -344,12 +341,11 @@ extension WindowManager {
 
     func placeArrivals(on display: String) {
         let screen = backend.screens().first { $0.uuid == display }
-        let moves = arrivals.compactMap { id, frame -> Animator.Move? in
+        let moves = nativeMoves.takeArrivals().compactMap { id, frame -> Animator.Move? in
             guard let window = windows[id], let screen else { return nil }
             targets[id] = frame
             return .init(window: window, to: frame, bounds: screen.visible)
         }
-        arrivals = [:]
         animator.animate(moves, duration: config.animate ? config.animationDuration : 0,
                          curve: config.animationCurve, bounce: config.animationBounce)
     }
