@@ -14,7 +14,7 @@ import Testing
 
     @Test func rendersWithoutEmptyContent() throws {
         let fonts = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
-            .deletingLastPathComponent().appendingPathComponent("Resources/Fonts")
+            .deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("Resources/Fonts")
         let urls = try FileManager.default.contentsOfDirectory(at: fonts, includingPropertiesForKeys: nil)
             .filter { $0.pathExtension == "otf" }
         CTFontManagerRegisterFontURLs(urls as CFArray, .process, true, nil)

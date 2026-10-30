@@ -41,6 +41,13 @@ let package = Package(
             name: "CatWMTests",
             dependencies: ["CatWM"],
             path: "Tests/CatWMTests",
+            exclude: ["Gallery"],
+            swiftSettings: testSettings
+        ),
+        .testTarget(
+            name: "CatWMGalleryTests",
+            dependencies: ["CatWM"],
+            path: "Tests/CatWMTests/Gallery",
             swiftSettings: testSettings
         )
     ]
