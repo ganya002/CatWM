@@ -123,7 +123,8 @@ extension WindowManager {
             guard let scan = scanner.results[pid], pidsOnScreen.contains(pid) || config.virtualWorkspaces else {
                 continue
             }
-            for id in scan.listed {
+            let listed = Set(scan.listed)
+            for id in scan.listed + scan.found.keys.filter({ !listed.contains($0) }) {
                 let maximised = scan.fullscreen.contains(id)
                 guard !nativeMoves.isMoving(id),
                       maximised || managed(id) || (onScreenIDs.contains(id) && !onOtherSpace(id)) else {

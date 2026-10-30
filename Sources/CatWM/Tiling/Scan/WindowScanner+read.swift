@@ -48,11 +48,14 @@ extension WindowScanner {
                                resizable: element.isSettable(kAXSizeAttribute))
     }
 
-    private static func listedElements(_ app: AXUIElement) -> [AXUIElement] {
-        let listed = app.elements(kAXWindowsAttribute)
-        if !listed.isEmpty { return listed }
-        return app.elements(kAXChildrenAttribute)
-            + [app.element(kAXMainWindowAttribute), app.element(kAXFocusedWindowAttribute)].compactMap(\.self)
+    static func listedElements(_ app: AXUIElement,
+                               value: (AXUIElement, String) -> CFTypeRef? = { $0.value($1) }) -> [AXUIElement] {
+        let listed = value(app, kAXWindowsAttribute) as? [AXUIElement] ?? []
+        return listed + (value(app, kAXChildrenAttribute) as? [AXUIElement] ?? [])
+            + [value(app, kAXMainWindowAttribute), value(app, kAXFocusedWindowAttribute)].compactMap {
+                guard let result = $0, CFGetTypeID(result) == AXUIElementGetTypeID() else { return nil }
+                return unsafeDowncast(result, to: AXUIElement.self)
+            }
     }
 
     private static func readKnown(_ window: Window, into scan: inout AppScan) {
