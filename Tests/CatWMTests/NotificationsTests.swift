@@ -37,6 +37,30 @@ import Testing
         #expect(Badge.count(120).text == "99+")
     }
 
+    @Test @MainActor func dockUpdateRechecksMessagesWhenWindowsChange() {
+        var windows = [window(1, "com.slack", "general - Slack")]
+        let registry = Notifications(windowList: { windows })
+        let dock = Fake("dock"), banner = Fake("banner")
+        registry.register(dock)
+        registry.register(banner)
+        registry.setEnabled(true)
+        dock.sink?.report(app: "com.slack", .count(4), from: dock.name)
+        banner.sink?.add(NotificationMessage(app: "com.slack", title: "general"), from: banner.name)
+        #expect(registry.badge(for: 1) == .count(1))
+
+        windows.append(window(2, "com.slack", "general - Slack"))
+        dock.sink?.report(app: "com.slack", .count(5), from: dock.name)
+        registry.stateChanged(focused: nil)
+        #expect(registry.badge(for: 1) == .count(5))
+        #expect(registry.badge(for: 2) == .count(5))
+
+        windows.removeFirst()
+        dock.sink?.report(app: "com.slack", .count(4), from: dock.name)
+        registry.stateChanged(focused: nil)
+        #expect(registry.badge(for: 1) == nil)
+        #expect(registry.badge(for: 2) == .count(1))
+    }
+
     @Test @MainActor func listenersGetEachChangeAndMessagesFindTheirWindow() {
         var windows = [window(1, "com.slack", "general - Acme - Slack"),
                        window(2, "com.slack", "random - Acme - Slack"), window(3, "com.other", "Other")]

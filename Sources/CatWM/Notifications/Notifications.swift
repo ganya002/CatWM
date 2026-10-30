@@ -81,10 +81,7 @@ final class Notifications: NotificationSink {
         }
         guard enabled, !apps.isEmpty || !windows.isEmpty || !messages.isEmpty || !shown.isEmpty else { return }
         let ids = Set(windowList().map(\.id))
-        if ids != known {
-            matches = [:]
-            dirty = true
-        }
+        if ids != known { dirty = true }
         if dirty { resolve() }
     }
 
@@ -164,7 +161,9 @@ final class Notifications: NotificationSink {
     private func resolve() {
         var next: [CGWindowID: (badge: Badge, source: String)] = [:]
         let all = enabled ? windowList() : []
-        known = Set(all.map(\.id))
+        let ids = Set(all.map(\.id))
+        if ids != known { matches = [:] }
+        known = ids
         let waiting = Set(messages.values.flatMap(\.keys))
         if waiting.contains(where: { matches[$0] == nil }) {
             let relevant = all.filter { $0.bundleID.map(waiting.contains) == true }
