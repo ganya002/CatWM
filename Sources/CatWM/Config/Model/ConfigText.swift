@@ -59,23 +59,22 @@ struct ConfigText {
         if start < text.endIndex { lines.append(Line(raw: String(text[start...]), ending: "")) }
         var reader = Reader()
         for index in lines.indices { read(index, reader: &reader) }
+        for block in reader.blocks {
+            config.errors.append("line \(block.line): block `\(block.name)` is missing a closing `}`")
+        }
         config.reportEmptySubmaps()
     }
 
     private struct Reader {
         var resolved: [(String, String)] = []
-        var blocks: [String] = []
+        var blocks: [(name: String, line: Int)] = []
         var modVar: String?
     }
 
     private mutating func read(_ index: Int, reader: inout Reader) {
         let raw = lines[index].raw
         let line = Self.commentParts(raw).value.trimmingCharacters(in: .whitespaces)
-        if line.hasSuffix("{") {
-            reader.blocks.append(String(line.dropLast()).trimmingCharacters(in: .whitespaces))
-            return
-        }
-        if line == "}" { _ = reader.blocks.popLast(); return }
+        if readBlock(line, number: index + 1, reader: &reader) { return }
         if line.isEmpty { return }
         guard let equals = line.firstIndex(of: "=") else {
             config.errors.append("line \(index + 1): expected `key = value`")
@@ -88,7 +87,7 @@ struct ConfigText {
         for (name, replacement) in reader.resolved {
             expanded = expanded.replacingOccurrences(of: name, with: replacement)
         }
-        let assignment = Assignment(key: key, blocks: reader.blocks)
+        let assignment = Assignment(key: key, blocks: reader.blocks.map(\.name))
         lines[index].assignment = assignment
         if key.hasPrefix("$") { return readVariable(key, value: value, expanded: expanded, reader: &reader) }
         if key.lowercased() == "submap" {
@@ -103,6 +102,18 @@ struct ConfigText {
         } else {
             lines[index].settingValue = lines[index].bind == nil && expanded != value ? expanded : nil
         }
+    }
+
+    private mutating func readBlock(_ line: String, number: Int, reader: inout Reader) -> Bool {
+        if line.hasSuffix("{") {
+            reader.blocks.append((String(line.dropLast()).trimmingCharacters(in: .whitespaces), number))
+            return true
+        }
+        guard line == "}" else { return false }
+        if reader.blocks.popLast() == nil {
+            config.errors.append("line \(number): unexpected `}` (no open block)")
+        }
+        return true
     }
 
     private mutating func readVariable(_ key: String, value: String, expanded: String, reader: inout Reader) {
