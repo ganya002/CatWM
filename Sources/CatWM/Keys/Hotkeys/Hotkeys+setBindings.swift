@@ -66,7 +66,8 @@ extension Hotkeys {
     }
 
     func fireCapsLock(_ flags: CGEventFlags) -> Bool {
-        guard !paused, let bind = lookup(CapsLockChord.keyCode, flags), repeatOK(bind, nil) else { return false }
+        guard !paused, !textInputActive, let bind = lookup(CapsLockChord.keyCode, flags),
+              repeatOK(bind, nil) else { return false }
         fire(bind)
         return true
     }

@@ -64,6 +64,22 @@ import Testing
         }
     }
 
+    @Test @MainActor func textEntryPassesRawCapsLockThroughWindowMode() {
+        let hotkeys = Hotkeys()
+        let bind = KeyBinding(keyCode: CapsLockChord.keyCode, mods: .maskCommand,
+                              dispatcher: "submap", arg: "reset", submap: "window")
+        hotkeys.tables = ["window": [Hotkeys.key(bind.keyCode, bind.mods): bind]]
+        hotkeys.submap = "window"
+        hotkeys.textInputActive = true
+
+        #expect(!hotkeys.fireCapsLock(.maskCommand))
+        #expect(hotkeys.submap == "window")
+
+        hotkeys.textInputActive = false
+        #expect(hotkeys.fireCapsLock(.maskCommand))
+        #expect(hotkeys.submap.isEmpty)
+    }
+
     @Test func exactDisplaysKeepTheirAssignmentsAfterReordering() {
         let mapping = template().displayMap(available: [("builtin", true), ("external", false)])
         #expect(mapping["external"] == "external")
