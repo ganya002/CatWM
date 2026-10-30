@@ -102,6 +102,10 @@ final class FakeBackend: WindowBackend {
         }
     }
 
+    func setResizable(_ id: CGWindowID, _ resizable: Bool) {
+        lock.withLock { windowList[id]?.resizable = resizable }
+    }
+
     func userMoves(_ id: CGWindowID, to frame: CGRect) {
         lock.withLock { windowList[id]?.frame = frame }
     }

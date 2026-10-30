@@ -270,6 +270,7 @@ extension WindowManager {
 
     func accept(_ found: WindowScanner.Found, from scan: WindowScanner.AppScan, for window: Window) {
         guard scan.readAt > window.observedAt else { return }
+        let wasResizable = window.resizable || window.fullscreen
         window.observedAt = scan.readAt
         window.minimized = scan.minimized.contains(window.id)
         window.fullscreen = scan.fullscreen.contains(window.id)
@@ -277,6 +278,11 @@ extension WindowManager {
         let retitled = window.title != found.title
         window.title = found.title
         window.resizable = found.resizable
+        let resizable = window.resizable || window.fullscreen
+        if wasResizable != resizable {
+            window.autoFloating = shouldFloat(window, title: window.title, resizable: resizable)
+            corrections[window.id] = nil
+        }
         if retitled { surface.titleChanged(window) }
     }
 
