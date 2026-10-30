@@ -3,9 +3,7 @@ import Foundation
 enum ControlCLI {
     static func run(_ arguments: [String]) -> Never {
         signal(SIGPIPE, SIG_IGN)
-        var words = arguments
-        let compact = words.contains("--json")
-        words.removeAll { $0 == "--json" }
+        let (words, compact) = options(arguments)
         guard let name = words.first?.lowercased() else { finish(help(nil), code: 0) }
         let rest = Array(words.dropFirst())
         if name == "help" || name == "--help" || name == "-h" { finish(help(rest.first), code: 0) }
@@ -29,6 +27,18 @@ enum ControlCLI {
             fail(response["error"]?["message"]?.string ?? "CatWM did not answer", code: 1)
         }
         finish(render(response["result"] ?? .null, compact: compact), code: 0)
+    }
+
+    static func options(_ arguments: [String]) -> (words: [String], compact: Bool) {
+        var words: [String] = []
+        var compact = false
+        var literal = false
+        for argument in arguments {
+            if !literal && argument == "--" { literal = true; continue }
+            if !literal && argument == "--json" { compact = true; continue }
+            words.append(argument)
+        }
+        return (words, compact)
     }
 
     static func bind(_ words: [String], to command: Command) throws -> [String: JSON] {
@@ -100,6 +110,7 @@ enum ControlCLI {
             lines.append("")
         }
         lines.append("Events: \(EventBus.allNames.joined(separator: ", "))")
+        lines.append("Use `--` before arguments that should be passed literally, including `--json`.")
         lines.append("Run `catwm help <command>` for the arguments of a command.")
         return lines.joined(separator: "\n")
     }

@@ -11,6 +11,15 @@ private func reply(_ text: String) throws -> JSON {
 }
 
 @Suite struct ControlRegistryTests {
+    @Test func cliPreservesOptionsAfterSeparator() throws {
+        let parsed = ControlCLI.options(["--json", "config.set", "some-key", "--", "tool", "--json"])
+        #expect(parsed.compact)
+        let command = try #require(CommandRegistry.command(named: "config.set"))
+        let args = try ControlCLI.bind(Array(parsed.words.dropFirst()), to: command)
+        #expect(args == ["key": "some-key", "value": "tool --json"])
+        #expect(!ControlCLI.options(["config.set", "some-key", "--", "tool", "--json"]).compact)
+    }
+
     @Test func everyDispatcherCanBeCalledThroughTheRegistry() {
         let missing = WindowActions.all.map(\.name).filter { CommandRegistry.command(named: $0) == nil }
         #expect(missing.isEmpty)
