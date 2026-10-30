@@ -141,6 +141,23 @@ private func reply(_ text: String) throws -> JSON {
         "/tmp/catwm-test-\(UInt32.random(in: 0...UInt32.max)).sock"
     }
 
+    @Test func oversizedTerminatedLineIsNotDispatched() {
+        var sockets: [Int32] = [0, 0]
+        #expect(socketpair(AF_UNIX, SOCK_STREAM, 0, &sockets) == 0)
+        defer { Darwin.close(sockets[1]) }
+        let closed = DispatchSemaphore(value: 0)
+        let delivered = DispatchSemaphore(value: 0)
+        let connection = ControlConnection(descriptor: sockets[0], onLine: { _, _ in
+            delivered.signal()
+        }, onClose: { _ in closed.signal() })
+        connection.start()
+        let data = Data(repeating: 65, count: ControlConnection.maxLine + 1) + Data("\n".utf8)
+        let sent = data.withUnsafeBytes { write(sockets[1], $0.baseAddress, $0.count) }
+        #expect(sent == data.count)
+        #expect(closed.wait(timeout: .now() + 5) == .success)
+        #expect(delivered.wait(timeout: .now()) == .timedOut)
+    }
+
     @Test func aClientCanCallACommandOverTheSocket() throws {
         let path = makePath()
         let server = ControlServer()
