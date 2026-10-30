@@ -3,8 +3,10 @@ import SwiftUI
 
 enum SettingsIndex {
     static let all: [SettingEntry] = {
-        let options = Options.all.compactMap(\.setting).map {
-            SettingEntry(id: $0.id, title: $0.label, pane: $0.pane, advanced: $0.advanced, keywords: $0.keywords)
+        let options = Options.all.compactMap { option -> SettingEntry? in
+            guard let setting = option.setting else { return nil }
+            return SettingEntry(id: setting.id, title: setting.label, pane: setting.pane,
+                                advanced: setting.advanced, keywords: "\(setting.keywords) \(option.key)")
         }
         return Pane.allCases.flatMap { pane in (CustomSettingsIndex.all + options).filter { $0.pane == pane } }
     }()
