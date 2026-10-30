@@ -28,6 +28,24 @@ import Testing
         }
     }
 
+    @Test func layoutsTranslateWithDisplaysAtNegativeOrigins() throws {
+        let offset = CGPoint(x: -1441, y: -901)
+        let display = screen.offsetBy(dx: offset.x, dy: offset.y)
+            .insetBy(dx: 0.5, dy: 0.5)
+        let origin = CGRect(origin: .zero, size: display.size)
+        for layout in Layout.allCases where layout != .floating {
+            for count in [1, 3, 5, 7] {
+                let expected = try #require(layout.frames(count: count, in: origin, ratio: 0.57, mainCount: 2))
+                let actual = try #require(layout.frames(count: count, in: display, ratio: 0.57, mainCount: 2))
+                #expect(actual.count == expected.count, "\(layout) with \(count) windows")
+                for (local, translated) in zip(expected, actual) {
+                    let normalized = translated.offsetBy(dx: -display.minX, dy: -display.minY)
+                    #expect(normalized.approxEqual(local, tolerance: 0.001), "\(layout) with \(count) windows")
+                }
+            }
+        }
+    }
+
     @Test func tallPutsMainLeftAndStacksTheRest() throws {
         let frames = try #require(Layout.tall.frames(count: 3, in: screen, ratio: 0.5, mainCount: 1))
         #expect(frames[0] == CGRect(x: 0, y: 0, width: 500, height: 600))
