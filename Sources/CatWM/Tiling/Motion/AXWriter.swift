@@ -130,6 +130,7 @@ final class AXWriter {
         switch item.operation {
         case let .step(frameAt):
             let frame = frameAt(CACurrentMediaTime() + (stepCosts[window.id]?.lead ?? 0))
+            guard window.cachedFrame != frame else { return }
             let (sizeTime, positionTime) = write(window, frame)
             stepCosts[window.id, default: StepCost()].add(sizeTime + positionTime)
             lock.withLock { if sizeTime > 0 { stats.size.add(sizeTime) }; stats.position.add(positionTime) }
