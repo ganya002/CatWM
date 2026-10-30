@@ -36,8 +36,17 @@ extension ConfigDocument {
     }
 
     func resolvedMods(_ mods: String) -> String {
+        var variables: [(name: String, value: String)] = []
+        for variable in vars {
+            var value = variable.value
+            for previous in variables {
+                value = value.replacingOccurrences(of: previous.name, with: previous.value)
+            }
+            variables.append((variable.name, value))
+            variables.sort { $0.name.count > $1.name.count }
+        }
         var resolved = mods
-        for variable in vars.sorted(by: { $0.name.count > $1.name.count }) {
+        for variable in variables {
             resolved = resolved.replacingOccurrences(of: variable.name, with: variable.value)
         }
         return resolved

@@ -35,6 +35,29 @@ struct BindIssueTests {
         #expect(overlaps(doc, 1))
     }
 
+    @Test func nestedModifierAliasesMatchRuntimeAndDetectConflicts() throws {
+        let doc = ConfigDocument(text: """
+        $primary = CTRL
+        $mod = $primary
+        bind = $mod, h, movefocus, l
+        bind = ALT, h, movefocus, r
+
+        """)
+        #expect(doc.config.errors.isEmpty)
+        #expect(doc.problemCount == 0)
+        let row = try #require(doc.binds.first)
+        let combos = try #require(doc.combos(row))
+        #expect(combos.map(\.flags) == [UInt(doc.config.bindings[0].mods.rawValue)])
+        doc.vars[0].value = "ALT"
+        #expect(overlaps(doc, 0))
+        #expect(overlaps(doc, 1))
+        doc.vars[0].value = "SUPER"
+        #expect(doc.problemCount == 0)
+        let reparsed = Config.parse(doc.serialize())
+        #expect(reparsed.errors.isEmpty)
+        #expect(doc.combos(row)?.map(\.flags) == [UInt(reparsed.bindings[0].mods.rawValue)])
+    }
+
     @Test func overlapIsPerSubmapAndCoversRanges() {
         let doc = ConfigDocument(text: """
         $mod = ALT
