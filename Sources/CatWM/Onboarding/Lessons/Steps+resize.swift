@@ -70,14 +70,19 @@ extension Steps {
         let prev = coach.book.find([WindowActions.cyclelayout], "prev")
         let keys = [next, prev].compactMap(\.self).map { KeyWords.caps($0, long: false).joined() }
         return PlannedStep { coach in
-            Step(title: "Change layout",
+            var forward = true
+            return Step(title: "Change layout",
                  text: "",
                  target: .window, caps: keys, tokens: keys.count > 1 ? ["next", "prev"] : [],
                  needsMode: true, count: 2,
                  accept: { event in
                      guard case .command(WindowActions.cyclelayout.name, let argument, _) = event else { return nil }
                      return argument.lowercased().hasPrefix("prev") ? "prev" : "next"
-                 }, simulate: { coach.windowManager.dispatch(WindowActions.cyclelayout.name, "next") })
+                 }, simulate: {
+                     let direction = forward || prev == nil ? "next" : "prev"
+                     coach.windowManager.dispatch(WindowActions.cyclelayout.name, direction)
+                     forward.toggle()
+                 })
         }
     }
 
