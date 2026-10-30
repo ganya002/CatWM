@@ -97,9 +97,13 @@ enum ProjectGuess {
     }
 
     static func pick(_ projects: [URL], title: String, document: String?) -> URL? {
+        let parts = Set(title.components(separatedBy: " — ").flatMap { $0.components(separatedBy: " - ") }
+            .map { $0.trimmingCharacters(in: .whitespaces) })
+        let named = projects.filter { names($0).contains(where: parts.contains) }
+        let candidates = named.isEmpty ? projects : named
         if let url = document.flatMap(URL.init(string:)), url.isFileURL {
             let path = url.standardizedFileURL.path
-            let owners = projects.filter {
+            let owners = candidates.filter {
                 let projectPath = $0.standardizedFileURL.path
                 return path == projectPath
                     || ($0.pathExtension != "code-workspace" && path.hasPrefix(projectPath + "/"))
@@ -108,9 +112,7 @@ enum ProjectGuess {
                 return owner
             }
         }
-        let parts = Set(title.components(separatedBy: " — ").flatMap { $0.components(separatedBy: " - ") }
-            .map { $0.trimmingCharacters(in: .whitespaces) })
-        return projects.first { names($0).contains(where: parts.contains) }
+        return named.first
     }
 
     static func xcodeProject(_ document: URL) -> URL? {

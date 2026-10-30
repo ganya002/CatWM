@@ -75,6 +75,25 @@ import Testing
         #expect(found?.absoluteString == "file:///Users/a/Code/catwm")
     }
 
+    @Test func theNamedProjectWinsOverARecentlyOpenedNestedFolder() throws {
+        let window = AppStateCapture.Window(id: 1, bundleID: "com.microsoft.VSCode",
+                                          title: "main.swift — Code — Visual Studio Code",
+                                          frame: .zero, document: "file:///Users/a/Code/catwm/main.swift")
+        let captured = try #require(ProjectGuess.windows([window], projects: projects).first)
+        #expect(captured.state.current == projects[1].absoluteString)
+    }
+
+    @Test func aNamedWorkspaceWinsOverTheFolderContainingItsOpenFile() {
+        #expect(ProjectGuess.pick(projects, title: "main.swift — site (Workspace) — Cursor",
+                                  document: "file:///Users/a/Code/catwm/main.swift") == projects[2])
+    }
+
+    @Test func theOpenFileDistinguishesProjectsWithTheSameName() {
+        let other = URL(fileURLWithPath: "/Users/a/Other/catwm")
+        #expect(ProjectGuess.pick([other] + projects, title: "main.swift — catwm — Cursor",
+                                  document: "file:///Users/a/Code/catwm/main.swift") == projects[0])
+    }
+
     @Test func aWorkspaceFileDoesNotOwnOtherFilesInItsParentFolder() {
         #expect(ProjectGuess.pick(projects, title: "notes.md — Visual Studio Code",
                                   document: "file:///Users/a/notes.md") == nil)

@@ -228,11 +228,12 @@ classDiagram
 
 ### Code editor projects
 
-`ProjectGuess.pick` chooses one project for each editor window from the recent-project list, most recent first.
+`ProjectGuess.pick` first limits the recent-project list to projects named in the window title. If no project is named, it uses the whole list. The open file then distinguishes projects with the same name. This keeps a recent nested folder from replacing the parent project that the window has open.
 
 ```mermaid
 flowchart TD
-    Win["Editor window: title and AXDocument"] --> Doc{"AXDocument is a file in a recent project folder?"}
+    Win["Editor window: title and AXDocument"] --> Pool["Projects named in the title, or all recent projects if none"]
+    Pool --> Doc{"AXDocument is a file in one of these project folders?"}
     Doc -- Yes --> Deep["the deepest such folder"]
     Doc -- No --> Title{"A part of the title, split at ' — ' and ' - ', is a project name?"}
     Title -- Yes --> Recent["the most recent such project"]
