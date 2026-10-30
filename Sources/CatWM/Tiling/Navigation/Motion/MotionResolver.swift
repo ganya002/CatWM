@@ -34,9 +34,15 @@ enum MotionResolver {
     static func resolve(
         from item: Item, _ dir: Direction, among candidates: [Item], displays: [Display], stamps: [CGWindowID: Int]
     ) -> Hit? {
-        if let next = neighbor(of: item, dir, among: candidates, stamps: stamps) { return .window(next) }
+        let local = candidates.filter { $0.screen == item.screen }
+        if let next = neighbor(of: item, dir, among: local, stamps: stamps) { return .window(next) }
         if let here = displays.first(where: { $0.id == item.screen }),
-           let next = display(from: here, dir, among: displays) { return .monitor(next) }
+           let next = display(from: here, dir, among: displays) {
+            let there = candidates.filter { $0.screen == next }
+            if let window = neighbor(of: item, dir, among: there, stamps: stamps) { return .window(window) }
+            return .monitor(next)
+        }
+        if let next = neighbor(of: item, dir, among: candidates, stamps: stamps) { return .window(next) }
         return wrap(from: item, dir, among: candidates, stamps: stamps).map(Hit.window)
     }
 

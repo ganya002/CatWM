@@ -136,6 +136,12 @@ private func go(
         #expect(try go(3, .down, tall + below, displays: stacked) == .window(10))
     }
 
+    @Test func emptyDisplayIsNotSkippedForAWindowFartherAway() throws {
+        let third = Display(id: "C", frame: CGRect(x: 3200, y: 0, width: 1600, height: 1000))
+        let items = tiled(.column, 1) + tiled(.column, 1, screen: "C", in: third.frame, first: 10)
+        #expect(try go(1, .right, items, displays: sideBySide + [third]) == .monitor("B"))
+    }
+
     @Test func anOffsetDisplayBesideIsNotBelow() throws {
         let offset = [sideBySide[0], Display(id: "B", frame: CGRect(x: 1600, y: 300, width: 1000, height: 700))]
         #expect(try go(3, .down, tall, displays: offset) == .window(2))
