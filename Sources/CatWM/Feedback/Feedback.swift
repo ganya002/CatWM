@@ -28,12 +28,18 @@ final class Feedback: ObservableObject {
         let report = Report(title: title, body: body, log: log, crash: nil)
         Self.post(report, to: endpoint) { [weak self] success in
             guard let self else { return }
-            sending = false
-            guard success else { return failed = true }
-            if text.trimmingCharacters(in: .whitespacesAndNewlines) == body { text = "" }
-            isOpen = false
-            HUD.shared.show("Feedback sent", on: nil)
+            finishSend(body: body, success: success)
         }
+    }
+
+    func finishSend(body: String, success: Bool) {
+        sending = false
+        guard success else { return failed = true }
+        if text.trimmingCharacters(in: .whitespacesAndNewlines) == body {
+            text = ""
+            isOpen = false
+        }
+        HUD.shared.show("Feedback sent", on: nil)
     }
 
     static var endpoint: URL? {
