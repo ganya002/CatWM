@@ -71,7 +71,7 @@ After a swap with a window of another app, `move` stores a `FocusEcho` for 0.4 s
 1. Add a file in `Operator/` with an extension on `WindowManager`.
 2. Call `resolve(_:from:among:)` to get the `MotionTarget`.
 3. Act on `.window` and `.monitor`. Do not write any neighbor or wrap logic.
-4. Add a dispatcher case in `WindowManager+status.swift`.
+4. Add a `WindowAction` in `Actions/` and register it in `WindowActions.all`. See [Add a command](control.md#add-a-command) for the dispatcher steps.
 
 ## Add a motion
 
