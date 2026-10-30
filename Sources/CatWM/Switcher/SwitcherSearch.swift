@@ -31,16 +31,26 @@ enum SwitcherSearch {
         let hay = Array(fold(text)), raw = Array(text)
         let camel = raw.count == hay.count
         guard !needle.isEmpty else { return nil }
-        var score = 0, start = 0, last = -2
-        for char in needle {
-            guard let found = hay[start...].firstIndex(of: char) else { return nil }
-            score += 1
-            if found == last + 1 { score += 2 }
-            if startsWord(found, hay, camel ? raw : hay) { score += 3 }
-            last = found
-            start = found + 1
+        var previous: [Int?] = Array(repeating: nil, count: hay.count)
+        for (queryIndex, char) in needle.enumerated() {
+            var current: [Int?] = Array(repeating: nil, count: hay.count)
+            var bestEarlier: Int?
+            for index in hay.indices {
+                if index > 0, let score = previous[index - 1] {
+                    bestEarlier = max(bestEarlier ?? score, score)
+                }
+                guard hay[index] == char else { continue }
+                let wordBonus = startsWord(index, hay, camel ? raw : hay) ? 3 : 0
+                if queryIndex == 0 {
+                    current[index] = 1 + wordBonus - index / 4
+                } else if let bestEarlier {
+                    let consecutive = index > 0 ? previous[index - 1].map { $0 + 2 } : nil
+                    current[index] = 1 + wordBonus + max(bestEarlier, consecutive ?? bestEarlier)
+                }
+            }
+            previous = current
         }
-        return score - (hay.firstIndex(of: needle.first ?? " ") ?? 0) / 4
+        return previous.compactMap(\.self).max()
     }
 
     private static func startsWord(_ index: Int, _ hay: [Character], _ raw: [Character]) -> Bool {

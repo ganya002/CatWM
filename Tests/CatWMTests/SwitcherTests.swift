@@ -13,7 +13,7 @@ private let all = [safari, slack, notes, safariTwo]
     }
 
     @Test func letterGapsStillMatchAndMissesDrop() {
-        #expect(SwitcherSearch.results(all, query: "sfr").map(\.id) == [1, 4])
+        #expect(SwitcherSearch.results(all, query: "sfr").map(\.id) == [4, 1])
         #expect(SwitcherSearch.results(all, query: "zzz").isEmpty)
     }
 
@@ -26,6 +26,12 @@ private let all = [safari, slack, notes, safariTwo]
     @Test func wordStartsRankAboveScatteredLetters() {
         #expect(SwitcherSearch.results(all, query: "sl").first?.id == 2)
         #expect(SwitcherSearch.results(all, query: "sh").first?.id == 3)
+    }
+
+    @Test func laterContiguousMatchesRankAboveScatteredMatches() {
+        let scattered = SwitcherItem(id: 5, pid: 1, app: "", title: "axxxb")
+        let contiguous = SwitcherItem(id: 6, pid: 2, app: "", title: "a---ab")
+        #expect(SwitcherSearch.results([scattered, contiguous], query: "ab").map(\.id) == [6, 5])
     }
 
     @Test func instantJumpNeedsExactlyOnePrefixMatch() {
