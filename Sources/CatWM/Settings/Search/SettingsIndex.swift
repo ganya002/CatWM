@@ -10,7 +10,7 @@ enum SettingsIndex {
     }()
 
     static func search(_ query: String, doc: ConfigDocument) -> [SettingEntry] {
-        let words = query.lowercased().split(separator: " ").map(String.init)
+        let words = query.lowercased().split(whereSeparator: { $0.isWhitespace }).map(String.init)
         guard !words.isEmpty else { return [] }
         func hit(_ text: String) -> Bool {
             let lowered = text.lowercased()
