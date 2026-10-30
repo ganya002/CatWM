@@ -41,7 +41,7 @@ struct LaunchRequest: Equatable, Sendable {
     var placesWindow: Bool { workspace != nil || display != nil || frame != nil }
 
     static func unitRect(_ text: String) -> CGRect? {
-        let parts = text.split(separator: ",").map { part -> Double? in
+        let parts = text.split(separator: ",", omittingEmptySubsequences: false).map { part -> Double? in
             let raw = part.trimmingCharacters(in: .whitespaces)
             if raw.hasSuffix("%") { return Double(raw.dropLast()).map { $0 / 100 } }
             return Double(raw)

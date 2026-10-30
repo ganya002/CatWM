@@ -22,6 +22,7 @@ import Testing
     @Test func refusesABadFrameOrAnEmptyTarget() {
         #expect(LaunchRequest("Safari frame=0.5,0,0.6,1") == nil)
         #expect(LaunchRequest("Safari frame=0,0,1") == nil)
+        #expect(LaunchRequest("Safari frame=0,,0,1,1") == nil)
         #expect(LaunchRequest("Safari workspace=") == nil)
         #expect(LaunchRequest("  ") == nil)
     }
