@@ -105,7 +105,7 @@ Each entry gives the design intent. The Swift type is in brackets.
 - A press without movement jumps to the press point and springs there. A drag on the line follows the pointer. A drag on the bar is relative to the grab point, so it never jumps.
 - Only the value rounds to `step`. The fill follows the pointer.
 - Hold Option while dragging for a tenth of the speed.
-- Within 2.5% of a tick, the value snaps and the thumb gives a small bump.
+- While dragging, within 2.5% of a tick, the value snaps and the thumb gives a small bump. Arrow keys and accessibility adjustments move by the step without snapping to ticks.
 - Dragging past an end stretches the control a few points, then springs back.
 - Double-click resets to `resetValue`. Arrow keys step. Shift gives 10 times the step.
 - Pressing with the pointer does not show a focus ring. Focus from the keyboard does.

@@ -56,9 +56,11 @@ struct SliderScale {
     func fraction(of value: Double) -> Double { span == 0 ? 0 : (value - range.lowerBound) / span }
     func value(at fraction: Double) -> Double { snapped(range.lowerBound + min(max(fraction, 0), 1) * span) }
 
-    func snapped(_ raw: Double) -> Double {
+    func stepping(_ value: Double, by steps: Double) -> Double { snapped(value + unit * steps, toTicks: false) }
+
+    private func snapped(_ raw: Double, toTicks: Bool = true) -> Double {
         var value = min(max(raw, range.lowerBound), range.upperBound)
-        if let tick = ticks.min(by: { abs($0 - value) < abs($1 - value) }), abs(tick - value) <= span * 0.025 {
+        if toTicks, let tick = ticks.min(by: { abs($0 - value) < abs($1 - value) }), abs(tick - value) <= span * 0.025 {
             return tick
         }
         if step > 0 { value = (value / step).rounded() * step }

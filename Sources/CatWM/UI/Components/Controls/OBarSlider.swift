@@ -49,7 +49,7 @@ struct OBarSlider: View {
         .accessibilityLabel(label)
         .accessibilityValue(format(value))
         .accessibilityAdjustableAction { dir in
-            value = scale.snapped(value + (dir == .increment ? scale.unit : -scale.unit))
+            value = scale.stepping(value, by: dir == .increment ? 1 : -1)
         }
     }
 

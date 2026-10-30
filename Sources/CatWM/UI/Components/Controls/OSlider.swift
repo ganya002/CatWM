@@ -61,8 +61,8 @@ struct OSlider: View {
             let multiplier = press.modifiers.contains(.shift) ? 10.0 : 1.0
             withAnimation(Motion.spring) {
                 switch press.key {
-                case .leftArrow, .downArrow: value = scale.snapped(value - scale.unit * multiplier)
-                case .rightArrow, .upArrow: value = scale.snapped(value + scale.unit * multiplier)
+                case .leftArrow, .downArrow: value = scale.stepping(value, by: -multiplier)
+                case .rightArrow, .upArrow: value = scale.stepping(value, by: multiplier)
                 case .home: value = range.lowerBound
                 default: value = range.upperBound
                 }
@@ -75,7 +75,7 @@ struct OSlider: View {
         .accessibilityLabel(label)
         .accessibilityValue(format(value))
         .accessibilityAdjustableAction { dir in
-            value = scale.snapped(value + (dir == .increment ? scale.unit : -scale.unit))
+            value = scale.stepping(value, by: dir == .increment ? 1 : -1)
         }
     }
 
