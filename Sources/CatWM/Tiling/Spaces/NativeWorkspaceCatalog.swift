@@ -19,14 +19,17 @@ struct NativeWorkspaceCatalog {
     var perDisplay = false
     var sharedSpaces = false
 
-    mutating func synchronize(_ displays: [Display]) {
-        if perDisplay { return follow(displays) }
+    @discardableResult
+    mutating func synchronize(_ displays: [Display]) -> Set<String> {
+        if perDisplay { follow(displays); return [] }
         let spaceOf = Dictionary(displays.flatMap { $0.uuids.map { ($0.value, $0.key) } },
                                  uniquingKeysWith: { first, _ in first })
         for (name, uuid) in uuids { if let space = spaceOf[uuid] { saved[name] = space } }
         let live = Set(displays.flatMap(\.spaces).filter { $0 != 0 })
         let connected = Set(displays.map(\.id))
+        let previousNames = Set(saved.keys)
         saved = saved.filter { live.contains($0.value) || homes[$0.key].map { !connected.contains($0) } == true }
+        let removed = previousNames.subtracting(saved.keys)
         var assigned = Set<UInt64>()
         saved = saved.sorted { $0.key < $1.key }.reduce(into: [:]) { result, pair in
             if assigned.insert(pair.value).inserted { result[pair.key] = pair.value }
@@ -46,6 +49,7 @@ struct NativeWorkspaceCatalog {
         let uuidOf = Dictionary(displays.flatMap(\.uuids), uniquingKeysWith: { first, _ in first })
         for entry in entries { uuids[entry.name] = uuidOf[entry.space] }
         uuids = uuids.filter { saved[$0.key] != nil }
+        return removed
     }
 
     private mutating func follow(_ displays: [Display]) {

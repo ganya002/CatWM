@@ -23,7 +23,8 @@ extension WindowManager {
             desktops.nativeCatalog.sharedSpaces = shared
             if shared { Log.info("native workspaces: displays share one Space; each display tiles its own windows") }
         }
-        desktops.nativeCatalog.synchronize(displays)
+        let removed = desktops.nativeCatalog.synchronize(displays)
+        for name in removed { forgetRemovedWorkspace(name) }
         for entry in desktops.nativeCatalog.entries { monitorOf[entry.name] = entry.display }
         if desktops.nativeCatalog.saved != desktops.lastNativeCatalogSaved
             || desktops.nativeCatalog.homes != desktops.lastNativeCatalogHomes

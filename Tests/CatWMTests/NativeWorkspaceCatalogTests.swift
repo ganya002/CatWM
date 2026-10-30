@@ -131,6 +131,43 @@ import Testing
         #expect(catalog.entry("3")?.space == 14)
     }
 
+    @Test func onlyConfirmedRemovalsAreReported() {
+        var catalog = NativeWorkspaceCatalog()
+        catalog.synchronize([.init(id: "left", spaces: [11, 12], uuids: [11: "A", 12: "B"]),
+                             .init(id: "right", spaces: [21])])
+        let reordered = catalog.synchronize([
+            .init(id: "left", spaces: [42, 41], uuids: [41: "A", 42: "B"]),
+            .init(id: "right", spaces: [21])
+        ])
+        #expect(reordered.isEmpty)
+        #expect(catalog.synchronize([.init(id: "left", spaces: [41, 42])]).isEmpty)
+        #expect(catalog.saved["3"] == 21)
+        #expect(catalog.synchronize([.init(id: "left", spaces: [41, 43])]) == ["2"])
+        #expect(catalog.entry("2")?.space == 43)
+    }
+
+    @Test(arguments: [false, true]) @MainActor
+    func anExternallyRemovedDesktopDoesNotDonateItsLabelAndLayout(replace: Bool) throws {
+        let screen = try #require(Screen.all().first)
+        let manager = WindowManager(config: .parse(defaultText))
+        manager.config.workspacesPerDisplay = false
+        manager.desktops.nativeCatalog.synchronize([.init(id: screen.uuid, spaces: [11, 12, 13])])
+        manager.labels = ["2": "Mail", "3": "Code"]
+        manager.state(workspace: "2").layout = .floating
+        manager.lastFocused["2"] = 7
+        let spaces: [UInt64] = replace ? [13, 11, 14] : [13, 11]
+        let snapshot = Spaces.Snapshot(displays: [[
+            "Display Identifier": screen.uuid,
+            "Spaces": spaces.map { ["ManagedSpaceID": $0, "type": 0] as [String: Any] }
+        ]])
+        manager.updateNativeCatalog([screen], snapshot: snapshot)
+        #expect(manager.desktops.nativeCatalog.entry("2")?.space == (replace ? 14 : nil))
+        #expect(manager.labels["2"] == nil)
+        #expect(manager.states["2"] == nil)
+        #expect(manager.lastFocused["2"] == nil)
+        #expect(manager.labels["3"] == "Code")
+    }
+
     @Test func ctrlDefaultsRespectConfiguredCommands() {
         let config = Config.parse("bind = CTRL, 1, layout, floating\nbind = ALT, 2, workspace, 2")
         let bindings = config.workspaceBindings
