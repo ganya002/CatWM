@@ -111,7 +111,8 @@ extension WindowManager {
             let next = sorted.firstIndex { before(current, $0) } ?? sorted.count
             return delta > 0 ? next - 1 : next
         }()
-        return sorted[((index + delta) % sorted.count + sorted.count) % sorted.count]
+        let offset = delta % sorted.count
+        return sorted[((index + offset) % sorted.count + sorted.count) % sorted.count]
     }
 
     func workspaceNumber(_ workspace: String) -> String { WorkspaceKey.number(workspace) }

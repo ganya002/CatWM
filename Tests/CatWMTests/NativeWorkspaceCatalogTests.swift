@@ -58,6 +58,13 @@ import Testing
         #expect(catalog.step(from: "10", by: -2) == "2")
     }
 
+    @Test func extremeRelativeStepsStayOutsideTheCatalog() {
+        var catalog = NativeWorkspaceCatalog()
+        catalog.synchronize([.init(id: "screen", spaces: [11, 12, 13])])
+        #expect(catalog.step(from: "2", by: Int.max) == nil)
+        #expect(catalog.step(from: "2", by: Int.min) == nil)
+    }
+
     @Test func removedDesktopDoesNotRenameOtherDesktops() {
         var catalog = NativeWorkspaceCatalog()
         catalog.saved = ["1": 11, "2": 12, "3": 13]

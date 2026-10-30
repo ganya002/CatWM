@@ -103,6 +103,7 @@ struct NativeWorkspaceCatalog {
         let local = entries(on: source.display)
             .sorted { WorkspaceReconciliation.workspaceSort($0.name, $1.name) }
         guard let index = local.firstIndex(of: source) else { return nil }
-        return local.indices.contains(index + delta) ? local[index + delta].name : nil
+        guard delta >= -index, delta < local.count - index else { return nil }
+        return local[index + delta].name
     }
 }

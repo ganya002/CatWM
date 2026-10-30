@@ -27,6 +27,15 @@ import Testing
         #expect(WindowManager.step([], from: "1", by: 1, sortedBy: before) == nil)
     }
 
+    @Test func extremeOccupiedStepsWrapWithoutOverflow() {
+        let sorted = ["1", "3", "5"]
+        let before = WorkspaceReconciliation.workspaceSort
+        #expect(WindowManager.step(sorted, from: "3", by: Int.max, sortedBy: before) == "5")
+        #expect(WindowManager.step(sorted, from: "1", by: Int.min, sortedBy: before) == "3")
+        #expect(WindowManager.step(sorted, from: "6", by: Int.max, sortedBy: before) == "1")
+        #expect(WindowManager.step(sorted, from: "0", by: Int.min, sortedBy: before) == "3")
+    }
+
     @Test @MainActor func aRemovedWorkspaceForgetsItsLabel() {
         let manager = WindowManager(config: .parse(defaultText))
         manager.labels["3"] = "Mail"
