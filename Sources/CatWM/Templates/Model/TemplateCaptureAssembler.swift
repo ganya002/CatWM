@@ -37,7 +37,8 @@ enum TemplateCaptureAssembler {
         var captured: [SavedWindow] = []
         for window in batch.windows {
             if facts.hiddenWorkspaceWindows.contains(window.windowID), !window.fullscreen { continue }
-            if !window.spaces.isEmpty, facts.currentSpaces.isDisjoint(with: Set(window.spaces)) { continue }
+            if !window.fullscreen, !window.spaces.isEmpty,
+               facts.currentSpaces.isDisjoint(with: Set(window.spaces)) { continue }
             let natural = facts.naturalFrames[window.windowID] ?? .null
             let frame = window.fullscreen && !natural.isNull ? natural : window.frame
             guard !frame.isNull, !frame.isEmpty else { continue }

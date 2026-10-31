@@ -194,6 +194,24 @@ import Testing
         #expect(template.windows[0].focused)
     }
 
+    @Test func nativeFullscreenOnItsOwnSpaceIsIncludedInTheTemplate() throws {
+        var savedFacts = facts(order: [3, 7])
+        savedFacts.hiddenWorkspaceWindows = [7]
+        let natural = CGRect(x: 40, y: 40, width: 600, height: 400)
+        savedFacts.naturalFrames = [7: natural]
+        let template = try TemplateCaptureAssembler.make(
+            facts: savedFacts,
+            batch: .init(windows: [
+                observed(id: 3, title: "Here"),
+                observed(id: 7, title: "Presentation", fullscreen: true, spaces: [99]),
+                observed(id: 9, title: "Other Desktop", spaces: [100])
+            ], focusedID: 3, complete: true)
+        )
+        #expect(template.windows.map(\.windowID) == [3, 7])
+        #expect(template.windows.last?.fullscreen == true)
+        #expect(template.windows.last?.frame == natural)
+    }
+
     @Test func fullscreenUsesTheNaturalFrameAndFloatingFollowsTheVisibleFrame() throws {
         var savedFacts = facts()
         savedFacts.virtualWorkspaces = false
