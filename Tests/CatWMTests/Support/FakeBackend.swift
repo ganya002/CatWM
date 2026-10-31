@@ -33,6 +33,7 @@ final class FakeBackend: WindowBackend {
     private var front: pid_t?
     private var writeLog: [Write] = []
     private var cursorRefreshCount = 0
+    private var placementCheckCount = 0
     private var onCursorRefresh: (() -> Void)?
     private var nextID: CGWindowID = 1
     private var nextDisplay: CGDirectDisplayID = 1
@@ -118,6 +119,8 @@ final class FakeBackend: WindowBackend {
 
     var writes: [Write] { lock.withLock { writeLog } }
 
+    var placementChecks: Int { lock.withLock { placementCheckCount } }
+
     func clearWrites() { lock.withLock { writeLog = [] } }
 
     func focused(in pid: pid_t) -> CGWindowID? { lock.withLock { focusedIn[pid] } }
@@ -202,7 +205,12 @@ final class FakeBackend: WindowBackend {
         }
     }
 
-    func blocksPlacement(_ window: Window) -> Bool { lock.withLock { windowList[window.id]?.minimized ?? true } }
+    func blocksPlacement(_ window: Window) -> Bool {
+        lock.withLock {
+            placementCheckCount += 1
+            return windowList[window.id]?.minimized ?? true
+        }
+    }
 
     func suspendEnhancedUI(_: pid_t) -> Bool { false }
 

@@ -34,6 +34,7 @@ struct AnimationWriteTests {
         }
         let positions = backend.writes.filter { if case .position = $0 { return true }; return false }
         #expect(positions.count == changedFrames)
+        #expect(backend.placementChecks == changedFrames)
         #expect(changedFrames < steps)
         await withCheckedContinuation { continuation in
             writer.land(window, at: target) { wrote in
@@ -43,6 +44,30 @@ struct AnimationWriteTests {
         }
         #expect(backend.frame(of: id) == target)
         #expect(backend.writes.last == .position(id, target.origin))
+    }
+
+    @Test func changedFramesStillCheckForMinimizedWindows() async throws {
+        let backend = FakeBackend()
+        let start = CGRect(x: 100, y: 100, width: 800, height: 600)
+        let id = backend.addWindow(frame: start)
+        let window = Window(id: id, element: try #require(backend.element(id)), pid: -100,
+                            bundleID: nil, backend: backend)
+        window.remember(start)
+        let writer = AXWriter(pid: window.pid, backend: backend)
+        let target = start.offsetBy(dx: 20, dy: 0)
+        backend.minimize(id)
+        writer.step(window) { _ in target }
+        await drain(writer)
+        #expect(backend.placementChecks == 1)
+        #expect(backend.writes.isEmpty)
+        #expect(backend.frame(of: id) == start)
+        backend.minimize(id, false)
+        writer.step(window) { _ in target }
+        await drain(writer)
+        #expect(backend.placementChecks == 2)
+        #expect(backend.frame(of: id) == target)
+        writer.cancel(id)
+        await drain(writer)
     }
 
     @Test func changedObservedFrameIsWrittenAgain() async throws {

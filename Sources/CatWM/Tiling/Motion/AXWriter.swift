@@ -117,6 +117,13 @@ final class AXWriter {
 
     private func apply(_ item: Pending) {
         let window = item.window
+        let stepFrame: CGRect
+        if case let .step(frameAt) = item.operation {
+            stepFrame = frameAt(CACurrentMediaTime() + (stepCosts[window.id]?.lead ?? 0))
+            guard window.cachedFrame != stepFrame else { return }
+        } else {
+            stepFrame = .null
+        }
         if window.placementSuspended || backend.blocksPlacement(window) {
             if animating.remove(window.id) != nil { enhancedUI.resume() }
             switch item.operation {
@@ -128,10 +135,8 @@ final class AXWriter {
         }
         if animating.insert(window.id).inserted { enhancedUI.suspend() }
         switch item.operation {
-        case let .step(frameAt):
-            let frame = frameAt(CACurrentMediaTime() + (stepCosts[window.id]?.lead ?? 0))
-            guard window.cachedFrame != frame else { return }
-            let (sizeTime, positionTime) = write(window, frame)
+        case .step:
+            let (sizeTime, positionTime) = write(window, stepFrame)
             stepCosts[window.id, default: StepCost()].add(sizeTime + positionTime)
             lock.withLock { if sizeTime > 0 { stats.size.add(sizeTime) }; stats.position.add(positionTime) }
         case let .follow(frame, done):
