@@ -279,7 +279,7 @@ extension WindowManager {
         window.title = found.title
         window.resizable = found.resizable
         let resizable = window.resizable || window.fullscreen
-        if wasResizable != resizable {
+        if retitled || wasResizable != resizable {
             window.autoFloating = shouldFloat(window, title: window.title, resizable: resizable)
             corrections[window.id] = nil
         }

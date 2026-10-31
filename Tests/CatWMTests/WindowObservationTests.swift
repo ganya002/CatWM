@@ -72,6 +72,31 @@ import Testing
         #expect(tracked.cachedFrame == placed)
     }
 
+    @Test @MainActor func aLateUtilityTitleUpdatesAutomaticFloating() {
+        let manager = WindowManager(config: .parse(defaultText))
+        let tracked = window()
+        let frame = CGRect(x: 10, y: 20, width: 800, height: 600)
+        for (index, title) in ["Document", "Settings", "Document"].enumerated() {
+            var scan = WindowScanner.AppScan()
+            scan.readAt = Date(timeIntervalSince1970: 2000 + Double(index))
+            let found = WindowScanner.Found(element: tracked.element, frame: frame,
+                                             title: title, resizable: true)
+            manager.accept(found, from: scan, for: tracked)
+            #expect(tracked.autoFloating == (title == "Settings"))
+        }
+    }
+
+    @Test @MainActor func aLateUtilityTitlePreservesTheUsersTilingChoice() {
+        let manager = WindowManager(config: .parse(defaultText))
+        let tracked = window()
+        tracked.userFloating = .chosen(false)
+        let found = WindowScanner.Found(element: tracked.element,
+            frame: CGRect(x: 10, y: 20, width: 800, height: 600), title: "Settings", resizable: true)
+        manager.accept(found, from: WindowScanner.AppScan(), for: tracked)
+        #expect(tracked.autoFloating)
+        #expect(!tracked.isFloating)
+    }
+
     @Test @MainActor func aSlowAppDoesNotBlockTheMainQueueOrOtherApps() async {
         let release = DispatchSemaphore(value: 0)
         let scanner = WindowScanner { job, _ in

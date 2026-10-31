@@ -341,15 +341,20 @@ extension WindowManager {
     }
 
     func titleChanged(_ element: AXUIElement) {
-        guard !tabs.isEmpty || surface.watchesTitles,
-              let window = windows.values.first(where: { CFEqual($0.element, element) }) else { return }
+        guard let window = windows.values.first(where: { CFEqual($0.element, element) }) else { return }
         let grouped = tabs.isGrouped(window.id)
-        guard grouped || surface.watchesTitles else { return }
         scanner.run(window.pid) {
             let title = element.string(kAXTitleAttribute)
             DispatchQueue.main.async {
                 guard window.title != title else { return }
+                let wasFloating = window.isFloating
                 window.title = title
+                window.autoFloating = self.shouldFloat(window, title: title,
+                                                       resizable: window.resizable || window.fullscreen)
+                if wasFloating != window.isFloating {
+                    self.corrections[window.id] = nil
+                    self.scheduleRefresh()
+                }
                 self.surface.titleChanged(window)
                 if grouped { self.surface.tabsDidChange(instant: false) }
             }
