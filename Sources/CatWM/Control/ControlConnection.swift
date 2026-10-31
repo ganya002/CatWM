@@ -65,6 +65,7 @@ final class ControlConnection {
         inbox.append(contentsOf: buffer[0..<count])
         while let newline = inbox.firstIndex(of: 0x0A) {
             let line = inbox[inbox.startIndex..<newline]
+            guard line.count <= Self.maxLine else { return finish() }
             inbox = Data(inbox[inbox.index(after: newline)...])
             if !line.isEmpty { onLine(self, Data(line)) }
         }

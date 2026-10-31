@@ -137,6 +137,36 @@ private func reply(_ text: String) throws -> JSON {
 }
 
 @Suite(.serialized) struct ControlSocketTests {
+    @Test(arguments: [ControlConnection.maxLine, ControlConnection.maxLine + 1])
+    func completeLinesRespectTheSizeLimit(length: Int) throws {
+        var descriptors: [Int32] = [0, 0]
+        try #require(socketpair(AF_UNIX, SOCK_STREAM, 0, &descriptors) == 0)
+        let sender = descriptors[0]
+        defer { Darwin.close(sender) }
+        var quiet: Int32 = 1
+        setsockopt(sender, SOL_SOCKET, SO_NOSIGPIPE, &quiet, socklen_t(MemoryLayout<Int32>.size))
+        let closed = DispatchSemaphore(value: 0)
+        let delivered = DispatchSemaphore(value: 0)
+        let connection = ControlConnection(descriptor: descriptors[1], onLine: { connection, line in
+            delivered.signal()
+            #expect(length <= ControlConnection.maxLine, "An oversized line reached the command handler")
+            #expect(line.count == length)
+            connection.close()
+        }, onClose: { _ in closed.signal() })
+        connection.start()
+        defer { connection.close() }
+        let data = Data(repeating: 0x61, count: length) + Data([0x0A])
+        var sent = 0
+        while sent < data.count {
+            let count = data.withUnsafeBytes { write(sender, $0.baseAddress?.advanced(by: sent), $0.count - sent) }
+            if count < 0, errno == EINTR { continue }
+            guard count > 0 else { break }
+            sent += count
+        }
+        #expect(closed.wait(timeout: .now() + 5) == .success)
+        #expect((delivered.wait(timeout: .now()) == .success) == (length <= ControlConnection.maxLine))
+    }
+
     private func makePath() -> String {
         "/tmp/catwm-test-\(UInt32.random(in: 0...UInt32.max)).sock"
     }
