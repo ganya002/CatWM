@@ -27,7 +27,7 @@ enum Badge: Equatable {
 
     init?(label: String?) {
         guard let label = label?.trimmingCharacters(in: .whitespaces), !label.isEmpty else { return nil }
-        let digits = label.filter(\.isNumber)
+        let digits = label.filter(\.isNumber).map { $0.wholeNumberValue.map(String.init) ?? String($0) }.joined()
         if let count = Int(digits), count > 0 { self = .count(count) } else { self = .dot }
     }
 

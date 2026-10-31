@@ -37,6 +37,12 @@ import Testing
         #expect(Badge.count(120).text == "99+")
     }
 
+    @Test(arguments: ["١٧٤", "۱۷۴", "१७४", "１７４"])
+    func badgeReadsLocalizedDockCounts(label: String) {
+        #expect(Badge(label: label) == .count(174))
+        #expect(Badge(label: label)?.text == "99+")
+    }
+
     @Test @MainActor func dockUpdateRechecksMessagesWhenWindowsChange() {
         var windows = [window(1, "com.slack", "general - Slack")]
         let registry = Notifications(windowList: { windows })
