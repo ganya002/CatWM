@@ -80,6 +80,26 @@ import Testing
         #expect(hotkeys.submap.isEmpty)
     }
 
+    @Test(arguments: [false, true]) @MainActor
+    func textEntryPassesScrollThroughWindowMode(continuous: Bool) throws {
+        let hotkeys = Hotkeys()
+        let bind = KeyBinding(keyCode: SpecialKey.mouseDown, mods: [],
+                              dispatcher: "submap", arg: "reset", submap: "window")
+        hotkeys.tables = ["window": [Hotkeys.key(bind.keyCode, bind.mods): bind]]
+        hotkeys.submap = "window"
+        hotkeys.textInputActive = true
+        let event = try #require(CGEvent(scrollWheelEvent2Source: nil, units: continuous ? .pixel : .line,
+                                        wheelCount: 1, wheel1: -80, wheel2: 0, wheel3: 0))
+        event.flags = []
+
+        #expect(!hotkeys.handlePointer(.scrollWheel, event))
+        #expect(hotkeys.submap == "window")
+
+        hotkeys.textInputActive = false
+        #expect(hotkeys.handlePointer(.scrollWheel, event))
+        #expect(hotkeys.submap.isEmpty)
+    }
+
     @Test func exactDisplaysKeepTheirAssignmentsAfterReordering() {
         let mapping = template().displayMap(available: [("builtin", true), ("external", false)])
         #expect(mapping["external"] == "external")

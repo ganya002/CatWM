@@ -84,7 +84,8 @@ extension Hotkeys {
     }
 
     func handleScroll(_ event: CGEvent) -> Bool {
-        guard !paused, event.getIntegerValueField(.eventSourceUserData) != Self.syntheticMarker else { return false }
+        guard !paused, !textInputActive,
+              event.getIntegerValueField(.eventSourceUserData) != Self.syntheticMarker else { return false }
         let continuous = event.getIntegerValueField(.scrollWheelEventIsContinuous) != 0
         let dy = event.getDoubleValueField(continuous ? .scrollWheelEventPointDeltaAxis1 : .scrollWheelEventDeltaAxis1)
         let dx = event.getDoubleValueField(continuous ? .scrollWheelEventPointDeltaAxis2 : .scrollWheelEventDeltaAxis2)
