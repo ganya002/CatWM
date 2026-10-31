@@ -210,10 +210,10 @@ struct ConfigText {
             set(option: option.key, value: option.text(editedConfig), in: &edited)
         }
         if config.layouts != editedConfig.layouts {
-            Self.append("layouts = " + editedConfig.layouts.map(\.rawValue).joined(separator: ", "), to: &edited)
+            set(option: "layouts", value: editedConfig.layouts.map(\.rawValue).joined(separator: ", "), in: &edited)
         }
         if config.floating != editedConfig.floating {
-            Self.append("floating = " + Self.escape(editedConfig.floating.joined(separator: ", ")), to: &edited)
+            set(option: "floating", value: editedConfig.floating.joined(separator: ", "), in: &edited)
         }
         let addedVars = editVariables(editedVars, in: &edited)
         editBinds(editedBinds, in: &edited)

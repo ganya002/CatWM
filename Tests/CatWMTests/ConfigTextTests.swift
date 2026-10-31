@@ -128,3 +128,52 @@ func aKeyboardImportKeepsSettingsThatUsedReplacedVariables(_ keyboard: String) {
     #expect(parsed.bindings.first?.arg == "d")
     #expect(parsed.bindings.first?.mods == .maskControl)
 }
+
+@Test(arguments: ["\n", "\r\n"])
+func editingListsKeepsTheirCommentsAndPosition(newline: String) {
+    let original = ["# apps", "floating = com.apple.calculator # utilities",
+                    "# cycle", "layouts = bsp, wide # preferred order", "window-margins = false", ""]
+        .joined(separator: newline)
+    let doc = ConfigDocument(text: original)
+    doc.config.floating = ["com.apple.calculator", "com.example.#utility"]
+    doc.config.layouts = [.wide, .bsp]
+    let saved = doc.serialize()
+    let expected = ["# apps", "floating = com.apple.calculator, com.example.##utility # utilities",
+                    "# cycle", "layouts = wide, bsp # preferred order", "window-margins = false", ""]
+        .joined(separator: newline)
+    #expect(saved == expected)
+    let reopened = ConfigDocument(text: saved)
+    #expect(reopened.config.errors.isEmpty)
+    #expect(reopened.config.floating == doc.config.floating)
+    #expect(reopened.config.layouts == doc.config.layouts)
+    reopened.config.floating = []
+    reopened.config.layouts = [.bsp]
+    let editedAgain = reopened.serialize()
+    #expect(editedAgain == ["# apps", "floating =  # utilities", "# cycle",
+                            "layouts = bsp # preferred order", "window-margins = false", ""]
+        .joined(separator: newline))
+    #expect(Config.parse(editedAgain).floating.isEmpty)
+}
+
+@Test func editingListsUpdatesTheLastAssignment() {
+    let text = "floating = com.example.first\nfloating = com.example.last # active\n"
+        + "layouts = bsp\nlayouts = wide # active\n"
+    let doc = ConfigDocument(text: text)
+    doc.config.floating = []
+    doc.config.layouts = [.tall]
+    let saved = doc.serialize()
+    #expect(saved == "floating = com.example.first\nfloating =  # active\n"
+        + "layouts = bsp\nlayouts = tall # active\n")
+    #expect(Config.parse(saved).floating.isEmpty)
+    #expect(Config.parse(saved).layouts == [.tall])
+}
+
+@Test func editingMissingListsAddsAssignments() {
+    let doc = ConfigDocument(text: "# personal config\n")
+    doc.config.floating = ["com.example.Utility"]
+    doc.config.layouts = [.tall]
+    let saved = doc.serialize()
+    #expect(saved == "# personal config\nlayouts = tall\nfloating = com.example.Utility\n")
+    #expect(Config.parse(saved).floating == doc.config.floating)
+    #expect(Config.parse(saved).layouts == doc.config.layouts)
+}
