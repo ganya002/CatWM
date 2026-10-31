@@ -20,8 +20,8 @@ enum BindRange {
         while last.hasPrefix(".") { last.removeFirst() }
         guard !first.isEmpty, !last.isEmpty else { return nil }
 
-        if keys, let i = numberRow.firstIndex(of: first), let j = numberRow.firstIndex(of: last), i <= j {
-            return Array(numberRow[i...j])
+        if keys, let i = numberRow.firstIndex(of: first), let j = numberRow.firstIndex(of: last) {
+            return i <= j ? Array(numberRow[i...j]) : Array(numberRow[j...i].reversed())
         }
         if first.count == 1, last.count == 1,
            let x = first.lowercased().unicodeScalars.first, let y = last.lowercased().unicodeScalars.first,

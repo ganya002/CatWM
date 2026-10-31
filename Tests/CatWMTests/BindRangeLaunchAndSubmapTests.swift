@@ -74,3 +74,9 @@ import Testing
     let realText = (try? String(contentsOf: real, encoding: .utf8)) ?? ""
     #expect(!realText.contains(marker))
 }
+
+@Test func numberRowRangeCanRunBackwards() throws {
+    let pairs = try BindRange.pairs(key: "0..1", dispatcher: "workspace", arg: "10..1").get()
+    #expect(pairs.map(\.key) == ["0", "9", "8", "7", "6", "5", "4", "3", "2", "1"])
+    #expect(pairs.map(\.arg) == ["10", "9", "8", "7", "6", "5", "4", "3", "2", "1"])
+}
