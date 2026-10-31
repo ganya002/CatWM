@@ -20,6 +20,8 @@ extension MenuModel {
     }
 
     func move(_ delta: Int) {
+        openWork?.cancel()
+        trimWork?.cancel()
         let level = keyLevel
         let list = column(level).filter { query.isEmpty ? $0.selectable : true }
         guard !list.isEmpty else { return }
