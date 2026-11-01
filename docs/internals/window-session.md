@@ -392,6 +392,8 @@ flowchart LR
     end
 ```
 
+An existing window with a different document cannot match at score 0, even when its title matches. This keeps restore from reusing an unrelated browser window instead of opening the saved tabs.
+
 A window that a script opened can show another URL while it loads. A saved window with app state can therefore match a new window at score 0. `MatchStability` waits until a score 0 or score 1 match stays the same for 0.6 seconds, but not more than 2 seconds. It ignores frame changes, so an early frame write does not restart the wait.
 
 ## The launch dispatcher

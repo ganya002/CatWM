@@ -95,6 +95,8 @@ enum WindowMatch {
         guard candidateScore == score else { return false }
         if score == 0 {
             guard candidate.allowsGenericFallback else { return false }
+            if !candidate.newlyOpened, let expected = window.document, let actual = candidate.document,
+               expected != actual { return false }
             if !candidate.newlyOpened, !candidate.title.isEmpty, candidate.title != window.title { return false }
         }
         return true

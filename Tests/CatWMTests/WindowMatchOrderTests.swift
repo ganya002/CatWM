@@ -42,6 +42,21 @@ import Testing
         #expect(WindowMatch.assign([window], candidates: [near, exact])[window.id] == 20)
     }
 
+    @Test(arguments: ["GitHub", ""])
+    func savedTabsDoNotClaimAnExistingWindowWithAnotherDocument(_ title: String) {
+        var window = saved(1, .zero, title: "GitHub", document: "https://github.com/noxaur/catwm")
+        window.bundleID = "com.apple.Safari"
+        window.appName = "Safari"
+        window.state = AppState(tabs: ["https://github.com/noxaur/catwm"])
+        var unrelated = candidate(30, nil, title: title, document: "https://github.com/other/project")
+        unrelated.bundleID = window.bundleID
+        unrelated.newlyOpened = false
+        #expect(WindowMatch.assign([window], candidates: [unrelated]).isEmpty)
+
+        unrelated.newlyOpened = true
+        #expect(WindowMatch.assign([window], candidates: [unrelated])[window.id] == 30)
+    }
+
     @Test func aWindowWithSavedTabsAcceptsANewWindowThatShowsAnotherPage() {
         var window = saved(1, .zero, title: "News", document: "https://news.example/")
         window.state = AppState(tabs: ["https://news.example/"])
