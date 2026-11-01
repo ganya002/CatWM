@@ -73,7 +73,11 @@ final class TabStrips {
             }
         }
         TabStripReveal.shared.watch(hidden)
-        let live = Set(manager.tabs.groups.filter { !manager.model.isShown(manager.workspaceOf[$0.active]) }.map(\.id))
+        let live = Set(manager.tabs.groups.filter { group in
+            let active = group.active
+            return !manager.model.isShown(manager.workspaceOf[active])
+                || (!manager.present.contains(active) && manager.windows[active]?.minimized == false)
+        }.map(\.id))
         for (key, strip) in strips where !placed.contains(key) {
             if manager.tilingEnabled, live.contains(key) { continue }
             strip.close()
