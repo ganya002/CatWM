@@ -84,6 +84,36 @@ import Testing
         #expect(await fake.wait(manager) { fake.cursorRefreshes > cursorRefreshes })
     }
 
+    @Test(arguments: [true, false])
+    func movingTheFocusedWindowReturnsToTheMostRecentWindow(hasHistory: Bool) async throws {
+        let fake = FakeBackend()
+        let source = fake.addScreen()
+        let destination = fake.addScreen(frame: source.frame.offsetBy(dx: source.frame.width, dy: 0))
+        let manager = fake.makeManager()
+        let moved = fake.addWindow()
+        fake.addWindow()
+        fake.addWindow()
+        #expect(await fake.settle(manager))
+        let remaining = manager.order.filter { $0 != moved }
+        let expected = try #require(hasHistory ? remaining.last : remaining.first)
+        for id in (hasHistory ? remaining : []) + [moved] {
+            fake.userFocuses(id)
+            let element = try #require(fake.element(id))
+            manager.handle(kAXFocusedWindowChangedNotification, element)
+            #expect(await fake.wait(manager) { manager.focusRequests.reportedFocus?.id == id })
+        }
+        let from = try #require(manager.shown[source.uuid])
+        let target = try #require(manager.shown[destination.uuid])
+        let window = try #require(manager.windows[moved])
+        fake.userMoves(moved, to: destination.visible)
+        window.remember(destination.visible)
+        manager.assignWindow(window, toWorkspace: target, from: from, follow: false, handOffFocus: true)
+
+        #expect(await fake.wait(manager) { manager.focusRequests.reportedFocus?.id == expected })
+        #expect(fake.focused(in: window.pid) == expected)
+        #expect(manager.workspaceOf[moved] == target)
+    }
+
     @Test func aWaitForAnEventThatNeverComesEnds() async {
         let fake = FakeBackend()
         fake.addScreen()
