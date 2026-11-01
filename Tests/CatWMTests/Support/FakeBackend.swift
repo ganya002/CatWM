@@ -50,6 +50,10 @@ final class FakeBackend: WindowBackend {
         }
     }
 
+    func removeScreen(_ screen: Screen) {
+        lock.withLock { screenList.removeAll { $0.uuid == screen.uuid } }
+    }
+
     @discardableResult
     func addWindow(pid: pid_t = -100, bundleID: String? = "test.fake.app",
                    frame: CGRect = CGRect(x: 100, y: 100, width: 800, height: 600), title: String? = "Window",

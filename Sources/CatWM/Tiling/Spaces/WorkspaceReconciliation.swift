@@ -46,12 +46,14 @@ struct WorkspaceReconciliation {
         }
         hostFullscreen(observation, in: &model)
         followMovedWindows(observation, in: &model, displayOf: &displayOf, uuids: uuids)
+        var moves: [CGWindowID: String] = [:]
         for id in observation.present where !model.isShown(model.workspaceOf[id]) {
             if let workspace = model.workspaceOf[id], isVirtual(workspace), let monitor = model.monitorOf[workspace],
                onHome.contains(monitor) { continue }
             let target = display(containing: observation.frames[id] ?? .null, among: displays)
-            model.assign(id, to: model.shown[target])
+            moves[id] = model.shown[target]
         }
+        model.assign(moves)
         let visible = observation.present.filter { model.isShown(model.workspaceOf[$0]) }
         return Self(model: model, homeSpace: homes, displayOf: displayOf, visible: visible,
                     park: virtual ? observation.present.subtracting(visible) : [])

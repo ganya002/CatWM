@@ -77,6 +77,19 @@ import Testing
         #expect(result.visible == [7, 8])
     }
 
+    @Test func rehomedTabsOnDifferentDisplaysSeparate() {
+        var model = WorkspaceModel()
+        for id: CGWindowID in [7, 8] { model.assign(id, to: "removed") }
+        model.joinTab(8, onto: 7)
+        let result = WorkspaceReconciliation.reconcile(
+            observation(frames: [7: displayA, 8: displayB]), model: model, virtual: false,
+            homeSpace: [:], displayOf: [:])
+        #expect(result.model.workspaceOf[7] == result.model.shown["A"])
+        #expect(result.model.workspaceOf[8] == result.model.shown["B"])
+        #expect(result.model.tabs.isEmpty)
+        #expect(result.visible == [7, 8])
+    }
+
     @Test func fullscreenWindowsJoinTheWorkspaceOfTheirOwnSpace() {
         var model = WorkspaceModel()
         model.virtualShown = ["A": "1"]

@@ -40,6 +40,28 @@ import Testing
         #expect(fake.frame(of: kept) == screen.visible)
     }
 
+    @Test func disconnectingADisplayKeepsItsTabsTogether() async {
+        let fake = FakeBackend()
+        let remaining = fake.addScreen()
+        let removed = fake.addScreen(frame: CGRect(x: 1440, y: 0, width: 1440, height: 900))
+        let manager = fake.makeManager()
+        let first = fake.addWindow(frame: removed.visible)
+        let second = fake.addWindow(frame: removed.visible)
+        #expect(await fake.settle(manager))
+        manager.joinTab(second, onto: first)
+        #expect(await fake.settle(manager))
+        #expect(manager.tabs.group(of: first)?.members == [first, second])
+
+        fake.removeScreen(removed)
+        #expect(await fake.settle(manager))
+
+        #expect(manager.workspaceOf[first] == manager.shown[remaining.uuid])
+        #expect(manager.workspaceOf[second] == manager.shown[remaining.uuid])
+        #expect(manager.tabs.group(of: first)?.members == [first, second])
+        #expect(manager.tabs.group(of: first)?.active == second)
+        #expect(fake.frame(of: second) == manager.belowTabStrip(remaining.visible, for: second))
+    }
+
     @Test func moveFocusRightFocusesTheNeighbourAndWritesNoFrame() async {
         let fake = FakeBackend()
         fake.addScreen()
