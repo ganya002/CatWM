@@ -57,6 +57,7 @@ import Testing
         func resumeEnhancedUI(_: pid_t) {}
         func focus(_: Window, ifCurrent _: () -> Bool) {}
         func refreshCursor() {}
+        func close(_: Window) -> String { "not supported" }
     }
 
     private func nextRefresh(_ backend: BlockingBackend) async {

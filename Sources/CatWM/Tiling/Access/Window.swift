@@ -98,13 +98,7 @@ final class Window {
     func focus(ifCurrent: () -> Bool = { true }) { backend.focus(self, ifCurrent: ifCurrent) }
 
     @discardableResult
-    func close() -> String {
-        let button = element.element(kAXCloseButtonAttribute)
-            ?? element.elements(kAXChildrenAttribute).first { $0.string(kAXSubroleAttribute) == kAXCloseButtonSubrole }
-        guard let button else { return "no close button" }
-        let result = button.noted { AXUIElementPerformAction(button, kAXPressAction as CFString) }
-        return result == .success ? "pressed" : "press failed (AX error \(result.rawValue))"
-    }
+    func close() -> String { backend.close(self) }
 
     func closeFromMenu() -> Bool {
         let bar = axApp(pid).element(kAXMenuBarAttribute)

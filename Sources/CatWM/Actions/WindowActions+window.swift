@@ -51,9 +51,7 @@ extension WindowActions {
 
     static let swapwindow = WindowAction.direction(
         "swapwindow", "window", "Swap the focused window with its neighbour"
-    ) { context in
-        if let direction = Direction(context.arg) { context.manager.moveWindow(direction) }
-    }
+    ) { $0.manager.moveWindowCommand($0.arg) }
 
     static let swapnext = WindowAction.step(
         "swapnext", "window", "Swap the focused window with the next or previous window",

@@ -82,6 +82,11 @@ final class FakeBackend: WindowBackend {
         }
     }
 
+    func close(_ window: Window) -> String {
+        close(window.id)
+        return "pressed"
+    }
+
     func quit(_ pid: pid_t) {
         lock.withLock {
             let gone = windowList.values.filter { $0.pid == pid }.map(\.id)

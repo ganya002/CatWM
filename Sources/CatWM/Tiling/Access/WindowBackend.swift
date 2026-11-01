@@ -18,6 +18,7 @@ protocol WindowBackend: AnyObject {
     func resumeEnhancedUI(_ pid: pid_t)
     func focus(_ window: Window, ifCurrent: () -> Bool)
     func refreshCursor()
+    func close(_ window: Window) -> String
 }
 
 final class AXBackend: WindowBackend {
@@ -76,6 +77,16 @@ final class AXBackend: WindowBackend {
         window.element.set(kAXMainAttribute, kCFBooleanTrue)
         guard ifCurrent() else { return }
         window.element.perform(kAXRaiseAction)
+    }
+
+    func close(_ window: Window) -> String {
+        let button = window.element.element(kAXCloseButtonAttribute)
+            ?? window.element.elements(kAXChildrenAttribute).first {
+                $0.string(kAXSubroleAttribute) == kAXCloseButtonSubrole
+            }
+        guard let button else { return "no close button" }
+        let result = button.noted { AXUIElementPerformAction(button, kAXPressAction as CFString) }
+        return result == .success ? "pressed" : "press failed (AX error \(result.rawValue))"
     }
 
     func refreshCursor() { CursorRefresh.post() }

@@ -28,6 +28,7 @@ struct WindowBackendBenchmarkTests {
         func resumeEnhancedUI(_: pid_t) {}
         func focus(_: Window, ifCurrent _: () -> Bool) {}
         func refreshCursor() {}
+        func close(_: Window) -> String { "not supported" }
     }
 
     private static let windows = 200, steps = 120, runs = 7
