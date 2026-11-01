@@ -6,6 +6,7 @@ final class TabDropHint {
 
     private let panel = CatWMPanel(role: .overlay(.normal, clickThrough: true))
     private let model = Model()
+    private let glide = PanelGlide()
     private var target: NSRect?
     private var hiding = false
 
@@ -35,12 +36,14 @@ final class TabDropHint {
             panel.alphaValue = 0
         }
         panel.order(.below, relativeTo: Int(window.id))
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = TabStrip.fade(Theme.fast)
-            context.timingFunction = Motion.Curve.easeOut
-            if !appearing { panel.animator().setFrame(frame, display: true) }
-            panel.animator().alphaValue = 1
+        if appearing {
+            glide.stop()
+        } else {
+            var spec = MotionSpec(WindowManager.shared.config)
+            spec.duration = TabStrip.fade(Theme.fast)
+            glide.to(frame, on: panel, spec: spec)
         }
+        Motion.fade(panel, to: 1, duration: TabStrip.fade(Theme.fast))
     }
 
     var showing: Bool { panel.isVisible && !hiding }
@@ -49,11 +52,8 @@ final class TabDropHint {
         guard panel.isVisible, !hiding else { return }
         hiding = true
         target = nil
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = TabStrip.fade(Theme.fast)
-            context.timingFunction = Motion.Curve.exit
-            panel.animator().alphaValue = 0
-        } completionHandler: { [weak self] in
+        glide.stop()
+        Motion.fade(panel, to: 0, duration: TabStrip.fade(Theme.fast), curve: Motion.Curve.exit) { [weak self] in
             guard let self, self.hiding else { return }
             self.hiding = false
             self.panel.orderOut(nil)

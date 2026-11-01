@@ -37,17 +37,6 @@ struct CurveGraph: View {
     }
 }
 
-struct CurveAnimation: CustomAnimation {
-    let curve: AnimationCurve
-    let bounce: Double
-    let duration: Double
-
-    func animate<V: VectorArithmetic>(value: V, time: TimeInterval, context _: inout AnimationContext<V>) -> V? {
-        guard time < duration else { return nil }
-        return value.scaled(by: curve.progress(time / duration, bounce: bounce))
-    }
-}
-
 struct PresetTile: View {
     let preset: MotionPane.Preset
     let selected: Bool
@@ -74,7 +63,7 @@ struct PresetTile: View {
         }
         .buttonStyle(PressScale())
         .onHover { hover.isOn = $0 }
-        .animation(.easeOut(duration: Theme.medium), value: selected)
+        .animation(Motion.fadeMedium, value: selected)
         .accessibilityLabel(preset.name)
         .accessibilityAddTraits(selected ? .isSelected : [])
     }

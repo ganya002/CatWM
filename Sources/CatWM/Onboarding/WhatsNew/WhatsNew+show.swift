@@ -32,7 +32,7 @@ extension WhatsNew {
         } else {
             panel.orderFrontRegardless()
         }
-        animate(0.35) { panel.animator().alphaValue = 1 }
+        Motion.group(0.35) { Motion.setAlpha(1, on: panel) }
         self.panel = panel
         markSeen(model.features)
         StatusMenu.shared.refreshIfOpen()
@@ -41,7 +41,7 @@ extension WhatsNew {
     func hide() {
         guard let hidden = panel else { return }
         panel = nil
-        animate(0.2, changes: { hidden.animator().alphaValue = 0 }, completion: { hidden.orderOut(nil) })
+        Motion.group(0.2, changes: { Motion.setAlpha(0, on: hidden) }, completion: { hidden.orderOut(nil) })
     }
 
     private func startTour() {

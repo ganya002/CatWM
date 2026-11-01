@@ -121,13 +121,11 @@ struct TabStripView: View {
                 .padding(.bottom, -1)
         }
         .clipped()
-        .animation(TabStrip.motion, value: model.tabs.map(\.id))
-        .animation(fade(TabStrip.reduceMotion ? Motion.fade : Motion.easeOut), value: model.active)
-        .animation(fade(Motion.fade), value: model.focused)
-        .animation(fade(Motion.fade), value: model.hovered)
+        .animation(Motion.tabStrip, value: model.tabs.map(\.id))
+        .animation(Motion.tabFade(TabStrip.reduceMotion ? Motion.fade : Motion.easeOut), value: model.active)
+        .animation(Motion.tabFade(Motion.fade), value: model.focused)
+        .animation(Motion.tabFade(Motion.fade), value: model.hovered)
     }
-
-    private func fade(_ animation: Animation) -> Animation? { TabStrip.animated ? animation : nil }
 
     private func pill(_ fill: Color, tabWidth: CGFloat) -> some View {
         RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous).fill(fill)
@@ -219,7 +217,7 @@ private struct TabCell: View {
                 }
             }
             .padding(.horizontal, TabStrip.closeInset)
-            .animation(TabStrip.motion, value: tab.badge)
+            .animation(Motion.tabStrip, value: tab.badge)
         }
         .foregroundStyle(active || hovered ? Theme.ink : Theme.inkMuted)
     }

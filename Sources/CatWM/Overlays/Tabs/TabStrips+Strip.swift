@@ -12,7 +12,7 @@ extension TabStrips {
         private var members: [CGWindowID] = []
         private var hidden = false
         private var shifted = false
-        private var gliding: Timer?
+        private let glide = PanelGlide()
 
         init() {
             view = TabStripInput(model: model)
@@ -38,18 +38,16 @@ extension TabStrips {
                 target = frame
                 shifted = false
                 if wasVisible, duration > 0 {
-                    glide(to: frame, duration: duration)
+                    var spec = MotionSpec(WindowManager.shared.config)
+                    spec.duration = duration
+                    glide.to(frame, on: panel, spec: spec)
                 } else {
-                    stopGlide()
+                    glide.stop()
                     panel.setFrame(frame, display: true)
                 }
                 if !wasVisible || panel.alphaValue < 1 {
                     if !wasVisible { panel.alphaValue = 0 }
-                    NSAnimationContext.runAnimationGroup { context in
-                        context.duration = TabStrip.fade(Theme.medium)
-                        context.timingFunction = Motion.Curve.easeOut
-                        panel.animator().alphaValue = 1
-                    }
+                    Motion.fade(panel, to: 1, duration: TabStrip.fade(Theme.medium))
                 }
             }
             members = group.members
@@ -74,7 +72,7 @@ extension TabStrips {
             let width = panel.frame.width
             if !model.tabs.contains(where: { $0.id == window.id }) {
                 let wanted = model.slot(at: x, width: width, extra: 1, rounding: .down)
-                withAnimation(TabStrip.motion) {
+                withAnimation(Motion.tabStrip) {
                     model.tabs.insert(.init(id: window.id, title: Self.title(of: window), pid: window.pid), at: wanted)
                 }
                 model.dragged = window.id
@@ -86,7 +84,7 @@ extension TabStrips {
             let grab = x - step / 2
             let wanted = model.slot(at: grab, width: width)
             if wanted != from {
-                withAnimation(TabStrip.motion) {
+                withAnimation(Motion.tabStrip) {
                     model.tabs.move(fromOffsets: [from], toOffset: wanted > from ? wanted + 1 : wanted)
                 }
             }
@@ -95,7 +93,7 @@ extension TabStrips {
 
         func endPreview(of id: CGWindowID) -> Int? {
             guard let index = model.tabs.firstIndex(where: { $0.id == id }) else { return nil }
-            withAnimation(TabStrip.motion) {
+            withAnimation(Motion.tabStrip) {
                 model.tabs.remove(at: index)
                 model.dragged = nil
                 model.dragShift = 0
@@ -105,7 +103,7 @@ extension TabStrips {
 
         func shift(by offset: CGVector) {
             guard let target, panel.isVisible else { return }
-            stopGlide()
+            glide.stop()
             shifted = true
             panel.setFrameOrigin(NSPoint(x: target.minX + offset.dx, y: target.minY - offset.dy))
         }
@@ -114,41 +112,15 @@ extension TabStrips {
             guard panel.isVisible, !hidden else { return }
             hidden = true
             view.cancelDrag()
-            NSAnimationContext.runAnimationGroup({ context in
-                context.duration = TabStrip.fade(Theme.medium)
-                context.timingFunction = Motion.Curve.easeOut
-                panel.animator().alphaValue = 0
-            }, completionHandler: { [weak self] in
+            Motion.fade(panel, to: 0, duration: TabStrip.fade(Theme.medium)) { [weak self] in
                 guard let self, self.hidden else { return }
                 self.panel.orderOut(nil)
                 self.target = nil
-            })
-        }
-
-        private func glide(to frame: NSRect, duration: Double) {
-            stopGlide()
-            let from = panel.frame, start = CACurrentMediaTime(), config = WindowManager.shared.config
-            let timer = Timer(timeInterval: 1.0 / 120.0, repeats: true) { [weak self] timer in
-                guard let self else { return timer.invalidate() }
-                let time = (CACurrentMediaTime() - start) / duration
-                let eased = CGFloat(config.animationCurve.progress(time, bounce: config.animationBounce))
-                self.panel.setFrame(NSRect(x: from.minX + (frame.minX - from.minX) * eased,
-                                           y: from.minY + (frame.minY - from.minY) * eased,
-                                           width: from.width + (frame.width - from.width) * eased,
-                                           height: frame.height).integral, display: true)
-                if time >= 1 { self.stopGlide() }
             }
-            RunLoop.main.add(timer, forMode: .common)
-            gliding = timer
-        }
-
-        private func stopGlide() {
-            gliding?.invalidate()
-            gliding = nil
         }
 
         func close() {
-            stopGlide()
+            glide.stop()
             view.cancelDrag()
             panel.orderOut(nil)
             target = nil

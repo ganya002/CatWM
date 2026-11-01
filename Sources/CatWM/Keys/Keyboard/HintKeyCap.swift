@@ -42,9 +42,9 @@ struct HintKeyCap: View {
         .offset(y: filled ? scale : 0)
         .scaleEffect(hot && !key.modifier.isEmpty && !reduceMotion ? 0.96 : 1)
         .contentShape(KeyOutline(cap: key.cap))
-        .animation(.easeOut(duration: Theme.fast), value: pressed)
-        .animation(.easeOut(duration: 0.15), value: hint?.label)
-        .animation(.easeOut(duration: Theme.fast), value: hot)
+        .animation(Motion.fade, value: pressed)
+        .animation(Motion.fade, value: hint?.label)
+        .animation(Motion.fade, value: hot)
 
         Group {
             if interactive || (tap != nil && !key.modifier.isEmpty) {

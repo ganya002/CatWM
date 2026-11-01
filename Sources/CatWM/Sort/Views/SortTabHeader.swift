@@ -34,7 +34,7 @@ struct SortTabHeader: View {
                 .onEnded { _ in model.dragEnded() })
             .oContextMenu(opened: { menu.isOn = $0 }, items: {
                 model.tabGroupMenu(lead: lead.id, closing: closing) { change in
-                    withAnimation(PanelMotion.windowAnimation(reduceMotion: reduceMotion), change)
+                    withAnimation(Motion.user(reduceMotion: reduceMotion), change)
                 }
             })
             .accessibilityLabel("Tab group, \(count) tabs")

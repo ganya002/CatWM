@@ -43,7 +43,7 @@ extension Coach {
             reposition(animated: false)
             panel.alphaValue = 0
             panel.orderFrontRegardless()
-            animate(0.35) { panel.animator().alphaValue = 1 }
+            Motion.group(0.35) { Motion.setAlpha(1, on: panel) }
             follow = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
                 self?.handle(.tick)
                 self?.reposition(animated: true)

@@ -14,11 +14,39 @@ STYLE = re.compile(
     r"\.system\(size:"
     r"|Color\(red:"
     r"|cornerRadius: *[0-9]"
-    r"|\.(?:easeOut|easeInOut|easeIn|linear)\(duration: *[0-9]"
-    r"|\.spring\("
     r"|\.shadow\("
 )
 PANEL = re.compile(r"\bNSPanel\(")
+MOTION_DIR = "Sources/CatWM/Motion/"
+MOTION_TILING = tuple(MOTION_DIR + name + "/" for name in ("Engine", "Windows", "Desktop"))
+ANIMATION_ENGINE = re.compile(
+    r"\bNSAnimationContext\b|\.animator\(\)"
+    r"|\b(?:CABasicAnimation|CASpringAnimation|CAKeyframeAnimation|CAAnimationGroup|CATransition|CAPropertyAnimation|CAAnimation)\b"
+)
+DISPLAY_LINK = re.compile(r"\bCADisplayLink\b|\bdisplayLink\(")
+DISPLAY_LINK_ALLOW = ("Sources/CatWM/App/Perf/FrameRun.swift",)
+FAST_TIMER_ALLOW = (
+    "Sources/CatWM/Overlays/Mode/ModeCursor.swift",
+    "Sources/CatWM/Sort/Model/SortModel+dragChanged.swift",
+)
+FAST_TIMER = re.compile(r"\bTimer\b.*?\b(?:timeInterval|withTimeInterval|interval) *: *([0-9.]+(?: */ *[0-9.]+)?)")
+SWIFTUI_ANIMATION = re.compile(
+    r"\.(?:easeOut|easeIn|easeInOut)\("
+    r"|\.linear\(duration"
+    r"|\.spring\("
+    r"|\.(?:snappy|bouncy|smooth)\b"
+    r"|\.timingCurve\("
+    r"|\.interpolatingSpring\b"
+    r"|\bAnimation\(|\bAnimation\.default\b"
+    r"|\bCustomAnimation\b"
+)
+ANIMATION_TOKEN = r"(?:Motion\.[\w.]+(?:\([^()]*\))?|nil)"
+ANIMATION_ARGUMENT = re.compile(
+    r"\bwithAnimation *\{"
+    r"|(?:\bwithAnimation|\.animation) *\((?!\))(?! *" + ANIMATION_TOKEN + r"[,)])"
+    r"(?![^?{};]+\? *" + ANIMATION_TOKEN + r" *: *(?:[^?{};:]+\? *" + ANIMATION_TOKEN + r" *: *)*" + ANIMATION_TOKEN + r" *[,)])"
+)
+ANIMATION_RULE = "animation:"
 TILING_UI = re.compile(
     r"\b(?:HUD|TabStrips|TabDropHint|TabStripFollow|TabStripReveal|SplitHandle|SortPanel|Switcher|Tips"
     r"|CursorActions|ModeFX|ModeCursor|KeyHelp|TemplateLibrary|MacKeyboard|Notifications)\b"
@@ -93,13 +121,42 @@ def reason_ok(text):
     return " " in text and len(text) >= 12
 
 
-def banned(path, code, uses_defaults=False):
+def fast_timer(code):
+    if re.search(r"\bTimer\((?:timeInterval:)?\s*$", code):
+        return True
+    for match in FAST_TIMER.finditer(code):
+        parts = [float(part) for part in match.group(1).split("/")]
+        interval = parts[0] / parts[1] if len(parts) == 2 and parts[1] else parts[0]
+        if interval < 0.1:
+            return True
+    return False
+
+
+def animation_hits(path, code):
+    if not path.startswith("Sources/CatWM/") or path.startswith(MOTION_DIR):
+        return []
     hits = []
+    if ANIMATION_ENGINE.search(code):
+        hits.append(ANIMATION_RULE + " AppKit animation outside Motion. Use Motion.group, Motion.fade or PanelGlide, or add a helper in Motion/Kit")
+    if path not in DISPLAY_LINK_ALLOW and DISPLAY_LINK.search(code):
+        hits.append(ANIMATION_RULE + " display link outside Motion. Drive frames with Animator, DesktopMotion or PanelGlide, or add a driver in Motion/")
+    if path not in FAST_TIMER_ALLOW and fast_timer(code):
+        hits.append(ANIMATION_RULE + " frame timer under 0.1 s. Animate with Animator, DesktopMotion or PanelGlide, or add a driver in Motion/")
+    if SWIFTUI_ANIMATION.search(code):
+        hits.append(ANIMATION_RULE + " raw SwiftUI animation. Use a Motion.* token, or add one to Motion/Kit/Motion.swift")
+    if ANIMATION_ARGUMENT.search(code):
+        hits.append(ANIMATION_RULE + " withAnimation or .animation without a Motion.* token. Pass Motion.<token> or nil, or add a token to Motion/Kit/Motion.swift")
+    return hits
+
+
+def banned(path, code, uses_defaults=False):
+    hits = animation_hits(path, code)
     if path.startswith("Sources/CatWM/") and not STYLE_ALLOW.search(path) and STYLE.search(code):
         hits.append("hard-coded style. Use a Theme token")
     if path.startswith("Sources/CatWM/") and PANEL.search(code):
         hits.append("NSPanel. Use CatWMPanel")
-    if path.startswith("Sources/CatWM/Tiling/") and TILING_UI.search(code):
+    tiling = path.startswith("Sources/CatWM/Tiling/") or path.startswith(MOTION_TILING)
+    if tiling and TILING_UI.search(code):
         hits.append("UI in Tiling. Use WindowManager.surface")
     if path.startswith("Sources/CatWM/Session/") and SESSION_APP.search(code):
         hits.append("CatWM type in Session. Put it in Templates")
@@ -109,7 +166,7 @@ def banned(path, code, uses_defaults=False):
         hits.append("NSLog or print. Use Log, which Send Feedback reads")
     if path.startswith("Sources/CatWM/") and path not in IGNORED_WRITE_ALLOW and IGNORED_WRITE.search(code):
         hits.append("try? drops a write failure. Use Log.attempt")
-    if path.startswith("Sources/CatWM/Tiling/") and FIXED_DELAY.search(code):
+    if tiling and FIXED_DELAY.search(code):
         hits.append("timer wait in Tiling. Wait for the event, or end the line with // style-ok: <why no event exists>")
     if path.startswith("Sources/CatWM/") and STORED_STATIC.search(code):
         hits.append("stored static var. Put the state in an owner that WindowManager or AppDelegate holds")
@@ -193,49 +250,62 @@ def catalog_violations(path, source):
     return failures
 
 
+def line_failures(path, source):
+    failures = []
+    in_multi = False
+    in_block = False
+    uses_defaults = "UserDefaults" in source
+    number = 0
+    for number, raw in enumerate(source.split("\n"), 1):
+        line = raw
+        if in_block:
+            if "*/" in line:
+                in_block = False
+            continue
+        idx, in_multi = outside(line, in_multi)
+        code = line if idx is None else line[:idx]
+        hits = banned(path, code, uses_defaults)
+        animation = [hit for hit in hits if hit.startswith(ANIMATION_RULE)]
+        others = [hit for hit in hits if not hit.startswith(ANIMATION_RULE)]
+        for hit in animation:
+            failures.append((path, number, hit[len(ANIMATION_RULE):].strip(), line.strip()))
+        if idx is None:
+            for hit in others:
+                failures.append((path, number, hit, line.strip()))
+            continue
+        comment = line[idx:].strip()
+        if comment.startswith("/*"):
+            failures.append((path, number, "block comment. Delete it", line.strip()))
+            if "*/" not in comment:
+                in_block = True
+            continue
+        if path == "Package.swift" and comment.startswith(TOOLS):
+            continue
+        match = OK.match(comment)
+        if match and animation:
+            failures.append((path, number, "style-ok cannot silence an animation rule. Add a token or helper in Motion/ instead", line.strip()))
+            continue
+        if match and reason_ok(match.group(1)) and others:
+            continue
+        if match and not reason_ok(match.group(1)):
+            why = "style-ok needs a reason of at least two words"
+        elif match and not others:
+            why = "style-ok is only allowed on a line that breaks a check"
+        else:
+            why = "comment. Delete it. A one-off may end with // style-ok: <why this line>"
+        failures.append((path, number, why, line.strip()))
+    if in_multi:
+        failures.append((path, number, "unclosed string", ""))
+    return failures
+
+
 def main():
     failures = []
     for path in sorted(swift_files()):
         with open(os.path.join(ROOT, path), encoding="utf-8") as handle:
             failures.extend(catalog_violations(path, handle.read()))
-        in_multi = False
-        in_block = False
         with open(os.path.join(ROOT, path), encoding="utf-8") as handle:
-            uses_defaults = "UserDefaults" in handle.read()
-        with open(os.path.join(ROOT, path), encoding="utf-8") as handle:
-            for number, raw in enumerate(handle, 1):
-                line = raw.rstrip("\n")
-                if in_block:
-                    if "*/" in line:
-                        in_block = False
-                    continue
-                idx, in_multi = outside(line, in_multi)
-                code = line if idx is None else line[:idx]
-                hits = banned(path, code, uses_defaults)
-                if idx is None:
-                    for hit in hits:
-                        failures.append((path, number, hit, line.strip()))
-                    continue
-                comment = line[idx:].strip()
-                if comment.startswith("/*"):
-                    failures.append((path, number, "block comment. Delete it", line.strip()))
-                    if "*/" not in comment:
-                        in_block = True
-                    continue
-                if path == "Package.swift" and comment.startswith(TOOLS):
-                    continue
-                match = OK.match(comment)
-                if match and reason_ok(match.group(1)) and hits:
-                    continue
-                if match and not reason_ok(match.group(1)):
-                    why = "style-ok needs a reason of at least two words"
-                elif match and not hits:
-                    why = "style-ok is only allowed on a line that breaks a check"
-                else:
-                    why = "comment. Delete it. A one-off may end with // style-ok: <why this line>"
-                failures.append((path, number, why, line.strip()))
-            if in_multi:
-                failures.append((path, number, "unclosed string", ""))
+            failures.extend(line_failures(path, handle.read()))
     import importlib.util
     spec = importlib.util.spec_from_file_location("catalog_generator", os.path.join(ROOT, "Tools/generate-catalogs.py"))
     generator = importlib.util.module_from_spec(spec)

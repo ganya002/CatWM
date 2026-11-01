@@ -20,7 +20,7 @@ struct AnimationWriteTests {
         let writer = AXWriter(pid: window.pid, backend: backend)
         let target = start.offsetBy(dx: 20, dy: 0)
         let item = Animator.Item(move: .init(window: window, to: target, bounds: target), from: start,
-                                 start: 0, duration: duration, curve: curve, bounce: 0.7)
+                                 start: 0, spec: .init(duration: duration, curve: curve, bounce: 0.7))
         var previous = start
         var changedFrames = 0
         let steps = Int(ceil(duration * 120))

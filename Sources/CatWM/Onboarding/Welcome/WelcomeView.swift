@@ -31,7 +31,7 @@ struct WelcomeView: View {
             CatMascot(feeling: .content).frame(height: 72).foregroundStyle(Theme.ink)
                 .offset(y: model.landed || reduceMotion ? 0 : -28)
                 .opacity(model.landed ? 1 : 0)
-                .animation(.easeIn(duration: 0.22), value: model.landed) // style-ok: drop lands on squish beat
+                .animation(Motion.drop, value: model.landed)
                 .squish(on: model.landed, delay: 0.22)
                 .padding(.top, 4)
             Text("Welcome to CatWM").textStyle(.largeTitle).oneLine()

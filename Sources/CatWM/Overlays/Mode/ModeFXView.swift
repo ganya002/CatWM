@@ -92,7 +92,7 @@ struct ModeFXView: View {
                 CubicKeyframe(1, duration: 0.2)
             }
         }
-        .opacity(isOn ? 1 : 0).animation(.easeOut(duration: isOn ? 0 : 0.25), value: isOn)
+        .opacity(isOn ? 1 : 0).animation(Motion.release(isOn), value: isOn)
     }
 
     private func corners(size: CGSize) -> some View {
@@ -116,7 +116,7 @@ struct ModeFXView: View {
                 SpringKeyframe(1, duration: 0.5, spring: Spring(response: 0.32, dampingRatio: 0.6))
             }
         }
-        .opacity(isOn ? 1 : 0).animation(.easeOut(duration: isOn ? 0 : 0.2), value: isOn)
+        .opacity(isOn ? 1 : 0).animation(Motion.release(isOn), value: isOn)
     }
 
     private var draw: some View {
@@ -141,7 +141,7 @@ struct ModeFXView: View {
                 CubicKeyframe(1, duration: 0.45)
             }
         }
-        .opacity(isOn ? 1 : 0).animation(.easeOut(duration: isOn ? 0 : 0.25), value: isOn)
+        .opacity(isOn ? 1 : 0).animation(Motion.release(isOn), value: isOn)
     }
 
     private func corner(_ i: Int, _ size: CGSize) -> CGPoint {

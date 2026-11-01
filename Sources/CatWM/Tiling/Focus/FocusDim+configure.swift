@@ -89,15 +89,13 @@ extension FocusDim {
             incoming.level = level
             if first || !incoming.isVisible { incoming.alphaValue = 0 }
             incoming.order(.below, relativeTo: Int(id))
-            NSAnimationContext.runAnimationGroup { ctx in
-                ctx.duration = fade
-                ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
-                incoming.animator().alphaValue = 1
-                if outgoing.isVisible { outgoing.animator().alphaValue = 0 }
-            } completionHandler: { [weak self] in
+            Motion.group(fade, curve: Motion.Curve.fade, changes: {
+                Motion.setAlpha(1, on: incoming)
+                if outgoing.isVisible { Motion.setAlpha(0, on: outgoing) }
+            }, completion: { [weak self] in
                 guard self?.generation == gen else { return }
                 outgoing.orderOut(nil)
-            }
+            })
         }
     }
 
@@ -107,13 +105,12 @@ extension FocusDim {
         let gen = generation
         let panels = pairs.values.flatMap { [$0.front, $0.spare] }.filter(\.isVisible)
         guard !panels.isEmpty else { return }
-        NSAnimationContext.runAnimationGroup { ctx in
-            ctx.duration = fade
-            panels.forEach { $0.animator().alphaValue = 0 }
-        } completionHandler: { [weak self] in
+        Motion.group(fade, curve: Motion.Curve.fade, changes: {
+            panels.forEach { Motion.setAlpha(0, on: $0) }
+        }, completion: { [weak self] in
             guard self?.generation == gen else { return }
             panels.forEach { $0.orderOut(nil) }
-        }
+        })
     }
 
     func focusedWindow() -> (CGWindowID, Int)? {

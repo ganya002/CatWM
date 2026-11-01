@@ -5,28 +5,41 @@ import QuartzCore
     private var preparedTarget: CFTimeInterval?
     private let screen: NSScreen?
     private var callback: ((CADisplayLink) -> Void)?
+    private var sample: Sample?
+
+    private struct Sample {
+        let value: Double
+        let time: CFTimeInterval
+        let velocity: Double
+    }
 
     init(screen: NSScreen?) { self.screen = screen }
 
-    func animate(from: Double, to target: Double, with settings: NativeDesktopController.Settings,
+    func animate(from: Double, to target: Double, with settings: MotionSpec,
                  update: @escaping (Double) throws -> Void) async throws {
         let prepared = preparedTarget
         preparedTarget = nil
-        let duration = settings.duration * min(1, abs(target - from))
-        if duration <= 0 { try update(target); return }
         let start = CACurrentMediaTime()
-        try update(from)
+        let inherited = inheritedVelocity(at: start)
+        let spec = settings.scaled(by: max(Self.shortest, min(1, abs(target - from))))
+        let trajectory = Trajectory(from: from, to: target, spec: spec, velocity: inherited)
+        func submit(_ value: Double, at time: CFTimeInterval) throws {
+            try update(value)
+            remember(value, at: time)
+        }
+        if spec.duration <= 0 { try submit(target, at: start); return }
+        try submit(from, at: start)
         if let prepared, prepared > start {
             try Task.checkCancellation()
-            let time = min(1, (prepared - start) / duration)
-            try update(from + (target - from) * settings.curve.progress(time, bounce: settings.bounce))
-            if time >= 1 { return }
+            let elapsed = prepared - start
+            try submit(trajectory.value(at: elapsed), at: prepared)
+            if elapsed >= spec.duration { return }
         }
-        try await run(limit: duration + 2, message: "Display link stopped before the animation finished",
+        try await run(limit: spec.duration + 2, message: "Display link stopped before the animation finished",
                       fast: true) { link in
-            let time = min(1, max(0, (link.targetTimestamp - start) / duration))
-            try update(from + (target - from) * settings.curve.progress(time, bounce: settings.bounce))
-            return time >= 1
+            let elapsed = max(0, link.targetTimestamp - start)
+            try submit(trajectory.value(at: elapsed), at: link.targetTimestamp)
+            return elapsed >= spec.duration
         }
     }
 
@@ -40,12 +53,32 @@ import QuartzCore
         }
     }
 
-    func follow(until finished: @escaping () -> Bool, update: @escaping () throws -> Void) async throws {
+    func follow(until finished: @escaping () -> Bool, update: @escaping () throws -> Double) async throws {
         preparedTarget = nil
-        try await run(limit: 180, message: "The Desktop swipe did not end", fast: false) { _ in
-            try update()
+        try await run(limit: 180, message: "The Desktop swipe did not end", fast: false) { link in
+            self.remember(try update(), at: link.targetTimestamp)
             return finished()
         }
+    }
+
+    private static let shortest = 0.4
+    private static let freshness = 0.06
+    private static let fastest = 24.0
+
+    private func remember(_ value: Double, at time: CFTimeInterval) {
+        guard let last = sample, time > last.time else {
+            sample = Sample(value: value, time: time, velocity: 0)
+            return
+        }
+        let step = (value - last.value) / (time - last.time)
+        let blended = last.velocity == 0 ? step : last.velocity * 0.3 + step * 0.7
+        sample = Sample(value: value, time: time, velocity: blended)
+    }
+
+    private func inheritedVelocity(at time: CFTimeInterval) -> Double? {
+        defer { sample = nil }
+        guard let sample, time - sample.time < Self.freshness else { return nil }
+        return min(Self.fastest, max(-Self.fastest, sample.velocity))
     }
 
     private func run(limit: Double, message: String, fast: Bool,

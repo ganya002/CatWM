@@ -33,7 +33,7 @@ final class SortOffer {
         card.contentView = host
         card.alphaValue = 0
         card.orderFrontRegardless()
-        animate(0.35) { card.animator().alphaValue = 1 }
+        Motion.group(0.35) { Motion.setAlpha(1, on: card) }
         panel = card
         let work = DispatchWorkItem { [weak self] in self?.end(false) }
         timeout = work
@@ -47,7 +47,7 @@ final class SortOffer {
         panel = nil
         let done = finish
         finish = nil
-        animate(0.25, changes: { card.animator().alphaValue = 0 }, completion: { card.orderOut(nil) })
+        Motion.group(0.25, changes: { Motion.setAlpha(0, on: card) }, completion: { card.orderOut(nil) })
         done?(sort)
     }
 }

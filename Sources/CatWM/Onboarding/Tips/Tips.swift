@@ -102,7 +102,7 @@ extension Tips {
         shown.contentView = host
         shown.alphaValue = 0
         shown.orderFrontRegardless()
-        animate(0.35) { shown.animator().alphaValue = 1 }
+        Motion.group(0.35) { Motion.setAlpha(1, on: shown) }
         panel?.orderOut(nil)
         panel = shown
         global = tip
@@ -118,6 +118,6 @@ extension Tips {
         global = nil
         guard let hidden = panel else { return }
         panel = nil
-        animate(0.2, changes: { hidden.animator().alphaValue = 0 }, completion: { hidden.orderOut(nil) })
+        Motion.group(0.2, changes: { Motion.setAlpha(0, on: hidden) }, completion: { hidden.orderOut(nil) })
     }
 }

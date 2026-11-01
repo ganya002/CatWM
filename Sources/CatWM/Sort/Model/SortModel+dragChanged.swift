@@ -96,7 +96,7 @@ extension SortModel {
         columnDrag = nil
         over = nil
         columnSlot = nil
-        withAnimation(PanelMotion.windowAnimation) {
+        withAnimation(Motion.user) {
             switch (columnHit.over, columnHit.slot) {
             case (.close, _): closeLane(ended.lane.id)
             case (.lane(let target), _): mergeLane(ended.lane.id, into: target)

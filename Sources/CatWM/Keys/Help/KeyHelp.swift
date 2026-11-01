@@ -77,9 +77,9 @@ final class KeyHelp {
     private func fired(_ bind: KeyBinding) {
         guard model.shown, bind.submap == model.mode, bind.keyCode < 0x1000 else { return }
         flashWork?.cancel()
-        withAnimation(.easeOut(duration: Theme.fast)) { model.pressed = bind.keyCode }
+        withAnimation(Motion.fade) { model.pressed = bind.keyCode }
         let work = DispatchWorkItem { [weak self] in
-            withAnimation(.easeOut(duration: Theme.slow)) { self?.model.pressed = nil }
+            withAnimation(Motion.fadeSlow) { self?.model.pressed = nil }
         }
         flashWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.22, execute: work)

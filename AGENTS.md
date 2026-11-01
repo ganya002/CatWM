@@ -22,7 +22,7 @@ These are the things we cant comprimise on, they make us what we are today and t
 
 ## How it works
 
-An event tap (`Hotkeys`) matches each key press against the binds of the active submap and sends the match to `WindowManager.dispatch` (`Tiling/Manager/`), which runs the `WindowAction` of that name (`Actions/`). The CLI and the language libraries call the same command registry (`Control/`) through a Unix socket. Read `docs/internals/control.md` before you add a command or an event. `WindowManager.shared` owns all state: one `Window` for each `CGWindowID`, and a `WorkspaceModel` for workspaces, order and layouts. `Tiling/` does not call UI types. It calls `WindowManager.surface` (`TilingSurface`). `AppSurface` (`App/`) sends these calls to the HUD, tab strips, keys and panels, and tests use `HeadlessSurface`. `Tools/check-style.sh` rejects a UI singleton in `Tiling/`. `AXObserver` notifications and `WindowScanner` (`Tiling/Scan/`) feed `refresh()`. `refresh()` adds and forgets windows, asks `Layout.frames` for the slots, and places the windows. `Animator` (`Tiling/Motion/`) steps the frames at 120 Hz through one `AXWriter` queue for each app. Each workspace is one macOS Desktop. `NativeDesktopController` (`Tiling/Spaces/`) moves the Desktops with the CatWM animation settings. `Config.parse` reads `~/.config/CatWM/CatWM.conf` into binds and `ConfigOption` values. `reload()` applies them, and Settings edits the same file through `ConfigDocument`. `Session/` saves and opens app windows: it reads windows through AX, reads browser tabs and folders through app adapters, matches windows to saved windows and opens apps, files and URLs. `Templates/` uses it and adds the CatWM state: workspaces, Desktops, layouts and frames. Read `docs/internals/window-session.md` before you change how windows are saved or opened, or the `launch` dispatcher.
+An event tap (`Hotkeys`) matches each key press against the binds of the active submap and sends the match to `WindowManager.dispatch` (`Tiling/Manager/`), which runs the `WindowAction` of that name (`Actions/`). The CLI and the language libraries call the same command registry (`Control/`) through a Unix socket. Read `docs/internals/control.md` before you add a command or an event. `WindowManager.shared` owns all state: one `Window` for each `CGWindowID`, and a `WorkspaceModel` for workspaces, order and layouts. `Tiling/` does not call UI types. It calls `WindowManager.surface` (`TilingSurface`). `AppSurface` (`App/`) sends these calls to the HUD, tab strips, keys and panels, and tests use `HeadlessSurface`. `Tools/check-style.sh` rejects a UI singleton in `Tiling/`. `AXObserver` notifications and `WindowScanner` (`Tiling/Scan/`) feed `refresh()`. `refresh()` adds and forgets windows, asks `Layout.frames` for the slots, and places the windows. `Animator` (`Motion/Windows/`) steps the frames at 120 Hz through one `AXWriter` queue for each app. Each workspace is one macOS Desktop. `NativeDesktopController` (`Tiling/Spaces/`) moves the Desktops with the CatWM animation settings, through `DesktopMotion` (`Motion/Desktop/`). `Config.parse` reads `~/.config/CatWM/CatWM.conf` into binds and `ConfigOption` values. `reload()` applies them, and Settings edits the same file through `ConfigDocument`. `Session/` saves and opens app windows: it reads windows through AX, reads browser tabs and folders through app adapters, matches windows to saved windows and opens apps, files and URLs. `Templates/` uses it and adds the CatWM state: workspaces, Desktops, layouts and frames. Read `docs/internals/window-session.md` before you change how windows are saved or opened, or the `launch` dispatcher.
 
 ## Code map
 
@@ -35,6 +35,7 @@ The app source is in `Sources/CatWM/`. Each folder has one job:
 - `Feedback/`: the Send Feedback sheet.
 - `Keys/`: the event tap, the Shortcut Map, keycaps and the keyboard help overlay.
 - `MenuBar/`: the menu bar icon, status menu and tip.
+- `Motion/`: all animation. Read `docs/internals/animation.md` before you animate anything. `Engine/`: the curve, `MotionSpec` and `Trajectory`. `Windows/`: `Animator` and `AXWriter`, which move window frames at 120 Hz. `Desktop/`: `DesktopMotion`, the Desktop slide. `Kit/`: the SwiftUI `Motion.*` tokens and the AppKit helpers (`Motion.group`, `Motion.fade`, `PanelGlide`).
 - `Notifications/`: the unread badge of each window, its sources (Dock, Notification Center database and banners) and its listeners. Read `docs/internals/notifications.md` before you add a source.
 - `Onboarding/`: the intro, welcome card, tour, permission step and practice.
 - `Overlays/`: the HUD, the mode effect and the quick-action menu.
@@ -66,6 +67,12 @@ Read `docs/internals/vocabulary.md` for the words CatWM uses, such as workspace,
 - Use `Theme` tokens (`UI/Theme/`) and the shared components (`UI/Components/`, `UI/Menus/`). Do not type a raw value or copy a control. If a control cannot do what you need, extend it.
 - Use `CatWMPanel` for a new window or panel.
 - `Tools/check-style.sh` must pass. A deliberate one-off ends with `// style-ok: <reason>` on that line.
+
+## Animation
+
+- Animate only through `Motion/`. A window frame uses `Animator`, a Desktop slide uses `DesktopMotion`, a panel uses `PanelGlide`, `Motion.fade` or `Motion.group`, and SwiftUI uses a `Motion.*` token.
+- A new kind of animation gets a function in `Motion/`, never a raw call at the call site.
+- `Tools/check-style.sh` rejects `NSAnimationContext`, `.animator()`, `CA*Animation`, display links, timers under 0.1 s and raw SwiftUI curves outside `Motion/`. `// style-ok` cannot silence these.
 
 ## Branch names
 

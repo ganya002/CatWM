@@ -48,7 +48,7 @@ struct PaneHost: View {
                 }
             }
             .onChange(of: settingsUI.recording) { _, id in
-                if let id { withAnimation { proxy.scrollTo("bind.\(id)", anchor: .center) } }
+                if let id { withAnimation(Motion.user) { proxy.scrollTo("bind.\(id)", anchor: .center) } }
             }
             .onAppear {
                 if let id = settingsUI.highlight { DispatchQueue.main.async { proxy.scrollTo(id, anchor: .center) } }

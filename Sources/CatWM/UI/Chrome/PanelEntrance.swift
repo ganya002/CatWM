@@ -9,12 +9,12 @@ struct PanelEntrance: ViewModifier {
 
     func body(content: Content) -> some View {
         if reduceMotion {
-            content.opacity(shown ? 1 : 0).animation(.easeOut(duration: Theme.medium), value: shown)
+            content.opacity(shown ? 1 : 0).animation(Motion.fadeMedium, value: shown)
         } else {
             switch style {
             case .tile:
                 content.modifier(TileProgress(progress: shown ? 1 : 0, shown: shown, surface: true))
-                    .animation(style.animation(in: shown), value: shown)
+                    .animation(Motion.panel(style, in: shown), value: shown)
             case .draw:
                 content.modifier(DrawEntrance(shown: shown, radius: radius))
             default:
@@ -23,7 +23,7 @@ struct PanelEntrance: ViewModifier {
                     .blur(radius: style == .focus && !shown ? 14 : 0)
                     .scaleEffect(x: shown ? 1 : scale.x, y: shown ? 1 : scale.y, anchor: .bottom)
                     .offset(y: shown ? 0 : lift)
-                    .animation(style.animation(in: shown), value: shown)
+                    .animation(Motion.panel(style, in: shown), value: shown)
             }
         }
     }
@@ -59,7 +59,7 @@ struct TileItem: ViewModifier {
     func body(content: Content) -> some View {
         if style == .tile && !reduceMotion {
             content.modifier(TileProgress(progress: shown ? 1 : 0, shown: shown, surface: false, spread: spread))
-                .animation(style.animation(in: shown), value: shown)
+                .animation(Motion.panel(style, in: shown), value: shown)
         } else {
             content
         }

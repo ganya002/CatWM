@@ -122,13 +122,10 @@ final class Popup: NSObject, NSWindowDelegate {
             let panel = entry.panel
             let done = entry.onClose
             entry.onClose = nil
-            NSAnimationContext.runAnimationGroup({ ctx in
-                ctx.duration = Theme.fast
-                panel.animator().alphaValue = 0
-            }, completionHandler: {
+            Motion.fade(panel, to: 0, duration: Theme.fast) {
                 panel.orderOut(nil)
                 panel.contentView = nil
-            })
+            }
             if let parent = entry.parent, parent.isVisible { parent.makeKey() }
             done?()
         }

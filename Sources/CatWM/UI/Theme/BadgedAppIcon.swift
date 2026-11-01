@@ -20,7 +20,7 @@ struct BadgedAppIcon: View {
                     .contentTransition(.symbolEffect(.replace))
                     .offset(x: size * 0.06, y: size * 0.04)
             }
-            .animation(.default, value: badge)
+            .animation(Motion.fadeMedium, value: badge)
             .accessibilityHidden(true)
     }
 }

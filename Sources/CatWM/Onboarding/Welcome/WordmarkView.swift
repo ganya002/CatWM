@@ -17,7 +17,7 @@ struct WordmarkView: View {
                 .foregroundStyle(Color.white.opacity(0.92))
                 .legible(strong: true)
                 .opacity(model.subtitle ? 1 : 0)
-                .animation(.easeOut(duration: 0.9), value: model.subtitle) // style-ok: intro timing follows music
+                .animation(Motion.introReveal, value: model.subtitle)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

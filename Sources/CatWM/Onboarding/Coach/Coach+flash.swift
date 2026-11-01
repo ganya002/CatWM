@@ -37,7 +37,7 @@ extension Coach {
         if KeyHelp.shared.isVisible { KeyHelp.shared.hide() }
         if SortPanel.shared.isOpen { SortPanel.shared.revert() }
         if let panel {
-            animate(0.25, changes: { panel.animator().alphaValue = 0 }, completion: { panel.orderOut(nil) })
+            Motion.group(0.25, changes: { Motion.setAlpha(0, on: panel) }, completion: { panel.orderOut(nil) })
         }
         if helper?.isRunning == true { helper?.terminate() }
         lesson.ended(how, at: index)
@@ -103,7 +103,7 @@ extension Coach {
         let moved = abs(frame.minX - target.minX) > 1 || abs(frame.maxY - target.maxY) > 1
         target = frame
         if animated && moved && panel.isVisible {
-            animate(0.45) { panel.animator().setFrame(frame, display: true) }
+            Motion.group(0.45) { Motion.setFrame(frame, on: panel) }
         } else {
             panel.setFrame(frame, display: true)
         }

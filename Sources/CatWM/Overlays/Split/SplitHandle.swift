@@ -34,6 +34,7 @@ final class SplitHandle {
 
         private let panel = CatWMPanel(role: .overlay(.normal, clickThrough: false))
         private let view: SplitHandleView
+        private let glide = PanelGlide()
         private var target: NSRect?
         private var confirmEnd: DispatchWorkItem?
 
@@ -50,12 +51,11 @@ final class SplitHandle {
             guard frame != target || !panel.isVisible else { return }
             target = frame
             if panel.isVisible, duration > 0, !view.model.dragging {
-                NSAnimationContext.runAnimationGroup { context in
-                    context.duration = duration
-                    context.timingFunction = Motion.Curve.easeOut
-                    panel.animator().setFrame(frame, display: true)
-                }
+                var spec = MotionSpec(WindowManager.shared.config)
+                spec.duration = duration
+                glide.to(frame, on: panel, spec: spec)
             } else {
+                glide.stop()
                 panel.setFrame(frame, display: true)
             }
         }

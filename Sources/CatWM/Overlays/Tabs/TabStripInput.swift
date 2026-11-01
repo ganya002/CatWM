@@ -152,7 +152,7 @@ final class TabStripInput: NSView {
         guard step > 0 else { return }
         let wanted = model.slot(at: x, width: bounds.width)
         if wanted != from, !lifted {
-            withAnimation(TabStrip.motion) {
+            withAnimation(Motion.tabStrip) {
                 model.tabs.move(fromOffsets: [from], toOffset: wanted > from ? wanted + 1 : wanted)
             }
         }
@@ -162,7 +162,7 @@ final class TabStripInput: NSView {
 
     private func lift(_ id: CGWindowID, _ lifted: Bool, at x: CGFloat) {
         model.lifted = lifted
-        withAnimation(TabStrip.motion) {
+        withAnimation(Motion.tabStrip) {
             if lifted, let from = model.tabs.firstIndex(where: { $0.id == id }) {
                 liftedTab = model.tabs.remove(at: from)
             } else if !lifted, let tab = liftedTab {
@@ -180,7 +180,7 @@ final class TabStripInput: NSView {
         if model.dragged != nil {
             let lifted = model.lifted
             let index = model.tabs.firstIndex { $0.id == press.id }
-            withAnimation(TabStrip.motion) {
+            withAnimation(Motion.tabStrip) {
                 model.dragged = nil
                 model.dragShift = 0
                 model.lifted = false
