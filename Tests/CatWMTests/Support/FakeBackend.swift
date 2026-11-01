@@ -116,6 +116,10 @@ final class FakeBackend: WindowBackend {
         lock.withLock { windowList[id]?.resizable = resizable }
     }
 
+    func setTitle(_ id: CGWindowID, _ title: String?) {
+        lock.withLock { windowList[id]?.title = title }
+    }
+
     func userMoves(_ id: CGWindowID, to frame: CGRect) {
         lock.withLock { windowList[id]?.frame = frame }
     }

@@ -349,8 +349,10 @@ extension WindowManager {
                 guard window.title != title else { return }
                 let wasFloating = window.isFloating
                 window.title = title
-                window.autoFloating = self.shouldFloat(window, title: title,
-                                                       resizable: window.resizable || window.fullscreen)
+                if !self.tabs.isGrouped(window.id) {
+                    window.autoFloating = self.shouldFloat(window, title: title,
+                                                           resizable: window.resizable || window.fullscreen)
+                }
                 if wasFloating != window.isFloating {
                     self.corrections[window.id] = nil
                     self.scheduleRefresh()
