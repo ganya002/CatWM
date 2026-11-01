@@ -90,6 +90,39 @@ private func plan(items: [SortItem]? = nil, lanes: [SortLane]? = nil, taken: Set
         #expect(sortPlan.lanes[1].ids == [1, 2])
     }
 
+    @Test func bringingBackAWindowFollowsItsReorderedWorkspace() {
+        var sortPlan = plan()
+        sortPlan.markClosing(1)
+        #expect(sortPlan.moveLane(0, toSlot: 2) == 1)
+        sortPlan.restore(1, avoiding: [])
+        #expect(sortPlan.close.isEmpty)
+        #expect(sortPlan.lanes.map(\.ids) == [[3], [1, 2]])
+        #expect(sortPlan.applied.lanes.map(\.ids) == [[3], [1, 2]])
+    }
+
+    @Test(arguments: [false, true])
+    func overviewBringBackFollowsADraggedWorkspace(perDisplay: Bool) {
+        let model = SortModel()
+        model.current = "D"
+        var initial = plan(lanes: [
+            SortLane(workspace: WorkspaceKey.make("1", on: "D", perDisplay: perDisplay),
+                     name: "", layout: .tall, ids: [1, 2]),
+            SortLane(workspace: WorkspaceKey.make("2", on: "D", perDisplay: perDisplay),
+                     name: "", layout: .bsp, ids: [3])
+        ])
+        initial.perDisplay = perDisplay
+        initial.active = initial.lanes[0].workspace
+        model.plans = ["D": initial]
+        let lane = model.plan.lanes[0].id
+        model.markClosing(1)
+        model.markClosing(3)
+        model.moveLane(lane, toSlot: 2)
+        model.restore(1)
+        model.restore(3)
+        #expect(model.plan.lanes.map(\.ids) == [[3], [1, 2]])
+        #expect(model.pendingApplies().first?.lanes.map(\.ids) == [[3], [1, 2]])
+    }
+
     @Test func addLaneTakesTheFirstFreeNumberInOrder() {
         var sortPlan = plan(lanes: [
             SortLane(workspace: "1", name: "", layout: .tall, ids: [1]),

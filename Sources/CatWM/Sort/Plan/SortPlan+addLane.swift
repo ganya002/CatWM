@@ -99,7 +99,9 @@ extension SortPlan {
         let lane = lanes.remove(at: i)
         let position = slot > i ? slot - 1 : slot
         lanes.insert(lane, at: position)
+        let renamed = Dictionary(uniqueKeysWithValues: lanes.indices.map { (lanes[$0].workspace, names[$0]) })
         for index in lanes.indices { lanes[index].workspace = names[index] }
+        origin = origin.mapValues { (renamed[$0.workspace] ?? $0.workspace, $0.at) }
         return position
     }
 
