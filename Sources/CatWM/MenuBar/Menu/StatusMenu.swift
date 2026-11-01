@@ -49,15 +49,12 @@ final class StatusMenu: NSObject, NSWindowDelegate {
         guard let panel, panel.isVisible else { return }
         dismiss.stop()
         button?.highlight(false)
-        NSAnimationContext.runAnimationGroup({ ctx in
-            ctx.duration = 0.12
-            panel.animator().alphaValue = 0
-        }, completionHandler: { [weak self] in
+        Motion.fade(panel, to: 0, duration: 0.12) { [weak self] in
             panel.orderOut(nil)
             panel.alphaValue = 1
             panel.contentView = nil
             self?.model.reset()
-        })
+        }
     }
 
     func refreshIfOpen() { if isOpen { model.refresh() } }

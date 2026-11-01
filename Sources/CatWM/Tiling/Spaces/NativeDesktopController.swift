@@ -7,12 +7,8 @@ final class NativeDesktopController {
         let display: String
         let space: UInt64
     }
-    struct Settings {
-        let duration: Double
-        let curve: AnimationCurve
-        let bounce: Double
-    }
-    var settings = Settings(duration: 0.18, curve: .easeOut, bounce: 0.5)
+    typealias Settings = MotionSpec
+    var settings = MotionSpec(duration: 0.18, curve: .easeOut, bounce: 0.5)
     var prepare: (Request) async throws -> Void = { _ in }
     var onSettled: (Request, _ changed: Bool) -> Void = { _, _ in }
     var onMotion: (Request) -> Void = { _ in }
@@ -169,7 +165,7 @@ final class NativeDesktopController {
                 try self.check(recovery.process.isRunning, "Desktop recovery process stopped")
                 progress = self.gestureProgress
                 try self.apply(state, width: width, progress: progress)
-                if progress > 0 { self.timing?.motion() }
+                return progress
             })
             gesture = false
         }
@@ -181,7 +177,6 @@ final class NativeDesktopController {
                     try self.check(recovery.process.isRunning, "Desktop recovery process stopped")
                     progress = value
                     try self.apply(state, width: width, progress: value)
-                    if value > 0 { self.timing?.motion() }
                 }
                 break
             } catch Retarget.changed { continue }
@@ -264,8 +259,9 @@ final class NativeDesktopController {
 }
 
 extension NativeDesktopController {
-    private func apply(_ state: DesktopGuard.Context, width: CGFloat, progress: Double) throws {
+    @MainActor private func apply(_ state: DesktopGuard.Context, width: CGFloat, progress: Double) throws {
         let pose = min(1, max(0, progress))
+        if pose > 0 { timing?.motion() }
         try check(DesktopBridge.transform(state.destination, x: (pose - 1) * width,
                                           options: state.destinationOptions), "Cannot move the destination Desktop")
         try check(DesktopBridge.transform(state.source, x: pose * width, options: state.sourceOptions),

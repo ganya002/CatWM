@@ -104,7 +104,7 @@ struct MotionPane: View {
     }
 
     private func play() {
-        withAnimation(PanelMotion.windowAnimation) {
+        withAnimation(Motion.user) {
             settingsUI.previewFlipped.toggle()
         }
     }

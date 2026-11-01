@@ -65,7 +65,7 @@ final class SortNudge {
         card.alphaValue = 0
         card.orderFrontRegardless()
         card.makeKey()
-        animate(0.35) { card.animator().alphaValue = 1 }
+        Motion.group(0.35) { Motion.setAlpha(1, on: card) }
         panel = card
         let work = DispatchWorkItem { [weak self] in self?.dismiss() }
         hideWork = work
@@ -77,7 +77,7 @@ final class SortNudge {
         hideWork = nil
         guard let card = panel else { return }
         panel = nil
-        animate(0.2, changes: { card.animator().alphaValue = 0 }, completion: { card.orderOut(nil) })
+        Motion.group(0.2, changes: { Motion.setAlpha(0, on: card) }, completion: { card.orderOut(nil) })
     }
 }
 

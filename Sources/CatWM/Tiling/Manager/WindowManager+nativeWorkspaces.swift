@@ -255,8 +255,7 @@ extension WindowManager {
 
     func configureNativeController(focusing preferred: Window?, focus takesFocus: Bool, quiet: Bool) {
         nativeDesktop.prepare = { [weak self] in try await self?.prepareNativeLayout($0) }
-        nativeDesktop.settings = .init(duration: config.animate ? config.animationDuration : 0,
-                                       curve: config.animationCurve, bounce: config.animationBounce)
+        nativeDesktop.settings = MotionSpec(config)
         nativeDesktop.onSettled = { [weak self] request, changed in
             guard let self else { return }
             if self.isVirtual(request.workspace) {

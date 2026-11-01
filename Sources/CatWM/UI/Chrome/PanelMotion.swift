@@ -30,31 +30,19 @@ enum PanelMotion: String, CaseIterable {
     func animation(in shown: Bool) -> Animation? {
         switch self {
         case .rise, .pop, .focus:
-            return Self.windowAnimation
+            return Motion.user
         case .tile:
-            return shown ? .linear(duration: Self.tileDuration) : exitAnimation
+            return shown ? Motion.tile(duration: Self.tileDuration) : exitAnimation
         case .draw:
-            return shown ? .linear(duration: 0.45) : exitAnimation
+            return shown ? Motion.draw : exitAnimation
         }
     }
 
-    private var exitAnimation: Animation { .timingCurve(0.4, 0, 1, 1, duration: outDuration) }
+    private var exitAnimation: Animation { Motion.panelExit(duration: outDuration) }
 
     static var windowDuration: Double {
         let config = WindowManager.shared.config
         return config.animate ? config.animationDuration : 0
-    }
-
-    static var windowAnimation: Animation? {
-        let config = WindowManager.shared.config
-        guard config.animate else { return nil }
-        return Animation(CurveAnimation(curve: config.animationCurve, bounce: config.animationBounce,
-                                        duration: config.animationDuration))
-    }
-
-    static func windowAnimation(reduceMotion: Bool) -> Animation? {
-        guard let animation = windowAnimation else { return nil }
-        return reduceMotion ? Motion.fade : animation
     }
 
     static var tileDuration: Double { max(0.3, WindowManager.shared.config.animationDuration * 1.7) }

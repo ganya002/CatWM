@@ -134,10 +134,7 @@ extension CursorActions {
 
     func fadeDot(out: Bool) {
         guard let dot = dotPanel else { return }
-        NSAnimationContext.runAnimationGroup { ctx in
-            ctx.duration = out ? 0.09 : 0.18
-            dot.animator().alphaValue = out ? 0 : 1
-        }
+        Motion.fade(dot, to: out ? 0 : 1, duration: out ? 0.09 : 0.18)
     }
 
     func startMoveTap() {

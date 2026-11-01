@@ -51,20 +51,15 @@ final class HUD {
             frame.origin.y = below >= screen.visibleFrame.minY ? below : avoid.maxY - Self.margin + 12
         }
         hud.place(size: frame.size, on: screen, anchor: .origin(frame.origin), inset: EdgeInsets(all: Self.margin))
-        NSAnimationContext.runAnimationGroup { ctx in
-            ctx.duration = 0
-            hud.animator().alphaValue = 1
-        }
+        Motion.fade(hud, to: 1, duration: 0)
         hud.orderFrontRegardless()
 
         hideWork?.cancel()
         let work = DispatchWorkItem { [weak hud] in
-            NSAnimationContext.runAnimationGroup({ ctx in
-                ctx.duration = 0.25
-                hud?.animator().alphaValue = 0
-            }, completionHandler: {
-                if let hud, hud.alphaValue == 0 { hud.orderOut(nil) }
-            })
+            guard let hud else { return }
+            Motion.fade(hud, to: 0, duration: 0.25) {
+                if hud.alphaValue == 0 { hud.orderOut(nil) }
+            }
         }
         hideWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + (warning ? 1.6 : layout == nil ? 0.8 : 1), execute: work)

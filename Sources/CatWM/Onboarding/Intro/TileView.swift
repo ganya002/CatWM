@@ -59,31 +59,10 @@ final class TileView: NSView {
     }
 
     func squish() {
-        for (key, values) in [("transform.scale.x", [1, 1.035, 0.99, 1]), ("transform.scale.y", [1, 0.955, 1.01, 1])] {
-            let animation = CAKeyframeAnimation(keyPath: key)
-            animation.values = values
-            animation.keyTimes = [0, 0.3, 0.7, 1]
-            animation.duration = 0.42
-            animation.timingFunctions = [CAMediaTimingFunction(name: .easeOut),
-                                         CAMediaTimingFunction(name: .easeInEaseOut),
-                                         CAMediaTimingFunction(name: .easeOut)]
-            card.add(animation, forKey: key)
-        }
+        Motion.squish(card)
     }
 
     func brace() {
-        let shrink = CABasicAnimation(keyPath: "transform.scale")
-        shrink.toValue = 0.92
-        shrink.duration = 0.25
-        shrink.timingFunction = CAMediaTimingFunction(name: .easeIn)
-        shrink.fillMode = .forwards
-        shrink.isRemovedOnCompletion = false
-        card.add(shrink, forKey: "brace")
-        let glow = CABasicAnimation(keyPath: "shadowRadius")
-        glow.toValue = 48
-        glow.duration = 0.25
-        glow.fillMode = .forwards
-        glow.isRemovedOnCompletion = false
-        card.add(glow, forKey: "glow")
+        Motion.brace(card)
     }
 }

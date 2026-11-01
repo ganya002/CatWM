@@ -107,9 +107,9 @@ extension Onboarding {
         panel.orderFrontRegardless()
         panel.makeKey()
         panel.invalidateShadow()
-        animate(0.5) {
-            panel.animator().alphaValue = 1
-            panel.animator().setFrame(end, display: true)
+        Motion.group(0.5) {
+            Motion.setAlpha(1, on: panel)
+            Motion.setFrame(end, on: panel)
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in self?.welcomeModel.landed = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
@@ -127,7 +127,7 @@ extension Onboarding {
         PermissionGuide.shared.onGranted = nil
         guard let panel = welcome else { return then() }
         welcome = nil
-        animate(0.3, changes: { panel.animator().alphaValue = 0 }, completion: {
+        Motion.group(0.3, changes: { Motion.setAlpha(0, on: panel) }, completion: {
             panel.orderOut(nil)
             then()
         })

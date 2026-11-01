@@ -98,7 +98,7 @@ struct BindRowView: View {
 
     private func editToggle(open: Bool, locked: Bool) -> some View {
         Button {
-            withAnimation(.snappy(duration: 0.2)) {
+            withAnimation(Motion.reveal) {
                 if settingsUI.expanded.contains(rowID) {
                     settingsUI.expanded.remove(rowID)
                 } else {

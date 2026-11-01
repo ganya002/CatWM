@@ -35,9 +35,9 @@ extension Intro {
     }
 
     func fadeIn() {
-        animate(0.8, curve: CAMediaTimingFunction(name: .easeOut)) {
-            dim.animator().alphaValue = 1
-            skipLabel.animator().alphaValue = 1
+        Motion.group(0.8, curve: CAMediaTimingFunction(name: .easeOut)) {
+            Motion.setAlpha(1, on: dim)
+            Motion.setAlpha(1, on: skipLabel)
         }
     }
 
@@ -54,18 +54,18 @@ extension Intro {
     }
 
     func showWord() {
-        for i in tiles.indices { animate(0.5) { tiles[i].animator().alphaValue = i == 0 ? 0.4 : 0.3 } }
+        for i in tiles.indices { Motion.group(0.5) { Motion.setAlpha(i == 0 ? 0.4 : 0.3, on: tiles[i]) } }
         wordModel.landed = true
-        animate(1.1) {
-            word.animator().alphaValue = 1
-            word.animator().setFrame(wordFrame, display: true)
+        Motion.group(1.1) {
+            Motion.setAlpha(1, on: word)
+            Motion.setFrame(wordFrame, on: word)
         }
     }
 
     func hideWord() {
-        animate(0.5, curve: CAMediaTimingFunction(name: .easeOut)) {
-            word.animator().alphaValue = 0
-            skipLabel.animator().alphaValue = 0
+        Motion.group(0.5, curve: CAMediaTimingFunction(name: .easeOut)) {
+            Motion.setAlpha(0, on: word)
+            Motion.setAlpha(0, on: skipLabel)
         }
     }
 

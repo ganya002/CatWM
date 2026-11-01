@@ -13,6 +13,7 @@ final class MenuBarTip {
     weak var statusButton: NSStatusBarButton?
     var suppressed = false { didSet { if suppressed != oldValue { update() } } }
 
+    private let glide = PanelGlide()
     private var panel: CatWMPanel?
     private var host: NSHostingView<MenuBarTipView>?
     private let model = MenuBarTipModel()
@@ -60,8 +61,11 @@ final class MenuBarTip {
                                     inset: MenuBarTipView.inset).integral
         if panel.frame != frame {
             if shown && abs(panel.frame.minX - frame.minX) > 1 {
-                animate(0.3) { panel.animator().setFrame(frame, display: true) }
+                var spec = MotionSpec(WindowManager.shared.config)
+                spec.duration = 0.3
+                glide.to(frame, on: panel, spec: spec)
             } else {
+                glide.stop()
                 panel.setFrame(frame, display: true)
             }
         }
@@ -73,9 +77,9 @@ final class MenuBarTip {
         shown = visible
         if visible {
             panel.orderFrontRegardless()
-            animate(0.35) { panel.animator().alphaValue = 1 }
+            Motion.group(0.35) { Motion.setAlpha(1, on: panel) }
         } else {
-            animate(0.2, changes: { panel.animator().alphaValue = 0 }, completion: { [weak self] in
+            Motion.group(0.2, changes: { Motion.setAlpha(0, on: panel) }, completion: { [weak self] in
                 if self?.shown == false { panel.orderOut(nil) }
             })
         }

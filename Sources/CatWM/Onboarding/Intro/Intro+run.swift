@@ -39,8 +39,8 @@ extension Intro {
         done = true
         onDone()
         let panels = [dim, word] + tiles
-        animate(seconds, curve: CAMediaTimingFunction(name: .easeOut),
-                changes: { panels.forEach { $0.animator().alphaValue = 0 } },
+        Motion.group(seconds, curve: CAMediaTimingFunction(name: .easeOut),
+                changes: { panels.forEach { Motion.setAlpha(0, on: $0) } },
                 completion: { panels.forEach { $0.orderOut(nil) } })
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) { [effects] in effects.orderOut(nil) }
     }
@@ -101,9 +101,9 @@ extension Intro {
               curve: CAMediaTimingFunction? = nil) {
         let panel = tiles[i], timing = curve ?? self.curve
         let run = {
-            animate(duration, curve: timing) { panel.animator().setFrame(self.padded(rect), display: true) }
-            animate(min(duration, 0.4), curve: CAMediaTimingFunction(name: .easeOut)) {
-                panel.animator().alphaValue = alpha
+            Motion.group(duration, curve: timing) { Motion.setFrame(self.padded(rect), on: panel) }
+            Motion.group(min(duration, 0.4), curve: CAMediaTimingFunction(name: .easeOut)) {
+                Motion.setAlpha(alpha, on: panel)
             }
         }
         if delay > 0 { later(delay, run) } else { run() }

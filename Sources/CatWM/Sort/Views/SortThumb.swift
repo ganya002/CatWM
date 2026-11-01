@@ -32,7 +32,7 @@ struct SortThumb: View {
     }
 
     private var motion: Animation? {
-        guard let animation = PanelMotion.windowAnimation else { return nil }
+        guard let animation = Motion.user else { return nil }
         return reduceMotion ? Motion.fade : animation
     }
 

@@ -18,15 +18,6 @@ final class Animator {
         }
     }
 
-    struct Item {
-        let move: Move
-        let from: CGRect
-        let start: CFTimeInterval
-        let duration: Double
-        let curve: AnimationCurve
-        let bounce: Double
-    }
-
     private var items: [CGWindowID: Item] = [:]
     private var landing: [CGWindowID: (move: Move, number: Int)] = [:]
     private var landings = 0
@@ -110,12 +101,19 @@ final class Animator {
     }
 
     func animate(_ moves: [Move], duration: Double, curve: AnimationCurve = .easeOut, bounce: Double = 0) {
+        animate(moves, spec: MotionSpec(duration: duration, curve: curve, bounce: bounce))
+    }
+
+    func animate(_ moves: [Move], spec: MotionSpec) {
         let now = CACurrentMediaTime()
+        let duration = spec.duration
         for move in moves {
             let id = move.window.id
             let from: CGRect
+            var velocity: [Double]?
             if let running = items[id] {
                 from = running.frame(at: now)
+                velocity = running.velocity(at: now)
             } else if let landed = landing.removeValue(forKey: id) {
                 from = move.from ?? landed.move.target
             } else if let followed = following[id] {
@@ -129,7 +127,7 @@ final class Animator {
                 items[id] = nil
                 land(move)
             } else {
-                items[id] = Item(move: move, from: from, start: now, duration: duration, curve: curve, bounce: bounce)
+                items[id] = Item(move: move, from: from, start: now, spec: spec, velocity: velocity)
             }
         }
         if !items.isEmpty && timer == nil {
@@ -309,22 +307,11 @@ extension Animator {
 extension Animator {
     func retarget(_ window: Window, to frame: CGRect) -> Bool {
         guard let running = items[window.id] else { return false }
-        items[window.id] = Item(move: .init(window: window, to: frame, bounds: frame), from: running.from,
-                                start: running.start, duration: running.duration, curve: running.curve,
-                                bounce: running.bounce)
+        let target = [frame.minX, frame.minY, frame.width, frame.height]
+        let tracks = zip(running.tracks, target).map { $0.retargeted(to: $1) }
+        items[window.id] = Item(move: .init(window: window, to: frame, bounds: frame), tracks: tracks,
+                                start: running.start, duration: running.duration)
         return true
-    }
-}
-
-extension Animator.Item {
-    func frame(at now: CFTimeInterval) -> CGRect {
-        let time = min(1, max(0, (now - start) / duration))
-        let eased = CGFloat(curve.progress(time, bounce: bounce))
-        let target = move.target
-        return CGRect(x: from.minX + (target.minX - from.minX) * eased,
-                      y: from.minY + (target.minY - from.minY) * eased,
-                      width: max(1, from.width + (target.width - from.width) * eased),
-                      height: max(1, from.height + (target.height - from.height) * eased)).pixelAligned
     }
 }
 

@@ -53,7 +53,7 @@ struct CatSymbol: View {
         CatShape(pose: feeling.pose, lid: lid)
             .fill(.foreground)
             .aspectRatio(CatShape.aspectRatio, contentMode: .fit)
-            .animation(reduceMotion ? Motion.fade : Animation.spring(feeling.spring), value: feeling)
+            .animation(Motion.feeling(feeling.spring, reduce: reduceMotion), value: feeling)
             .accessibilityHidden(true)
     }
 

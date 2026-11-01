@@ -10,7 +10,8 @@ REGISTRATION = re.compile(r"static\s+let\s+(\w+)\s*=\s*GalleryExample\(\s*order:
 
 def gallery_examples():
     examples = []
-    for path in sorted((ROOT / "Sources/CatWM/UI").rglob("*.swift")):
+    paths = sorted(path for base in ("UI", "Motion/Kit") for path in (ROOT / "Sources/CatWM" / base).rglob("*.swift"))
+    for path in paths:
         for match in REGISTRATION.finditer(path.read_text()):
             if "Gallery" in path.parts:
                 raise ValueError(f"{path}: put the example in its control file")

@@ -51,7 +51,7 @@ struct SortLaneView: View {
     private func commitNumber() {
         guard number.isEditing else { return }
         number.isEditing = false
-        withAnimation(PanelMotion.windowAnimation(reduceMotion: reduceMotion)) {
+        withAnimation(Motion.user(reduceMotion: reduceMotion)) {
             model.renumber(lane.id, to: number.draft)
         }
     }
@@ -63,7 +63,7 @@ struct SortLaneView: View {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 if model.plan.lanes.count > 1 {
                     RemoveButton(help: "Close workspace \(lane.number)", variant: .close) {
-                        withAnimation(PanelMotion.windowAnimation(reduceMotion: reduceMotion)) {
+                        withAnimation(Motion.user(reduceMotion: reduceMotion)) {
                             model.closeLane(lane.id)
                         }
                     }
@@ -87,7 +87,7 @@ struct SortLaneView: View {
             .oContextMenu(opened: { menu.isOn = $0 }, items: {
                 model.laneMenu(lane, index: index, rename: { editing = true },
                                run: { change in
-                                   withAnimation(PanelMotion.windowAnimation(reduceMotion: reduceMotion), change)
+                                   withAnimation(Motion.user(reduceMotion: reduceMotion), change)
                                })
             })
             SortThumb(layout: lane.layout, ids: model.plan.tiles(lane.ids),

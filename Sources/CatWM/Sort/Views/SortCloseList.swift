@@ -23,7 +23,7 @@ struct SortCloseList: View {
             .frame(height: CGFloat(rows) * SortMetrics.rowHeight + SortMetrics.closeExtra)
             .onChange(of: model.reveal) { _, reveal in
                 if plan.close.contains(reveal.id) || grouped.contains(reveal.id) {
-                    withAnimation(PanelMotion.windowAnimation) { proxy.scrollTo(reveal.id) }
+                    withAnimation(Motion.user) { proxy.scrollTo(reveal.id) }
                 }
             }
         }

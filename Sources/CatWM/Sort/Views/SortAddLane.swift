@@ -14,7 +14,7 @@ struct SortAddLane: View {
         let hovered = hover.isOn && !full
         let box = RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous)
         VStack(alignment: .leading, spacing: 8) {
-            Button { withAnimation(PanelMotion.windowAnimation) { _ = model.addLane(focus: true) } } label: {
+            Button { withAnimation(Motion.user) { _ = model.addLane(focus: true) } } label: {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text("+").textStyle(.title).fixedSize()

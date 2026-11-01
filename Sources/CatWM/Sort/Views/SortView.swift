@@ -28,8 +28,8 @@ struct SortView: View {
                 closedColumn(plan, rows: rows)
             }
             .overlay(alignment: .trailing) { dropZone }
-            .animation(PanelMotion.windowAnimation(reduceMotion: reduceMotion), value: model.carriesToClose)
-            .animation(PanelMotion.windowAnimation(reduceMotion: reduceMotion),
+            .animation(Motion.user(reduceMotion: reduceMotion), value: model.carriesToClose)
+            .animation(Motion.user(reduceMotion: reduceMotion),
                        value: plan.close.isEmpty && plan.closedLanes.isEmpty)
             .padding(.top, hasHeader ? Theme.Space.small : 0).padding(.horizontal, -8)
             actions
@@ -92,7 +92,7 @@ struct SortView: View {
             }
             .onChange(of: model.reveal) { _, reveal in
                 guard let lane = reveal.lane else { return }
-                withAnimation(PanelMotion.windowAnimation) { proxy.scrollTo(lane) }
+                withAnimation(Motion.user) { proxy.scrollTo(lane) }
             }
         }
     }
