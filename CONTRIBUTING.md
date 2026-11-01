@@ -60,10 +60,11 @@ The config is strict: all default rules are on, more opt-in rules are on, and ea
 ## Submit a change
 
 - Write commit messages in English: `type(scope): description`. The scope is optional.
-- Write the pull request title as one imperative sentence in sentence case. Example: "Add workspace switch animation".
+- Write the pull request title like a commit message: `type(scope): description`. Example: `feat(animation): add workspace switch animation`. The type sets the type label.
 - Write the pull request body in this order: the problem in 1 to 3 sentences, a `## Changes` heading with an unordered list, and a `## Verification` heading that says how you verified the change.
 - For a UI change, attach a before image and an after image. For motion, attach a video. Upload them to the pull request. Do not commit them.
 - Verify a bug before you fix it. Fix only bugs that you verified.
+- The `label-pr` workflow labels each pull request with its size (`size/XS` to `size/XXL`), its scopes (`scope: tiling`), its type from the title (`bug`, `enhancement`) and `vouched` or `unvouched`. Do not set these by hand. The workflow resets them on each push.
 
 ## Feedback and performance relay
 
