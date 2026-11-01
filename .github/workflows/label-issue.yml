@@ -1,0 +1,75 @@
+name: label-issue
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  issues: write
+
+concurrency:
+  group: label-issue-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v8
+        with:
+          script: |
+            const { owner, repo } = context.repo
+            const issue = context.payload.issue
+
+            const TYPES = {
+              feat: ['enhancement', 'a2eeef'],
+              fix: ['bug', 'd73a4a'],
+              docs: ['documentation', '0075ca'],
+              perf: ['performance', 'ff7b72'],
+              refactor: ['refactor', 'bfd4f2'],
+            }
+
+            const SCOPES = [
+              ['actions', /\bdispatch(er)?s?\b/i],
+              ['config', /\bconfig(uration)?\b|CatWM\.conf/i],
+              ['control', /\bcli\b|\bsocket\b|\bcommand registry\b/i],
+              ['keys', /\bkeybind|\bhotkey|\bshortcut|\bkeyboard\b|\bsubmap/i],
+              ['menu bar', /\bmenu ?bar\b|\bstatus (menu|item)\b/i],
+              ['motion', /\banimat|\bjank|\bstutter|\bframe ?rate\b/i],
+              ['notifications', /\bnotification|\bbadge\b/i],
+              ['onboarding', /\bonboarding\b|\bintro\b|\btour\b/i],
+              ['overlays', /\bhud\b|\boverlay/i],
+              ['session', /\bsession\b|\brestore\b|\bsave(d)? windows?\b/i],
+              ['settings', /\bsettings\b|\bpreferences\b/i],
+              ['overview', /\boverview\b/i],
+              ['switcher', /\bswitcher\b|\balt[- ]tab\b/i],
+              ['templates', /\btemplates?\b/i],
+              ['tiling', /\btil(e|ing)\b|\blayout|\bworkspace|\bdesktop|\bspaces?\b|\bfloating\b|\bfullscreen\b|\bmonitor|\bdisplay\b/i],
+              ['ui', /\bdark mode\b|\btheme\b|\bcontrast\b|\btraffic light/i],
+            ]
+            const SCOPE_COLOR = 'c5def5'
+            const MAX_SCOPES = 3
+
+            const text = `${issue.title}\n${issue.body ?? ''}`
+            const wanted = new Map()
+
+            const prefix = (issue.title.match(/^(\w+)(\([^)]*\))?!?:/) ?? [])[1]
+            if (Object.hasOwn(TYPES, prefix)) wanted.set(...TYPES[prefix])
+
+            const scopes = SCOPES
+              .map(([name, re]) => [name, (text.match(new RegExp(re, 'gi')) ?? []).length])
+              .filter(([, hits]) => hits > 0)
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, MAX_SCOPES)
+            for (const [name] of scopes) wanted.set(`scope: ${name}`, SCOPE_COLOR)
+
+            const current = issue.labels.map(l => l.name)
+            for (const [name, color] of wanted) {
+              if (current.includes(name)) continue
+              try {
+                await github.rest.issues.createLabel({ owner, repo, name, color })
+              } catch (error) {
+                if (error.status !== 422) throw error
+              }
+              await github.rest.issues.addLabels({ owner, repo, issue_number: issue.number, labels: [name] })
+            }
