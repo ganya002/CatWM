@@ -9,8 +9,8 @@ struct AnimationWriteTests {
         }
     }
 
-    @Test(arguments: [0.12, 0.5])
-    func repeatedPixelFramesDoNotWritePositions(duration: Double) async throws {
+    @Test(arguments: [0.12, 0.5], [AnimationCurve.easeOut, .bounce])
+    func repeatedPixelFramesDoNotWritePositions(duration: Double, curve: AnimationCurve) async throws {
         let backend = FakeBackend()
         let start = CGRect(x: 100, y: 100, width: 800, height: 600)
         let id = backend.addWindow(frame: start)
@@ -20,7 +20,7 @@ struct AnimationWriteTests {
         let writer = AXWriter(pid: window.pid, backend: backend)
         let target = start.offsetBy(dx: 20, dy: 0)
         let item = Animator.Item(move: .init(window: window, to: target, bounds: target), from: start,
-                                 start: 0, duration: duration, curve: .easeOut, bounce: 0)
+                                 start: 0, duration: duration, curve: curve, bounce: 0.7)
         var previous = start
         var changedFrames = 0
         let steps = Int(ceil(duration * 120))

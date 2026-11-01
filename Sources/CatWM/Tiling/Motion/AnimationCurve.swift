@@ -92,19 +92,24 @@ enum AnimationCurve: Hashable {
 
     private static func bounceProgress(_ time: Double, bounce: Double) -> Double {
         let restitution = 0.3 + 0.4 * bounce
-        var arcs: [Double] = []
-        while arcs.count < 12, pow(restitution, Double(2 * (arcs.count + 1))) > 0.003 {
-            arcs.append(2 * pow(restitution, Double(arcs.count + 1)))
+        var count = 0, total = 1.0, height = restitution
+        while count < 12, pow(restitution, Double(2 * (count + 1))) > 0.003 {
+            total += 2 * height
+            count += 1
+            height *= restitution
         }
-        var x = time * (1 + arcs.reduce(0, +))
+        var x = time * total
         if x < 1 { return x * x }
         x -= 1
-        for (i, arc) in arcs.enumerated() {
+        height = restitution
+        for _ in 0..<count {
+            let arc = 2 * height
             if x < arc {
                 let position = x / arc * 2 - 1
-                return 1 - pow(restitution, Double(2 * (i + 1))) * (1 - position * position)
+                return 1 - height * height * (1 - position * position)
             }
             x -= arc
+            height *= restitution
         }
         return 1
     }
