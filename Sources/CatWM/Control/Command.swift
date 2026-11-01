@@ -67,6 +67,7 @@ struct ControlError: Error, Equatable {
 struct Invocation {
     let args: [String: JSON]
     let client: ControlConnection?
+    let manager: WindowManager
 
     func text(_ name: String) -> String { args[name]?.string ?? "" }
 }

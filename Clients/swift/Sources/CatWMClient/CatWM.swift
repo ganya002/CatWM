@@ -609,7 +609,7 @@ public final class CatWM: @unchecked Sendable {
         return try decode([WindowsItem].self, try call("windows", args))
     }
 
-    /// List the workspaces
+    /// List the workspaces, including empty Desktops
     public func workspaces() throws -> [WorkspacesItem] {
         let args: [String: Any] = [:]
         return try decode([WorkspacesItem].self, try call("workspaces", args))

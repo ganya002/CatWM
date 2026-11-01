@@ -473,7 +473,7 @@ export class CatWM {
     return (await this.call("windows")) as WindowsItem[];
   }
 
-  /** List the workspaces */
+  /** List the workspaces, including empty Desktops */
   async workspaces(): Promise<WorkspacesItem[]> {
     return (await this.call("workspaces")) as WorkspacesItem[];
   }

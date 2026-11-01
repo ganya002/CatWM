@@ -219,3 +219,45 @@ private func reply(_ text: String) throws -> JSON {
         #expect(ended["result"]?["events"] == .array([]))
     }
 }
+
+@Suite(.serialized) struct ControlWorkspaceSocketTests {
+    @Test(arguments: [false, true]) @MainActor
+    func workspacesIncludesEmptyHiddenDesktops(perDisplay: Bool) async throws {
+        let fake = FakeBackend()
+        let screen = fake.addScreen()
+        let manager = fake.makeManager()
+        let window = fake.addWindow()
+        #expect(await fake.settle(manager))
+        manager.desktops.nativeCatalog.perDisplay = perDisplay
+        manager.desktops.nativeCatalog.synchronize([.init(id: screen.uuid, spaces: [11, 12, 13])])
+        let names = (1...3).map { perDisplay ? "\(screen.uuid)/\($0)" : "\($0)" }
+        manager.shown = [screen.uuid: names[0]]
+        manager.model.assign(window, to: names[0])
+        let path = "/tmp/catwm-workspaces-\(UInt32.random(in: 0...UInt32.max)).sock"
+        let server = ControlServer(manager: manager)
+        server.start(path: path)
+        defer { server.stop() }
+        let answer = try await Task.detached {
+            let client = try #require(ControlCLI.Client(path: path))
+            return client.call("workspaces", [:])
+        }.value
+        #expect(answer["ok"] == true)
+        let workspaces = try #require(answer["result"]?.array)
+        #expect(workspaces.compactMap { $0["name"]?.string } == names)
+        #expect(workspaces.first?["windows"] == .array([.int(Int(window))]))
+        #expect(workspaces.first?["screens"] == .array([.string(screen.uuid)]))
+        for name in names.dropFirst() {
+            let workspace = try #require(workspaces.first { $0["name"] == .string(name) })
+            #expect(workspace["windows"] == .array([]))
+            #expect(workspace["screens"] == .array([]))
+        }
+        manager.desktops.nativeCatalog.synchronize([.init(id: screen.uuid, spaces: [11, 13])])
+        let afterRemoval = try await Task.detached {
+            let client = try #require(ControlCLI.Client(path: path))
+            return client.call("workspaces", [:])
+        }.value
+        let remaining = try #require(afterRemoval["result"]?.array)
+        let expected = perDisplay ? Array(names.prefix(2)) : [names[0], names[2]]
+        #expect(remaining.compactMap { $0["name"]?.string } == expected)
+    }
+}

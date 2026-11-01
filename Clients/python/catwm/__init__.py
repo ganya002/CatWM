@@ -504,7 +504,7 @@ class CatWM:
         return self.call("windows", args)
 
     def workspaces(self) -> list[WorkspacesItem]:
-        """List the workspaces"""
+        """List the workspaces, including empty Desktops"""
         args: dict[str, Any] = {}
         return self.call("workspaces", args)
 

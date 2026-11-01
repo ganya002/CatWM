@@ -32,6 +32,8 @@ The CLI, the Python, TypeScript and Swift libraries (`Clients/`) and the key bin
 | `poststyle 0\|1\|2` | diagnostics: how synthetic shortcuts are posted |
 | `grabtest` | diagnostics |
 
+`catwm workspaces` includes empty, hidden Desktops from CatWM’s workspace catalog. An empty workspace has `windows: []`; a hidden workspace has `screens: []`.
+
 `exec` and `launch` are **refused** from the socket, because any process of the user could use them. They work only from key binds.
 
 ## Events

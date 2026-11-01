@@ -15,7 +15,7 @@ enum CommandRegistry {
                         manager: WindowManager = .shared) throws -> JSON {
         guard let command = command(named: name) else { throw ControlError.unknownCommand(name) }
         guard command.access != .keybindOnly else { throw ControlError.forbidden(name) }
-        let call = try Invocation(args: command.validate(args), client: client)
+        let call = try Invocation(args: command.validate(args), client: client, manager: manager)
         let target = command.name == "dispatch" ? call.text("dispatcher").lowercased() : command.name
         if let refusal = manager.scopeRefusal(target) { throw ControlError.failed(refusal) }
         return try command.run(call)
@@ -38,7 +38,7 @@ enum CommandRegistry {
                 throw ControlError(code: "unknown_command", message: "Unknown dispatcher `\(name)`")
             }
             guard !keybindOnly.contains(name) else { throw ControlError.forbidden(name) }
-            WindowManager.shared.dispatch(name, call.text("arg"))
+            call.manager.dispatch(name, call.text("arg"))
             return .null
         },
         Command(name: "subscribe", group: "events", summary: "Receive events on this connection",
@@ -65,16 +65,16 @@ enum CommandRegistry {
     )
 
     private static let development: [Command] = [
-        Command(name: "grabtest", group: "dev", summary: "Run the window grab test", access: .dev) { _ in
-            WindowManager.shared.grabTest()
+        Command(name: "grabtest", group: "dev", summary: "Run the window grab test", access: .dev) { call in
+            call.manager.grabTest()
             return .null
         },
         Command(name: "poststyle", group: "dev", summary: "Set the key post style",
                 args: [CommandArg(name: "style", kind: .int, summary: "Style number")], access: .dev) { call in
             if let style = call.args["style"]?.int.flatMap(Hotkeys.PostStyle.init(rawValue:)) {
-                WindowManager.shared.keyPostStyle = style
+                call.manager.keyPostStyle = style
             }
-            Log.info("ipc: post style is now \(WindowManager.shared.keyPostStyle)")
+            Log.info("ipc: post style is now \(call.manager.keyPostStyle)")
             return .null
         },
         Command(name: "modefx", group: "dev", summary: "Preview a mode effect",

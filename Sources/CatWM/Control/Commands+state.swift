@@ -17,7 +17,7 @@ extension CommandRegistry {
             Field(name: "mode", type: "string", summary: "Active key mode, empty for none"),
             Field(name: "workspaces", type: "string", summary: "`catwm` or `macos`"),
             Field(name: "screens", type: "object[]", summary: "One entry for each display")
-        ])) { _ in WindowManager.shared.statusJSON() },
+        ])) { call in call.manager.statusJSON() },
         Command(name: "windows", group: "state", summary: "List the windows that CatWM knows", result: .list([
             Field(name: "id", type: "int", summary: "Window ID"),
             Field(name: "pid", type: "int", summary: "Process ID"),
@@ -31,13 +31,14 @@ extension CommandRegistry {
             Field(name: "workspace", type: "string?", summary: "Workspace name"),
             Field(name: "screen", type: "string?", summary: "Display ID"),
             Field(name: "frame", type: rect + "?", summary: "Last known frame")
-        ])) { _ in WindowManager.shared.windowsJSON() },
-        Command(name: "workspaces", group: "state", summary: "List the workspaces", result: .list([
+        ])) { call in call.manager.windowsJSON() },
+        Command(name: "workspaces", group: "state", summary: "List the workspaces, including empty Desktops",
+                result: .list([
             Field(name: "name", type: "string", summary: "Workspace name"),
             Field(name: "windows", type: "int[]", summary: "Window IDs in the workspace"),
             Field(name: "screens", type: "string[]", summary: "Displays that show the workspace"),
             Field(name: "native", type: "bool", summary: "The workspace is a macOS Desktop")
-        ])) { _ in WindowManager.shared.workspacesJSON() },
+        ])) { call in call.manager.workspacesJSON() },
         Command(name: "screens", group: "state", summary: "List the displays", result: .list([
             Field(name: "uuid", type: "string", summary: "Display ID"),
             Field(name: "name", type: "string", summary: "Display name"),
@@ -48,9 +49,10 @@ extension CommandRegistry {
             Field(name: "mainCount", type: "int", summary: "Number of main windows"),
             Field(name: "workspace", type: "string", summary: "Workspace shown on the display"),
             Field(name: "focused", type: "bool", summary: "The display has focus")
-        ])) { _ in WindowManager.shared.screensJSON() },
-        Command(name: "dump", group: "state", summary: "Read a text report of the tiling state", result: .text) { _ in
-            let lines = WindowManager.shared.dumpLines()
+        ])) { call in call.manager.screensJSON() },
+        Command(name: "dump", group: "state", summary: "Read a text report of the tiling state",
+                result: .text) { call in
+            let lines = call.manager.dumpLines()
             lines.forEach { Log.info($0) }
             return .string(lines.joined(separator: "\n"))
         }
@@ -62,7 +64,7 @@ extension CommandRegistry {
             guard let option = ConfigOption.named(call.text("key")) else {
                 throw ControlError.invalid("Unknown option `\(call.text("key"))`")
             }
-            return .string(option.text(WindowManager.shared.config))
+            return .string(option.text(call.manager.config))
         },
         Command(name: "config.set", group: "config", summary: "Change a config option and reload the config",
                 args: [.text("key", "Option name"), .text("value", "New value")]) { call in
@@ -82,7 +84,7 @@ extension CommandRegistry {
             } catch {
                 throw ControlError.failed("Could not save config: \(error.localizedDescription)")
             }
-            WindowManager.shared.reload(showHUD: false)
+            call.manager.reload(showHUD: false)
             return .null
         },
         Command(name: "config.options", group: "config", summary: "List the config options", result: .list([
@@ -91,8 +93,8 @@ extension CommandRegistry {
             Field(name: "default", type: "string", summary: "Default value"),
             Field(name: "type", type: "string", summary: "Accepted values"),
             Field(name: "summary", type: "string", summary: "What the option does")
-        ])) { _ in
-            let current = WindowManager.shared.config
+        ])) { call in
+            let current = call.manager.config
             return .array(Options.all.map { option in
                 ["key": .string(option.key), "value": .string(option.text(current)),
                  "default": .string(option.defaultText), "type": .string(option.valueDescription),

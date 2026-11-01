@@ -74,6 +74,8 @@ A dispatcher (a command that a key bind can run) is one `WindowAction` in `Sourc
 
 A command that is not a dispatcher (a query or a config command) is a `Command` in `Commands+state.swift` or `CommandRegistry.swift`.
 
+Socket tests use dependency injection: pass a FakeBackend manager to `ControlServer(manager:)`. The server passes it through `Invocation.manager` to the command handlers; the app uses `WindowManager.shared` by default. The `workspaces` query includes catalog entries even when they have no windows and no display shows them.
+
 ## Access
 
 - `public`: in the CLI, the schema and the libraries.

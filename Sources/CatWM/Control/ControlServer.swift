@@ -14,6 +14,10 @@ final class ControlServer {
                 "pid": .int(Int(getpid()))]
     }
 
+    private let manager: WindowManager?
+
+    init(manager: WindowManager? = nil) { self.manager = manager }
+
     private let queue = DispatchQueue(label: "catwm.control.accept", qos: .userInitiated)
     private var listener: DispatchSourceRead?
     private var clients: [ObjectIdentifier: ControlConnection] = [:]
@@ -42,8 +46,11 @@ final class ControlServer {
     private func accept(_ listenFD: Int32) {
         let descriptor = Darwin.accept(listenFD, nil, nil)
         guard descriptor >= 0 else { return }
+        let manager = self.manager
         let connection = ControlConnection(descriptor: descriptor, onLine: { connection, line in
-            DispatchQueue.main.async { connection.send(Self.reply(to: line, client: connection)) }
+            DispatchQueue.main.async {
+                connection.send(Self.reply(to: line, client: connection, manager: manager ?? .shared))
+            }
         }, onClose: { [weak self] connection in
             self?.queue.async { self?.clients[ObjectIdentifier(connection)] = nil }
             DispatchQueue.main.async { EventBus.shared.remove(connection) }
@@ -53,7 +60,7 @@ final class ControlServer {
         connection.send(JSON.object(["hello": Self.hello]).encoded() + Data("\n".utf8))
     }
 
-    static func reply(to line: Data, client: ControlConnection?) -> Data {
+    static func reply(to line: Data, client: ControlConnection?, manager: WindowManager = .shared) -> Data {
         var id = JSON.null
         let response: JSON
         do {
@@ -64,7 +71,8 @@ final class ControlServer {
             guard let name = request["command"]?.string else { throw ControlError.badRequest("Send a `command`") }
             let args = request["args"] ?? [:]
             guard let given = args.object else { throw ControlError.badRequest("`args` must be an object") }
-            response = ["id": id, "ok": true, "result": try CommandRegistry.execute(name, given, client: client)]
+            let result = try CommandRegistry.execute(name, given, client: client, manager: manager)
+            response = ["id": id, "ok": true, "result": result]
         } catch let error as ControlError {
             response = ["id": id, "ok": false,
                         "error": ["code": .string(error.code), "message": .string(error.message)]]

@@ -815,7 +815,7 @@
         ],
         "kind" : "list"
       },
-      "summary" : "List the workspaces"
+      "summary" : "List the workspaces, including empty Desktops"
     },
     {
       "args" : [
