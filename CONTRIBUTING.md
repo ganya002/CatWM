@@ -65,6 +65,7 @@ The config is strict: all default rules are on, more opt-in rules are on, and ea
 - For a UI change, attach a before image and an after image. For motion, attach a video. Upload them to the pull request. Do not commit them.
 - Verify a bug before you fix it. Fix only bugs that you verified.
 - The `label-pr` workflow labels each pull request with its size (`size/XS` to `size/XXL`), its scopes (`scope: tiling`), its type from the title (`bug`, `enhancement`) and `vouched` or `unvouched`. Do not set these by hand. The workflow resets them on each push.
+- The `label-issue` workflow labels each issue with a `scope:` label when its title or text names an area (`scope: keys`), and with a type label when the title starts with `feat:` or `fix:`. Change or remove a label by hand when it is wrong. The workflow only adds labels.
 
 ## Feedback and performance relay
 
