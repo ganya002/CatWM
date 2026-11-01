@@ -6,7 +6,8 @@ enum SettingsIndex {
         let options = Options.all.compactMap { option -> SettingEntry? in
             guard let setting = option.setting else { return nil }
             return SettingEntry(id: setting.id, title: setting.label, pane: setting.pane,
-                                advanced: setting.advanced, keywords: "\(setting.keywords) \(option.key)")
+                                advanced: setting.advanced,
+                                keywords: "\(setting.keywords) \(option.names.joined(separator: " "))")
         }
         return Pane.allCases.flatMap { pane in (CustomSettingsIndex.all + options).filter { $0.pane == pane } }
     }()
