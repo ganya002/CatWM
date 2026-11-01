@@ -103,6 +103,20 @@ import Testing
         expectTiles([fake.frame(of: wide), fake.frame(of: other)], fill: screen.visible)
     }
 
+    @Test func aMinimumSizePreservesAsMuchOfTheRequestedSplitAsPossible() async {
+        let fake = FakeBackend()
+        let screen = fake.addScreen(frame: CGRect(x: 0, y: 0, width: 1000, height: 600))
+        let manager = fake.makeManager()
+        let stack = fake.addWindow(pid: -101, minSize: CGSize(width: 300, height: 0)), main = fake.addWindow()
+        #expect(await fake.settle(manager))
+        manager.dispatch("splitratio", "exact 0.8")
+        #expect(await fake.wait(manager) { manager.minSizes[stack] != nil })
+        #expect(await fake.settle(manager))
+        #expect(fake.frame(of: main) == CGRect(x: 0, y: 0, width: 700, height: 600))
+        #expect(fake.frame(of: stack) == CGRect(x: 700, y: 0, width: 300, height: 600))
+        expectTiles([fake.frame(of: main), fake.frame(of: stack)], fill: screen.visible)
+    }
+
     @Test func aTallMinimumPushesTheOtherRowInTheWideLayout() async {
         let fake = FakeBackend()
         let screen = fake.addScreen()

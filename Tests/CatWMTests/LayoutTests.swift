@@ -164,9 +164,18 @@ import Testing
         let tall = [CGRect(x: 0, y: 0, width: 600, height: 600), CGRect(x: 610, y: 0, width: 290, height: 295),
                     CGRect(x: 610, y: 305, width: 290, height: 295)]
         let frames = fitMinimums(tall, mins: [nil, CGSize(width: 400, height: 100), nil], gap: 10)
-        #expect(frames[0] == CGRect(x: 0, y: 0, width: 445, height: 600))
-        #expect(frames[1] == CGRect(x: 455, y: 0, width: 445, height: 295))
-        #expect(frames[2] == CGRect(x: 455, y: 305, width: 445, height: 295))
+        #expect(frames[0] == CGRect(x: 0, y: 0, width: 490, height: 600))
+        #expect(frames[1] == CGRect(x: 500, y: 0, width: 400, height: 295))
+        #expect(frames[2] == CGRect(x: 500, y: 305, width: 400, height: 295))
+    }
+
+    @Test func aMinimumOnlyTakesTheRoomItNeedsFromAnUnequalSplit() throws {
+        let screen = CGRect(x: 0, y: 0, width: 1000, height: 600)
+        let raw = try #require(Layout.tall.frames(count: 2, in: screen, ratio: 0.8, mainCount: 1))
+        let frames = fitMinimums(raw, mins: [nil, CGSize(width: 300, height: 100)], gap: 0)
+        #expect(frames == [CGRect(x: 0, y: 0, width: 700, height: 600),
+                           CGRect(x: 700, y: 0, width: 300, height: 600)])
+        #expect(fitMinimums(frames, mins: [nil, CGSize(width: 300, height: 100)], gap: 0) == frames)
     }
 
     @Test func aTallMinimumInTheBottomRowTakesRoomFromTheMainRow() throws {

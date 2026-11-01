@@ -34,19 +34,13 @@ private func fit(_ group: [[Int]], in out: inout [CGRect], mins: [CGSize?], gap:
     guard zip(need, sizes).contains(where: { $0 > $1 + 1 }) else { return }
     let total = sizes.reduce(0, +)
     guard need.reduce(0, +) <= total else { return }
-    var pinned = Set<Int>()
-    var share: CGFloat = 0
-    while true {
-        let free = sorted.indices.filter { !pinned.contains($0) }
-        let left = total - pinned.map { need[$0] }.reduce(0, +)
-        share = free.isEmpty ? 0 : left / CGFloat(free.count)
-        let more = free.filter { need[$0] > share }
-        if more.isEmpty { break }
-        pinned.formUnion(more)
-    }
+    let growth = zip(need, sizes).map { max(0, $0 - $1) }.reduce(0, +)
+    let spare = zip(sizes, need).map { max(0, $0 - $1) }
+    let available = spare.reduce(0, +)
     var pos = starts[0]
     for (position, unit) in sorted.enumerated() {
-        let size = pinned.contains(position) ? need[position] : share
+        let size = need[position] > sizes[position] ? need[position]
+            : sizes[position] - growth * spare[position] / available
         for i in unit {
             let frame = out[i]
             out[i] = vertical ? CGRect(x: frame.minX, y: pos, width: frame.width, height: size)
