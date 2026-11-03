@@ -66,17 +66,19 @@ extension WindowManager {
             monitorOf[key] = screen.uuid
             return key
         }
+        var assignments: [CGWindowID: String] = [:]
         for (id, window) in windows
         where !nativeMoves.isBusy(id) && !closeAndSort.sortSession
             && !isPending(workspaceOf[id]) {
             let membership = nativeMoves.observedMembership(id, observed: scanner.desktop.spaces[id] ?? [])
             if let entry = desktops.nativeCatalog.entries.first(where: { membership.contains($0.space) }) {
-                model.assign(id, to: entry.name)
+                assignments[id] = entry.name
                 displayOf[id] = sharesSpaces ? sharedDisplay(of: window, in: screens) ?? entry.display : entry.display
             } else if window.fullscreen, let space = membership.first {
                 _ = host(id, on: space)
             }
         }
+        model.assign(assignments)
         model.fullscreenHost = [:]
         for (id, space) in fullscreenSpaces() {
             if let key = host(id, on: space) { model.fullscreenHost[key] = id }
