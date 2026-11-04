@@ -32,7 +32,9 @@ final class Animator {
     private let backend: any WindowBackend
     private let makeWriter: (pid_t) -> AXWriter
     private let applyFocus: (Window, () -> Bool) -> Void
-    private var timer: Timer?
+    var makeResizeScene: (([Move]) -> WindowResizeScene?)?
+    private var resizeScene: WindowResizeScene?
+    private var clock: WindowFrameClock?
     private var timing = Timing()
     private var frameRun: FrameRun?
     var onMinimumSize: ((CGWindowID, CGSize) -> Void)?
@@ -45,6 +47,8 @@ final class Animator {
         self.makeWriter = makeWriter ?? { AXWriter(pid: $0, backend: backend) }
         self.applyFocus = applyFocus
     }
+
+    deinit { clock?.stop(); resizeScene?.close() }
 
     func cancelFocus() { focusLock.withLock { focusGeneration += 1 } }
 
@@ -88,7 +92,8 @@ final class Animator {
 
     func isMoving(_ id: CGWindowID, to frame: CGRect) -> Bool { destination(id) == frame }
 
-    func cancel(_ id: CGWindowID) {
+    func cancel(_ id: CGWindowID, keepingScene: Bool = false) {
+        if !keepingScene { endResizeScene() }
         nextEpoch(for: id)
         following.remove(id)
         let item = items.removeValue(forKey: id), landed = landing.removeValue(forKey: id)
@@ -105,6 +110,7 @@ final class Animator {
     }
 
     func animate(_ moves: [Move], spec: MotionSpec) {
+        prepareResizeScene(for: moves, spec: spec)
         let now = CACurrentMediaTime()
         let duration = spec.duration
         for move in moves {
@@ -112,7 +118,7 @@ final class Animator {
             let from: CGRect
             var velocity: [Double]?
             if let running = items[id] {
-                from = running.frame(at: now)
+                from = running.frame(at: now, aligned: resizeScene?.visible != true)
                 velocity = running.velocity(at: now)
             } else if let landed = landing.removeValue(forKey: id) {
                 from = move.from ?? landed.move.target
@@ -121,22 +127,18 @@ final class Animator {
             } else {
                 from = move.from ?? move.window.cachedFrame
             }
-            cancel(id)
+            cancel(id, keepingScene: true)
             owners[id] = move.window.pid
             if duration < 0.01 || from.isNull || from.approxEqual(move.target, tolerance: 2) {
                 items[id] = nil
                 land(move)
             } else {
                 items[id] = Item(move: move, from: from, start: now, spec: spec, velocity: velocity)
+                if resizeScene?.visible == true { land(move) }
             }
         }
-        if !items.isEmpty && timer == nil {
-            let newTimer = Timer(timeInterval: 1.0 / 120.0, repeats: true) { [weak self] _ in self?.tick() }
-            RunLoop.main.add(newTimer, forMode: .common)
-            timer = newTimer
-            frameRun = PerfMonitor.shared.begin("window-move")
-            tick()
-        }
+        startClock()
+        finishResizeScene()
     }
 
     func follow(_ moves: [Move]) {
@@ -191,35 +193,27 @@ final class Animator {
         group.notify(queue: completionQueue, execute: completion)
     }
 
-    private func tick() {
+    private func tick(at presentation: CFTimeInterval) {
         let now = CACurrentMediaTime()
         timing.tick(at: now)
+        resizeScene?.update(items.mapValues { $0.frame(at: presentation, aligned: false) })
         for (id, item) in items {
-            if now - item.start >= item.duration {
+            if presentation - item.start >= item.duration {
                 items[id] = nil
                 land(item.move)
-            } else {
-                writer(item.move.window.pid).step(item.move.window) { item.frame(at: $0) }
+            } else if resizeScene?.visible != true {
+                writer(item.move.window.pid).step(item.move.window, notBefore: presentation) { item.frame(at: $0) }
             }
         }
         timing.ticks.add(CACurrentMediaTime() - now)
         if items.isEmpty {
-            timer?.invalidate(); timer = nil
+            clock?.stop(); clock = nil
             let stats = writers.map { ($0.key, $0.value.takeStats()) }
             frameRun?.end(apps: stats.compactMap(Self.slowApp))
             frameRun = nil
             timing.log(stats)
             timing = Timing()
         }
-    }
-
-    private static func slowApp(_ pid: pid_t, _ stats: AXWriter.Stats) -> PerfMonitor.SlowApp? {
-        guard !stats.position.isEmpty,
-              let bundle = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier else { return nil }
-        let step = (stats.size.isEmpty ? 0 : stats.size.total / Double(stats.size.count))
-            + stats.position.total / Double(stats.position.count)
-        return .init(bundle: bundle, stepMs: step * 1000,
-                     skipped: Double(stats.skipped) / Double(stats.skipped + stats.position.count))
     }
 
     private func land(_ move: Move) {
@@ -229,9 +223,12 @@ final class Animator {
         let epoch = epochs[id] ?? nextEpoch(for: id)
         landing[id] = (move, number)
         quietUntil[id] = CACurrentMediaTime() + 0.4
+        resizeScene?.cover(id, to: move.target)
         writer(move.window.pid).land(move.window, at: move.target) { [weak self] wrote in
             guard let self, self.landing[id]?.number == number else { return }
             self.landing[id] = nil
+            if wrote { self.resizeScene?.placed(id, at: move.target) }
+            self.finishResizeScene()
             guard wrote else { return }
             self.onLanded?()
             self.quietUntil[id] = CACurrentMediaTime() + 0.4
@@ -277,6 +274,67 @@ final class Animator {
 }
 
 extension Animator {
+    private static func slowApp(_ pid: pid_t, _ stats: AXWriter.Stats) -> PerfMonitor.SlowApp? {
+        guard !stats.position.isEmpty,
+              let bundle = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier else { return nil }
+        let step = (stats.size.isEmpty ? 0 : stats.size.total / Double(stats.size.count))
+            + stats.position.total / Double(stats.position.count)
+        return .init(bundle: bundle, stepMs: step * 1000,
+                     skipped: Double(stats.skipped) / Double(stats.skipped + stats.position.count))
+    }
+
+    private func prepareResizeScene(for moves: [Move], spec: MotionSpec) {
+        guard makeResizeScene != nil else { return }
+        guard spec.duration >= 0.08 else { endResizeScene(); return }
+        if let resizeScene, !resizeScene.visible || !Set(moves.map(\.window.id)).isSubset(of: resizeScene.ids)
+            || !moves.allSatisfy({ resizeScene.contains($0.target) }) {
+            endResizeScene()
+        }
+        guard resizeScene == nil, items.isEmpty, landing.isEmpty,
+              moves.contains(where: { move in
+                  let frame = move.from ?? move.window.cachedFrame
+                  return !frame.isNull && (abs(frame.width - move.target.width) > 2
+                      || abs(frame.height - move.target.height) > 2)
+              }) else { return }
+        resizeScene = makeResizeScene?(moves)
+        resizeScene?.onDismiss = { [weak self] in self?.endResizeScene() }
+        resizeScene?.show()
+    }
+
+    private func endResizeScene() {
+        guard let scene = resizeScene else { return }
+        scene.ids.forEach { items[$0] = nil }
+        scene.close()
+        resizeScene = nil
+    }
+
+    private func finishResizeScene() {
+        guard items.isEmpty, landing.isEmpty else { return }
+        resizeScene?.close()
+        resizeScene = nil
+    }
+
+    private func startClock() {
+        guard !items.isEmpty else { return }
+        let screens = backend.screens().filter { screen in
+            items.values.contains { $0.move.target.intersects(screen.frame) }
+        }.compactMap(\.nsScreen)
+        guard let screen = screens.max(by: { $0.maximumFramesPerSecond < $1.maximumFramesPerSecond })
+            ?? NSScreen.main else {
+            let unfinished = Array(items.values)
+            items.removeAll()
+            unfinished.forEach { land($0.move) }
+            return
+        }
+        if clock == nil {
+            frameRun = PerfMonitor.shared.begin("window-move")
+        }
+        if clock?.displayID != screen.displayID {
+            clock?.stop()
+            clock = WindowFrameClock(screen: screen) { [weak self] time in self?.tick(at: time) }
+        }
+    }
+
     private func writer(_ pid: pid_t) -> AXWriter {
         if let existing = writers[pid] { return existing }
         let created = makeWriter(pid)
@@ -307,10 +365,15 @@ extension Animator {
 extension Animator {
     func retarget(_ window: Window, to frame: CGRect) -> Bool {
         guard let running = items[window.id] else { return false }
+        if resizeScene?.contains(frame) == false { endResizeScene(); return false }
         let target = [frame.minX, frame.minY, frame.width, frame.height]
         let tracks = zip(running.tracks, target).map { $0.retargeted(to: $1) }
         items[window.id] = Item(move: .init(window: window, to: frame, bounds: frame), tracks: tracks,
                                 start: running.start, duration: running.duration)
+        if resizeScene?.visible == true, let item = items[window.id] {
+            nextEpoch(for: window.id)
+            land(item.move)
+        }
         return true
     }
 }
@@ -332,31 +395,5 @@ extension Animator {
         } onCancel: {
             completion.finish(false)
         }
-    }
-}
-
-private final class PendingWrites: Sendable {
-    private struct State: Sendable {
-        var continuation: CheckedContinuation<Bool, Never>?
-        var result: Result<Bool, Never>?
-    }
-    private let state = OSAllocatedUnfairLock(initialState: State())
-
-    func wait(_ continuation: CheckedContinuation<Bool, Never>) {
-        let result = state.withLock { state -> Result<Bool, Never>? in
-            if state.result == nil { state.continuation = continuation }
-            return state.result
-        }
-        if let result { continuation.resume(with: result) }
-    }
-
-    func finish(_ result: Bool) {
-        let waiting = state.withLock { state -> CheckedContinuation<Bool, Never>? in
-            guard state.result == nil else { return nil }
-            state.result = .success(result)
-            defer { state.continuation = nil }
-            return state.continuation
-        }
-        waiting?.resume(returning: result)
     }
 }

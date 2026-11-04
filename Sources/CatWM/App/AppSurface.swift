@@ -1,7 +1,28 @@
 import AppKit
+import QuartzCore
 
 struct AppSurface: TilingSurface {
     func start(_ manager: WindowManager) {
+        if ProcessInfo.processInfo.environment["CATWM_RESIZE_SCENE"] == "1" {
+            manager.animator.makeResizeScene = { moves in
+                let screens = Screen.all()
+                guard moves.allSatisfy({ move in
+                    screens.contains { $0.frame.contains(move.target) && $0.frame.contains(move.window.cachedFrame) }
+                }) else { return nil }
+                let frames = Dictionary(moves.map { ($0.window.id, $0.from ?? $0.window.cachedFrame) },
+                                        uniquingKeysWith: { _, latest in latest })
+                let regions = moves.map { ($0.from ?? $0.window.cachedFrame).union($0.target) }
+                guard WindowSceneCapture.canPresent(regions, participants: Set(frames.keys)) else { return nil }
+                let started = CACurrentMediaTime()
+                guard let capture = WindowSceneCapture.take(frames: frames, screens: screens) else { return nil }
+                Log.debug(String(format: "window-scene: captured %d windows in %.1fms", frames.count,
+                                 (CACurrentMediaTime() - started) * 1000))
+                return WindowResizeScene(capture: capture, frames: frames)
+            }
+            DispatchQueue.global(qos: .userInitiated).async {
+                Log.debug("window-scene: prewarm \(WindowSceneCapture.prepare())")
+            }
+        }
         Hotkeys.shared.onSubmapChange = { [weak manager] name in
             Log.debug("mode: \(name.isEmpty ? "reset" : name)")
             ModeFX.shared.setActive(!name.isEmpty)

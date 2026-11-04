@@ -60,7 +60,7 @@ extension Animator {
         func log(_ writers: [(pid_t, AXWriter.Stats)]) {
             let apps = writers.filter { $0.1.size.count + $0.1.position.count + $0.1.land.count > 0 }
             guard Log.verbose, !ticks.isEmpty else { return }
-            Log.debug(String(format: "animate: %d ticks in %.0fms (timer 8.33ms) | tick %@ | gap %@",
+            Log.debug(String(format: "animate: %d ticks in %.0fms (display link) | tick %@ | gap %@",
                              ticks.count, (CACurrentMediaTime() - (firstTick ?? 0)) * 1000, ticks.text, gaps.text))
             let sorted = apps.sorted {
                 $0.1.size.total + $0.1.position.total > $1.1.size.total + $1.1.position.total
