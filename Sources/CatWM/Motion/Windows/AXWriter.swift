@@ -3,7 +3,7 @@ import QuartzCore
 
 final class AXWriter {
     private enum Operation {
-        case step((CFTimeInterval) -> CGRect)
+        case step(notBefore: CFTimeInterval, frame: (CFTimeInterval) -> CGRect)
         case land(CGRect, done: (Bool) -> Void), position(CGPoint, done: (Bool) -> Void)
         case follow(CGRect, done: (CGSize?) -> Void)
     }
@@ -30,7 +30,9 @@ final class AXWriter {
         queue = DispatchQueue(label: "catwm.ax.\(pid)", qos: .userInteractive)
     }
 
-    func step(_ window: Window, to frame: @escaping (CFTimeInterval) -> CGRect) { submit(window, .step(frame)) }
+    func step(_ window: Window, notBefore: CFTimeInterval = 0, to frame: @escaping (CFTimeInterval) -> CGRect) {
+        submit(window, .step(notBefore: notBefore, frame: frame))
+    }
     func land(_ window: Window, at frame: CGRect, done: @escaping (Bool) -> Void) {
         submit(window, .land(frame, done: done))
     }
@@ -118,8 +120,8 @@ final class AXWriter {
     private func apply(_ item: Pending) {
         let window = item.window
         let stepFrame: CGRect
-        if case let .step(frameAt) = item.operation {
-            stepFrame = frameAt(CACurrentMediaTime() + (stepCosts[window.id]?.lead ?? 0))
+        if case let .step(presentation, frameAt) = item.operation {
+            stepFrame = frameAt(max(presentation, CACurrentMediaTime() + (stepCosts[window.id]?.lead ?? 0)))
             guard window.cachedFrame != stepFrame else { return }
         } else {
             stepFrame = .null

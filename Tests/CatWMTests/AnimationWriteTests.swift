@@ -1,5 +1,6 @@
 import AppKit
 @testable import CatWM
+import QuartzCore
 import Testing
 
 struct AnimationWriteTests {
@@ -44,6 +45,45 @@ struct AnimationWriteTests {
         }
         #expect(backend.frame(of: id) == target)
         #expect(backend.writes.last == .position(id, target.origin))
+    }
+
+    @Test func aStepSamplesTheUpcomingDisplayFrame() async throws {
+        let backend = FakeBackend()
+        let start = CGRect(x: 100, y: 100, width: 800, height: 600)
+        let id = backend.addWindow(frame: start)
+        let window = Window(id: id, element: try #require(backend.element(id)), pid: -100,
+                            bundleID: nil, backend: backend)
+        window.remember(start)
+        let writer = AXWriter(pid: window.pid, backend: backend)
+        let now = CACurrentMediaTime()
+        let presentation = now + 60
+        let target = start.offsetBy(dx: 600, dy: 0)
+        let item = Animator.Item(move: .init(window: window, to: target, bounds: target), from: start,
+                                 start: now, spec: .init(duration: 120, curve: .linear, bounce: 0))
+        writer.step(window, notBefore: presentation) { item.frame(at: $0) }
+        await drain(writer)
+        #expect(backend.frame(of: id) == item.frame(at: presentation))
+        writer.cancel(id)
+        await drain(writer)
+    }
+
+    @Test func aMissedDisplayDeadlineDoesNotReplayAnOldFrame() async throws {
+        let backend = FakeBackend()
+        let start = CGRect(x: 100, y: 100, width: 800, height: 600)
+        let id = backend.addWindow(frame: start)
+        let window = Window(id: id, element: try #require(backend.element(id)), pid: -100,
+                            bundleID: nil, backend: backend)
+        window.remember(start)
+        let writer = AXWriter(pid: window.pid, backend: backend)
+        let now = CACurrentMediaTime()
+        let target = start.offsetBy(dx: 600, dy: 0)
+        let item = Animator.Item(move: .init(window: window, to: target, bounds: target), from: start,
+                                 start: now - 120, spec: .init(duration: 120, curve: .linear, bounce: 0))
+        writer.step(window, notBefore: now - 60) { item.frame(at: $0) }
+        await drain(writer)
+        #expect(backend.frame(of: id) == target)
+        writer.cancel(id)
+        await drain(writer)
     }
 
     @Test func changedFramesStillCheckForMinimizedWindows() async throws {

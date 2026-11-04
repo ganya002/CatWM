@@ -30,10 +30,11 @@ extension Animator {
 }
 
 extension Animator.Item {
-    func frame(at now: CFTimeInterval) -> CGRect {
+    func frame(at now: CFTimeInterval, aligned: Bool = true) -> CGRect {
         let elapsed = now - start
         let values = tracks.map { $0.value(at: elapsed) }
-        return CGRect(x: values[0], y: values[1], width: max(1, values[2]), height: max(1, values[3])).pixelAligned
+        let frame = CGRect(x: values[0], y: values[1], width: max(1, values[2]), height: max(1, values[3]))
+        return aligned ? frame.pixelAligned : frame
     }
 
     func velocity(at now: CFTimeInterval) -> [Double] {
