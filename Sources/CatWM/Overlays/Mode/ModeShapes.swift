@@ -38,6 +38,16 @@ struct NotchCutout: Shape {
     let height: CGFloat
     func path(in rect: CGRect) -> Path {
         var path = Path(rect)
+        path.addPath(NotchFill(halfWidth: halfWidth, height: height).path(in: rect))
+        return path
+    }
+}
+
+struct NotchFill: Shape {
+    let halfWidth: CGFloat
+    let height: CGFloat
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
         guard halfWidth > 0 else { return path }
         let left = rect.midX - halfWidth, right = rect.midX + halfWidth, top = rect.minY
         let bottom = Notch.bottomRadius, flare = Notch.flareRadius, kappa: CGFloat = 0.5523

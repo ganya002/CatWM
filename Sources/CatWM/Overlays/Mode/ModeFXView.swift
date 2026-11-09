@@ -30,6 +30,9 @@ struct ModeFXView: View {
     private var notchCutout: some View {
         NotchCutout(halfWidth: notchHalfWidth, height: notchHeight).fill(style: FillStyle(eoFill: true))
     }
+    private var notchFill: some View {
+        NotchFill(halfWidth: notchHalfWidth, height: notchHeight).fill(.black)
+    }
     private var color: Color { model.color }
     private var isOn: Bool { model.active }
 
@@ -41,7 +44,9 @@ struct ModeFXView: View {
                     .stroke(color, style: StrokeStyle(lineWidth: width + tuck, lineCap: .butt, lineJoin: .miter))
                     .scaleEffect(x: mirrored ? -1 : 1, y: 1)
             }
+            notchFill
         }
+        .compositingGroup()
     }
 
     @ViewBuilder private func effect(size: CGSize) -> some View {
@@ -134,7 +139,9 @@ struct ModeFXView: View {
                     }
                     .scaleEffect(x: mirrored ? -1 : 1, y: 1)
                 }
+                notchFill
             }
+            .compositingGroup()
         } keyframes: { _ in
             KeyframeTrack {
                 CubicKeyframe(0, duration: 0.001)

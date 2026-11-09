@@ -20,6 +20,7 @@ final class ModeFX {
     var style: Style = .draw
     private let model = ModeFXModel()
     private var panels: [CGDirectDisplayID: (panel: NSPanel, screen: ModeFXScreen)] = [:]
+    private var isOn = false
     private var hideWork: DispatchWorkItem?
     private var demo: [DispatchWorkItem] = []
     private var observers: [NSObjectProtocol] = []
@@ -52,16 +53,19 @@ final class ModeFX {
     }
 
     private func setActive(_ active: Bool, style: Style) {
-        guard active != model.active else { return }
+        guard active != isOn, !active || style != .none else { return }
+        isOn = active
         hideWork?.cancel()
         if active {
-            guard style != .none else { return }
             model.style = style
             layoutPanels()
             model.cursor = NSEvent.mouseLocation
-            model.active = true
             PerfMonitor.shared.track("ui:modefx-\(style)", for: 0.6)
-            DispatchQueue.main.async { [weak self] in self?.model.enters += 1 }
+            DispatchQueue.main.async { [weak self] in
+                guard let self, isOn else { return }
+                model.active = true
+                model.enters += 1
+            }
         } else {
             model.active = false
             let work = DispatchWorkItem { [weak self] in self?.panels.values.forEach { $0.panel.orderOut(nil) } }
