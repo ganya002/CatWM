@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 
 extension SortPlan {
     static func current(of display: SortDisplay) -> SortPlan {

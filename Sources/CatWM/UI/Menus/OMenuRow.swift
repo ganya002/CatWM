@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 import SwiftUI
 
 struct OMenuRow<Lead: View, Label: View, Trailing: View>: View {

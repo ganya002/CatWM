@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 import MacKeysCore
 import SwiftUI
 
@@ -266,11 +267,11 @@ extension OptionRows {
         return OptionRow(\Config.modeEffect, settingsUI: settingsUI) { label in
             HStack(spacing: 8) {
                 OMenuPicker(
-                    title: label, options: ModeFX.Style.allCases.map { ($0.rawValue, $0.title) },
+                    title: label, options: ModeEffect.allCases.map { ($0.rawValue, $0.title) },
                     selection: Binding(
                         get: { config.modeEffect.rawValue },
                         set: { raw in
-                            guard let style = ModeFX.Style(rawValue: raw) else { return }
+                            guard let style = ModeEffect(rawValue: raw) else { return }
                             doc.config.modeEffect = style
                             ModeFX.shared.command([style.rawValue])
                         }))

@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 
 extension Motion {
     static func impact(on root: CALayer, center: NSPoint, bounds: NSRect) {

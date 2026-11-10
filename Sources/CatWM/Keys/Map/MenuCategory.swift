@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 import SwiftUI
 
 enum MenuCategory: String, CaseIterable, Identifiable {

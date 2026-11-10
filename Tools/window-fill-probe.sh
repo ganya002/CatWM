@@ -3,19 +3,19 @@ set -eu
 cd "$(dirname "$0")/.."
 PROBE_DIR=$(mktemp -d "${TMPDIR:-/tmp}/catwm-fill-probe.XXXXXX")
 trap 'rm -rf "$PROBE_DIR"' EXIT
-swiftc -D CATWM_RESIZE_PROBE \
+swiftc -package-name CatWM -D CATWM_RESIZE_PROBE \
   Tools/WindowFillProbe.swift \
   Tools/WindowFillDemo.swift \
   Tools/WindowFillProbeChecks.swift \
   Tools/WindowFillProbeCapture.swift \
   Tools/WindowFillProbeFixture.swift \
-  Sources/CatWM/Motion/Windows/WindowFillAppearance.swift \
-  Sources/CatWM/Motion/Windows/WindowResizeFill.swift \
-  Sources/CatWM/Motion/Windows/WindowSceneCapture.swift \
-  Sources/CatWM/UI/Chrome/CatWMPanel.swift \
-  Sources/CatWM/Tiling/Access/Screen.swift \
-  Sources/CatWM/Tiling/Scan/WindowServerList.swift \
-  Sources/CatWM/Tiling/Access/PrivateSymbols.swift \
+  Sources/CatWMKit/Motion/Windows/WindowFillAppearance.swift \
+  Sources/CatWMKit/Motion/Windows/WindowResizeFill.swift \
+  Sources/CatWMKit/Motion/Windows/WindowSceneCapture.swift \
+  Sources/CatWMKit/Chrome/CatWMPanel.swift \
+  Sources/CatWMKit/Tiling/Access/Screen.swift \
+  Sources/CatWMKit/Tiling/Scan/WindowServerList.swift \
+  Sources/CatWMKit/Tiling/Access/PrivateSymbols.swift \
   -o "$PROBE_DIR/probe"
 if [ "${1:-}" = "--demo" ]; then
   "$PROBE_DIR/probe" "$@"

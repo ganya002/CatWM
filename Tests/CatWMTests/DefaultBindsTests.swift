@@ -1,5 +1,6 @@
 import AppKit
 @testable import CatWM
+@testable import CatWMKit
 import Testing
 
 private struct Bind: Hashable {
@@ -93,7 +94,7 @@ func defaultBindsLeaveCommandShortcutsToApps(text: String) {
 func everyDefaultBindRunsAKnownDispatcher(text: String) {
     for bind in binds(text) {
         let known = WindowActions.named(bind.dispatcher) != nil
-            || FocusDim.features.contains { $0.pointer.dispatcher == bind.dispatcher }
+            || FocusEffect.all.contains { $0.dispatcher == bind.dispatcher }
         #expect(known, "unknown dispatcher \(bind.dispatcher)")
     }
 }

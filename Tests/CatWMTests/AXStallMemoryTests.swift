@@ -1,5 +1,6 @@
 import ApplicationServices
 @testable import CatWM
+@testable import CatWMKit
 import Testing
 
 @Suite struct AXStallMemoryTests {

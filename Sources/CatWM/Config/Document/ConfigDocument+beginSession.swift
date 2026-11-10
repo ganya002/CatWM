@@ -1,5 +1,6 @@
 import AppKit
 import Carbon
+import CatWMKit
 import Combine
 import SwiftUI
 
@@ -60,6 +61,18 @@ extension ConfigDocument {
     }
 
     func load() {
+        let store = ConfigStore.shared
+        if store.isScript {
+            unreadable = false
+            let copy = store.settingsCopy
+            apply(text: copy.text)
+            settingsCopy = copy
+            fileErrors = store.current.errors
+            overrides = store.overriddenPaths
+            savedText = serialize()
+            saveError = nil
+            return
+        }
         let text = try? String(contentsOf: Config.url, encoding: .utf8)
         let wasUnreadable = unreadable
         unreadable = text == nil && FileManager.default.fileExists(atPath: Config.url.path)
@@ -79,6 +92,17 @@ extension ConfigDocument {
         vars = source.vars
         binds = source.binds
         extraLines = source.extraLines
+    }
+
+    func useScriptValue(_ path: String?) {
+        do {
+            try ConfigStore.shared.resetOverride(path)
+        } catch {
+            saveError = error.localizedDescription
+            return
+        }
+        WindowManager.shared.applyStoredConfig()
+        load()
     }
 
     func autosaveIfNeeded() {

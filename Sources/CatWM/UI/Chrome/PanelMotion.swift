@@ -1,24 +1,9 @@
 import AppKit
+import CatWMKit
 import SwiftUI
 
-enum PanelMotion: String, CaseIterable {
-    case rise
-    case pop
-    case focus
-    case tile
-    case draw
-
+extension PanelMotion {
     static var current: PanelMotion { PanelMotionDemo.shared.preview ?? WindowManager.shared.config.panelAnimation }
-
-    var title: String {
-        switch self {
-        case .rise: "Rise"
-        case .pop: "Pop"
-        case .focus: "Focus"
-        case .tile: "Tile"
-        case .draw: "Draw"
-        }
-    }
 
     var outDuration: Double {
         switch self {

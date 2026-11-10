@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 import QuartzCore
 import SwiftUI
 

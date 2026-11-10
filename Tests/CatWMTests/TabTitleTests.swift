@@ -1,5 +1,6 @@
 import AppKit
 @testable import CatWM
+@testable import CatWMKit
 import Testing
 
 private final class TitleSurface: TilingSurface {
@@ -15,6 +16,8 @@ private final class TitleSurface: TilingSurface {
     var keybindsActive: Bool { false }
     var keysPaused: Bool { false }
     func setKeyTap(enabled _: Bool) {}
+    func setKeyBinds(enabled _: Bool) {}
+    func stop() {}
     func tilesDidChange(instant _: Bool) {}
     func splitSwapped(on _: String) {}
     func tabsDidChange(instant _: Bool) { tabChanges += 1 }
@@ -31,6 +34,14 @@ private final class TitleSurface: TilingSurface {
     func titleChanged(_ window: Window) { titles.append(window.id) }
     func windowForgotten(_: CGWindowID) {}
     func abandonOverview() {}
+    func toggleOverview() {}
+    func undoOverview() {}
+    func refreshed(_: [Screen]) {}
+    func openSwitcher(backward _: Bool) {}
+    func focusChanged() {}
+    func toggleFocusEffect(_: FocusEffect) {}
+    var loginItem: (enabled: Bool, needsApproval: Bool) { (false, false) }
+    func preview(_: String, _: String) -> Bool { false }
 }
 
 @Suite(.timeLimit(.minutes(1))) @MainActor struct TabTitleTests {

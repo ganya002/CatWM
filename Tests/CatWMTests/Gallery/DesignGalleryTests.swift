@@ -1,6 +1,7 @@
 #if DEBUG
 import AppKit
 @testable import CatWM
+@testable import CatWMKit
 import SwiftUI
 import Testing
 

@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 import SwiftUI
 
 extension MenuModel {
@@ -15,6 +16,12 @@ extension MenuModel {
             out.append(MenuItem(id: "attention", kind: .attention, label: "CatWM needs Accessibility",
                                 keywords: "permission grant",
                                 action: { Permission.accessibility.request() }))
+        }
+        if let failure = ConfigStore.shared.failures.first {
+            let file = URL(fileURLWithPath: failure.file ?? ConfigStore.shared.scriptURL.path)
+            out.append(MenuItem(id: "config-error", kind: .attention, label: "Config error: \(failure.text)",
+                                keywords: "config typescript error broken",
+                                action: { NSWorkspace.shared.open(file) }))
         }
 
         out.append(MenuItem(id: "tiling", kind: .check, label: "Tiling", symbol: "rectangle.split.3x1",

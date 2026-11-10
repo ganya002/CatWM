@@ -1,3 +1,4 @@
+import CatWMKit
 import Foundation
 import Sparkle
 

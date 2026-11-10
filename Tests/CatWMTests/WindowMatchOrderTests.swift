@@ -1,4 +1,5 @@
 @testable import CatWM
+@testable import CatWMKit
 import CoreGraphics
 import Foundation
 import Testing

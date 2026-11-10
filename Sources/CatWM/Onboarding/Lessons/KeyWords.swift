@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 
 enum KeyWords {
     enum RatioChange { case grow, shrink }

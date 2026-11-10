@@ -1,4 +1,5 @@
 @testable import CatWM
+@testable import CatWMKit
 import Testing
 
 private let safari = SwitcherItem(id: 1, pid: 10, app: "Safari", title: "Apple Developer", workspace: "1")

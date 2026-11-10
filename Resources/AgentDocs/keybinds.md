@@ -1,51 +1,64 @@
 # Keybinds
 
-```
-bind = MODS, key, dispatcher, args
-```
+A bind is a typed object in `binds` (every app) or in a mode of `submaps`:
 
-- `MODS`: space-separated, any of `SUPER` (= `CMD`, `COMMAND`, `WIN`, `META`, `MOD4`), `ALT` (= `OPT`, `OPTION`, `MOD1`), `CTRL` (= `CONTROL`), `SHIFT`. May be empty (`bind = , h, …`), as in window mode. `$mod` and other `$vars` expand.
-- `key`: a letter, digit, `f1`–`f20`, `space`, `return`, `escape`/`esc`, `backspace`, arrows (`left right up down`), `capslock`/`caps`, and so on, plus the scroll and swipe keys below.
-- The macOS app-shortcut caveat: binding `SUPER` combos like Q or C replaces the standard app shortcut. Settings → Shortcuts flags those in orange.
-
-## Ranges and lists
-
-One line binds many keys; values pair with keys in order.
-
-```
-bind = $mod, 1..0, workspace, 1..10                 # ⌥1…⌥9 → 1–9, ⌥0 → 10
-bind = $mod, f1..f4, layout, tall|wide|bsp|column   # a | list works too
-bind = $mod CTRL, h|j|k|l, movefocus, l|d|u|r
-bind = $mod, a..d, layout, bsp                      # one value is used for every key
+```ts
+{ mods: ["alt", "shift"], key: "tab", run: ["switcher", "prev"] }
+{ key: "h", run: ["movefocus", "l"], repeat: true }   // no mods: only in a mode
+{ mods: ["alt"], key: "o", run: "sort" }               // an action with no arguments
 ```
 
-`exec` arguments and any argument containing spaces are never expanded.
+- `mods`: any of `"cmd"`, `"alt"`, `"ctrl"`, `"shift"`. Leave it out in a mode. A constant such as `const mod = "alt"` works: `mods: [mod, "shift"]`.
+- `key`: a letter, digit, `f1`–`f12`, `space`, `return`, `escape`, `backspace`, arrows (`left right up down`), `capslock`, and so on, plus the scroll and swipe keys below. `catwm.d.ts` lists them all.
+- `run`: an action name, or the name and its arguments. The arguments are the ones the `.conf` file used after the dispatcher. [dispatchers.md](dispatchers.md) lists every action.
+- `repeat: true` runs the action again while the key is held.
+- The macOS app-shortcut caveat: binding `cmd` combos like Q or C replaces the standard app shortcut. Settings → Shortcuts flags those in orange.
+
+## Many keys at once
+
+There's no range syntax. Write ordinary TypeScript:
+
+```ts
+import type { Bind } from "./catwm"
+const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"] as const
+const workspaces = keys.map((key, index): Bind => ({ mods: ["alt"], key, run: ["workspace", String(index + 1)] }))
+const focus = (["h", "j", "k", "l"] as const).map((key, index): Bind =>
+  ({ mods: ["alt", "ctrl"], key, run: ["movefocus", "ldur"[index]] }))
+export default { binds: [...workspaces, ...focus] }
+```
+
+## The old `.conf` syntax
+
+`catwm.conf` used `bind = MODS, key, dispatcher, args` lines with `$vars`, ranges (`1..0`) and lists (`h|j|k|l`). The first launch converts it: variables become constants and each range becomes one bind for each key.
 
 ## Window mode (submaps)
 
-```
-bind = SUPER, capslock, submap, window   # enter the mode (Caps Lock itself is left alone)
-submap = window
-bind = , h|j|k|l, movefocus, l|d|u|r
-bind = SHIFT, h|j|k|l, movewindow, l|d|u|r
-bind = , 1..0, workspace, 1..10
-bind = , escape|i|return, submap, reset
-submap = reset
+```ts
+binds: [
+  { mods: ["cmd"], key: "capslock", run: ["submap", "window"] },   // enter the mode (Caps Lock itself is left alone)
+],
+submaps: {
+  window: [
+    { key: "h", run: ["movefocus", "l"] },
+    { mods: ["shift"], key: "h", run: ["movewindow", "l"] },
+    { key: "escape", run: ["submap", "reset"] },
+  ],
+},
 ```
 
 - While on, "-- WINDOW --" appears at the screen bottom and the menu bar shows WINDOW.
 - Keys with no bind in the mode are swallowed. ⌘ and ⌃ shortcuts still reach apps.
 - Clicking anywhere leaves the mode, except a right click on a window: it opens that window's context menu and the mode stays on.
-- Always give the mode an exit (`submap, reset`) or the user gets stuck.
+- Always give the mode an exit (`["submap", "reset"]`) or the user gets stuck.
 - Mode names are free-form; `window` is what the UI's "Window mode" tab edits.
 
 ## Scroll and swipes
 
 Keys: `mouse_up`, `mouse_down`, `mouse_left`, `mouse_right`; `swipe_left`, `swipe_right`, `swipe_up`, `swipe_down`.
 
-```
-bind = $mod, mouse_down, workspace, e+1
-bind = $mod CTRL, swipe_left, workspace, +1
+```ts
+{ mods: ["alt"], key: "mouse_down", run: ["workspace", "e+1"] }
+{ mods: ["alt", "ctrl"], key: "swipe_left", run: ["workspace", "+1"] }
 ```
 
 - Matched scrolls are consumed; unmatched ones reach the app. Direction follows natural-scrolling.
@@ -54,7 +67,7 @@ bind = $mod CTRL, swipe_left, workspace, +1
 
 ## Defaults
 
-The stock config (`$mod` = Option) has these binds. Read the user's actual file before you think a bind exists. **Restore Defaults** (Settings → Shortcuts) resets the binds.
+The stock config (`mod` = Option) has these binds. Read the user's `catwm.config.ts` and `catwm.overrides.json` before you think a bind exists. **Restore Defaults** (Settings → Shortcuts) resets the binds.
 
 Global binds:
 

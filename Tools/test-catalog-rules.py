@@ -70,19 +70,20 @@ class CatalogRules(unittest.TestCase):
             ("Settings/Panes/WindowsPane.swift", "PointerActions.all.filter { $0.available(context) }"),
             ("UI/Components/Controls/OButton.swift", "static let buttons = GalleryExample(order: 3) {}"),
             ("Keys/Help/KeyHelp.swift", "binds.map { KeyHint($0) }"),
-            ("Templates/Model/TemplateLibrary.swift", 'QuickAction(id: "template.save", title: "Save") {}'),
-            ("Tiling/Focus/FocusDim.swift", 'QuickAction(id: "focus.dim", title: "Dim") {}'),
+            ("Overlays/Cursor/TemplateLibrary+quickActions.swift", 'QuickAction(id: "template.save", title: "Save") {}'),
+            ("Overlays/Dim/FocusDim.swift", 'QuickAction(id: "focus.dim", title: "Dim") {}'),
             ("Actions/WindowActions+window.swift", 'static let minimize = WindowAction(name: "minimize")'),
             ("Actions/LayoutActions.swift", 'ActionPicker("Swap Sides", .layout, "swapsides", "arrow")'),
             ("Actions/FocusActions.swift", 'static let movefocus = WindowAction.direction("movefocus")'),
             ("UI/Components/Rows/TemplateRow.swift", 'static let templates = GalleryExample(order: 15) {}\nQuickAction(id: "x", title: "Save") {}'),
         ]
         for path, source in cases:
-            self.assertFalse(style.catalog_violations("Sources/CatWM/" + path, source))
+            root = "Sources/CatWMKit/" if path.startswith("Actions/") else "Sources/CatWM/"
+            self.assertFalse(style.catalog_violations(root + path, source))
 
 
 class TilingRules(unittest.TestCase):
-    engine = "Sources/CatWM/Tiling/Manager/WindowManager+start.swift"
+    engine = "Sources/CatWMKit/Tiling/Manager/WindowManager+start.swift"
 
     def test_rejects_ui_in_tiling(self):
         cases = [
@@ -107,7 +108,7 @@ class TilingRules(unittest.TestCase):
 
 
 class SessionRules(unittest.TestCase):
-    session = "Sources/CatWM/Session/Restore/WindowMatch.swift"
+    session = "Sources/CatWMKit/Session/Restore/WindowMatch.swift"
 
     def test_rejects_catwm_types_in_session(self):
         cases = [
@@ -126,12 +127,12 @@ class SessionRules(unittest.TestCase):
                      "var layoutName: String"):
             with self.subTest(code=code):
                 self.assertFalse(style.banned(self.session, code))
-        self.assertFalse(style.banned("Sources/CatWM/Templates/Restore/TemplateRestorer.swift",
+        self.assertFalse(style.banned("Sources/CatWMKit/Templates/Restore/TemplateRestorer.swift",
                                       "let manager = WindowManager.shared"))
 
 
 class FailureRules(unittest.TestCase):
-    source = "Sources/CatWM/Tiling/Manager/WindowManager+start.swift"
+    source = "Sources/CatWMKit/Tiling/Manager/WindowManager+start.swift"
 
     def test_rejects_discarded_run_errors(self):
         for code in ("try? process.run()", "    _ = try? child.run ()", "try? worker.run(arguments)"):
@@ -223,7 +224,7 @@ class FailureRules(unittest.TestCase):
             (self.source, "let app = axApp(pid, timeout: 0.1)", False),
             (self.source, "let flag = Instance.defaults.bool(forKey: DefaultsKey.grabHints)", True),
             (self.source, "init(_ arrangement: Arrangement = .standard) {", False),
-            ("Sources/CatWM/App/Instance.swift", "guard let suite else { return UserDefaults.standard }", True),
+            ("Sources/CatWMKit/App/Instance.swift", "guard let suite else { return UserDefaults.standard }", True),
             (self.source, "DispatchQueue.main.async { run() }", False),
             ("Sources/CatWM/Keys/Help/KeyHelp.swift", "DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)", False),
             (self.source, "static var defaultValue: [Int: CGFloat] = [:]", False),
@@ -237,10 +238,10 @@ class FailureRules(unittest.TestCase):
             (self.source, "if (try? backup.write(to: url, atomically: true, encoding: .utf8)) != nil {}", False),
             (self.source, "let saved = defaults.dictionary(forKey: DefaultsKey.grabHints)", True),
             (self.source, 'layer.add(animation, forKey: "glow")', False),
-            ("Sources/CatWM/Session/AX/AXRead.swift", "let app = AXUIElementCreateApplication(pid)", False),
+            ("Sources/CatWMKit/Session/AX/AXRead.swift", "let app = AXUIElementCreateApplication(pid)", False),
             ("Sources/CatWM/main.swift", "print(dir.path)", False),
-            ("Sources/CatWM/App/Log.swift", "try? handle.write(contentsOf: line)", False),
-            ("Sources/CatWM/App/DefaultsKey.swift", 'static let grabHints = "grabHints"', True),
+            ("Sources/CatWMKit/App/Log.swift", "try? handle.write(contentsOf: line)", False),
+            ("Sources/CatWMKit/App/DefaultsKey.swift", 'static let grabHints = "grabHints"', True),
         ]
         for path, code, uses_defaults in cases:
             with self.subTest(code=code):

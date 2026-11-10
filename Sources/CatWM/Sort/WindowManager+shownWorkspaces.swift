@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 
 extension WindowManager {
     func shownWorkspaces() -> [ShownWorkspace] {

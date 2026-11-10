@@ -1,5 +1,6 @@
 import AppKit
 import Carbon
+import CatWMKit
 import Combine
 import SwiftUI
 import UniformTypeIdentifiers
@@ -10,6 +11,7 @@ final class ConfigDocument: ObservableObject {
     @Published var binds: [BindRow] = []
     @Published var fileErrors: [String] = []
     @Published var saveError: String?
+    @Published var overrides: [String] = []
     var source = ConfigText("")
     var savedText = ""
     var openedText = ""
@@ -17,6 +19,8 @@ final class ConfigDocument: ObservableObject {
     var unreadable = false
     var autosave: AnyCancellable?
     var comboCache: ComboCache?
+    var settingsCopy: ConfigStore.SettingsCopy?
+    var storeObserver: NSObjectProtocol?
 
     static let modifierChoices: [(value: String, label: String)] = [
         ("ALT", "⌥ Option"), ("SUPER", "⌘ Command"), ("CTRL", "⌃ Control"),
@@ -102,6 +106,12 @@ final class ConfigDocument: ObservableObject {
         autosave = objectWillChange
             .debounce(for: .milliseconds(50), scheduler: RunLoop.main)
             .sink { [weak self] in self?.autosaveIfNeeded() }
+        storeObserver = NotificationCenter.default.addObserver(
+            forName: .configStoreChanged, object: nil, queue: .main
+        ) { [weak self] _ in
+            guard let self, !isDirty else { return }
+            load()
+        }
     }
 }
 

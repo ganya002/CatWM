@@ -1,5 +1,6 @@
 import AppKit
 import Carbon
+import CatWMKit
 import IOKit
 import IOKit.ps
 import MacKeysCore

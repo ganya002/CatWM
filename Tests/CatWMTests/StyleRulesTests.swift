@@ -67,7 +67,7 @@ func styleRejectsAppKitAnimation(line: String) throws {
     #expect(try styleFailures(path: uiPath, source: line).contains { $0.contains("display link") })
     let failures = try styleFailures(path: uiPath, source: "var link: CADisplayLink?")
     #expect(failures.contains { $0.contains("display link") })
-    #expect(try styleFailures(path: "Sources/CatWM/Motion/Desktop/Example.swift", source: line).isEmpty)
+    #expect(try styleFailures(path: "Sources/CatWMKit/Motion/Desktop/Example.swift", source: line).isEmpty)
     #expect(try styleFailures(path: "Sources/CatWM/App/Perf/FrameRun.swift", source: line).isEmpty)
 }
 
@@ -158,11 +158,11 @@ func styleRejectsRawSwiftUIAnimation(line: String) throws {
     let wait = "DispatchQueue.main.async" + "After(deadline: .now() + 1) { }"
     let hud = "HUD.shared.show()"
     for folder in ["Engine", "Windows", "Desktop"] {
-        let path = "Sources/CatWM/Motion/\(folder)/Example.swift"
+        let path = "Sources/CatWMKit/Motion/\(folder)/Example.swift"
         #expect(try styleFailures(path: path, source: wait).contains { $0.contains("timer wait") }, "\(folder)")
         #expect(try styleFailures(path: path, source: hud).contains { $0.contains("UI in Tiling") }, "\(folder)")
     }
     #expect(try styleFailures(path: "Sources/CatWM/Motion/Kit/Example.swift", source: wait).isEmpty)
     let excused = wait + " // style-ok: no event exists for this"
-    #expect(try styleFailures(path: "Sources/CatWM/Motion/Windows/Example.swift", source: excused).isEmpty)
+    #expect(try styleFailures(path: "Sources/CatWMKit/Motion/Windows/Example.swift", source: excused).isEmpty)
 }

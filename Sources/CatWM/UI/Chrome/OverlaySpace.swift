@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 
 enum OverlaySpace {
     private typealias ConnFn = @convention(c) () -> Int32

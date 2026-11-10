@@ -156,8 +156,12 @@ public struct WindowNotificationsData: Codable, Equatable, Sendable {
     public let source: String?
 }
 
+public struct PermissionsChangedData: Codable, Equatable, Sendable {
+    public let granted: [String]
+}
+
 public struct ConfigReloadedData: Codable, Equatable, Sendable {
-    public let errors: [String]
+    public let errors: [[String: JSONValue]]
 }
 
 public enum Event: Sendable {
@@ -169,6 +173,7 @@ public enum Event: Sendable {
     case tilingChanged(TilingChangedData)
     case modeChanged(ModeChangedData)
     case windowNotifications(WindowNotificationsData)
+    case permissionsChanged(PermissionsChangedData)
     case configReloaded(ConfigReloadedData)
     case unknown(name: String, data: JSONValue)
 
@@ -182,6 +187,7 @@ public enum Event: Sendable {
         case "tiling.changed": return .tilingChanged(try JSONDecoder().decode(TilingChangedData.self, from: data))
         case "mode.changed": return .modeChanged(try JSONDecoder().decode(ModeChangedData.self, from: data))
         case "window.notifications": return .windowNotifications(try JSONDecoder().decode(WindowNotificationsData.self, from: data))
+        case "permissions.changed": return .permissionsChanged(try JSONDecoder().decode(PermissionsChangedData.self, from: data))
         case "config.reloaded": return .configReloaded(try JSONDecoder().decode(ConfigReloadedData.self, from: data))
         default: return .unknown(name: name, data: try JSONDecoder().decode(JSONValue.self, from: data))
         }
@@ -634,7 +640,7 @@ public final class CatWM: @unchecked Sendable {
         return try decode(String.self, try call("config.get", args))
     }
 
-    /// Change a config option and reload the config
+    /// Change a config option. With a TypeScript config it writes an override
     public func configSet(key: String, value: String) throws {
         var args: [String: Any] = [:]
         args["key"] = key

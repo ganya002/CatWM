@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 
 extension WindowManager {
     func dropSortSnapshot() { closeAndSort.sortSnapshot = nil }
@@ -207,21 +208,4 @@ extension WindowManager {
         if !closing.isEmpty { closeMarked(closing, attempt: 0) }
         commitNativeRemovals()
     }
-}
-
-extension WindowManager {
-    struct SortSnapshot {
-        var model: WorkspaceModel
-        var labels: [String: String]
-        var focused: CGWindowID?
-    }
-}
-
-struct CloseAndSortState {
-    var sortSnapshot: WindowManager.SortSnapshot?
-    var sortSession = false
-    var quietWorkspaceHUD = false
-    var closingNow: Set<CGWindowID> = []
-    var closingApps: Set<pid_t> = []
-    var lastClose = Date.distantPast
 }

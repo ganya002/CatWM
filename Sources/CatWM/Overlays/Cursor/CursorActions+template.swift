@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 import os
 
 enum TemplatePreviewState: Equatable, Sendable {

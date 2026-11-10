@@ -130,8 +130,12 @@ export interface WindowNotificationsData {
   source: string | null;
 }
 
+export interface PermissionsChangedData {
+  granted: string[];
+}
+
 export interface ConfigReloadedData {
-  errors: string[];
+  errors: Record<string, unknown>[];
 }
 
 export type CatWMEvent =
@@ -143,8 +147,9 @@ export type CatWMEvent =
   | { event: "tiling.changed"; data: TilingChangedData }
   | { event: "mode.changed"; data: ModeChangedData }
   | { event: "window.notifications"; data: WindowNotificationsData }
+  | { event: "permissions.changed"; data: PermissionsChangedData }
   | { event: "config.reloaded"; data: ConfigReloadedData };
-export const EVENTS = ["focus.changed", "window.added", "window.removed", "workspace.changed", "layout.changed", "tiling.changed", "mode.changed", "window.notifications", "config.reloaded"] as const;
+export const EVENTS = ["focus.changed", "window.added", "window.removed", "workspace.changed", "layout.changed", "tiling.changed", "mode.changed", "window.notifications", "permissions.changed", "config.reloaded"] as const;
 
 export class CatWMError extends Error {
   constructor(readonly code: string, message: string) {
@@ -493,7 +498,7 @@ export class CatWM {
     return (await this.call("config.get", { "key": key })) as string;
   }
 
-  /** Change a config option and reload the config */
+  /** Change a config option. With a TypeScript config it writes an override */
   async configSet(key: string, value: string): Promise<void> {
     await this.call("config.set", { "key": key, "value": value });
   }

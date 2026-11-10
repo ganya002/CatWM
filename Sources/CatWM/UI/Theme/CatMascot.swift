@@ -1,3 +1,4 @@
+import CatWMKit
 import SwiftUI
 
 enum CatMove: CaseIterable {

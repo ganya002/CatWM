@@ -1,4 +1,5 @@
 @testable import CatWM
+@testable import CatWMKit
 import Foundation
 import Testing
 
@@ -72,8 +73,8 @@ import Testing
     }
 
     @Test func recognisesLegacyBundles() {
-        #expect(Migrations.isLegacyBundle("local.ouch"))
-        #expect(Migrations.isLegacyBundle("local.hyprthyst"))
-        #expect(!Migrations.isLegacyBundle("com.apple.finder"))
+        #expect(Legacy.isBundle("local.ouch"))
+        #expect(Legacy.isBundle("local.hyprthyst"))
+        #expect(!Legacy.isBundle("com.apple.finder"))
     }
 }

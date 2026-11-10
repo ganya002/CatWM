@@ -2,7 +2,11 @@ import AppKit
 import QuartzCore
 
 #if CATWM_RESIZE_PROBE
-enum Instance { static let scope: ProbeScope? = nil }
+enum Instance {
+    static let scope: ProbeScope? = nil
+    static let embedding = ProbeEmbedding()
+}
+struct ProbeEmbedding { let scope: ProbeScope? = nil }
 struct ProbeScope { func filter(_ screens: [Screen]) -> [Screen] { screens } }
 extension NSScreen {
     var displayID: CGDirectDisplayID? { deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? UInt32 }

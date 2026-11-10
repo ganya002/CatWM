@@ -1,15 +1,10 @@
 import AppKit
+import CatWMKit
 import CryptoKit
 import QuartzCore
 
 final class PerfMonitor {
     static let shared = PerfMonitor()
-
-    struct SlowApp {
-        let bundle: String
-        let stepMs: Double
-        let skipped: Double
-    }
 
     private struct Event {
         var kind: String

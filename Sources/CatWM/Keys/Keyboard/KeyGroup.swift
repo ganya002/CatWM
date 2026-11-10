@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 import MacKeysCore
 import MacKeysUI
 import SwiftUI

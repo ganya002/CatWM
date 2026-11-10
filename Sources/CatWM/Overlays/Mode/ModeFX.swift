@@ -1,23 +1,11 @@
 import AppKit
+import CatWMKit
 import SwiftUI
 
 final class ModeFX {
     static let shared = ModeFX()
 
-    enum Style: String, CaseIterable {
-        case draw, ripple, corners, none
-
-        var title: String {
-            switch self {
-            case .draw: "Draw"
-            case .ripple: "Ripple"
-            case .corners: "Corners"
-            case .none: "None"
-            }
-        }
-    }
-
-    var style: Style = .draw
+    var style: ModeEffect = .draw
     private let model = ModeFXModel()
     private var panels: [CGDirectDisplayID: (panel: NSPanel, screen: ModeFXScreen)] = [:]
     private var isOn = false
@@ -52,7 +40,7 @@ final class ModeFX {
         setActive(active, style: style)
     }
 
-    private func setActive(_ active: Bool, style: Style) {
+    private func setActive(_ active: Bool, style: ModeEffect) {
         guard active != isOn, !active || style != .none else { return }
         isOn = active
         hideWork?.cancel()
@@ -79,11 +67,11 @@ final class ModeFX {
         demo = []
         switch args.first?.lowercased() {
         case "all":
-            for (i, choice) in Style.allCases.filter({ $0 != .none }).enumerated() {
+            for (i, choice) in ModeEffect.allCases.filter({ $0 != .none }).enumerated() {
                 schedule(Double(i) * 2.6) { [weak self] in self?.preview(choice) }
             }
         case let name?:
-            if let choice = Style(rawValue: name) {
+            if let choice = ModeEffect(rawValue: name) {
                 preview(choice)
             } else {
                 logStyles()
@@ -94,10 +82,10 @@ final class ModeFX {
     }
 
     private func logStyles() {
-        Log.info("modefx: styles are \(Style.allCases.map(\.rawValue).joined(separator: ", ")), or all")
+        Log.info("modefx: styles are \(ModeEffect.allCases.map(\.rawValue).joined(separator: ", ")), or all")
     }
 
-    private func preview(_ choice: Style) {
+    private func preview(_ choice: ModeEffect) {
         setActive(false)
         hideWork?.cancel()
         HUD.shared.show(choice.rawValue.capitalized, on: NSScreen.main)
@@ -144,7 +132,7 @@ final class ModeFX {
 final class ModeFXModel: ObservableObject {
     @Published var active = false
     @Published var enters = 0
-    @Published var style: ModeFX.Style = .draw
+    @Published var style: ModeEffect = .draw
     @Published var color = Theme.accent
     var cursor: CGPoint = .zero
 }

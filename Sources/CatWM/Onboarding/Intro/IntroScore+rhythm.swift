@@ -1,5 +1,6 @@
 import AudioToolbox
 import AVFoundation
+import CatWMKit
 
 extension IntroScore {
     static func rhythm(_ rhythm: Rhythm, _ add: AddNote) {

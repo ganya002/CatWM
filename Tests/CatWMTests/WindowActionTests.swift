@@ -1,4 +1,5 @@
 @testable import CatWM
+@testable import CatWMKit
 import Foundation
 import Testing
 
@@ -17,7 +18,7 @@ import Testing
     @Test func everyPickerRowIsUniqueAndRunsAnAction() {
         let ids = Actions.all.map(\.id)
         #expect(Set(ids).count == ids.count)
-        let effects = Set(FocusDim.features.map(\.pointer.dispatcher))
+        let effects = Set(FocusEffect.all.map(\.dispatcher))
         for row in Actions.all where !effects.contains(row.dispatcher) {
             #expect(WindowActions.named(row.dispatcher) != nil, "\(row.title)")
         }

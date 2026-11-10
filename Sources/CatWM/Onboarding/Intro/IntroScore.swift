@@ -1,5 +1,6 @@
 import AudioToolbox
 import AVFoundation
+import CatWMKit
 
 final class IntroScore {
     typealias AddNote = (Double, Voice, [UInt8], UInt8, Double) -> Void

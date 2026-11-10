@@ -1,6 +1,7 @@
 #if DEBUG
 
 import AppKit
+import CatWMKit
 import SwiftUI
 
 final class GalleryModel: ObservableObject {

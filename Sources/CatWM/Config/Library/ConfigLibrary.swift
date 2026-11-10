@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 import Combine
 import SwiftUI
 import UniformTypeIdentifiers

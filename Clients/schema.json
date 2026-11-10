@@ -922,7 +922,7 @@
       "result" : {
         "kind" : "none"
       },
-      "summary" : "Change a config option and reload the config"
+      "summary" : "Change a config option. With a TypeScript config it writes an override"
     },
     {
       "args" : [
@@ -1110,13 +1110,24 @@
     {
       "data" : [
         {
-          "name" : "errors",
-          "summary" : "Problems in the config file",
+          "name" : "granted",
+          "summary" : "The permissions that are granted now",
           "type" : "string[]"
         }
       ],
+      "name" : "permissions.changed",
+      "summary" : "A permission was granted or revoked"
+    },
+    {
+      "data" : [
+        {
+          "name" : "errors",
+          "summary" : "Problems in the config: file, line, phase and message. A failed save keeps the last good config",
+          "type" : "object[]"
+        }
+      ],
       "name" : "config.reloaded",
-      "summary" : "CatWM read the config file again"
+      "summary" : "CatWM applied the config again"
     }
   ],
   "protocol" : 1

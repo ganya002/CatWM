@@ -1,3 +1,4 @@
+import CatWMKit
 import CoreGraphics
 
 extension SortPlan {

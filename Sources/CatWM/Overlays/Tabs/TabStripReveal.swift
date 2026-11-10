@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 
 final class TabStripReveal {
     struct Target {

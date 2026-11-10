@@ -1,102 +1,104 @@
-# Config: `~/.config/catwm/catwm.conf`
+# Config: `~/.config/catwm/catwm.config.ts`
 
-Hyprland syntax: `key = value`, `$var = value`, `# comments`, `bind = …` lines, and `name { … }` blocks. Option names are case-insensitive and `-` equals `_` (`window-margin-size` = `window_margin_size`). A `prefix:` is stripped (`general:gaps_in`), so Hyprland configs mostly parse. Unknown options and bad values are logged as `config: …` and skipped; the rest still loads.
+The config is plain TypeScript: one default-exported object. CatWM writes `catwm.d.ts` and `tsconfig.json` next to it, so an editor completes and checks every option, key and action.
 
-Apply changes with `catwm reload`, the menu bar's reload button, or by saving through Settings.
+```ts
+import type { Bind, Config } from "./catwm"
 
-Booleans accept `true yes on 1` and `false no off 0`. Any other value is an error: CatWM logs it and the option becomes false. A bad number or name is also an error, and the option keeps its earlier value (the default, if no earlier line sets it). Numbers outside the range in the table are clamped to that range.
+const mod = "alt"
+
+export default {
+  mod,
+  layouts: ["tall", "bsp", "fullscreen"],
+  gaps: { size: 10 },
+  padding: 10,
+  animation: { curve: "spring", bounce: 0.6 },
+  floating: { apps: ["com.apple.systempreferences", "com.apple.calculator"] },
+  binds: [
+    ...(["1", "2", "3"] as const).map((key): Bind => ({ mods: [mod], key, run: ["workspace", key] })),
+    { mods: [mod], key: "return", run: ["exec", "open -na Terminal"] },
+  ],
+} satisfies Config
+```
+
+- **Save to apply.** CatWM watches the config folder and the folders of imported files. A save re-runs only the changed module and the modules that import it, then applies only the fields that changed. `catwm reload` runs every module again.
+- **A broken save keeps the last good config.** The error goes to the log (`config: kept the last good config, …`), to the menu bar menu and to the `errors` of the `config.reloaded` event: `{ file, line, phase, message }`. The next good save clears it.
+- **Data only.** Functions, loops and imports can compute the config, but the exported value must be plain data. A function in it is an error. There are no timers, events or native APIs. Use only erasable TypeScript syntax (no `enum` or `namespace`); the shipped `tsconfig.json` sets `erasableSyntaxOnly`.
+- **Imports:** relative paths only, such as `import { binds } from "./binds"`. A type import from `"./catwm"` is free.
+- **Settings and `catwm config.set`** never edit the TypeScript file. They write `catwm.overrides.json` beside it. The order is defaults, then `catwm.config.ts`, then the overrides. Settings → General lists each override and can drop it, so the file value applies again.
+- **Features:** `features: { windows, input, services, presentation }` turns parts of CatWM on or off, such as `features: { presentation: { hud: true } }`. Embedded mode will read these switches. Standalone CatWM checks them but keeps every feature on for now.
+- **From `catwm.conf`:** the first launch converts an existing `catwm.conf` to `catwm.config.ts` once, checks that the result gives the same config, and keeps `catwm.conf` as an unread backup. If the conversion fails, CatWM keeps using `catwm.conf` and says why in the log and the menu bar menu.
 
 ## Options
 
-The Settings window writes options in this order. Aliases (after `/`) are read but never written.
+Each option is a path in the config object: `gaps.size` is `gaps: { size: … }`. `padding` also takes one number for all four sides.
 
 | Option | Value | Default | Notes |
 |---|---|---|---|
-| `$mod` | `SUPER` / `ALT` / `CTRL` / `SHIFT` | `ALT` | variable used in binds |
-| `layouts` | comma list | `bsp, wide, floating, fullscreen` | the cycle; each layout once. Names below |
-| `floating` | comma list of bundle IDs | empty (first run: System Settings, Calculator) | apps that float (or the only ones that tile, see next). Wildcards such as `com.adobe.*` work |
-| `floating-is-blacklist` | bool | `true` | true: listed apps float. false: only listed apps are tiled |
-| `window-margins` | bool | `true` | gaps between windows |
-| `window-margin-size` | 0–100 points | `10` | `gaps_in` is accepted and doubled |
-| `smart-window-margins` / `smart-gaps` | bool | `true` | no gaps with a single window |
-| `screen-padding-left` | 0–500 points | `10` | `screen-padding` or `gaps_out` sets all four sides |
-| `screen-padding-right` | 0–500 points | `10` | |
-| `screen-padding-top` | 0–500 points | `10` | |
-| `screen-padding-bottom` | 0–500 points | `10` | |
-| `disable-padding-on-builtin-display` | bool | `true` | |
-| `ignore-menu-bar` | bool | `false` | tile over the menu bar area |
-| `mouse-follows-focus` | bool | `true` | |
-| `focus-follows-mouse` / `follow_mouse` | bool | `true` | |
-| `focus-follows-mouse-in-mode-only` | bool | `true` | with `focus-follows-mouse` on, hovering focuses a window only while window mode is on |
-| `mouse-swaps-windows` | bool | `true` | drag a tile onto another to swap |
-| `mouse-resizes-windows` | bool | `true` | drag edges to resize |
-| `split-handle` | bool | `true` | a bar on the main split: drag it to resize, click it to swap the sides |
-| `auto-hide-tab-strip` | bool | `false` | hide each tab strip until the pointer reaches the top of its window |
-| `tab-notification-badges` | bool | `true` | show a red badge with the unread count on each tab |
-| `new-windows-to-main` / `new_is_master` | bool | `false` | |
-| `float-small-windows` | bool | `true` | |
-| `window-resize-step` | number | `5` | percent (`5`) or fraction (`0.05`); 1 or more is read as percent |
-| `enables-layout-hud` | bool | `false` | HUD when the layout changes |
-| `enables-layout-hud-on-space-change` | bool | `true` | |
-| `dim-other-windows` / `dim_inactive` | bool | `false` | darken every window but the focused one |
-| `dim-strength` | 0–1 (or 0–100) | `0.5` | how dark; a value above 1 is read as percent |
-| `blur-other-windows` | bool | `false` | blur every window but the focused one; combines with dimming |
-| `blur-radius` | 1–100 (points) | `20` | rounded to whole points. The Settings slider shows 2–60 |
-| `virtual-workspaces` | bool | `true` | true: CatWM controls native Desktops. false: macOS controls switching. See [workspaces.md](workspaces.md) |
-| `stay-on-workspace-after-close` | bool | `true` | |
-| `remove-empty-workspaces` | bool | `true` | true: an empty workspace and its Desktop go away when you leave it |
-| `workspaces-per-display` | bool | `true` | true: each display counts its own workspaces from 1, and `workspace 2` selects the second workspace on the current display. false: workspace numbers are shared by all displays |
-| `sort-nudge` | 0–100 (whole number) | `5` | windows on one workspace before CatWM offers Overview; `0` turns the offer off |
-| `keyboard-help` | bool | `true` | on-screen keyboard help in window mode |
-| `keyboard-help-key` | one character | `?` | toggles the keyboard help in window mode |
-| `keyboard-finish` | `auto`, `macbook-pro`, `macbook-air`, `macbook-neo`, `magic-keyboard`, or a finish such as `macbook-pro-space-black` | `auto` | look of the Shortcut Map keyboard |
-| `cursor-actions` | bool | `true` | in window mode, a dot at the pointer; a tap of the mode modifier opens saved workspace templates and the Save workspace action |
-| `template-app-scripting` | bool | `false` | workspace templates also save browser tabs, Terminal and iTerm2 tab folders, Finder folders and code editor projects; macOS asks once for each scripted app |
-| `switcher-instant-jump` | bool | `true` | in the window switcher, a search with one prefix match opens that window by itself |
-| `switcher-jump-delay` | milliseconds | `300` | wait before instant jump opens the match; `0` opens it at once |
-| `switcher-exclude` | bundle IDs, comma separated | `` | apps the window switcher never shows; wildcards like com.adobe.* work |
-| `animate` / `animations` | bool | `true` | `animations { enabled = … }` also works |
-| `animation-duration` | seconds, or ms if above 5 | `0.12` | |
-| `animation-curve` | `ease-out` `ease-in-out` `linear` `spring` `bounce` `overshoot` `cubic-bezier(x1, y1, x2, y2)` | `ease-out` | |
-| `animation-bounce` | 0–1 (or 0–100) | `0.5` | liveliness of spring/bounce/overshoot |
-| `panel-animation` | `rise` `pop` `focus` `tile` `draw` | `rise` | how Overview and keyboard help come and go; `tile` follows the animation curve; `catwm panelfx <style>` previews |
-| `mode-effect` | `draw` `ripple` `corners` `none` | `draw` | visual while window mode is on; `catwm modefx <style>` previews |
-| `debug-logging` | bool | `false` | verbose log; prefer `--verbose` |
-| `perf-reports` | bool | `false` | sends repeated slow animations and hangs (numbers and app bundle IDs only) to the developers |
-| `bind` (also `binde`, `bindr`, `bindl`, `bindel`, `bindle`) | see [keybinds.md](keybinds.md) | | the `binde`/`bindel`/`bindle` forms repeat while held |
-| `submap = name` / `submap = reset` | | | groups binds into a mode |
-
-The animation options (`animate`, `animation-duration`, `animation-curve`, `animation-bounce`) make up an animation config (see below).
-
-`bindm` is accepted and ignored (dragging already moves and resizes tiles).
+| `mod` | `"cmd"` / `"alt"` / `"ctrl"` / `"shift"`, or a list | `"alt"` | the main modifier. `.conf`: `$mod` |
+| `layouts` | list of layout names | `bsp, wide, floating, fullscreen` | the cycle; each layout once. Names below |
+| `floating.apps` | list of bundle IDs | empty (first run: System Settings, Calculator) | apps that float (or the only ones that tile, see `floating.listedAppsFloat`). Wildcards such as `com.adobe.*` work. `.conf`: `floating` |
+| `floating.listedAppsFloat` | bool | `true` | true: listed apps float. false: only listed apps are tiled. `.conf`: `floating-is-blacklist` |
+| `gaps.enabled` | bool | `true` | gaps between windows. `.conf`: `window-margins` |
+| `gaps.size` | 0–100 points | `10` | `gaps_in` is accepted and doubled. `.conf`: `window-margin-size` |
+| `gaps.smart` | bool | `true` | no gaps with a single window. `.conf`: `smart-window-margins` / `smart-gaps` |
+| `padding.left` | 0–500 points | `10` | `screen-padding` or `gaps_out` sets all four sides. `.conf`: `screen-padding-left` |
+| `padding.right` | 0–500 points | `10` | `.conf`: `screen-padding-right` |
+| `padding.top` | 0–500 points | `10` | `.conf`: `screen-padding-top` |
+| `padding.bottom` | 0–500 points | `10` | `.conf`: `screen-padding-bottom` |
+| `noPaddingOnBuiltinDisplay` | bool | `true` | `.conf`: `disable-padding-on-builtin-display` |
+| `ignoreMenuBar` | bool | `false` | tile over the menu bar area. `.conf`: `ignore-menu-bar` |
+| `focus.mouseFollowsFocus` | bool | `true` | `.conf`: `mouse-follows-focus` |
+| `focus.followsMouse` | bool | `true` | `.conf`: `focus-follows-mouse` / `follow_mouse` |
+| `focus.followsMouseInModeOnly` | bool | `true` | with `focus-follows-mouse` on, hovering focuses a window only while window mode is on. `.conf`: `focus-follows-mouse-in-mode-only` |
+| `mouse.swapsWindows` | bool | `true` | drag a tile onto another to swap. `.conf`: `mouse-swaps-windows` |
+| `mouse.resizesWindows` | bool | `true` | drag edges to resize. `.conf`: `mouse-resizes-windows` |
+| `mouse.splitHandle` | bool | `true` | a bar on the main split: drag it to resize, click it to swap the sides. `.conf`: `split-handle` |
+| `tabs.autoHideStrip` | bool | `false` | hide each tab strip until the pointer reaches the top of its window. `.conf`: `auto-hide-tab-strip` |
+| `tabs.notificationBadges` | bool | `true` | show a red badge with the unread count on each tab. `.conf`: `tab-notification-badges` |
+| `newWindowsToMain` | bool | `false` | `.conf`: `new-windows-to-main` / `new_is_master` |
+| `floating.smallWindows` | bool | `true` | `.conf`: `float-small-windows` |
+| `resizeStep` | number | `5` | percent (`5`) or fraction (`0.05`); 1 or more is read as percent. `.conf`: `window-resize-step` |
+| `layoutHud.enabled` | bool | `false` | HUD when the layout changes. `.conf`: `enables-layout-hud` |
+| `layoutHud.onSpaceChange` | bool | `true` | `.conf`: `enables-layout-hud-on-space-change` |
+| `focusDim.dim` | bool | `false` | darken every window but the focused one. `.conf`: `dim-other-windows` / `dim_inactive` |
+| `focusDim.dimStrength` | 0–1 (or 0–100) | `0.5` | how dark; a value above 1 is read as percent. `.conf`: `dim-strength` |
+| `focusDim.blur` | bool | `false` | blur every window but the focused one; combines with dimming. `.conf`: `blur-other-windows` |
+| `focusDim.blurRadius` | 1–100 (points) | `20` | rounded to whole points. The Settings slider shows 2–60. `.conf`: `blur-radius` |
+| `workspaces.virtual` | bool | `true` | true: CatWM controls native Desktops. false: macOS controls switching. See [workspaces.md](workspaces.md). `.conf`: `virtual-workspaces` |
+| `workspaces.stayAfterClose` | bool | `true` | `.conf`: `stay-on-workspace-after-close` |
+| `workspaces.removeEmpty` | bool | `true` | true: an empty workspace and its Desktop go away when you leave it. `.conf`: `remove-empty-workspaces` |
+| `workspaces.perDisplay` | bool | `true` | true: each display counts its own workspaces from 1, and `workspace 2` selects the second workspace on the current display. false: workspace numbers are shared by all displays. `.conf`: `workspaces-per-display` |
+| `workspaces.sortNudge` | 0–100 (whole number) | `5` | windows on one workspace before CatWM offers Overview; `0` turns the offer off. `.conf`: `sort-nudge` |
+| `keyboardHelp.enabled` | bool | `true` | on-screen keyboard help in window mode. `.conf`: `keyboard-help` |
+| `keyboardHelp.key` | one character | `?` | toggles the keyboard help in window mode. `.conf`: `keyboard-help-key` |
+| `keyboardHelp.finish` | `auto`, `macbook-pro`, `macbook-air`, `macbook-neo`, `magic-keyboard`, or a finish such as `macbook-pro-space-black` | `auto` | look of the Shortcut Map keyboard. `.conf`: `keyboard-finish` |
+| `cursorActions` | bool | `true` | in window mode, a dot at the pointer; a tap of the mode modifier opens saved workspace templates and the Save workspace action. `.conf`: `cursor-actions` |
+| `templateAppScripting` | bool | `false` | workspace templates also save browser tabs, Terminal and iTerm2 tab folders, Finder folders and code editor projects; macOS asks once for each scripted app. `.conf`: `template-app-scripting` |
+| `switcher.instantJump` | bool | `true` | in the window switcher, a search with one prefix match opens that window by itself. `.conf`: `switcher-instant-jump` |
+| `switcher.jumpDelay` | milliseconds | `300` | wait before instant jump opens the match; `0` opens it at once. `.conf`: `switcher-jump-delay` |
+| `switcher.exclude` | bundle IDs, comma separated | `` | apps the window switcher never shows; wildcards like com.adobe.* work. `.conf`: `switcher-exclude` |
+| `animation.enabled` | bool | `true` | `animations { enabled = … }` also works. `.conf`: `animate` / `animations` |
+| `animation.duration` | seconds, or ms if above 5 | `0.12` | `.conf`: `animation-duration` |
+| `animation.curve` | `ease-out` `ease-in-out` `linear` `spring` `bounce` `overshoot` `cubic-bezier(x1, y1, x2, y2)` | `ease-out` | `.conf`: `animation-curve` |
+| `animation.bounce` | 0–1 (or 0–100) | `0.5` | liveliness of spring/bounce/overshoot. `.conf`: `animation-bounce` |
+| `panelAnimation` | `rise` `pop` `focus` `tile` `draw` | `rise` | how Overview and keyboard help come and go; `tile` follows the animation curve; `catwm panelfx <style>` previews. `.conf`: `panel-animation` |
+| `modeEffect` | `draw` `ripple` `corners` `none` | `draw` | visual while window mode is on; `catwm modefx <style>` previews. `.conf`: `mode-effect` |
+| `debugLogging` | bool | `false` | verbose log; prefer `--verbose`. `.conf`: `debug-logging` |
+| `perfReports` | bool | `false` | sends repeated slow animations and hangs (numbers and app bundle IDs only) to the developers. `.conf`: `perf-reports` |
+| `binds` | list of `{ mods?, key, run, repeat? }` | | see [keybinds.md](keybinds.md) |
+| `submaps` | `{ name: [binds] }` | | key modes |
+| `features.<group>.<feature>` | bool | `true` | see `catwm.d.ts` for the list |
 
 ## Layout names
 
 `tall`, `tall-right`, `wide`, `middle-wide`, `fullscreen`, `column`, `row`, `floating`, `bsp`, `3column-left`, `3column-middle`, `3column-right`, `two-pane`, `two-pane-right`, `widescreen-tall`, `widescreen-tall-right`.
 
-## Minimal example
-
-```
-$mod = ALT
-layouts = tall, bsp, fullscreen
-window-margin-size = 10
-screen-padding = 10
-animate = true
-animation-curve = spring
-animation-bounce = 0.6
-floating = com.apple.systempreferences, com.apple.calculator
-floating-is-blacklist = true
-
-bind = $mod, 1..0, workspace, 1..10
-bind = $mod SHIFT, 1..0, movetoworkspace, 1..10
-bind = $mod, return, exec, open -na Terminal
-```
-
 ## Settings window and saved configs
 
-Menu bar → **Settings…** (⌘,). Panes: General, Layout, Windows, Motion, Templates, Shortcuts. Changes save and apply automatically. **Configs** (menu bar submenu / Settings) stores named keyboard, animation, and full presets in `~/.config/catwm/configs.json`; switching one rewrites the matching part of `catwm.conf`. Presets can be imported and exported.
+Menu bar → **Settings…** (⌘,). Panes: General, Layout, Windows, Motion, Templates, Shortcuts. Changes save to `catwm.overrides.json` and apply at once. **Configs** (menu bar submenu / Settings) stores named keyboard, animation, and full presets in `~/.config/catwm/configs.json`; switching one writes its values as overrides. Presets can be imported and exported.
 
-When editing by hand while the app runs, make the edit then run `catwm reload`. If the user also has Settings open, tell them: UI edits can overwrite hand edits.
+Hand edits to `catwm.config.ts` apply on save. A value that Settings changed stays overridden until you drop it in Settings → General.
 
 ## Workspace templates
 

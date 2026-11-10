@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 
 final class TabStrips {
     static let shared = TabStrips()
@@ -45,7 +46,7 @@ final class TabStrips {
         var placed = Set<Int>()
         var placements: [(strip: Strip, active: CGWindowID)] = []
         var hidden: [TabStripReveal.Target] = []
-        if manager.tilingEnabled {
+        if manager.tilingEnabled, manager.isStarted, manager.config.features.contains(.tabStrips) {
             for screen in Screen.all() {
                 for id in manager.tiled(on: screen) {
                     guard let group = manager.tabs.group(of: id), let target = manager.targets[id],

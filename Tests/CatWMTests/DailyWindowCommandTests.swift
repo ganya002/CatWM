@@ -1,5 +1,6 @@
 import AppKit
 @testable import CatWM
+@testable import CatWMKit
 import Testing
 
 @Suite(.timeLimit(.minutes(1))) @MainActor struct DailyWindowCommandTests {

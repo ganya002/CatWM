@@ -1,19 +1,12 @@
+import CatWMKit
 import Foundation
 
 enum Migrations {
-    static let legacyBundlePrefixes = ["local.ouch", "local.hyprthyst"]
-    static let legacyConfigMarker = "ouch"
-    static let legacyConfigExtension = "ouchconfig"
-
     static func run() {
         let home = FileManager.default.homeDirectoryForCurrentUser
         moveOuchConfigFolder(home: home)
         copyHyprthystConfig(home: home)
         migrateDefaults(Instance.defaults)
-    }
-
-    static func isLegacyBundle(_ bundle: String) -> Bool {
-        legacyBundlePrefixes.contains { bundle.hasPrefix($0) }
     }
 
     static func moveOuchConfigFolder(home: URL, fileManager: FileManager = .default) {

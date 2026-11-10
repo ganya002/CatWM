@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 
 final class ModeCursor {
     static let shared = ModeCursor()
