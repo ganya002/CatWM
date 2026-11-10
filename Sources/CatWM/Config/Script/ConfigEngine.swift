@@ -2,6 +2,8 @@ import Foundation
 import JavaScriptCore
 
 final class ConfigEngine {
+    static let timeLimit = 1.0
+
     enum Pass {
         case all
         case changed
@@ -78,11 +80,20 @@ final class ConfigEngine {
             if paths.isEmpty { return Run(value: value, files: files) }
             changed = paths
         }
+        let start = DispatchTime.now().uptimeNanoseconds
         let output = registry.invokeMethod("run", withArguments: [entry.path, changed])?.toString() ?? ""
         JSGarbageCollect(context.jsGlobalContextRef)
         guard let result = JSON.parse(Data(output.utf8)) else {
-            let failure = ConfigDiagnostic(file: entry.path, phase: .evaluate, message: "the config run failed")
-            return Run(value: value, files: files, failures: [failure])
+            let seconds = Double(DispatchTime.now().uptimeNanoseconds - start) / 1_000_000_000
+            guard seconds >= Self.timeLimit else {
+                let failure = ConfigDiagnostic(file: entry.path, phase: .evaluate, message: "the config run failed")
+                return Run(value: value, files: files, failures: [failure])
+            }
+            registry.invokeMethod("rollback", withArguments: [])
+            let message = "the config ran longer than \(Int(Self.timeLimit)) s, so CatWM stopped it. "
+                + "Look for an endless loop"
+            return Run(value: value, files: files,
+                       failures: [ConfigDiagnostic(file: entry.path, phase: .evaluate, message: message)])
         }
         let ran = result["ran"]?.array?.compactMap(\.string) ?? []
         if let error = result["error"] {
@@ -108,6 +119,14 @@ final class ConfigEngine {
               let url = Self.resources.url(forResource: "sucrase", withExtension: "js"),
               let sucrase = try? String(contentsOf: url, encoding: .utf8) else { return nil }
         context.name = "CatWM config"
+        typealias ShouldStop = @convention(c) (JSContextRef?, UnsafeMutableRawPointer?) -> Bool
+        typealias SetTimeLimit = @convention(c) (JSContextGroupRef?, Double, ShouldStop?,
+                                                 UnsafeMutableRawPointer?) -> Void
+        if let setTimeLimit: SetTimeLimit = symbol("JSContextGroupSetExecutionTimeLimit") {
+            setTimeLimit(JSContextGetGroup(context.jsGlobalContextRef), Self.timeLimit, nil, nil)
+        } else {
+            Log.info("config: JSContextGroupSetExecutionTimeLimit is missing, so an endless loop can't be stopped")
+        }
         let read: @convention(block) (String) -> JSValue = { path in
             guard let text = try? String(contentsOfFile: path, encoding: .utf8) else {
                 return JSValue(undefinedIn: JSContext.current())

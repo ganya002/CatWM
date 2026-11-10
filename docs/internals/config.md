@@ -17,7 +17,7 @@
 
 ## Errors
 
-A failure is a `ConfigDiagnostic`: file, line, phase (`read`, `resolve`, `transform`, `evaluate`, `validate`, `migrate`) and message. `ConfigStore.failures` holds the last failure until a good save. A run that takes longer than `ConfigStore.timeLimit` (3 s), such as an endless loop, counts as a failure: CatWM stops waiting, keeps the last good config and starts a new engine for the next save. JavaScriptCore has no public API to stop a running script, so the old thread keeps running until CatWM quits. The menu bar menu shows it, and `config.reloaded` sends every diagnostic in `errors`.
+A failure is a `ConfigDiagnostic`: file, line, phase (`read`, `resolve`, `transform`, `evaluate`, `validate`, `migrate`) and message. `ConfigStore.failures` holds the last failure until a good save. A script that runs longer than `ConfigEngine.timeLimit` (1 s of CPU time), such as an endless loop, counts as a failure. The private `JSContextGroupSetExecutionTimeLimit` stops it, usually within about 2.5 s of wall time. The engine then rolls its module registry back and keeps the last good config, and the next save runs on the same thread. A run that still hasn't returned after `ConfigStore.timeLimit` (5 s), for example in a native call, makes CatWM stop waiting and start a new engine. That old thread keeps running until CatWM quits. The menu bar menu shows it, and `config.reloaded` sends every diagnostic in `errors`.
 
 ## Settings
 

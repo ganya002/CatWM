@@ -116,9 +116,10 @@ import Testing
         let started = Date()
         let kept = store.reload(.all)
 
-        #expect(Date().timeIntervalSince(started) < ConfigStore.timeLimit + 1)
+        #expect(Date().timeIntervalSince(started) < ConfigStore.timeLimit)
         #expect(kept.windowMarginSize == 8)
-        #expect(store.failures.first?.message.hasPrefix("the config didn't finish within 3 s") == true)
+        let message = store.failures.first?.message ?? ""
+        #expect(message.hasPrefix("the config ran longer than 1 s, so CatWM stopped it"))
         try folder.write("catwm.config.ts", "export default { gaps: { size: \"wide\" } }\n")
         #expect(store.reload(.changed).windowMarginSize == 8)
         try folder.write("catwm.config.ts", "export default { gaps: { size: 12 } }\n")
