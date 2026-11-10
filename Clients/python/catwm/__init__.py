@@ -184,7 +184,7 @@ class WindowNotifications(TypedDict):
 
 
 class ConfigReloadedData(TypedDict):
-    errors: list[str]
+    errors: list[dict[str, Any]]
 
 
 class ConfigReloaded(TypedDict):
@@ -525,7 +525,7 @@ class CatWM:
         return self.call("config.get", args)
 
     def config_set(self, key: str, value: str) -> None:
-        """Change a config option and reload the config"""
+        """Change a config option. With a TypeScript config it writes an override"""
         args: dict[str, Any] = {}
         args["key"] = key
         args["value"] = value

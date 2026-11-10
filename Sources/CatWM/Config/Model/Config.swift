@@ -50,8 +50,11 @@ struct Config {
     var mainMod: CGEventFlags = .maskAlternate
     var keyboardFinish = "auto"
     var bindings: [KeyBinding] = []
+    var bindRows: [BindRow] = []
+    var features = Set(Feature.allCases)
     var currentSubmap = ""
     var errors: [String] = []
+    var diagnostics: [ConfigDiagnostic] = []
 
     static let url = Instance.configFolder.appendingPathComponent("catwm.conf")
 
@@ -166,5 +169,19 @@ extension Config {
         let configured = Set(bindings.filter(\.submap.isEmpty).map { Hotkeys.key($0.keyCode, $0.mods) })
         defaults.removeAll { configured.contains(Hotkeys.key($0.keyCode, $0.mods)) }
         return defaults + bindings
+    }
+}
+
+extension Config {
+    func changes(from other: Config) -> Set<String> {
+        var changed = Set(Options.all.filter { $0.text(self) != $0.text(other) }.map(\.key))
+        if layouts != other.layouts { changed.insert("layouts") }
+        if floating != other.floating { changed.insert("floating") }
+        if mainMod != other.mainMod { changed.insert("mod") }
+        if Dictionary(grouping: bindings, by: \.submap) != Dictionary(grouping: other.bindings, by: \.submap) {
+            changed.insert("bindings")
+        }
+        if features != other.features { changed.insert("features") }
+        return changed
     }
 }

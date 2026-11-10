@@ -21,8 +21,8 @@ The CLI, the Python, TypeScript and Swift libraries (`Clients/`) and the key bin
 | `<dispatcher> [args]` | run a dispatcher, for example `catwm movefocus left` or `catwm workspace 3`. A bad argument gives an error. See [dispatchers.md](dispatchers.md). |
 | `dispatch <name> [args]` | run any dispatcher by name, as a key bind does. Name is case-insensitive. An unknown name gives an error. Bad arguments are ignored silently. |
 | `status`, `windows`, `workspaces`, `screens` | print the state as JSON |
-| `config.get <key>`, `config.set <key> <value>`, `config.options` | read and change config options. `config.set` writes `catwm.conf` and reloads it. |
-| `reload` | re-read `catwm.conf` and rebind keys. Errors go to the log; a HUD shows "Config reloaded" or the error count. |
+| `config.get <key>`, `config.set <key> <value>`, `config.options` | read and change config options. `config.set` writes `catwm.overrides.json` and applies it. |
+| `reload` | run every module of `catwm.config.ts` again and apply what changed. A save applies by itself, so you rarely need it. Errors go to the log; a HUD shows "Config reloaded" or the error count. |
 | `dump` | print the tiling state. The app also writes it to `~/Library/Logs/CatWM.log`. |
 | `events [event ...]` | print one JSON line for each event until you stop it. With no names it prints every event. |
 | `ping`, `commands` | check the app, or list the commands with their arguments as JSON |

@@ -22,7 +22,7 @@ with CatWM() as catwm:
     catwm.layout("wide")
     windows = catwm.windows()            # list of dicts: id, app, title, focused, workspace, frame, ...
     screens = catwm.screens()            # layout, ratio, workspace, usable area for each display
-    catwm.config_set("gaps-in", "8")     # changes catwm.conf. Change it back after your test.
+    catwm.config_set("gaps-in", "8")     # writes catwm.overrides.json. Change it back after your test.
 ```
 
 `catwm.call("name", {"arg": value})` runs any command by name. `catwm.commands()` lists every command with its arguments. `exec` and `launch` are refused, because they run code.

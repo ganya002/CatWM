@@ -125,11 +125,16 @@ private func values(_ config: Config) -> [String: String] {
         .components(separatedBy: "\n")
         .filter { $0.hasPrefix("| `") }
     for option in Options.all {
-        let row = rows.first { $0.hasPrefix("| `\(option.key)`") }
-        #expect(row != nil, "config.md has no row for \(option.key)")
+        let row = rows.first { $0.hasPrefix("| `\(option.script)` |") }
+        #expect(row != nil, "config.md has no row for \(option.script)")
         guard let row else { continue }
-        let first = row.components(separatedBy: "|")[1]
-        for alias in option.aliases { #expect(first.contains("`\(alias)`"), "config.md lacks alias \(alias)") }
+        for name in option.names { #expect(row.contains("`\(name)`"), "config.md lacks the .conf name \(name)") }
         #expect(row.contains("| `\(option.defaultText)` |"), "config.md has the wrong default for \(option.key)")
     }
+}
+
+@Test func everyOptionHasItsOwnPathInTheTypeScriptConfig() {
+    let paths = Options.all.map(\.script)
+    #expect(!paths.contains(""))
+    #expect(Set(paths).count == paths.count)
 }

@@ -8,19 +8,26 @@ extension ConfigDocument {
     func save() -> Bool {
         guard !unreadable else { return false }
         let text = serialize()
+        let store = ConfigStore.shared
         do {
-            try FileManager.default.createDirectory(at: Config.url.deletingLastPathComponent(),
-                                                    withIntermediateDirectories: true)
-            try text.write(to: Config.url, atomically: true, encoding: .utf8)
+            if store.isScript {
+                try store.save(settings: ConfigText(text).config, from: settingsCopy ?? store.settingsCopy)
+            } else {
+                try FileManager.default.createDirectory(at: Config.url.deletingLastPathComponent(),
+                                                        withIntermediateDirectories: true)
+                try text.write(to: Config.url, atomically: true, encoding: .utf8)
+            }
         } catch {
             if saveError == nil { saveError = error.localizedDescription }
             return false
         }
         savedText = text
         if saveError != nil { saveError = nil }
-        WindowManager.shared.reload(showHUD: false)
+        WindowManager.shared.applyStoredConfig()
         let errors = WindowManager.shared.config.errors
         if errors != fileErrors { fileErrors = errors }
+        let paths = store.overriddenPaths
+        if paths != overrides { overrides = paths }
         return true
     }
 

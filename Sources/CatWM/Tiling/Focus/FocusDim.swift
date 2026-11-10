@@ -20,7 +20,7 @@ final class FocusDim {
 
     static let features: [Feature] = [
         Feature(options: [
-            .bool("dim-other-windows", \.dimOtherWindows)
+            .bool("dim-other-windows", \.dimOtherWindows).script("focusDim.dim")
                 .documented("bool", "darken every window but the focused one").aliases("dim_inactive")
                 .section("focused window")
                 .note(
@@ -31,6 +31,7 @@ final class FocusDim {
                          help: "Darkens everything but the focused window",
                          keywords: "focus darken inactive spotlight hazeover", order: 3),
             .points("dim-strength", \.dimStrength, valid: 0...1, convert: { $0 > 1 ? $0 / 100 : $0 })
+                .script("focusDim.dimStrength")
                 .documented("0–1 (or 0–100)", "how dark; a value above 1 is read as percent")
                 .setting(.windows, "windows.dimStrength", "Dim strength", help: "How dark the other windows get",
                          keywords: "darken amount opacity", range: 0...100, scale: 100, order: 4,
@@ -43,12 +44,13 @@ final class FocusDim {
                                        selected: { _ in shared.dims }), run: { shared.toggleDim() },
                 menu: FeatureMenu(key: "d", title: "Dim other windows", isOn: { shared.dims })),
         Feature(options: [
-            .bool("blur-other-windows", \.blurOtherWindows)
+            .bool("blur-other-windows", \.blurOtherWindows).script("focusDim.blur")
                 .documented("bool", "blur every window but the focused one; combines with dimming")
                 .setting(.windows, "windows.blurOthers", "Blur other windows",
                          help: "Softens everything but the focused window",
                          keywords: "focus soft inactive spotlight", order: 5),
             .points("blur-radius", \.blurRadius, valid: 1...100, convert: { $0.rounded() })
+                .script("focusDim.blurRadius")
                 .documented("1–100 (points)", "rounded to whole points. The Settings slider shows 2–60")
                 .setting(.windows, "windows.blurRadius", "Blur radius", help: "How soft the other windows look",
                          keywords: "soft amount points", range: 2...60, order: 6,

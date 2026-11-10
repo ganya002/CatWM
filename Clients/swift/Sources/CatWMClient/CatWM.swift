@@ -157,7 +157,7 @@ public struct WindowNotificationsData: Codable, Equatable, Sendable {
 }
 
 public struct ConfigReloadedData: Codable, Equatable, Sendable {
-    public let errors: [String]
+    public let errors: [[String: JSONValue]]
 }
 
 public enum Event: Sendable {
@@ -634,7 +634,7 @@ public final class CatWM: @unchecked Sendable {
         return try decode(String.self, try call("config.get", args))
     }
 
-    /// Change a config option and reload the config
+    /// Change a config option. With a TypeScript config it writes an override
     public func configSet(key: String, value: String) throws {
         var args: [String: Any] = [:]
         args["key"] = key

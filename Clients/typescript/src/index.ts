@@ -131,7 +131,7 @@ export interface WindowNotificationsData {
 }
 
 export interface ConfigReloadedData {
-  errors: string[];
+  errors: Record<string, unknown>[];
 }
 
 export type CatWMEvent =
@@ -493,7 +493,7 @@ export class CatWM {
     return (await this.call("config.get", { "key": key })) as string;
   }
 
-  /** Change a config option and reload the config */
+  /** Change a config option. With a TypeScript config it writes an override */
   async configSet(key: string, value: string): Promise<void> {
     await this.call("config.set", { "key": key, "value": value });
   }

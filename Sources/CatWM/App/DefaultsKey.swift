@@ -2,6 +2,7 @@ enum DefaultsKey {
     static let didSetUpLaunchAtLogin = "didSetUpLaunchAtLogin"
     static let grabHints = "grabHints"
     static let migratedLegacyDefaults = "migratedLegacyDefaults"
+    static let migratedConfigToTypeScript = "migratedConfigToTypeScript"
     static let perfBackoffUntil = "perf.backoffUntil"
     static let perfCounts = "perf.counts"
     static let perfSentAt = "perf.sentAt"

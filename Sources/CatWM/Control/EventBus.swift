@@ -59,8 +59,10 @@ final class EventBus {
             Field(name: "dot", type: "bool", summary: "The app shows unread items with no number"),
             Field(name: "source", type: "string?", summary: "dock, banner or database, or null")
         ]),
-        EventSpec(name: "config.reloaded", summary: "CatWM read the config file again", data: [
-            Field(name: "errors", type: "string[]", summary: "Problems in the config file")
+        EventSpec(name: "config.reloaded", summary: "CatWM applied the config again", data: [
+            Field(name: "errors", type: "object[]",
+                  summary: "Problems in the config: file, line, phase and message. "
+                    + "A failed save keeps the last good config")
         ])
     ]
 

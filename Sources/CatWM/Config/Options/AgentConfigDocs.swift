@@ -5,8 +5,9 @@ enum AgentConfigDocs {
     static func render(_ template: String) -> String {
         let rows = Options.all.map { option in
             let names = option.names.map { "`\($0)`" }.joined(separator: " / ")
-            let notes = option.documentation.isEmpty ? "" : " " + option.documentation
-            return "| \(names) | \(option.valueDescription) | `\(option.defaultText)` |\(notes) |"
+            let notes = option.documentation.isEmpty ? "" : " " + option.documentation + "."
+            let value = "\(option.valueDescription) | `\(option.defaultText)`"
+            return "| `\(option.script)` | \(value) |\(notes) `.conf`: \(names) |"
         }.joined(separator: "\n")
         let defaultLayouts = Config().layouts.map(\.rawValue).joined(separator: ", ")
         let layouts = Layout.allCases.map { "`\($0.rawValue)`" }.joined(separator: ", ")
@@ -19,6 +20,8 @@ enum AgentConfigDocs {
         let directory = root.appendingPathComponent("Resources/AgentDocs")
         let template = try String(contentsOf: directory.appendingPathComponent("config.template.md"), encoding: .utf8)
         try render(template).write(to: directory.appendingPathComponent("config.md"), atomically: true, encoding: .utf8)
+        try ConfigTypes.render().write(to: directory.appendingPathComponent(ConfigTypes.fileName), atomically: true,
+                                       encoding: .utf8)
         let manifest = try Data(contentsOf: root.appendingPathComponent("Tools/config-doc-inputs.json"))
         let inputs = try JSONDecoder().decode(Inputs.self, from: manifest)
         var paths = inputs.files

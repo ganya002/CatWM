@@ -22,6 +22,7 @@ extension WindowManager {
         watchClaims()
 
         ControlServer.shared.start()
+        ConfigStore.shared.watch { [weak self] in self?.apply($0, showHUD: true) }
 
         prepareFocusSink()
         requestFocusObservation()
@@ -184,36 +185,71 @@ extension WindowManager {
     }
 
     func reload(showHUD: Bool = true) {
-        nativeDesktop.stop()
-        let wasVirtual = config.virtualWorkspaces
-        let wasPerDisplay = config.workspacesPerDisplay
-        config = Self.loadConfig(scope: scope)
-        if wasVirtual != config.virtualWorkspaces {
-            tilingRecovery = TilingRecovery()
-            if wasVirtual { restoreHiddenWindows() }
-            model.resetWorkspaces()
-            labels = [:]; closeAndSort.sortSnapshot = nil; closeAndSort.closingNow = []; closeAndSort.closingApps = []
-            surface.abandonOverview()
-            Log.info("workspaces: \(config.virtualWorkspaces ? "CatWM workspaces" : "macOS Spaces")")
-        } else if wasPerDisplay != config.workspacesPerDisplay {
-            renumberWorkspaces()
-        }
+        apply(ConfigStore.shared.reload(.all), showHUD: showHUD)
+    }
+
+    func applyStoredConfig() {
+        apply(ConfigStore.shared.reload(.changed), showHUD: false)
+    }
+
+    func apply(_ next: Config, showHUD: Bool) {
+        let old = config
+        config = scope?.restrict(next) ?? next
+        let changes = config.changes(from: old)
+        guard !changes.isEmpty || config.diagnostics != old.diagnostics else { return }
+        applyWorkspaceChanges(changes, wasVirtual: old.virtualWorkspaces)
         Log.verbose = config.debugLogging || Log.verboseLaunch
-        surface.apply(config)
-        FocusDim.shared.configure(dim: config.dimOtherWindows, strength: config.dimStrength,
-                                  blur: config.blurOtherWindows, radius: Int(config.blurRadius))
+        if !changes.isDisjoint(with: Self.surfaceFields) { surface.apply(config) }
+        if !changes.isDisjoint(with: Self.focusDimFields) {
+            FocusDim.shared.configure(dim: config.dimOtherWindows, strength: config.dimStrength,
+                                      blur: config.blurOtherWindows, radius: Int(config.blurRadius))
+        }
+        if !changes.isDisjoint(with: Self.floatFields) {
+            for window in windows.values { window.autoFloating = shouldFloat(window) }
+        }
+        if !changes.subtracting(Self.liveFields).isEmpty {
+            corrections = [:]
+            scheduleRefresh(after: 0)
+            refresh()
+        }
+        if !changes.isEmpty { Log.info("config: applied \(changes.sorted().joined(separator: ", "))") }
         config.errors.forEach { Log.info("config: \($0)") }
-        for window in windows.values { window.autoFloating = shouldFloat(window) }
-        corrections = [:]
-        scheduleRefresh(after: 0)
-        refresh()
-        EventBus.shared.emit("config.reloaded", ["errors": .array(config.errors.map(JSON.string))])
+        EventBus.shared.emit("config.reloaded", ["errors": .array(config.diagnostics.map(\.json))])
         guard showHUD else { return }
         surface.showHUD(
             config.errors.isEmpty ? "Config reloaded" : "Config: \(config.errors.count) error(s), see Console",
             on: currentScreen()?.nsScreen
         )
     }
+
+    private func applyWorkspaceChanges(_ changes: Set<String>, wasVirtual: Bool) {
+        if changes.contains("virtual-workspaces") {
+            nativeDesktop.stop()
+            tilingRecovery = TilingRecovery()
+            if wasVirtual { restoreHiddenWindows() }
+            model.resetWorkspaces()
+            labels = [:]; closeAndSort.sortSnapshot = nil; closeAndSort.closingNow = []; closeAndSort.closingApps = []
+            surface.abandonOverview()
+            Log.info("workspaces: \(config.virtualWorkspaces ? "CatWM workspaces" : "macOS Spaces")")
+        } else if changes.contains("workspaces-per-display") {
+            nativeDesktop.stop()
+            renumberWorkspaces()
+        }
+    }
+
+    static let surfaceFields: Set<String> = [
+        "bindings", "mod", "virtual-workspaces", "mode-effect", "keyboard-finish", "tab-notification-badges"
+    ]
+    static let focusDimFields: Set<String> = ["dim-other-windows", "dim-strength", "blur-other-windows", "blur-radius"]
+    static let floatFields: Set<String> = ["floating", "floating-is-blacklist", "float-small-windows"]
+    static let liveFields: Set<String> = surfaceFields.union(focusDimFields).subtracting(["virtual-workspaces"]).union([
+        "features", "mouse-follows-focus", "focus-follows-mouse", "focus-follows-mouse-in-mode-only",
+        "mouse-swaps-windows", "mouse-resizes-windows", "enables-layout-hud", "enables-layout-hud-on-space-change",
+        "keyboard-help", "keyboard-help-key", "cursor-actions", "template-app-scripting", "switcher-instant-jump",
+        "switcher-jump-delay", "switcher-exclude", "animate", "animation-duration", "animation-curve",
+        "animation-bounce", "panel-animation", "debug-logging", "perf-reports", "sort-nudge", "window-resize-step",
+        "stay-on-workspace-after-close", "remove-empty-workspaces"
+    ])
 
     func toggleTiling() {
         tilingEnabled.toggle()

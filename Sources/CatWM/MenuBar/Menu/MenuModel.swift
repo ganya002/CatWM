@@ -89,7 +89,9 @@ struct ShortcutIndex {
     var modeChord: [String] = []
 
     init() {
-        let text = (try? String(contentsOf: Config.url, encoding: .utf8)) ?? defaultText
+        let store = ConfigStore.shared
+        let text = store.isScript
+            ? store.settingsText : (try? String(contentsOf: Config.url, encoding: .utf8)) ?? defaultText
         let doc = ConfigDocument(text: text)
         let modeBind = doc.binds.first {
             $0.submap.isEmpty && $0.dispatcher == WindowActions.submap.name && $0.args.lowercased() != "reset"

@@ -1,7 +1,7 @@
 import AppKit
 
 final class WindowManager {
-    static let shared = WindowManager(config: Config.load(), scope: Instance.scope)
+    static let shared = WindowManager(config: ConfigStore.shared.load(), scope: Instance.scope)
 
     let backend: any WindowBackend
     let scope: WindowScope?
@@ -125,11 +125,6 @@ final class WindowManager {
             readApplications: { backend.applications() }, scope: scope,
             claims: scope == nil ? ScopeClaims(folder: Instance.paths.instancesFolder) : nil)
         focusRequests.focusReader = FocusReader { backend.focusedWindow(pid: $0) }
-    }
-
-    static func loadConfig(scope: WindowScope?) -> Config {
-        let config = Config.load()
-        return scope?.restrict(config) ?? config
     }
 
     func scopeRefusal(_ command: String) -> String? {

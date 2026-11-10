@@ -27,6 +27,7 @@ let package = Package(
                 .product(name: "PermissionFlow", package: "PermissionFlow")
             ],
             path: "Sources/CatWM",
+            resources: [.copy("Config/Script/sucrase.js")],
             linkerSettings: [.unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"]),
                              .linkedLibrary("sqlite3")],
             plugins: [.plugin(name: "CatalogPlugin")]

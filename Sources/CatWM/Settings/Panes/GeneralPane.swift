@@ -51,6 +51,8 @@ struct GeneralPane: View {
                 .setting(GeneralPane.searchModifier.id, settingsUI)
             }
 
+            if ConfigStore.shared.isScript { configGroup }
+
             OGroup("Updates") {
                 if updater.isConfigured {
                     OSwitchRow(GeneralPane.searchAutoCheck.title,
@@ -141,4 +143,25 @@ extension GeneralPane {
                                          keywords: "update channel early")
     static let searchReset = SettingEntry(id: "general.reset", title: "Reset all settings", pane: .general,
                                           keywords: "defaults restore factory")
+}
+
+extension GeneralPane {
+    private var configGroup: some View {
+        OGroup("Config") {
+            ORow(ConfigStore.scriptName, description: "Settings saves its changes next to this file, never in it") {
+                OButton("Open", size: .small) { NSWorkspace.shared.open(ConfigStore.shared.scriptURL) }
+            }
+            ForEach(doc.overrides, id: \.self) { path in
+                ORow(ConfigScript.label(path),
+                     description: "Changed in Settings, so `\(path)` in the file doesn't apply") {
+                    OButton("Use File Value", size: .small) { doc.useScriptValue(path) }
+                }
+            }
+            if doc.overrides.count > 1 {
+                ORow("All changes from Settings", description: "Use every value from \(ConfigStore.scriptName) again") {
+                    OButton("Use File Values", size: .small) { doc.useScriptValue(nil) }
+                }
+            }
+        }
+    }
 }

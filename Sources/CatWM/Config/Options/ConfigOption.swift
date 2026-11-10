@@ -12,6 +12,9 @@ struct ConfigOption {
     var documentation = ""
     var choices: [(String, String)] = []
     var setNumber: ((inout Config, Double) -> Void)?
+    var script = ""
+    var scriptKind = ScriptKind.string
+    var scriptType: String?
     let path: PartialKeyPath<Config>
     let read: (inout Config, _ value: String, _ rawKey: String) -> String?
     let text: (Config) -> String
@@ -22,6 +25,7 @@ struct ConfigOption {
             read: @escaping (String, _ rawKey: String) -> (V?, String?),
             text: @escaping (V) -> String, number: @escaping (V) -> Double = { _ in 0 }) {
         self.valueDescription = V.self == Bool.self ? "bool" : "value"
+        self.scriptKind = V.self == Bool.self ? .bool : .string
         self.key = key
         self.path = path
         self.read = { config, input, raw in
@@ -44,6 +48,12 @@ struct ConfigOption {
         return option
     }
 
+    func script(_ path: String, type: String? = nil) -> Self {
+        var option = self
+        option.script = path
+        option.scriptType = type
+        return option
+    }
     func aliases(_ names: String...) -> Self { var option = self; option.aliases = names; return option }
     func section(_ title: String) -> Self { var option = self; option.section = title; return option }
     func note(_ text: String) -> Self { var option = self; option.note = text; return option }
@@ -86,6 +96,7 @@ struct ConfigOption {
         }, text: text, number: number)
         option.setNumber = { $0[keyPath: path] = make($1) }
         option.valueDescription = "number"
+        option.scriptKind = .number
         option.valid = valid
         return option
     }
@@ -97,7 +108,10 @@ struct ConfigOption {
     }
 
     static func list(_ key: String, _ path: WritableKeyPath<Config, [String]>) -> Self {
-        Self(key, path, read: { input, _ in (Config.listItems(input), nil) }, text: { $0.joined(separator: ", ") })
+        var option = Self(key, path, read: { input, _ in (Config.listItems(input), nil) },
+                          text: { $0.joined(separator: ", ") })
+        option.scriptKind = .strings
+        return option
     }
 
     static func choice<V: RawRepresentable & CaseIterable>(_ key: String, _ path: WritableKeyPath<Config, V>,
@@ -130,6 +144,10 @@ struct ConfigOption {
     }
 
     static func norm(_ name: String) -> String { name.lowercased().replacingOccurrences(of: "-", with: "_") }
+}
+
+enum ScriptKind {
+    case bool, number, string, strings
 }
 
 enum OptionGroup {

@@ -40,9 +40,9 @@ final class SortNudge {
         model.never = { [weak self] in
             self?.dismiss()
             Log.attempt("disable Overview tips") {
-                try Config.write(option: "sort-nudge", "0")
+                try ConfigStore.shared.set(option: ConfigOption.at(\Config.sortNudge), "0")
+                manager.applyStoredConfig()
                 SettingsWindow.shared.doc.load()
-                manager.reload(showHUD: false)
             }
         }
         let host = CatWMHostingView(rootView: SortNudgeView(model: model))

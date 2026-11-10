@@ -66,7 +66,8 @@ extension CommandRegistry {
             }
             return .string(option.text(call.manager.config))
         },
-        Command(name: "config.set", group: "config", summary: "Change a config option and reload the config",
+        Command(name: "config.set", group: "config",
+                summary: "Change a config option. With a TypeScript config it writes an override",
                 args: [.text("key", "Option name"), .text("value", "New value")]) { call in
             guard let option = ConfigOption.named(call.text("key")) else {
                 throw ControlError.invalid("Unknown option `\(call.text("key"))`")
@@ -80,11 +81,11 @@ extension CommandRegistry {
                 throw ControlError.invalid(problem)
             }
             do {
-                try Config.write(option: option.key, value)
+                try ConfigStore.shared.set(option: option, value)
             } catch {
                 throw ControlError.failed("Could not save config: \(error.localizedDescription)")
             }
-            call.manager.reload(showHUD: false)
+            call.manager.applyStoredConfig()
             return .null
         },
         Command(name: "config.options", group: "config", summary: "List the config options", result: .list([

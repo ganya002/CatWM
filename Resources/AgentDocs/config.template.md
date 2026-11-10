@@ -1,55 +1,57 @@
-# Config: `~/.config/catwm/catwm.conf`
+# Config: `~/.config/catwm/catwm.config.ts`
 
-Hyprland syntax: `key = value`, `$var = value`, `# comments`, `bind = …` lines, and `name { … }` blocks. Option names are case-insensitive and `-` equals `_` (`window-margin-size` = `window_margin_size`). A `prefix:` is stripped (`general:gaps_in`), so Hyprland configs mostly parse. Unknown options and bad values are logged as `config: …` and skipped; the rest still loads.
+The config is plain TypeScript: one default-exported object. CatWM writes `catwm.d.ts` and `tsconfig.json` next to it, so an editor completes and checks every option, key and action.
 
-Apply changes with `catwm reload`, the menu bar's reload button, or by saving through Settings.
+```ts
+import type { Bind, Config } from "./catwm"
 
-Booleans accept `true yes on 1` and `false no off 0`. Any other value is an error: CatWM logs it and the option becomes false. A bad number or name is also an error, and the option keeps its earlier value (the default, if no earlier line sets it). Numbers outside the range in the table are clamped to that range.
+const mod = "alt"
+
+export default {
+  mod,
+  layouts: ["tall", "bsp", "fullscreen"],
+  gaps: { size: 10 },
+  padding: 10,
+  animation: { curve: "spring", bounce: 0.6 },
+  floating: { apps: ["com.apple.systempreferences", "com.apple.calculator"] },
+  binds: [
+    ...(["1", "2", "3"] as const).map((key): Bind => ({ mods: [mod], key, run: ["workspace", key] })),
+    { mods: [mod], key: "return", run: ["exec", "open -na Terminal"] },
+  ],
+} satisfies Config
+```
+
+- **Save to apply.** CatWM watches the config folder and the folders of imported files. A save re-runs only the changed module and the modules that import it, then applies only the fields that changed. `catwm reload` runs every module again.
+- **A broken save keeps the last good config.** The error goes to the log (`config: kept the last good config, …`), to the menu bar menu and to the `errors` of the `config.reloaded` event: `{ file, line, phase, message }`. The next good save clears it.
+- **Data only.** Functions, loops and imports can compute the config, but the exported value must be plain data. A function in it is an error. There are no timers, events or native APIs. Use only erasable TypeScript syntax (no `enum` or `namespace`); the shipped `tsconfig.json` sets `erasableSyntaxOnly`.
+- **Imports:** relative paths only, such as `import { binds } from "./binds"`. A type import from `"./catwm"` is free.
+- **Settings and `catwm config.set`** never edit the TypeScript file. They write `catwm.overrides.json` beside it. The order is defaults, then `catwm.config.ts`, then the overrides. Settings → General lists each override and can drop it, so the file value applies again.
+- **Features:** `features: { windows, input, services, presentation }` turns parts of CatWM on or off, such as `features: { presentation: { hud: true } }`. Embedded mode will read these switches. Standalone CatWM checks them but keeps every feature on for now.
+- **From `catwm.conf`:** the first launch converts an existing `catwm.conf` to `catwm.config.ts` once, checks that the result gives the same config, and keeps `catwm.conf` as an unread backup. If the conversion fails, CatWM keeps using `catwm.conf` and says why in the log and the menu bar menu.
 
 ## Options
 
-The Settings window writes options in this order. Aliases (after `/`) are read but never written.
+Each option is a path in the config object: `gaps.size` is `gaps: { size: … }`. `padding` also takes one number for all four sides.
 
 | Option | Value | Default | Notes |
 |---|---|---|---|
-| `$mod` | `SUPER` / `ALT` / `CTRL` / `SHIFT` | `ALT` | variable used in binds |
-| `layouts` | comma list | `{{default-layouts}}` | the cycle; each layout once. Names below |
-| `floating` | comma list of bundle IDs | empty (first run: System Settings, Calculator) | apps that float (or the only ones that tile, see next). Wildcards such as `com.adobe.*` work |
+| `mod` | `"cmd"` / `"alt"` / `"ctrl"` / `"shift"`, or a list | `"alt"` | the main modifier. `.conf`: `$mod` |
+| `layouts` | list of layout names | `{{default-layouts}}` | the cycle; each layout once. Names below |
+| `floating.apps` | list of bundle IDs | empty (first run: System Settings, Calculator) | apps that float (or the only ones that tile, see `floating.listedAppsFloat`). Wildcards such as `com.adobe.*` work. `.conf`: `floating` |
 {{options}}
-| `bind` (also `binde`, `bindr`, `bindl`, `bindel`, `bindle`) | see [keybinds.md](keybinds.md) | | the `binde`/`bindel`/`bindle` forms repeat while held |
-| `submap = name` / `submap = reset` | | | groups binds into a mode |
-
-The animation options (`animate`, `animation-duration`, `animation-curve`, `animation-bounce`) make up an animation config (see below).
-
-`bindm` is accepted and ignored (dragging already moves and resizes tiles).
+| `binds` | list of `{ mods?, key, run, repeat? }` | | see [keybinds.md](keybinds.md) |
+| `submaps` | `{ name: [binds] }` | | key modes |
+| `features.<group>.<feature>` | bool | `true` | see `catwm.d.ts` for the list |
 
 ## Layout names
 
 {{layouts}}.
 
-## Minimal example
-
-```
-$mod = ALT
-layouts = tall, bsp, fullscreen
-window-margin-size = 10
-screen-padding = 10
-animate = true
-animation-curve = spring
-animation-bounce = 0.6
-floating = com.apple.systempreferences, com.apple.calculator
-floating-is-blacklist = true
-
-bind = $mod, 1..0, workspace, 1..10
-bind = $mod SHIFT, 1..0, movetoworkspace, 1..10
-bind = $mod, return, exec, open -na Terminal
-```
-
 ## Settings window and saved configs
 
-Menu bar → **Settings…** (⌘,). Panes: General, Layout, Windows, Motion, Templates, Shortcuts. Changes save and apply automatically. **Configs** (menu bar submenu / Settings) stores named keyboard, animation, and full presets in `~/.config/catwm/configs.json`; switching one rewrites the matching part of `catwm.conf`. Presets can be imported and exported.
+Menu bar → **Settings…** (⌘,). Panes: General, Layout, Windows, Motion, Templates, Shortcuts. Changes save to `catwm.overrides.json` and apply at once. **Configs** (menu bar submenu / Settings) stores named keyboard, animation, and full presets in `~/.config/catwm/configs.json`; switching one writes its values as overrides. Presets can be imported and exported.
 
-When editing by hand while the app runs, make the edit then run `catwm reload`. If the user also has Settings open, tell them: UI edits can overwrite hand edits.
+Hand edits to `catwm.config.ts` apply on save. A value that Settings changed stays overridden until you drop it in Settings → General.
 
 ## Workspace templates
 

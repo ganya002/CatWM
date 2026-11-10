@@ -73,7 +73,11 @@ final class Feedback: ObservableObject {
             let tail = log.split(separator: "\n", omittingEmptySubsequences: false).suffix(1500)
             files.append(("CatWM.log", tail.joined(separator: "\n")))
         }
-        if let conf = try? String(contentsOf: Config.url, encoding: .utf8) { files.append(("catwm.conf", conf)) }
+        let store = ConfigStore.shared
+        let configs = store.isScript ? [store.scriptURL, store.overridesURL] : [Config.url]
+        for url in configs {
+            if let text = try? String(contentsOf: url, encoding: .utf8) { files.append((url.lastPathComponent, text)) }
+        }
         if let crash, let ips = try? String(contentsOf: crash, encoding: .utf8) { files.append(("crash.ips", ips)) }
 
         let boundary = "catwm-\(UUID().uuidString)"
