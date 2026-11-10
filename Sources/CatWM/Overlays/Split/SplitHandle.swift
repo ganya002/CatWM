@@ -5,6 +5,8 @@ final class SplitHandle {
     static let shared = SplitHandle()
     private var handles: [String: Handle] = [:]
 
+    var windowIDs: Set<CGWindowID> { Set(handles.values.compactMap(\.windowID)) }
+
     func update(instant: Bool = false) {
         let manager = WindowManager.shared
         let animate = !instant && manager.config.animate
@@ -37,6 +39,8 @@ final class SplitHandle {
         private let glide = PanelGlide()
         private var target: NSRect?
         private var confirmEnd: DispatchWorkItem?
+
+        var windowID: CGWindowID? { panel.isVisible ? CGWindowID(panel.windowNumber) : nil }
 
         init(screen: String) {
             view = SplitHandleView(screen: screen)

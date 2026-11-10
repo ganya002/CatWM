@@ -9,8 +9,12 @@ enum WindowServerList {
     private static let list: List? = symbol("SLSGetOnScreenWindowList")
 
     static func onScreen() -> [CGWindowID]? {
-        guard let connection, let list else { return nil }
-        let cid = connection()
+        guard let connection else { return nil }
+        return onScreen(connection: connection())
+    }
+
+    static func onScreen(connection cid: Int32) -> [CGWindowID]? {
+        guard let list else { return nil }
         return read(capacity: 1_024) { buffer in
             var returned: Int32 = 0
             guard let base = buffer.baseAddress,

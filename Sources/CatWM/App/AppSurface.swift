@@ -2,8 +2,12 @@ import AppKit
 import QuartzCore
 
 struct AppSurface: TilingSurface {
+    private let fills = WindowResizeFills()
+
     func start(_ manager: WindowManager) {
-        if ProcessInfo.processInfo.environment["CATWM_RESIZE_SCENE"] == "1" {
+        if ProcessInfo.processInfo.environment["CATWM_RESIZE_FILL"] == "1" {
+            startColorFills(manager)
+        } else if ProcessInfo.processInfo.environment["CATWM_RESIZE_SCENE"] == "1" {
             manager.animator.makeResizeScene = { moves in
                 let screens = Screen.all()
                 guard moves.allSatisfy({ move in
@@ -12,9 +16,12 @@ struct AppSurface: TilingSurface {
                 let frames = Dictionary(moves.map { ($0.window.id, $0.from ?? $0.window.cachedFrame) },
                                         uniquingKeysWith: { _, latest in latest })
                 let regions = moves.map { ($0.from ?? $0.window.cachedFrame).union($0.target) }
-                guard WindowSceneCapture.canPresent(regions, participants: Set(frames.keys)) else { return nil }
+                let excluded = SplitHandle.shared.windowIDs
+                guard WindowSceneCapture.canPresent(regions, participants: Set(frames.keys),
+                                                    excluding: excluded) else { return nil }
                 let started = CACurrentMediaTime()
-                guard let capture = WindowSceneCapture.take(frames: frames, screens: screens) else { return nil }
+                guard let capture = WindowSceneCapture.take(frames: frames, screens: screens,
+                                                          excluding: excluded) else { return nil }
                 Log.debug(String(format: "window-scene: captured %d windows in %.1fms", frames.count,
                                  (CACurrentMediaTime() - started) * 1000))
                 return WindowResizeScene(capture: capture, frames: frames)
@@ -39,6 +46,20 @@ struct AppSurface: TilingSurface {
         startKeyTap()
         Notifications.shared.installBuiltIn()
         HUD.shared.prepare(text: manager.currentWorkspace ?? "1", layout: manager.config.layouts.first)
+    }
+
+    private func startColorFills(_ manager: WindowManager) {
+        let fills = fills
+        manager.animator.windowPresentation = fills
+        fills.excluded = { SplitHandle.shared.windowIDs }
+        fills.refresh = { [weak manager, weak fills] in
+            guard let manager else { return }
+            fills?.warm(manager.windows) { [weak manager] in manager?.animator.isAnimating($0) ?? true }
+        }
+        let landed = manager.animator.onLanded
+        manager.animator.onLanded = { [weak fills] in landed?(); fills?.refresh?() }
+        fills.refresh?()
+        Log.info("window-fill: color-only tiling enabled")
     }
 
     private func startKeyTap() {
@@ -74,6 +95,7 @@ struct AppSurface: TilingSurface {
     }
 
     func tilesDidChange(instant: Bool) {
+        fills.refresh?()
         SplitHandle.shared.update(instant: instant)
         TabStrips.shared.update(instant: instant)
     }

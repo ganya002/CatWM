@@ -4,20 +4,6 @@ import os
 import QuartzCore
 
 final class Animator {
-    struct Move {
-        let window: Window
-        let target: CGRect
-        let bounds: CGRect
-        var from: CGRect?
-
-        init(window: Window, to target: CGRect, bounds: CGRect, from: CGRect? = nil) {
-            self.window = window
-            self.target = target
-            self.bounds = bounds
-            self.from = from
-        }
-    }
-
     private var items: [CGWindowID: Item] = [:]
     private var landing: [CGWindowID: (move: Move, number: Int)] = [:]
     private var landings = 0
@@ -33,6 +19,7 @@ final class Animator {
     private let makeWriter: (pid_t) -> AXWriter
     private let applyFocus: (Window, () -> Bool) -> Void
     var makeResizeScene: (([Move]) -> WindowResizeScene?)?
+    var windowPresentation: (any WindowPresentation)?
     private var resizeScene: WindowResizeScene?
     private var clock: WindowFrameClock?
     private var timing = Timing()
@@ -48,7 +35,7 @@ final class Animator {
         self.applyFocus = applyFocus
     }
 
-    deinit { clock?.stop(); resizeScene?.close() }
+    deinit { clock?.stop(); resizeScene?.close(); windowPresentation?.close() }
 
     func cancelFocus() { focusLock.withLock { focusGeneration += 1 } }
 
@@ -83,8 +70,10 @@ final class Animator {
     }
 
     func isBusy(_ id: CGWindowID) -> Bool {
-        items[id] != nil || landing[id] != nil || following[id] != nil || (quietUntil[id] ?? 0) > CACurrentMediaTime()
+        isAnimating(id) || (quietUntil[id] ?? 0) > CACurrentMediaTime()
     }
+
+    func isAnimating(_ id: CGWindowID) -> Bool { items[id] != nil || landing[id] != nil || following[id] != nil }
 
     func destination(_ id: CGWindowID) -> CGRect? {
         items[id]?.move.target ?? landing[id]?.move.target ?? following[id]?.target
@@ -93,6 +82,7 @@ final class Animator {
     func isMoving(_ id: CGWindowID, to frame: CGRect) -> Bool { destination(id) == frame }
 
     func cancel(_ id: CGWindowID, keepingScene: Bool = false) {
+        windowPresentation?.cancel(id)
         if !keepingScene { endResizeScene() }
         nextEpoch(for: id)
         following.remove(id)
@@ -110,6 +100,7 @@ final class Animator {
     }
 
     func animate(_ moves: [Move], spec: MotionSpec) {
+        guard !moves.isEmpty else { return }
         prepareResizeScene(for: moves, spec: spec)
         let now = CACurrentMediaTime()
         let duration = spec.duration
@@ -134,25 +125,13 @@ final class Animator {
                 land(move)
             } else {
                 items[id] = Item(move: move, from: from, start: now, spec: spec, velocity: velocity)
+                items[id]?.colorSizing = windowPresentation?.sizing(for: move, from: from, spec: spec)
                 if resizeScene?.visible == true { land(move) }
             }
         }
+        windowPresentation?.prepare(moves, spec: spec)
         startClock()
         finishResizeScene()
-    }
-
-    func follow(_ moves: [Move]) {
-        for move in moves {
-            let id = move.window.id
-            if items[id] != nil || landing[id] != nil { cancel(id) }
-            owners[id] = move.window.pid
-            following.add(move)
-            quietUntil[id] = CACurrentMediaTime() + 0.4
-            writer(move.window.pid).follow(move.window, to: move.target) { [weak self] actual in
-                guard let self, let minimum = self.following.minimum(after: move, actual: actual) else { return }
-                self.onMinimumSize?(move.window.id, minimum)
-            }
-        }
     }
 
     func endFollow() { following.removeAll().forEach(land) }
@@ -197,14 +176,23 @@ final class Animator {
         let now = CACurrentMediaTime()
         timing.tick(at: now)
         resizeScene?.update(items.mapValues { $0.frame(at: presentation, aligned: false) })
-        for (id, item) in items {
+        let ordered = items.sorted {
+            let left = $0.value.colorSizing?.releasesSpace == true
+            let right = $1.value.colorSizing?.releasesSpace == true
+            return left == right ? $0.key < $1.key : left
+        }
+        for (id, item) in ordered {
             if presentation - item.start >= item.duration {
                 items[id] = nil
                 land(item.move)
             } else if resizeScene?.visible != true {
-                writer(item.move.window.pid).step(item.move.window, notBefore: presentation) { item.frame(at: $0) }
+                writer(item.move.window.pid).step(item.move.window, notBefore: presentation,
+                                                  releasesSpace: item.colorSizing?.releasesSpace == true) {
+                    item.request(at: $0, presentedAt: presentation)
+                }
             }
         }
+        updateWindowPresentation(at: presentation)
         timing.ticks.add(CACurrentMediaTime() - now)
         if items.isEmpty {
             clock?.stop(); clock = nil
@@ -227,10 +215,10 @@ final class Animator {
         writer(move.window.pid).land(move.window, at: move.target) { [weak self] wrote in
             guard let self, self.landing[id]?.number == number else { return }
             self.landing[id] = nil
+            self.updateWindowPresentation()
             if wrote { self.resizeScene?.placed(id, at: move.target) }
             self.finishResizeScene()
-            guard wrote else { return }
-            self.onLanded?()
+            if wrote { self.onLanded?() }
             self.quietUntil[id] = CACurrentMediaTime() + 0.4
             DispatchQueue.main.asyncAfter( // style-ok: an app that ignores a write sends no event
                 deadline: .now() + 0.12
@@ -274,13 +262,31 @@ final class Animator {
 }
 
 extension Animator {
-    private static func slowApp(_ pid: pid_t, _ stats: AXWriter.Stats) -> PerfMonitor.SlowApp? {
-        guard !stats.position.isEmpty,
-              let bundle = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier else { return nil }
-        let step = (stats.size.isEmpty ? 0 : stats.size.total / Double(stats.size.count))
-            + stats.position.total / Double(stats.position.count)
-        return .init(bundle: bundle, stepMs: step * 1000,
-                     skipped: Double(stats.skipped) / Double(stats.skipped + stats.position.count))
+    func follow(_ moves: [Move]) {
+        for move in moves {
+            let id = move.window.id
+            if items[id] != nil || landing[id] != nil { cancel(id) }
+            owners[id] = move.window.pid
+            following.add(move)
+            quietUntil[id] = CACurrentMediaTime() + 0.4
+        }
+        windowPresentation?.follow(moves)
+        updateWindowPresentation()
+        for move in moves {
+            writer(move.window.pid).follow(move.window, to: move.target) { [weak self] actual in
+                guard let self else { return }
+                self.updateWindowPresentation()
+                guard let minimum = self.following.minimum(after: move, actual: actual) else { return }
+                self.onMinimumSize?(move.window.id, minimum)
+            }
+        }
+    }
+
+    private func updateWindowPresentation(at time: CFTimeInterval = CACurrentMediaTime()) {
+        guard let windowPresentation else { return }
+        let samples = items.mapValues { $0.frame(at: time, aligned: false) }
+        let moving = following.frames.merging(samples) { _, frame in frame }
+        windowPresentation.update(moving.merging(landing.mapValues { $0.move.target }) { frame, _ in frame })
     }
 
     private func prepareResizeScene(for moves: [Move], spec: MotionSpec) {
@@ -370,30 +376,13 @@ extension Animator {
         let tracks = zip(running.tracks, target).map { $0.retargeted(to: $1) }
         items[window.id] = Item(move: .init(window: window, to: frame, bounds: frame), tracks: tracks,
                                 start: running.start, duration: running.duration)
+        if let sizing = running.colorSizing, frame.minY == sizing.source.minY {
+            items[window.id]?.colorSizing = ColorFillSizing(source: sizing.source, target: frame)
+        }
         if resizeScene?.visible == true, let item = items[window.id] {
             nextEpoch(for: window.id)
             land(item.move)
         }
         return true
-    }
-}
-
-extension Animator {
-    @MainActor func waitForPendingWrites(pids: Set<pid_t>, timeout: TimeInterval = 1) async -> Bool {
-        let completion = PendingWrites()
-        let deadline = Task { @MainActor in
-            do { try await Task.sleep(for: .seconds(timeout)) } catch { return } // style-ok: a hung app never drains
-            completion.finish(false)
-        }
-        defer { deadline.cancel() }
-        return await withTaskCancellationHandler {
-            guard !Task.isCancelled else { return false }
-            return await withCheckedContinuation { continuation in
-                completion.wait(continuation)
-                afterPendingWrites(pids: pids) { completion.finish(true) }
-            }
-        } onCancel: {
-            completion.finish(false)
-        }
     }
 }

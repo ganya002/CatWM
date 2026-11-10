@@ -25,10 +25,16 @@ Window animation uses an `NSScreen` display link for the fastest display contain
 `WindowFrameClock` sends its `targetTimestamp` to `Animator`; each app writer samples at that deadline,
 or at its estimated write-completion time if it has already fallen behind. Pending writes are coalesced,
 so a slow app skips obsolete frames instead of replaying them. The link stops when no trajectories remain.
+The estimate learns only from successful native writes. Samples are capped at 50 ms before smoothing;
+it follows rising costs with an 80% weight and falling costs with a 40% weight. Recent estimates survive
+landing and expire after one second of idle time. These are tuning heuristics, not measured client
+repaint times. A successful AX write does not prove fresh pixels are ready.
 This paces AX requests; it does not make app redraws or WindowServer presentation atomic.
 
-Compositor-side scaling is a separate mechanism. [Hyprland's surface renderer](https://github.com/hyprwm/Hyprland/blob/main/src/render/pass/SurfacePassElement.cpp)
-scales the client buffer to the current animated geometry, independently of the client's reported size.
+Compositor-side presentation is a separate mechanism. [Hyprland's surface renderer](https://github.com/hyprwm/Hyprland/blob/main/src/render/pass/SurfacePassElement.cpp)
+fits the current client buffer to animated geometry, independently of the client's reported size.
+Its [texture coordinates](https://github.com/hyprwm/Hyprland/blob/main/src/render/ElementRenderer.cpp) can crop
+or extend edge pixels, so this need not stretch the whole window.
 CatWM normally interpolates real AX window frames, so client resize and redraw latency still affect motion.
 A display link cannot remove that cost.
 
@@ -51,8 +57,9 @@ can represent the new targets; otherwise it returns to live AX animation.
 
 This path runs only with existing Screen Recording permission. Overlapping, partially
 visible or changing source frames return to live AX animation. A foreground window intersecting the
-animation bounds also uses live AX resizing, so a scene cannot paint over that window. Capture preparation currently adds tens of
-milliseconds on the test Mac. The background inside the hidden real-window footprints is a snapshot;
+animation bounds also uses live AX resizing, so a scene cannot paint over that window.
+CatWM's split-handle panels are excluded from these checks and the background capture, so their input regions do not reject adjacent tiles.
+Capture preparation currently adds tens of milliseconds on the test Mac. The background inside the hidden real-window footprints is a snapshot;
 content outside those footprints remains live. It remains opt-in while capture costs are investigated.
 
 Run `Tools/window-resize-probe.sh` to build a standalone probe from the real capture, scene and clock source.
@@ -62,6 +69,78 @@ unrelated indicator behind the scene and checks that both updates reach the scre
 `/tmp/catwm-resize-stalled.png` and `/tmp/catwm-resize-live.png` and prints `pixel_fit true`,
 `resizing_content_live true`, `unrelated_content_live true` and `live_frame_fit true` on success. The probe always resumes and terminates its
 child and closes the scene; it does not move user windows.
+
+### Experimental background fills
+
+Set `CATWM_RESIZE_FILL=1` at launch to test color-only fills during tiling. The default is off.
+This mode takes precedence over `CATWM_RESIZE_SCENE`; it doesn't enable captured-window compositing.
+`Animator` sends presentation samples and cancellations through `WindowPresentation`. `WindowResizeFills`
+uses those samples to update the fill against the actual WindowServer frame while AX writes continue.
+It closes fills when placement ends, the window is cancelled, or the presentation becomes obstructed.
+`AppSurface` prepares appearances on a serial background queue when windows are idle. A cache miss uses
+normal AX motion, so capture never blocks the start of an animation. Width-only changes reuse the
+prepared vertical color profiles. After placement, the cache is refreshed even during the animation
+recovery grace period. A mouse click or display change cancels the current fill. Divider dragging
+uses the same presentation path and publishes its desired frames before submitting AX writes.
+
+For a prepared opaque window with a fixed top edge, `ColorFillSizing` uses predicted trajectory sizes
+for both shrinking and growing. Shrinking proceeds through intermediate native sizes, slightly ahead
+of the visible outline when the writer has learned a lead. Color fills cover the resulting gap around
+the smaller real window. Growing native dimensions and predicted positions stay inside the visible
+viewport, since a color fill cannot crop excess content. Requests that release
+space go first within a tick and a pending per-app batch; different apps still write independently.
+Position and size writes use the order that keeps the intermediate rectangle closest to the source
+and target union, preventing a right-aligned tile from briefly extending off its display.
+
+Prepare its `WindowFillAppearance` before motion. It samples narrow bands on the left and right,
+a row along the bottom, and the native border and alpha outline. It retains color strips and compact
+corner masks. Text and controls stay in the real window. There is no app whitelist.
+
+Each side keeps its own colors at the original vertical scale, including browser tabs and toolbars.
+The most common color in each sampled band reduces streaks from text and icons. Bottom growth
+preserves fixed color regions such as a sidebar by expanding the longest flat color run. This is an
+estimate of which region stretches; it doesn't know the app's layout.
+
+A mask keeps the fill inside the desired outline and cuts out live content. The fill covers the old
+border and shadow where the window grows, and extends the native border around the desired outline.
+Shared corners stay untouched. The masks overlap at their join to avoid an antialiasing gap. Mask
+textures use nearest-pixel sampling so a small rectangular mask cannot wash out the live content.
+One fixed panel holds the layers. Updates don't capture or resize the panel each frame. Each update reuses one
+window-order read for visibility and stacking checks. A fill panel changes its order only when it
+opens or the real window rises above it. Its AppKit
+appearance animation is disabled so macOS cannot scale the fill away from the live window as it opens.
+
+Run `Tools/window-fill-probe.sh` with existing Screen Recording permission. Use `--light` or `--dark`
+to set only the disposable window's appearance. Choose `--style=native`, `--style=browser`,
+`--style=sidebar`, or `--style=borderless`. The browser fixture uses live WebKit content with a custom
+tab strip and toolbar. The sidebar fixture also checks that the boundary keeps its width after a
+partial live resize. `--style=translucent` checks that actual translucent content is left unpainted.
+Use `--inspect <window-id> ...` to check appearance preparation on existing app windows without moving them.
+Use `--demo` for a persistent interactive browser fixture. Its width and height sliders expose the
+color fill, **Catch up** resizes the real window, and **Close** ends the demo and its child process.
+This mode doesn't enable fills in the running CatWM or hold the verification lock while you test.
+
+The probes check half-pixel seams, old borders, native corner shapes, titlebar colors, unchanged
+content and controls, and every physical pixel outside the target bounds. They also check fractional
+targets, retargeting, cancellation and removal when the real window grows and repaints. Images are
+saved to `/tmp/catwm-fill-refined-*.png`. These checks verify pixels, not animation latency.
+Corner checks compare surface alpha so the source window's external shadow cannot be mistaken for
+a change in clipping.
+
+Add `--background` to keep the fixture behind other apps and capture only the test windows through
+WindowServer. This mode checks fill-surface opacity at the seams as well as composite pixels. It
+excludes WindowServer shadows and doesn't measure physical presentation or latency. Its images use
+`/tmp/catwm-fill-background-*.png`. WebKit stays running, so its live pixels may change during the
+probe. The browser checks transparency of the helper over the content and controls, and confirms
+that WindowServer removes the closed helper. If a covered browser stops presenting fresh content,
+the repaint check exits with code 77 and needs a visible run.
+
+The prototype supports opaque rectangular and rounded windows resizing with a fixed top edge on one
+display. Predictive native shrinking also requires compatible prepared colors, minimum corner dimensions,
+and a matching display scale. The fill hides when native content already covers the viewport, for
+vertical moves, or for unsupported geometry. Transparency outside the corner regions is rejected. It cannot crop
+another app's excess content or repair stale pixels inside that app's own frame. True transparency
+still needs a different method to preserve the backdrop while hiding the real window's shadow.
 
 One number, for example a scroll offset or a slider, stepped by your own clock:
 

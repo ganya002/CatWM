@@ -20,9 +20,11 @@ final class WindowResizeScene {
     private var capturing: Set<CGWindowID> = []
     private(set) var visible = false
     let ids: Set<CGWindowID>
+    private let excluded: Set<CGWindowID>
 
     init(capture: WindowSceneCapture, frames: [CGWindowID: CGRect]) {
         ids = Set(frames.keys)
+        excluded = capture.excluded
         placements = frames.mapValues { WindowScenePlacement(frame: $0) }
         for display in capture.displays {
             guard let screen = display.screen.nsScreen else { continue }
@@ -89,7 +91,7 @@ final class WindowResizeScene {
         let regions = placements.values.map { $0.requested.union(frame) }
         let participants = ids.union(displays.map { CGWindowID($0.panel.windowNumber) })
         return displays.contains { $0.frame.contains(frame) }
-            && WindowSceneCapture.canPresent(regions, participants: participants)
+            && WindowSceneCapture.canPresent(regions, participants: participants, excluding: excluded)
     }
 
     func show() {

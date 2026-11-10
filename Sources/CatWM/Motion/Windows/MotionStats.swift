@@ -12,17 +12,35 @@ struct Stat {
 }
 
 struct StepCost {
+    static let limit = 0.05
+    private static let rise = 0.8, fall = 0.4
+
     private(set) var seconds: Double?
 
-    var lead: Double { min(seconds ?? 0, 0.05) }
+    var lead: Double { seconds ?? 0 }
 
-    mutating func add(_ cost: Double) { seconds = seconds.map { $0 * 0.6 + cost * 0.4 } ?? cost }
+    mutating func add(_ cost: Double) {
+        let cost = min(cost, Self.limit)
+        guard let seconds else { self.seconds = cost; return }
+        self.seconds = seconds + (cost > seconds ? Self.rise : Self.fall) * (cost - seconds)
+    }
 }
 
-func measure(_ body: () -> Void) -> Double {
-    let start = CACurrentMediaTime()
-    body()
-    return CACurrentMediaTime() - start
+struct WindowWriteCost {
+    private var cost = StepCost()
+    private var sampledAt: CFTimeInterval?
+    private static let lifetime: CFTimeInterval = 1
+
+    func lead(at now: CFTimeInterval) -> Double {
+        guard let sampledAt, (0...Self.lifetime).contains(now - sampledAt) else { return 0 }
+        return cost.lead
+    }
+
+    mutating func add(_ seconds: Double, at now: CFTimeInterval) {
+        if let sampledAt, !(0...Self.lifetime).contains(now - sampledAt) { cost = StepCost() }
+        cost.add(seconds)
+        sampledAt = now
+    }
 }
 
 struct TilingTiming {
@@ -47,6 +65,15 @@ struct TilingTiming {
 }
 
 extension Animator {
+    static func slowApp(_ pid: pid_t, _ stats: AXWriter.Stats) -> PerfMonitor.SlowApp? {
+        guard !stats.position.isEmpty,
+              let bundle = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier else { return nil }
+        let step = (stats.size.isEmpty ? 0 : stats.size.total / Double(stats.size.count))
+            + stats.position.total / Double(stats.position.count)
+        return .init(bundle: bundle, stepMs: step * 1000,
+                     skipped: Double(stats.skipped) / Double(stats.skipped + stats.position.count))
+    }
+
     struct Timing {
         var ticks = Stat(), gaps = Stat()
         var firstTick: CFTimeInterval?, lastTick: CFTimeInterval?

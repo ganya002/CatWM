@@ -79,20 +79,24 @@ final class Window {
     var minimizedUnlessStalled: Bool { unlessStalled(false) { element.flag(kAXMinimizedAttribute) } }
     var frameUnlessStalled: CGRect { unlessStalled(.null) { frame } }
 
-    func setPosition(_ origin: CGPoint) {
-        if backend.setPosition(self, origin) {
-            frameLock.withLock { if !lastFrame.isNull { lastFrame.origin = origin; frameVersion += 1 } }
-        }
+    @discardableResult
+    func setPosition(_ origin: CGPoint) -> Bool {
+        guard backend.setPosition(self, origin) else { return false }
+        frameLock.withLock { if !lastFrame.isNull { lastFrame.origin = origin; frameVersion += 1 } }
+        return true
     }
-    func setSize(_ size: CGSize) {
-        if backend.setSize(self, size) {
-            frameLock.withLock { if !lastFrame.isNull { lastFrame.size = size; frameVersion += 1 } }
-        }
+    @discardableResult
+    func setSize(_ size: CGSize) -> Bool {
+        guard backend.setSize(self, size) else { return false }
+        frameLock.withLock { if !lastFrame.isNull { lastFrame.size = size; frameVersion += 1 } }
+        return true
     }
-    func setFrame(_ rect: CGRect) {
+    @discardableResult
+    func setFrame(_ rect: CGRect) -> Bool {
         setSize(rect.size)
-        setPosition(rect.origin)
-        setSize(rect.size)
+        let moved = setPosition(rect.origin)
+        let sized = setSize(rect.size)
+        return moved && sized
     }
 
     func focus(ifCurrent: () -> Bool = { true }) { backend.focus(self, ifCurrent: ifCurrent) }
