@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 
 extension Steps {
     static func global(_ coach: Coach) -> PlannedStep? {

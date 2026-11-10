@@ -205,45 +205,45 @@ export interface Config {
   debugLogging?: boolean
   features?: {
     input?: {
-      /** Quick actions at the pointer in window mode. Embedded mode reads this. Standalone CatWM keeps every feature on for now. */
+      /** Quick actions at the pointer in window mode. On by default. Embedded mode doesn't have it. */
       cursorActions?: boolean
-      /** Switch workspaces with trackpad swipes. Embedded mode reads this. Standalone CatWM keeps every feature on for now. */
+      /** Switch workspaces with trackpad swipes. On by default, off by default in embedded mode. */
       gestures?: boolean
-      /** Read key presses for the binds. Embedded mode reads this. Standalone CatWM keeps every feature on for now. */
+      /** Read key presses for the binds. On by default, off by default in embedded mode. */
       keys?: boolean
-      /** Swap and resize windows with the mouse, and pull windows from the Dock. Embedded mode reads this. Standalone CatWM keeps every feature on for now. */
+      /** Swap and resize windows with the mouse, and pull windows from the Dock. On by default, off by default in embedded mode. */
       mouse?: boolean
     }
     presentation?: {
-      /** Dim and blur the other windows. Embedded mode reads this. Standalone CatWM keeps every feature on for now. */
+      /** Dim and blur the other windows. On by default. Embedded mode doesn't have it. */
       dimming?: boolean
-      /** The layout and config messages. Embedded mode reads this. Standalone CatWM keeps every feature on for now. */
+      /** The layout and config messages. On by default. Embedded mode doesn't have it. */
       hud?: boolean
-      /** The keyboard help in window mode. Embedded mode reads this. Standalone CatWM keeps every feature on for now. */
+      /** The keyboard help in window mode. On by default. Embedded mode doesn't have it. */
       keyHelp?: boolean
-      /** The Overview of every workspace. Embedded mode reads this. Standalone CatWM keeps every feature on for now. */
+      /** The Overview of every workspace. On by default. Embedded mode doesn't have it. */
       overview?: boolean
-      /** The window switcher. Embedded mode reads this. Standalone CatWM keeps every feature on for now. */
+      /** The window switcher. On by default. Embedded mode doesn't have it. */
       switcher?: boolean
-      /** The tab strip above a tab group. Embedded mode reads this. Standalone CatWM keeps every feature on for now. */
+      /** The tab strip above a tab group. On by default. Embedded mode doesn't have it. */
       tabStrips?: boolean
     }
     services?: {
-      /** Unread badges on tabs. Embedded mode reads this. Standalone CatWM keeps every feature on for now. */
+      /** Unread badges on tabs. On by default, off by default in embedded mode. */
       notifications?: boolean
-      /** Save and open app windows, tabs and folders. Embedded mode reads this. Standalone CatWM keeps every feature on for now. */
+      /** Save and open app windows, tabs and folders. On by default, off by default in embedded mode. */
       sessions?: boolean
-      /** The control socket for the CLI and the libraries. Embedded mode reads this. Standalone CatWM keeps every feature on for now. */
+      /** The control socket for the CLI and the libraries. On by default, off by default in embedded mode. */
       socket?: boolean
-      /** Saved workspace templates. Embedded mode reads this. Standalone CatWM keeps every feature on for now. */
+      /** Saved workspace templates. On by default, off by default in embedded mode. */
       templates?: boolean
     }
     windows?: {
-      /** Run each workspace as a macOS Desktop. Embedded mode reads this. Standalone CatWM keeps every feature on for now. */
+      /** Run each workspace as a macOS Desktop. On by default, off by default in embedded mode. */
       desktops?: boolean
-      /** Group windows as tabs. Embedded mode reads this. Standalone CatWM keeps every feature on for now. */
+      /** Group windows as tabs. On by default, off by default in embedded mode. */
       tabGroups?: boolean
-      /** Lay out windows with the layouts. Embedded mode reads this. Standalone CatWM keeps every feature on for now. */
+      /** Lay out windows with the layouts. On by default, off by default in embedded mode. */
       tiling?: boolean
     }
   }

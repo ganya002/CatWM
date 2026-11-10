@@ -1,5 +1,6 @@
 import AppKit
 import Carbon
+import CatWMKit
 import IOKit
 import IOKit.ps
 import MacKeysCore
@@ -26,11 +27,6 @@ extension MacKeyboard {
         return automatic(family, dark: dark)
     }
 
-    static func isValid(_ setting: String) -> Bool {
-        let wanted = slug(setting)
-        return wanted == "auto" || familyFor(wanted) != nil || FinishID.allCases.contains { slug($0.name) == wanted }
-    }
-
     static func familyFor(_ slug: String) -> Family? {
         if slug == "imac" { return .mk }
         return Family.allCases.first { familySlug($0) == slug }
@@ -45,11 +41,7 @@ extension MacKeyboard {
         }
     }
 
-    static func slug(_ text: String) -> String {
-        text.lowercased().replacingOccurrences(of: "·", with: " ")
-            .split(whereSeparator: { $0 == " " || $0 == "-" || $0 == "_" })
-            .joined(separator: "-")
-    }
+    static func slug(_ text: String) -> String { KeyboardFinish.slug(text) }
 
     static func automatic(_ family: Family, dark: Bool) -> FinishID {
         switch family {

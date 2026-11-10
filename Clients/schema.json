@@ -1110,6 +1110,17 @@
     {
       "data" : [
         {
+          "name" : "granted",
+          "summary" : "The permissions that are granted now",
+          "type" : "string[]"
+        }
+      ],
+      "name" : "permissions.changed",
+      "summary" : "A permission was granted or revoked"
+    },
+    {
+      "data" : [
+        {
           "name" : "errors",
           "summary" : "Problems in the config: file, line, phase and message. A failed save keeps the last good config",
           "type" : "object[]"

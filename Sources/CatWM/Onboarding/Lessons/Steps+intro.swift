@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 
 extension Steps {
     typealias SummaryRow = (caps: [String], label: String)

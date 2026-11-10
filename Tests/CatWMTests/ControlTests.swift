@@ -1,4 +1,5 @@
 @testable import CatWM
+@testable import CatWMKit
 import Foundation
 import Testing
 
@@ -59,7 +60,7 @@ private func reply(_ text: String) throws -> JSON {
     }
 
     @Test func dispatchKnowsAliasesAndFocusFeatures() {
-        let names = ["setlayout", "reevaluate"] + FocusDim.features.map(\.pointer.dispatcher)
+        let names = ["setlayout", "reevaluate"] + FocusEffect.all.map(\.dispatcher)
         #expect(names.allSatisfy(CommandRegistry.dispatcherNames.contains))
     }
 

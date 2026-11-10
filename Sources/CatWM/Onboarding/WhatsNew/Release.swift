@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 
 struct Release {
     struct Feature {

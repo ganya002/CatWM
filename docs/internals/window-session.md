@@ -1,6 +1,6 @@
 # Window session
 
-`Sources/CatWM/Session/` saves and opens app windows. It does not know about CatWM workspaces, layouts or Desktops. It has no CatWM types, such as `WindowManager`, `WorkspaceModel`, `Layout`, `Theme` or `HUD`, and `Tools/check-style.sh` rejects these names in it. The code in `Sources/CatWM/Templates/` uses `Session/` and changes the CatWM state.
+`Sources/CatWMKit/Session/` saves and opens app windows. It does not know about CatWM workspaces, layouts or Desktops. It has no CatWM types, such as `WindowManager`, `WorkspaceModel`, `Layout`, `Theme` or `HUD`, and `Tools/check-style.sh` rejects these names in it. The code in `Sources/CatWMKit/Templates/` uses `Session/` and changes the CatWM state.
 
 ## Folder map
 

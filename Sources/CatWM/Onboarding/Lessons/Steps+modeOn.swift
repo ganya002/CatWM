@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 
 extension Steps {
     static func modeOn(_ coach: Coach, title: String? = nil, text: String? = nil) -> PlannedStep? {

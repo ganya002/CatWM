@@ -1,5 +1,6 @@
 import AppKit
 @testable import CatWM
+@testable import CatWMKit
 
 final class FakeBackend: WindowBackend {
     struct FakeWindow {

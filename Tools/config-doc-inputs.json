@@ -1,11 +1,10 @@
 {
   "directories": [
-    "Sources/CatWM/Config/Options",
-    "Sources/CatWM/Config/Model"
+    "Sources/CatWMKit/Config/Options",
+    "Sources/CatWMKit/Config/Model"
   ],
   "files": [
-    "Sources/CatWM/Tiling/Focus/FocusDim.swift",
-    "Sources/CatWM/Tiling/Layout/Layout.swift",
+    "Sources/CatWMKit/Tiling/Layout/Layout.swift",
     "Resources/AgentDocs/config.template.md",
     "Resources/AgentDocs/config.md",
     "Tools/config-doc-inputs.json"

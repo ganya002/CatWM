@@ -1,6 +1,6 @@
 # Notifications: the unread badge of each window
 
-`Notifications.shared` (`Sources/CatWM/Notifications/`) holds one `Badge` for each window: a count (`99+` above 99) or a dot. Sources find the badges and messages. Listeners get each change. The `tab-notification-badges` option turns it on and off. When it is off, no source runs.
+`Notifications.shared` (`Sources/CatWMKit/Notifications/`) holds one `Badge` for each window: a count (`99+` above 99) or a dot. Sources find the badges and messages. Listeners get each change. The `tab-notification-badges` option turns it on and off. When it is off, no source runs.
 
 This document tells what the code does and why. Read it before you add a source or change a source.
 

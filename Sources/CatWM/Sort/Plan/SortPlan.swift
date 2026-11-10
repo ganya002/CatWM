@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 
 struct SortPlan {
     static let maxLanes = 10

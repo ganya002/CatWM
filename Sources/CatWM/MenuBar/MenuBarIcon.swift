@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 
 enum MenuBarIcon {
     private struct Part {

@@ -9,6 +9,9 @@ let testSettings: [SwiftSetting] = FileManager.default.fileExists(atPath: testin
 let package = Package(
     name: "CatWM",
     platforms: [.macOS(.v14)],
+    products: [
+        .library(name: "CatWMKit", type: .static, targets: ["CatWMKit"])
+    ],
     dependencies: [
         .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.8.1"),
         .package(url: "https://github.com/noxaur/mackeys-sdk.git", from: "0.2.0"),
@@ -17,9 +20,15 @@ let package = Package(
     targets: [
         .plugin(name: "CatalogPlugin", capability: .buildTool()),
         .target(name: "NativeTrafficLight", path: "Sources/native-traffic-light"),
+        .target(
+            name: "CatWMKit",
+            path: "Sources/CatWMKit",
+            linkerSettings: [.linkedLibrary("sqlite3")]
+        ),
         .executableTarget(
             name: "CatWM",
             dependencies: [
+                "CatWMKit",
                 "NativeTrafficLight",
                 .product(name: "Sparkle", package: "Sparkle"),
                 .product(name: "MacKeysCore", package: "mackeys-sdk"),
@@ -27,9 +36,7 @@ let package = Package(
                 .product(name: "PermissionFlow", package: "PermissionFlow")
             ],
             path: "Sources/CatWM",
-            resources: [.copy("Config/Script/sucrase.js")],
-            linkerSettings: [.unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"]),
-                             .linkedLibrary("sqlite3")],
+            linkerSettings: [.unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"])],
             plugins: [.plugin(name: "CatalogPlugin")]
         ),
         .testTarget(
@@ -40,14 +47,14 @@ let package = Package(
         ),
         .testTarget(
             name: "CatWMTests",
-            dependencies: ["CatWM"],
+            dependencies: ["CatWM", "CatWMKit"],
             path: "Tests/CatWMTests",
             exclude: ["Gallery"],
             swiftSettings: testSettings
         ),
         .testTarget(
             name: "CatWMGalleryTests",
-            dependencies: ["CatWM"],
+            dependencies: ["CatWM", "CatWMKit"],
             path: "Tests/CatWMTests/Gallery",
             swiftSettings: testSettings
         )

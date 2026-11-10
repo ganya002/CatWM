@@ -2,6 +2,7 @@ import Foundation
 import Testing
 
 @testable import CatWM
+@testable import CatWMKit
 
 private func preservesOriginalOrder(_ actual: [String], _ original: [String]) -> Bool {
     actual.filter { original.contains($0) } == original
@@ -110,9 +111,9 @@ private var catalogRoot: URL {
 @Test func dispatcherRegistryContainsEveryActionAndNoDuplicates() {
     #expect(Set(Actions.dispatchers).count == Actions.dispatchers.count)
     #expect(Actions.all.allSatisfy { Actions.dispatchers.contains($0.dispatcher) })
-    for feature in FocusDim.features {
-        #expect(Options.all.contains { $0.key == feature.options.first?.key })
-        #expect(PointerActions.all.contains { $0.id == feature.pointer.id })
+    for effect in FocusEffect.all {
+        #expect(Options.all.contains { $0.key == effect.options.first?.key })
+        #expect(PointerActions.all.contains { $0.id == effect.pointer.id })
     }
 }
 

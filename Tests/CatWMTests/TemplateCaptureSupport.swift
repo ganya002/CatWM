@@ -1,4 +1,5 @@
 @testable import CatWM
+@testable import CatWMKit
 import Foundation
 
 func sampleTemplate(title: String = "Draft") -> WorkspaceTemplate {

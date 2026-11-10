@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 import SwiftUI
 
 class CatWMHostingView<Content: View>: NSHostingView<Content> {

@@ -183,6 +183,15 @@ class WindowNotifications(TypedDict):
     data: WindowNotificationsData
 
 
+class PermissionsChangedData(TypedDict):
+    granted: list[str]
+
+
+class PermissionsChanged(TypedDict):
+    event: Literal["permissions.changed"]
+    data: PermissionsChangedData
+
+
 class ConfigReloadedData(TypedDict):
     errors: list[dict[str, Any]]
 
@@ -192,8 +201,8 @@ class ConfigReloaded(TypedDict):
     data: ConfigReloadedData
 
 
-Event = FocusChanged | WindowAdded | WindowRemoved | WorkspaceChanged | LayoutChanged | TilingChanged | ModeChanged | WindowNotifications | ConfigReloaded
-EVENTS = ["focus.changed", "window.added", "window.removed", "workspace.changed", "layout.changed", "tiling.changed", "mode.changed", "window.notifications", "config.reloaded"]
+Event = FocusChanged | WindowAdded | WindowRemoved | WorkspaceChanged | LayoutChanged | TilingChanged | ModeChanged | WindowNotifications | PermissionsChanged | ConfigReloaded
+EVENTS = ["focus.changed", "window.added", "window.removed", "workspace.changed", "layout.changed", "tiling.changed", "mode.changed", "window.notifications", "permissions.changed", "config.reloaded"]
 
 
 def default_path() -> str:

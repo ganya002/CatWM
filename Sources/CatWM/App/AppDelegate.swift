@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
@@ -87,6 +88,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func permissionsChecked(_ granted: Set<Permission>, _ changed: Set<Permission>) {
         let trusted = granted.contains(.accessibility)
+        if !changed.isEmpty { EventBus.shared.permissionsChanged(granted) }
         let optional: [Permission] = [.inputMonitoring, .screenRecording, .fullDiskAccess]
         for permission in optional where changed.contains(permission) {
             let isGranted = granted.contains(permission)
@@ -95,12 +97,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         if changed.contains(.fullDiskAccess) { Notifications.shared.refreshSources() }
         let manager = WindowManager.shared
-        if trusted && !manager.isStarted {
+        if trusted && !manager.servicesStarted {
             Log.info("Accessibility granted")
             manager.start()
         } else if trusted {
-            if Instance.input.keys, !Hotkeys.shared.isActive { Hotkeys.shared.restart() }
-            manager.startMouseTaps()
+            restartInput(manager)
         }
         if changed.contains(.accessibility) {
             Log.info("Accessibility \(trusted ? "granted" : "revoked")")
@@ -111,6 +112,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             updateIcon()
             if trusted { PermissionGuide.shared.granted(.accessibility) } else { Permission.accessibility.reset() }
         }
+    }
+
+    private func restartInput(_ manager: WindowManager) {
+        if manager.input.keys, manager.config.features.contains(.keys), !Hotkeys.shared.isActive {
+            Hotkeys.shared.restart()
+        }
+        manager.startMouseTaps()
     }
 
     func applicationShouldHandleReopen(_: NSApplication, hasVisibleWindows _: Bool) -> Bool {

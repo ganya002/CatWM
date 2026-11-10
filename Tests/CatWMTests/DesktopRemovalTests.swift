@@ -1,5 +1,6 @@
 import AppKit
 @testable import CatWM
+@testable import CatWMKit
 import Testing
 
 @MainActor @Suite(.serialized) struct DesktopRemovalTests {

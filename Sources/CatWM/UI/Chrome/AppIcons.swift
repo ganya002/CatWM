@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 
 final class AppIcons {
     static let shared = AppIcons()

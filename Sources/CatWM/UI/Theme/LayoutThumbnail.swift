@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 import CoreText
 import SwiftUI
 

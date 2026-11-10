@@ -9,6 +9,7 @@ included:
 excluded:
   - .build
   - build
+  - Sources/CatWMKit/Config/Script/Sucrase.swift
 opt_in_rules:
   - async_without_await
   - closure_end_indentation

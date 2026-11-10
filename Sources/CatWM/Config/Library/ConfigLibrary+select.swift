@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 import Combine
 import SwiftUI
 import UniformTypeIdentifiers
@@ -122,7 +123,7 @@ extension ConfigLibrary {
     func importFile(_ url: URL, only kind: ConfigKind? = nil) {
         guard let data = try? Data(contentsOf: url),
               let bundle = try? JSONDecoder().decode(ConfigBundle.self, from: data),
-              ["catwm", Migrations.legacyConfigMarker].contains(bundle.app) else {
+              ["catwm", Legacy.configMarker].contains(bundle.app) else {
             Self.alert("Not a config file", "“\(url.lastPathComponent)” isn't a CatWM config.")
             return
         }

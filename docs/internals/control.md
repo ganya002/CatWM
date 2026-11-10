@@ -2,19 +2,19 @@
 
 One registry feeds every way to control CatWM from outside the app. Key binds, the `catwm` CLI and the language libraries all run the same commands.
 
-## Parts (`Sources/CatWM/Control/`)
+## Parts (`Sources/CatWMKit/Control/`)
 
 - `Command.swift`: `Command` (name, group, summary, typed arguments, result shape, access, `run`). It also holds the argument check.
 - `CommandRegistry.swift`, `Commands+dispatchers.swift`, `Commands+state.swift`: the list of commands. `Commands+dispatchers.swift` makes one dispatcher entry from each `WindowAction`. A dispatcher entry calls `WindowManager.dispatch`. A query entry builds JSON from the window manager.
 - `ControlServer.swift`: the Unix socket (`catwm.sock` in `Instance.configFolder`, mode `0600`, `CATWM_SOCKET` overrides it). It reads on a background queue and runs each command on the main queue, in order. It refuses a path that is longer than `sun_path` (104 bytes). It does not cut the path.
 - `ControlConnection.swift`: one client. It frames lines, writes without blocking, and drops a client that falls 1 MB behind.
 - `EventBus.swift`: the event list and the subscriptions. `WindowManager.notifyChange()` replaced the old `onChange?()` calls. When someone subscribes, it compares a state snapshot with the last one and emits the difference. With no subscriber it does nothing.
-- `ControlCLI.swift`: the `catwm` command line. It reads the registry to parse arguments and print help. `main.swift` calls it for any first argument that does not start with `-`.
+- `ControlCLI.swift` (in the app, `Sources/CatWM/App/`): the `catwm` command line. It reads the registry to parse arguments and print help. `main.swift` calls it for any first argument that does not start with `-`.
 - `ControlSchema.swift`: writes `Clients/schema.json` from the registry.
 
 ## Instances
 
-`CATWM_INSTANCE=<id>` starts a separate CatWM instance. The id is 1 to 24 characters of `a-z`, `0-9` and `-`. CatWM stops with exit code 2 on a bad id. It does not use the default instance, because the default instance quits the user's CatWM. `Sources/CatWM/App/Instance.swift` holds each path of an instance. Use `Instance` for a new file, folder or `UserDefaults` value. `Tools/check-style.sh` rejects `UserDefaults.standard`.
+`CATWM_INSTANCE=<id>` starts a separate CatWM instance. The id is 1 to 24 characters of `a-z`, `0-9` and `-`. CatWM stops with exit code 2 on a bad id. It does not use the default instance, because the default instance quits the user's CatWM. `Sources/CatWMKit/App/Instance.swift` holds each path of an instance. Use `Instance` for a new file, folder or `UserDefaults` value. `Tools/check-style.sh` rejects `UserDefaults.standard`.
 
 | | Default instance | Named instance `<id>` |
 |---|---|---|
@@ -28,6 +28,8 @@ Each instance writes its pid to `catwm.pid` in its config folder. At start, `App
 A named instance does not register a login item, link the `catwm` command, start the updater, send crash or performance reports, show onboarding, tips or What's New, or run migrations. The bundle ID and the signature do not change, so the macOS permissions of the app apply to each instance.
 
 The CLI and the libraries read `CATWM_INSTANCE` too. `CATWM_SOCKET` wins over it.
+
+An embedded engine (`docs/internals/embedding.md`) uses the folders of a named instance with its engine name. It listens on the socket only with `features.services.socket`, and it ignores `CATWM_SOCKET`.
 
 ## Window scope
 
@@ -64,7 +66,7 @@ Add a new switch for a scoped instance to `WindowScope.restrict` (a config optio
 
 ## Add a command
 
-A dispatcher (a command that a key bind can run) is one `WindowAction` in `Sources/CatWM/Actions/`. The value holds the name, the CLI group and summary, the arguments, the access, the aliases, the bind picker rows and the handler. `WindowActions.all` is the only list. The registry, `WindowManager.dispatch` and the bind picker read it.
+A dispatcher (a command that a key bind can run) is one `WindowAction` in `Sources/CatWMKit/Actions/`. The value holds the name, the CLI group and summary, the arguments, the access, the aliases, the bind picker rows and the handler. `WindowActions.all` is the only list. The registry, `WindowManager.dispatch` and the bind picker read it.
 
 1. Add a `static let` `WindowAction` to the file of its group in `Actions/`. Give each argument a type. Use `.choice` when the values are a fixed set. Use `WindowAction.direction`, `.step` or `.text` for the usual argument shapes.
 2. Add its name to `WindowActions.all`. The order of that list is the order of the CLI help and the schema.

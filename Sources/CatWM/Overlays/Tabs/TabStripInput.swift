@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 import NativeTrafficLight
 import SwiftUI
 

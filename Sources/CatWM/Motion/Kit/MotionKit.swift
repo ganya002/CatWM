@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 
 extension Motion {
     static func group(_ duration: Double, curve: CAMediaTimingFunction = Curve.settle, label: String = #fileID,

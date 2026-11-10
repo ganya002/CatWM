@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 import SwiftUI
 
 struct OMenuPicker<T: Hashable>: View {

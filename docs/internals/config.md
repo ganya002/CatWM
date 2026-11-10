@@ -2,7 +2,7 @@
 
 `ConfigStore` (`Config/Script/`) owns the config that CatWM runs. It reads `catwm.config.ts` from `Instance.configFolder`, then `catwm.overrides.json`, and gives `WindowManager` one `Config`.
 
-## Parts (`Sources/CatWM/Config/Script/`)
+## Parts (`Sources/CatWMKit/Config/Script/`)
 
 - `ConfigEngine`: the system JavaScriptCore through its public API, on its own thread with a run loop. It loads the bundled `sucrase.js` (Sucrase 3.35.1, `Tools/bundle-sucrase.sh`) once and keeps the context loaded. Only the finished value goes to the main thread.
 - `ConfigRuntime`: the module registry in JavaScript. Sucrase turns `import` and `export` into `require` and `exports`, and each module runs as `function (exports, require, module)`. A run with changed files deletes them and every module that imports them, then runs the entry again. Every other module keeps its exports. A failed run, or a value that `ConfigScript` rejects, puts the last good registry back. CatWM doesn't use the native ES module loader: it's private API and keeps each old module for the life of the context.
@@ -22,3 +22,7 @@ A failure is a `ConfigDiagnostic`: file, line, phase (`read`, `resolve`, `transf
 ## Settings
 
 Settings and `config.set` never write the TypeScript file. `ConfigDocument` edits `ConfigStore.settingsText` and reloads it after each save of the TypeScript config. A Settings save takes only what changed from the text it loaded, puts it on the running config, and writes the values that differ from the TypeScript config (`ConfigStore.base`) as overrides. So a value that the `.conf` text can't hold, such as a command with a line break, keeps its TypeScript value. Settings → General lists the overrides and drops one with **Use File Value**. Saved presets in `configs.json` keep their `.conf` text and apply through the same path.
+
+## Embedded mode
+
+`ConfigStore(embedded: true)` starts from `Config.embedded`, with every feature off, and reads the entry file that the host gives (`use(entry:)`). It writes no files: no migration, no default config, no `catwm.d.ts`, and it keeps the overrides in memory. `ConfigScript.read(embedded: true)` rejects the features that embedded mode doesn't have. See `docs/internals/embedding.md`.

@@ -1,11 +1,12 @@
 #!/bin/sh
-# Rebuilds Sources/CatWM/Config/Script/sucrase.js, the type stripper the TypeScript config uses.
+# Rebuilds Sources/CatWMKit/Config/Script/Sucrase.swift, the type stripper the TypeScript config uses.
 set -e
 cd "$(dirname "$0")/.."
 VERSION=3.35.1
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
-OUT="$PWD/Sources/CatWM/Config/Script/sucrase.js"
+ROOT=$PWD
+OUT="$WORK/sucrase.js"
 cd "$WORK"
 npm init -y >/dev/null
 npm install --silent "sucrase@$VERSION"
@@ -16,3 +17,4 @@ globalThis.strip = (source, path) => transform(source, {
 }).code;
 JS
 bun build entry.js --minify --format=iife --target=browser --outfile="$OUT"
+python3 "$ROOT/Tools/embed-sucrase.py" "$OUT" "$ROOT/Sources/CatWMKit/Config/Script/Sucrase.swift"

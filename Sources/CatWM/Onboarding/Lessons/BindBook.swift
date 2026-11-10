@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 
 struct BindBook {
     let binds: [KeyBinding]

@@ -1,5 +1,6 @@
 #if DEBUG
 import AppKit
+import CatWMKit
 import SwiftUI
 
 extension DesignGalleryView {

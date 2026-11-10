@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 
 extension WindowManager {
     func closeMarked(_ ids: [CGWindowID], attempt: Int) {

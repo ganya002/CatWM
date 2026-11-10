@@ -1,4 +1,5 @@
 import AppKit
+import CatWMKit
 import CryptoKit
 import QuartzCore
 
@@ -41,7 +42,7 @@ final class FrameRun: NSObject {
                      slowShare: Double(gaps.filter { $0 > period * 1.5 }.count) / Double(gaps.count))
     }
 
-    func end(apps: [PerfMonitor.SlowApp] = []) {
+    func end(apps: [SlowApp] = []) {
         guard !ended else { return }
         ended = true
         link?.invalidate()
