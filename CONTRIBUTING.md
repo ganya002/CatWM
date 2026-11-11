@@ -97,6 +97,17 @@ python3 Tools/perf.py
 
 `Tools/Perf/budgets.json` holds one cap for each row. The caps are for the slowest Mac that runs the newest macOS, the M1 MacBook Air. A fixed benchmark (`CatWMPerf calibrate`) measures the speed of the runner next to that Mac, and each CPU time is scaled to the M1 before the check. A faster runner needs no new caps. The M1 reference in `budgets.json` is the M4 result times 1.59, the Geekbench 6 single-core ratio. Wakeup and memory caps do not depend on the CPU. A row whose P99 is over its cap shows ❌ and fails the check. Lower a cap when you make something faster.
 
+## Smoke tests
+
+The `smoke` workflow starts the real app on each pull request and each push to `main`. It runs three suites, each as its own job on its own VM: `windows` (layouts, focus, moves, floating, full screen, tabs, windows that open and close), `workspaces` (Desktops, displays, the Overview, the switcher, key modes and real key presses) and `app` (launch and quit, every config option, broken configs, events, many clients, bad requests and the agent display). After each step, CatWM must still run, answer `ping` within 5 s and leave no crash report. The check catches crashes and hangs, not logic bugs, so a refused command passes. Each job uploads the CatWM log, a screenshot and, after a failure, the crash report or a `sample` of the hung process.
+
+The instance is unscoped, so it owns the whole VM: it tiles every window, drives the Desktops and reads key presses. On your Mac, pass `--scoped` so it manages only its own TextEdit windows. CatWM then refuses the commands that reach outside the scope, and the key presses are skipped:
+
+```sh
+CATWM_INSTANCE=smoke ./build.sh --dev
+python3 Tools/smoke.py --suite windows --scoped
+```
+
 ## Releasing
 
 Updates ship through [Amore](https://amore.computer) and Sparkle. Amore signs, notarizes, builds the DMG, writes the appcast and hosts it.
