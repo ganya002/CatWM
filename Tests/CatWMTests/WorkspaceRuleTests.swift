@@ -147,6 +147,23 @@ private struct RecordedBatch {
         #expect(await world.fake.wait(world.manager) { world.manager.state(for: screen).layout == base })
     }
 
+    @Test func aLayoutsRuleKeepsALayoutThatIsStillInTheList() async throws {
+        let world = makeWorld()
+        let screen = try #require(world.fake.screens().first)
+        world.fake.addWindow(pid: -100, bundleID: "test.app.a")
+        #expect(await world.fake.settle(world.manager))
+        let current = world.manager.state(for: screen).layout
+        var config = world.manager.config
+        config.workspaceRules = [WorkspaceRule(
+            when: .all([.compare(.windows, .atLeast, .int(2))]),
+            set: ["layouts": .array([.string("wide")] + config.layouts.map { .string($0.rawValue) })])]
+        world.manager.apply(config, showHUD: false)
+
+        world.fake.addWindow(pid: -100, bundleID: "test.app.a")
+        #expect(await world.fake.settle(world.manager))
+        #expect(world.manager.state(for: screen).layout == current)
+    }
+
     @Test func aNameMatchesTheWorkspaceLabel() throws {
         let config = try rules("catwm.workspaces({ name: \"Mail\" }, () => { catwm.gaps.size = 4 })")
         var labelled = facts()

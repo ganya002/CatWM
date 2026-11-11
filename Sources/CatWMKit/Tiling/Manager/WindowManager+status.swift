@@ -141,7 +141,10 @@ extension WindowManager {
         if config.virtualWorkspaces {
             guard let workspace = resolveWorkspace(arg) else { return }
             moveFocusedWindow(to: workspace, follow: follow, window: target)
-        } else if target == nil, let number = Int(arg) {
+        } else if let number = Int(arg) {
+            guard target == nil else {
+                return Log.info("rules: moving a window to a Desktop needs CatWM workspaces, so \(arg) was skipped")
+            }
             moveToSpace(number)
         }
     }

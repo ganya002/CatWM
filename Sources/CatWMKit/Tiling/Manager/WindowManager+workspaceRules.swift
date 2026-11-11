@@ -42,7 +42,13 @@ extension WindowManager {
         if state.layouts == nil { state.layouts = config.layouts }
         guard state.layouts != layouts else { return }
         state.layouts = layouts
-        if state.layout != first { state.layout = first }
+        if let before = state.layoutBeforeRule, layouts.contains(before) {
+            state.layout = before
+            state.layoutBeforeRule = nil
+        } else if !layouts.contains(state.layout) {
+            state.layoutBeforeRule = state.layoutBeforeRule ?? state.layout
+            state.layout = first
+        }
     }
 
     package func rulePaths(for workspace: String? = nil) -> Set<String> {

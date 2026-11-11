@@ -90,6 +90,20 @@ import Testing
         })
     }
 
+    @Test func aKeyFunctionActsOnTheWindowFocusedAtThePress() async throws {
+        let world = try makeWorld("catwm.bind([\"alt\"], \"c\", () => { catwm.window.focused.float() })")
+        let pressed = world.fake.addWindow(bundleID: app)
+        let other = world.fake.addWindow(pid: -101, bundleID: "test.other.app")
+        #expect(await world.fake.settle(world.manager))
+        try await focus(pressed, in: world)
+
+        try press(0, in: world)
+        try await focus(other, in: world)
+
+        #expect(await world.fake.wait(world.manager) { world.manager.windows[pressed]?.isFloating == true })
+        #expect(world.manager.windows[other]?.isFloating == false)
+    }
+
     @Test func aThrowingKeyFunctionRunsNoActions() async throws {
         let world = try makeWorld(
             "catwm.bind([\"alt\"], \"c\", () => {",
@@ -175,6 +189,7 @@ import Testing
         let size = world.fake.frame(of: id).size
         let ruled = centered(size)
         #expect(world.fake.frame(of: id) == ruled)
+        try await Task.sleep(for: .milliseconds(250)) // style-ok: outlast Animator.verify, which no event reports
 
         let moved = CGRect(x: 100, y: 120, width: size.width, height: size.height)
         world.fake.userMoves(id, to: moved)

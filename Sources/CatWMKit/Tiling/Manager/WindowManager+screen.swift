@@ -37,11 +37,13 @@ package final class ScreenState {
     package var mainCount = 1
     package var zoomed: CGWindowID?
     var layouts: [Layout]?
+    var layoutBeforeRule: Layout?
     package init(layout: Layout) { self.layout = layout }
 
     package func copy() -> ScreenState {
         let clone = ScreenState(layout: layout)
-        clone.ratio = ratio; clone.mainCount = mainCount; clone.zoomed = zoomed; clone.layouts = layouts
+        clone.ratio = ratio; clone.mainCount = mainCount; clone.zoomed = zoomed
+        clone.layouts = layouts; clone.layoutBeforeRule = layoutBeforeRule
         return clone
     }
 }

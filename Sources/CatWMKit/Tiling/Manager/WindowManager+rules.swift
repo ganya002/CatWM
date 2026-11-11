@@ -13,7 +13,8 @@ extension WindowManager {
                 Log.info("config: \(failure.text)")
                 surface.showHUD("Config: 1 error(s), see Console", on: currentScreen()?.nsScreen)
             }
-            for action in result.actions { dispatch(action.dispatcher, action.arg) }
+            guard let target = windows[window.id] else { return }
+            for action in result.actions { run(action, on: target) }
         }
     }
 

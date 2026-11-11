@@ -107,6 +107,7 @@ struct AppSurface: TilingSurface {
         Notifications.shared.setEnabled(config.tabNotificationBadges)
         FocusDim.shared.configure(dim: config.dimOtherWindows, strength: config.dimStrength,
                                   blur: config.blurOtherWindows, radius: Int(config.blurRadius))
+        FocusDim.shared.followWorkspace()
         setResizeAnimation(config.resizeAnimation)
     }
 
