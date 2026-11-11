@@ -30,9 +30,19 @@ extension WindowManager {
         var resolved: [String: Config] = [:]
         for screen in screens {
             guard let workspace = shown[screen.uuid], resolved[workspace] == nil else { continue }
-            resolved[workspace] = resolvedConfig(of: workspace, on: screen, among: visible)
+            let config = resolvedConfig(of: workspace, on: screen, among: visible)
+            resolved[workspace] = config
+            followRuleLayouts(config.layouts, on: workspace)
         }
         workspaceConfigs = resolved
+    }
+
+    private func followRuleLayouts(_ layouts: [Layout], on workspace: String) {
+        guard let state = states[workspace], let first = layouts.first else { return }
+        if state.layouts == nil { state.layouts = config.layouts }
+        guard state.layouts != layouts else { return }
+        state.layouts = layouts
+        if state.layout != first { state.layout = first }
     }
 
     package func rulePaths(for workspace: String? = nil) -> Set<String> {
@@ -56,13 +66,13 @@ extension WindowManager {
     private func workspaceFacts(of workspace: String, on screen: Screen?,
                                 among ids: some Sequence<CGWindowID>) -> WorkspaceFacts {
         var facts = WorkspaceFacts(layout: states[workspace]?.layout ?? config.layouts.first ?? .tall,
-                                   name: workspaceNumber(workspace))
-        var perApp: [pid_t: Int] = [:]
+                                   names: [workspaceNumber(workspace)] + (labels[workspace].map { [$0] } ?? []))
+        var perApp: [String: Int] = [:]
         var bundles = Set<String>()
         for id in ids where workspaceOf[id] == workspace {
             guard let window = windows[id] else { continue }
             facts.windows += 1
-            perApp[window.pid, default: 0] += 1
+            perApp[window.bundleID ?? "pid \(window.pid)", default: 0] += 1
             if let bundle = window.bundleID { bundles.insert(bundle) }
         }
         facts.sameApp = perApp.values.max() ?? 0

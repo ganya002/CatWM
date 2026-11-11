@@ -29,12 +29,10 @@ extension WindowManager {
         let rules = config.windowRules
         for id in due {
             guard let window = windows[id] else { continue }
-            let matching = matchingRules(of: window, in: rules)
-            let started = matching.subtracting(window.matchedRules).sorted()
-            window.matchedRules = matching
+            let started = updateMatchedRules(of: window, in: rules)
             guard !restoringTemplate else { continue }
-            for index in started {
-                for action in rules[index].actions { run(action, on: window) }
+            for rule in started {
+                for action in rule.actions { run(action, on: window) }
             }
         }
     }
@@ -45,15 +43,20 @@ extension WindowManager {
             let list = shouldFloat(window)
             var changed = window.autoFloating != list
             var rule = Window.FloatingChoice.automatic
+            var started: [WindowRule] = []
             if !oldRules.isEmpty || !newRules.isEmpty {
                 let facts = ruleFacts(of: window)
                 let before = floatingRule(of: oldRules, facts)
                 rule = floatingRule(of: newRules, facts)
                 changed = outcome(before, auto: window.autoFloating) != outcome(rule, auto: list)
-                window.matchedRules = matchingRules(of: window, in: newRules, facts)
+                started = updateMatchedRules(of: window, in: newRules, facts)
             }
             window.autoFloating = list
             if changed, !tabs.isGrouped(window.id) { window.userFloating = rule }
+            guard !restoringTemplate else { continue }
+            for rule in started {
+                for action in rule.actions { run(action, on: window) }
+            }
         }
     }
 
@@ -74,10 +77,13 @@ extension WindowManager {
         }
     }
 
-    private func matchingRules(of window: Window, in rules: [WindowRule], _ facts: Facts? = nil) -> Set<Int> {
-        guard !rules.isEmpty else { return [] }
-        let facts = facts ?? ruleFacts(of: window)
-        return Set(rules.indices.filter { rules[$0].when.holds(facts) })
+    private func updateMatchedRules(of window: Window, in rules: [WindowRule], _ facts: Facts? = nil)
+        -> [WindowRule] {
+        let facts = rules.isEmpty ? [:] : facts ?? ruleFacts(of: window)
+        let matching = rules.filter { $0.when.holds(facts) }
+        let started = matching.filter { !window.matchedRules.contains($0) }
+        window.matchedRules = matching
+        return started
     }
 
     private func floatingRule(of rules: [WindowRule], _ facts: Facts) -> Window.FloatingChoice {
@@ -101,7 +107,7 @@ extension WindowManager {
 
     private func ruleFacts(of window: Window) -> Facts {
         var facts: Facts = [
-            .pid: .int(Int(window.pid)), .role: .string(kAXStandardWindowSubrole), .floating: .bool(window.isFloating),
+            .pid: .int(Int(window.pid)), .floating: .bool(window.isFloating),
             .minimized: .bool(window.minimized), .fullscreen: .bool(window.fullscreen)
         ]
         if let bundle = window.bundleID { facts[.app] = .string(bundle) }

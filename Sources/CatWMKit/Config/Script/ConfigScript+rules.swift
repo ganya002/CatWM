@@ -41,7 +41,7 @@ extension ConfigScript.Reader {
     }
 
     private static let windowFields: [String: (Fact, Field)] = [
-        "app": (.app, .glob), "title": (.title, .textOrRegex), "pid": (.pid, .number), "role": (.role, .text),
+        "app": (.app, .glob), "title": (.title, .textOrRegex), "pid": (.pid, .number),
         "workspace": (.workspace, .text), "display": (.display, .text), "floating": (.floating, .bool),
         "minimized": (.minimized, .bool), "fullscreen": (.fullscreen, .bool)
     ]

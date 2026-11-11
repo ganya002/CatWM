@@ -15,8 +15,6 @@ extension ConfigTypes {
         "  /** The exact title, or a regular expression. */",
         "  title?: string | RegExp",
         "  pid?: number",
-        "  /** The accessibility subrole, such as `AXDialog`. */",
-        "  role?: string",
         "  workspace?: string",
         "  display?: Display",
         "  floating?: boolean",

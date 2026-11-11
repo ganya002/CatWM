@@ -8,7 +8,7 @@ package struct RuleAction: Equatable, Sendable {
 }
 
 package enum Fact: String, CaseIterable, Sendable {
-    case app, title, pid, role, workspace, display, floating, minimized, fullscreen
+    case app, title, pid, workspace, display, floating, minimized, fullscreen
     case windows, sameApp, apps, layout, name, focused
 }
 
@@ -80,19 +80,19 @@ package struct WorkspaceFacts: Sendable {
     package var sameApp = 0
     package var apps: [String] = []
     package var layout: Layout
-    package var name: String
+    package var names: [String]
     package var displays: [String] = []
     package var focused = false
 
-    package init(layout: Layout, name: String) {
+    package init(layout: Layout, names: [String]) {
         self.layout = layout
-        self.name = name
+        self.names = names
     }
 
     var facts: Facts {
         [.windows: .int(windows), .sameApp: .int(sameApp), .apps: .array(apps.map(JSON.string)),
-         .layout: .string(layout.rawValue), .name: .string(name), .display: .array(displays.map(JSON.string)),
-         .focused: .bool(focused)]
+         .layout: .string(layout.rawValue), .name: .array(names.map(JSON.string)),
+         .display: .array(displays.map(JSON.string)), .focused: .bool(focused)]
     }
 }
 

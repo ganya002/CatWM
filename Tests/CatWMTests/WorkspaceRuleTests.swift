@@ -37,7 +37,7 @@ private struct RecordedBatch {
     }
 
     private func facts(windows: Int = 1, sameApp: Int = 1, apps: [String] = [], name: String = "1") -> WorkspaceFacts {
-        var facts = WorkspaceFacts(layout: .bsp, name: name)
+        var facts = WorkspaceFacts(layout: .bsp, names: [name])
         facts.windows = windows
         facts.sameApp = sameApp
         facts.apps = apps
@@ -113,6 +113,47 @@ private struct RecordedBatch {
         let second = world.fake.addWindow(pid: -100, bundleID: "test.app.a")
         #expect(await world.fake.settle(world.manager))
         #expect(world.recorder.spec(of: second)?.duration == 0.2)
+    }
+
+    @Test func twoProcessesOfOneAppCountAsOneApp() async {
+        let rule = WorkspaceRule(when: .all([.compare(.sameApp, .atLeast, .int(2))]),
+                                 set: ["motion.duration": .number(0.2)])
+        let world = makeWorld(rule: rule)
+        world.fake.addWindow(pid: -100, bundleID: "test.app.a")
+        #expect(await world.fake.settle(world.manager))
+
+        world.recorder.batches = []
+        let second = world.fake.addWindow(pid: -101, bundleID: "test.app.a")
+        #expect(await world.fake.settle(world.manager))
+        #expect(world.recorder.spec(of: second)?.duration == 0.2)
+    }
+
+    @Test func aLayoutsRuleSwitchesTheLayoutAndBack() async throws {
+        let rule = WorkspaceRule(when: .all([.compare(.windows, .atLeast, .int(2))]),
+                                 set: ["layouts": .array([.string("wide")])])
+        let world = makeWorld(rule: rule)
+        let screen = try #require(world.fake.screens().first)
+        let first = world.fake.addWindow(pid: -100, bundleID: "test.app.a")
+        #expect(await world.fake.settle(world.manager))
+        let base = world.manager.config.layouts.first
+        #expect(world.manager.state(for: screen).layout == base)
+
+        let second = world.fake.addWindow(pid: -100, bundleID: "test.app.a")
+        #expect(await world.fake.settle(world.manager))
+        #expect(world.manager.state(for: screen).layout == .wide)
+
+        world.fake.close(second)
+        world.manager.handle(kAXUIElementDestroyedNotification, try #require(world.fake.element(first)))
+        #expect(await world.fake.wait(world.manager) { world.manager.state(for: screen).layout == base })
+    }
+
+    @Test func aNameMatchesTheWorkspaceLabel() throws {
+        let config = try rules("catwm.workspaces({ name: \"Mail\" }, () => { catwm.gaps.size = 4 })")
+        var labelled = facts()
+        labelled.names = ["1", "Mail"]
+
+        #expect(config.resolved(for: labelled).windowMarginSize == 4)
+        #expect(config.resolved(for: facts()).windowMarginSize == 10)
     }
 
     @Test func aSecondWindowOfAnotherAppDoesNotMatch() async {

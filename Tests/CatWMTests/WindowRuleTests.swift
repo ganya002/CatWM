@@ -77,6 +77,19 @@ import Testing
         })
     }
 
+    @Test func aRuleAddedByASaveRunsOnWindowsAlreadyOpen() async throws {
+        let world = try makeWorld()
+        let id = world.fake.addWindow(bundleID: app)
+        #expect(await world.fake.settle(world.manager))
+
+        try save(world, "catwm.windows({ app: \"\(app)\" }, (win) => {",
+                 "  win.float()", "  win.size = { width: 600, height: 400 }", "  win.position = \"center\"", "})")
+
+        #expect(await world.fake.wait(world.manager) {
+            world.fake.frame(of: id) == self.centered(CGSize(width: 600, height: 400))
+        })
+    }
+
     @Test func aThrowingKeyFunctionRunsNoActions() async throws {
         let world = try makeWorld(
             "catwm.bind([\"alt\"], \"c\", () => {",

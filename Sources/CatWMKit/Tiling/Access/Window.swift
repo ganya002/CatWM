@@ -15,7 +15,7 @@ import os
     package nonisolated let backend: any WindowBackend
     package var autoFloating = false
     package var userFloating = FloatingChoice.automatic
-    package var matchedRules = Set<Int>()
+    package var matchedRules: [WindowRule] = []
     package var naturalFrame = CGRect.null
     package var observedAt = Date.distantPast
     package var title: String?
