@@ -114,14 +114,19 @@ class Smoke:
         self.process = None
 
     def call(self, command, args=None):
-        with CatWM(timeout=HANG_SECONDS) as client:
-            return client.call(command, args)
+        """Run a command. A refusal raises CatWMError, and no reply within HANG_SECONDS fails the run."""
+        try:
+            with CatWM(timeout=HANG_SECONDS) as client:
+                return client.call(command, args)
+        except CatWMError as error:
+            if error.code not in ("not_running", "closed"):
+                raise
+            self.hang(f"`{command}`", error)
+        except OSError as error:
+            self.hang(f"`{command}`", error)
 
     def check(self, name):
-        try:
-            self.call("ping")
-        except (CatWMError, OSError) as error:
-            self.hang(f"ping after `{name}`", error)
+        self.call("ping")
         crashes = self.crash_reports()
         if crashes:
             raise Failure(f"crash report after `{name}`: {', '.join(path.name for path in crashes)}")
@@ -142,11 +147,7 @@ class Smoke:
         try:
             self.call(command, args)
         except CatWMError as error:
-            if error.code in ("not_running", "closed"):
-                self.hang(f"`{name}`", error)
             self.refused[name] = f"{error.code}: {error.message}"
-        except OSError as error:
-            self.hang(f"`{name}`", error)
         self.check(name)
 
     def run(self, command, *args):
