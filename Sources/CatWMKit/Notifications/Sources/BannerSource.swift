@@ -67,7 +67,9 @@ import AppKit
     private func created(_ element: AXUIElement) {
         guard sink != nil else { return }
         guard reportsMessages else { return changed() }
+        let reference = AXReference(element)
         queue.async { [weak self] in
+            let element = reference.object
             AXUIElementSetMessagingTimeout(element, 0.5)
             guard element.string(kAXRoleAttribute) == kAXWindowRole else { return }
             let banners = Self.banners(in: element, depth: 0)

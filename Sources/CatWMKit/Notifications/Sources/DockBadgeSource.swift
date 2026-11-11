@@ -73,7 +73,7 @@ import os
 }
 
 private final class DockBadgePoller: Sendable {
-    struct Item { let element: AXUIElement, app: String }
+    struct Item: Sendable { let element: AXReference<AXUIElement>, app: String }
     struct State {
         var items: [Item] = []
         var bundles: [String: String] = [:]
@@ -116,7 +116,7 @@ private final class DockBadgePoller: Sendable {
         var sawStale = false
         for item in items {
             var label: CFTypeRef?
-            let result = AXUIElementCopyAttributeValue(item.element, "AXStatusLabel" as CFString, &label)
+            let result = AXUIElementCopyAttributeValue(item.element.object, "AXStatusLabel" as CFString, &label)
             if result == .invalidUIElement || result == .cannotComplete { sawStale = true }
             if let badge = Badge(label: label as? String) { badges[item.app] = badge }
         }
@@ -140,7 +140,7 @@ private final class DockBadgePoller: Sendable {
             guard AXUIElementCopyMultipleAttributeValues(item, attributes, [], &values) == .success,
                   let list = values as? [Any], list.count == 2, list[0] as? String == "AXApplicationDockItem",
                   let url = list[1] as? URL, let app = Self.bundle(of: url, cache: &bundles) else { return nil }
-            return Item(element: item, app: app)
+            return Item(element: AXReference(item), app: app)
         }
     }
 

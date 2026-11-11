@@ -17,14 +17,15 @@ import QuartzCore
     }
 
     package struct Found: Sendable {
-        package let element: AXUIElement
+        private let reference: AXReference<AXUIElement>
+        package var element: AXUIElement { reference.object }
         package let frame: CGRect
         package let title: String?
         package let resizable: Bool
         package var frameRevision: Int?
 
         package init(element: AXUIElement, frame: CGRect, title: String?, resizable: Bool, frameRevision: Int? = nil) {
-            (self.element, self.frame, self.title) = (element, frame, title)
+            (reference, self.frame, self.title) = (AXReference(element), frame, title)
             (self.resizable, self.frameRevision) = (resizable, frameRevision)
         }
     }

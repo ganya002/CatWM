@@ -12,7 +12,7 @@ Every target builds in Swift 6 mode, and none opts back to Swift 5. Refresh, lay
 
 ## Cross-thread classes own their state behind a lock
 
-`AXWriter`, `ControlServer`, `ControlConnection`, `Log`'s file, `ScreenRecording`, `AXStalls`, `WindowServerUpdates`, `Embedding` and `EnhancedUI` keep their state in an `OSAllocatedUnfairLock`, which makes them `Sendable` without `@unchecked`. Serial-queue confinement was rejected because the compiler can't check it. `AXWriter` reads its state in one short lock and writes the results back in one more per step, and makes every AX call between them, so a main-thread `step` never waits on AX IPC. `DockBadgePoller` does the same and mutates its fields in place on the way back, so a `markStale` that lands during the AX reads survives.
+`AXWriter`, `ControlServer`, `ControlConnection`, `Log`'s file, `ScreenRecording`, `AXStalls`, `WindowServerUpdates`, `Embedding` and `EnhancedUI` keep their state in an `OSAllocatedUnfairLock`, which makes them `Sendable` without `@unchecked`. Serial-queue confinement was rejected because the compiler can't check it. `AXWriter` reads its state in one short lock and writes the results back in one more per step, and makes every AX call between them, so a main-thread `step` never waits on AX IPC. `DockBadgePoller` does the same, and writes back only the fields it changed, so the poll never replaces state with a stale snapshot.
 
 ## Where the main-actor assumption lives
 
@@ -22,7 +22,9 @@ Every target builds in Swift 6 mode, and none opts back to Swift 5. Refresh, lay
 
 ## Unannotated Apple types
 
-`AXUIElement` and `AXObserver` are immutable CF references whose calls are thread-safe, so `AXSendable.swift` declares one retroactive `@unchecked Sendable` conformance for each instead of a file-wide `@preconcurrency import ApplicationServices`. Two `@preconcurrency` imports remain: `CoreGraphics` in `tapCallback.swift`, whose `CGEvent` has no annotations and arrives on the tap thread, and `Foundation` in `ConfigEngine.swift`, whose `CFRunLoop` the config thread owns. A retroactive conformance on either would make every `CGEvent` or run loop `Sendable` for the whole module, which is a bigger claim than those two files need.
+`AXUIElement` and `AXObserver` are not `Sendable`. `AXReference` (`Tiling/Access/AXReference.swift`) is a package-internal `@unchecked Sendable` wrapper that carries one across a queue hop, with a `style-ok` that names AX's own locking as the reason it is safe. `Window` and `WindowScanner.Found` hold their element in one, and the scan-queue closures that capture an element or an observer wrap it first. That includes `watch(_:)`, which adds notifications on the scan queue while the observer's run-loop source is live on main, so the observer isn't immutable and only AX's locking makes that safe. A retroactive `Sendable` conformance was rejected: it is global, so it would make `AXUIElement` `Sendable` inside every host that embeds CatWM and switch off a Swift 6 check in their code. File-wide `@preconcurrency import ApplicationServices` was rejected for the same reason of breadth.
+
+Two `@preconcurrency` imports remain. `CoreGraphics` in `tapCallback.swift`: tap sources run on `CFRunLoopGetMain()`, so the `CGEvent` is already on the main thread, but the compiler can't see that handing it to the main actor is synchronous. `Foundation` in `ConfigEngine.swift`: the config thread owns its `CFRunLoop`.
 
 ## Deinit
 

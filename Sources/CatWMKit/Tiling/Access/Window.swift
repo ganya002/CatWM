@@ -1,10 +1,6 @@
 import AppKit
 import os
 
-private struct ElementReference: Sendable {
-    let element: AXUIElement
-}
-
 @MainActor package final class Window {
     package enum FloatingChoice: Equatable {
         case automatic
@@ -12,8 +8,8 @@ private struct ElementReference: Sendable {
     }
 
     package nonisolated let id: CGWindowID
-    private nonisolated let reference: ElementReference
-    package nonisolated var element: AXUIElement { reference.element }
+    private nonisolated let reference: AXReference<AXUIElement>
+    package nonisolated var element: AXUIElement { reference.object }
     package nonisolated let pid: pid_t
     package nonisolated let bundleID: String?
     package nonisolated let backend: any WindowBackend
@@ -35,7 +31,7 @@ private struct ElementReference: Sendable {
     package nonisolated init(id: CGWindowID, element: AXUIElement, pid: pid_t, bundleID: String?,
                              backend: any WindowBackend = AXBackend.shared) {
         self.id = id
-        reference = ElementReference(element: element)
+        reference = AXReference(element)
         self.pid = pid
         self.bundleID = bundleID
         self.backend = backend
