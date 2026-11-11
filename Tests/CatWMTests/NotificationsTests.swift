@@ -12,6 +12,8 @@ import Testing
         init(_ name: String) { self.name = name }
         func start(_ sink: NotificationSink) { self.sink = sink }
         func stop() { sink = nil }
+        private(set) var tracked: Set<String>?
+        func track(_ bundles: Set<String>) { tracked = bundles }
     }
 
     private func window(_ id: CGWindowID, _ app: String?, _ title: String?) -> Window {
@@ -42,6 +44,21 @@ import Testing
     func badgeReadsLocalizedDockCounts(label: String) {
         #expect(Badge(label: label) == .count(174))
         #expect(Badge(label: label)?.text == "99+")
+    }
+
+    @Test @MainActor func sourcesLearnWhichAppsHaveAWindow() {
+        var windows: [Window] = []
+        let registry = Notifications(windowList: { windows })
+        let dock = Fake("dock")
+        registry.register(dock)
+        registry.setEnabled(true)
+        #expect(dock.tracked?.isEmpty == true)
+        windows = [window(1, "com.slack", "Slack"), window(2, "com.slack", "Slack"), window(3, nil, "Other")]
+        registry.stateChanged(focused: nil)
+        #expect(dock.tracked == ["com.slack"])
+        windows = []
+        registry.stateChanged(focused: nil)
+        #expect(dock.tracked?.isEmpty == true)
     }
 
     @Test @MainActor func dockUpdateRechecksMessagesWhenWindowsChange() {

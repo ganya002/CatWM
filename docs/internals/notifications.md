@@ -21,7 +21,7 @@ CatWM doesn't read marks such as `(3)` or `•` from titles. Apps use them for o
 
 Registration order decides which source wins a conflict. Measure a new source's idle CPU and its latency to a badge, and add both here.
 
-**Dock.** The Dock posts no AX notification when a badge changes, so `DockBadgeSource` polls `AXStatusLabel`. It polls every 10 s, plus 0.5 s after a database write, a banner or an app switch, which catches most changes. It stops while the displays sleep. Polling cost grows with frequency (13 Dock items, CPU per minute):
+**Dock.** The Dock posts no AX notification when a badge changes, so `DockBadgeSource` polls `AXStatusLabel`. It polls every 10 s, plus 0.5 s after a database write, a banner or an app switch, which catches most changes. It stops while the displays sleep. A badge only shows on a managed window, so `Notifications` tells each source which app bundles have one (`track(_:)`). The Dock poll reads `AXStatusLabel` only for those apps and pauses its timer while there are none, so an instance that manages no window (such as a scoped one) never polls. A newly tracked app triggers the 0.5 s nudge, so its badge shows at once. We rejected polling always and filtering later, because the Dock reads are the cost. Polling cost grows with frequency (13 Dock items, CPU per minute):
 
 | Interval | CatWM | Dock |
 |---|---|---|

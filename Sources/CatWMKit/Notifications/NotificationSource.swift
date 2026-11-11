@@ -7,11 +7,13 @@ import Foundation
     var messagesClearOnFocus: Bool { get }
     func start(_ sink: NotificationSink)
     func stop()
+    func track(_ bundles: Set<String>)
 }
 
 extension NotificationSource {
     package var isAvailable: Bool { true }
     package var messagesClearOnFocus: Bool { false }
+    package func track(_: Set<String>) {}
 }
 
 @MainActor package protocol NotificationSink: AnyObject {

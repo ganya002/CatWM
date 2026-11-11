@@ -10,6 +10,7 @@ import os
     private var observers: [NSObjectProtocol] = []
     private var reported: [String: Badge] = [:]
     private var poller: DockBadgePoller?
+    private var tracked: Set<String> = []
 
     package func start(_ sink: NotificationSink) {
         self.sink = sink
@@ -32,7 +33,20 @@ import os
                     awake ? self?.resume() : self?.pause()
                 }
             }
-        resume()
+    }
+
+    package func track(_ bundles: Set<String>) {
+        guard let poller else { return }
+        let added = !bundles.isSubset(of: tracked)
+        tracked = bundles
+        poller.track(bundles)
+        if bundles.isEmpty {
+            pause()
+        } else if timer == nil {
+            resume()
+        } else if added {
+            poller.pollSoon()
+        }
     }
 
     package func stop() {
@@ -41,12 +55,13 @@ import os
         observers.forEach(NSWorkspace.shared.notificationCenter.removeObserver)
         observers = []
         reported = [:]
+        tracked = []
         poller?.reset()
         poller = nil
     }
 
     private func resume() {
-        guard sink != nil, timer == nil, let poller else { return }
+        guard sink != nil, timer == nil, !tracked.isEmpty, let poller else { return }
         let timer = DispatchSource.makeTimerSource(queue: poller.queue)
         timer.schedule(deadline: .now(), repeating: Self.interval, leeway: .milliseconds(500))
         timer.setEventHandler { @Sendable in poller.poll() }
@@ -81,6 +96,7 @@ private final class DockBadgePoller: Sendable {
         var stale = true
         var passes = 0
         var nudged = false
+        var tracked: Set<String> = []
     }
 
     let queue = DispatchQueue(label: "catwm.notifications.dock", qos: .utility)
@@ -90,6 +106,8 @@ private final class DockBadgePoller: Sendable {
     init(publish: @escaping @Sendable ([String: Badge]) -> Void) { self.publish = publish }
 
     func markStale() { queue.async { [self] in state.withLock { $0.stale = true } } }
+
+    func track(_ bundles: Set<String>) { queue.async { [self] in state.withLock { $0.tracked = bundles } } }
 
     func reset() { queue.async { [self] in state.withLock { $0 = State() } } }
 
@@ -104,17 +122,17 @@ private final class DockBadgePoller: Sendable {
     }
 
     func poll() {
-        let (known, due, bundleCache) = state.withLock { state in
+        let (known, due, bundleCache, tracked) = state.withLock { state in
             state.passes += 1
             let due = state.stale || state.items.isEmpty || state.passes.isMultiple(of: 3)
             if due { state.stale = false }
-            return (state.items, due, state.bundles)
+            return (state.items, due, state.bundles, state.tracked)
         }
         var bundles = bundleCache
         let items = due ? appItems(&bundles) : known
         var badges: [String: Badge] = [:]
         var sawStale = false
-        for item in items {
+        for item in items where tracked.contains(item.app) {
             var label: CFTypeRef?
             let result = AXUIElementCopyAttributeValue(item.element.object, "AXStatusLabel" as CFString, &label)
             if result == .invalidUIElement || result == .cannotComplete { sawStale = true }

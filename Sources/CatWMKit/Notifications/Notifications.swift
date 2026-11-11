@@ -25,6 +25,7 @@ import AppKit
     private var shown: [CGWindowID: (badge: Badge, source: String)] = [:]
     private var focused: CGWindowID?
     private var known: Set<CGWindowID> = []
+    private var tracked: Set<String> = []
     private var matches: [String: Matches] = [:]
     private let windowList: () -> [Window]
 
@@ -60,6 +61,7 @@ import AppKit
     package func setEnabled(_ wanted: Bool) {
         guard wanted != enabled else { return }
         enabled = wanted
+        updateTracked()
         refreshSources()
     }
     package func refreshSources() {
@@ -68,6 +70,7 @@ import AppKit
             let wanted = enabled && source.isAvailable
             if wanted, running.insert(key).inserted {
                 source.start(self)
+                source.track(tracked)
             } else if !wanted, running.remove(key) != nil {
                 source.stop()
                 drop(source.name)
@@ -81,10 +84,18 @@ import AppKit
             focused = id
             if let id { dirty = clearOnFocus(id) }
         }
+        updateTracked()
         guard enabled, !apps.isEmpty || !windows.isEmpty || !messages.isEmpty || !shown.isEmpty else { return }
         let ids = Set(windowList().map(\.id))
         if ids != known { dirty = true }
         if dirty { resolve() }
+    }
+
+    private func updateTracked() {
+        let bundles = enabled ? Set(windowList().compactMap(\.bundleID)) : []
+        guard bundles != tracked else { return }
+        tracked = bundles
+        for source in sources where running.contains(ObjectIdentifier(source)) { source.track(bundles) }
     }
 
     package func titleChanged(_ window: Window) {
