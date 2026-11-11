@@ -1,5 +1,4 @@
 import AppKit
-@preconcurrency import ApplicationServices
 import os
 
 private struct ElementReference: Sendable {

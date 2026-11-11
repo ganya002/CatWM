@@ -1,5 +1,4 @@
 import AppKit
-@preconcurrency import ApplicationServices
 import QuartzCore
 
 @MainActor package final class WindowScanner {

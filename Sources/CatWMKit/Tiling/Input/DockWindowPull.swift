@@ -1,5 +1,4 @@
 import AppKit
-@preconcurrency import CoreGraphics
 
 @MainActor package final class DockWindowPull {
     package var prepare: ((CGPoint) -> (@MainActor @Sendable () -> Void)?)?

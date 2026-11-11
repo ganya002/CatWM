@@ -1,5 +1,4 @@
 import AppKit
-@preconcurrency import ApplicationServices
 import CoreGraphics
 
 package struct TitleBar: Equatable {

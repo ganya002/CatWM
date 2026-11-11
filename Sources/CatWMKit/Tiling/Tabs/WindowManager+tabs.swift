@@ -1,5 +1,4 @@
 import AppKit
-@preconcurrency import ApplicationServices
 
 extension WindowManager {
     package static let tabTitleBand: CGFloat = 44

@@ -1,5 +1,4 @@
 import AppKit
-@preconcurrency import ApplicationServices
 
 extension WindowManager {
     package func observe(_ app: NSRunningApplication) {

@@ -1,5 +1,4 @@
 import AppKit
-@preconcurrency import ApplicationServices
 
 package struct TilingContext {
     package let window: Window?

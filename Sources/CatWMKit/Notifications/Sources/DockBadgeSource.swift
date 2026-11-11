@@ -1,5 +1,4 @@
 import AppKit
-@preconcurrency import ApplicationServices
 import os
 
 @MainActor package final class DockBadgeSource: NotificationSource {

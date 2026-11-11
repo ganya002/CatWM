@@ -1,5 +1,4 @@
 import AppKit
-@preconcurrency import ApplicationServices
 @MainActor package final class BannerSource: NotificationSource {
     package let name: String
     package let messagesClearOnFocus = true
