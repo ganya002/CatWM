@@ -100,14 +100,15 @@ package enum ConfigRuntime {
       }
 
       globalThis.catwmRegistry = {
-        run(entry) {
+        run(entry, legacy) {
           touched = [];
           modules = new Map();
           catwmModule.begin();
           try {
             load(entry);
-            rejectDefaultExports();
-            const value = catwmModule.finish();
+            if (!legacy) rejectDefaultExports();
+            const written = catwmModule.finish();
+            const value = legacy ? modules.get(entry).exports.default : written;
             check(value, "", entry, []);
             for (const path of [...compiled.keys()]) if (!modules.has(path)) compiled.delete(path);
             return JSON.stringify({ value, files: [...modules.keys()] });

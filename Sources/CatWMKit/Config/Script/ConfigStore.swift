@@ -57,8 +57,9 @@ import os
             return loadConf()
         }
         source = .script
+        let legacy = convertLegacyScript()
         writeTypes()
-        publish(evaluate(), notify: false)
+        publish(evaluate(), notify: false, extra: legacy.map { [$0] } ?? [])
         return current
     }
 
@@ -159,9 +160,9 @@ import os
         }
     }
 
-    private func publish(_ run: ConfigEngine.Run, notify: Bool) {
+    private func publish(_ run: ConfigEngine.Run, notify: Bool, extra: [ConfigDiagnostic] = []) {
         if !run.files.isEmpty { files = run.files }
-        var failures = run.failures
+        var failures = extra + run.failures
         var base = baseline
         if let value = run.value {
             _ = ConfigScript.read(value, into: &base, file: scriptURL.path, embedded: embedded)
@@ -223,16 +224,22 @@ extension ConfigStore {
     }
 
     private func migrate(_ conf: String) -> ConfigDiagnostic? {
-        let fail = { (reason: String) in
-            ConfigDiagnostic(file: self.confURL.path, phase: .migrate,
-                             message: "CatWM couldn't convert catwm.conf to \(Self.scriptName), so it still uses "
-                                + "catwm.conf: \(reason)")
-        }
         let source = ConfigMigration.typescript(from: conf, header: [
             "// CatWM config, converted from catwm.conf.",
             "// catwm.conf stays next to it as a backup that CatWM no longer reads.",
             "// Types and completion come from catwm.d.ts. Save the file and CatWM applies the change."
         ])
+        var parsed = Config.parse(conf)
+        parsed.bindings.removeAll { !Actions.dispatchers.contains($0.dispatcher) }
+        return install(source, matching: parsed) { reason in
+            ConfigDiagnostic(file: self.confURL.path, phase: .migrate,
+                             message: "CatWM couldn't convert catwm.conf to \(Self.scriptName), so it still uses "
+                                + "catwm.conf: \(reason)")
+        }
+    }
+
+    func install(_ source: String, matching expected: Config, backup: URL? = nil,
+                 fail: (String) -> ConfigDiagnostic) -> ConfigDiagnostic? {
         let trial = folder.appendingPathComponent(".catwm.config.converting.ts")
         defer {
             if FileManager.default.fileExists(atPath: trial.path) {
@@ -252,12 +259,15 @@ extension ConfigStore {
         if let problem = run.value.map({ ConfigScript.read($0, into: &config, file: nil) })?.first {
             return fail(problem.message)
         }
-        var parsed = Config.parse(conf)
-        parsed.bindings.removeAll { !Actions.dispatchers.contains($0.dispatcher) }
-        let changes = config.changes(from: parsed)
+        let changes = config.changes(from: expected)
         if !changes.isEmpty { return fail("the result differs in \(changes.sorted().joined(separator: ", "))") }
         do {
-            try FileManager.default.moveItem(at: trial, to: scriptURL)
+            if let backup {
+                try FileManager.default.copyItem(at: scriptURL, to: backup)
+                _ = try FileManager.default.replaceItemAt(scriptURL, withItemAt: trial)
+            } else {
+                try FileManager.default.moveItem(at: trial, to: scriptURL)
+            }
         } catch {
             return fail(error.localizedDescription)
         }

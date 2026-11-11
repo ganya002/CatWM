@@ -35,15 +35,18 @@ package final class ConfigEngine {
 
     package let entry: URL
     private let baseline: Config
+    private let isLegacy: Bool
     private let check: (JSON) -> [ConfigDiagnostic]
     private let thread = RunLoopThread(name: "CatWM config")
     private var context: JSContext?
     private var value: JSON?
     private var files: [URL] = []
 
-    package init(entry: URL, baseline: Config = Config(), check: @escaping (JSON) -> [ConfigDiagnostic] = { _ in [] }) {
+    package init(entry: URL, baseline: Config = Config(), legacy: Bool = false,
+                 check: @escaping (JSON) -> [ConfigDiagnostic] = { _ in [] }) {
         self.entry = entry
         self.baseline = baseline
+        isLegacy = legacy
         self.check = check
     }
 
@@ -95,7 +98,7 @@ package final class ConfigEngine {
         self.context = context
         guard let registry = context.objectForKeyedSubscript("catwmRegistry") else { return Run(value: value) }
         let start = DispatchTime.now().uptimeNanoseconds
-        let output = registry.invokeMethod("run", withArguments: [entry.path])?.toString() ?? ""
+        let output = registry.invokeMethod("run", withArguments: [entry.path, isLegacy])?.toString() ?? ""
         let late = registry.invokeMethod("late", withArguments: [])?.toString() ?? "[]"
         JSGarbageCollect(context.jsGlobalContextRef)
         guard let result = JSON.parse(Data(output.utf8)) else {

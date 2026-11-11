@@ -8,6 +8,23 @@ package enum ConfigMigration {
         for line in text.components(separatedBy: .newlines) { reader.read(line) }
         return reader.render(header: header)
     }
+
+    package static func typescript(from value: [String: JSON], header: [String]) -> String {
+        var reader = MigrationReader(Config())
+        reader.read(value)
+        return reader.render(header: header)
+    }
+
+    package static func renamed(_ value: [String: JSON]) -> [String: JSON] {
+        var value = value
+        let groupsFirst = ConfigScript.renamed.filter { !$0.key.contains(".") }
+            .sorted { ($0.value.split(separator: ".").count, $0.key) < ($1.value.split(separator: ".").count, $1.key) }
+        for (old, new) in groupsFirst {
+            guard let moved = value.removeValue(forKey: old) else { continue }
+            ConfigScript.set(moved, at: new, in: &value)
+        }
+        return value
+    }
 }
 
 private struct MigrationVariable {
@@ -33,6 +50,7 @@ private struct MigrationReader {
     package var blocks: [String] = []
     package var resolved: [(String, String)] = []
     package var variableComments: [String: [String]] = [:]
+    package var given: [String: JSON] = [:]
 
     package init(_ parsed: Config) { self.parsed = parsed }
 }
@@ -152,21 +170,52 @@ extension MigrationReader {
               case .success(let pairs) = BindRange.pairs(key: row.key, dispatcher: row.dispatcher, arg: row.args)
         else { return }
         guard Actions.dispatchers.contains(row.dispatcher) else { return unknown(line, "unknown action") }
-        let mods = modsLiteral(raw.mods)
         let repeats = ["binde", "bindel", "bindle"].contains(kind)
-        let options = (submap.isEmpty ? [] : ["submap: " + ConfigScript.quoted(submap)])
-            + (repeats ? ["repeat: true"] : [])
         let calls = pairs.map { pair in
-            let key = pair.key.lowercased()
             let arg = pairs.count == 1 ? argLiteral(raw: raw.args, expanded: pair.arg) : ConfigScript.quoted(pair.arg)
             let run = pair.arg.isEmpty
                 ? ConfigScript.quoted(row.dispatcher) : "[\(ConfigScript.quoted(row.dispatcher)), \(arg)]"
-            let tail = options.isEmpty ? "" : ", { " + options.joined(separator: ", ") + " }"
-            let name = ConfigScript.quoted(ConfigScript.keyAliases[key] ?? key)
-            return "catwm.bind(\(modsLiteral(raw.mods) ?? "[]"), \(name), " + run + tail + ")"
+            return Self.call(mods: modsLiteral(raw.mods) ?? "[]", key: pair.key, run: run, submap: submap,
+                             repeats: repeats)
         }
         binds.append(MigrationBind(submap: submap, comments: comments + comment, calls: calls))
         comments = []
+    }
+
+    private static func call(mods: String, key: String, run: String, submap: String, repeats: Bool) -> String {
+        let options = (submap.isEmpty ? [] : ["submap: " + ConfigScript.quoted(submap)])
+            + (repeats ? ["repeat: true"] : [])
+        let tail = options.isEmpty ? "" : ", { " + options.joined(separator: ", ") + " }"
+        let key = key.lowercased()
+        let name = ConfigScript.quoted(ConfigScript.keyAliases[key] ?? key)
+        return "catwm.bind(\(mods), \(name), " + run + tail + ")"
+    }
+
+    package mutating func read(_ object: [String: JSON]) {
+        for path in ConfigScript.paths(object) {
+            switch path {
+            case "binds": binds(object[path]?.array ?? [], submap: "")
+            case "submaps":
+                let modes = object[path]?.object ?? [:]
+                for name in modes.keys.sorted() { binds(modes[name]?.array ?? [], submap: name) }
+            default:
+                let json = path.split(separator: ".").reduce(JSON.object(object)) { $0.object?[String($1)] ?? .null }
+                given[path] = json
+                paths.append((path, []))
+            }
+        }
+    }
+
+    private mutating func binds(_ list: [JSON], submap: String) {
+        let calls = list.compactMap { item -> String? in
+            guard let bind = item.object, let key = bind["key"]?.string, let run = bind["run"] else { return nil }
+            let mods = (bind["mods"]?.array ?? bind["mods"].map { [$0] } ?? []).compactMap(\.string)
+            let action = run.array.map { "[" + $0.map { ConfigScript.literal($0) }.joined(separator: ", ") + "]" }
+                ?? ConfigScript.literal(run)
+            return Self.call(mods: ConfigScript.literal(.array(mods.map(JSON.string))), key: key, run: action,
+                             submap: submap, repeats: bind["repeat"] == .bool(true))
+        }
+        self.binds.append(MigrationBind(submap: submap, comments: [], calls: calls))
     }
 
     private func modsLiteral(_ text: String) -> String? {
@@ -241,6 +290,7 @@ extension MigrationReader {
     }
 
     private func value(_ path: String) -> JSON {
+        if let json = given[path] { return json }
         switch path {
         case "layouts": return .array(parsed.layouts.map { .string($0.rawValue) })
         case "floating.apps": return .array(parsed.floating.map(JSON.string))
