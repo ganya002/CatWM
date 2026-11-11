@@ -9,7 +9,9 @@ private var projectRoot: URL {
 }
 
 private func reply(_ text: String) throws -> JSON {
-    try #require(JSON.parse(ControlServer.reply(to: Data(text.utf8), client: nil)))
+    var data = Data()
+    ControlServer.respond(to: Data(text.utf8), client: nil) { data = $0 }
+    return try #require(JSON.parse(data))
 }
 
 @Suite struct ControlRegistryTests {

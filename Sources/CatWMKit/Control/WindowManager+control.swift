@@ -1,6 +1,11 @@
 import AppKit
 
 extension WindowManager {
+    package func connectionClosed(_ client: ControlConnection) {
+        guard let display = agents.take(client) else { return }
+        Task { @MainActor in await display.quit() }
+    }
+
     package func statusJSON() -> JSON {
         let current = status()
         return [

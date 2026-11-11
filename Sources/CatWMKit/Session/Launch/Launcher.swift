@@ -91,35 +91,38 @@ package enum Launcher {
 
     @discardableResult
     static func open(_ target: LaunchTarget, activates: Bool = true) async -> Bool {
+        await start(target, activates: activates) != nil
+    }
+
+    package static func start(_ target: LaunchTarget, activates: Bool = true,
+                              arguments: [String] = []) async -> NSRunningApplication? {
         switch target {
-        case .app(let url): return await launch(url, activates: activates)
+        case .app(let url): return await start(url, arguments: arguments, activates: activates)
         case .open(let url):
-            guard let app = appURL(for: target) else { return false }
-            return await open(url, withApp: app, activates: activates)
+            guard let app = appURL(for: target) else { return nil }
+            return await start(url, withApp: app, activates: activates)
         }
     }
 
     static func open(_ url: URL, withApp appURL: URL, activates: Bool = false) async -> Bool {
-        let configuration = NSWorkspace.OpenConfiguration()
-        configuration.activates = activates
-        do {
-            _ = try await NSWorkspace.shared.open([url], withApplicationAt: appURL, configuration: configuration)
-            return true
-        } catch {
-            return false
-        }
+        await start(url, withApp: appURL, activates: activates) != nil
     }
 
     package static func launch(_ appURL: URL, arguments: [String] = [], activates: Bool = false) async -> Bool {
+        await start(appURL, arguments: arguments, activates: activates) != nil
+    }
+
+    private static func start(_ url: URL, withApp appURL: URL, activates: Bool) async -> NSRunningApplication? {
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.activates = activates
+        return try? await NSWorkspace.shared.open([url], withApplicationAt: appURL, configuration: configuration)
+    }
+
+    private static func start(_ appURL: URL, arguments: [String], activates: Bool) async -> NSRunningApplication? {
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.activates = activates
         configuration.arguments = arguments
-        do {
-            _ = try await NSWorkspace.shared.openApplication(at: appURL, configuration: configuration)
-            return true
-        } catch {
-            return false
-        }
+        return try? await NSWorkspace.shared.openApplication(at: appURL, configuration: configuration)
     }
 
     package static func run(command: String) -> Bool {

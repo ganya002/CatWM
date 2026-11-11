@@ -48,37 +48,59 @@ package final class ControlServer {
         let manager = self.manager
         let connection = ControlConnection(descriptor: descriptor, onLine: { connection, line in
             DispatchQueue.main.async {
-                connection.send(Self.reply(to: line, client: connection, manager: manager ?? .shared))
+                Self.respond(to: line, client: connection, manager: manager ?? .shared, send: connection.send)
             }
         }, onClose: { [weak self] connection in
             self?.queue.async { self?.clients[ObjectIdentifier(connection)] = nil }
-            DispatchQueue.main.async { EventBus.shared.remove(connection) }
+            DispatchQueue.main.async {
+                EventBus.shared.remove(connection)
+                (manager ?? .shared).connectionClosed(connection)
+            }
         })
         clients[ObjectIdentifier(connection)] = connection
         connection.start()
         connection.send(JSON.object(["hello": Self.hello]).encoded() + Data("\n".utf8))
     }
 
-    package static func reply(to line: Data, client: ControlConnection?, manager: WindowManager = .shared) -> Data {
-        var id = JSON.null
-        let response: JSON
-        do {
-            guard let request = JSON.parse(line)?.object else {
-                throw ControlError.badRequest("Send one JSON object")
+    package static func respond(to line: Data, client: ControlConnection?, manager: WindowManager = .shared,
+                                send: @escaping (Data) -> Void) {
+        func answer(_ id: JSON, _ outcome: () throws -> JSON) {
+            let response: JSON
+            do {
+                response = ["id": id, "ok": true, "result": try outcome()]
+            } catch let error as ControlError {
+                response = ["id": id, "ok": false,
+                            "error": ["code": .string(error.code), "message": .string(error.message)]]
+            } catch {
+                response = ["id": id, "ok": false, "error": ["code": "failed", "message": .string("\(error)")]]
             }
-            id = request["id"] ?? .null
-            guard let name = request["command"]?.string else { throw ControlError.badRequest("Send a `command`") }
-            let args = request["args"] ?? [:]
-            guard let given = args.object else { throw ControlError.badRequest("`args` must be an object") }
-            let result = try CommandRegistry.execute(name, given, client: client, manager: manager)
-            response = ["id": id, "ok": true, "result": result]
-        } catch let error as ControlError {
-            response = ["id": id, "ok": false,
-                        "error": ["code": .string(error.code), "message": .string(error.message)]]
-        } catch {
-            response = ["id": id, "ok": false, "error": ["code": "failed", "message": .string("\(error)")]]
+            send(response.encoded() + Data("\n".utf8))
         }
-        return response.encoded() + Data("\n".utf8)
+        guard let request = JSON.parse(line)?.object else {
+            return answer(.null) { throw ControlError.badRequest("Send one JSON object") }
+        }
+        let id = request["id"] ?? .null
+        do {
+            guard let name = request["command"]?.string else { throw ControlError.badRequest("Send a `command`") }
+            guard let given = (request["args"] ?? [:]).object else {
+                throw ControlError.badRequest("`args` must be an object")
+            }
+            let (command, call) = try CommandRegistry.prepare(name, given, client: client, manager: manager)
+            switch command.body {
+            case .now(let run): answer(id) { try run(call) }
+            case .later(let run):
+                Task { @MainActor in
+                    do {
+                        let result = try await run(call)
+                        answer(id) { result }
+                    } catch {
+                        answer(id) { throw error }
+                    }
+                }
+            }
+        } catch {
+            answer(id) { throw error }
+        }
     }
 
     package static func listen(on path: String, log: (String) -> Void = { Log.info($0) }) -> Int32? {

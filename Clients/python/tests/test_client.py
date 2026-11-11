@@ -10,7 +10,7 @@ import unittest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from catwm import CatWM, CatWMError  # noqa: E402
-from catwm.testing import Events, connect, find_windows, wait_for_window, wait_until  # noqa: E402
+from catwm.testing import Events, Sandbox, connect, find_windows, wait_for_window, wait_until  # noqa: E402
 
 WINDOWS = [
     {"id": 1, "app": "com.apple.Safari", "title": "Docs", "focused": True, "workspace": "1", "floating": False},
@@ -26,6 +26,7 @@ class FakeCatWM:
         self.path = os.path.join(self.directory.name, "catwm.sock")
         self.requests = []
         self.subscribers = []
+        self.polls = 0
         self.server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.server.bind(self.path)
         self.server.listen(8)
@@ -55,6 +56,22 @@ class FakeCatWM:
             elif name == "subscribe":
                 self.subscribers.append(connection)
                 reply = {"id": rid, "ok": True, "result": {"events": args["events"]}}
+            elif name == "agent.open":
+                reply = {"id": rid, "ok": True, "result": {"uuid": "U", "frame": {"x": 0, "y": 0, "w": 1, "h": 1}}}
+            elif name == "agent.launch" and args["app"] == "running.app":
+                reply = {"id": rid, "ok": False, "error": {"code": "app_running", "message": "already runs"}}
+            elif name == "agent.launch":
+                reply = {"id": rid, "ok": True, "result": {"pid": 7}}
+            elif name == "agent.windows":
+                self.polls += 1
+                found = [{"id": 9, "pid": 7, "app": "a", "title": None, "frame": {}}] if self.polls > 1 else []
+                reply = {"id": rid, "ok": True, "result": found}
+            elif name == "agent.type":
+                reply = {"id": rid, "ok": True, "result": {"method": "ax"}}
+            elif name == "agent.text":
+                reply = {"id": rid, "ok": True, "result": "hello"}
+            elif name == "agent.screenshot":
+                reply = {"id": rid, "ok": True, "result": args["path"]}
             elif name == "fake.emit":
                 for target in self.subscribers:
                     for event in args["events"]:
@@ -150,3 +167,41 @@ class EventTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SandboxTests(unittest.TestCase):
+    def setUp(self):
+        self.fake = FakeCatWM()
+        self.addCleanup(self.fake.close)
+
+    def commands(self):
+        return [r["command"] for r in self.fake.requests]
+
+    def test_flow_waits_for_the_window_and_closes_at_the_end(self):
+        with Sandbox(self.fake.path) as box:
+            window = box.launch("com.apple.TextEdit")
+            self.assertEqual(window["id"], 9)
+            self.assertEqual(box.type(window, "hello"), "ax")
+            self.assertEqual(box.text(window), "hello")
+            path = box.screenshot(window)
+            self.addCleanup(os.remove, path)
+            self.assertTrue(os.path.isabs(path))
+        self.assertGreaterEqual(self.fake.polls, 2)
+        self.assertEqual(self.commands()[0], "agent.open")
+        self.assertEqual(self.commands()[-1], "agent.close")
+
+    def test_exit_closes_after_an_exception(self):
+        with self.assertRaises(ZeroDivisionError):
+            with Sandbox(self.fake.path):
+                1 / 0
+        self.assertEqual(self.commands()[-1], "agent.close")
+
+    def test_a_running_app_is_refused_with_its_code(self):
+        with Sandbox(self.fake.path) as box:
+            with self.assertRaises(CatWMError) as caught:
+                box.launch("running.app")
+        self.assertEqual(caught.exception.code, "app_running")
+
+    def test_skips_when_catwm_does_not_run(self):
+        with self.assertRaises(unittest.SkipTest):
+            Sandbox("/nonexistent/catwm.sock")

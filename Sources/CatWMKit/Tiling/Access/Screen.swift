@@ -24,7 +24,7 @@ package struct Screen {
         func flip(_ rect: CGRect) -> CGRect {
             CGRect(x: rect.minX, y: height - rect.maxY, width: rect.width, height: rect.height)
         }
-        let screens = NSScreen.screens.compactMap { screen -> Screen? in
+        let screens = NSScreen.userScreens.compactMap { screen -> Screen? in
             guard let id = screen.displayID else { return nil }
             let uuid = screen.displayUUID ?? "\(id)"
             return Screen(id: id, uuid: uuid, frame: flip(screen.frame), visible: flip(screen.visibleFrame),
