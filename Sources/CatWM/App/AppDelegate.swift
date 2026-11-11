@@ -78,14 +78,18 @@ import CatWMKit
 
     private func closePreviousInstances() {
         let myExe = Bundle.main.executableURL?.resolvingSymlinksInPath()
-        let running = NSWorkspace.shared.runningApplications.filter { app in
+        let recorded = InstancePaths.readPid(Instance.pidFile)
+        let candidates = Instance.isNamed
+            ? recorded.flatMap { NSRunningApplication(processIdentifier: $0) }.map { [$0] } ?? []
+            : NSWorkspace.shared.runningApplications
+        let running = candidates.filter { app in
             guard !app.isTerminated else { return false }
             if let id = Bundle.main.bundleIdentifier, app.bundleIdentifier == id { return true }
             return myExe != nil && app.executableURL?.resolvingSymlinksInPath() == myExe
         }
         let otherInstances = Instance.isNamed ? [] : Instance.paths.namedPidFiles().compactMap(InstancePaths.readPid)
         let pids = InstancePaths.pidsToClose(own: getpid(), named: Instance.isNamed,
-                                             recorded: InstancePaths.readPid(Instance.pidFile),
+                                             recorded: recorded,
                                              running: running.map(\.processIdentifier),
                                              otherInstances: Set(otherInstances))
         let others = running.filter { pids.contains($0.processIdentifier) }

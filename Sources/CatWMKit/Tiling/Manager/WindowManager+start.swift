@@ -46,8 +46,13 @@ extension WindowManager {
         for delay in [0.5, 1.5, 3.0, 6.0] {
             DispatchQueue.main.asyncAfter( // style-ok: apps at login become readable with no event
                 deadline: .now() + delay
-            ) { [weak self] in self?.scheduleRefresh() }
+            ) { [weak self] in self?.retryStartupScan() }
         }
+    }
+
+    package func retryStartupScan() {
+        guard scanner.lastScan == 0 || scanner.applications.contains(where: \.regular) else { return }
+        scheduleRefresh()
     }
 
     package func startEngine() {
@@ -119,7 +124,10 @@ extension WindowManager {
             self?.poweringOffAt = Date()
         }
         for name in [NSWorkspace.didHideApplicationNotification, NSWorkspace.didUnhideApplicationNotification] {
-            observe(name, in: center) { [weak self] in self?.scheduleRefresh() }
+            observeApplication(name, in: center) { [weak self] app in
+                guard let self, app.map({ scanner.keeps($0.processIdentifier) }) ?? true else { return }
+                scheduleRefresh()
+            }
         }
         observeApplication(NSWorkspace.didActivateApplicationNotification, in: center) { [weak self] app in
             if let self, let echo = focusRequests.focusEcho, echo.matches(app?.processIdentifier),
@@ -133,6 +141,7 @@ extension WindowManager {
     }
 
     package func applicationLaunched(_ app: NSRunningApplication) {
+        guard scanner.keeps(app.processIdentifier) else { return }
         observe(app)
         scheduleRefresh(after: 0)
         for delay in [0.3, 1.0, 2.5] {
@@ -145,9 +154,9 @@ extension WindowManager {
         }
     }
 
-    private func applicationTerminated(_ pid: pid_t) {
+    package func applicationTerminated(_ pid: pid_t) {
         release(pid)
-        scheduleRefresh()
+        if scanner.keeps(pid) { scheduleRefresh() }
     }
 
     package func releaseClaimedApps() {
