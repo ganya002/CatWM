@@ -35,6 +35,8 @@ package struct WindowScope: Equatable {
         "pids:" + pids.sorted().map(String.init).joined(separator: ",") + (display.map { ";display:\($0)" } ?? "")
     }
 
+    package var isContained: Bool { display != nil }
+
     package static let launchd: pid_t = 1
 
     package var refusal: String? {

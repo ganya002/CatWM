@@ -10,14 +10,9 @@ import CatWMKit
         closePreviousInstances()
         endWithScope()
         Theme.registerFonts()
-        let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        let statusItem = Instance.isContained ? nil : makeStatusItem()
         self.statusItem = statusItem
-        statusItem.button?.image = NSImage(systemSymbolName: "rectangle.split.3x1", accessibilityDescription: "CatWM")
-        statusItem.button?.toolTip = Instance.id.map { "CatWM (\($0))" }
-        statusItem.button?.target = self
-        statusItem.button?.action = #selector(toggleMenu)
-        statusItem.button?.sendAction(on: [.leftMouseDown, .rightMouseDown])
-        StatusMenu.shared.button = statusItem.button
+        StatusMenu.shared.button = statusItem?.button
 
         NSApp.mainMenu = makeMainMenu()
         if !Instance.isNamed { Updater.shared.start() }
@@ -33,7 +28,7 @@ import CatWMKit
             LoginItem.shared.enableOnFirstLaunch()
             CommandLineTool.install()
         }
-        Onboarding.shared.statusButton = statusItem.button
+        Onboarding.shared.statusButton = statusItem?.button
 
         let watcher = PermissionWatcher.shared
         watcher.start()
@@ -44,7 +39,7 @@ import CatWMKit
             Log.info("launch: Accessibility not granted")
             WindowManager.shared.prewarm()
         }
-        if !Instance.isNamed && Onboarding.shouldShow(firstRun: firstRun, trusted: trusted)
+        if !Instance.isContained, !Instance.isNamed && Onboarding.shouldShow(firstRun: firstRun, trusted: trusted)
             || LaunchFlag.onboarding.isSet {
             Onboarding.shared.start()
         } else if !trusted {
@@ -55,10 +50,20 @@ import CatWMKit
             WhatsNew.shared.launched()
         }
         #if DEBUG
-        if LaunchFlag.gallery.isSet { DesignGallery.shared.open() }
+        if LaunchFlag.gallery.isSet, !Instance.isContained { DesignGallery.shared.open() }
         #endif
         updateIcon()
         watcher.subscribe { [weak self] granted, changed in self?.permissionsChecked(granted, changed) }
+    }
+
+    private func makeStatusItem() -> NSStatusItem {
+        let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        statusItem.button?.image = NSImage(systemSymbolName: "rectangle.split.3x1", accessibilityDescription: "CatWM")
+        statusItem.button?.toolTip = Instance.id.map { "CatWM (\($0))" }
+        statusItem.button?.target = self
+        statusItem.button?.action = #selector(toggleMenu)
+        statusItem.button?.sendAction(on: [.leftMouseDown, .rightMouseDown])
+        return statusItem
     }
 
     private func endWithScope() {
@@ -204,6 +209,7 @@ import CatWMKit
     }
 
     static func checkForUpdates() {
+        guard !Instance.isContained else { return }
         guard Updater.shared.isConfigured else {
             let alert = NSAlert()
             alert.messageText = "Updates aren't set up in this build"

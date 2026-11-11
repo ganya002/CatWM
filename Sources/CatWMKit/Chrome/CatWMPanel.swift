@@ -68,6 +68,51 @@ package final class CatWMPanel: NSPanel {
     }
     package override var canBecomeMain: Bool { false }
 
+    package static func contained(_ frame: NSRect, in bounds: NSRect) -> NSRect {
+        let width = min(frame.width, bounds.width), height = min(frame.height, bounds.height)
+        return NSRect(x: min(max(frame.minX, bounds.minX), bounds.maxX - width),
+                      y: min(max(frame.minY, bounds.minY), bounds.maxY - height), width: width, height: height)
+    }
+
+    package var containedDisplay = Instance.scope?.display
+
+    private func fitted(_ frame: NSRect) -> NSRect? {
+        guard let display = containedDisplay else { return frame }
+        guard let screen = NSScreen.screens.first(where: { $0.displayUUID == display }) else { return nil }
+        return Self.contained(frame, in: screen.frame)
+    }
+
+    private func showable() -> Bool {
+        guard let target = fitted(frame) else { return false }
+        if target != frame { super.setFrame(target, display: false) }
+        return true
+    }
+
+    package override func orderFront(_ sender: Any?) { if showable() { super.orderFront(sender) } }
+    package override func orderFrontRegardless() { if showable() { super.orderFrontRegardless() } }
+    package override func makeKeyAndOrderFront(_ sender: Any?) { if showable() { super.makeKeyAndOrderFront(sender) } }
+    package override func order(_ place: NSWindow.OrderingMode, relativeTo other: Int) {
+        if place == .out || showable() { super.order(place, relativeTo: other) }
+    }
+
+    package override func setFrame(_ frameRect: NSRect, display flag: Bool) {
+        super.setFrame(fitted(frameRect) ?? frameRect, display: flag)
+    }
+
+    package override func setFrame(_ frameRect: NSRect, display displayFlag: Bool, animate animateFlag: Bool) {
+        super.setFrame(fitted(frameRect) ?? frameRect, display: displayFlag, animate: animateFlag)
+    }
+
+    package override func setFrameOrigin(_ point: NSPoint) {
+        super.setFrameOrigin(fitted(NSRect(origin: point, size: frame.size))?.origin ?? point)
+    }
+
+    package override func setFrameTopLeftPoint(_ point: NSPoint) {
+        let moved = NSRect(x: point.x, y: point.y - frame.height, width: frame.width, height: frame.height)
+        guard let target = fitted(moved) else { return super.setFrameTopLeftPoint(point) }
+        super.setFrameTopLeftPoint(NSPoint(x: target.minX, y: target.maxY))
+    }
+
     package override func performKeyEquivalent(with event: NSEvent) -> Bool {
         if let onClose, Self.isCloseKey(event) { onClose(); return true }
         return super.performKeyEquivalent(with: event)

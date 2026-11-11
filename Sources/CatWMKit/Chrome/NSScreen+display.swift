@@ -1,8 +1,11 @@
 import AppKit
 
 extension NSScreen {
-    package static var userScreens: [NSScreen] {
-        screens.filter { $0.displayID.map { !AgentDisplay.owns($0) } ?? true }
+    package static var userScreens: [NSScreen] { userScreens(display: Instance.scope?.display) }
+
+    package static func userScreens(display: String?) -> [NSScreen] {
+        if let display { return screens.filter { $0.displayUUID == display } }
+        return screens.filter { $0.displayID.map { !AgentDisplay.owns($0) } ?? true }
     }
 
     package var displayID: CGDirectDisplayID? {

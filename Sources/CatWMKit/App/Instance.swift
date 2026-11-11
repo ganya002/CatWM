@@ -133,6 +133,8 @@ package enum Instance {
         return scope
     }()
 
+    package static let isContained = scope?.isContained ?? false
+
     package static let keys = ProcessInfo.processInfo.environment["CATWM_KEYS"]
 
     @MainActor package static let defaults: UserDefaults = {

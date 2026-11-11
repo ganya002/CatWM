@@ -42,7 +42,23 @@ An incident left two scoped test instances on the user's screen for over an hour
 
 ## What a scoped instance can still reach
 
-Checked in code, no leak found. `restrict` turns Desktops off, so the Desktop slide, `DesktopGuardClient`, the wallpaper and menu bar covers, `WindowServerUpdates` leases in `moveNativeWindow`, native space moves and empty-Desktop removal never run. The commands that would start them are in `refusedCommands`. `restoreHiddenWindows` and parked-window restore iterate `windows`, which holds only scope pids, and the scanner drops other pids before the manager sees them, so cached AX elements belong to the scope. `GlobalInput` leaves out the event taps, Caps Lock, the pointer and the focus sink. The one thing that stays on the user's display is the status item, which is why the perf app scenario is still on the real screen: a display in the scope moves panels and HUDs (through `Screen.all`) but not the status item.
+Checked in code, no leak found. `restrict` turns Desktops off, so the Desktop slide, `DesktopGuardClient`, the wallpaper and menu bar covers, `WindowServerUpdates` leases in `moveNativeWindow`, native space moves and empty-Desktop removal never run. The commands that would start them are in `refusedCommands`. `restoreHiddenWindows` and parked-window restore iterate `windows`, which holds only scope pids, and the scanner drops other pids before the manager sees them, so cached AX elements belong to the scope. `GlobalInput` leaves out the event taps, Caps Lock, the pointer and the focus sink. What a scope without a display still draws on the user's screens is the next section's subject.
+
+## A scope with a display draws nothing on the user's screens
+
+`CATWM_SCOPE=...;display:<uuid>` makes the instance contained (`Instance.isContained`). Everything it draws goes to that display or is not drawn. One chokepoint for each kind of drawing, because patching every call site would miss the next one.
+
+- **Screens.** `NSScreen.userScreens` returns only the scope's display, and only for a contained instance. Before this, every CatWM process dropped every agent display from `userScreens`, so a scope naming one saw no screens at all. Mode effects, dimming and `Screen.all` read this one list.
+- **Panels.** Every panel is a `CatWMPanel`, which clamps its frame into the scope's display on each `setFrame`, `setFrameOrigin`, `setFrameTopLeftPoint` and each way of ordering it front. A display that is gone means the panel never shows. Callers keep choosing a screen with `NSScreen.main` or the pointer, so the clamp is what keeps a HUD or tab strip off the user's screen. The alternative, an audit of the 24 files that make panels, would break at the next new panel.
+- **Status item and menu.** No `NSStatusItem` is made. The status menu, the menu bar tip and the sort nudge anchor to it, so they have nothing to open from.
+- **Windows and prompts.** `SettingsWindow.show` (also reached by reopening the app), the update alert, onboarding, the design gallery and `PermissionGuide.show` do nothing. `PermissionGuide.show` is the single path for the Accessibility and other permission prompts. The unnamed-only surfaces (Tips, What's New, the updater, crash reports, the login item) were already off for any named instance.
+- **The focus sink** is never ordered front, because a scoped instance has no pointer or focus handling.
+
+An untrusted contained instance therefore just logs that it has no Accessibility permission. `ScopeLifetime` still ends it with its scope pids.
+
+## The perf app scenario on an agent display
+
+`Tools/perf.py` opens an agent display through the running user CatWM (`Sandbox`, one connection for the whole run) and scopes each instance with `;display:<uuid>`. All parallel runs share the display, since the instances manage no windows. The display belongs to the connection, so the kernel closes it if perf.py dies, and `ScopeLifetime` ends the instances with perf.py. With no CatWM socket (CI), or one without `agent.open` (a build from before the agent display), the script prints that and keeps the old behaviour: scoped to its own pid on the real display. A CI runner has no user CatWM, so there the status item still appears on the runner's screen, which nobody watches.
 
 ## An engine on a fake never reaches the user's input
 

@@ -11,6 +11,7 @@ import SwiftUI
     private(set) lazy var settingsUI = SettingsUI(doc: doc)
 
     func show(pane: Pane?, map: Bool = false) {
+        guard !Instance.isContained else { return }
         let wasVisible = sessionOpen
         if window == nil {
             let settingsWindow = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 880, height: 620),

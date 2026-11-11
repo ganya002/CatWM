@@ -50,10 +50,11 @@ extension Permission {
 @MainActor final class PermissionGuide {
     static let shared = PermissionGuide()
     @MainActor private lazy var flow = PermissionFlow.makeController()
-    private var kind: Permission?
+    private(set) var kind: Permission?
     var onGranted: (() -> Void)?
 
-    func show(_ kind: Permission) {
+    func show(_ kind: Permission, contained: Bool = Instance.isContained) {
+        guard !contained else { return Log.info("permissions: no prompt for \(kind.title) in a contained instance") }
         self.kind = kind
         Task { @MainActor in flow.authorize(pane: kind.pane, suggestedAppURLs: [Bundle.main.bundleURL]) }
     }

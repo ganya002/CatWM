@@ -7,7 +7,10 @@ so a faster or slower runner needs no new caps.
 
 Run `swift build -c release` and `CATWM_INSTANCE=perf ./build.sh` first. The runs go in parallel.
 Each engine scenario runs in a new CatWMPerf process. The app scenario starts build/CatWM.app as the
-named instance `perf-<run>`, scoped to this process, so it manages no window. The exit status is 1 when a value is over its cap.
+named instance `perf-<run>`, scoped to this process, so it manages no window. When a CatWM runs (a developer's
+Mac), the instances also go on a private agent display that it opens for this run, and they draw nothing on the
+real screens. Without one (CI), they run on the real display as before and the script says so. The exit status is
+1 when a value is over its cap.
 
     python3 Tools/perf.py [--runs N] [--out report.md] [--json samples.json]
 """
@@ -21,10 +24,15 @@ import statistics
 import subprocess
 import sys
 import time
+import unittest
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "Clients/python"))
+from catwm import CatWMError  # noqa: E402
+from catwm.testing import Sandbox  # noqa: E402
+
 PERF = ROOT / ".build/release/CatWMPerf"
 APP = ROOT / "build/CatWM.app/Contents/MacOS/CatWM"
 BUDGETS = ROOT / "Tools/Perf/budgets.json"
@@ -62,8 +70,22 @@ def run_engine(scenario):
     return json.loads(result.stdout)
 
 
-def run_app(run):
-    env = {**os.environ, "CATWM_INSTANCE": f"perf-{run}", "CATWM_SCOPE": f"pids:{os.getpid()}"}
+def open_display():
+    """Open an agent display through the running CatWM. Returns (sandbox, uuid), or (None, None) without one."""
+    try:
+        sandbox = Sandbox(timeout=15)
+    except (unittest.SkipTest, CatWMError, OSError) as error:
+        print(f"perf: no agent display ({error}); the app scenario runs on the real display", file=sys.stderr)
+        return None, None
+    return sandbox, sandbox.display["uuid"]
+
+
+def scope(display):
+    return f"pids:{os.getpid()}" + (f";display:{display}" if display else "")
+
+
+def run_app(run, display=None):
+    env = {**os.environ, "CATWM_INSTANCE": f"perf-{run}", "CATWM_SCOPE": scope(display)}
     process = subprocess.Popen([str(APP)], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     samples = {}
     try:
@@ -147,19 +169,25 @@ def main():
     budgets = json.loads(BUDGETS.read_text())
     if args.skip_app:
         budgets["rows"] = {key: value for key, value in budgets["rows"].items() if not key.startswith("app.")}
+    sandbox, display = (None, None) if args.skip_app else open_display()
+
     def run(number):
         results = [run_engine(scenario) for scenario in ENGINE_SCENARIOS]
         if not args.skip_app:
-            results.append(run_app(number))
+            results.append(run_app(number, display))
         print(f"perf: run {number} done", file=sys.stderr)
         return results
 
     samples = {}
-    with ThreadPoolExecutor(max_workers=args.runs) as pool:
-        for results in pool.map(run, range(1, args.runs + 1)):
-            for result in results:
-                for metric, values in result.items():
-                    samples.setdefault(metric, []).extend(values)
+    try:
+        with ThreadPoolExecutor(max_workers=args.runs) as pool:
+            for results in pool.map(run, range(1, args.runs + 1)):
+                for result in results:
+                    for metric, values in result.items():
+                        samples.setdefault(metric, []).extend(values)
+    finally:
+        if sandbox:
+            sandbox.close()
 
     table, failed = report(samples, budgets, machine())
     print(table)
