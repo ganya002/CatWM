@@ -54,9 +54,30 @@ with Events("focus.changed", "workspace.changed") as events:
 
 `events.wait(name, where=..., timeout=...)` returns the next matching event or raises `TimeoutError`. `events.drain()` returns the events that wait now. The events are: `focus.changed`, `window.added`, `window.removed`, `workspace.changed`, `layout.changed`, `tiling.changed`, `mode.changed` and `config.reloaded`.
 
+## Test apps on a private display
+
+`Sandbox` opens a virtual display that only your test uses. Apps you launch there never take the user's focus, Desktop or cursor, and the user's CatWM does not tile them. It needs Accessibility and Screen Recording for CatWM, and it skips the test when CatWM does not run.
+
+```python
+from catwm.testing import Sandbox
+
+with Sandbox() as box:
+    panel = box.launch("com.apple.TextEdit")  # returns when its first window exists (TextEdit: the Open panel)
+    box.press(panel, "New Document")          # AX press, no focus
+    edit = box.window(title="Untitled")       # waits for the window
+    box.type(edit, "hello")                   # no focus, no cursor
+    assert box.text(edit) == "hello"
+    box.screenshot(edit, "/tmp/edit.png")     # one PNG frame of that window
+```
+
+- `launch` refuses an app that already runs (`CatWMError` code `app_running`), because the display takes over every window of the app. Pick another app or quit it first.
+- `box.key(window, "cmd+a")` posts a key to the app. Key events can miss an app that is not active, so prefer `press` and `type`. `box.type` returns `ax` when it set the text field directly, or `events` when it posted key events.
+- Leaving the block quits the apps and closes the display, also after an exception or `kill -9` of your script. The display belongs to the connection.
+- The apps are not in `catwm.windows()` and send no `window.added`. `box.client` is the connection, and `box.client.agent_windows()` lists the windows.
+
 ## Rules for tests
 
-- The user works on the same desktop. Do not move their windows or take their focus. Open your own windows for a test, and close them after.
+- The user works on the same desktop. Do not move their windows or take their focus. Test apps go in a `Sandbox`. Close any other window you open.
 - Put back what you change: layout, tiling on or off, workspace and config options.
 - Use `unittest` or `pytest`. `connect()` raises `unittest.SkipTest`, so both skip the test when CatWM does not run.
 - Read `catwm dump` or `~/Library/Logs/CatWM.log` when a test fails.

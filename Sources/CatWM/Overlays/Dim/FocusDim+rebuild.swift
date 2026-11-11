@@ -12,7 +12,7 @@ extension FocusDim {
 
     func layoutPanels() {
         var seen = Set<CGDirectDisplayID>()
-        for screen in NSScreen.screens {
+        for screen in NSScreen.userScreens {
             guard let display = screen.displayID else { continue }
             seen.insert(display)
             let pair = pairs[display] ?? Pair(front: makePanel(screen), spare: makePanel(screen))

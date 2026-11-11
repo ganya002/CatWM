@@ -3,7 +3,7 @@ import AppKit
 package enum CommandRegistry {
     package static let protocolVersion = 1
 
-    package static let all: [Command] = meta + dispatchers + state + config + development
+    package static let all: [Command] = meta + dispatchers + state + config + agent + development
 
     private static let byName = Dictionary(all.map { ($0.name, $0) }, uniquingKeysWith: { first, _ in first })
 
@@ -11,14 +11,23 @@ package enum CommandRegistry {
 
     package static var published: [Command] { all.filter { $0.access == .public } }
 
-    package static func execute(_ name: String, _ args: [String: JSON], client: ControlConnection?,
-                                manager: WindowManager = .shared) throws -> JSON {
+    package static func prepare(_ name: String, _ args: [String: JSON], client: ControlConnection?,
+                                manager: WindowManager) throws -> (Command, Invocation) {
         guard let command = command(named: name) else { throw ControlError.unknownCommand(name) }
         guard command.access != .keybindOnly else { throw ControlError.forbidden(name) }
         let call = try Invocation(args: command.validate(args), client: client, manager: manager)
         let target = command.name == "dispatch" ? call.text("dispatcher").lowercased() : command.name
         if let refusal = manager.scopeRefusal(target) { throw ControlError.failed(refusal) }
-        return try command.run(call)
+        return (command, call)
+    }
+
+    package static func execute(_ name: String, _ args: [String: JSON], client: ControlConnection?,
+                                manager: WindowManager = .shared) throws -> JSON {
+        let (command, call) = try prepare(name, args, client: client, manager: manager)
+        guard case .now(let run) = command.body else {
+            throw ControlError.failed("`\(command.name)` waits for an app, so it needs the socket")
+        }
+        return try run(call)
     }
 
     private static let meta: [Command] = [

@@ -11,7 +11,9 @@
 from __future__ import annotations
 
 import json
+import os
 import queue
+import tempfile
 import threading
 import time
 import unittest
@@ -136,6 +138,85 @@ class Events:
         self._client.close()
 
     def __enter__(self) -> "Events":
+        return self
+
+    def __exit__(self, *exc: Any) -> None:
+        self.close()
+
+
+class Sandbox:
+    """A private display for test apps. The user's focus, Desktop and cursor never change.
+
+        with Sandbox() as box:
+            panel = box.launch("com.apple.TextEdit")    # refuses an app that already runs
+            box.press(panel, "New Document")
+            edit = box.window(title="Untitled")
+            box.type(edit, "hello")
+            assert box.text(edit) == "hello"
+            box.screenshot(edit, "/tmp/edit.png")
+
+    The display belongs to this connection. Leaving the block, or losing the connection (even `kill -9`),
+    quits the apps and closes the display. The user's CatWM does not see these windows, so no `window.added`
+    event arrives: `launch` waits with `wait_until` on `agent_windows`. Skips like `connect()`.
+    """
+
+    def __init__(self, path: str | None = None, timeout: float = 30.0):
+        self.client = connect(path, timeout)
+        try:
+            self.display = self.client.agent_open()
+        except BaseException:
+            self.client.close()
+            raise
+
+    def launch(self, bundle_id: str, timeout: float = 15.0) -> dict[str, Any]:
+        """Open an app and return its first window: id, pid, app, title, frame."""
+        pid = self.client.agent_launch(bundle_id)["pid"]
+        return wait_until(lambda: next((w for w in self.client.agent_windows() if w["pid"] == pid), None),
+                          timeout, message=f"a window of {bundle_id} on the agent display")
+
+    def type(self, window: dict[str, Any], text: str) -> str:
+        """Add text to the window. Returns `ax` or `events`, the way it got in."""
+        return self.client.agent_type(window["id"], text)["method"]
+
+    def key(self, window: dict[str, Any], keys: str) -> None:
+        self.client.agent_key(window["id"], keys)
+
+    def press(self, window: dict[str, Any], button: str) -> None:
+        """Press a button by its title, without focus."""
+        self.client.agent_press(window["id"], button)
+
+    def window(self, timeout: float = 5.0, **filters: Any) -> dict[str, Any]:
+        """Wait for a window on the display. Filters: `title` (part, any case), `app`, `not_id`."""
+        def match() -> dict[str, Any] | None:
+            for found in self.client.agent_windows():
+                if "title" in filters and filters["title"].lower() not in (found["title"] or "").lower():
+                    continue
+                if "app" in filters and found["app"] != filters["app"]:
+                    continue
+                if found["id"] != filters.get("not_id"):
+                    return found
+            return None
+        return wait_until(match, timeout, message=f"a window that matches {filters}")
+
+    def text(self, window: dict[str, Any]) -> str:
+        return self.client.agent_text(window["id"])
+
+    def screenshot(self, window: dict[str, Any], path: str | None = None) -> str:
+        """Save one frame of the window as a PNG file. Returns the path."""
+        if path is None:
+            handle, path = tempfile.mkstemp(suffix=".png", prefix="catwm-")
+            os.close(handle)
+        return self.client.agent_screenshot(window["id"], os.path.abspath(path))
+
+    def close(self) -> None:
+        try:
+            self.client.agent_close()
+        except (CatWMError, OSError):
+            pass
+        finally:
+            self.client.close()
+
+    def __enter__(self) -> "Sandbox":
         return self
 
     def __exit__(self, *exc: Any) -> None:
