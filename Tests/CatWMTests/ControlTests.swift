@@ -230,6 +230,7 @@ private var projectRoot: URL {
         let manager = fake.makeManager()
         let window = fake.addWindow()
         #expect(await fake.settle(manager))
+        manager.isStarted = false
         manager.desktops.nativeCatalog.perDisplay = perDisplay
         manager.desktops.nativeCatalog.synchronize([.init(id: screen.uuid, spaces: [11, 12, 13])])
         let names = (1...3).map { perDisplay ? "\(screen.uuid)/\($0)" : "\($0)" }
