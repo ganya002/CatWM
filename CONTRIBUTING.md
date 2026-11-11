@@ -54,8 +54,7 @@ The config is strict: all default rules are on, more opt-in rules are on, and ea
 
 - `AGENTS.md` has the code map, the vocabulary and the project rules.
 - `docs/design/design-system.md` tells how each UI component must look. Read it before you change UI.
-- `docs/internals/add-a-setting.md` tells how to add a setting.
-- `docs/internals/` also holds the reasons and constraints behind some designs. For example, [native-space-import.md](docs/internals/native-space-import.md) tells how **Bring Window Here** and Dock clicks move a window from a different macOS Desktop.
+- `docs/internals/` holds the architecture of each area and the reasons and constraints behind it. For example, [native-space-import.md](docs/internals/native-space-import.md) tells how **Bring Window Here** and Dock clicks move a window from a different macOS Desktop.
 
 ## Submit a change
 

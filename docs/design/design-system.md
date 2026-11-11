@@ -204,7 +204,7 @@ Use SF Symbols only, at the weight of the text, in hierarchical rendering. Use t
 
 ## Motion
 
-Two curves: `Motion.easeOut` for things that appear, `Motion.spring` for things that move under the hand (switch and slider thumbs, segmented thumbs, the HUD, keycaps). Direct manipulation follows the pointer exactly, then springs. Durations: `Theme.fast` 120 ms, `Theme.medium` 180 ms, `Theme.slow` 280 ms. The tokens live in `Motion/Kit/Motion.swift`. All animation goes through `Motion/`, and style-check rejects a raw curve or an AppKit animation anywhere else. Read `docs/internals/animation.md` to animate a window, a panel or a view, and to add a token.
+Two curves: `Motion.easeOut` for things that appear, `Motion.spring` for things that move under the hand (switch and slider thumbs, segmented thumbs, the HUD, keycaps). Direct manipulation follows the pointer exactly, then springs. Durations: `Theme.fast` 120 ms, `Theme.medium` 180 ms, `Theme.slow` 280 ms. The tokens live in `Motion/Kit/Motion.swift`. All animation goes through `Motion/`, and style-check rejects a raw curve or an AppKit animation anywhere else. `docs/internals/animation.md` explains the window motion.
 
 ## Voice
 
