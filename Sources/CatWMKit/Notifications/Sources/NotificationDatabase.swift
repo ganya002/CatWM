@@ -44,7 +44,7 @@ import SQLite3
         let source = DispatchSource.makeFileSystemObjectSource(fileDescriptor: handle,
                                                                eventMask: [.write, .extend, .delete, .rename],
                                                                queue: queue)
-        source.setEventHandler { [weak self, weak source] in
+        source.setEventHandler { @Sendable [weak self, weak source] in
             let moved = source.map { !$0.data.isDisjoint(with: [.delete, .rename]) } ?? false
             DispatchQueue.main.async {
                 guard let self, self.sink != nil else { return }

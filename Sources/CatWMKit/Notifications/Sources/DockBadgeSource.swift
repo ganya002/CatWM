@@ -49,7 +49,7 @@ import os
         guard sink != nil, timer == nil, let poller else { return }
         let timer = DispatchSource.makeTimerSource(queue: poller.queue)
         timer.schedule(deadline: .now(), repeating: Self.interval, leeway: .milliseconds(500))
-        timer.setEventHandler { poller.poll() }
+        timer.setEventHandler { @Sendable in poller.poll() }
         timer.resume()
         self.timer = timer
     }
