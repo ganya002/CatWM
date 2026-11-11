@@ -9,6 +9,7 @@ package struct WindowSceneCapture {
     package let displays: [Display]
     package let images: [CGWindowID: CGImage]
     package let order: [CGWindowID]
+    package let excluded: Set<CGWindowID>
 
     private typealias NewConnection = @convention(c) (Int32, UnsafeMutablePointer<Int32>) -> Int32
     private typealias ReleaseConnection = @convention(c) (Int32) -> Int32
@@ -37,6 +38,7 @@ package struct WindowSceneCapture {
         deinit { _ = releaseConnection?(connection) }
     }
     private static let session = Session()
+    private static let orderSession = Session()
 
     @discardableResult package static func prepare(window requested: CGWindowID? = nil) -> Bool {
         guard CGPreflightScreenCaptureAccess(), let session, let capture else { return false }
@@ -60,11 +62,13 @@ package struct WindowSceneCapture {
         return result?.first.map { $0.width > 0 && $0.height > 0 } ?? false
     }
 
-    package static func take(frames: [CGWindowID: CGRect], screens: [Screen]) -> WindowSceneCapture? {
+    package static func take(
+        frames: [CGWindowID: CGRect], screens: [Screen], excluding excluded: Set<CGWindowID> = []
+    ) -> WindowSceneCapture? {
         guard !frames.isEmpty, CGPreflightScreenCaptureAccess(), let session, let capture, let readFrame,
               let ids = WindowServerList.onScreen(), frames.keys.allSatisfy(ids.contains),
               canCapture(Array(frames.values), on: screens),
-              unobscured(Array(frames.values), participants: Set(frames.keys), order: ids,
+              unobscured(Array(frames.values), participants: Set(frames.keys), excluding: excluded, order: ids,
                          frame: occludingFrame) else { return nil }
         func unchanged() -> Bool {
             frames.allSatisfy { id, expected in
@@ -88,7 +92,7 @@ package struct WindowSceneCapture {
         for screen in screens where sources.contains(where: { $0.intersects(screen.frame) }) {
             let region = sources.filter { $0.intersects(screen.frame) }.reduce(CGRect.null) { $0.union($1) }
             let results = OSAllocatedUnfairLock(initialState: [Int: CGImage]())
-            let backgroundIDs = ids.filter { frames[$0] == nil }
+            let backgroundIDs = ids.filter { frames[$0] == nil && !excluded.contains($0) }
             DispatchQueue.concurrentPerform(iterations: 2) { index in
                 if let captured = image(index == 0 ? ordered : backgroundIDs, in: index == 0 ? region : screen.frame) {
                     results.withLock { $0[index] = captured }
@@ -108,7 +112,7 @@ package struct WindowSceneCapture {
             displays.append(Display(screen: screen, background: background))
         }
         guard images.count == frames.count, !displays.isEmpty, unchanged() else { return nil }
-        return WindowSceneCapture(displays: displays, images: images, order: ordered.reversed())
+        return WindowSceneCapture(displays: displays, images: images, order: ordered.reversed(), excluded: excluded)
     }
     package static func windowImage(_ id: CGWindowID) -> (image: CGImage, frame: CGRect)? {
         guard CGPreflightScreenCaptureAccess(), let session, let capture,
@@ -128,9 +132,17 @@ package struct WindowSceneCapture {
         return frame
     }
 
-    package static func canPresent(_ regions: [CGRect], participants: Set<CGWindowID>) -> Bool {
-        guard let order = WindowServerList.onScreen() else { return false }
-        return unobscured(regions, participants: participants, order: order, frame: occludingFrame)
+    package static func windowOrder() -> [CGWindowID]? {
+        guard let orderSession else { return nil }
+        return WindowServerList.onScreen(connection: orderSession.connection)
+    }
+
+    package static func canPresent(
+        _ regions: [CGRect], participants: Set<CGWindowID>, excluding excluded: Set<CGWindowID> = [],
+        order requested: [CGWindowID]? = nil
+    ) -> Bool {
+        guard let order = requested ?? windowOrder() else { return false }
+        return unobscured(regions, participants: participants, excluding: excluded, order: order, frame: occludingFrame)
     }
 
     private static func occludingFrame(_ id: CGWindowID) -> CGRect? {
@@ -140,11 +152,12 @@ package struct WindowSceneCapture {
         return level == 0 ? currentFrame(id) : .zero
     }
 
-    package static func unobscured(_ regions: [CGRect], participants: Set<CGWindowID>, order: [CGWindowID],
+    package static func unobscured(_ regions: [CGRect], participants: Set<CGWindowID>,
+                                   excluding excluded: Set<CGWindowID> = [], order: [CGWindowID],
                                    frame: (CGWindowID) -> CGRect?) -> Bool {
         var remaining = participants
         guard !remaining.isEmpty else { return false }
-        for id in order {
+        for id in order where !excluded.contains(id) {
             if remaining.remove(id) != nil {
                 if remaining.isEmpty { return true }
             } else if !participants.contains(id) {

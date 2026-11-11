@@ -4,6 +4,8 @@ package struct FollowedMoves {
     private var moves: [CGWindowID: Animator.Move] = [:]
     private var refusals: [CGWindowID: CGSize] = [:]
 
+    package var frames: [CGWindowID: CGRect] { moves.mapValues(\.target) }
+
     package subscript(id: CGWindowID) -> Animator.Move? { moves[id] }
 
     package mutating func add(_ move: Animator.Move) { moves[move.window.id] = move }

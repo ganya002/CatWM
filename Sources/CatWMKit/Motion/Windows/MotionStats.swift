@@ -12,17 +12,35 @@ package struct Stat {
 }
 
 package struct StepCost {
+    package static let limit = 0.05
+    private static let rise = 0.8, fall = 0.4
+
     package private(set) var seconds: Double?
 
-    package var lead: Double { min(seconds ?? 0, 0.05) }
+    package var lead: Double { seconds ?? 0 }
 
-    package mutating func add(_ cost: Double) { seconds = seconds.map { $0 * 0.6 + cost * 0.4 } ?? cost }
+    package mutating func add(_ cost: Double) {
+        let cost = min(cost, Self.limit)
+        guard let seconds else { self.seconds = cost; return }
+        self.seconds = seconds + (cost > seconds ? Self.rise : Self.fall) * (cost - seconds)
+    }
 }
 
-package func measure(_ body: () -> Void) -> Double {
-    let start = CACurrentMediaTime()
-    body()
-    return CACurrentMediaTime() - start
+package struct WindowWriteCost {
+    private var cost = StepCost()
+    private var sampledAt: CFTimeInterval?
+    private static let lifetime: CFTimeInterval = 1
+
+    package func lead(at now: CFTimeInterval) -> Double {
+        guard let sampledAt, (0...Self.lifetime).contains(now - sampledAt) else { return 0 }
+        return cost.lead
+    }
+
+    package mutating func add(_ seconds: Double, at now: CFTimeInterval) {
+        if let sampledAt, !(0...Self.lifetime).contains(now - sampledAt) { cost = StepCost() }
+        cost.add(seconds)
+        sampledAt = now
+    }
 }
 
 package struct TilingTiming {
@@ -47,9 +65,18 @@ package struct TilingTiming {
 }
 
 extension Animator {
+    package static func slowApp(_ pid: pid_t, _ stats: AXWriter.Stats) -> SlowApp? {
+        guard !stats.position.isEmpty,
+              let bundle = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier else { return nil }
+        let step = (stats.size.isEmpty ? 0 : stats.size.total / Double(stats.size.count))
+            + stats.position.total / Double(stats.position.count)
+        return .init(bundle: bundle, stepMs: step * 1000,
+                     skipped: Double(stats.skipped) / Double(stats.skipped + stats.position.count))
+    }
+
     package struct Timing {
-        package var ticks = Stat(), gaps = Stat()
-        package var firstTick: CFTimeInterval?, lastTick: CFTimeInterval?
+        var ticks = Stat(), gaps = Stat()
+        var firstTick: CFTimeInterval?, lastTick: CFTimeInterval?
 
         package mutating func tick(at now: CFTimeInterval) {
             if let lastTick { gaps.add(now - lastTick) }

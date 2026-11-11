@@ -3,26 +3,13 @@ import CatWMKit
 import QuartzCore
 
 struct AppSurface: TilingSurface {
+    private let fills = WindowResizeFills()
+
     func start(_ manager: WindowManager) {
-        if ProcessInfo.processInfo.environment["CATWM_RESIZE_SCENE"] == "1" {
-            manager.animator.makeResizeScene = { moves in
-                let screens = Screen.all()
-                guard moves.allSatisfy({ move in
-                    screens.contains { $0.frame.contains(move.target) && $0.frame.contains(move.window.cachedFrame) }
-                }) else { return nil }
-                let frames = Dictionary(moves.map { ($0.window.id, $0.from ?? $0.window.cachedFrame) },
-                                        uniquingKeysWith: { _, latest in latest })
-                let regions = moves.map { ($0.from ?? $0.window.cachedFrame).union($0.target) }
-                guard WindowSceneCapture.canPresent(regions, participants: Set(frames.keys)) else { return nil }
-                let started = CACurrentMediaTime()
-                guard let capture = WindowSceneCapture.take(frames: frames, screens: screens) else { return nil }
-                Log.debug(String(format: "window-scene: captured %d windows in %.1fms", frames.count,
-                                 (CACurrentMediaTime() - started) * 1000))
-                return WindowResizeScene(capture: capture, frames: frames)
-            }
-            DispatchQueue.global(qos: .userInitiated).async {
-                Log.debug("window-scene: prewarm \(WindowSceneCapture.prepare())")
-            }
+        if ProcessInfo.processInfo.environment["CATWM_RESIZE_FILL"] == "1" {
+            startColorFills(manager)
+        } else if ProcessInfo.processInfo.environment["CATWM_RESIZE_SCENE"] == "1" {
+            startResizeScenes(manager)
         }
         Hotkeys.shared.onSubmapChange = { [weak manager] name in
             Log.debug("mode: \(name.isEmpty ? "reset" : name)")
@@ -52,6 +39,44 @@ struct AppSurface: TilingSurface {
         startKeyTap(manager)
         Notifications.shared.installBuiltIn()
         HUD.shared.prepare(text: manager.currentWorkspace ?? "1", layout: manager.config.layouts.first)
+    }
+
+    private func startResizeScenes(_ manager: WindowManager) {
+        manager.animator.makeResizeScene = { moves in
+            let screens = Screen.all()
+            guard moves.allSatisfy({ move in
+                screens.contains { $0.frame.contains(move.target) && $0.frame.contains(move.window.cachedFrame) }
+            }) else { return nil }
+            let frames = Dictionary(moves.map { ($0.window.id, $0.from ?? $0.window.cachedFrame) },
+                                    uniquingKeysWith: { _, latest in latest })
+            let regions = moves.map { ($0.from ?? $0.window.cachedFrame).union($0.target) }
+            let excluded = SplitHandle.shared.windowIDs
+            guard WindowSceneCapture.canPresent(regions, participants: Set(frames.keys),
+                                                excluding: excluded) else { return nil }
+            let started = CACurrentMediaTime()
+            guard let capture = WindowSceneCapture.take(frames: frames, screens: screens,
+                                                      excluding: excluded) else { return nil }
+            Log.debug(String(format: "window-scene: captured %d windows in %.1fms", frames.count,
+                             (CACurrentMediaTime() - started) * 1000))
+            return WindowResizeScene(capture: capture, frames: frames)
+        }
+        DispatchQueue.global(qos: .userInitiated).async {
+            Log.debug("window-scene: prewarm \(WindowSceneCapture.prepare())")
+        }
+    }
+
+    private func startColorFills(_ manager: WindowManager) {
+        let fills = fills
+        manager.animator.windowPresentation = fills
+        fills.excluded = { SplitHandle.shared.windowIDs }
+        fills.refresh = { [weak manager, weak fills] in
+            guard let manager else { return }
+            fills?.warm(manager.windows) { [weak manager] in manager?.animator.isAnimating($0) ?? true }
+        }
+        let landed = manager.animator.onLanded
+        manager.animator.onLanded = { [weak fills] in landed?(); fills?.refresh?() }
+        fills.refresh?()
+        Log.info("window-fill: color-only tiling enabled")
     }
 
     private var features: Set<Feature> { WindowManager.shared.config.features }
@@ -106,6 +131,7 @@ struct AppSurface: TilingSurface {
     }
 
     func tilesDidChange(instant: Bool) {
+        fills.refresh?()
         SplitHandle.shared.update(instant: instant)
         TabStrips.shared.update(instant: instant)
     }

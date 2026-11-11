@@ -2,11 +2,26 @@ import CoreGraphics
 import QuartzCore
 
 extension Animator {
+    package struct Move {
+        package let window: Window
+        package let target: CGRect
+        package let bounds: CGRect
+        package var from: CGRect?
+
+        package init(window: Window, to target: CGRect, bounds: CGRect, from: CGRect? = nil) {
+            self.window = window
+            self.target = target
+            self.bounds = bounds
+            self.from = from
+        }
+    }
+
     package struct Item {
-        package let move: Move
-        package let start: CFTimeInterval
-        package let duration: Double
-        package let tracks: [Trajectory]
+        let move: Move
+        let start: CFTimeInterval
+        let duration: Double
+        let tracks: [Trajectory]
+        var colorSizing: ColorFillSizing?
 
         package init(move: Move, from: CGRect, start: CFTimeInterval, spec: MotionSpec, velocity: [Double]? = nil) {
             self.move = move
@@ -30,6 +45,10 @@ extension Animator {
 }
 
 extension Animator.Item {
+    package func request(at predictedTime: CFTimeInterval, presentedAt time: CFTimeInterval) -> CGRect {
+        let predicted = frame(at: predictedTime)
+        return colorSizing?.request(predicted: predicted, viewport: frame(at: time, aligned: false)) ?? predicted
+    }
     package func frame(at now: CFTimeInterval, aligned: Bool = true) -> CGRect {
         let elapsed = now - start
         let values = tracks.map { $0.value(at: elapsed) }

@@ -7,11 +7,18 @@ package final class AXWriter {
         case land(CGRect, done: (Bool) -> Void), position(CGPoint, done: (Bool) -> Void)
         case follow(CGRect, done: (CGSize?) -> Void)
     }
-    private struct Pending { let window: Window; let operation: Operation; let epoch: Int }
+    private struct Pending {
+        let window: Window
+        let operation: Operation
+        let epoch: Int
+        let releasesSpace: Bool
+    }
+    private struct Write { var size = 0.0, position = 0.0, applied = true }
     package struct Stats { var size = Stat(), position = Stat(), land = Stat(), skipped = 0 }
 
     package let pid: pid_t
     private let backend: any WindowBackend
+    private let now: () -> CFTimeInterval
     private let queue: DispatchQueue
     private let lock = NSLock()
     private var pending: [CGWindowID: Pending] = [:]
@@ -20,18 +27,21 @@ package final class AXWriter {
     private var stats = Stats()
     private var animating: Set<CGWindowID> = []
     private var lastSize: [CGWindowID: CGSize] = [:]
-    private var stepCosts: [CGWindowID: StepCost] = [:]
+    private var stepCosts: [CGWindowID: WindowWriteCost] = [:]
     private var enhancedUI: EnhancedUI
 
-    package init(pid: pid_t, backend: any WindowBackend = AXBackend.shared) {
+    package init(pid: pid_t, backend: any WindowBackend = AXBackend.shared,
+                 now: @escaping () -> CFTimeInterval = CACurrentMediaTime) {
         self.pid = pid
         self.backend = backend
+        self.now = now
         enhancedUI = EnhancedUI(pid: pid, backend: backend)
         queue = DispatchQueue(label: "catwm.ax.\(pid)", qos: .userInteractive)
     }
 
-    package func step(_ window: Window, notBefore: CFTimeInterval = 0, to frame: @escaping (CFTimeInterval) -> CGRect) {
-        submit(window, .step(notBefore: notBefore, frame: frame))
+    package func step(_ window: Window, notBefore: CFTimeInterval = 0, releasesSpace: Bool = false,
+                      to frame: @escaping (CFTimeInterval) -> CGRect) {
+        submit(window, .step(notBefore: notBefore, frame: frame), releasesSpace: releasesSpace)
     }
     package func land(_ window: Window, at frame: CGRect, done: @escaping (Bool) -> Void) {
         submit(window, .land(frame, done: done))
@@ -78,10 +88,11 @@ package final class AXWriter {
         lock.withLock { defer { stats = Stats() }; return stats }
     }
 
-    private func submit(_ window: Window, _ operation: Operation) {
+    private func submit(_ window: Window, _ operation: Operation, releasesSpace: Bool = false) {
         let start = lock.withLock { () -> Bool in
             if case .step = pending[window.id]?.operation { stats.skipped += 1 }
-            pending[window.id] = Pending(window: window, operation: operation, epoch: epochs[window.id] ?? 0)
+            pending[window.id] = Pending(window: window, operation: operation,
+                                         epoch: epochs[window.id] ?? 0, releasesSpace: releasesSpace)
             defer { draining = true }
             return !draining
         }
@@ -91,7 +102,9 @@ package final class AXWriter {
     private func drain() {
         while true {
             let batch = lock.withLock { () -> [Pending] in
-                let items = Array(pending.values)
+                let items = pending.values.sorted {
+                    $0.releasesSpace == $1.releasesSpace ? $0.window.id < $1.window.id : $0.releasesSpace
+                }
                 pending = [:]
                 if items.isEmpty { draining = false }
                 return items
@@ -101,27 +114,46 @@ package final class AXWriter {
         }
     }
 
-    private func write(_ window: Window, _ frame: CGRect) -> (size: Double, position: Double) {
-        let previous = lastSize[window.id]
-        lastSize[window.id] = frame.size
-        guard previous != frame.size else { return (0, measure { window.setPosition(frame.origin) }) }
-        let shrinks = previous.map { frame.size.width <= $0.width && frame.size.height <= $0.height } ?? false
-        if shrinks {
-            let positionTime = measure { window.setPosition(frame.origin) }
-            return (measure { window.setSize(frame.size) }, positionTime)
+    private func measure(_ body: () -> Void) -> Double {
+        let start = now()
+        body()
+        return now() - start
+    }
+
+    private func attempt(_ write: () -> Bool) -> (seconds: Double, applied: Bool) {
+        var applied = false
+        let seconds = measure { applied = write() }
+        return (seconds, applied)
+    }
+
+    private func write(_ window: Window, _ frame: CGRect) -> Write {
+        var result = Write()
+        func move() {
+            let moved = attempt { window.setPosition(frame.origin) }
+            result.position += moved.seconds
+            result.applied = result.applied && moved.applied
         }
-        let rises = !window.cachedFrame.isNull && frame.minY < window.cachedFrame.minY
-        var sizeTime = measure { window.setSize(frame.size) }
-        let positionTime = measure { window.setPosition(frame.origin) }
-        if rises { sizeTime += measure { window.setSize(frame.size) } }
-        return (sizeTime, positionTime)
+        func resize() {
+            let sized = attempt { window.setSize(frame.size) }
+            result.size += sized.seconds
+            result.applied = result.applied && sized.applied
+            lastSize[window.id] = sized.applied ? frame.size : nil
+        }
+        let previous = lastSize[window.id]
+        guard previous != frame.size || window.cachedFrame.size != frame.size else { move(); return result }
+        switch WindowFrameOrder(from: window.cachedFrame, to: frame) {
+        case .positionFirst: move(); resize()
+        case .sizeFirst: resize(); move()
+        }
+        return result
     }
 
     private func apply(_ item: Pending) {
         let window = item.window
         let stepFrame: CGRect
         if case let .step(presentation, frameAt) = item.operation {
-            stepFrame = frameAt(max(presentation, CACurrentMediaTime() + (stepCosts[window.id]?.lead ?? 0)))
+            let start = now()
+            stepFrame = frameAt(max(presentation, start + (stepCosts[window.id]?.lead(at: start) ?? 0)))
             guard window.cachedFrame != stepFrame else { return }
         } else {
             stepFrame = .null
@@ -138,29 +170,33 @@ package final class AXWriter {
         if animating.insert(window.id).inserted { enhancedUI.suspend() }
         switch item.operation {
         case .step:
-            let (sizeTime, positionTime) = write(window, stepFrame)
-            stepCosts[window.id, default: StepCost()].add(sizeTime + positionTime)
-            lock.withLock { if sizeTime > 0 { stats.size.add(sizeTime) }; stats.position.add(positionTime) }
+            let written = write(window, stepFrame)
+            if written.applied {
+                stepCosts[window.id, default: WindowWriteCost()].add(written.size + written.position, at: now())
+            }
+            lock.withLock {
+                if written.size > 0 { stats.size.add(written.size) }
+                stats.position.add(written.position)
+            }
         case let .follow(frame, done):
             let resized = lastSize[window.id] != frame.size
-            let (sizeTime, positionTime) = write(window, frame)
+            let written = write(window, frame)
             let actual = resized ? window.frame.size : nil
-            lock.withLock { if resized { stats.size.add(sizeTime) }; stats.position.add(positionTime) }
+            lock.withLock { if resized { stats.size.add(written.size) }; stats.position.add(written.position) }
             DispatchQueue.main.async { done(actual) }
         case let .position(point, done):
-            let elapsed = measure { window.setPosition(point) }
+            let written = attempt { window.setPosition(point) }
             animating.remove(window.id)
             enhancedUI.resume()
-            lock.withLock { stats.position.add(elapsed) }
-            DispatchQueue.main.async { done(true) }
+            lock.withLock { stats.position.add(written.seconds) }
+            DispatchQueue.main.async { done(written.applied) }
         case let .land(frame, done):
-            let sized = lastSize.removeValue(forKey: window.id) == frame.size
-            stepCosts[window.id] = nil
-            let elapsed = measure { sized ? window.setPosition(frame.origin) : window.setFrame(frame) }
+            let written = write(window, frame)
+            lastSize[window.id] = nil
             animating.remove(window.id)
             enhancedUI.resume()
-            lock.withLock { stats.land.add(elapsed) }
-            DispatchQueue.main.async { done(true) }
+            lock.withLock { stats.land.add(written.size + written.position) }
+            DispatchQueue.main.async { done(written.applied) }
         }
     }
 }
