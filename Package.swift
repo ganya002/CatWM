@@ -40,7 +40,9 @@ let package = Package(
             plugins: [.plugin(name: "CatalogPlugin")]
         ),
         .target(name: "CatWMFakes", dependencies: ["CatWMKit"], path: "Tests/Fakes"),
-        .executableTarget(name: "CatWMPerf", dependencies: ["CatWMKit", "CatWMFakes"], path: "Tools/Perf"),
+        .executableTarget(
+            name: "CatWMPerf", dependencies: ["CatWMKit", "CatWMFakes"], path: "Tools/Perf", exclude: ["budgets.json"]
+        ),
         .testTarget(
             name: "NativeTrafficLightTests",
             dependencies: ["NativeTrafficLight"],
