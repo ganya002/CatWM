@@ -49,8 +49,13 @@ extension WindowManager {
 
     private func rebindRelaunched(_ fresh: [Window]) {
         let now = Date()
+        var launchDates: [pid_t: Date] = [:]
         let relaunched = fresh.filter { window in
-            let launched = NSRunningApplication(processIdentifier: window.pid)?.launchDate ?? .distantPast
+            let launched = launchDates[window.pid] ?? {
+                let date = NSRunningApplication(processIdentifier: window.pid)?.launchDate ?? .distantPast
+                launchDates[window.pid] = date
+                return date
+            }()
             return now.timeIntervalSince(max(launched, startedAt)) < Self.relaunchWindow
         }
         guard !relaunched.isEmpty else { return }

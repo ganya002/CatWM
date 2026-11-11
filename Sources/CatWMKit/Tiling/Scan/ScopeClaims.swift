@@ -94,13 +94,15 @@ package final class ScopeClaims: Sendable {
 
     private func read(_ state: inout State) -> Set<pid_t> {
         let files = FileManager.default
-        let stamp = (try? files.attributesOfItem(atPath: folder.path))?[.modificationDate] as? Date
+        var info = stat()
+        let stamp = stat(folder.path, &info) == 0
+            ? Date(timeIntervalSince1970: Double(info.st_mtimespec.tv_sec) + Double(info.st_mtimespec.tv_nsec) / 1e9)
+            : nil
         if stamp != state.stamp {
             state.stamp = stamp
             let ids = (try? files.contentsOfDirectory(atPath: folder.path)) ?? []
             state.claims = ids.compactMap { id in
-                let file = folder.appendingPathComponent("\(id)/scope")
-                return (try? String(contentsOf: file, encoding: .utf8)).flatMap(ScopeClaim.init)
+                (try? String(contentsOfFile: "\(folder.path)/\(id)/scope", encoding: .utf8)).flatMap(ScopeClaim.init)
             }
         }
         let live = state.claims.filter { alive($0.owner) }

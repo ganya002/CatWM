@@ -173,18 +173,25 @@ extension WindowManager {
         "com.microsoft.autoupdate2"
     ]
 
-    private static let signInTitle = try? NSRegularExpression(
-        pattern: "^(sign[ -]?in|log[ -]?in)(?=$|[\\s\\-–—|:,])", options: .caseInsensitive)
+    package static func isSignInTitle(_ title: String) -> Bool {
+        var rest = Substring(title.lowercased())
+        guard rest.removePrefix("sign") || rest.removePrefix("log") else { return false }
+        if let separator = rest.first, separator == " " || separator == "-" { rest.removeFirst() }
+        guard rest.removePrefix("in") else { return false }
+        guard let next = rest.first else { return true }
+        return next.isWhitespace || "-–—|:,".contains(next)
+    }
 
     private func isUtilityWindow(_ window: Window, title: String?) -> Bool {
         guard let title, !title.isEmpty else { return false }
         if title == "Picture in Picture" || title == "Picture-in-Picture" { return true }
         if window.bundleID == "com.apple.finder" { return title.hasSuffix(" Info") }
-        if let regex = Self.signInTitle,
-           regex.firstMatch(in: title, range: NSRange(title.startIndex..., in: title)) != nil { return true }
-        let name = NSRunningApplication(processIdentifier: window.pid)?.localizedName
+        if Self.isSignInTitle(title) { return true }
         let settings = ["Settings", "Preferences", "Settings…", "Preferences…"]
-        return settings.contains(title) || name.map { app in settings.contains { title == "\(app) \($0)" } } == true
+        if settings.contains(title) { return true }
+        guard settings.contains(where: { title.hasSuffix(" \($0)") }),
+              let app = NSRunningApplication(processIdentifier: window.pid)?.localizedName else { return false }
+        return settings.contains { title == "\(app) \($0)" }
     }
 
     private func isMountedImageWindow(title: String?) -> Bool {
@@ -263,5 +270,13 @@ extension WindowManager {
     package func prewarm() {
         guard !isStarted else { return }
         scanner.observeDesktop(known: []) {}
+    }
+}
+
+private extension Substring {
+    mutating func removePrefix(_ prefix: String) -> Bool {
+        guard hasPrefix(prefix) else { return false }
+        removeFirst(prefix.count)
+        return true
     }
 }
