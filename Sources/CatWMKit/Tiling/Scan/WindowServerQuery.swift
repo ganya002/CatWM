@@ -169,7 +169,7 @@ package struct WindowServerObservation {
     }
 
     package static func read(known: Set<CGWindowID>) -> Self {
-        dispatchPrecondition(condition: .notOnQueue(.main))
+        dispatchPrecondition(condition: .onQueue(.main))
         if let observation = WindowServerQuery.observation(known: known) { return observation }
         let windows = CGWindowInfo.onScreen()
         let all = CGWindowInfo.onScreen(options: [.optionAll, .excludeDesktopElements])
