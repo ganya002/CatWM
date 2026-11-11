@@ -9,7 +9,7 @@ Run `swift build -c release` and `CATWM_INSTANCE=perf ./build.sh` first. The run
 Each engine scenario runs in a new CatWMPerf process. The app scenario starts build/CatWM.app as the
 named instance `perf-<run>`, scoped to this process, so it manages no window. When a CatWM runs (a developer's
 Mac), the instances also go on a private agent display that it opens for this run, and they draw nothing on the
-real screens. Without one (CI), they run on the real display as before and the script says so. The exit status is
+real screens. Without one, CI runs them on the real display and says so, and anywhere else the script stops. The exit status is
 1 when a value is over its cap.
 
     python3 Tools/perf.py [--runs N] [--out report.md] [--json samples.json]
@@ -75,6 +75,9 @@ def open_display():
     try:
         sandbox = Sandbox(timeout=15)
     except (unittest.SkipTest, CatWMError, OSError) as error:
+        if not os.environ.get("CI"):
+            sys.exit(f"perf: no agent display ({error}). Off CI the app scenario runs only on an agent display, "
+                     "so start a CatWM with agent.open or pass --skip-app")
         print(f"perf: no agent display ({error}); the app scenario runs on the real display", file=sys.stderr)
         return None, None
     return sandbox, sandbox.display["uuid"]

@@ -58,7 +58,7 @@ An untrusted contained instance therefore just logs that it has no Accessibility
 
 ## The perf app scenario on an agent display
 
-`Tools/perf.py` opens an agent display through the running user CatWM (`Sandbox`, one connection for the whole run) and scopes each instance with `;display:<uuid>`. All parallel runs share the display, since the instances manage no windows. The display belongs to the connection, so the kernel closes it if perf.py dies, and `ScopeLifetime` ends the instances with perf.py. With no CatWM socket (CI), or one without `agent.open` (a build from before the agent display), the script prints that and keeps the old behaviour: scoped to its own pid on the real display. A CI runner has no user CatWM, so there the status item still appears on the runner's screen, which nobody watches.
+`Tools/perf.py` opens an agent display through the running user CatWM (`Sandbox`, one connection for the whole run) and scopes each instance with `;display:<uuid>`. All parallel runs share the display, since the instances manage no windows. The display belongs to the connection, so the kernel closes it if perf.py dies, and `ScopeLifetime` ends the instances with perf.py. With no CatWM socket, or one without `agent.open` (a build from before the agent display), CI keeps the old behaviour (scoped to its own pid on the real display, whose screen nobody watches) and says so. Anywhere else the script stops and asks for an agent display or `--skip-app`, because a fallback to the real display would put test instances on a developer's screen.
 
 ## An engine on a fake never reaches the user's input
 
