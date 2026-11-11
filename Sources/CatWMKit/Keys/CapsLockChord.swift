@@ -107,7 +107,7 @@ import IOKit.hid
         if rawMisses == 1 {
             stop()
             startRaw()
-        } else if rawMisses == 2, !grantedAtLaunch {
+        } else if rawMisses == 2, !grantedAtLaunch, Instance.paths.mayRelaunchItself {
             Log.info("Input Monitoring granted but no events: relaunching")
             Process.runTool("/bin/sh", ["-c", "sleep 0.7; /usr/bin/open -n \"$0\"", Bundle.main.bundlePath],
                             wait: false)

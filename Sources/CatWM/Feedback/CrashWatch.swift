@@ -16,7 +16,7 @@ import SwiftUI
     }
 
     static func start() {
-        guard !Instance.isNamed else { return }
+        guard Instance.paths.mayRelaunchItself else { return }
         let files = FileManager.default
         Log.attempt("create crash marker folder") {
             try files.createDirectory(at: Instance.supportFolder, withIntermediateDirectories: true)

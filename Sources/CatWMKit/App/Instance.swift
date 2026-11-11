@@ -27,6 +27,7 @@ package struct InstancePaths: Equatable {
     package var pidFile: URL { configFolder.appendingPathComponent("catwm.pid") }
     package var scopeFile: URL { configFolder.appendingPathComponent("scope") }
     private var stagedScopeFile: URL { instancesFolder.appendingPathComponent(".\(id ?? "default").scope") }
+    package var mayRelaunchItself: Bool { id == nil }
     package var defaultsSuite: String? { id.map { "local.catwm.instance.\($0)" } }
 
     private func named(_ folder: URL) -> URL {
@@ -128,6 +129,7 @@ package enum Instance {
         guard let scope = WindowScope(text) else {
             fail("CATWM_SCOPE must be pids:<pid>,<pid>... with an optional ;display:<display UUID>")
         }
+        if let refusal = scope.refusal { fail(refusal) }
         return scope
     }()
 

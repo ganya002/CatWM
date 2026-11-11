@@ -4,9 +4,11 @@ import CatWMKit
 @MainActor final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
     private var statusUpdatePending = false
+    private var scopeLifetime: ScopeLifetime?
 
     func applicationDidFinishLaunching(_: Notification) {
         closePreviousInstances()
+        endWithScope()
         Theme.registerFonts()
         let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         self.statusItem = statusItem
@@ -57,6 +59,16 @@ import CatWMKit
         #endif
         updateIcon()
         watcher.subscribe { [weak self] granted, changed in self?.permissionsChecked(granted, changed) }
+    }
+
+    private func endWithScope() {
+        guard let scope = Instance.scope else { return }
+        let lifetime = ScopeLifetime(pids: scope.pids) {
+            Log.info("scope: every pid of CATWM_SCOPE has exited; quitting")
+            kill(getpid(), SIGTERM)
+        }
+        lifetime.start()
+        scopeLifetime = lifetime
     }
 
     private func closePreviousInstances() {

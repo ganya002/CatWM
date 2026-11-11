@@ -75,7 +75,7 @@ class Smoke:
         env = dict(os.environ)
         arguments = [str(APP), "--verbose"]
         if self.scoped:
-            self.scope = list(self.apps) or [os.getpid()]
+            self.scope = [os.getpid(), *self.apps]
             env["CATWM_SCOPE"] = "pids:" + ",".join(map(str, self.scope))
         else:
             arguments.append("--unscoped")

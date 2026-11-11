@@ -35,6 +35,14 @@ package struct WindowScope: Equatable {
         "pids:" + pids.sorted().map(String.init).joined(separator: ",") + (display.map { ";display:\($0)" } ?? "")
     }
 
+    package static let launchd: pid_t = 1
+
+    package var refusal: String? {
+        guard pids.contains(Self.launchd) else { return nil }
+        return "CATWM_SCOPE must not contain pid 1 (launchd): it never exits, so the instance would outlive "
+            + "its test and no test owns launchd. Scope to the pid of the process that runs the test."
+    }
+
     package func filter(_ screens: [Screen]) -> [Screen] {
         guard let display else { return screens }
         return screens.filter { $0.uuid == display }
