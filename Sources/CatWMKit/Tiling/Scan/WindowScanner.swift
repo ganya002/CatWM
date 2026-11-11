@@ -80,11 +80,13 @@ package final class WindowScanner {
         DispatchQueue.global(qos: .userInitiated).async { [weak self, readDesktop, readApplications, scope, claims] in
             let claimed = claims?.claimedPids() ?? []
             let keep = { (pid: pid_t) in scope?.pids.contains(pid) ?? !claimed.contains(pid) }
-            let observation = readDesktop(known).keeping(keep)
             let applications = readApplications().filter { keep($0.pid) }
             DispatchQueue.main.async {
                 guard let self else { return }
-                self.desktop = observation
+                let started = CACurrentMediaTime()
+                self.desktop = readDesktop(known).keeping(keep)
+                Log.debug(String(format: "scan: desktop windows %d %.1fms", self.desktop.allWindows.count,
+                                 (CACurrentMediaTime() - started) * 1000))
                 self.applications = applications
                 self.claimed = claimed
                 self.observingDesktop = false

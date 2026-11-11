@@ -10,7 +10,7 @@ import Testing
         var reads = 0
         let application = RunningApplicationSnapshot(pid: 42, bundleID: "test.app", regular: true, hidden: false)
         let scanner = WindowScanner(readDesktop: { _ in
-            #expect(!Thread.isMainThread)
+            #expect(Thread.isMainThread)
             return WindowServerObservation(spaces: [7: [9]])
         }, readApplications: {
             #expect(!Thread.isMainThread)

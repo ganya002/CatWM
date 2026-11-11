@@ -5,11 +5,10 @@ import Testing
 
 @Suite struct DesktopObservationTests {
     @Test @MainActor func eventsDuringADesktopReadProduceOneFreshFollowUp() async {
-        let release = DispatchSemaphore(value: 0)
         let reads = FocusObservationTests.Counter()
         let scanner = WindowScanner(readDesktop: { known in
-            #expect(!Thread.isMainThread)
-            if reads.next() == 1 { _ = release.wait(timeout: .now() + 3) }
+            #expect(Thread.isMainThread)
+            _ = reads.next()
             let spaces = Dictionary(uniqueKeysWithValues: known.map { ($0, Set<UInt64>([1])) })
             return WindowServerObservation(spaces: spaces)
         })
@@ -22,7 +21,6 @@ import Testing
                     continuation.resume()
                 }
             }
-            release.signal()
         }
         #expect(firstCompleted)
         #expect(reads.value == 2)
