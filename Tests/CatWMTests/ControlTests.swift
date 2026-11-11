@@ -1,4 +1,5 @@
 @testable import CatWM
+import CatWMFakes
 @testable import CatWMKit
 import Foundation
 import Testing

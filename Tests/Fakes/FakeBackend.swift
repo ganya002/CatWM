@@ -1,9 +1,10 @@
 import AppKit
-@testable import CatWM
-@testable import CatWMKit
+import CatWMKit
 
-final class FakeBackend: WindowBackend {
-    struct FakeWindow {
+package final class FakeBackend: WindowBackend {
+    package init() {}
+
+    package struct FakeWindow {
         let id: CGWindowID
         let pid: pid_t
         let element: AXUIElement
@@ -14,11 +15,11 @@ final class FakeBackend: WindowBackend {
         var minimized = false
     }
 
-    enum Write: Equatable {
+    package enum Write: Equatable {
         case position(CGWindowID, CGPoint)
         case size(CGWindowID, CGSize)
 
-        var id: CGWindowID {
+        package var id: CGWindowID {
             switch self {
             case let .position(id, _), let .size(id, _): id
             }
@@ -41,7 +42,8 @@ final class FakeBackend: WindowBackend {
     private var scanGate: DispatchSemaphore?
 
     @discardableResult
-    func addScreen(frame: CGRect = CGRect(x: 0, y: 0, width: 1440, height: 900), visible: CGRect? = nil) -> Screen {
+    package func addScreen(frame: CGRect = CGRect(x: 0, y: 0, width: 1440, height: 900),
+                           visible: CGRect? = nil) -> Screen {
         lock.withLock {
             let screen = Screen(id: nextDisplay, uuid: "fake-display-\(nextDisplay)", frame: frame,
                                 visible: visible ?? frame, isBuiltin: false, nsScreen: nil)
@@ -51,14 +53,14 @@ final class FakeBackend: WindowBackend {
         }
     }
 
-    func removeScreen(_ screen: Screen) {
+    package func removeScreen(_ screen: Screen) {
         lock.withLock { screenList.removeAll { $0.uuid == screen.uuid } }
     }
 
     @discardableResult
-    func addWindow(pid: pid_t = -100, bundleID: String? = "test.fake.app",
-                   frame: CGRect = CGRect(x: 100, y: 100, width: 800, height: 600), title: String? = "Window",
-                   minSize: CGSize = .zero, resizable: Bool = true) -> CGWindowID {
+    package func addWindow(pid: pid_t = -100, bundleID: String? = "test.fake.app",
+                           frame: CGRect = CGRect(x: 100, y: 100, width: 800, height: 600),
+                           title: String? = "Window", minSize: CGSize = .zero, resizable: Bool = true) -> CGWindowID {
         precondition(pid < 0, "A fake app uses a negative pid, so no AX call reaches a real app")
         return lock.withLock {
             let id = nextID
@@ -73,7 +75,7 @@ final class FakeBackend: WindowBackend {
         }
     }
 
-    func close(_ id: CGWindowID) {
+    package func close(_ id: CGWindowID) {
         lock.withLock {
             guard let closed = windowList.removeValue(forKey: id) else { return }
             stacking.removeAll { $0 == id }
@@ -83,12 +85,12 @@ final class FakeBackend: WindowBackend {
         }
     }
 
-    func close(_ window: Window) -> String {
+    package func close(_ window: Window) -> String {
         close(window.id)
         return "pressed"
     }
 
-    func quit(_ pid: pid_t) {
+    package func quit(_ pid: pid_t) {
         lock.withLock {
             let gone = windowList.values.filter { $0.pid == pid }.map(\.id)
             gone.forEach { windowList[$0] = nil }
@@ -99,11 +101,11 @@ final class FakeBackend: WindowBackend {
         }
     }
 
-    func minimize(_ id: CGWindowID, _ minimized: Bool = true) {
+    package func minimize(_ id: CGWindowID, _ minimized: Bool = true) {
         lock.withLock { windowList[id]?.minimized = minimized }
     }
 
-    func userFocuses(_ id: CGWindowID) {
+    package func userFocuses(_ id: CGWindowID) {
         lock.withLock {
             guard let window = windowList[id] else { return }
             front = window.pid
@@ -113,37 +115,37 @@ final class FakeBackend: WindowBackend {
         }
     }
 
-    func setResizable(_ id: CGWindowID, _ resizable: Bool) {
+    package func setResizable(_ id: CGWindowID, _ resizable: Bool) {
         lock.withLock { windowList[id]?.resizable = resizable }
     }
 
-    func setTitle(_ id: CGWindowID, _ title: String?) {
+    package func setTitle(_ id: CGWindowID, _ title: String?) {
         lock.withLock { windowList[id]?.title = title }
     }
 
-    func userMoves(_ id: CGWindowID, to frame: CGRect) {
+    package func userMoves(_ id: CGWindowID, to frame: CGRect) {
         lock.withLock { windowList[id]?.frame = frame }
     }
 
-    func element(_ id: CGWindowID) -> AXUIElement? { lock.withLock { windowList[id]?.element } }
+    package func element(_ id: CGWindowID) -> AXUIElement? { lock.withLock { windowList[id]?.element } }
 
-    func frame(of id: CGWindowID) -> CGRect { lock.withLock { windowList[id]?.frame ?? .null } }
+    package func frame(of id: CGWindowID) -> CGRect { lock.withLock { windowList[id]?.frame ?? .null } }
 
-    var ids: Set<CGWindowID> { lock.withLock { Set(windowList.keys) } }
+    package var ids: Set<CGWindowID> { lock.withLock { Set(windowList.keys) } }
 
-    var writes: [Write] { lock.withLock { writeLog } }
+    package var writes: [Write] { lock.withLock { writeLog } }
 
-    var placementChecks: Int { lock.withLock { placementCheckCount } }
+    package var placementChecks: Int { lock.withLock { placementCheckCount } }
 
-    func clearWrites() { lock.withLock { writeLog = [] } }
+    package func clearWrites() { lock.withLock { writeLog = [] } }
 
-    func focused(in pid: pid_t) -> CGWindowID? { lock.withLock { focusedIn[pid] } }
+    package func focused(in pid: pid_t) -> CGWindowID? { lock.withLock { focusedIn[pid] } }
 
-    var frontmost: pid_t? { lock.withLock { front } }
+    package var frontmost: pid_t? { lock.withLock { front } }
 
-    var cursorRefreshes: Int { lock.withLock { cursorRefreshCount } }
+    package var cursorRefreshes: Int { lock.withLock { cursorRefreshCount } }
 
-    func holdScans() -> DispatchSemaphore {
+    package func holdScans() -> DispatchSemaphore {
         lock.withLock {
             let gate = DispatchSemaphore(value: 0)
             scanGate = gate
@@ -151,13 +153,13 @@ final class FakeBackend: WindowBackend {
         }
     }
 
-    func applications() -> [RunningApplicationSnapshot] {
+    package func applications() -> [RunningApplicationSnapshot] {
         lock.withLock {
             apps.map { RunningApplicationSnapshot(pid: $0.key, bundleID: $0.value, regular: true, hidden: false) }
         }
     }
 
-    func desktop(known _: Set<CGWindowID>) -> WindowServerObservation {
+    package func desktop(known _: Set<CGWindowID>) -> WindowServerObservation {
         lock.withLock {
             let all = stacking.compactMap { windowList[$0] }
             let shown = all.filter { !$0.minimized }
@@ -167,7 +169,8 @@ final class FakeBackend: WindowBackend {
         }
     }
 
-    func scan(_ job: WindowScanner.Job, discovered _: (WindowScanner.AppScan) -> Void) -> WindowScanner.AppScan {
+    package func scan(_ job: WindowScanner.Job,
+                      discovered _: (WindowScanner.AppScan) -> Void) -> WindowScanner.AppScan {
         if let gate = lock.withLock({ scanGate }) {
             gate.wait()
             gate.signal()
@@ -188,19 +191,19 @@ final class FakeBackend: WindowBackend {
         }
     }
 
-    func focusedWindow(pid: pid_t) -> FocusReader.Result { lock.withLock { .focused(focusedIn[pid]) } }
+    package func focusedWindow(pid: pid_t) -> FocusReader.Result { lock.withLock { .focused(focusedIn[pid]) } }
 
-    func screens() -> [Screen] { lock.withLock { screenList } }
+    package func screens() -> [Screen] { lock.withLock { screenList } }
 
-    func currentSpace(display _: String) -> UInt64 { 1 }
+    package func currentSpace(display _: String) -> UInt64 { 1 }
 
-    func isRunning(_ pid: pid_t) -> Bool { lock.withLock { apps[pid] != nil } }
+    package func isRunning(_ pid: pid_t) -> Bool { lock.withLock { apps[pid] != nil } }
 
-    func frontmostPID() -> pid_t? { lock.withLock { front } }
+    package func frontmostPID() -> pid_t? { lock.withLock { front } }
 
-    func frame(of window: Window) -> CGRect { frame(of: window.id) }
+    package func frame(of window: Window) -> CGRect { frame(of: window.id) }
 
-    func setPosition(_ window: Window, _ point: CGPoint) -> Bool {
+    package func setPosition(_ window: Window, _ point: CGPoint) -> Bool {
         lock.withLock {
             guard windowList[window.id] != nil else { return false }
             windowList[window.id]?.frame.origin = point
@@ -209,7 +212,7 @@ final class FakeBackend: WindowBackend {
         }
     }
 
-    func setSize(_ window: Window, _ size: CGSize) -> Bool {
+    package func setSize(_ window: Window, _ size: CGSize) -> Bool {
         lock.withLock {
             guard let fake = windowList[window.id], fake.resizable else { return false }
             windowList[window.id]?.frame.size = CGSize(width: max(size.width, fake.minSize.width),
@@ -219,23 +222,23 @@ final class FakeBackend: WindowBackend {
         }
     }
 
-    func blocksPlacement(_ window: Window) -> Bool {
+    package func blocksPlacement(_ window: Window) -> Bool {
         lock.withLock {
             placementCheckCount += 1
             return windowList[window.id]?.minimized ?? true
         }
     }
 
-    func suspendEnhancedUI(_: pid_t) -> Bool { false }
+    package func suspendEnhancedUI(_: pid_t) -> Bool { false }
 
-    func resumeEnhancedUI(_: pid_t) {}
+    package func resumeEnhancedUI(_: pid_t) {}
 
-    func focus(_ window: Window, ifCurrent: () -> Bool) {
+    package func focus(_ window: Window, ifCurrent: () -> Bool) {
         guard ifCurrent() else { return }
         userFocuses(window.id)
     }
 
-    func refreshCursor() {
+    package func refreshCursor() {
         let observer = lock.withLock {
             cursorRefreshCount += 1
             return onCursorRefresh
@@ -243,13 +246,13 @@ final class FakeBackend: WindowBackend {
         observer?()
     }
 
-    func observeCursorRefresh(_ observer: (() -> Void)?) { lock.withLock { onCursorRefresh = observer } }
+    package func observeCursorRefresh(_ observer: (() -> Void)?) { lock.withLock { onCursorRefresh = observer } }
 }
 
 extension FakeBackend {
     private static let defaults = Config.parse(defaultText)
 
-    @MainActor func makeManager(_ configure: (inout Config) -> Void = { _ in }) -> WindowManager {
+    @MainActor package func makeManager(_ configure: (inout Config) -> Void = { _ in }) -> WindowManager {
         var config = Self.defaults
         config.virtualWorkspaces = false
         config.animate = false
@@ -264,7 +267,7 @@ extension FakeBackend {
     }
 
     @MainActor @discardableResult
-    func settle(_ manager: WindowManager, rounds: Int = 8, timeout: TimeInterval = 10) async -> Bool {
+    package func settle(_ manager: WindowManager, rounds: Int = 8, timeout: TimeInterval = 10) async -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
         for _ in 0..<rounds {
             let before = writes.count
@@ -283,8 +286,8 @@ extension FakeBackend {
     }
 
     @MainActor @discardableResult
-    func wait(_ manager: WindowManager, timeout: TimeInterval = 10,
-              until condition: @escaping () -> Bool) async -> Bool {
+    package func wait(_ manager: WindowManager, timeout: TimeInterval = 10,
+                      until condition: @escaping () -> Bool) async -> Bool {
         guard !condition() else { return true }
         return await bounded(until: Date().addingTimeInterval(timeout)) { waiter in
             manager.onChange = { if condition() { waiter.finish(true) } }

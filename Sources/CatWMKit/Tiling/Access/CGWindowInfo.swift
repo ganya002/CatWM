@@ -6,6 +6,8 @@ package struct CGWindowInfo {
     package let pid: pid_t
     package let bounds: CGRect
 
+    package init(id: CGWindowID, pid: pid_t, bounds: CGRect) { (self.id, self.pid, self.bounds) = (id, pid, bounds) }
+
     package static func onScreen(
         options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
     ) -> [CGWindowInfo] {

@@ -164,6 +164,11 @@ package struct WindowServerObservation {
     package var allWindows: [CGWindowInfo] = []
     package var spaces: [CGWindowID: Set<UInt64>] = [:]
 
+    package init(windows: [CGWindowInfo] = [], allWindows: [CGWindowInfo] = [],
+                 spaces: [CGWindowID: Set<UInt64>] = [:]) {
+        (self.windows, self.allWindows, self.spaces) = (windows, allWindows, spaces)
+    }
+
     package func keeping(_ keep: (pid_t) -> Bool) -> Self {
         Self(windows: windows.filter { keep($0.pid) }, allWindows: allWindows.filter { keep($0.pid) }, spaces: spaces)
     }
