@@ -136,7 +136,7 @@ import AppKit
     package let dockWindowPull = DockWindowPull()
     package let dockArea = DockArea()
     package let cursorRefresh: CursorRefresh
-    package var warp: (CGPoint) -> Void = { CGWarpMouseCursorPosition($0) }
+    package var warp: @MainActor (CGPoint) -> Void
 
     package init(backend: any WindowBackend = AXBackend.shared, config: Config, scope: WindowScope? = nil,
                  scanner: WindowScanner? = nil, embedded: Bool = false) {
@@ -147,6 +147,7 @@ import AppKit
         input = GlobalInput(scope: scope, keys: Instance.keys, embedded: embedded)
         self.config = Self.effective(config, scope: scope)
         frontmostPID = { backend.frontmostPID() }
+        warp = { backend.warpPointer(to: $0) }
         animator = Animator(backend: backend)
         cursorRefresh = CursorRefresh(backend: backend, pointerAndFocus: input.pointerAndFocus)
         self.scanner = scanner ?? WindowScanner(

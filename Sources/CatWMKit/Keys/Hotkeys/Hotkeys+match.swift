@@ -51,6 +51,7 @@ extension Hotkeys {
     }
 
     package static func post(keyCode: UInt16, flags: CGEventFlags, style: PostStyle) {
+        guard RealInput.allows("key \(keyCode)") else { return }
         var flags = flags.intersection([.maskCommand, .maskAlternate, .maskControl, .maskShift,
                                         .maskSecondaryFn, .maskNumericPad])
         if style != .plain, (123...126).contains(keyCode) { flags.formUnion([.maskSecondaryFn, .maskNumericPad]) }

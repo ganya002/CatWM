@@ -108,6 +108,8 @@ struct Usage {
         }
         record("engine.action.growth", (Usage.now().footprint - start.footprint) * 1024)
         guard writes > 0 else { fail("the actions moved no window") }
+        guard RealInput.refusals == 0 else { fail("the actions tried to reach the real input or Desktops") }
+        guard !fake.desktopSwitches.isEmpty else { fail("the workspace actions switched no Desktop in the fake") }
     }
 
     private func configLoad() throws {

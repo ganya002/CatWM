@@ -3,7 +3,7 @@ import CatWMKit
 import os
 
 package final class FakeBackend: WindowBackend, Sendable {
-    package init() {}
+    package init() { RealInput.block() }
 
     package struct FakeWindow {
         let id: CGWindowID
@@ -27,7 +27,19 @@ package final class FakeBackend: WindowBackend, Sendable {
         }
     }
 
-    private struct State {
+    package enum Input: Equatable {
+        case key(UInt16, flags: UInt64)
+        case mouse(UInt32, CGPoint)
+        case warp(CGPoint)
+    }
+
+    struct Held {
+        var id: CGWindowID
+        var start: CGPoint
+        var current: CGPoint
+    }
+
+    struct State {
         var screenList: [Screen] = []
         var apps: [pid_t: String?] = [:]
         var windowList: [CGWindowID: FakeWindow] = [:]
@@ -41,9 +53,16 @@ package final class FakeBackend: WindowBackend, Sendable {
         var nextID: CGWindowID = 1
         var nextDisplay: CGDirectDisplayID = 1
         var scanGate: DispatchSemaphore?
+        var inputLog: [Input] = []
+        var pointer = CGPoint.zero
+        var desktopCount = 3
+        var desktop = 1
+        var desktopOf: [CGWindowID: Int] = [:]
+        var desktopSwitches: [Int] = []
+        var held: Held?
     }
 
-    private let state = OSAllocatedUnfairLock(uncheckedState: State())
+    let state = OSAllocatedUnfairLock(uncheckedState: State())
 
     @discardableResult
     package func addScreen(frame: CGRect = CGRect(x: 0, y: 0, width: 1440, height: 900),

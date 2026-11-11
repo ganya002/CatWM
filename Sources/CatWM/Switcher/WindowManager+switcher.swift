@@ -104,12 +104,10 @@ extension WindowManager {
     private func stepToSpace(of id: CGWindowID) -> Bool {
         guard let space = Spaces.of(window: id).first else { return false }
         for screen in backend.screens() {
-            guard let info = Spaces.list(display: screen.uuid), let target = info.ids.firstIndex(of: space),
-                  let cur = info.current, cur != target, let combo = SystemShortcut.step(right: target > cur)
+            guard let info = backend.spaceList(display: screen.uuid), let target = info.ids.firstIndex(of: space),
+                  let cur = info.current, cur != target, let combo = backend.stepShortcut(right: target > cur)
             else { continue }
-            for _ in 0..<abs(target - cur) {
-                Hotkeys.post(keyCode: combo.keyCode, flags: combo.flags, style: keyPostStyle)
-            }
+            for _ in 0..<abs(target - cur) { postKey(combo) }
             return true
         }
         return false

@@ -29,3 +29,7 @@ Two `@preconcurrency` imports remain. `CoreGraphics` in `tapCallback.swift`: tap
 ## Deinit
 
 Isolated `deinit` needs a newer runtime than the macOS 14 target. A main-actor owner that must close a panel or stop a clock when it goes away (`Animator`, `WindowResizeFill`) captures those objects and closes them in `DispatchQueue.main.async`, one main turn after release. `PermissionWatcher`, `DockArea`, `WindowResizeScene` and `TrafficLights` lost their `deinit`. Their owners stop or close the first three explicitly. `TrafficLights` removes its flags monitors in `viewDidMoveToWindow` when the view leaves its window.
+
+## An engine on a fake never reaches the user's input
+
+An engine built on `FakeBackend` must never reach the user's input: the perf tool, CI perf and `swift test` must not post a key, press the pointer, warp it or switch a Desktop. The engine reaches all of these through `WindowBackend`, and `RealInput` refuses the ones that skip it (see `fake-backend.md` for the decision and the alternative). The scope's `GlobalInput` was not enough: an unscoped manager has `pointerAndFocus` on, and a fake manager is unscoped.

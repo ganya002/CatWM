@@ -52,14 +52,14 @@ extension WindowManager {
             guard let self else { return }
             let point = mouseLocation()
             if attemptsLeft > 0, let screen = backend.screens().first(where: { $0.frame.contains(point) }),
-               let info = Spaces.list(display: screen.uuid), let cur = info.current,
+               let info = backend.spaceList(display: screen.uuid), let cur = info.current,
                info.desktops.indices.contains(number - 1),
                cur != info.desktops[number - 1],
-               let combo = SystemShortcut.step(right: info.desktops[number - 1] > cur) {
+               let combo = backend.stepShortcut(right: info.desktops[number - 1] > cur) {
                 let delta = info.desktops[number - 1] - cur
                 Log.info("move to space: landed on \(cur + 1); stepping \(delta) more")
                 for _ in 0..<abs(delta) {
-                    Hotkeys.post(keyCode: combo.keyCode, flags: combo.flags, style: keyPostStyle)
+                    postKey(combo)
                 }
                 holdUntilArrived(space: number, release: release, restore: restore,
                                  settle: 0.45 + 0.15 * Double(abs(delta) - 1), attemptsLeft: attemptsLeft - 1)
@@ -77,11 +77,7 @@ extension WindowManager {
         scheduleRefresh(after: 0.2)
     }
 
-    package func serverFrame(_ id: CGWindowID) -> CGRect? {
-        guard let list = CGWindowListCopyWindowInfo(.optionIncludingWindow, id) as? [[String: Any]],
-              let bounds = list.first?[kCGWindowBounds as String] as? [String: Any] else { return nil }
-        return CGRect(dictionaryRepresentation: bounds as CFDictionary)
-    }
+    package func serverFrame(_ id: CGWindowID) -> CGRect? { backend.serverFrame(of: id) }
 
     package func rememberGrab(_ window: Window, _ point: CGPoint, frame: CGRect) {
         guard let id = window.bundleID else { return }

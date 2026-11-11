@@ -7,6 +7,22 @@ package enum DesktopBridge {
         package let options: UInt32
     }
 
+    private static func submit(
+        _ name: String, selector: String,
+        initialize: (UnsafeMutableRawPointer, Selector, IMP) -> UnsafeMutableRawPointer?
+    ) -> Bool {
+        RealInput.allows("Desktop operation \(name)")
+            && NativeSpaceMove.perform(name, selector: selector, initialize: initialize)
+    }
+
+    private static func submitSynchronously(
+        _ name: String, selector: String,
+        initialize: (UnsafeMutableRawPointer, Selector, IMP) -> UnsafeMutableRawPointer?
+    ) -> AnyObject? {
+        RealInput.allows("Desktop operation \(name)")
+            ? NativeSpaceMove.performSynchronous(name, selector: selector, initialize: initialize) : nil
+    }
+
     private static let lifecycleAvailable: Bool = {
         guard NativeSpaceMove.isAvailable else { return false }
         return [
@@ -24,7 +40,7 @@ package enum DesktopBridge {
         ) -> UnsafeMutableRawPointer?
         typealias Read = @convention(c) (AnyObject, Selector) -> UInt64
         guard lifecycleAvailable else { return nil }
-        let result = NativeSpaceMove.performSynchronous(
+        let result = submitSynchronously(
             "SLSBridgedSpaceCreateOperation", selector: "initWithOptions:values:"
         ) { object, selector, method in
             unsafeBitCast(method, to: Initialize.self)(object, selector, 0, [:] as CFDictionary)
@@ -37,7 +53,7 @@ package enum DesktopBridge {
 
     package static func remove(_ space: UInt64) -> Bool {
         typealias Initialize = @convention(c) (UnsafeMutableRawPointer, Selector, UInt64) -> UnsafeMutableRawPointer?
-        return NativeSpaceMove.perform("SLSBridgedSpaceDestroyOperation",
+        return submit("SLSBridgedSpaceDestroyOperation",
                                        selector: "initWithSpaceID:") { object, selector, method in
             unsafeBitCast(method, to: Initialize.self)(object, selector, space)
         }
@@ -47,7 +63,7 @@ package enum DesktopBridge {
         typealias Initialize = @convention(c) (
             UnsafeMutableRawPointer, Selector, UInt64, CFString, Int32
         ) -> UnsafeMutableRawPointer?
-        return NativeSpaceMove.perform(
+        return submit(
             "SLSBridgedMoveManagedSpaceToDisplayIndexOperation", selector: "initWithSpaceID:displayIdentifier:index:"
         ) { object, selector, method in
             unsafeBitCast(method, to: Initialize.self)(object, selector, space, display as CFString, index)
@@ -58,7 +74,7 @@ package enum DesktopBridge {
         typealias Initialize = @convention(c) (
             UnsafeMutableRawPointer, Selector, CFArray, UInt64
         ) -> UnsafeMutableRawPointer?
-        return NativeSpaceMove.perform(
+        return submit(
             "SLSBridgedMoveWindowsToManagedSpaceOperation", selector: "initWithWindows:spaceID:"
         ) { object, selector, method in
             unsafeBitCast(method, to: Initialize.self)(object, selector, windows as CFArray, space)
@@ -69,7 +85,7 @@ package enum DesktopBridge {
         typealias Initialize = @convention(c) (
             UnsafeMutableRawPointer, Selector, CFArray, CFArray
         ) -> UnsafeMutableRawPointer?
-        return NativeSpaceMove.perform(
+        return submit(
             "SLSBridgedRemoveWindowsFromSpacesOperation", selector: "initWithWindows:spaces:"
         ) { object, selector, method in
             unsafeBitCast(method, to: Initialize.self)(object, selector, windows as CFArray, [space] as CFArray)
@@ -97,7 +113,7 @@ package enum DesktopBridge {
             UnsafeMutableRawPointer, Selector, UInt64, CGAffineTransform, UInt32
         ) -> UnsafeMutableRawPointer?
         let appliedOptions = x == 0 ? options : options & ~UInt32(0x0100_0000)
-        return NativeSpaceMove.perform(
+        return submit(
             "SLSBridgedSpaceSetTransformOperation", selector: "initWithSpaceID:transform:options:"
         ) { object, selector, method in
             unsafeBitCast(method, to: Initialize.self)(object, selector, space,
@@ -109,7 +125,7 @@ package enum DesktopBridge {
         typealias Initialize = @convention(c) (
             UnsafeMutableRawPointer, Selector, CFString, Bool
         ) -> UnsafeMutableRawPointer?
-        return NativeSpaceMove.perform(
+        return submit(
             "SLSBridgedManagedDisplaySetIsAnimatingOperation", selector: "initWithDisplayIdentifier:isAnimating:"
         ) { object, selector, method in
             unsafeBitCast(method, to: Initialize.self)(object, selector, display as CFString, active)
@@ -128,7 +144,7 @@ package enum DesktopBridge {
         typealias Initialize = @convention(c) (
             UnsafeMutableRawPointer, Selector, CFString, UInt64
         ) -> UnsafeMutableRawPointer?
-        return NativeSpaceMove.perform("SLSBridgedManagedDisplaySetCurrentSpaceOperation",
+        return submit("SLSBridgedManagedDisplaySetCurrentSpaceOperation",
                                        selector: "initWithDisplayIdentifier:spaceID:") { object, selector, method in
             unsafeBitCast(method, to: Initialize.self)(object, selector, display as CFString, space)
         }
@@ -136,7 +152,7 @@ package enum DesktopBridge {
 
     private static func spacesOperation(_ name: String, _ spaces: [UInt64]) -> Bool {
         typealias Initialize = @convention(c) (UnsafeMutableRawPointer, Selector, CFArray) -> UnsafeMutableRawPointer?
-        return NativeSpaceMove.perform(name, selector: "initWithSpaces:") { object, selector, method in
+        return submit(name, selector: "initWithSpaces:") { object, selector, method in
             unsafeBitCast(method, to: Initialize.self)(object, selector, spaces as CFArray)
         }
     }

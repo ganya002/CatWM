@@ -9,7 +9,10 @@ package enum Spaces {
 
     @MainActor package static func move(window id: CGWindowID, to target: UInt64, waitUntilOnScreen: Bool = false,
                                         completion: @escaping @MainActor (Bool) -> Void) {
-        guard target != 0, canMoveWindows else { completion(false); return }
+        guard target != 0, canMoveWindows, RealInput.allows("window move to Desktop \(target)") else {
+            completion(false)
+            return
+        }
         let move = WindowSpaceMove(
             membership: { of(window: id) }, submit: { NativeSpaceMove.move(window: id, to: target) },
             isOnScreen: {
@@ -33,6 +36,13 @@ package enum Spaces {
         package let desktops: [Int]
         package let current: Int?
         package var uuids: [String?] = []
+
+        package init(ids: [UInt64], desktops: [Int], current: Int?, uuids: [String?] = []) {
+            self.ids = ids
+            self.desktops = desktops
+            self.current = current
+            self.uuids = uuids
+        }
     }
 
     package struct Snapshot {
@@ -99,7 +109,15 @@ package enum Spaces {
 }
 
 package enum SystemShortcut {
-    package struct Combo { package let keyCode: UInt16; package let flags: CGEventFlags }
+    package struct Combo {
+        package let keyCode: UInt16
+        package let flags: CGEventFlags
+
+        package init(keyCode: UInt16, flags: CGEventFlags) {
+            self.keyCode = keyCode
+            self.flags = flags
+        }
+    }
 
     private static func read(_ id: Int) -> (enabled: Bool, combo: Combo)? {
         guard let all = UserDefaults(suiteName: "com.apple.symbolichotkeys")?

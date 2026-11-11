@@ -19,6 +19,30 @@ package protocol WindowBackend: Sendable {
     func focus(_ window: Window, ifCurrent: () -> Bool)
     func refreshCursor()
     func close(_ window: Window) -> String
+
+    @MainActor func pointerLocation() -> CGPoint
+    @MainActor func warpPointer(to point: CGPoint)
+    @MainActor func post(keyCode: UInt16, flags: CGEventFlags, style: Hotkeys.PostStyle)
+    @MainActor func postMouse(_ type: CGEventType, at point: CGPoint)
+    @MainActor func serverFrame(of id: CGWindowID) -> CGRect?
+    @MainActor func spaceList(display: String) -> Spaces.DisplaySpaces?
+    @MainActor func desktopShortcut(_ number: Int) -> SystemShortcut.Combo?
+    @MainActor func stepShortcut(right: Bool) -> SystemShortcut.Combo?
+}
+
+extension WindowBackend {
+    @MainActor package func pointerLocation() -> CGPoint { .zero }
+    @MainActor package func warpPointer(to _: CGPoint) { assertionFailure("\(Self.self) has no input seam") }
+    @MainActor package func post(keyCode _: UInt16, flags _: CGEventFlags, style _: Hotkeys.PostStyle) {
+        assertionFailure("\(Self.self) has no input seam")
+    }
+    @MainActor package func postMouse(_: CGEventType, at _: CGPoint) {
+        assertionFailure("\(Self.self) has no input seam")
+    }
+    @MainActor package func serverFrame(of _: CGWindowID) -> CGRect? { nil }
+    @MainActor package func spaceList(display _: String) -> Spaces.DisplaySpaces? { nil }
+    @MainActor package func desktopShortcut(_: Int) -> SystemShortcut.Combo? { nil }
+    @MainActor package func stepShortcut(right _: Bool) -> SystemShortcut.Combo? { nil }
 }
 
 package final class AXBackend: WindowBackend, Sendable {
@@ -92,4 +116,35 @@ package final class AXBackend: WindowBackend, Sendable {
     }
 
     package func refreshCursor() { CursorRefresh.post() }
+
+    @MainActor package func pointerLocation() -> CGPoint { mouseLocation() }
+
+    @MainActor package func warpPointer(to point: CGPoint) {
+        guard RealInput.allows("pointer warp") else { return }
+        CGWarpMouseCursorPosition(point)
+    }
+
+    @MainActor package func post(keyCode: UInt16, flags: CGEventFlags, style: Hotkeys.PostStyle) {
+        Hotkeys.post(keyCode: keyCode, flags: flags, style: style)
+    }
+
+    @MainActor package func postMouse(_ type: CGEventType, at point: CGPoint) {
+        guard RealInput.allows("mouse event"),
+              let event = CGEvent(mouseEventSource: CGEventSource(stateID: .hidSystemState), mouseType: type,
+                                  mouseCursorPosition: point, mouseButton: .left) else { return }
+        event.setIntegerValueField(.eventSourceUserData, value: Hotkeys.syntheticMarker)
+        event.post(tap: .cghidEventTap)
+    }
+
+    @MainActor package func serverFrame(of id: CGWindowID) -> CGRect? {
+        guard let list = CGWindowListCopyWindowInfo(.optionIncludingWindow, id) as? [[String: Any]],
+              let bounds = list.first?[kCGWindowBounds as String] as? [String: Any] else { return nil }
+        return CGRect(dictionaryRepresentation: bounds as CFDictionary)
+    }
+
+    @MainActor package func spaceList(display: String) -> Spaces.DisplaySpaces? { Spaces.list(display: display) }
+
+    @MainActor package func desktopShortcut(_ number: Int) -> SystemShortcut.Combo? { SystemShortcut.desktop(number) }
+
+    @MainActor package func stepShortcut(right: Bool) -> SystemShortcut.Combo? { SystemShortcut.step(right: right) }
 }
