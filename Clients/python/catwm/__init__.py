@@ -100,6 +100,27 @@ class ConfigOptionsItem(TypedDict):
     summary: str
 
 
+class AgentOpenResult(TypedDict):
+    uuid: str
+    frame: Rect
+
+
+class AgentLaunchResult(TypedDict):
+    pid: int
+
+
+class AgentWindowsItem(TypedDict):
+    id: int
+    pid: int
+    app: str | None
+    title: str | None
+    frame: Rect
+
+
+class AgentTypeResult(TypedDict):
+    method: str
+
+
 class FocusChangedData(TypedDict):
     window: int | None
     app: str | None
@@ -544,3 +565,58 @@ class CatWM:
         """List the config options"""
         args: dict[str, Any] = {}
         return self.call("config.options", args)
+
+    def agent_open(self) -> AgentOpenResult:
+        """Open a private display for test apps"""
+        args: dict[str, Any] = {}
+        return self.call("agent.open", args)
+
+    def agent_launch(self, app: str) -> AgentLaunchResult:
+        """Open an app on the agent display without focus. Fails if the app already runs"""
+        args: dict[str, Any] = {}
+        args["app"] = app
+        return self.call("agent.launch", args)
+
+    def agent_windows(self) -> list[AgentWindowsItem]:
+        """List the windows on the agent display"""
+        args: dict[str, Any] = {}
+        return self.call("agent.windows", args)
+
+    def agent_type(self, window: int, text: str) -> AgentTypeResult:
+        """Type text into a window without focusing it"""
+        args: dict[str, Any] = {}
+        args["window"] = window
+        args["text"] = text
+        return self.call("agent.type", args)
+
+    def agent_key(self, window: int, keys: str) -> None:
+        """Send a key to a window without focusing it"""
+        args: dict[str, Any] = {}
+        args["window"] = window
+        args["keys"] = keys
+        self.call("agent.key", args)
+
+    def agent_press(self, window: int, button: str) -> None:
+        """Press a button of a window without focusing it"""
+        args: dict[str, Any] = {}
+        args["window"] = window
+        args["button"] = button
+        self.call("agent.press", args)
+
+    def agent_text(self, window: int) -> str:
+        """Read the text of a window"""
+        args: dict[str, Any] = {}
+        args["window"] = window
+        return self.call("agent.text", args)
+
+    def agent_screenshot(self, window: int, path: str) -> str:
+        """Save one frame of a window as a PNG file"""
+        args: dict[str, Any] = {}
+        args["window"] = window
+        args["path"] = path
+        return self.call("agent.screenshot", args)
+
+    def agent_close(self) -> None:
+        """Quit the apps that opened on the agent display and close it"""
+        args: dict[str, Any] = {}
+        self.call("agent.close", args)

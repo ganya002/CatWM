@@ -31,7 +31,7 @@ import SwiftUI
 
     private func reshape() {
         guard model.active else { return }
-        for screen in NSScreen.screens {
+        for screen in NSScreen.userScreens {
             if let id = screen.displayID { panels[id]?.screen.update(screen) }
         }
     }
@@ -103,7 +103,7 @@ import SwiftUI
 
     private func layoutPanels() {
         var seen = Set<CGDirectDisplayID>()
-        for screen in NSScreen.screens {
+        for screen in NSScreen.userScreens {
             guard let id = screen.displayID else { continue }
             seen.insert(id)
             let entry = panels[id] ?? makePanel(screen)

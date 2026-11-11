@@ -1,6 +1,10 @@
 import AppKit
 
 extension NSScreen {
+    package static var userScreens: [NSScreen] {
+        screens.filter { $0.displayID.map { !AgentDisplay.owns($0) } ?? true }
+    }
+
     package var displayID: CGDirectDisplayID? {
         (deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID)
     }

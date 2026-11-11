@@ -72,6 +72,11 @@ package struct Invocation {
     package func text(_ name: String) -> String { args[name]?.string ?? "" }
 }
 
+package enum CommandBody: Sendable {
+    case now(@MainActor @Sendable (Invocation) throws -> JSON)
+    case later(@MainActor @Sendable (Invocation) async throws -> JSON)
+}
+
 package struct Command: Sendable {
     package let name: String
     package let group: String
@@ -79,7 +84,24 @@ package struct Command: Sendable {
     package var args: [CommandArg] = []
     package var result = ResultShape.none
     package var access = CommandAccess.public
-    package let run: @MainActor @Sendable (Invocation) throws -> JSON
+    package private(set) var body: CommandBody
+
+    package init(name: String, group: String, summary: String, args: [CommandArg] = [],
+                 result: ResultShape = .none, access: CommandAccess = .public,
+                 run: @escaping @MainActor @Sendable (Invocation) throws -> JSON) {
+        (self.name, self.group, self.summary, self.args, self.result, self.access) =
+            (name, group, summary, args, result, access)
+        body = .now(run)
+    }
+
+    package static func later(name: String, group: String, summary: String, args: [CommandArg] = [],
+                              result: ResultShape = .none, access: CommandAccess = .public,
+                              run: @escaping @MainActor @Sendable (Invocation) async throws -> JSON) -> Command {
+        var command = Command(name: name, group: group, summary: summary, args: args, result: result,
+                              access: access) { _ in .null }
+        command.body = .later(run)
+        return command
+    }
 
     package func validate(_ given: [String: JSON]) throws -> [String: JSON] {
         for key in given.keys where !args.contains(where: { $0.name == key }) {

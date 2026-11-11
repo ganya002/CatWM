@@ -15,3 +15,4 @@ Use these words in code, docs, UI text and commit messages. Each word has one me
 - **switcher** means the window switcher. `$mod Tab` opens it, and the `switcher` dispatcher runs it.
 - **template** means a saved workspace template: the windows, workspaces, Desktops, layouts and frames of a setup. `Templates/` owns it.
 - **session** (in `Session/`) means the save and open of app windows. It has no CatWM types. See `window-session.md`.
+- **agent display** means a private virtual display that an agent's apps open their windows on. The user's CatWM ignores it. See `agent-display.md`.

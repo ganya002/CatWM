@@ -113,6 +113,27 @@ public struct ConfigOptionsItem: Codable, Equatable, Sendable {
     public let summary: String
 }
 
+public struct AgentOpenResult: Codable, Equatable, Sendable {
+    public let uuid: String
+    public let frame: Rect
+}
+
+public struct AgentLaunchResult: Codable, Equatable, Sendable {
+    public let pid: Int
+}
+
+public struct AgentWindowsItem: Codable, Equatable, Sendable {
+    public let id: Int
+    public let pid: Int
+    public let app: String?
+    public let title: String?
+    public let frame: Rect
+}
+
+public struct AgentTypeResult: Codable, Equatable, Sendable {
+    public let method: String
+}
+
 public struct FocusChangedData: Codable, Equatable, Sendable {
     public let window: Int?
     public let app: String?
@@ -652,5 +673,69 @@ public final class CatWM: @unchecked Sendable {
     public func configOptions() throws -> [ConfigOptionsItem] {
         let args: [String: Any] = [:]
         return try decode([ConfigOptionsItem].self, try call("config.options", args))
+    }
+
+    /// Open a private display for test apps
+    public func agentOpen() throws -> AgentOpenResult {
+        let args: [String: Any] = [:]
+        return try decode(AgentOpenResult.self, try call("agent.open", args))
+    }
+
+    /// Open an app on the agent display without focus. Fails if the app already runs
+    public func agentLaunch(app: String) throws -> AgentLaunchResult {
+        var args: [String: Any] = [:]
+        args["app"] = app
+        return try decode(AgentLaunchResult.self, try call("agent.launch", args))
+    }
+
+    /// List the windows on the agent display
+    public func agentWindows() throws -> [AgentWindowsItem] {
+        let args: [String: Any] = [:]
+        return try decode([AgentWindowsItem].self, try call("agent.windows", args))
+    }
+
+    /// Type text into a window without focusing it
+    public func agentType(window: Int, text: String) throws -> AgentTypeResult {
+        var args: [String: Any] = [:]
+        args["window"] = window
+        args["text"] = text
+        return try decode(AgentTypeResult.self, try call("agent.type", args))
+    }
+
+    /// Send a key to a window without focusing it
+    public func agentKey(window: Int, keys: String) throws {
+        var args: [String: Any] = [:]
+        args["window"] = window
+        args["keys"] = keys
+        _ = try call("agent.key", args)
+    }
+
+    /// Press a button of a window without focusing it
+    public func agentPress(window: Int, button: String) throws {
+        var args: [String: Any] = [:]
+        args["window"] = window
+        args["button"] = button
+        _ = try call("agent.press", args)
+    }
+
+    /// Read the text of a window
+    public func agentText(window: Int) throws -> String {
+        var args: [String: Any] = [:]
+        args["window"] = window
+        return try decode(String.self, try call("agent.text", args))
+    }
+
+    /// Save one frame of a window as a PNG file
+    public func agentScreenshot(window: Int, path: String) throws -> String {
+        var args: [String: Any] = [:]
+        args["window"] = window
+        args["path"] = path
+        return try decode(String.self, try call("agent.screenshot", args))
+    }
+
+    /// Quit the apps that opened on the agent display and close it
+    public func agentClose() throws {
+        let args: [String: Any] = [:]
+        _ = try call("agent.close", args)
     }
 }
