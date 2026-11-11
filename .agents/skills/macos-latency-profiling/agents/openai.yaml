@@ -1,0 +1,3 @@
+interface:
+  display_name: "macOS Latency Profiling"
+  short_description: "Trace macOS latency and verify p99 improvements"
