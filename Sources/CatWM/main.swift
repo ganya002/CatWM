@@ -57,7 +57,7 @@ for sig in [SIGTERM, SIGINT, SIGHUP] {
         WindowManager.shared.isStarted = false
         ControlServer.shared.stop()
         WindowManager.shared.restoreHiddenWindows {
-            Hotkeys.shared.capsLockChord?.restore()
+            Hotkeys.shared.existingChord?.restore()
             CrashWatch.cleanExit()
             Instance.removePid()
             exit(0)

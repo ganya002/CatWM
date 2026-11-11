@@ -25,7 +25,13 @@ import AppKit
     package var input = GlobalInput(scope: nil, keys: nil)
     package var mainMod: CGEventFlags = .maskAlternate
     package var helpKey = "?"
-    package lazy var chord = CapsLockChord(hotkeys: self)
+    package private(set) var existingChord: CapsLockChord?
+    package var chord: CapsLockChord {
+        if let existingChord { return existingChord }
+        let made = CapsLockChord(hotkeys: self)
+        existingChord = made
+        return made
+    }
     package var capsLockChord: CapsLockChord? { capsLock ? chord : nil }
     package var swipeMonitor: Any?
     package var scrollAccum: [Int: Double] = [:]

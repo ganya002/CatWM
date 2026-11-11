@@ -309,13 +309,14 @@ extension WindowManager {
 
     package static let surfaceFields: Set<String> = [
         "bindings", "mod", "virtual-workspaces", "mode-effect", "keyboard-finish", "tab-notification-badges",
-        "dim-other-windows", "dim-strength", "blur-other-windows", "blur-radius", "resize-animation"
+        "dim-other-windows", "dim-strength", "blur-other-windows", "blur-radius", "resize-animation",
+        "keyboard-help-key"
     ]
     package static let floatFields: Set<String> = ["floating", "floating-is-blacklist", "float-small-windows"]
     package static let liveFields: Set<String> = surfaceFields.subtracting(["virtual-workspaces"]).union([
         "features", "mouse-follows-focus", "focus-follows-mouse", "focus-follows-mouse-in-mode-only",
         "mouse-swaps-windows", "mouse-resizes-windows", "enables-layout-hud", "enables-layout-hud-on-space-change",
-        "keyboard-help", "keyboard-help-key", "cursor-actions", "template-app-scripting", "switcher-instant-jump",
+        "keyboard-help", "cursor-actions", "template-app-scripting", "switcher-instant-jump",
         "switcher-jump-delay", "switcher-exclude", "animate", "animation-duration", "animation-curve",
         "animation-bounce", "panel-animation", "debug-logging", "perf-reports", "sort-nudge", "window-resize-step",
         "stay-on-workspace-after-close", "remove-empty-workspaces"

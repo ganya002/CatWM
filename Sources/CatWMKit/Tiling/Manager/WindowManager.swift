@@ -145,7 +145,7 @@ import AppKit
         self.config = Self.effective(config, scope: scope)
         frontmostPID = { backend.frontmostPID() }
         animator = Animator(backend: backend)
-        cursorRefresh = CursorRefresh(backend: backend)
+        cursorRefresh = CursorRefresh(backend: backend, pointerAndFocus: input.pointerAndFocus)
         self.scanner = scanner ?? WindowScanner(
             read: { backend.scan($0, discovered: $1) }, readDesktop: { backend.desktop(known: $0) },
             readApplications: { backend.applications() }, scope: scope,
