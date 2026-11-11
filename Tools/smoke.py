@@ -43,7 +43,7 @@ LAYOUTS = ["tall", "tall-right", "wide", "middle-wide", "fullscreen", "column", 
 DIRECTIONS = ["left", "right", "up", "down"]
 LAYOUT_MESSAGES = ["swapwithmaster", "swapsides", "focusmaster", "addmaster", "removemaster", "mfact 0.55",
                    "orientationnext", "orientationprev"]
-# System Events key codes.
+# Virtual key codes.
 KEYS = {"tab": 48, "escape": 53, "1": 18, "2": 19, "h": 4, "j": 38, "k": 40, "l": 37, "o": 31, "slash": 44,
         "left": 123, "right": 124}
 
@@ -220,15 +220,12 @@ class Smoke:
             self.run("cyclenext")
 
     def keys(self, *strokes):
-        """Press keys through System Events. Each stroke is (key, [modifiers])."""
-        script = []
-        for key, mods in strokes:
-            using = f" using {{{', '.join(f'{mod} down' for mod in mods)}}}" if mods else ""
-            script.append(f'tell application "System Events" to key code {KEYS[key]}{using}')
-        result = subprocess.run(["osascript", *sum((["-e", line] for line in script), [])],
-                                capture_output=True, text=True, timeout=HANG_SECONDS * 2)
-        if result.returncode != 0:
-            raise Failure(f"osascript could not press keys: {result.stderr.strip()}")
+        """Press keys at the HID level, where CatWM's key tap reads a real keyboard. A stroke is (key, [mods])."""
+        helper = self.desk / "smoke-keys"
+        if not helper.exists():
+            subprocess.run(["swiftc", "-O", str(ROOT / "Tools/smoke-keys.swift"), "-o", str(helper)], check=True)
+        arguments = ["+".join([str(KEYS[key]), *mods]) for key, mods in strokes]
+        subprocess.run([str(helper), *arguments], check=True, timeout=HANG_SECONDS)
         self.steps += 1
         self.check(f"keys {strokes}")
 
