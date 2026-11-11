@@ -40,10 +40,7 @@ CatWM is an engine with no GUI, wrapped by an app that draws. Other Mac apps can
 ## Branches and pull requests
 
 - Use a short branch name of at most three hyphenated words, such as `session-recovery` or `fix-scroll-state`.
-- Make a PR only when asked.
-- Title it as a conventional commit in plain English: `feat(animation): force windows to render faster`.
-- Start the body with one or two sentences on the problem. Then add media such as screenshots (through `--attach`, never committed) or benchmark results in a grid. Under `## Changes`, list what you changed, then add a short section on how you verified it. Leave out lint and style checks.
-- Watch the PR until it merges, and resolve conflicts and comments. Verify each reported bug or review issue, and fix only the ones you verified.
+- Make a PR only when asked. Before you create one, load the `pr` skill (`.agents/skills/pr/SKILL.md`) and follow it. It is mandatory.
 
 ## Code and residue
 

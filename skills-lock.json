@@ -1,0 +1,47 @@
+{
+  "version": 2,
+  "skills": {
+    "combine": {
+      "source": "Prisma-Labs-Dev/apple-skills",
+      "sourceType": "github",
+      "skillPath": "skills/combine/SKILL.md",
+      "computedHash": "b4d8e53c0b12c0870c42baba57a5b9c33e1c155d885d87810ac2c943bf8479e9"
+    },
+    "core-animation": {
+      "source": "Prisma-Labs-Dev/apple-skills",
+      "sourceType": "github",
+      "skillPath": "skills/core-animation/SKILL.md",
+      "computedHash": "08e01d8c2c8d5d43bb876aa996ebf299cb009812262b538113fc7ff30a25e139"
+    },
+    "guide-swift-concurrency": {
+      "source": "Prisma-Labs-Dev/apple-skills",
+      "sourceType": "github",
+      "skillPath": "skills/guide-swift-concurrency/SKILL.md",
+      "computedHash": "050eb8c3a6bf246efc1dd1aa6d68ee542f621f9b7065446a47b8089315ca72fd"
+    },
+    "guide-swift-testing": {
+      "source": "Prisma-Labs-Dev/apple-skills",
+      "sourceType": "github",
+      "skillPath": "skills/guide-swift-testing/SKILL.md",
+      "computedHash": "1041ff2701231b3dd72d99e5adaf80987c3265dd1d1c0e70007bc50d086c2c8e"
+    },
+    "hig": {
+      "source": "Prisma-Labs-Dev/apple-skills",
+      "sourceType": "github",
+      "skillPath": "skills/hig/SKILL.md",
+      "computedHash": "f836268335044944ff29306e7401ad371792ee238546ad5508fb77b99deb51dd"
+    },
+    "swift-concurrency": {
+      "source": "Prisma-Labs-Dev/apple-skills",
+      "sourceType": "github",
+      "skillPath": "skills/swift-concurrency/SKILL.md",
+      "computedHash": "a95761750953c0161ba13716509bb41fed83abf47991f60e7286f066b1e41b12"
+    },
+    "swift-testing": {
+      "source": "Prisma-Labs-Dev/apple-skills",
+      "sourceType": "github",
+      "skillPath": "skills/swift-testing/SKILL.md",
+      "computedHash": "357e5862cc991cbf6844c0cbe9a8db1bdc5be988612ad694e0c941f29ec304db"
+    }
+  }
+}
