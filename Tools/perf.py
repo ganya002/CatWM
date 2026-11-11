@@ -107,14 +107,18 @@ def report(samples, budgets):
         ok = row is not None and row["p99"] <= budget["cap"]
         if not ok:
             failed.append(metric)
-        cells = " | ".join(number(row[key]) for key in ["median", "mean", "p99"]) if row else "| |"
+        if row:
+            p99 = number(row["p99"]) if ok else f"**{number(row['p99'])}**"
+            cells = f"{number(row['median'])} | {number(row['mean'])} | {p99}"
+        else:
+            cells = "| | **none**"
         cap = number(budget["cap"]) if budget["cap"] >= 1 else f"{budget['cap']:g}"
         tables.setdefault(budget["group"], []).append(
-            f"| {budget['label']} | {cells} | {cap} {budget['unit']} | {'✓' if ok else '✗'} |")
-    lines = ["### ✓ Performance" if not failed else f"### ✗ Performance: {len(failed)} over the cap"]
+            f"| {budget['label']} | {cells} | ≤ {cap} {budget['unit']} | {'✅' if ok else '❌'} |")
+    lines = ["### ✅ Performance" if not failed else f"### ❌ Performance: {len(failed)} over the cap"]
     for group, rows in tables.items():
-        lines += ["", f"| {group} | Median | Mean | P99 | Cap | |", "|---|--:|--:|--:|--:|:-:|", *rows]
-    return "\n".join([*lines, "", "A row passes when its P99 is at or under the cap.", ""]), failed
+        lines += ["", f"| {group} | Median | Mean | P99 | Cap | |", "|:--|:--|:--|:--|:--|:--|", *rows]
+    return "\n".join([*lines, ""]), failed
 
 
 def main():

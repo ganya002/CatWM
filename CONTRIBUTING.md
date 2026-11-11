@@ -96,7 +96,7 @@ CATWM_INSTANCE=perf ./build.sh
 python3 Tools/perf.py
 ```
 
-`Tools/Perf/budgets.json` holds one cap for each row. A row whose P99 is over its cap shows ✗ and fails the check. Lower a cap when you make something faster.
+`Tools/Perf/budgets.json` holds one cap for each row. A row whose P99 is over its cap shows ❌ and fails the check. Lower a cap when you make something faster.
 
 ## Releasing
 
