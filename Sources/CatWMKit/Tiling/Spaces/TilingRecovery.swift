@@ -5,6 +5,11 @@ package struct TilingRecovery: Codable, Equatable {
         package let id: CGWindowID
         package let pid: pid_t
         package let bundleID: String?
+
+        package func hash(into hasher: inout Hasher) {
+            hasher.combine(id)
+            hasher.combine(pid)
+        }
     }
 
     package struct MenuBar: Codable, Equatable {

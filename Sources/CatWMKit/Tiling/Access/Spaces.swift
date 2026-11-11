@@ -84,14 +84,24 @@ package enum Spaces {
         package static let maxAge: TimeInterval = 0.1
         private var held: Snapshot?
         private var readAt: TimeInterval = 0
+        private var lists: [String: DisplaySpaces?] = [:]
 
         package mutating func remember(_ snapshot: Snapshot?, at now: TimeInterval) {
             held = snapshot
             readAt = now
+            lists = [:]
         }
 
         package func fresh(at now: TimeInterval) -> Snapshot? {
             now - readAt < Self.maxAge ? held : nil
+        }
+
+        package mutating func list(display uuid: String, at now: TimeInterval) -> DisplaySpaces?? {
+            guard let snapshot = fresh(at: now) else { return nil }
+            if let known = lists[uuid] { return known }
+            let built = snapshot.list(display: uuid)
+            lists[uuid] = .some(built)
+            return .some(built)
         }
     }
 
@@ -109,9 +119,12 @@ package enum Spaces {
         return read
     }
 
-    package static func recentSnapshot() -> Snapshot? {
+    package static func recentList(display uuid: String) -> DisplaySpaces? {
         let now = ProcessInfo.processInfo.systemUptime
-        return remembered.withLockUnchecked { $0.fresh(at: now) } ?? snapshot()
+        if let known = remembered.withLockUnchecked({ $0.list(display: uuid, at: now) }) { return known }
+        _ = snapshot()
+        guard let read = remembered.withLockUnchecked({ $0.list(display: uuid, at: now) }) else { return nil }
+        return read
     }
 
     package static func list(display uuid: String) -> DisplaySpaces? { snapshot()?.list(display: uuid) }

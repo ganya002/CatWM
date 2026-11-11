@@ -31,8 +31,14 @@ import Testing
         remembered.remember(Spaces.Snapshot(displays: [["Display Identifier": "left", "Spaces": [space(11)]]]), at: 100)
         #expect(remembered.fresh(at: 100 + Spaces.Remembered.maxAge / 2)?.list(display: "left")?.ids == [11])
         #expect(remembered.fresh(at: 100 + Spaces.Remembered.maxAge * 2) == nil)
-        remembered.remember(nil, at: 101)
-        #expect(remembered.fresh(at: 101) == nil)
+        #expect(remembered.list(display: "left", at: 100)??.ids == [11])
+        #expect(remembered.list(display: "other", at: 100)??.ids == [11])
+        #expect(remembered.list(display: "left", at: 100 + Spaces.Remembered.maxAge * 2) == nil)
+        remembered.remember(Spaces.Snapshot(displays: [["Display Identifier": "left", "Spaces": [space(12)]]]), at: 101)
+        #expect(remembered.list(display: "left", at: 101)??.ids == [12])
+        remembered.remember(nil, at: 102)
+        #expect(remembered.fresh(at: 102) == nil)
+        #expect(remembered.list(display: "left", at: 102) == nil)
     }
 
     @Test func keepsTheSingleDisplayIdentifierFallback() throws {
