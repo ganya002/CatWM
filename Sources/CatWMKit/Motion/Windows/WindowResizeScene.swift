@@ -7,12 +7,15 @@ package final class WindowResizeScene {
     }
 
     private struct Display {
-        package let panel: CatWMPanel
-        package let frame: CGRect
-        package let layers: [CGWindowID: CALayer]
-        package let mask: CAShapeLayer
+        let panel: CatWMPanel
+        let frame: CGRect
+        let layers: [CGWindowID: CALayer]
+        let native: [CGWindowID: NativeWindowBufferLayer]
+        let mask: CAShapeLayer
     }
     private var displays: [Display] = []
+    private let live: WindowLiveBuffers?
+    var usesLiveBuffers: Bool { live != nil }
     private var placements: [CGWindowID: WindowScenePlacement]
     package var onDismiss: (() -> Void)?
     package var onContentsUpdate: ((CGWindowID, CGImage) -> Void)?
@@ -22,7 +25,8 @@ package final class WindowResizeScene {
     package let ids: Set<CGWindowID>
     private let excluded: Set<CGWindowID>
 
-    package init(capture: WindowSceneCapture, frames: [CGWindowID: CGRect]) {
+    package init(capture: WindowSceneCapture, frames: [CGWindowID: CGRect], live: WindowLiveBuffers? = nil) {
+        self.live = live
         ids = Set(frames.keys)
         excluded = capture.excluded
         placements = frames.mapValues { WindowScenePlacement(frame: $0) }
@@ -30,6 +34,7 @@ package final class WindowResizeScene {
             guard let screen = display.screen.nsScreen else { continue }
             let panel = CatWMPanel(role: .overlay(.normal, clickThrough: true), frame: screen.frame)
             panel.collectionBehavior = [.stationary, .fullScreenAuxiliary, .ignoresCycle]
+            panel.animationBehavior = .none
             let view = SceneView(frame: CGRect(origin: .zero, size: screen.frame.size))
             let root = CALayer()
             root.isGeometryFlipped = true
@@ -46,8 +51,18 @@ package final class WindowResizeScene {
             view.wantsLayer = true
             panel.contentView = view
             var layers: [CGWindowID: CALayer] = [:]
+            var native: [CGWindowID: NativeWindowBufferLayer] = [:]
             for id in capture.order {
-                guard let image = capture.images[id], let frame = frames[id] else { continue }
+                guard let frame = frames[id] else { continue }
+                if let packet = live?.frame(id) {
+                    let buffer = NativeWindowBufferLayer()
+                    buffer.viewport(frame.offsetBy(dx: -display.screen.frame.minX, dy: -display.screen.frame.minY))
+                    buffer.present(packet)
+                    root.addSublayer(buffer.layer)
+                    native[id] = buffer
+                    continue
+                }
+                guard let image = capture.images[id] else { continue }
                 let layer = CALayer()
                 layer.contents = image
                 layer.contentsGravity = .resize
@@ -56,7 +71,8 @@ package final class WindowResizeScene {
                 root.addSublayer(layer)
                 layers[id] = layer
             }
-            displays.append(Display(panel: panel, frame: display.screen.frame, layers: layers, mask: mask))
+            displays.append(Display(panel: panel, frame: display.screen.frame,
+                                    layers: layers, native: native, mask: mask))
         }
         updateMasks()
     }
@@ -99,6 +115,7 @@ package final class WindowResizeScene {
         visible = true
         for display in displays { display.panel.orderFrontRegardless(); display.panel.displayIfNeeded() }
         CATransaction.flush()
+        live?.pace(active: true)
         let dismiss = DismissMonitor()
         dismiss.start(keeps: { _ in false }, screens: true, close: { [weak self] in self?.dismissed() })
         self.dismiss = dismiss
@@ -110,7 +127,9 @@ package final class WindowResizeScene {
         CATransaction.setDisableActions(true)
         for display in displays {
             for (id, frame) in frames {
-                display.layers[id]?.frame = frame.offsetBy(dx: -display.frame.minX, dy: -display.frame.minY)
+                let local = frame.offsetBy(dx: -display.frame.minX, dy: -display.frame.minY)
+                display.layers[id]?.frame = local
+                display.native[id]?.viewport(local)
             }
         }
         CATransaction.commit()
@@ -118,6 +137,16 @@ package final class WindowResizeScene {
     }
 
     private func refreshContents() {
+        if let live {
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            for id in ids {
+                guard let packet = live.frame(id) else { CATransaction.commit(); dismissed(); return }
+                for display in displays { display.native[id]?.present(packet) }
+            }
+            CATransaction.commit()
+            return
+        }
         for id in ids where capturing.insert(id).inserted {
             DispatchQueue.global(qos: .userInteractive).async { [weak self] in
                 let snapshot = WindowSceneCapture.windowImage(id)
@@ -150,8 +179,14 @@ package final class WindowResizeScene {
         onDismiss = nil
         onContentsUpdate = nil
         dismiss?.stop(); dismiss = nil
-        for display in displays { display.panel.orderOut(nil); display.panel.close() }
+        live?.pace(active: false)
+        for display in displays {
+            display.native.values.forEach { $0.close() }
+            display.panel.orderOut(nil)
+            display.panel.close()
+        }
         displays.removeAll()
+        CATransaction.flush()
     }
 
     deinit { close() }

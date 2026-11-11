@@ -5,6 +5,34 @@ import CatWMFakes
 import Testing
 
 struct WindowSceneCaptureTests {
+    @MainActor @Test func cancellingOneLiveParticipantKeepsTheOtherNativeTrajectory() throws {
+        let backend = FakeBackend()
+        let sources = [CGRect(x: 0, y: 38, width: 600, height: 400),
+                       CGRect(x: 610, y: 38, width: 600, height: 400)]
+        let windows = try sources.map { source in
+            let id = backend.addWindow(frame: source)
+            let window = Window(id: id, element: try #require(backend.element(id)), pid: -100,
+                                bundleID: nil, backend: backend)
+            window.remember(source)
+            return window
+        }
+        let frames = Dictionary(uniqueKeysWithValues: zip(windows.map(\.id), sources))
+        let capture = WindowSceneCapture(displays: [], images: [:], order: windows.map(\.id), excluded: [])
+        let scene = WindowResizeScene(capture: capture, frames: frames, live: WindowLiveBuffers())
+        let animator = Animator(backend: backend)
+        animator.makeResizeScene = { _ in scene }
+        defer { windows.forEach { animator.cancel($0.id) } }
+        let target = CGRect(x: 510, y: 38, width: 700, height: 400)
+        animator.animate([.init(window: windows[0], to: CGRect(x: 0, y: 38, width: 500, height: 400),
+                                bounds: sources[0]),
+                          .init(window: windows[1], to: target, bounds: target)], duration: 1)
+        #expect(scene.visible)
+        animator.cancel(windows[0].id)
+        #expect(!scene.visible)
+        #expect(!animator.isAnimating(windows[0].id))
+        #expect(animator.isMoving(windows[1].id, to: target))
+    }
+
     @MainActor @Test func anEmptyInstantBatchKeepsTheActiveResizeScene() throws {
         let backend = FakeBackend()
         let from = CGRect(x: 100, y: 100, width: 600, height: 400)

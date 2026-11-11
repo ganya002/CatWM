@@ -63,7 +63,8 @@ package struct WindowSceneCapture {
     }
 
     package static func take(
-        frames: [CGWindowID: CGRect], screens: [Screen], excluding excluded: Set<CGWindowID> = []
+        frames: [CGWindowID: CGRect], screens: [Screen], excluding excluded: Set<CGWindowID> = [],
+        includeWindowImages: Bool = true
     ) -> WindowSceneCapture? {
         guard !frames.isEmpty, CGPreflightScreenCaptureAccess(), let session, let capture, let readFrame,
               let ids = WindowServerList.onScreen(), frames.keys.allSatisfy(ids.contains),
@@ -93,25 +94,27 @@ package struct WindowSceneCapture {
             let region = sources.filter { $0.intersects(screen.frame) }.reduce(CGRect.null) { $0.union($1) }
             let results = OSAllocatedUnfairLock(initialState: [Int: CGImage]())
             let backgroundIDs = ids.filter { frames[$0] == nil && !excluded.contains($0) }
-            DispatchQueue.concurrentPerform(iterations: 2) { index in
-                if let captured = image(index == 0 ? ordered : backgroundIDs, in: index == 0 ? region : screen.frame) {
-                    results.withLock { $0[index] = captured }
+            DispatchQueue.concurrentPerform(iterations: includeWindowImages ? 2 : 1) { index in
+                let foreground = includeWindowImages && index == 0
+                if let captured = image(foreground ? ordered : backgroundIDs, in: foreground ? region : screen.frame) {
+                    results.withLock { $0[foreground ? 0 : 1] = captured }
                 }
             }
-            guard let foreground = results.withLock({ $0[0] }),
-                  let background = results.withLock({ $0[1] }) else { return nil }
-            let scaleX = CGFloat(foreground.width) / region.width
-            let scaleY = CGFloat(foreground.height) / region.height
-            for (id, frame) in frames where frame.intersects(screen.frame) {
-                let local = frame.offsetBy(dx: -region.minX, dy: -region.minY)
-                let pixels = CGRect(x: local.minX * scaleX, y: local.minY * scaleY,
-                                    width: local.width * scaleX, height: local.height * scaleY)
-                guard let cropped = foreground.cropping(to: pixels) else { return nil }
-                images[id] = cropped
+            guard let background = results.withLock({ $0[1] }) else { return nil }
+            if includeWindowImages, let foreground = results.withLock({ $0[0] }) {
+                let scaleX = CGFloat(foreground.width) / region.width
+                let scaleY = CGFloat(foreground.height) / region.height
+                for (id, frame) in frames where frame.intersects(screen.frame) {
+                    let local = frame.offsetBy(dx: -region.minX, dy: -region.minY)
+                    let pixels = CGRect(x: local.minX * scaleX, y: local.minY * scaleY,
+                                        width: local.width * scaleX, height: local.height * scaleY)
+                    guard let cropped = foreground.cropping(to: pixels) else { return nil }
+                    images[id] = cropped
+                }
             }
             displays.append(Display(screen: screen, background: background))
         }
-        guard images.count == frames.count, !displays.isEmpty, unchanged() else { return nil }
+        guard !includeWindowImages || images.count == frames.count, !displays.isEmpty, unchanged() else { return nil }
         return WindowSceneCapture(displays: displays, images: images, order: ordered.reversed(), excluded: excluded)
     }
     package static func windowImage(_ id: CGWindowID) -> (image: CGImage, frame: CGRect)? {

@@ -4,11 +4,16 @@ import QuartzCore
 
 struct AppSurface: TilingSurface {
     private let fills = WindowResizeFills()
+    private let liveBuffers = WindowLiveBuffers()
 
     func start(_ manager: WindowManager) {
         fills.excluded = { SplitHandle.shared.windowIDs }
         let landed = manager.animator.onLanded
-        manager.animator.onLanded = { [weak fills] in landed?(); fills?.refresh?() }
+        manager.animator.onLanded = { [weak fills, weak liveBuffers] in
+            landed?()
+            fills?.refresh?()
+            liveBuffers?.refresh?()
+        }
         Hotkeys.shared.onSubmapChange = { [weak manager] name in
             Log.debug("mode: \(name.isEmpty ? "reset" : name)")
             ModeFX.shared.setActive(!name.isEmpty)
@@ -42,13 +47,19 @@ struct AppSurface: TilingSurface {
     private func setResizeAnimation(_ mode: ResizeAnimation) {
         let manager = WindowManager.shared
         let animator = manager.animator
+        let streaming = liveBuffers.refresh != nil
         if mode != .colorFill, animator.windowPresentation != nil {
             animator.windowPresentation = nil
             fills.refresh = nil
             fills.close()
             Log.info("window-fill: color-only tiling disabled")
         }
-        if mode != .snapshot { animator.makeResizeScene = nil }
+        if mode != .stream, streaming {
+            liveBuffers.stop()
+            animator.makeResizeScene = nil
+            Log.info("live-window: native-size buffers disabled")
+        }
+        if mode != .snapshot, mode != .stream { animator.makeResizeScene = nil }
         switch mode {
         case .live:
             break
@@ -63,27 +74,74 @@ struct AppSurface: TilingSurface {
             Log.info("window-fill: color-only tiling enabled")
         case .snapshot:
             guard animator.makeResizeScene == nil else { return }
-            animator.makeResizeScene = { moves in
-                let screens = Screen.all()
-                guard moves.allSatisfy({ move in
-                    screens.contains { $0.frame.contains(move.target) && $0.frame.contains(move.window.cachedFrame) }
-                }) else { return nil }
-                let frames = Dictionary(moves.map { ($0.window.id, $0.from ?? $0.window.cachedFrame) },
-                                        uniquingKeysWith: { _, latest in latest })
-                let regions = moves.map { ($0.from ?? $0.window.cachedFrame).union($0.target) }
-                let excluded = SplitHandle.shared.windowIDs
-                guard WindowSceneCapture.canPresent(regions, participants: Set(frames.keys),
-                                                    excluding: excluded) else { return nil }
-                let started = CACurrentMediaTime()
-                guard let capture = WindowSceneCapture.take(frames: frames, screens: screens,
-                                                          excluding: excluded) else { return nil }
-                Log.debug(String(format: "window-scene: captured %d windows in %.1fms", frames.count,
-                                 (CACurrentMediaTime() - started) * 1000))
-                return WindowResizeScene(capture: capture, frames: frames)
+            startScenes(animator)
+        case .stream:
+            guard !streaming else { return }
+            startStreams(manager)
+            Log.info("live-window: native-size buffers enabled")
+        }
+    }
+
+    private func startStreams(_ manager: WindowManager) {
+        startScenes(manager.animator, live: liveBuffers)
+        liveBuffers.refresh = { [weak manager, weak liveBuffers] in
+            guard let manager, let liveBuffers, let order = WindowServerList.onScreen() else { return }
+            let screens = Screen.all()
+            let capacity = CGSize(width: screens.map(\.frame.width).max() ?? 1,
+                                  height: screens.map(\.frame.height).max() ?? 1)
+            let ids = Set(manager.windows.keys).intersection(order).filter {
+                manager.windows[$0]?.isFloating == false
             }
-            DispatchQueue.global(qos: .userInitiated).async {
-                Log.debug("window-scene: prewarm \(WindowSceneCapture.prepare())")
+            liveBuffers.warm(ids, capacity: capacity)
+            if ids.allSatisfy({ !manager.animator.isAnimating($0) }) {
+                let frames = Dictionary(uniqueKeysWithValues: ids.compactMap { id in
+                    WindowSceneCapture.currentFrame(id).map { (id, $0) }
+                })
+                liveBuffers.prepare(frames: frames, screens: screens, excluding: SplitHandle.shared.windowIDs)
             }
+        }
+        liveBuffers.refresh?()
+    }
+
+    private func startScenes(_ animator: Animator, live: WindowLiveBuffers? = nil) {
+        animator.makeResizeScene = { moves in
+            let screens = Screen.all()
+            guard moves.allSatisfy({ move in
+                screens.contains { $0.frame.contains(move.target) && $0.frame.contains(move.window.cachedFrame) }
+            }) else { return nil }
+            var frames = Dictionary(moves.map { ($0.window.id, $0.from ?? $0.window.cachedFrame) },
+                                    uniquingKeysWith: { _, latest in latest })
+            var prepared: WindowSceneCapture?
+            if let live {
+                guard let scene = live.capture(moving: frames) else {
+                    Log.debug("window-scene: live buffers or background not ready")
+                    return nil
+                }
+                prepared = scene.capture
+                frames = scene.frames
+            }
+            let moving = Set(moves.map(\.window.id))
+            let regions = moves.map { ($0.from ?? $0.window.cachedFrame).union($0.target) }
+                + frames.filter { !moving.contains($0.key) }.map(\.value)
+            let excluded = SplitHandle.shared.windowIDs
+            guard WindowSceneCapture.canPresent(regions, participants: Set(frames.keys),
+                                                excluding: excluded) else {
+                Log.debug("window-scene: obstructed; excluding \(excluded)")
+                return nil
+            }
+            if let prepared {
+                Log.debug("window-scene: live native buffers \(moving.count) of \(frames.count)")
+                return WindowResizeScene(capture: prepared, frames: frames, live: live)
+            }
+            let started = CACurrentMediaTime()
+            guard let capture = WindowSceneCapture.take(frames: frames, screens: screens,
+                                                      excluding: excluded) else { return nil }
+            Log.debug(String(format: "window-scene: captured %d windows in %.1fms", frames.count,
+                             (CACurrentMediaTime() - started) * 1000))
+            return WindowResizeScene(capture: capture, frames: frames)
+        }
+        DispatchQueue.global(qos: .userInitiated).async {
+            Log.debug("window-scene: prewarm \(WindowSceneCapture.prepare())")
         }
     }
 
@@ -134,6 +192,7 @@ struct AppSurface: TilingSurface {
     }
 
     func stop() {
+        liveBuffers.stop()
         Hotkeys.shared.stop()
         Notifications.shared.setEnabled(false)
         TabStrips.shared.update(instant: true)
@@ -141,6 +200,7 @@ struct AppSurface: TilingSurface {
 
     func tilesDidChange(instant: Bool) {
         fills.refresh?()
+        liveBuffers.refresh?()
         SplitHandle.shared.update(instant: instant)
         TabStrips.shared.update(instant: instant)
     }

@@ -292,8 +292,8 @@ export interface Config {
     key?: string
   }
   lab?: {
-    /** Resize animation. Color fills and snapshots keep slow apps smooth. Both need Screen Recording. Default: `live`. */
-    resizeAnimation?: "live" | "color-fill" | "snapshot"
+    /** Resize animation. Fills, snapshots and streams keep slow apps smooth. They need Screen Recording. Default: `live`. */
+    resizeAnimation?: "live" | "color-fill" | "snapshot" | "stream"
   }
   layoutHud?: {
     /** Show layout name on change. A short card in the middle of the screen. Default: `false`. */

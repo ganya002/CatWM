@@ -129,7 +129,10 @@ package final class Animator {
             } else {
                 items[id] = Item(move: move, from: from, start: now, spec: spec, velocity: velocity)
                 items[id]?.colorSizing = windowPresentation?.sizing(for: move, from: from, spec: spec)
-                if resizeScene?.visible == true { land(move) }
+                if resizeScene?.usesLiveBuffers == true {
+                    items[id]?.colorSizing = ColorFillSizing(source: from, target: move.target)
+                    resizeScene?.cover(id, to: move.target)
+                } else if resizeScene?.visible == true { land(move) }
             }
         }
         windowPresentation?.prepare(moves, spec: spec)
@@ -188,7 +191,7 @@ package final class Animator {
             if presentation - item.start >= item.duration {
                 items[id] = nil
                 land(item.move)
-            } else if resizeScene?.visible != true {
+            } else if resizeScene?.visible != true || resizeScene?.usesLiveBuffers == true {
                 writer(item.move.window.pid).step(item.move.window, notBefore: presentation,
                                                   releasesSpace: item.colorSizing?.releasesSpace == true) {
                     item.request(at: $0, presentedAt: presentation)
@@ -312,7 +315,7 @@ extension Animator {
 
     private func endResizeScene() {
         guard let scene = resizeScene else { return }
-        scene.ids.forEach { items[$0] = nil }
+        if !scene.usesLiveBuffers { scene.ids.forEach { items[$0] = nil } }
         scene.close()
         resizeScene = nil
     }
