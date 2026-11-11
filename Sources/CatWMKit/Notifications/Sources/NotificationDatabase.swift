@@ -57,7 +57,7 @@ import SQLite3
                 }
             }
         }
-        source.setCancelHandler { close(handle) }
+        source.setCancelHandler { @Sendable in close(handle) }
         source.resume()
         watcher = source
     }
