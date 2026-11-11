@@ -104,6 +104,19 @@ import Testing
         #expect(world.manager.windows[other]?.isFloating == false)
     }
 
+    @Test func aTitleChangeNotificationStartsARule() async throws {
+        let world = try makeWorld("catwm.windows({ app: \"\(app)\", title: /Settings/ }, (win) => { win.float() })")
+        let id = world.fake.addWindow(bundleID: app, title: "Document")
+        #expect(await world.fake.settle(world.manager))
+        let window = try #require(world.manager.windows[id])
+        #expect(!window.isFloating)
+
+        world.fake.setTitle(id, "Settings")
+        world.manager.titleChanged(try #require(world.fake.element(id)))
+
+        #expect(await world.fake.wait(world.manager) { window.isFloating })
+    }
+
     @Test func aThrowingKeyFunctionRunsNoActions() async throws {
         let world = try makeWorld(
             "catwm.bind([\"alt\"], \"c\", () => {",

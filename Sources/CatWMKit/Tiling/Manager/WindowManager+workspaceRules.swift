@@ -24,7 +24,12 @@ extension WindowManager {
 
     package func resolveWorkspaceConfigs(screens: [Screen]) {
         guard hasWorkspaceRules else {
-            if !workspaceConfigs.isEmpty { workspaceConfigs = [:] }
+            guard !workspaceConfigs.isEmpty else { return }
+            workspaceConfigs = [:]
+            for (workspace, state) in states where state.layouts != nil {
+                followRuleLayouts(config.layouts, on: workspace)
+                state.layouts = nil
+            }
             return
         }
         var resolved: [String: Config] = [:]
@@ -38,7 +43,8 @@ extension WindowManager {
     }
 
     private func followRuleLayouts(_ layouts: [Layout], on workspace: String) {
-        guard let state = states[workspace], let first = layouts.first else { return }
+        guard let first = layouts.first else { return }
+        let state = state(workspace: workspace)
         if state.layouts == nil { state.layouts = config.layouts }
         guard state.layouts != layouts else { return }
         state.layouts = layouts

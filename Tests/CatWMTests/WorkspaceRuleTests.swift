@@ -164,6 +164,37 @@ private struct RecordedBatch {
         #expect(world.manager.state(for: screen).layout == current)
     }
 
+    @Test func removingTheLastRuleRestoresTheLayout() async throws {
+        let rule = WorkspaceRule(when: .all([.compare(.windows, .atLeast, .int(2))]),
+                                 set: ["layouts": .array([.string("wide")])])
+        let world = makeWorld(rule: rule)
+        let screen = try #require(world.fake.screens().first)
+        world.fake.addWindow(pid: -100, bundleID: "test.app.a")
+        world.fake.addWindow(pid: -100, bundleID: "test.app.a")
+        #expect(await world.fake.settle(world.manager))
+        #expect(world.manager.state(for: screen).layout == .wide)
+
+        var config = world.manager.config
+        config.workspaceRules = []
+        world.manager.apply(config, showHUD: false)
+
+        #expect(await world.fake.wait(world.manager) {
+            world.manager.state(for: screen).layout == world.manager.config.layouts.first
+        })
+    }
+
+    @Test func aRuleCannotMatchLayoutAndSetLayouts() throws {
+        let folder = try ConfigFolder(["catwm.config.ts": catwmConfig(
+            "catwm.workspaces({ layout: \"bsp\" }, () => { catwm.layouts = [\"wide\"] })")])
+        defer { folder.remove() }
+        let value = try #require(ConfigEngine(entry: folder.entry).run().value)
+        var config = Config()
+        let diagnostics = ConfigScript.read(value, into: &config, file: folder.entry.path)
+
+        #expect(config.workspaceRules.isEmpty)
+        #expect(diagnostics.contains { $0.message.contains("back and forth") })
+    }
+
     @Test func aNameMatchesTheWorkspaceLabel() throws {
         let config = try rules("catwm.workspaces({ name: \"Mail\" }, () => { catwm.gaps.size = 4 })")
         var labelled = facts()

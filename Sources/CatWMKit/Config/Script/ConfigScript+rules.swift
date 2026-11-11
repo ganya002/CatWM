@@ -81,6 +81,10 @@ extension ConfigScript.Reader {
                 continue
             }
             guard let condition = condition(match, Self.workspaceFields, name: name) else { continue }
+            if let layout = match["layout"], let layouts = set["layouts"]?.array, !layouts.contains(layout) {
+                fail("", "\(name) matches a layout that its `layouts` leaves out, so it would switch back and forth")
+                continue
+            }
             let before = diagnostics.count
             for path in set.keys.sorted() {
                 guard let leaf = ConfigScript.leaves[path] else {
