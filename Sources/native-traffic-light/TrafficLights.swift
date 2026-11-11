@@ -251,7 +251,7 @@ public final class TrafficLights: NSView {
 }
 
 private func onMain<T: Sendable>(_ body: @MainActor () -> T) -> T {
-    MainActor.assumeIsolated(body)
+    MainActor.assumeIsolated(body) // style-ok: AppKit calls the accessibility getters on the main thread
 }
 
 final class LightElement: NSAccessibilityElement {
