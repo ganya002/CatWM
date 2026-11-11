@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Measure CPU and memory, check each P99 against Tools/Perf/budgets.json and write a Markdown table.
 
+The caps are for the device in budgets.json. A fixed benchmark (CatWMPerf calibrate) measures how fast
+this machine is next to that device, and each CPU time in ms is scaled to that device before the check,
+so a faster or slower runner needs no new caps.
+
 Run `swift build -c release` and `CATWM_INSTANCE=perf ./build.sh` first. Each engine scenario runs
 in a new CatWMPerf process. The app scenario starts build/CatWM.app as the named instance `perf`,
 scoped to this process, so it manages no window. The exit status is 1 when a value is over its cap.
@@ -23,7 +27,7 @@ ROOT = Path(__file__).resolve().parent.parent
 PERF = ROOT / ".build/release/CatWMPerf"
 APP = ROOT / "build/CatWM.app/Contents/MacOS/CatWM"
 BUDGETS = ROOT / "Tools/Perf/budgets.json"
-ENGINE_SCENARIOS = ["engine-idle", "engine-tile", "engine-actions", "config-load"]
+ENGINE_SCENARIOS = ["calibrate", "engine-idle", "engine-tile", "engine-actions", "config-load"]
 APP_LAUNCH_SECONDS, APP_IDLE_SECONDS = 5, 20
 
 libc = ctypes.CDLL(None)
@@ -84,6 +88,12 @@ def run_app():
     return samples
 
 
+def machine():
+    def read(key):
+        return subprocess.run(["sysctl", "-n", key], capture_output=True, text=True).stdout.strip()
+    return f"{read('machdep.cpu.brand_string')}, {read('hw.ncpu')} cores, {int(read('hw.memsize')) // 2**30} GB"
+
+
 def percentile(values, share):
     ordered = sorted(values)
     return ordered[max(0, math.ceil(share * len(ordered)) - 1)]
@@ -99,10 +109,14 @@ def number(value):
     return f"{value:,.0f}" if abs(value) >= 100 else f"{value:.2f}" if abs(value) >= 1 else f"{value:.3f}"
 
 
-def report(samples, budgets):
+def report(samples, budgets, runner):
+    device = budgets["device"]
+    speed = device["calibrate"] / statistics.median(samples["calibrate.cpu"])
     tables, failed = {}, []
-    for metric, budget in budgets.items():
+    for metric, budget in budgets["rows"].items():
         values = samples.get(metric)
+        if values and budget["unit"] == "ms":
+            values = [value * speed for value in values]
         row = stats(values) if values else None
         ok = row is not None and row["p99"] <= budget["cap"]
         if not ok:
@@ -112,10 +126,10 @@ def report(samples, budgets):
             cells = f"{number(row['median'])} | {number(row['mean'])} | {p99}"
         else:
             cells = "| | **none**"
-        cap = number(budget["cap"]) if budget["cap"] >= 1 else f"{budget['cap']:g}"
         tables.setdefault(budget["group"], []).append(
-            f"| {budget['label']} | {cells} | ≤ {cap} {budget['unit']} | {'✅' if ok else '❌'} |")
-    lines = ["### ✅ Performance" if not failed else f"### ❌ Performance: {len(failed)} over the cap"]
+            f"| {budget['label']} | {cells} | ≤ {budget['cap']:,g} {budget['unit']} | {'✅' if ok else '❌'} |")
+    note = f"(as an {device['name']} · runner: {runner}, speed {speed:.2f}×)"
+    lines = [f"### ✅ Performance {note}" if not failed else f"### ❌ Performance: {len(failed)} over the cap {note}"]
     for group, rows in tables.items():
         lines += ["", f"| {group} | Median | Mean | P99 | Cap | |", "|:--|:--|:--|:--|:--|:--|", *rows]
     return "\n".join([*lines, ""]), failed
@@ -131,7 +145,7 @@ def main():
 
     budgets = json.loads(BUDGETS.read_text())
     if args.skip_app:
-        budgets = {key: value for key, value in budgets.items() if not key.startswith("app.")}
+        budgets["rows"] = {key: value for key, value in budgets["rows"].items() if not key.startswith("app.")}
     samples = {}
     for run in range(args.runs):
         for scenario in ENGINE_SCENARIOS:
@@ -142,7 +156,7 @@ def main():
                 samples.setdefault(metric, []).extend(values)
         print(f"perf: run {run + 1} of {args.runs} done", file=sys.stderr)
 
-    table, failed = report(samples, budgets)
+    table, failed = report(samples, budgets, machine())
     print(table)
     if args.out:
         args.out.write_text(table)

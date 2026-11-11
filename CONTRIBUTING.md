@@ -96,7 +96,7 @@ CATWM_INSTANCE=perf ./build.sh
 python3 Tools/perf.py
 ```
 
-`Tools/Perf/budgets.json` holds one cap for each row. A row whose P99 is over its cap shows ❌ and fails the check. Lower a cap when you make something faster.
+`Tools/Perf/budgets.json` holds one cap for each row. The caps are for the slowest Mac that runs the newest macOS, the M1 MacBook Air. A fixed benchmark (`CatWMPerf calibrate`) measures the speed of the runner next to that Mac, and each CPU time is scaled to the M1 before the check. A faster runner needs no new caps. The M1 reference in `budgets.json` is the M4 result times 1.59, the Geekbench 6 single-core ratio. Wakeup and memory caps do not depend on the CPU. A row whose P99 is over its cap shows ❌ and fails the check. Lower a cap when you make something faster.
 
 ## Releasing
 

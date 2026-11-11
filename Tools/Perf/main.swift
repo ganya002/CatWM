@@ -57,6 +57,7 @@ struct Usage {
         case "engine-tile": await engineTile()
         case "engine-actions": await engineActions()
         case "config-load": try configLoad()
+        case "calibrate": calibrate()
         default: fail("unknown scenario \(name)")
         }
     }
@@ -128,6 +129,24 @@ struct Usage {
             let reloaded = store.reload(.changed)
             record("config.reload.cpu", Usage.now().cpu - start)
             guard reloaded.windowMarginSize == CGFloat(gaps) else { fail("the config did not reload") }
+        }
+    }
+
+    private func calibrate() {
+        for _ in 0..<9 {
+            let start = Usage.now().cpu
+            var seed: UInt64 = 42
+            var values: [UInt64] = []
+            var counts: [UInt64: Int] = [:]
+            for _ in 0..<300_000 {
+                seed = seed &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
+                values.append(seed >> 33)
+                counts[seed % 4096, default: 0] += 1
+            }
+            values.sort()
+            let text = values.prefix(20_000).map(String.init).joined(separator: ",")
+            guard counts.count == 4096, !text.isEmpty else { fail("the calibration did not run") }
+            record("calibrate.cpu", Usage.now().cpu - start)
         }
     }
 
