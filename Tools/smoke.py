@@ -163,12 +163,18 @@ class Smoke:
                 if path.name.startswith("CatWM") and path.stat().st_mtime >= self.started]
 
     def wait(self, check, message, timeout=15):
+        if not self.poll(check, message, timeout):
+            raise Failure(f"timed out after {timeout} s waiting for {message}")
+
+    def poll(self, check, message, timeout):
+        """Return whether `check` passed within `timeout`, and check CatWM's health while waiting."""
         deadline = time.monotonic() + timeout
         while not check():
             if time.monotonic() > deadline:
-                raise Failure(f"timed out after {timeout} s waiting for {message}")
+                return False
             self.check(message)
             time.sleep(0.2)
+        return True
 
     def settle(self, timeout=5):
         """Wait until the window frames stop changing. Not a failure when they never do."""
@@ -370,10 +376,15 @@ def workspaces(smoke):
     else:
         status = smoke.call("status")
         print(f"smoke: key tap {status['keybindsActive']}, Input Monitoring {status['inputMonitoring']}", flush=True)
-        smoke.keys(("2", ["control"]))
-        # A key press that CatWM never sees would pass every check below without testing anything.
-        smoke.wait(lambda: smoke.call("status")["screens"][0]["workspace"].endswith("/2"),
-                   "ctrl-2 to show workspace 2 through the key tap")
+        # A key press that CatWM never sees would pass every check below without testing anything. The window
+        # server sometimes drops a synthetic press, so a few tries tell that apart from a dead key tap.
+        message = "ctrl-2 to show workspace 2 through the key tap"
+        for _ in range(3):
+            smoke.keys(("2", ["control"]))
+            if smoke.poll(lambda: smoke.call("status")["screens"][0]["workspace"].endswith("/2"), message, 5):
+                break
+        else:
+            raise Failure(f"timed out after 3 presses waiting for {message}")
         smoke.keys(("1", ["control"]))
         smoke.keys(("right", ["control"]), ("left", ["control"]))
         smoke.keys(("h", ["option", "control"]), ("l", ["option", "control"]))
