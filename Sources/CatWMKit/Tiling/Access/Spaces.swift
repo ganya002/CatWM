@@ -1,5 +1,6 @@
 import AppKit
 import ApplicationServices
+import os
 
 package enum Spaces {
     package static var canMoveWindows: Bool {
@@ -79,10 +80,38 @@ package enum Spaces {
         }
     }
 
+    package struct Remembered {
+        package static let maxAge: TimeInterval = 0.1
+        private var held: Snapshot?
+        private var readAt: TimeInterval = 0
+
+        package mutating func remember(_ snapshot: Snapshot?, at now: TimeInterval) {
+            held = snapshot
+            readAt = now
+        }
+
+        package func fresh(at now: TimeInterval) -> Snapshot? {
+            now - readAt < Self.maxAge ? held : nil
+        }
+    }
+
+    private static let remembered = OSAllocatedUnfairLock(uncheckedState: Remembered())
+
     package static func snapshot() -> Snapshot? {
-        guard let conn, let copySpaces,
-              let arr = copySpaces(conn())?.takeRetainedValue() as? [[String: Any]] else { return nil }
-        return Snapshot(displays: arr)
+        let read: Snapshot?
+        if let conn, let copySpaces, let arr = copySpaces(conn())?.takeRetainedValue() as? [[String: Any]] {
+            read = Snapshot(displays: arr)
+        } else {
+            read = nil
+        }
+        let now = ProcessInfo.processInfo.systemUptime
+        remembered.withLockUnchecked { $0.remember(read, at: now) }
+        return read
+    }
+
+    package static func recentSnapshot() -> Snapshot? {
+        let now = ProcessInfo.processInfo.systemUptime
+        return remembered.withLockUnchecked { $0.fresh(at: now) } ?? snapshot()
     }
 
     package static func list(display uuid: String) -> DisplaySpaces? { snapshot()?.list(display: uuid) }

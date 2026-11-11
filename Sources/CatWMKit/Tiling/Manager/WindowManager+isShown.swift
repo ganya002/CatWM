@@ -137,10 +137,11 @@ extension WindowManager {
         defer { timing.finish() }
         if config.virtualWorkspaces { return syncNativeWorkspaces(screens: screens, present: present) }
         let held = desktops.movingToSpace || NSEvent.pressedMouseButtons & 1 != 0
+        let spaces = Spaces.recentSnapshot()
         let observation = WorkspaceObservation(
             displays: screens.map {
                 .init(id: $0.uuid, frame: $0.frame, space: backend.currentSpace(display: $0.uuid),
-                      spaces: Set(Spaces.list(display: $0.uuid)?.ids ?? []))
+                      spaces: Set(spaces?.list(display: $0.uuid)?.ids ?? []))
             },
             frames: windows.mapValues(\.cachedFrame), present: present,
             held: held ? present : nativeMoves.movingIDs.union(present.filter { animator.isBusy($0) }),
