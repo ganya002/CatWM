@@ -224,8 +224,9 @@ class Smoke:
         helper = self.desk / "smoke-keys"
         if not helper.exists():
             subprocess.run(["swiftc", "-O", str(ROOT / "Tools/smoke-keys.swift"), "-o", str(helper)], check=True)
-        arguments = ["+".join([str(KEYS[key]), *mods]) for key, mods in strokes]
-        subprocess.run([str(helper), *arguments], check=True, timeout=HANG_SECONDS)
+        # One process per stroke: events posted back to back can reach the tap before it reads the last one.
+        for key, mods in strokes:
+            subprocess.run([str(helper), "+".join([str(KEYS[key]), *mods])], check=True, timeout=HANG_SECONDS)
         self.steps += 1
         self.check(f"keys {strokes}")
 
