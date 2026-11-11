@@ -201,7 +201,7 @@ export interface Config {
   binds?: readonly Bind[]
   /** Quick actions at the pointer. In window mode, tap the mode's modifier to save or open a workspace template. Default: `true`. */
   cursorActions?: boolean
-  /** Verbose log; prefer `--verbose`. Default: `false`. */
+  /** Verbose logging. Writes every step to the log. Default: `false`. */
   debugLogging?: boolean
   features?: {
     input?: {
@@ -291,6 +291,10 @@ export interface Config {
     /** Toggles the keyboard help in window mode. Default: `?`. */
     key?: string
   }
+  lab?: {
+    /** Resize animation. Color fills and snapshots keep slow apps smooth. Both need Screen Recording. Default: `live`. */
+    resizeAnimation?: "live" | "color-fill" | "snapshot"
+  }
   layoutHud?: {
     /** Show layout name on change. A short card in the middle of the screen. Default: `false`. */
     enabled?: boolean
@@ -328,7 +332,7 @@ export interface Config {
   }
   /** Panel animation. How Overview and keyboard help come and go. Default: `rise`. */
   panelAnimation?: "rise" | "pop" | "focus" | "tile" | "draw"
-  /** Sends repeated slow animations and hangs (numbers and app bundle IDs only) to the developers. Default: `false`. */
+  /** Send performance reports. Repeated slow animations and hangs. Numbers and app IDs only. Default: `false`. */
   perfReports?: boolean
   /** Main pane resize step. How much the split moves each time. Default: `5`. */
   resizeStep?: number

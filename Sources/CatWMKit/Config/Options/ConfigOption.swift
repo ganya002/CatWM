@@ -181,6 +181,7 @@ extension Pane {
         case .motion: "Feel"
         case .templates: "Saved templates"
         case .shortcuts: "Keyboard"
+        case .lab: "Experiments"
         }
     }
 }

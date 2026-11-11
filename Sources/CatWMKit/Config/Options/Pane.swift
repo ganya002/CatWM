@@ -2,7 +2,7 @@ import Foundation
 
 package enum Pane: String, CaseIterable, Identifiable {
     case general = "General", layout = "Layout", windows = "Windows", motion = "Motion", templates = "Templates"
-    case shortcuts = "Shortcuts"
+    case shortcuts = "Shortcuts", lab = "Lab"
     package var id: Self { self }
 
     package var icon: String {
@@ -13,6 +13,7 @@ package enum Pane: String, CaseIterable, Identifiable {
         case .motion: "wand.and.stars"
         case .templates: "rectangle.3.group"
         case .shortcuts: "keyboard"
+        case .lab: "flask"
         }
     }
 }
