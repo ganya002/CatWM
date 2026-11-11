@@ -366,7 +366,12 @@ def workspaces(smoke):
     if smoke.scoped:
         print("smoke: --scoped reads no key presses, so the key steps are skipped", flush=True)
     else:
+        status = smoke.call("status")
+        print(f"smoke: key tap {status['keybindsActive']}, Input Monitoring {status['inputMonitoring']}", flush=True)
         smoke.keys(("2", ["control"]))
+        # A key press that CatWM never sees would pass every check below without testing anything.
+        smoke.wait(lambda: smoke.call("status")["screens"][0]["workspace"].endswith("/2"),
+                   "ctrl-2 to show workspace 2 through the key tap")
         smoke.keys(("1", ["control"]))
         smoke.keys(("right", ["control"]), ("left", ["control"]))
         smoke.keys(("h", ["option", "control"]), ("l", ["option", "control"]))
