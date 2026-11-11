@@ -27,7 +27,7 @@ CatWM is an engine with no GUI, wrapped by an app that draws. Other Mac apps can
 ## Docs
 
 - Before you change an area, read its doc in `docs/`. Use the words defined in `docs/internals/vocabulary.md`.
-- When a large feature adds or reshapes an area, write or update its doc in `docs/internals/` in the same change. The code shows what it does, so the doc records why: each architectural decision, the alternative you rejected and the constraint that decided it.
+- When a large feature adds or reshapes an area, write or update its doc in `docs/internals/` in the same change. The code shows what it does, so the doc records why: each architectural decision, the alternative you rejected and the constraint that decided it. Leave out how-to steps, code tours, test results and dated verification runs. Recipes belong in a skill.
 - Keep docs tight. State each fact once, in the doc that owns it, and delete what has gone stale in the same change that made it stale.
 
 ## Checks

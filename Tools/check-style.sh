@@ -58,6 +58,8 @@ AX_APP = re.compile(r"\bAXUIElementCreateApplication\(")
 AX_APP_OWNER = "Sources/CatWMKit/Session/AX/AXRead.swift"
 SYSTEM_LOG = re.compile(r"\bNSLog\(|^\s*print\(")
 SYSTEM_LOG_ALLOW = ("Sources/CatWM/main.swift",)
+INTERNALS = "docs/internals"
+RECIPE_HEADING = re.compile(r"^#+ +(?:Add|How to|Write|Repeat|Check|Run|Verify|Test)s?\b", re.I)
 IGNORED_WRITE = re.compile(r"^\s*try\? .*\.(?:write|moveItem|copyItem|replaceItem)\(")
 IGNORED_WRITE_ALLOW = ("Sources/CatWMKit/App/Log.swift",)
 FIXED_DELAY = re.compile(r"\basyncAfter\(|\bTask\.sleep\(|\bThread\.sleep\(|\busleep\(")
@@ -307,6 +309,12 @@ def main():
             failures.extend(catalog_violations(path, handle.read()))
         with open(os.path.join(ROOT, path), encoding="utf-8") as handle:
             failures.extend(line_failures(path, handle.read()))
+    for name in sorted(os.listdir(os.path.join(ROOT, INTERNALS))):
+        path = INTERNALS + "/" + name
+        with open(os.path.join(ROOT, path), encoding="utf-8") as handle:
+            for number, line in enumerate(handle, 1):
+                if RECIPE_HEADING.match(line):
+                    failures.append((path, number, "docs: docs/internals records architecture and why, not steps. Delete the recipe, or put it in a skill under .agents/skills/", line.strip()))
     import importlib.util
     spec = importlib.util.spec_from_file_location("catalog_generator", os.path.join(ROOT, "Tools/generate-catalogs.py"))
     generator = importlib.util.module_from_spec(spec)
