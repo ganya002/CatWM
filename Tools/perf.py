@@ -5,9 +5,9 @@ The caps are for the device in budgets.json. A fixed benchmark (CatWMPerf calibr
 this machine is next to that device, and each CPU time in ms is scaled to that device before the check,
 so a faster or slower runner needs no new caps.
 
-Run `swift build -c release` and `CATWM_INSTANCE=perf ./build.sh` first. Each engine scenario runs
-in a new CatWMPerf process. The app scenario starts build/CatWM.app as the named instance `perf`,
-scoped to this process, so it manages no window. The exit status is 1 when a value is over its cap.
+Run `swift build -c release` and `CATWM_INSTANCE=perf ./build.sh` first. The runs go in parallel.
+Each engine scenario runs in a new CatWMPerf process. The app scenario starts build/CatWM.app as the
+named instance `perf-<run>`, scoped to this process, so it manages no window. The exit status is 1 when a value is over its cap.
 
     python3 Tools/perf.py [--runs N] [--out report.md] [--json samples.json]
 """
@@ -21,6 +21,7 @@ import statistics
 import subprocess
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -61,8 +62,8 @@ def run_engine(scenario):
     return json.loads(result.stdout)
 
 
-def run_app():
-    env = {**os.environ, "CATWM_INSTANCE": "perf", "CATWM_SCOPE": f"pids:{os.getpid()}"}
+def run_app(run):
+    env = {**os.environ, "CATWM_INSTANCE": f"perf-{run}", "CATWM_SCOPE": f"pids:{os.getpid()}"}
     process = subprocess.Popen([str(APP)], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     samples = {}
     try:
@@ -146,15 +147,19 @@ def main():
     budgets = json.loads(BUDGETS.read_text())
     if args.skip_app:
         budgets["rows"] = {key: value for key, value in budgets["rows"].items() if not key.startswith("app.")}
-    samples = {}
-    for run in range(args.runs):
-        for scenario in ENGINE_SCENARIOS:
-            for metric, values in run_engine(scenario).items():
-                samples.setdefault(metric, []).extend(values)
+    def run(number):
+        results = [run_engine(scenario) for scenario in ENGINE_SCENARIOS]
         if not args.skip_app:
-            for metric, values in run_app().items():
-                samples.setdefault(metric, []).extend(values)
-        print(f"perf: run {run + 1} of {args.runs} done", file=sys.stderr)
+            results.append(run_app(number))
+        print(f"perf: run {number} done", file=sys.stderr)
+        return results
+
+    samples = {}
+    with ThreadPoolExecutor(max_workers=args.runs) as pool:
+        for results in pool.map(run, range(1, args.runs + 1)):
+            for result in results:
+                for metric, values in result.items():
+                    samples.setdefault(metric, []).extend(values)
 
     table, failed = report(samples, budgets, machine())
     print(table)
