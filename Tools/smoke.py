@@ -28,6 +28,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "Clients/python"))
 from catwm import CatWM, CatWMError  # noqa: E402
+from catwm.testing import Events, wait_until  # noqa: E402
 
 APP = ROOT / "build/CatWM.app/Contents/MacOS/CatWM"
 INSTANCE = "smoke"
@@ -164,18 +165,14 @@ class Smoke:
                 if path.name.startswith("CatWM") and path.stat().st_mtime >= self.started]
 
     def wait(self, check, message, timeout=15):
-        if not self.poll(check, message, timeout):
-            raise Failure(f"timed out after {timeout} s waiting for {message}")
-
-    def poll(self, check, message, timeout):
-        """Return whether `check` passed within `timeout`, and check CatWM's health while waiting."""
-        deadline = time.monotonic() + timeout
-        while not check():
-            if time.monotonic() > deadline:
-                return False
+        """Wait for `check`, and check that CatWM is healthy on each try."""
+        def healthy():
             self.check(message)
-            time.sleep(0.2)
-        return True
+            return check()
+        try:
+            wait_until(healthy, timeout, interval=0.2, message=message)
+        except TimeoutError as error:
+            raise Failure(str(error)) from None
 
     def settle(self, timeout=5):
         """Wait until the window frames stop changing. Not a failure when they never do."""
@@ -339,9 +336,10 @@ def workspaces(smoke):
 
     for target in ["2", "3", "1", "previous", "+1", "-1", "e+1", "name:smoke", "1"]:
         smoke.run("workspace", target)
-    smoke.run("workspace", "2")
-    if not smoke.scoped:
-        smoke.wait(lambda: smoke.call("status")["screens"][0]["workspace"].endswith("/2"), "workspace 2 to show")
+    with Events("workspace.changed") as events:
+        smoke.run("workspace", "2")
+        if not smoke.scoped:
+            events.wait("workspace.changed", timeout=15, where=lambda data: data["workspace"].endswith("/2"))
     smoke.run("workspace", "1")
     smoke.focus_test_window()
     smoke.run("movetoworkspace", "2")
@@ -379,9 +377,13 @@ def workspaces(smoke):
         print(f"smoke: key tap {status['keybindsActive']}, Input Monitoring {status['inputMonitoring']}", flush=True)
         # The VM's window server drops synthetic presses in some runs, so a press that never lands is a warning.
         for _ in range(3):
-            smoke.keys(("2", ["control"]))
-            if smoke.poll(lambda: smoke.call("status")["screens"][0]["workspace"].endswith("/2"), "ctrl-2", 5):
-                break
+            with Events("workspace.changed") as events:
+                smoke.keys(("2", ["control"]))
+                try:
+                    events.wait("workspace.changed", timeout=5, where=lambda data: data["workspace"].endswith("/2"))
+                    break
+                except TimeoutError:
+                    pass
         else:
             smoke.warnings.append("No key press reached CatWM's key tap, so the key steps tested nothing.")
         smoke.keys(("1", ["control"]))
@@ -407,9 +409,7 @@ def app(smoke):
     smoke.wait_for_windows(first, 3)
     smoke.focus_test_window()
 
-    events = []
-    listener = threading.Thread(target=listen, args=(events,), daemon=True)
-    listener.start()
+    events = Events()
 
     for option in smoke.call("config.options"):
         for value in alternates(option):
@@ -453,8 +453,10 @@ def app(smoke):
     for name, style in [("modefx", "all"), ("panelfx", "all")]:
         smoke.step(f"{name} {style}", name, {"style": style})
     smoke.settle()
-    if not listener.is_alive() or not events:
-        raise Failure("the event connection stopped, or no event arrived")
+    received = events.drain()
+    events.close()
+    if not received:
+        raise Failure("no event arrived on the event connection")
 
     smoke.stop()
     smoke.start()
@@ -482,11 +484,6 @@ def alternates(option):
     if kind in ("number", "milliseconds"):
         return [str(float(value or 0) + 1).removesuffix(".0")]
     return []
-
-
-def listen(events):
-    for event in CatWM.events():
-        events.append(event["event"])
 
 
 SUITES = {"windows": windows, "workspaces": workspaces, "app": app}
