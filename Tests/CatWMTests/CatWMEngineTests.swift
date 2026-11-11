@@ -8,15 +8,13 @@ import Testing
     let home = URL(fileURLWithPath: "/tmp/cw-\(UUID().uuidString.prefix(6))")
     let fake = FakeBackend()
 
-    static let tiling = """
-        export default {
-          features: { windows: { tiling: true } },
-          animation: { enabled: false },
-          gaps: { enabled: false },
-          padding: 0,
-          focus: { mouseFollowsFocus: false, followsMouse: false },
-        }
-        """
+    static let tiling = catwmConfig(
+        "catwm.features.windows.tiling = true",
+        "catwm.motion.enabled = false",
+        "catwm.gaps.enabled = false",
+        "catwm.padding = 0",
+        "catwm.focus = { mouseFollowsFocus: false, followsMouse: false }"
+    )
 
     func makeEngine(granted: Set<Permission> = [.accessibility]) throws -> CatWMEngine {
         let paths = try #require(InstancePaths(id: "embed-test", home: home))
@@ -37,7 +35,7 @@ import Testing
         let engine = try makeEngine()
         let window = fake.addWindow(frame: CGRect(x: 10, y: 10, width: 300, height: 200))
         _ = fake.addScreen()
-        try engine.start(config: .text("export default {}"))
+        try engine.start(config: .text(""))
         let snapshot = engine.snapshot()
         #expect(snapshot.isRunning)
         #expect(!snapshot.isTiling)
@@ -64,26 +62,26 @@ import Testing
 
     @Test func aSecondStartFails() async throws {
         let engine = try makeEngine()
-        try engine.start(config: .text("export default {}"))
-        #expect(throws: CatWMEngine.EngineError.alreadyRunning) { try engine.start(config: .text("export default {}")) }
+        try engine.start(config: .text(""))
+        #expect(throws: CatWMEngine.EngineError.alreadyRunning) { try engine.start(config: .text("")) }
         let other = try makeEngine()
-        #expect(throws: CatWMEngine.EngineError.alreadyRunning) { try other.start(config: .text("export default {}")) }
+        #expect(throws: CatWMEngine.EngineError.alreadyRunning) { try other.start(config: .text("")) }
         await cleanUp(engine)
     }
 
     @Test func aSecondEngineLeavesTheRunningOneInPlace() async throws {
         let engine = try makeEngine()
-        try engine.start(config: .text("export default {}"))
+        try engine.start(config: .text(""))
         let running = WindowManager.shared
         let other = try makeEngine()
-        #expect(throws: CatWMEngine.EngineError.alreadyRunning) { try other.start(config: .text("export default {}")) }
+        #expect(throws: CatWMEngine.EngineError.alreadyRunning) { try other.start(config: .text("")) }
         #expect(WindowManager.shared === running)
         await cleanUp(engine)
     }
 
     @Test func tilingWaitsForAccessibility() async throws {
         let engine = try makeEngine(granted: [])
-        try engine.start(config: .text("export default {}"))
+        try engine.start(config: .text(""))
         try engine.setOption("features.windows.tiling", to: true)
         #expect(engine.snapshot().features == ["features.windows.tiling"])
         #expect(!engine.snapshot().isTiling)
@@ -120,7 +118,7 @@ import Testing
     @Test func aBrokenConfigFailsTheStart() async throws {
         let engine = try makeEngine()
         #expect {
-            try engine.start(config: .text("export default { features: { windows: { tiling: true } }, gaps: 4 }"))
+            try engine.start(config: .text(catwmConfig("catwm.features.windows.tiling = true", "catwm.gaps = 4")))
         } throws: { error in
             guard case .config(let problems) = error as? CatWMEngine.EngineError else { return false }
             return problems.first?.message.contains("`gaps`") == true
@@ -128,14 +126,14 @@ import Testing
         #expect(!engine.isRunning)
         #expect(!engine.snapshot().isTiling)
         #expect(engine.snapshot().diagnostics.first?.message.contains("`gaps`") == true)
-        try engine.start(config: .text("export default {}"))
+        try engine.start(config: .text(""))
         await cleanUp(engine)
     }
 
     @Test func presentationIsNotAvailable() async throws {
         let engine = try makeEngine()
         #expect {
-            try engine.start(config: .text("export default { features: { presentation: { hud: true } } }"))
+            try engine.start(config: .text(catwmConfig("catwm.features.presentation.hud = true")))
         } throws: { error in
             guard case .config(let problems) = error as? CatWMEngine.EngineError else { return false }
             return problems.contains { $0.message.contains("isn't available in embedded mode") }
@@ -146,9 +144,9 @@ import Testing
 
     @Test func eventsReportConfigChanges() async throws {
         let engine = try makeEngine()
-        try engine.start(config: .text("export default { gaps: { size: 4 } }"))
+        try engine.start(config: .text(catwmConfig("catwm.gaps.size = 4")))
         let events = engine.events()
-        try engine.replaceConfig("export default { gaps: { size: 5 } }")
+        try engine.replaceConfig(catwmConfig("catwm.gaps.size = 5"))
         var iterator = events.makeAsyncIterator()
         let event = await iterator.next()
         #expect(event?.name == "config.reloaded")
@@ -189,14 +187,14 @@ import Testing
 
     @Test func theSocketFeatureListensOnTheEnginePath() async throws {
         let engine = try makeEngine()
-        try engine.start(config: .text("export default { features: { services: { socket: true } } }"))
+        try engine.start(config: .text(catwmConfig("catwm.features.services.socket = true")))
         #expect(FileManager.default.fileExists(atPath: socket))
         await cleanUp(engine)
     }
 
     @Test func snapshotReportsThePermissions() async throws {
         let engine = try makeEngine(granted: [.accessibility, .screenRecording])
-        try engine.start(config: .text("export default {}"))
+        try engine.start(config: .text(""))
         #expect(engine.snapshot().permissions == ["accessibility": true, "inputMonitoring": false,
                                                   "screenRecording": true, "fullDiskAccess": false])
         await cleanUp(engine)

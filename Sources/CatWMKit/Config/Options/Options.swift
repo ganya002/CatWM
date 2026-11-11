@@ -7,26 +7,26 @@ package enum Options {
             .setting(.windows, "windows.floatingMode", "Apps in the list",
                      keywords: "floating apps float exclude blacklist whitelist tile only", section: "Floating"),
 
-        .bool("window-margins", \.windowMargins).script("gaps.enabled")
+        .bool("window-margins", \.windowMargins).script("gaps.enabled").scoped()
             .documented("bool", "gaps between windows")
             .section("gaps")
             .note("Hyprland names also work: gaps_in = per-window gap, gaps_out = screen padding.")
             .setting(.layout, "layout.gaps", "Gaps between windows", keywords: "margin spacing"),
-        .points("window-margin-size", \.windowMarginSize, valid: 0...100).script("gaps.size")
+        .points("window-margin-size", \.windowMarginSize, valid: 0...100).script("gaps.size").scoped()
             .documented("0–100 points", "`gaps_in` is accepted and doubled")
             .setting(.layout, "layout.gapSize", "Gap size", keywords: "margin spacing points", range: 0...60,
                      enabled: { $0.windowMargins }, width: 180),
-        .bool("smart-window-margins", \.smartWindowMargins).script("gaps.smart")
+        .bool("smart-window-margins", \.smartWindowMargins).script("gaps.smart").scoped()
             .documented("bool", "no gaps with a single window").aliases("smart-gaps")
             .setting(.layout, "layout.smartGaps", "Smart gaps", help: "No gaps when a window is alone",
                      keywords: "single window no gaps", enabled: { $0.windowMargins }),
-        .points("screen-padding-left", \.paddingLeft, valid: 0...500).script("padding.left")
+        .points("screen-padding-left", \.paddingLeft, valid: 0...500).script("padding.left").scoped()
             .documented("0–500 points", "`screen-padding` or `gaps_out` sets all four sides"),
-        .points("screen-padding-right", \.paddingRight, valid: 0...500).script("padding.right")
+        .points("screen-padding-right", \.paddingRight, valid: 0...500).script("padding.right").scoped()
             .documented("0–500 points", ""),
-        .points("screen-padding-top", \.paddingTop, valid: 0...500).script("padding.top")
+        .points("screen-padding-top", \.paddingTop, valid: 0...500).script("padding.top").scoped()
             .documented("0–500 points", ""),
-        .points("screen-padding-bottom", \.paddingBottom, valid: 0...500).script("padding.bottom")
+        .points("screen-padding-bottom", \.paddingBottom, valid: 0...500).script("padding.bottom").scoped()
             .documented("0–500 points", ""),
         .bool("disable-padding-on-builtin-display", \.disablePaddingOnBuiltinDisplay)
             .script("noPaddingOnBuiltinDisplay")
@@ -77,7 +77,7 @@ package enum Options {
             .setting(.windows, "windows.tabNotificationBadges", "Show notification badges on tabs",
                      help: "A tab shows the unread count of its app or window",
                      keywords: "tabs unread count badge notification dock red", section: "Tab groups"),
-        .bool("new-windows-to-main", \.newWindowsToMain).script("newWindowsToMain")
+        .bool("new-windows-to-main", \.newWindowsToMain).script("newWindowsToMain").scoped()
             .documented("bool", "").aliases("new_is_master")
             .setting(.windows, "windows.newMain", "New windows become main", keywords: "open", advanced: true,
                      section: "Windows"),
@@ -175,7 +175,7 @@ package enum Options {
             .setting(.windows, "windows.switcherExclude", "Apps the switcher hides",
                      keywords: "switcher exclude hide ignore apps bundle", section: "Switcher"),
 
-        .bool("animate", \.animate).script("animation.enabled")
+        .bool("animate", \.animate).script("motion.enabled").scoped()
             .documented("bool", "`animations { enabled = … }` also works").aliases("animations").animation()
             .section("animation")
             .note("These also set how windows slide when you switch workspaces.")
@@ -183,7 +183,7 @@ package enum Options {
                      keywords: "animation off motion"),
         .number("animation-duration", \.animationDuration, valid: 0...5, convert: { $0 > 5 ? $0 / 1000 : $0 },
                 make: { $0 }, text: { String(format: "%g", ($0 * 1000).rounded() / 1000) }, number: { $0 })
-            .script("animation.duration")
+            .script("motion.duration").scoped()
             .documented("seconds, or ms if above 5", "").animation()
             .note("Seconds; a value above 5 is read as milliseconds.")
             .setting(.motion, "motion.duration", "Duration", keywords: "speed time milliseconds animation",
@@ -195,8 +195,9 @@ package enum Options {
             }
             return (curve, nil)
         }, text: { $0.name })
-            .script("animation.curve", type: AnimationCurve.named.map { "\"\($0.name)\"" }.joined(separator: " | ")
+            .script("motion.curve", type: AnimationCurve.named.map { "\"\($0.name)\"" }.joined(separator: " | ")
                 + " | `cubic-bezier(${number}, ${number}, ${number}, ${number})`")
+            .scoped()
             .documented("`ease-out` `ease-in-out` `linear` `spring` `bounce` `overshoot` "
                             + "`cubic-bezier(x1, y1, x2, y2)`", "").animation()
             .note("ease-out, ease-in-out, linear, spring, bounce, overshoot or cubic-bezier(x1, y1, x2, y2)\n"
@@ -205,7 +206,8 @@ package enum Options {
                      keywords: "easing ease spring bounce overshoot linear", advanced: true, section: "Curve",
                      enabled: { $0.animate }),
         .number("animation-bounce", \.animationBounce, valid: 0...1, convert: { $0 > 1 ? $0 / 100 : $0 }, make: { $0 },
-                text: { String(format: "%g", ($0 * 100).rounded() / 100) }, number: { $0 }).script("animation.bounce")
+                text: { String(format: "%g", ($0 * 100).rounded() / 100) }, number: { $0 })
+                .script("motion.bounce").scoped()
             .documented("0–1 (or 0–100)", "liveliness of spring/bounce/overshoot").animation()
             .note("How lively spring, bounce and overshoot are, 0-1.")
             .setting(.motion, "motion.bounce", "Bounciness",
@@ -213,7 +215,7 @@ package enum Options {
                      keywords: "spring overshoot", advanced: true, range: 0...1, section: "Curve",
                      enabled: { $0.animate && $0.animationCurve.usesBounce }),
 
-        .choice("panel-animation", \.panelAnimation, noun: "panel animation").script("panelAnimation")
+        .choice("panel-animation", \.panelAnimation, noun: "panel animation").script("motion.panels")
             .documented(nil, "how Overview and keyboard help come and go; `tile` follows the animation curve; "
                             + "`catwm panelfx <style>` previews")
             .section("panels and window mode")
@@ -221,7 +223,7 @@ package enum Options {
             .setting(.motion, "motion.panels", "Panel animation", help: "How Overview and keyboard help come and go",
                      keywords: "overview sort windows keyboard help rise pop focus tile draw open appear",
                      advanced: true, section: "Panels and window mode"),
-        .choice("mode-effect", \.modeEffect, noun: "mode effect").script("modeEffect")
+        .choice("mode-effect", \.modeEffect, noun: "mode effect").script("motion.modeEffect")
             .documented(nil, "visual while window mode is on; `catwm modefx <style>` previews")
             .note("The screen-edge effect while window mode is on: draw, ripple, corners or none.")
             .setting(.motion, "motion.modeEffect", "Window mode effect",

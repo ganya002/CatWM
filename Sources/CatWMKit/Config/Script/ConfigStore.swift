@@ -19,6 +19,7 @@ import os
     var heldOverrides: [String: JSON] = [:]
     package private(set) var source = Source.script
     package private(set) var isLoaded = false
+    var conversionFailure: ConfigDiagnostic?
     package private(set) var base = Config()
     package private(set) var current = Config()
     package private(set) var failures: [ConfigDiagnostic] = []
@@ -45,7 +46,7 @@ import os
     package func load() -> Config {
         isLoaded = true
         if embedded {
-            publish(evaluate(.all), notify: false)
+            publish(evaluate(), notify: false)
             return current
         }
         Log.attempt("create config folder") {
@@ -58,23 +59,23 @@ import os
         }
         source = .script
         writeTypes()
-        publish(evaluate(.all), notify: false)
+        publish(evaluate(), notify: false, extra: conversionFailure.map { [$0] } ?? [])
         return current
     }
 
     private func makeEngine() -> ConfigEngine {
         let scriptPath = scriptURL.path
         let baseline = baseline, embedded = embedded
-        return ConfigEngine(entry: scriptURL) { value in
+        return ConfigEngine(entry: scriptURL, baseline: baseline) { value in
             var config = baseline
             return ConfigScript.read(value, into: &config, file: scriptPath, embedded: embedded)
         }
     }
 
-    private func evaluate(_ pass: ConfigEngine.Pass) -> ConfigEngine.Run {
+    private func evaluate() -> ConfigEngine.Run {
         let engine = engine ?? makeEngine()
         self.engine = engine
-        return engine.run(pass, timeout: Self.timeLimit) ?? stuck(engine)
+        return engine.run(timeout: Self.timeLimit) ?? stuck(engine)
     }
 
     private func stuck(_ engine: ConfigEngine) -> ConfigEngine.Run {
@@ -85,10 +86,19 @@ import os
                                                                          message: message)], isStuck: true)
     }
 
-    package func reload(_ pass: ConfigEngine.Pass) -> Config {
+    package func call(function: Int, window: ConfigEngine.WindowSnapshot,
+                      then finish: @escaping @MainActor (ConfigEngine.FunctionRun) -> Void) {
+        guard let engine else {
+            let failure = ConfigDiagnostic(file: scriptURL.path, phase: .evaluate, message: "the config isn't loaded")
+            return finish(ConfigEngine.FunctionRun(failure: failure))
+        }
+        engine.call(function: function, window: window) { run in DispatchQueue.main.async { finish(run) } }
+    }
+
+    package func reload() -> Config {
         guard isLoaded else { return load() }
         guard source == .script else { return loadConf() }
-        publish(evaluate(pass), notify: false)
+        publish(evaluate(), notify: false)
         return current
     }
 
@@ -108,7 +118,7 @@ import os
         self.entry = entry
         engine = nil
         files = []
-        return reload(.all)
+        return reload()
     }
 
     package func stopWatching() {
@@ -137,7 +147,7 @@ import os
         let engine = engine ?? makeEngine()
         self.engine = engine
         let finished = OSAllocatedUnfairLock(initialState: false)
-        engine.run(.changed) { [weak self] run in
+        engine.run { [weak self] run in
             DispatchQueue.main.async { [weak self] in
                 finished.withLock { $0 = true }
                 guard let self, self.engine === engine else { return }
@@ -150,9 +160,9 @@ import os
         }
     }
 
-    private func publish(_ run: ConfigEngine.Run, notify: Bool) {
+    private func publish(_ run: ConfigEngine.Run, notify: Bool, extra: [ConfigDiagnostic] = []) {
         if !run.files.isEmpty { files = run.files }
-        var failures = run.failures
+        var failures = extra + run.failures
         var base = baseline
         if let value = run.value {
             _ = ConfigScript.read(value, into: &base, file: scriptURL.path, embedded: embedded)
@@ -182,15 +192,11 @@ import os
         self.failures = failures
         self.base = base
         self.current = current
-        let names = run.ran.map { URL(fileURLWithPath: $0).lastPathComponent }
         let time = String(format: "%.1f ms", run.milliseconds)
         if let failure = failures.first {
             Log.info("config: kept the last good config, \(failure.phase.rawValue) failed: \(failure.text) (\(time))")
-        } else if names.isEmpty {
-            Log.debug("config: no module changed (\(time))")
         } else {
-            let count = "\(names.count) of \(files.count) modules"
-            Log.info("config: ran \(names.joined(separator: ", ")) (\(count)) in \(time)")
+            Log.info("config: ran \(files.count) modules in \(time)")
         }
         watcher?.watch(folders)
         guard notify else { return }
@@ -218,16 +224,22 @@ extension ConfigStore {
     }
 
     private func migrate(_ conf: String) -> ConfigDiagnostic? {
-        let fail = { (reason: String) in
-            ConfigDiagnostic(file: self.confURL.path, phase: .migrate,
-                             message: "CatWM couldn't convert catwm.conf to \(Self.scriptName), so it still uses "
-                                + "catwm.conf: \(reason)")
-        }
         let source = ConfigMigration.typescript(from: conf, header: [
             "// CatWM config, converted from catwm.conf.",
             "// catwm.conf stays next to it as a backup that CatWM no longer reads.",
             "// Types and completion come from catwm.d.ts. Save the file and CatWM applies the change."
         ])
+        var parsed = Config.parse(conf)
+        parsed.bindings.removeAll { !Actions.dispatchers.contains($0.dispatcher) }
+        return install(source, matching: parsed) { reason in
+            ConfigDiagnostic(file: self.confURL.path, phase: .migrate,
+                             message: "CatWM couldn't convert catwm.conf to \(Self.scriptName), so it still uses "
+                                + "catwm.conf: \(reason)")
+        }
+    }
+
+    func install(_ source: String, matching expected: Config, backup: URL? = nil,
+                 fail: (String) -> ConfigDiagnostic) -> ConfigDiagnostic? {
         let trial = folder.appendingPathComponent(".catwm.config.converting.ts")
         defer {
             if FileManager.default.fileExists(atPath: trial.path) {
@@ -239,7 +251,7 @@ extension ConfigStore {
         } catch {
             return fail(error.localizedDescription)
         }
-        guard let run = ConfigEngine(entry: trial).run(.all, timeout: Self.timeLimit) else {
+        guard let run = ConfigEngine(entry: trial).run(timeout: Self.timeLimit) else {
             return fail("the converted config didn't finish")
         }
         if let failure = run.failures.first { return fail(failure.message) }
@@ -247,12 +259,15 @@ extension ConfigStore {
         if let problem = run.value.map({ ConfigScript.read($0, into: &config, file: nil) })?.first {
             return fail(problem.message)
         }
-        var parsed = Config.parse(conf)
-        parsed.bindings.removeAll { !Actions.dispatchers.contains($0.dispatcher) }
-        let changes = config.changes(from: parsed)
+        let changes = config.changes(from: expected)
         if !changes.isEmpty { return fail("the result differs in \(changes.sorted().joined(separator: ", "))") }
         do {
-            try FileManager.default.moveItem(at: trial, to: scriptURL)
+            if let backup {
+                try FileManager.default.copyItem(at: scriptURL, to: backup)
+                _ = try FileManager.default.replaceItemAt(scriptURL, withItemAt: trial)
+            } else {
+                try FileManager.default.moveItem(at: trial, to: scriptURL)
+            }
         } catch {
             return fail(error.localizedDescription)
         }

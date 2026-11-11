@@ -35,7 +35,7 @@ extension WindowManager {
         drag.position = position
         dividerState.dividerDrag = drag
         let screenState = state(for: screen), ids = splitIDs(on: screen)
-        let wanted = divider.ratio(at: position, in: usableRect(screen), gap: windowGap(count: ids.count))
+        let wanted = divider.ratio(at: position, in: usableRect(screen), gap: windowGap(count: ids.count, on: screen))
         let ratio = allowedRatio(from: drag.startRatio, to: wanted, ids: ids, on: screen, screenState)
         guard abs(ratio - screenState.ratio) > 0.0005 else { return }
         screenState.ratio = ratio

@@ -68,27 +68,18 @@ extension WindowManager {
         }
         current.state.ratio = ratio
         corrections = [:]
-        dividerState.ratioChange = (current.screen.uuid, Date() + (config.animate ? config.animationDuration : 0) + 0.6)
+        dividerState.ratioChange = (current.screen.uuid, Date() + motion(on: current.screen).duration + 0.6)
         refresh()
     }
 
     package func toggleFloating() {
         guard let window = focusedWindow() else { return }
-        window.userFloating = .chosen(!window.isFloating)
-        floats.floatZoom[window.id] = nil
-        if window.isFloating {
-            targets[window.id] = nil
-        } else {
-            if let screen = screen(containing: window.cachedFrame) {
-                assignManagedWindow(window.id, to: shown[screen.uuid])
-            }
-            corrections[window.id] = nil
-        }
-        refresh()
+        setFloating(!window.isFloating, for: window)
     }
 
-    package func toggleZoom() {
-        guard let current = context(), let window = current.window else { return }
+    package func toggleZoom(of target: Window? = nil) {
+        guard let window = target ?? focusedWindow(), let screen = screen(of: window) ?? currentScreen() else { return }
+        let current = TilingContext(window: window, screen: screen, state: state(for: screen), ids: tiled(on: screen))
         if floatsFreely(window.id) { return toggleFloatZoom(window) }
         guard current.ids.contains(window.id) else { return }
         tilingRecovery.zoomed[workspaceKey(for: current.screen)] = nil
@@ -109,8 +100,7 @@ extension WindowManager {
             target = fill
         }
         animator.animate([.init(window: window, to: target, bounds: screen.visible)],
-                         duration: config.animate ? config.animationDuration : 0,
-                         curve: config.animationCurve, bounce: config.animationBounce)
+                         spec: motion(of: window))
         focus(window, warp: false)
     }
 
@@ -149,8 +139,9 @@ extension WindowManager {
     }
 
     package func cycleLayout(_ delta: Int) {
-        guard let current = context(), !config.layouts.isEmpty else { return }
-        let layouts = config.layouts
+        guard let current = context() else { return }
+        let layouts = config(on: current.screen).layouts
+        guard !layouts.isEmpty else { return }
         let layout = current.state.layout
         let i = layouts.firstIndex(of: layout) ?? layout.mirrored.flatMap { layouts.firstIndex(of: $0) }
             ?? (delta > 0 ? -1 : 0)

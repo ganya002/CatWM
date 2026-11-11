@@ -25,11 +25,16 @@ extension ConfigScript {
 
     package static func keyName(_ code: UInt16) -> String? { keyNames.first { keyCodes[$0] == code } }
 
+    private static func runJSON(_ binding: KeyBinding) -> JSON {
+        if let function = binding.function { return .object(["function": .int(function)]) }
+        return binding.arg.isEmpty
+            ? .string(binding.dispatcher) : .array([.string(binding.dispatcher), .string(binding.arg)])
+    }
+
     package static func json(_ binding: KeyBinding) -> JSON {
         var bind: [String: JSON] = [
             "key": .string(keyName(binding.keyCode) ?? "\(binding.keyCode)"),
-            "run": binding.arg.isEmpty
-                ? .string(binding.dispatcher) : .array([.string(binding.dispatcher), .string(binding.arg)])
+            "run": runJSON(binding)
         ]
         let mods = modNames(binding.mods)
         if !mods.isEmpty { bind["mods"] = .array(mods.map(JSON.string)) }

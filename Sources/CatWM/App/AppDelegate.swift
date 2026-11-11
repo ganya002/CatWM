@@ -21,6 +21,7 @@ import CatWMKit
         if !Instance.isNamed { Updater.shared.start() }
         CrashWatch.start()
         PerfMonitor.shared.start()
+        ConfigStore.shared.convertLegacyConfig()
         WindowManager.shared.surface = AppSurface()
         WindowManager.shared.onChange = { [weak self] in
             self?.scheduleStatusUpdate()

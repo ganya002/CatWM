@@ -8,6 +8,23 @@ package enum ConfigMigration {
         for line in text.components(separatedBy: .newlines) { reader.read(line) }
         return reader.render(header: header)
     }
+
+    package static func typescript(from value: [String: JSON], header: [String]) -> String {
+        var reader = MigrationReader(Config())
+        reader.read(value)
+        return reader.render(header: header)
+    }
+
+    package static func renamed(_ value: [String: JSON]) -> [String: JSON] {
+        var value = value
+        let groupsFirst = ConfigScript.renamed.filter { !$0.key.contains(".") }
+            .sorted { ($0.value.split(separator: ".").count, $0.key) < ($1.value.split(separator: ".").count, $1.key) }
+        for (old, new) in groupsFirst {
+            guard let moved = value.removeValue(forKey: old) else { continue }
+            ConfigScript.set(moved, at: new, in: &value)
+        }
+        return value
+    }
 }
 
 private struct MigrationVariable {
@@ -17,21 +34,10 @@ private struct MigrationVariable {
     package let mods: [String]?
 }
 
-private indirect enum MigrationEntry {
-    case leaf(key: String, value: String, comments: [String])
-    case group(key: String, entries: [MigrationEntry], comments: [String])
-
-    package var key: String {
-        switch self {
-        case .leaf(let key, _, _), .group(let key, _, _): key
-        }
-    }
-}
-
 private struct MigrationBind {
     package let submap: String
     package let comments: [String]
-    package let objects: [String]
+    package let calls: [String]
 }
 
 private struct MigrationReader {
@@ -44,6 +50,7 @@ private struct MigrationReader {
     package var blocks: [String] = []
     package var resolved: [(String, String)] = []
     package var variableComments: [String: [String]] = [:]
+    package var given: [String: JSON] = [:]
 
     package init(_ parsed: Config) { self.parsed = parsed }
 }
@@ -101,7 +108,7 @@ extension MigrationReader {
         case "floating": "floating.apps"
         case "gaps_in": "gaps.size"
         case "screen_padding", "gaps_out": "padding"
-        case "enabled", "animations": "animation.enabled"
+        case "enabled", "animations": "motion.enabled"
         default: ConfigOption.named(key)?.script
         }
     }
@@ -163,21 +170,52 @@ extension MigrationReader {
               case .success(let pairs) = BindRange.pairs(key: row.key, dispatcher: row.dispatcher, arg: row.args)
         else { return }
         guard Actions.dispatchers.contains(row.dispatcher) else { return unknown(line, "unknown action") }
-        let mods = modsLiteral(raw.mods)
         let repeats = ["binde", "bindel", "bindle"].contains(kind)
-        let objects = pairs.map { pair in
-            var fields: [String] = []
-            if let mods { fields.append("mods: \(mods)") }
-            let key = pair.key.lowercased()
-            fields.append("key: " + ConfigScript.quoted(ConfigScript.keyAliases[key] ?? key))
+        let calls = pairs.map { pair in
             let arg = pairs.count == 1 ? argLiteral(raw: raw.args, expanded: pair.arg) : ConfigScript.quoted(pair.arg)
-            fields.append("run: " + (pair.arg.isEmpty
-                ? ConfigScript.quoted(row.dispatcher) : "[\(ConfigScript.quoted(row.dispatcher)), \(arg)]"))
-            if repeats { fields.append("repeat: true") }
-            return "{ " + fields.joined(separator: ", ") + " }"
+            let run = pair.arg.isEmpty
+                ? ConfigScript.quoted(row.dispatcher) : "[\(ConfigScript.quoted(row.dispatcher)), \(arg)]"
+            return Self.call(mods: modsLiteral(raw.mods) ?? "[]", key: pair.key, run: run, submap: submap,
+                             repeats: repeats)
         }
-        binds.append(MigrationBind(submap: submap, comments: comments + comment, objects: objects))
+        binds.append(MigrationBind(submap: submap, comments: comments + comment, calls: calls))
         comments = []
+    }
+
+    private static func call(mods: String, key: String, run: String, submap: String, repeats: Bool) -> String {
+        let options = (submap.isEmpty ? [] : ["submap: " + ConfigScript.quoted(submap)])
+            + (repeats ? ["repeat: true"] : [])
+        let tail = options.isEmpty ? "" : ", { " + options.joined(separator: ", ") + " }"
+        let key = key.lowercased()
+        let name = ConfigScript.quoted(ConfigScript.keyAliases[key] ?? key)
+        return "catwm.bind(\(mods), \(name), " + run + tail + ")"
+    }
+
+    package mutating func read(_ object: [String: JSON]) {
+        for path in ConfigScript.paths(object) {
+            switch path {
+            case "binds": binds(object[path]?.array ?? [], submap: "")
+            case "submaps":
+                let modes = object[path]?.object ?? [:]
+                for name in modes.keys.sorted() { binds(modes[name]?.array ?? [], submap: name) }
+            default:
+                let json = path.split(separator: ".").reduce(JSON.object(object)) { $0.object?[String($1)] ?? .null }
+                given[path] = json
+                paths.append((path, []))
+            }
+        }
+    }
+
+    private mutating func binds(_ list: [JSON], submap: String) {
+        let calls = list.compactMap { item -> String? in
+            guard let bind = item.object, let key = bind["key"]?.string, let run = bind["run"] else { return nil }
+            let mods = (bind["mods"]?.array ?? bind["mods"].map { [$0] } ?? []).compactMap(\.string)
+            let action = run.array.map { "[" + $0.map { ConfigScript.literal($0) }.joined(separator: ", ") + "]" }
+                ?? ConfigScript.literal(run)
+            return Self.call(mods: ConfigScript.literal(.array(mods.map(JSON.string))), key: key, run: action,
+                             submap: submap, repeats: bind["repeat"] == .bool(true))
+        }
+        self.binds.append(MigrationBind(submap: submap, comments: [], calls: calls))
     }
 
     private func modsLiteral(_ text: String) -> String? {
@@ -209,7 +247,7 @@ extension MigrationReader {
     }
 
     package func render(header: [String]) -> String {
-        var out = header + ["import type { Config } from \"./catwm\"", ""]
+        var out = header + ["import { catwm } from \"./catwm\"", ""]
         for variable in variables {
             out += variableComments[variable.identifier] ?? []
             let value = variable.mods.map { mods in
@@ -219,36 +257,30 @@ extension MigrationReader {
             out.append("const \(variable.identifier) = \(value)")
         }
         if !variables.isEmpty { out.append("") }
-        out.append("export default {")
-        var entries: [MigrationEntry] = []
         if let first = variables.first(where: { $0.name.lowercased().contains("mod") && $0.mods != nil }),
            let mod = variables.last(where: { $0.name == first.name && $0.mods != nil }) {
-            entries.append(.leaf(key: "mod", value: mod.identifier, comments: []))
+            out.append("catwm.mod = \(mod.identifier)")
         }
         let split = paths.contains { $0.path.hasPrefix("padding.") }
         for (path, comments) in paths {
             if path == "padding", split {
                 let sides = ["left", "right", "top", "bottom"]
                 for side in sides where !paths.contains(where: { $0.path == "padding." + side }) {
-                    insert("padding." + side, comments: side == "left" ? comments : [], into: &entries)
+                    out += setter("padding." + side, comments: side == "left" ? comments : [])
                 }
             } else {
-                insert(path, comments: comments, into: &entries)
+                out += setter(path, comments: comments)
             }
         }
-        out += lines(entries, indent: 2)
-        for (index, submap) in ([""] + submapNames).enumerated() {
-            let rows = binds.filter { $0.submap == submap }
-            let pad = submap.isEmpty ? "    " : "      "
-            if index == 1 { out.append("  submaps: {") }
-            out.append(submap.isEmpty ? "  binds: [" : "    \(ConfigScript.property(submap)): [")
-            for bind in rows { out += bind.comments.map { pad + $0 } + bind.objects.map { pad + $0 + "," } }
-            out.append(submap.isEmpty ? "  ]," : "    ],")
+        for submap in [""] + submapNames {
+            for bind in binds.filter({ $0.submap == submap }) { out += bind.comments + bind.calls }
         }
-        if !submapNames.isEmpty { out.append("  },") }
-        out += comments.map { "  " + $0 }
-        out.append("} satisfies Config")
+        out += comments
         return out.joined(separator: "\n") + "\n"
+    }
+
+    private func setter(_ path: String, comments: [String]) -> [String] {
+        comments + ["catwm.\(path) = " + ConfigScript.literal(value(path))]
     }
 
     private var submapNames: [String] {
@@ -258,6 +290,7 @@ extension MigrationReader {
     }
 
     private func value(_ path: String) -> JSON {
+        if let json = given[path] { return json }
         switch path {
         case "layouts": return .array(parsed.layouts.map { .string($0.rawValue) })
         case "floating.apps": return .array(parsed.floating.map(JSON.string))
@@ -272,43 +305,6 @@ extension MigrationReader {
         default:
             guard let option = Options.all.first(where: { $0.script == path }) else { return .null }
             return ConfigScript.json(option, in: parsed)
-        }
-    }
-
-    private func insert(_ path: String, comments: [String], into entries: inout [MigrationEntry]) {
-        insert(path.split(separator: ".").map(String.init), full: path, comments: comments, into: &entries)
-    }
-
-    private func insert(_ parts: [String], full: String, comments: [String], into entries: inout [MigrationEntry]) {
-        guard let first = parts.first else { return }
-        guard parts.count > 1 else {
-            let depth = full.split(separator: ".").count * 2
-            let literal = ConfigScript.literal(value(full), indent: depth)
-            entries.append(.leaf(key: first, value: literal, comments: comments))
-            return
-        }
-        if let index = entries.firstIndex(where: { $0.key == first }),
-           case .group(let key, var children, let groupComments) = entries[index] {
-            insert(Array(parts.dropFirst()), full: full, comments: comments, into: &children)
-            entries[index] = .group(key: key, entries: children, comments: groupComments)
-        } else {
-            var children: [MigrationEntry] = []
-            insert(Array(parts.dropFirst()), full: full, comments: comments, into: &children)
-            entries.append(.group(key: first, entries: children, comments: []))
-        }
-    }
-
-    private func lines(_ entries: [MigrationEntry], indent: Int) -> [String] {
-        let pad = String(repeating: " ", count: indent)
-        return entries.flatMap { entry -> [String] in
-            switch entry {
-            case .leaf(let key, let value, let comments):
-                let line = key == value ? key : "\(ConfigScript.property(key)): \(value)"
-                return comments.map { pad + $0 } + [pad + line + ","]
-            case .group(let key, let children, let comments):
-                return comments.map { pad + $0 } + [pad + ConfigScript.property(key) + ": {"]
-                    + lines(children, indent: indent + 2) + [pad + "},"]
-            }
         }
     }
 }

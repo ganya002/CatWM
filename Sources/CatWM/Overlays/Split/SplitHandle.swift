@@ -10,8 +10,7 @@ import SwiftUI
 
     func update(instant: Bool = false) {
         let manager = WindowManager.shared
-        let animate = !instant && manager.config.animate
-            && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         var shown = Set<String>()
         let screens = Screen.all()
         let present = Set(screens.map(\.uuid))
@@ -24,8 +23,8 @@ import SwiftUI
             shown.insert(screen.uuid)
             let handle = handles[screen.uuid] ?? Handle(screen: screen.uuid)
             handles[screen.uuid] = handle
-            handle.show(divider, duration: animate ? manager.config.animationDuration : 0,
-                        above: manager.splitIDs(on: screen))
+            let spec = manager.motion(on: screen)
+            handle.show(divider, spec: instant || reduceMotion ? .instant : spec, above: manager.splitIDs(on: screen))
         }
         for (uuid, handle) in handles where !shown.contains(uuid) { handle.hide() }
     }
@@ -48,16 +47,14 @@ import SwiftUI
             panel.contentView = view
         }
 
-        func show(_ divider: SplitDivider, duration: Double, above tiled: [CGWindowID]) {
+        func show(_ divider: SplitDivider, spec: MotionSpec, above tiled: [CGWindowID]) {
             view.divider = divider
             if view.model.vertical != divider.vertical { view.model.vertical = divider.vertical }
             let frame = Self.frame(for: divider)
             defer { stack(above: tiled) }
             guard frame != target || !panel.isVisible else { return }
             target = frame
-            if panel.isVisible, duration > 0, !view.model.dragging {
-                var spec = MotionSpec(WindowManager.shared.config)
-                spec.duration = duration
+            if panel.isVisible, spec.duration > 0, !view.model.dragging {
                 glide.to(frame, on: panel, spec: spec)
             } else {
                 glide.stop()

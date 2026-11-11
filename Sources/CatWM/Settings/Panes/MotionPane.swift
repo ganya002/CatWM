@@ -10,41 +10,15 @@ struct MotionPane: View {
         DemoApp.all.filter { !$0.dark }.randomElement() ?? DemoApp.all[0]
     ].shuffled()
 
-    struct Preset {
-        let name: String
-        var animate = true
-        var curve: AnimationCurve = .easeOut
-        var duration = 0.2
-        var bounce = 0.5
-    }
-
-    static let presets: [Preset] = [
-        Preset(name: "None", animate: false),
-        Preset(name: "Snappy", duration: 0.12),
-        Preset(name: "Relaxed", curve: .easeInOut, duration: 0.35)
-    ]
-
-    private func matches(_ preset: Preset, _ config: Config) -> Bool {
-        guard preset.animate else { return !config.animate }
-        return config.animate && config.animationCurve == preset.curve
-            && abs(config.animationDuration - preset.duration) < 0.005
-            && (!preset.curve.usesBounce || abs(config.animationBounce - preset.bounce) < 0.005)
-    }
-
     var body: some View {
         let config = doc.config
         VStack(alignment: .leading, spacing: Theme.Space.xxl) {
             OGroup("Style") {
                 HStack(spacing: 12) {
                     VStack(spacing: 8) {
-                        ForEach(Self.presets, id: \.name) { preset in
-                            PresetTile(preset: preset, selected: matches(preset, config)) {
-                                doc.config.animate = preset.animate
-                                if preset.animate {
-                                    doc.config.animationCurve = preset.curve
-                                    doc.config.animationDuration = preset.duration
-                                    if preset.curve.usesBounce { doc.config.animationBounce = preset.bounce }
-                                }
+                        ForEach(MotionStyle.all, id: \.name) { style in
+                            PresetTile(preset: style, selected: style.matches(config)) {
+                                style.apply(to: &doc.config)
                                 play()
                             }
                         }

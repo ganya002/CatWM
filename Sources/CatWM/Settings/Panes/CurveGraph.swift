@@ -39,7 +39,7 @@ struct CurveGraph: View {
 }
 
 struct PresetTile: View {
-    let preset: MotionPane.Preset
+    let preset: MotionStyle
     let selected: Bool
     let action: () -> Void
     @StateObject private var hover = Flag()

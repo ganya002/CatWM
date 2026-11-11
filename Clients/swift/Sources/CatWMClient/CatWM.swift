@@ -456,6 +456,38 @@ public final class CatWM: @unchecked Sendable {
         _ = try call("togglefloating", args)
     }
 
+    /// Float the focused window
+    public func setfloating() throws {
+        let args: [String: Any] = [:]
+        _ = try call("setfloating", args)
+    }
+
+    /// Tile the focused window
+    public func settiled() throws {
+        let args: [String: Any] = [:]
+        _ = try call("settiled", args)
+    }
+
+    /// Set the size of the focused floating window
+    public func resizeactive(size: String) throws {
+        var args: [String: Any] = [:]
+        args["size"] = size
+        _ = try call("resizeactive", args)
+    }
+
+    /// Move the focused floating window
+    public func moveactive(position: String) throws {
+        var args: [String: Any] = [:]
+        args["position"] = position
+        _ = try call("moveactive", args)
+    }
+
+    /// Center the focused floating window on its display
+    public func centerwindow() throws {
+        let args: [String: Any] = [:]
+        _ = try call("centerwindow", args)
+    }
+
     /// Fill the screen with the focused window, inside the tiling
     public func fullscreen() throws {
         let args: [String: Any] = [:]

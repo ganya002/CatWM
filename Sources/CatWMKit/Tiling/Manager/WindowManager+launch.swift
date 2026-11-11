@@ -50,8 +50,7 @@ extension WindowManager {
                                width: unit.width * visible.width, height: unit.height * visible.height).integral
             window.naturalFrame = frame
             animator.animate([.init(window: window, to: frame, bounds: visible)],
-                             duration: config.animate ? config.animationDuration : 0,
-                             curve: config.animationCurve, bounce: config.animationBounce)
+                             spec: motion(of: window))
         }
         if let display {
             assignManagedWindow(window.id, to: shown[display.uuid])

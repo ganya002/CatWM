@@ -1,16 +1,17 @@
 import AppKit
 
 extension WindowManager {
-    package func windowGap(count: Int) -> CGFloat {
-        config.windowMargins && !(config.smartWindowMargins && count == 1) ? config.windowMarginSize : 0
+    package func windowGap(count: Int, on screen: Screen, workspace: String? = nil) -> CGFloat {
+        let scoped = config(on: screen, workspace: workspace)
+        return scoped.windowMargins && !(scoped.smartWindowMargins && count == 1) ? scoped.windowMarginSize : 0
     }
 
     package func rawSlots(
-        _ ids: [CGWindowID], on screen: Screen, _ screenState: ScreenState, ratio: CGFloat
+        _ ids: [CGWindowID], on screen: Screen, _ screenState: ScreenState, ratio: CGFloat, workspace: String? = nil
     ) -> ([CGRect], CGFloat)? {
-        let gap = windowGap(count: ids.count)
-        guard let raw = screenState.layout.frames(count: ids.count,
-                                                  in: usableRect(screen).insetBy(dx: -gap / 2, dy: -gap / 2),
+        let gap = windowGap(count: ids.count, on: screen, workspace: workspace)
+        let area = usableRect(screen, workspace: workspace).insetBy(dx: -gap / 2, dy: -gap / 2)
+        guard let raw = screenState.layout.frames(count: ids.count, in: area,
                                                   ratio: ratio, mainCount: screenState.mainCount) else { return nil }
         let slots = raw.map { $0.insetBy(dx: gap / 2, dy: gap / 2).pixelAligned }
         guard slots.allSatisfy({ [$0.minX, $0.minY, $0.width, $0.height].allSatisfy(\.isFinite) }) else { return nil }
@@ -46,9 +47,10 @@ extension WindowManager {
         }
     }
 
-    package func usableRect(_ screen: Screen) -> CGRect {
+    package func usableRect(_ screen: Screen, workspace: String? = nil) -> CGRect {
+        let scoped = config(on: screen, workspace: workspace)
         var rect = screen.visible
-        if config.ignoreMenuBar {
+        if scoped.ignoreMenuBar {
             rect = CGRect(x: rect.minX, y: screen.frame.minY, width: rect.width, height: rect.maxY - screen.frame.minY)
         }
         if let height = menuBarHeights[screen.uuid]?.height(on: screen.visible),
@@ -56,9 +58,9 @@ extension WindowManager {
             let top = screen.frame.minY + height
             rect = CGRect(x: rect.minX, y: top, width: rect.width, height: rect.maxY - top)
         }
-        if config.disablePaddingOnBuiltinDisplay && screen.isBuiltin { return rect }
-        return Self.padded(rect, left: config.paddingLeft, right: config.paddingRight,
-                           top: config.paddingTop, bottom: config.paddingBottom)
+        if scoped.disablePaddingOnBuiltinDisplay && screen.isBuiltin { return rect }
+        return Self.padded(rect, left: scoped.paddingLeft, right: scoped.paddingRight,
+                           top: scoped.paddingTop, bottom: scoped.paddingBottom)
     }
 
     package static func padded(_ rect: CGRect, left: CGFloat, right: CGFloat, top: CGFloat, bottom: CGFloat) -> CGRect {

@@ -41,7 +41,7 @@ import CatWMKit
     private func performUpdate(instant: Bool, restackAll: Bool) {
         let manager = WindowManager.shared
         guard !strips.isEmpty || !manager.tabs.isEmpty else { return }
-        let animate = !instant && manager.config.animate && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        let still = instant || NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         let focused = manager.focusedWindow()?.id
         var placed = Set<Int>()
         var placements: [(strip: Strip, active: CGWindowID)] = []
@@ -68,7 +68,7 @@ import CatWMKit
                     }
                     strip.show(group, above: target,
                                focused: focused.map(group.members.contains) ?? false,
-                               duration: animate ? manager.config.animationDuration : 0)
+                               spec: still ? .instant : manager.motion(on: screen))
                     placements.append((strip, group.active))
                 }
             }

@@ -126,7 +126,7 @@ struct Usage {
         for gaps in 9..<29 {
             try Self.config(gaps: gaps).write(to: file, atomically: true, encoding: .utf8)
             let start = Usage.now().cpu
-            let reloaded = store.reload(.changed)
+            let reloaded = store.reload()
             record("config.reload.cpu", Usage.now().cpu - start)
             guard reloaded.windowMarginSize == CGFloat(gaps) else { fail("the config did not reload") }
         }
@@ -152,13 +152,11 @@ struct Usage {
 
     private static func config(gaps: Int) -> String {
         """
-        const workspaces = ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
-        export default {
-          gaps: { size: \(gaps) },
-          binds: workspaces.flatMap((key) => [
-            { mods: ["alt"], key, run: ["workspace", key] },
-            { mods: ["alt", "shift"], key, run: ["movetoworkspace", key] },
-          ]),
+        import { catwm } from "./catwm"
+        catwm.gaps.size = \(gaps)
+        for (const key of ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const) {
+          catwm.bind(["alt"], key, ["workspace", key])
+          catwm.bind(["alt", "shift"], key, ["movetoworkspace", key])
         }
 
         """

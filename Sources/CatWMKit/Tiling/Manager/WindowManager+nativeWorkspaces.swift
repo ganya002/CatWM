@@ -131,7 +131,8 @@ extension WindowManager {
                         self.desktops.nativeWorkspaceGeneration == generation
                     })
                     if self.desktops.nativeWorkspaceGeneration == generation {
-                        self.configureNativeController(focusing: preferred, focus: takesFocus, quiet: quiet)
+                        self.configureNativeController(focusing: preferred, focus: takesFocus, quiet: quiet,
+                                                       toward: workspace)
                         self.nativeDesktop.request(.init(workspace: workspace, display: entry.display,
                                                          space: entry.space), since: requestedAt)
                     }
@@ -142,7 +143,7 @@ extension WindowManager {
             }
             return
         }
-        configureNativeController(focusing: preferred, focus: takesFocus, quiet: quiet)
+        configureNativeController(focusing: preferred, focus: takesFocus, quiet: quiet, toward: workspace)
         nativeDesktop.request(.init(workspace: workspace, display: entry.display, space: entry.space),
                               since: requestedAt)
     }
@@ -251,15 +252,18 @@ extension WindowManager {
               }),
               backend.currentSpace(display: screen.uuid) != space else { return false }
         desktops.nativeWorkspaceGeneration += 1
-        configureNativeController(focusing: window, focus: true, quiet: true)
+        configureNativeController(focusing: window, focus: true, quiet: true,
+                                  toward: Self.spaceWorkspace(display: screen.uuid, space: space))
         nativeDesktop.request(.init(workspace: Self.spaceWorkspace(display: screen.uuid, space: space),
                                     display: screen.uuid, space: space))
         return true
     }
 
-    package func configureNativeController(focusing preferred: Window?, focus takesFocus: Bool, quiet: Bool) {
+    package func configureNativeController(
+        focusing preferred: Window?, focus takesFocus: Bool, quiet: Bool, toward workspace: String? = nil
+    ) {
         nativeDesktop.prepare = { [weak self] in try await self?.prepareNativeLayout($0) }
-        nativeDesktop.settings = MotionSpec(config)
+        nativeDesktop.settings = MotionSpec(config(for: workspace ?? currentWorkspace))
         nativeDesktop.onSettled = { [weak self] request, changed in
             guard let self else { return }
             if self.isVirtual(request.workspace) {
@@ -319,7 +323,8 @@ extension WindowManager {
         }
         var slots: [CGWindowID: CGRect] = [:]
         for (screen, group) in layoutGroups(ids, on: request.display) where tilingEnabled {
-            guard let placed = layoutTargets(group, state(workspace: request.workspace), on: screen) else { continue }
+            guard let placed = layoutTargets(group, state(workspace: request.workspace), on: screen,
+                                        workspace: request.workspace) else { continue }
             let expanded = group.flatMap { id -> [(CGWindowID, CGRect)] in
                 guard let slot = placed[id] else { return [] }
                 let frame = belowTabStrip(slot, for: id)
@@ -350,8 +355,7 @@ extension WindowManager {
             targets[id] = frame
             return .init(window: window, to: frame, bounds: screen.visible)
         }
-        animator.animate(moves, duration: config.animate ? config.animationDuration : 0,
-                         curve: config.animationCurve, bounce: config.animationBounce)
+        animator.animate(moves, spec: screen.map(motion(on:)) ?? MotionSpec(config))
     }
 
     @MainActor private func place(_ ids: [CGWindowID], in slots: [CGWindowID: CGRect], on screen: Screen,

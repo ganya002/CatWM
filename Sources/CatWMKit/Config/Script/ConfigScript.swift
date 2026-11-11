@@ -1,11 +1,25 @@
 import AppKit
 
 package enum ConfigScript {
-    private enum Leaf {
+    enum Leaf {
         case option(ConfigOption)
-        case mod, layouts, floatingApps, padding, binds, submaps
+        case mod, layouts, floatingApps, padding, binds, submaps, windowRules, workspaceRules
         case feature(Feature)
+
+        var isScoped: Bool {
+            switch self {
+            case .option(let option): option.isScoped
+            case .layouts: true
+            default: false
+            }
+        }
     }
+
+    package static let renamed = [
+        "animation": "motion", "animation.enabled": "motion.enabled", "animation.duration": "motion.duration",
+        "animation.curve": "motion.curve", "animation.bounce": "motion.bounce",
+        "panelAnimation": "motion.panels", "modeEffect": "motion.modeEffect"
+    ]
 
     package struct Mod {
         package let name: String
@@ -25,14 +39,16 @@ package enum ConfigScript {
         "`": "grave"
     ]
 
+    package static func isScoped(_ path: String) -> Bool { leaves[path]?.isScoped ?? false }
+
     package static var keyNames: [String] {
         keyCodes.keys.filter { keyAliases[$0] == nil }.sorted { (keyCodes[$0] ?? 0, $0) < (keyCodes[$1] ?? 0, $1) }
     }
 
-    private static let leaves: [String: Leaf] = {
+    static let leaves: [String: Leaf] = {
         var leaves: [String: Leaf] = [
             "mod": .mod, "layouts": .layouts, "floating.apps": .floatingApps, "padding": .padding,
-            "binds": .binds, "submaps": .submaps
+            "binds": .binds, "submaps": .submaps, "windowRules": .windowRules, "workspaceRules": .workspaceRules
         ]
         for option in Options.all { leaves[option.script] = .option(option) }
         for feature in Feature.allCases { leaves[feature.path] = .feature(feature) }
@@ -56,7 +72,7 @@ package enum ConfigScript {
                              embedded: Bool = false) -> [ConfigDiagnostic] {
         var reader = Reader(file: file)
         guard let object = value.object else {
-            reader.fail("", "the default export must be an object, such as `export default { gaps: { size: 8 } }`")
+            reader.fail("", "the config must produce an object")
             return reader.diagnostics
         }
         reader.read(object, prefix: "", into: &config)
@@ -78,7 +94,7 @@ package enum ConfigScript {
 }
 
 extension ConfigScript {
-    private struct Reader {
+    struct Reader {
         package let file: String?
         package var diagnostics: [ConfigDiagnostic] = []
 
@@ -100,13 +116,17 @@ extension ConfigScript {
                     }
                     read(group, prefix: path, into: &config)
                 } else {
+                    if let new = ConfigScript.renamed[path] {
+                        fail(path, "was renamed to `\(new)`")
+                        continue
+                    }
                     let known = prefix.isEmpty ? "" : " (\(prefix) has \(ConfigScript.list(prefix)))"
                     fail(path, "is not a CatWM option\(known)")
                 }
             }
         }
 
-        private mutating func read(_ leaf: Leaf, _ value: JSON, path: String, into config: inout Config) {
+        mutating func read(_ leaf: Leaf, _ value: JSON, path: String, into config: inout Config) {
             switch leaf {
             case .option(let option): read(option, value, path: path, into: &config)
             case .feature(let feature):
@@ -130,10 +150,12 @@ extension ConfigScript {
                 }
             case .binds: readBinds(value, path: path, into: &config)
             case .submaps: readSubmaps(value, path: path, into: &config)
+            case .windowRules: readWindowRules(value, into: &config)
+            case .workspaceRules: readWorkspaceRules(value, into: &config)
             }
         }
 
-        private mutating func readLayouts(_ value: JSON, path: String, into config: inout Config) {
+        mutating func readLayouts(_ value: JSON, path: String, into config: inout Config) {
             guard let names = strings(value, path: path) else { return }
             var layouts: [Layout] = []
             for name in names {
@@ -168,7 +190,7 @@ extension ConfigScript {
             }
         }
 
-        private mutating func read(_ option: ConfigOption, _ value: JSON, path: String, into config: inout Config) {
+        mutating func read(_ option: ConfigOption, _ value: JSON, path: String, into config: inout Config) {
             let text: String
             switch (option.scriptKind, value) {
             case (.bool, .bool(let isOn)): text = isOn ? "true" : "false"
@@ -192,7 +214,7 @@ extension ConfigScript {
             }
         }
 
-        private mutating func strings(_ value: JSON, path: String) -> [String]? {
+        mutating func strings(_ value: JSON, path: String) -> [String]? {
             guard let list = value.array, list.allSatisfy({ $0.string != nil }) else {
                 fail(path, "must be a list of strings")
                 return nil
@@ -249,7 +271,18 @@ extension ConfigScript {
                 fail(path + ".key", "is an unknown key `\(key)`\(hint)")
                 return nil
             }
-            guard let (dispatcher, arg) = run(object["run"], path: path + ".run") else { return nil }
+            var function: Int?
+            let dispatcher: String, arg: String
+            if let reference = object["run"]?.object {
+                guard reference.count == 1, let number = reference["function"]?.int else {
+                    fail(path + ".run", "must be an action or a function")
+                    return nil
+                }
+                (function, dispatcher, arg) = (number, "function", "\(number)")
+            } else {
+                guard let (name, args) = run(object["run"], path: path + ".run") else { return nil }
+                (dispatcher, arg) = (name, args)
+            }
             var repeats = false
             if let value = object["repeat"] {
                 guard case .bool(let isOn) = value else {
@@ -259,14 +292,15 @@ extension ConfigScript {
                 repeats = isOn
             }
             let binding = KeyBinding(keyCode: code, mods: CGEventFlags(rawValue: UInt64(flags.rawValue)),
-                                     dispatcher: dispatcher, arg: arg, submap: submap, repeats: repeats)
+                                     dispatcher: dispatcher, arg: arg, submap: submap, repeats: repeats,
+                                     function: function)
             let mods = ConfigScript.mods.filter { flags.contains($0.flag) }.map(\.conf).joined(separator: " ")
             let row = BindRow(mods: mods, key: key.lowercased(), dispatcher: dispatcher, args: arg, submap: submap,
                               kind: repeats ? "binde" : "bind")
             return (binding, row)
         }
 
-        private mutating func run(_ value: JSON?, path: String) -> (String, String)? {
+        mutating func run(_ value: JSON?, path: String) -> (String, String)? {
             let parts = value?.string.map { [JSON.string($0)] } ?? value?.array ?? []
             guard let name = parts.first?.string else {
                 fail(path, "must name an action, such as \"sort\" or [\"workspace\", \"2\"]")

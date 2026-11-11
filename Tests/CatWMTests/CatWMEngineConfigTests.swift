@@ -6,13 +6,13 @@ import Testing
 extension CatWMEngineTests {
     @Test func optionsDescribeTheConfig() async throws {
         let engine = try makeEngine()
-        try engine.start(config: .text("export default { gaps: { size: 12 } }"))
+        try engine.start(config: .text(catwmConfig("catwm.gaps.size = 12")))
         let size = try #require(engine.options.first { $0.id == "gaps.size" })
         #expect(size.kind == .number)
         #expect(size.range == 0...100)
         #expect(size.value == .int(12))
         #expect(size.defaultValue != .int(12))
-        let curve = try #require(engine.options.first { $0.id == "animation.curve" })
+        let curve = try #require(engine.options.first { $0.id == "motion.curve" })
         #expect(curve.kind == .string)
         let keys = try #require(engine.options.first { $0.id == "features.input.keys" })
         #expect(keys.kind == .bool && keys.defaultValue == false && keys.value == false)
@@ -24,10 +24,10 @@ extension CatWMEngineTests {
 
     @Test func overridesSurviveAConfigChangeUntilReset() async throws {
         let engine = try makeEngine()
-        try engine.start(config: .text("export default { gaps: { size: 4 } }"))
+        try engine.start(config: .text(catwmConfig("catwm.gaps.size = 4")))
         try engine.setOption("gaps.size", to: 20)
         #expect(engine.options.first { $0.id == "gaps.size" }?.value == .int(20))
-        try engine.replaceConfig("export default { gaps: { size: 6 } }")
+        try engine.replaceConfig(catwmConfig("catwm.gaps.size = 6"))
         #expect(engine.options.first { $0.id == "gaps.size" }?.value == .int(20))
         #expect(engine.overrides == ["gaps": ["size": 20]])
         #expect(throws: CatWMEngine.EngineError.self) { try engine.setOption("gaps.size", to: "wide") }
@@ -44,7 +44,7 @@ extension CatWMEngineTests {
         let engine = try makeEngine()
         _ = fake.addScreen()
         _ = fake.addWindow()
-        try engine.start(config: .text("export default { animation: { enabled: false } }"))
+        try engine.start(config: .text(catwmConfig("catwm.motion.enabled = false")))
         #expect(!engine.snapshot().isTiling)
         try engine.setOption("features.windows.tiling", to: true)
         #expect(engine.snapshot().isTiling)
@@ -75,8 +75,8 @@ extension CatWMEngineTests {
 
     @Test func aBrokenChangeKeepsTheLastGoodConfig() async throws {
         let engine = try makeEngine()
-        try engine.start(config: .text("export default { gaps: { size: 4 } }"))
-        #expect(throws: CatWMEngine.EngineError.self) { try engine.replaceConfig("export default { gaps: { size: } }") }
+        try engine.start(config: .text(catwmConfig("catwm.gaps.size = 4")))
+        #expect(throws: CatWMEngine.EngineError.self) { try engine.replaceConfig(catwmConfig("catwm.gaps.size = ")) }
         #expect(engine.options.first { $0.id == "gaps.size" }?.value == .int(4))
         #expect(!engine.snapshot().diagnostics.isEmpty)
         await cleanUp(engine)
@@ -84,13 +84,13 @@ extension CatWMEngineTests {
 
     @Test func loadConfigReadsAHostFile() async throws {
         let engine = try makeEngine()
-        try engine.start(config: .text("export default {}"))
+        try engine.start(config: .text(""))
         let folder = home.appendingPathComponent("host")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         try "export const size = 9\n".write(to: folder.appendingPathComponent("size.ts"), atomically: true,
                                               encoding: .utf8)
         let entry = folder.appendingPathComponent("host.config.ts")
-        try "import { size } from './size'\nexport default { gaps: { size } }\n"
+        try "import { catwm } from './catwm'\nimport { size } from './size'\ncatwm.gaps.size = size\n"
             .write(to: entry, atomically: true, encoding: .utf8)
         try engine.loadConfig(at: entry)
         #expect(engine.options.first { $0.id == "gaps.size" }?.value == .int(9))

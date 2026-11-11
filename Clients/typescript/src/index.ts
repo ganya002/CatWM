@@ -359,6 +359,31 @@ export class CatWM {
     await this.call("togglefloating");
   }
 
+  /** Float the focused window */
+  async setfloating(): Promise<void> {
+    await this.call("setfloating");
+  }
+
+  /** Tile the focused window */
+  async settiled(): Promise<void> {
+    await this.call("settiled");
+  }
+
+  /** Set the size of the focused floating window */
+  async resizeactive(size: string): Promise<void> {
+    await this.call("resizeactive", { "size": size });
+  }
+
+  /** Move the focused floating window */
+  async moveactive(position: string): Promise<void> {
+    await this.call("moveactive", { "position": position });
+  }
+
+  /** Center the focused floating window on its display */
+  async centerwindow(): Promise<void> {
+    await this.call("centerwindow");
+  }
+
   /** Fill the screen with the focused window, inside the tiling */
   async fullscreen(): Promise<void> {
     await this.call("fullscreen");

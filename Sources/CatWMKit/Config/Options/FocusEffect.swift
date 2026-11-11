@@ -11,7 +11,7 @@ package struct FocusEffect: Sendable {
     package static let all = [dim, blur]
 
     package static let dim = FocusEffect(options: [
-        .bool("dim-other-windows", \.dimOtherWindows).script("focusDim.dim")
+        .bool("dim-other-windows", \.dimOtherWindows).script("focusDim.dim").scoped()
             .documented("bool", "darken every window but the focused one").aliases("dim_inactive")
             .section("focused window")
             .note(
@@ -22,7 +22,7 @@ package struct FocusEffect: Sendable {
                      help: "Darkens everything but the focused window",
                      keywords: "focus darken inactive spotlight hazeover", order: 3),
         .points("dim-strength", \.dimStrength, valid: 0...1, convert: { $0 > 1 ? $0 / 100 : $0 })
-            .script("focusDim.dimStrength")
+            .script("focusDim.dimStrength").scoped()
             .documented("0–1 (or 0–100)", "how dark; a value above 1 is read as percent")
             .setting(.windows, "windows.dimStrength", "Dim strength", help: "How dark the other windows get",
                      keywords: "darken amount opacity", range: 0...100, scale: 100, order: 4,
@@ -34,13 +34,13 @@ package struct FocusEffect: Sendable {
                                    selected: { $0.dimmed }))
 
     package static let blur = FocusEffect(options: [
-        .bool("blur-other-windows", \.blurOtherWindows).script("focusDim.blur")
+        .bool("blur-other-windows", \.blurOtherWindows).script("focusDim.blur").scoped()
             .documented("bool", "blur every window but the focused one; combines with dimming")
             .setting(.windows, "windows.blurOthers", "Blur other windows",
                      help: "Softens everything but the focused window",
                      keywords: "focus soft inactive spotlight", order: 5),
         .points("blur-radius", \.blurRadius, valid: 1...100, convert: { $0.rounded() })
-            .script("focusDim.blurRadius")
+            .script("focusDim.blurRadius").scoped()
             .documented("1–100 (points)", "rounded to whole points. The Settings slider shows 2–60")
             .setting(.windows, "windows.blurRadius", "Blur radius", help: "How soft the other windows look",
                      keywords: "soft amount points", range: 2...60, order: 6,

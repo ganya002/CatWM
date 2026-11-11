@@ -22,6 +22,7 @@ import AppKit
     package let embedded: Bool
     package let input: GlobalInput
     package var config: Config
+    package var workspaceConfigs: [String: Config] = [:]
     package lazy var store = ConfigStore.shared
     package var socketPath = ControlServer.socketPath
     package let agents = AgentSessions()
@@ -83,6 +84,7 @@ import AppKit
     package var focusRequests = FocusRequests()
     package var closeAndSort = CloseAndSortState()
     package var floats = FloatState()
+    package var windowsToMatch: [CGWindowID] = []
     package var previousWorkspace: [String: String] = [:]
     package var labels: [String: String] = [:]
     package struct Slide {

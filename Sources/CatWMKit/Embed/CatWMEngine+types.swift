@@ -104,7 +104,9 @@ extension CatWMEngine {
             self.feature = feature.needs.last?.path
         }
 
-        private static let appOnly: Set<String> = ["panelAnimation", "modeEffect", "perfReports", "mouse.splitHandle"]
+        private static let appOnly: Set<String> = [
+            "motion.panels", "motion.modeEffect", "perfReports", "mouse.splitHandle"
+        ]
 
         private static func feature(of id: String) -> Feature? {
             switch id.split(separator: ".").first {

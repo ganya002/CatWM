@@ -4,6 +4,7 @@ import SwiftUI
 
 struct OptionRow<Control: View>: View {
     @ObservedObject var settingsUI: SettingsUI
+    let path: PartialKeyPath<Config>
     let info: SettingInfo
     var description: String?
     let control: (String) -> Control
@@ -11,13 +12,15 @@ struct OptionRow<Control: View>: View {
     init(_ path: PartialKeyPath<Config>, settingsUI: SettingsUI, description: String? = nil,
          @ViewBuilder control: @escaping (String) -> Control) {
         self.settingsUI = settingsUI
+        self.path = path
         self.info = ConfigOption.at(path).settingInfo
         self.description = description
         self.control = control
     }
 
     var body: some View {
-        ORow(info.label, description: description ?? info.help) { control(info.label) }
+        let note = ConfigOption.at(path).ruleNote
+        ORow(info.label, description: note ?? description ?? info.help) { control(info.label) }
             .setting(info.id, settingsUI)
     }
 }
@@ -38,7 +41,8 @@ struct OptionSwitch: View {
 
     var body: some View {
         let info = ConfigOption.at(path).settingInfo
-        OSwitchRow(info.label, description: description ?? info.help, isOn: $doc.config[dynamicMember: path])
+        let note = ConfigOption.at(path).ruleNote
+        OSwitchRow(info.label, description: note ?? description ?? info.help, isOn: $doc.config[dynamicMember: path])
             .setting(info.id, settingsUI)
     }
 }
@@ -62,7 +66,7 @@ struct OptionSlider: View {
     var body: some View {
         let option = ConfigOption.at(path), info = option.settingInfo
         let value = Double(doc.config[keyPath: path]) * info.scale
-        ORow(info.label, description: info.help) {
+        ORow(info.label, description: option.ruleNote ?? info.help) {
             OSlider(value: Binding(get: { Double(doc.config[keyPath: path]) * info.scale },
                                    set: { doc.config[keyPath: path] = CGFloat($0.rounded() / info.scale) }),
                     range: option.sliderRange(holding: value), step: 1, ticks: [option.resetValue],
@@ -76,6 +80,10 @@ extension ConfigOption {
     var settingInfo: SettingInfo {
         guard let setting else { fatalError("config option \(key) has no Settings row") }
         return setting
+    }
+
+    @MainActor var ruleNote: String? {
+        WindowManager.shared.rulePaths().contains(script) ? "A workspace rule changes this here" : nil
     }
 
     var resetValue: Double { number(Config()) * settingInfo.scale }

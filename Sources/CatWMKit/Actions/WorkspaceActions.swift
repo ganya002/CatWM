@@ -32,7 +32,7 @@ extension WindowActions {
             ActionPicker("Send Window to Workspace \($0)", .spaces, "\($0)", "\($0).square.fill",
                          group: "Send Window to Workspace", short: "Workspace \($0)", focusRequired: true)
         }
-    ) { $0.manager.moveToWorkspaceCommand($0.arg, follow: false) }
+    ) { $0.manager.moveToWorkspaceCommand($0.arg, follow: false, window: $0.target) }
 
     package static let sethomespace = WindowAction(
         name: "sethomespace", group: "workspaces", summary: "Make the current Desktop the home Desktop"

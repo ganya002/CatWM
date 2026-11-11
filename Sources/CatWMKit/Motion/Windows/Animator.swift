@@ -108,40 +108,42 @@ import QuartzCore
     package func animate(_ moves: [Move], duration: Double, curve: AnimationCurve = .easeOut, bounce: Double = 0) {
         animate(moves, spec: MotionSpec(duration: duration, curve: curve, bounce: bounce))
     }
+    package func animate(_ moves: [Move], spec: MotionSpec) { animate([Batch(moves: moves, spec: spec)]) }
 
-    package func animate(_ moves: [Move], spec: MotionSpec) {
-        guard !moves.isEmpty else { return }
-        prepareResizeScene(for: moves, spec: spec)
+    package func animate(_ batches: [Batch]) {
+        let batches = batches.filter { !$0.moves.isEmpty }
+        guard !batches.isEmpty else { return }
+        prepareResizeScene(for: batches.filter { $0.spec.duration >= 0.08 }.flatMap(\.moves))
         let now = CACurrentMediaTime()
-        let duration = spec.duration
-        for move in moves {
-            let id = move.window.id
-            let from: CGRect
-            var velocity: [Double]?
-            if let running = items[id] {
-                from = running.frame(at: now, aligned: resizeScene?.visible != true)
-                velocity = running.velocity(at: now)
-            } else if let landed = landing.removeValue(forKey: id) {
-                from = move.from ?? landed.move.target
-            } else if let followed = following[id] {
-                from = move.from ?? followed.target
-            } else {
-                from = move.from ?? move.window.cachedFrame
-            }
-            cancel(id, keepingScene: true)
-            owners[id] = move.window.pid
-            if duration < 0.01 || from.isNull || from.approxEqual(move.target, tolerance: 2) {
-                items[id] = nil
-                land(move)
-            } else {
-                items[id] = Item(move: move, from: from, start: now, spec: spec, velocity: velocity)
-                items[id]?.colorSizing = windowPresentation?.sizing(for: move, from: from, spec: spec)
-                if resizeScene?.visible == true { land(move) }
-            }
-        }
-        windowPresentation?.prepare(moves, spec: spec)
+        for batch in batches { batch.moves.forEach { start($0, spec: batch.spec, at: now) } }
+        for batch in batches { windowPresentation?.prepare(batch.moves, spec: batch.spec) }
         startClock()
         finishResizeScene()
+    }
+
+    private func start(_ move: Move, spec: MotionSpec, at now: CFTimeInterval) {
+        let id = move.window.id
+        let from: CGRect
+        var velocity: [Double]?
+        if let running = items[id] {
+            from = running.frame(at: now, aligned: resizeScene?.visible != true)
+            velocity = running.velocity(at: now)
+        } else if let landed = landing.removeValue(forKey: id) {
+            from = move.from ?? landed.move.target
+        } else if let followed = following[id] {
+            from = move.from ?? followed.target
+        } else {
+            from = move.from ?? move.window.cachedFrame
+        }
+        cancel(id, keepingScene: true)
+        owners[id] = move.window.pid
+        if spec.duration < 0.01 || from.isNull || from.approxEqual(move.target, tolerance: 2) {
+            items[id] = nil; land(move)
+        } else {
+            items[id] = Item(move: move, from: from, start: now, spec: spec, velocity: velocity)
+            items[id]?.colorSizing = windowPresentation?.sizing(for: move, from: from, spec: spec)
+            if resizeScene?.covers(id) == true { land(move) }
+        }
     }
 
     package func endFollow() { following.removeAll().forEach(land) }
@@ -195,7 +197,7 @@ import QuartzCore
             if presentation - item.start >= item.duration {
                 items[id] = nil
                 land(item.move)
-            } else if resizeScene?.visible != true {
+            } else if resizeScene?.covers(id) != true {
                 writer(item.move.window.pid).step(item.move.window, notBefore: presentation,
                                                   releasesSpace: item.colorSizing?.releasesSpace == true) {
                     item.request(at: $0, presentedAt: presentation)
@@ -299,9 +301,9 @@ extension Animator {
         windowPresentation.update(moving.merging(landing.mapValues { $0.move.target }) { frame, _ in frame })
     }
 
-    private func prepareResizeScene(for moves: [Move], spec: MotionSpec) {
+    private func prepareResizeScene(for moves: [Move]) {
         guard makeResizeScene != nil else { return }
-        guard spec.duration >= 0.08 else { endResizeScene(); return }
+        guard !moves.isEmpty else { endResizeScene(); return }
         if let resizeScene, !resizeScene.visible || !Set(moves.map(\.window.id)).isSubset(of: resizeScene.ids)
             || !moves.allSatisfy({ resizeScene.contains($0.target) }) {
             endResizeScene()

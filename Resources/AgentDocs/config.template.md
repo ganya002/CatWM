@@ -1,46 +1,53 @@
 # Config: `~/.config/catwm/catwm.config.ts`
 
-The config is plain TypeScript: one default-exported object. CatWM writes `catwm.d.ts` and `tsconfig.json` next to it, so an editor completes and checks every option, key and action.
+The config is a TypeScript file that sets options on one object, `catwm`. CatWM writes `catwm.d.ts` and `tsconfig.json` next to it, so an editor completes and checks every option, key and action.
 
 ```ts
-import type { Bind, Config } from "./catwm"
+import { catwm } from "./catwm"
 
 const mod = "alt"
 
-export default {
-  mod,
-  layouts: ["tall", "bsp", "fullscreen"],
-  gaps: { size: 10 },
-  padding: 10,
-  animation: { curve: "spring", bounce: 0.6 },
-  floating: { apps: ["com.apple.systempreferences", "com.apple.calculator"] },
-  binds: [
-    ...(["1", "2", "3"] as const).map((key): Bind => ({ mods: [mod], key, run: ["workspace", key] })),
-    { mods: [mod], key: "return", run: ["exec", "open -na Terminal"] },
-  ],
-} satisfies Config
+catwm.mod = mod
+catwm.layouts = ["tall", "bsp", "fullscreen"]
+catwm.gaps.size = 10
+catwm.padding = 10
+catwm.motion = { style: "snappy", bounce: 0.6 }
+catwm.floating.apps.push("com.apple.systempreferences", "com.apple.calculator")
+for (const key of ["1", "2", "3"]) catwm.bind([mod], key, ["workspace", key])
+catwm.bind([mod], "return", ["exec", "open -na Terminal"])
+
+catwm.windows({ app: "com.apple.calculator" }, (win) => {
+  win.float()
+  win.position = "center"
+})
+catwm.workspaces({ windows: 1 }, () => {
+  catwm.gaps.size = 0
+})
 ```
 
-- **Save to apply.** CatWM watches the config folder and the folders of imported files. A save re-runs only the changed module and the modules that import it, then applies only the fields that changed. `catwm reload` runs every module again.
+- **Save to apply.** CatWM watches the config folder and the folders of imported files. A save runs the whole config again, then applies only the fields that changed. `catwm reload` does the same without a save.
 - **A broken save keeps the last good config.** The error goes to the log (`config: kept the last good config, …`), to the menu bar menu and to the `errors` of the `config.reloaded` event: `{ file, line, phase, message }`. The next good save clears it.
-- **Data only.** Functions, loops and imports can compute the config, but the exported value must be plain data. A function in it is an error. There are no timers, events or native APIs. Use only erasable TypeScript syntax (no `enum` or `namespace`); the shipped `tsconfig.json` sets `erasableSyntaxOnly`.
-- **Imports:** relative paths only, such as `import { binds } from "./binds"`. A type import from `"./catwm"` is free.
+- **Set options while the config loads.** `catwm` holds every default. An object assignment merges into it (`catwm.gaps = { size: 4 }` keeps the other gap fields). A list or a number replaces it. `undefined` goes back to the default. A list has `push(...)` and `remove(value)`, and reading an option gives its current value. A write from a promise or a timer, or after the load, is an error. There are no timers, events or native APIs. Use only erasable TypeScript syntax (no `enum` or `namespace`); the shipped `tsconfig.json` sets `erasableSyntaxOnly`.
+- **`export default` is gone.** CatWM converts a file that default-exports a config the first time it loads, and keeps the original as `catwm.config.ts.bak` (the conversion drops comments and helper constants). If it can't convert the file, the file stays as it is and the menu bar says why. Old names get an error too: `animation` is `motion`, `panelAnimation` is `motion.panels`, `modeEffect` is `motion.modeEffect`.
+- **Motion styles.** `catwm.motion.style = "snappy"` sets `enabled`, `curve` and `duration` to the style's values, and a later write to one field overrides that field. Reading `style` gives the style whose values all match, or `undefined`. The styles are the tiles in Settings → Motion.
+- **Window rules.** `catwm.windows(match, win => …)` runs once while the config loads and records what it does: `win.float()`, `win.tile()`, `win.fullscreen()`, `win.size = { width, height }`, `win.position = "center"` or `{ x, y }`, `win.workspace = "3"` (with CatWM workspaces on; macOS can move only the focused window to another Desktop) and `win.display = "external"`. `match` takes `app` (wildcards work), `title` (a string or a RegExp), `pid`, `workspace`, `display`, `floating`, `minimized` and `fullscreen`. A RegExp must be one that macOS can match, or the rule is an error. CatWM checks the rules when a window appears and when its title changes, and a rule applies once each time a window starts matching, so it doesn't pull a window back after you move it. A save that adds or changes a rule applies it to the windows already open. If two rules match at once, the later one in the file wins. **Floating: the latest change wins.** `floating.apps`, a rule's `win.float()` or `win.tile()`, and the `togglefloating` key don't rank above each other. Whichever happened last decides. A save that doesn't change a window's result leaves your toggle alone.
+- **Workspace rules.** `catwm.workspaces(match, () => …)` records option writes for the workspaces that match. `match` takes `windows` and `sameApp` (a number or `{ atLeast, atMost }`; `sameApp` counts the windows of one app, across its processes), `app`, `layout`, `name` (the workspace number or the name you gave it), `display` and `focused`. A rule that sets `layouts` keeps the workspace's layout if it's in that list. Otherwise it switches to the first one and goes back when the rule stops matching or you delete it. A rule that matches `layout` has to keep that layout in its `layouts`, or it would switch back and forth. A rule can set only the options marked scoped in `catwm.d.ts`: gaps, padding, layouts, `newWindowsToMain`, the motion fields and the focus dimming. Another option, or `catwm.bind`, is an error. CatWM checks them on each refresh, before it lays the workspace out, and the last matching rule wins for each field. A rule beats a Settings override.
+- **Imports:** relative paths only, such as `import { gap } from "./gaps"`. `"./catwm"` is the host module, not a file.
 - **Settings and `catwm config.set`** never edit the TypeScript file. They write `catwm.overrides.json` beside it. The order is defaults, then `catwm.config.ts`, then the overrides. Settings → General lists each override and can drop it, so the file value applies again.
-- **Features:** `features: { windows, input, services, presentation }` turns parts of CatWM on or off, such as `features: { presentation: { hud: true } }`. Embedded mode will read these switches. Standalone CatWM checks them but keeps every feature on for now.
+- **Features:** `catwm.features.presentation.hud = true` turns parts of CatWM on or off. Embedded mode will read these switches. Standalone CatWM checks them but keeps every feature on for now.
 - **From `catwm.conf`:** the first launch converts an existing `catwm.conf` to `catwm.config.ts` once, checks that the result gives the same config, and keeps `catwm.conf` as an unread backup. If the conversion fails, CatWM keeps using `catwm.conf` and says why in the log and the menu bar menu.
 
 ## Options
 
-Each option is a path in the config object: `gaps.size` is `gaps: { size: … }`. `padding` also takes one number for all four sides.
+Each option is a path on `catwm`: `gaps.size` is `catwm.gaps.size`. `padding` also takes one number for all four sides.
 
 | Option | Value | Default | Notes |
 |---|---|---|---|
 | `mod` | `"cmd"` / `"alt"` / `"ctrl"` / `"shift"`, or a list | `"alt"` | the main modifier. `.conf`: `$mod` |
 | `layouts` | list of layout names | `{{default-layouts}}` | the cycle; each layout once. Names below |
-| `floating.apps` | list of bundle IDs | empty (first run: System Settings, Calculator) | apps that float (or the only ones that tile, see `floating.listedAppsFloat`). Wildcards such as `com.adobe.*` work. `.conf`: `floating` |
+| `floating.apps` | list of bundle IDs | empty (first run: System Settings, Calculator) | apps that float (or the only ones that tile, see `floating.listedAppsFloat`). Wildcards such as `com.adobe.*` work. A window rule or a toggle can still override one window. `.conf`: `floating` |
 {{options}}
-| `binds` | list of `{ mods?, key, run, repeat? }` | | see [keybinds.md](keybinds.md) |
-| `submaps` | `{ name: [binds] }` | | key modes |
+| `catwm.bind(mods, key, run, options?)` | a call, not an option | | see [keybinds.md](keybinds.md) |
 | `features.<group>.<feature>` | bool | `true` | see `catwm.d.ts` for the list |
 
 ## Layout names

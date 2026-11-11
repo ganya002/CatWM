@@ -63,7 +63,8 @@ package struct WindowScope: Equatable {
         "agent.open", "agent.launch", "agent.windows", "agent.type", "agent.key", "agent.press", "agent.text",
         "agent.screenshot", "agent.close",
         "movefocus", "cyclenext", "movewindow", "movewindowtomonitor", "swapwindow", "swapnext",
-        "togglefloating", "fullscreen", "minimize", "killactive",
+        "togglefloating", "setfloating", "settiled", "resizeactive", "moveactive", "centerwindow",
+        "fullscreen", "minimize", "killactive",
         "moveintogroup", "moveoutofgroup", "changegroupactive", "movegroupwindow",
         "layoutmsg", "splitratio", "cyclelayout", "layout", "toggletiling", "retile",
         "reload", "exit"

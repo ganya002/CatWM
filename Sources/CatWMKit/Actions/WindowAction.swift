@@ -3,6 +3,8 @@ import AppKit
 package struct ActionContext {
     package let manager: WindowManager
     package let arg: String
+    package var target: Window?
+    @MainActor package var window: Window? { target ?? manager.focusedWindow() }
 }
 
 package struct ActionPicker: Sendable {
@@ -69,12 +71,20 @@ package struct WindowAction: Sendable {
 extension ActionContext {
     package var backward: Bool { arg.lowercased().hasPrefix("prev") }
     package var tabBackward: Bool { backward || arg.lowercased().hasPrefix("b") }
+
+    var exactPair: CGPoint? {
+        let parts = arg.lowercased().split(whereSeparator: \.isWhitespace)
+        guard parts.count == 3, parts[0] == "exact", let x = Double(parts[1]), let y = Double(parts[2]),
+              x.isFinite, y.isFinite else { return nil }
+        return CGPoint(x: x, y: y)
+    }
 }
 
 package enum WindowActions {
     package static let all: [WindowAction] = [
         movefocus, cyclenext, focusmonitor, movewindow, movewindowtomonitor, swapwindow, swapnext,
-        togglefloating, fullscreen, nativefullscreen, minimize, killactive,
+        togglefloating, setfloating, settiled, resizeactive, moveactive, centerwindow,
+        fullscreen, nativefullscreen, minimize, killactive,
         moveintogroup, moveoutofgroup, changegroupactive, movegroupwindow,
         layoutmsg, splitratio, cyclelayout, layout, toggletiling, retile,
         workspace, movetoworkspace, movetoworkspacesilent, sethomespace,

@@ -261,6 +261,71 @@
 
       ],
       "group" : "window",
+      "name" : "setfloating",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Float the focused window"
+    },
+    {
+      "args" : [
+
+      ],
+      "group" : "window",
+      "name" : "settiled",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Tile the focused window"
+    },
+    {
+      "args" : [
+        {
+          "name" : "size",
+          "required" : true,
+          "summary" : "`exact W H`, the size in points. A tiled window keeps its size.",
+          "type" : "string"
+        }
+      ],
+      "group" : "window",
+      "name" : "resizeactive",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Set the size of the focused floating window"
+    },
+    {
+      "args" : [
+        {
+          "name" : "position",
+          "required" : true,
+          "summary" : "`exact X Y`, the top-left corner in points from the top-left of the display's visible area. A tiled window stays in its tile.",
+          "type" : "string"
+        }
+      ],
+      "group" : "window",
+      "name" : "moveactive",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Move the focused floating window"
+    },
+    {
+      "args" : [
+
+      ],
+      "group" : "window",
+      "name" : "centerwindow",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Center the focused floating window on its display"
+    },
+    {
+      "args" : [
+
+      ],
+      "group" : "window",
       "name" : "fullscreen",
       "result" : {
         "kind" : "none"

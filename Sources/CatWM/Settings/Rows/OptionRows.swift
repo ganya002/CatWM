@@ -167,6 +167,10 @@ extension OptionRows {
         .setting(WindowsPane.searchSortCrowded.id, settingsUI)
     }
 
+    @ViewBuilder private func ruleNote(_ option: ConfigOption) -> some View {
+        if let note = option.ruleNote { Text(note).textStyle(.caption).foregroundStyle(Theme.inkMuted).oneLine() }
+    }
+
     private var animationDurationRow: some View {
         let config = doc.config
         let duration = ConfigOption.at(\Config.animationDuration).settingInfo
@@ -180,6 +184,7 @@ extension OptionRows {
         .padding(.vertical, 12)
         .disabled(!config.animate)
         .setting(duration.id, settingsUI)
+        .overlay(alignment: .bottomLeading) { ruleNote(ConfigOption.at(\Config.animationDuration)) }
     }
 
     @ViewBuilder private var animationCurveRows: some View {
@@ -240,6 +245,7 @@ extension OptionRows {
         .padding(.vertical, 12)
         .disabled(!config.animate || !config.animationCurve.usesBounce)
         .setting(bounce.id, settingsUI)
+        .overlay(alignment: .bottomLeading) { ruleNote(ConfigOption.at(\Config.animationBounce)) }
     }
 
     private var panelAnimationRow: some View {
