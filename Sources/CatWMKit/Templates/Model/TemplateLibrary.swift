@@ -1,7 +1,7 @@
 import AppKit
 import Combine
 
-package final class TemplateLibrary: ObservableObject {
+@MainActor package final class TemplateLibrary: ObservableObject {
     package static let shared = TemplateLibrary()
     package static let url = Instance.configFolder.appendingPathComponent("templates.json")
 
@@ -18,10 +18,10 @@ package final class TemplateLibrary: ObservableObject {
     private var generations: [UUID: Int] = [:]
     private var workspaceGenerations: [UUID: Int] = [:]
     private var updateToken = 0
-    package var captureWorkspace: () async throws -> WorkspaceTemplate = {
+    package var captureWorkspace: @MainActor () async throws -> WorkspaceTemplate = {
         try await WindowManager.shared.captureTemplate()
     }
-    package var captureScreenshot: () async -> Data? = {
+    package var captureScreenshot: @MainActor () async -> Data? = {
         await TemplateScreenshot.capture()
     }
 
@@ -94,7 +94,7 @@ package final class TemplateLibrary: ObservableObject {
         let id = template.id
         let baseline = workspaceGenerations[id] ?? 0
         return Task { @MainActor in
-            func endSnapshot() {
+            @MainActor func endSnapshot() {
                 if updateToken == token { updating = false }
             }
             do {

@@ -354,8 +354,9 @@ extension WindowManager {
     package func titleChanged(_ element: AXUIElement) {
         guard let window = windows.values.first(where: { CFEqual($0.element, element) }) else { return }
         let grouped = tabs.isGrouped(window.id)
+        let reference = AXReference(element)
         scanner.run(window.pid) {
-            let title = element.string(kAXTitleAttribute)
+            let title = reference.object.string(kAXTitleAttribute)
             DispatchQueue.main.async {
                 guard window.title != title else { return }
                 let wasFloating = window.isFloating

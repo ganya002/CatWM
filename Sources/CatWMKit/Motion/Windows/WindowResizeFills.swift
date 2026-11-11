@@ -1,7 +1,7 @@
 import AppKit
 import QuartzCore
 
-package final class WindowResizeFills: WindowPresentation {
+@MainActor package final class WindowResizeFills: WindowPresentation {
     private struct Stats {
         var samples = 0, visible = 0, caughtUp = 0, movedTop = 0
     }
@@ -18,10 +18,10 @@ package final class WindowResizeFills: WindowPresentation {
     private var stats: [CGWindowID: Stats] = [:]
     package init() {}
 
-    package var refresh: (() -> Void)?
-    package var excluded: () -> Set<CGWindowID> = { [] }
+    package var refresh: (@MainActor () -> Void)?
+    package var excluded: @MainActor () -> Set<CGWindowID> = { [] }
 
-    package func warm(_ windows: [CGWindowID: Window], busy: @escaping (CGWindowID) -> Bool) {
+    package func warm(_ windows: [CGWindowID: Window], busy: @escaping @MainActor (CGWindowID) -> Bool) {
         cache = cache.filter { windows[$0.key] != nil }
         for id in windows.keys where !warming.contains(id) && !busy(id) {
             guard let frame = WindowSceneCapture.currentFrame(id), !frame.isEmpty,

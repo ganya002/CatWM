@@ -1,7 +1,7 @@
 import CoreGraphics
 import Foundation
 
-package final class TabDrag {
+@MainActor package final class TabDrag {
     private enum Kind { case lifted, native }
     private struct Session {
         package let id: CGWindowID
@@ -37,6 +37,7 @@ package final class TabDrag {
         return session.id
     }
 
+    @discardableResult
     package func finish(_ id: CGWindowID?, on surface: any TilingSurface) -> Completion {
         let joins = allowsJoin
         session = nil
@@ -52,7 +53,7 @@ package final class TabDrag {
         return preview
     }
 
-    private static func scheduleHover(_ work: DispatchWorkItem) {
+    private nonisolated static func scheduleHover(_ work: DispatchWorkItem) {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: work) // style-ok: hover dwell time
     }
 

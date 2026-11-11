@@ -2,7 +2,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-final class SettingsWindow: NSObject, NSWindowDelegate {
+@MainActor final class SettingsWindow: NSObject, NSWindowDelegate {
     static let shared = SettingsWindow()
     private(set) var window: NSWindow?
     private var sessionOpen = false
@@ -96,7 +96,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
     }
 }
 
-func confirm(_ title: String, _ detail: String, button: String = "Reset") -> Bool {
+@MainActor func confirm(_ title: String, _ detail: String, button: String = "Reset") -> Bool {
     let alert = NSAlert()
     alert.messageText = title
     alert.informativeText = detail

@@ -3,7 +3,7 @@ import AppKit
 @testable import CatWMKit
 import Testing
 
-@Suite struct SortCloseAndWorkspaceStepTests {
+@Suite @MainActor struct SortCloseAndWorkspaceStepTests {
     @Test func aBusyAppIsNotSeenAsWindowless() {
         #expect(!WindowManager.reportsNoWindows(.cannotComplete, nil))
         #expect(!WindowManager.reportsNoWindows(.failure, nil))

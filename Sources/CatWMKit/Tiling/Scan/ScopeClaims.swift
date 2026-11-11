@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 package struct ScopeClaim: Equatable {
     package let owner: pid_t
@@ -19,30 +20,35 @@ package struct ScopeClaim: Equatable {
     package var text: String { "\(owner)\n\(scope.text)\n" }
 }
 
-package final class ScopeClaims {
-    private let folder: URL
-    private let alive: (pid_t) -> Bool
-    private let queue = DispatchQueue(label: "catwm.scope-claims")
-    private var stamp: Date?
-    private var claims: [ScopeClaim] = []
-    private var pids: Set<pid_t> = []
-    private var changed: (() -> Void)?
-    private var folderWatch: DispatchSourceFileSystemObject?
-    private var ownerWatches: [pid_t: DispatchSourceProcess] = [:]
+package final class ScopeClaims: Sendable {
+    private struct State {
+        var stamp: Date?
+        var claims: [ScopeClaim] = []
+        var pids: Set<pid_t> = []
+        var changed: (@Sendable () -> Void)?
+        var folderWatch: DispatchSourceFileSystemObject?
+        var ownerWatches: [pid_t: DispatchSourceProcess] = [:]
+    }
 
-    package init(folder: URL, alive: @escaping (pid_t) -> Bool = { kill($0, 0) == 0 || errno == EPERM }) {
+    private let folder: URL
+    private let alive: @Sendable (pid_t) -> Bool
+    private let state = OSAllocatedUnfairLock(initialState: State())
+
+    package init(folder: URL, alive: @escaping @Sendable (pid_t) -> Bool = { kill($0, 0) == 0 || errno == EPERM }) {
         self.folder = folder
         self.alive = alive
     }
 
     deinit {
-        folderWatch?.cancel()
-        ownerWatches.values.forEach { $0.cancel() }
+        state.withLock { state in
+            state.folderWatch?.cancel()
+            state.ownerWatches.values.forEach { $0.cancel() }
+        }
     }
 
-    package func claimedPids() -> Set<pid_t> { queue.sync { read() } }
+    package func claimedPids() -> Set<pid_t> { state.withLock { read(&$0) } }
 
-    package func watch(_ changed: @escaping () -> Void) {
+    package func watch(_ changed: @escaping @Sendable () -> Void) {
         Log.attempt("create \(folder.path)") {
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         }
@@ -51,68 +57,69 @@ package final class ScopeClaims {
             Log.info("claims: cannot watch \(folder.path) (errno \(errno))")
             return
         }
-        queue.sync {
-            self.changed = changed
-            let source = DispatchSource.makeFileSystemObjectSource(fileDescriptor: handle, eventMask: .write,
-                                                                   queue: .global(qos: .utility))
-            source.setEventHandler { [weak self] in self?.folderChanged() }
-            source.setCancelHandler { close(handle) }
-            source.resume()
-            folderWatch = source
-            _ = read()
+        let source = DispatchSource.makeFileSystemObjectSource(fileDescriptor: handle, eventMask: .write,
+                                                               queue: .global(qos: .utility))
+        source.setEventHandler { [weak self] in self?.folderChanged() }
+        source.setCancelHandler { close(handle) }
+        source.resume()
+        state.withLock { state in
+            state.changed = changed
+            state.folderWatch = source
+            _ = read(&state)
         }
     }
 
     package func stop() {
-        queue.sync {
-            changed = nil
-            folderWatch?.cancel()
-            folderWatch = nil
-            ownerWatches.values.forEach { $0.cancel() }
-            ownerWatches = [:]
+        state.withLock { state in
+            state.changed = nil
+            state.folderWatch?.cancel()
+            state.folderWatch = nil
+            state.ownerWatches.values.forEach { $0.cancel() }
+            state.ownerWatches = [:]
         }
     }
 
     package func folderChanged() {
-        queue.sync {
-            guard pids != read() else { return }
-            changed?()
+        let notify = state.withLock { state -> (@Sendable () -> Void)? in
+            let before = state.pids
+            return before == read(&state) ? nil : state.changed
         }
+        notify?()
     }
 
     package func ownerExited(_ owner: pid_t) {
-        queue.sync { claims.removeAll { $0.owner == owner } }
+        state.withLock { state in state.claims.removeAll { $0.owner == owner } }
         folderChanged()
     }
 
-    private func read() -> Set<pid_t> {
+    private func read(_ state: inout State) -> Set<pid_t> {
         let files = FileManager.default
         let stamp = (try? files.attributesOfItem(atPath: folder.path))?[.modificationDate] as? Date
-        if stamp != self.stamp {
-            self.stamp = stamp
+        if stamp != state.stamp {
+            state.stamp = stamp
             let ids = (try? files.contentsOfDirectory(atPath: folder.path)) ?? []
-            claims = ids.compactMap { id in
+            state.claims = ids.compactMap { id in
                 let file = folder.appendingPathComponent("\(id)/scope")
                 return (try? String(contentsOf: file, encoding: .utf8)).flatMap(ScopeClaim.init)
             }
         }
-        let live = claims.filter { alive($0.owner) }
-        if changed != nil { watchOwners(Set(live.map(\.owner))) }
-        pids = Set(live.flatMap(\.scope.pids))
-        return pids
+        let live = state.claims.filter { alive($0.owner) }
+        if state.changed != nil { watchOwners(Set(live.map(\.owner)), in: &state) }
+        state.pids = Set(live.flatMap(\.scope.pids))
+        return state.pids
     }
 
-    private func watchOwners(_ owners: Set<pid_t>) {
-        for (owner, source) in ownerWatches where !owners.contains(owner) {
+    private func watchOwners(_ owners: Set<pid_t>, in state: inout State) {
+        for (owner, source) in state.ownerWatches where !owners.contains(owner) {
             source.cancel()
-            ownerWatches[owner] = nil
+            state.ownerWatches[owner] = nil
         }
-        for owner in owners where ownerWatches[owner] == nil {
+        for owner in owners where state.ownerWatches[owner] == nil {
             let source = DispatchSource.makeProcessSource(identifier: owner, eventMask: .exit,
                                                           queue: .global(qos: .utility))
             source.setEventHandler { [weak self] in self?.ownerExited(owner) }
             source.resume()
-            ownerWatches[owner] = source
+            state.ownerWatches[owner] = source
         }
     }
 }

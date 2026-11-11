@@ -1,6 +1,6 @@
 import AppKit
 
-package final class DesktopGuard {
+@MainActor package final class DesktopGuard {
     package struct Context: Codable {
         package let display: String
         package let source: UInt64
@@ -55,7 +55,7 @@ package final class DesktopGuard {
         }
     }
 
-    package static func run() -> Never {
+    @MainActor package static func run() -> Never {
         let arguments = CommandLine.arguments
         guard arguments.count == 3, let parent = pid_t(arguments[2]), parent > 1 else { exit(1) }
         guard Spaces.canMoveWindows else { exit(1) }

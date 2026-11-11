@@ -100,7 +100,7 @@ enum Theme {
     private static let headerBold = "Alpino-Bold"
     private static let hasHeaderFace = NSFont(name: headerBold, size: 12) != nil
 
-    private static let keysDescriptor = NSFontDescriptor(fontAttributes: [
+    @MainActor private static let keysDescriptor = NSFontDescriptor(fontAttributes: [
         .name: brandSemibold,
         .cascadeList: [NSFont.systemFont(ofSize: 12, weight: .semibold).fontDescriptor]
     ])
@@ -108,7 +108,7 @@ enum Theme {
     static func body(_ size: CGFloat = 13.5, _ weight: Font.Weight = .regular) -> Font {
         .system(size: size, weight: weight)
     }
-    static func keys(_ size: CGFloat = 12.5, _ weight: Font.Weight = .regular) -> Font {
+    @MainActor static func keys(_ size: CGFloat = 12.5, _ weight: Font.Weight = .regular) -> Font {
         guard hasBrandFace, let font = NSFont(descriptor: keysDescriptor, size: size) else {
             return .system(size: size, weight: weight)
         }

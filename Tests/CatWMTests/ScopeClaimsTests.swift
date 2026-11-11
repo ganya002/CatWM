@@ -1,6 +1,7 @@
 import AppKit
 @testable import CatWM
 @testable import CatWMKit
+import os
 import Testing
 
 @MainActor @Suite struct ScopeClaimsTests {
@@ -49,10 +50,10 @@ import Testing
 
     @Test func aDeadOwnerIsCheckedOnEachReadWithoutReadingTheFilesAgain() throws {
         try write(ScopeClaim(owner: 1, scope: WindowScope(pids: [10])), id: "a")
-        var running = true
-        let claims = ScopeClaims(folder: folder, alive: { _ in running })
+        let running = OSAllocatedUnfairLock(initialState: true)
+        let claims = ScopeClaims(folder: folder, alive: { _ in running.withLock { $0 } })
         #expect(claims.claimedPids() == [10])
-        running = false
+        running.withLock { $0 = false }
         #expect(claims.claimedPids().isEmpty)
     }
 
@@ -194,14 +195,14 @@ import Testing
     @Test func aFolderChangeWithoutAClaimChangeStartsNoScan() throws {
         let paths = try #require(InstancePaths(id: "plain", home: folder))
         let claims = ScopeClaims(folder: paths.instancesFolder, alive: { _ in true })
-        var scans = 0
-        claims.watch { scans += 1 }
+        let scans = OSAllocatedUnfairLock(initialState: 0)
+        claims.watch { scans.withLock { $0 += 1 } }
         try FileManager.default.createDirectory(at: paths.configFolder, withIntermediateDirectories: true)
         try Data("1".utf8).write(to: paths.pidFile, options: .atomic)
         claims.folderChanged()
-        #expect(scans == 0)
+        #expect(scans.withLock { $0 } == 0)
         try paths.writeClaim(ScopeClaim(owner: 1, scope: WindowScope(pids: [10])))
         claims.folderChanged()
-        #expect(scans == 1)
+        #expect(scans.withLock { $0 } == 1)
     }
 }

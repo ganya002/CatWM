@@ -1,8 +1,9 @@
 import AudioToolbox
 import AVFoundation
 import CatWMKit
+import os
 
-final class IntroScore {
+final class IntroScore: Sendable {
     typealias AddNote = (Double, Voice, [UInt8], UInt8, Double) -> Void
 
     struct Voice: Hashable {
@@ -30,17 +31,17 @@ final class IntroScore {
         func at(_ volume: Float) -> Voice { Voice(program: program, kit: kit, volume: volume) }
     }
 
-    struct Arrangement: Identifiable {
+    struct Arrangement: Identifiable, Sendable {
         let id: String
         let name: String
         let blurb: String
-        let notes: () -> [Note]
+        let notes: @Sendable () -> [Note]
 
         static func named(_ id: String) -> Arrangement? { all.first { $0.id == id } }
         static var standard: Arrangement { named("1") ?? all[0] }
     }
 
-    struct Note {
+    struct Note: Sendable {
         let time: Double
         let voice: Voice
         let keys: [UInt8]
@@ -63,14 +64,19 @@ final class IntroScore {
 
     let engine = AVAudioEngine()
     let reverb = AVAudioUnitReverb()
-    var samplers: [Voice: AVAudioUnitSampler] = [:]
+    let samplers: [Voice: AVAudioUnitSampler]
     let queue = DispatchQueue(label: "catwm.intro.score", qos: .userInteractive)
-    var pending: [DispatchWorkItem] = []
-    var keepAlive: IntroScore?
-    var ready = false
+    let ready: Bool
     let notes: [Note]
 
-    var isPlaying: Bool { keepAlive != nil }
+    struct Playback: Sendable {
+        var generation = 0
+        var keepAlive: IntroScore?
+    }
+
+    let playback = OSAllocatedUnfairLock(initialState: Playback())
+
+    var isPlaying: Bool { playback.withLock { $0.keepAlive != nil } }
 
     static let Gn1: UInt8 = 31, An1: UInt8 = 33
     static let Dn1: UInt8 = 26, Dn2: UInt8 = 38, Gn2: UInt8 = 43, An2: UInt8 = 45
@@ -114,6 +120,7 @@ final class IntroScore {
         engine.attach(reverb)
         engine.connect(band, to: reverb, format: nil)
         engine.connect(reverb, to: engine.mainMixerNode, format: nil)
+        var loaded: [Voice: AVAudioUnitSampler] = [:]
         for voice in Set(notes.map(\.voice)) {
             let sampler = AVAudioUnitSampler()
             engine.attach(sampler)
@@ -127,10 +134,11 @@ final class IntroScore {
                 Log.info("intro: no instrument \(voice.program) (\(error.localizedDescription))")
                 continue
             }
-            samplers[voice] = sampler
+            loaded[voice] = sampler
         }
         engine.mainMixerNode.outputVolume = 0.75
         engine.prepare()
+        samplers = loaded
         ready = true
     }
 }

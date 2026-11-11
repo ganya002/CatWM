@@ -4,8 +4,8 @@ import Combine
 import SwiftUI
 import UniformTypeIdentifiers
 
-final class ConfigLibrary: ObservableObject {
-    static let builtInPrefix = "builtin."
+@MainActor final class ConfigLibrary: ObservableObject {
+    nonisolated static let builtInPrefix = "builtin."
 
     @Published var custom: [SavedConfig] = []
     @Published var builtIns: [SavedConfig] = []

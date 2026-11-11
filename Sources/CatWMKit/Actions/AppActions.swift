@@ -18,7 +18,7 @@ extension WindowActions {
         name: "exit", group: "app", summary: "Quit CatWM",
         pickers: [ActionPicker("Quit CatWM", .app, "", "xmark.circle")]
     ) { _ in
-        RunLoop.main.perform(inModes: [.common, .modalPanel]) { NSApp.terminate(nil) }
+        RunLoop.main.perform(inModes: [.common, .modalPanel]) { onMainThread { NSApp.terminate(nil) } }
     }
 
     package static let exec = WindowAction(

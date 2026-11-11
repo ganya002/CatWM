@@ -1,7 +1,7 @@
 import AppKit
 import CatWMKit
 
-final class TabStrips {
+@MainActor final class TabStrips {
     static let shared = TabStrips()
     private var strips: [Int: Strip] = [:]
     private var previewing: Int?
@@ -149,7 +149,7 @@ struct TabStripStack {
     }
 }
 
-final class TabStripFollow {
+@MainActor final class TabStripFollow {
     private struct Anchor {
         let group: Int
         let offset: CGVector

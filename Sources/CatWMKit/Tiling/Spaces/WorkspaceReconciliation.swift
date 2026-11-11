@@ -156,7 +156,7 @@ package enum SharedSpaces {
     package static func display(of frame: CGRect, kept: String?, target: CGRect?, settling: Bool,
                                 in screens: [(id: String, frame: CGRect)]) -> String? {
         let kept = kept.flatMap { id in screens.contains { $0.id == id } ? id : nil }
-        if let kept, settling || target.map { frame.approxEqual($0) } == true { return kept }
+        if let kept, settling || target.map({ frame.approxEqual($0) }) == true { return kept }
         guard !frame.isNull else { return kept ?? screens.first?.id }
         let centre = CGPoint(x: frame.midX, y: frame.midY)
         if let hit = screens.first(where: { $0.frame.contains(centre) }) { return hit.id }

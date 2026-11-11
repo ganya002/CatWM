@@ -2,7 +2,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-final class SliderState: ObservableObject {
+@MainActor final class SliderState: ObservableObject {
     @Published var dragging = false
     @Published var fraction: Double?
     @Published var stretch: CGFloat = 0

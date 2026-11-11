@@ -25,7 +25,7 @@ package struct CGWindowInfo {
 }
 
 extension CGWindowInfo {
-    package static func normalWindow(at point: CGPoint, ignoring ignored: Set<Int> = []) -> CGWindowInfo? {
+    @MainActor package static func normalWindow(at point: CGPoint, ignoring ignored: Set<Int> = []) -> CGWindowInfo? {
         guard let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
             as? [[String: Any]] else { return nil }
         let blocking: Set<Int> = [Int(CGWindowLevelForKey(.dockWindow)), Int(CGWindowLevelForKey(.mainMenuWindow)),

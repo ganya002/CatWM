@@ -1,7 +1,7 @@
 import AppKit
 import CatWMKit
 
-enum WindowContextMenu {
+@MainActor enum WindowContextMenu {
     struct Display {
         let index: Int
         let name: String
@@ -90,7 +90,7 @@ enum WindowContextMenu {
     }
 }
 
-enum TabMenu {
+@MainActor enum TabMenu {
     static func items(for id: CGWindowID) -> [MenuItem] {
         let manager = WindowManager.shared
         guard manager.windows[id] != nil else { return [] }

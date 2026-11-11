@@ -2,7 +2,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-final class SplitGripModel: ObservableObject {
+@MainActor final class SplitGripModel: ObservableObject {
     @Published var vertical = true
     @Published var confirming: Bool
     var dragging = false

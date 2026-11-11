@@ -1,7 +1,7 @@
 import AppKit
 import CatWMKit
 
-enum KeyWords {
+@MainActor enum KeyWords {
     enum RatioChange { case grow, shrink }
 
     static func same(_ lhs: String, _ rhs: String) -> Bool {

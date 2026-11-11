@@ -2,7 +2,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-final class TabDropHint {
+@MainActor final class TabDropHint {
     static let shared = TabDropHint()
 
     private let panel = CatWMPanel(role: .overlay(.normal, clickThrough: true))
@@ -11,7 +11,7 @@ final class TabDropHint {
     private var target: NSRect?
     private var hiding = false
 
-    final class Model: ObservableObject {
+    @MainActor final class Model: ObservableObject {
         @Published var title = ""
         @Published var pid: pid_t = 0
     }

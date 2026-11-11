@@ -2,7 +2,7 @@ import CatWMKit
 import Foundation
 
 enum Migrations {
-    static func run() {
+    @MainActor static func run() {
         let home = FileManager.default.homeDirectoryForCurrentUser
         moveOuchConfigFolder(home: home)
         copyHyprthystConfig(home: home)

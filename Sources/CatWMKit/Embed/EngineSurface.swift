@@ -10,7 +10,7 @@ struct EngineSurface: TilingSurface {
     }
 
     func apply(_ config: Config) {
-        Hotkeys.shared.setBindings(config.workspaceBindings)
+        Hotkeys.shared.setBindings(config.workspaceBindings, config: config, input: WindowManager.shared.input)
         guard WindowManager.shared.isStarted else { return }
         Notifications.shared.setEnabled(config.tabNotificationBadges)
     }
@@ -22,7 +22,7 @@ struct EngineSurface: TilingSurface {
 
     func setKeyBinds(enabled: Bool) {
         guard enabled else { return Hotkeys.shared.stop() }
-        guard WindowManager.shared.input.keys, !Hotkeys.shared.start() else { return }
+        guard WindowManager.shared.input.keys, !Hotkeys.shared.start(input: WindowManager.shared.input) else { return }
         Log.info("start: could not create the keyboard event tap; the host needs Accessibility")
     }
 

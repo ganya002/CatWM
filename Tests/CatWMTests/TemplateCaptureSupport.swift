@@ -22,7 +22,7 @@ struct TemplateScratch {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         url = directory.appendingPathComponent("templates.json")
     }
-    func library() -> TemplateLibrary { TemplateLibrary(url: url) }
+    @MainActor func library() -> TemplateLibrary { TemplateLibrary(url: url) }
     func remove() { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
 }
 

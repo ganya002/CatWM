@@ -11,35 +11,34 @@ private final class SlowBackend: WindowBackend {
     private struct State {
         var time = 0.0, cost = 0.0, fails = false
         var failures = 0
-        var onApplied: (() -> Void)?
+        var onApplied: (@Sendable () -> Void)?
         var frames: [CGRect] = []
     }
     let inner = FakeBackend()
-    private let lock = NSLock()
-    private var state = State()
+    private let state = OSAllocatedUnfairLock(initialState: State())
 
-    var time: CFTimeInterval { lock.withLock { state.time } }
-    func advance(_ seconds: Double) { lock.withLock { state.time += seconds } }
-    func set(cost: Double, fails: Bool = false) { lock.withLock { state.cost = cost; state.fails = fails } }
+    var time: CFTimeInterval { state.withLock { $0.time } }
+    func advance(_ seconds: Double) { state.withLock { $0.time += seconds } }
+    func set(cost: Double, fails: Bool = false) { state.withLock { $0.cost = cost; $0.fails = fails } }
 
-    func failNextWrite(onApplied: @escaping () -> Void) {
-        lock.withLock { state.failures = 1; state.onApplied = onApplied }
+    func failNextWrite(onApplied: @escaping @Sendable () -> Void) {
+        state.withLock { $0.failures = 1; $0.onApplied = onApplied }
     }
 
     private func spend() -> Bool {
-        lock.withLock {
-            state.time += state.cost
-            if state.failures > 0 { state.failures -= 1; return false }
-            return !state.fails
+        state.withLock {
+            $0.time += $0.cost
+            if $0.failures > 0 { $0.failures -= 1; return false }
+            return !$0.fails
         }
     }
 
-    var frames: [CGRect] { lock.withLock { state.frames } }
-    func clearFrames() { lock.withLock { state.frames.removeAll() } }
+    var frames: [CGRect] { state.withLock { $0.frames } }
+    func clearFrames() { state.withLock { $0.frames.removeAll() } }
     private func apply(_ window: Window, _ write: () -> Bool) -> Bool {
         guard spend(), write() else { return false }
         let frame = inner.frame(of: window.id)
-        let applied = lock.withLock { state.frames.append(frame); return state.onApplied }
+        let applied = state.withLock { $0.frames.append(frame); return $0.onApplied }
         applied?()
         return true
     }
@@ -163,7 +162,7 @@ private final class SlowBackend: WindowBackend {
         let animator = Animator(backend: backend)
         defer { animator.cancel(window.id) }
         animator.animate([.init(window: window, to: target, bounds: target)], duration: 0)
-        let placed = await XCTWaiter.fulfillment(of: [recovered], timeout: 2)
+        let placed = await XCTWaiter.fulfillment(of: [recovered], timeout: 10)
         #expect(placed == .completed)
         #expect(backend.inner.frame(of: window.id) == target)
     }

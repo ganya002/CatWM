@@ -2,7 +2,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-final class Coach {
+@MainActor final class Coach {
     enum Target { case center, window, bar, mode }
     enum Event { case mode(String), command(String, String, inMode: Bool), tick }
     enum Ending { case finished, skipped, paused, tutorial }
@@ -105,7 +105,7 @@ final class Coach {
     }
 }
 
-final class CoachModel: ObservableObject {
+@MainActor final class CoachModel: ObservableObject {
     enum Caret: Equatable { case none, pointingUp(CGFloat), down }
     @Published var title = ""
     @Published var text = ""

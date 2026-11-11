@@ -6,7 +6,7 @@ import IOKit.ps
 import MacKeysCore
 import MacKeysUI
 
-final class MacKeyboard: ObservableObject {
+@MainActor final class MacKeyboard: ObservableObject {
     static let shared = MacKeyboard()
 
     typealias Family = ModelID
@@ -63,13 +63,12 @@ final class MacKeyboard: ObservableObject {
         finish = initial
         device = macDevice(finish: initial, layout: .enUS)
         refresh()
-        inputSourceObserver = DistributedNotificationCenter.default().addObserver(
-            forName: Notification.Name(kTISNotifySelectedKeyboardInputSourceChanged as String), object: nil,
-            queue: .main
-        ) { [weak self] _ in self?.refresh() }
-        activationObserver = NotificationCenter.default.addObserver(
-            forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main
-        ) { [weak self] _ in
+        inputSourceObserver = DistributedNotificationCenter.default().observeOnMain(
+            Notification.Name(kTISNotifySelectedKeyboardInputSourceChanged as String)
+        ) { [weak self] in self?.refresh() }
+        activationObserver = NotificationCenter.default.observeOnMain(
+            NSApplication.didBecomeActiveNotification
+        ) { [weak self] in
             self?.refresh()
         }
         appearanceObserver = NSApp?.observe(\.effectiveAppearance) { [weak self] _, _ in

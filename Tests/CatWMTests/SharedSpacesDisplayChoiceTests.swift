@@ -3,7 +3,7 @@ import AppKit
 @testable import CatWMKit
 import Testing
 
-@Suite struct SharedSpacesDisplayChoiceTests {
+@Suite @MainActor struct SharedSpacesDisplayChoiceTests {
     private let screens: [(id: String, frame: CGRect)] = [
         (id: "left", frame: CGRect(x: 0, y: 0, width: 1000, height: 800)),
         (id: "right", frame: CGRect(x: 1000, y: 0, width: 1000, height: 800))

@@ -92,7 +92,7 @@ struct AppSurface: TilingSurface {
     private func startKeyTap(_ manager: WindowManager) {
         guard manager.input.keys else { return Log.info("start: key binds off in a scoped instance (CATWM_KEYS=on)") }
         guard manager.config.features.contains(.keys) else { return Log.info("start: key binds are off in the config") }
-        guard !Hotkeys.shared.start() else { return }
+        guard !Hotkeys.shared.start(input: manager.input) else { return }
         Log.info("start: could not create the keyboard event tap")
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
             guard !Hotkeys.shared.isActive else { return }
@@ -101,7 +101,7 @@ struct AppSurface: TilingSurface {
     }
 
     func apply(_ config: Config) {
-        Hotkeys.shared.setBindings(config.workspaceBindings)
+        Hotkeys.shared.setBindings(config.workspaceBindings, config: config, input: WindowManager.shared.input)
         ModeFX.shared.style = config.modeEffect
         MacKeyboard.shared.setting = config.keyboardFinish
         Notifications.shared.setEnabled(config.tabNotificationBadges)

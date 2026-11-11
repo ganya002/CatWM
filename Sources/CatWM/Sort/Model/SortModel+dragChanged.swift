@@ -44,9 +44,7 @@ extension SortModel {
 
     func startEdgeTimer() {
         edgeTimer?.invalidate()
-        let timer = Timer(timeInterval: 1 / 60, repeats: true) { [weak self] _ in self?.edgeScroll() }
-        RunLoop.main.add(timer, forMode: .common)
-        edgeTimer = timer
+        edgeTimer = Timer.onMain(every: 1 / 60, mode: .common, owner: self) { $0.edgeScroll() }
     }
 
     func dragEnded() {
@@ -163,9 +161,9 @@ extension SortModel {
         scroller = scroll
         scroll.contentView.postsBoundsChangedNotifications = true
         if let observer = scrollObserver { NotificationCenter.default.removeObserver(observer) }
-        scrollObserver = NotificationCenter.default.addObserver(forName: NSView.boundsDidChangeNotification,
-                                                                object: scroll.contentView,
-                                                                queue: .main) { [weak self] _ in self?.measureRow() }
+        scrollObserver = NotificationCenter.default.observeOnMain(
+            NSView.boundsDidChangeNotification, object: scroll.contentView
+        ) { [weak self] in self?.measureRow() }
         measureRow()
     }
 

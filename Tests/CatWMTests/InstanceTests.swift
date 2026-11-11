@@ -3,7 +3,7 @@
 import Foundation
 import Testing
 
-@Suite struct InstanceTests {
+@Suite @MainActor struct InstanceTests {
     let home = FileManager.default.temporaryDirectory.appendingPathComponent("catwm-instance-\(UUID().uuidString)")
 
     @Test func theDefaultInstanceKeepsTheOldPaths() throws {

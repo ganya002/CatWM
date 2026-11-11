@@ -22,7 +22,7 @@ struct ShortcutMap: View {
     }
 }
 
-final class ShortcutMapModel: ObservableObject {
+@MainActor final class ShortcutMapModel: ObservableObject {
     @Published var mode = ""
     @Published var picked: NSEvent.ModifierFlags = []
     @Published var held: NSEvent.ModifierFlags = []
@@ -110,13 +110,14 @@ final class ShortcutMapModel: ObservableObject {
             }
             return event
         }
-        fireObserver = NotificationCenter.default.addObserver(
-            forName: Hotkeys.didFire, object: nil, queue: .main
-        ) { [weak self] note in
-            guard let bind = note.userInfo?["bind"] as? KeyBinding else { return }
-            let mods = NSEvent.ModifierFlags(rawValue: UInt(bind.mods.rawValue)).intersection(Self.watched)
-            self?.flash(bind.keyCode, flags: mods, submap: bind.submap)
-        }
+        fireObserver = NotificationCenter.default.observeOnMain(
+            Hotkeys.didFire, payload: { $0.userInfo?["bind"] as? KeyBinding },
+            handler: { [weak self] bind in
+                guard let bind else { return }
+                let mods = NSEvent.ModifierFlags(rawValue: UInt(bind.mods.rawValue)).intersection(Self.watched)
+                self?.flash(bind.keyCode, flags: mods, submap: bind.submap)
+            }
+        )
     }
 
     func stopWatching() {

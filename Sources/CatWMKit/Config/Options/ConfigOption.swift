@@ -1,6 +1,6 @@
 import AppKit
 
-package struct ConfigOption {
+package struct ConfigOption: Sendable {
     package let key: String
     package var aliases: [String] = []
     package var group = OptionGroup.general
@@ -11,19 +11,19 @@ package struct ConfigOption {
     package var valueDescription = "value"
     package var documentation = ""
     package var choices: [(String, String)] = []
-    package var setNumber: ((inout Config, Double) -> Void)?
+    package var setNumber: (@Sendable (inout Config, Double) -> Void)?
     package var script = ""
     package var scriptKind = ScriptKind.string
     package var scriptType: String?
-    package let path: PartialKeyPath<Config>
-    package let read: (inout Config, _ value: String, _ rawKey: String) -> String?
-    package let text: (Config) -> String
-    package let copy: (inout Config, Config) -> Void
-    package let number: (Config) -> Double
+    package let path: PartialKeyPath<Config> & Sendable
+    package let read: @Sendable (inout Config, _ value: String, _ rawKey: String) -> String?
+    package let text: @Sendable (Config) -> String
+    package let copy: @Sendable (inout Config, Config) -> Void
+    package let number: @Sendable (Config) -> Double
 
-    package init<V>(_ key: String, _ path: WritableKeyPath<Config, V>,
-                    read: @escaping (String, _ rawKey: String) -> (V?, String?),
-                    text: @escaping (V) -> String, number: @escaping (V) -> Double = { _ in 0 }) {
+    package init<V>(_ key: String, _ path: WritableKeyPath<Config, V> & Sendable,
+                    read: @escaping @Sendable (String, _ rawKey: String) -> (V?, String?),
+                    text: @escaping @Sendable (V) -> String, number: @escaping @Sendable (V) -> Double = { _ in 0 }) {
         self.valueDescription = V.self == Bool.self ? "bool" : "value"
         self.scriptKind = V.self == Bool.self ? .bool : .string
         self.key = key
@@ -60,7 +60,8 @@ package struct ConfigOption {
     package func animation() -> Self { var option = self; option.group = .animation; return option }
     package func setting(_ pane: Pane, _ id: String, _ label: String, help: String? = nil, keywords: String = "",
                          advanced: Bool = false, range: ClosedRange<Double>? = nil, scale: Double = 1,
-                         section: String? = nil, order: Int = 0, enabled: @escaping (Config) -> Bool = { _ in true },
+                         section: String? = nil, order: Int = 0,
+                         enabled: @escaping @Sendable (Config) -> Bool = { _ in true },
                          unit: String = " pt", width: CGFloat = 160) -> Self {
         var option = self
         option.setting = SettingInfo(pane: pane, id: id, label: label, help: help, keywords: keywords,
@@ -78,16 +79,19 @@ package struct ConfigOption {
         return (trueWords.contains(word), known ? nil : "`\(rawKey)` needs true or false")
     }
 
-    package static func bool(_ key: String, _ path: WritableKeyPath<Config, Bool>) -> Self {
+    package static func bool(_ key: String, _ path: WritableKeyPath<Config, Bool> & Sendable) -> Self {
         Self(key, path, read: { input, raw in
             let (value, error) = readBool(input, raw)
             return (error == nil ? value : nil, error)
         }, text: { $0 ? "true" : "false" })
     }
 
-    package static func number<V>(_ key: String, _ path: WritableKeyPath<Config, V>, valid: ClosedRange<Double>? = nil,
-                                  convert: @escaping (Double) -> Double = \.self, make: @escaping (Double) -> V,
-                                  text: @escaping (V) -> String, number: @escaping (V) -> Double) -> Self {
+    package static func number<V>(_ key: String, _ path: WritableKeyPath<Config, V> & Sendable,
+                                  valid: ClosedRange<Double>? = nil,
+                                  convert: @escaping @Sendable (Double) -> Double = \.self,
+                                  make: @escaping @Sendable (Double) -> V,
+                                  text: @escaping @Sendable (V) -> String,
+                                  number: @escaping @Sendable (V) -> Double) -> Self {
         var option = Self(key, path, read: { input, raw in
             guard let parsed = Double(input), parsed.isFinite else { return (nil, "`\(raw)` needs a number") }
             var value = convert(parsed)
@@ -101,22 +105,23 @@ package struct ConfigOption {
         return option
     }
 
-    package static func points(_ key: String, _ path: WritableKeyPath<Config, CGFloat>,
+    package static func points(_ key: String, _ path: WritableKeyPath<Config, CGFloat> & Sendable,
                                valid: ClosedRange<Double>? = nil,
-                               convert: @escaping (Double) -> Double = \.self) -> Self {
+                               convert: @escaping @Sendable (Double) -> Double = \.self) -> Self {
         number(key, path, valid: valid, convert: convert, make: { CGFloat($0) },
                text: { String(format: "%g", Double($0)) }, number: { Double($0) })
     }
 
-    package static func list(_ key: String, _ path: WritableKeyPath<Config, [String]>) -> Self {
+    package static func list(_ key: String, _ path: WritableKeyPath<Config, [String]> & Sendable) -> Self {
         var option = Self(key, path, read: { input, _ in (Config.listItems(input), nil) },
                           text: { $0.joined(separator: ", ") })
         option.scriptKind = .strings
         return option
     }
 
-    package static func choice<V: RawRepresentable & CaseIterable>(_ key: String, _ path: WritableKeyPath<Config, V>,
-                                                                   noun: String) -> Self
+    package static func choice<V: RawRepresentable & CaseIterable & Sendable>(
+        _ key: String, _ path: WritableKeyPath<Config, V> & Sendable, noun: String
+    ) -> Self
     where V.RawValue == String {
         var option = Self(key, path, read: { input, _ in
             guard let value = V(rawValue: input.lowercased()) else {
@@ -156,7 +161,7 @@ package enum OptionGroup {
     case animation
 }
 
-package struct SettingInfo {
+package struct SettingInfo: Sendable {
     package let pane: Pane
     package let id: String
     package let label: String
@@ -167,7 +172,7 @@ package struct SettingInfo {
     package var scale: Double = 1
     package var section = ""
     package var order = 0
-    package var enabled: (Config) -> Bool = { _ in true }
+    package var enabled: @Sendable (Config) -> Bool = { _ in true }
     package var unit = " pt"
     package var width: CGFloat = 160
 }

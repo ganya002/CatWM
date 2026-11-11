@@ -3,7 +3,7 @@ import CatWMKit
 import CryptoKit
 import QuartzCore
 
-final class FrameRun: NSObject {
+@MainActor final class FrameRun: NSObject {
     struct Stats { let frames: Int; let duration, period, p95, slowShare: Double }
 
     let kind: String

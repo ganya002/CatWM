@@ -36,12 +36,13 @@ extension WindowManager {
     }
 
     package func watch(_ window: Window) {
-        guard let obs = observers[window.pid] else { return }
+        guard let observer = observers[window.pid] else { return }
+        let obs = AXReference(observer)
         scanner.run(window.pid) {
             for name in [kAXUIElementDestroyedNotification, kAXWindowMiniaturizedNotification,
                          kAXWindowDeminiaturizedNotification, kAXWindowMovedNotification,
                          kAXWindowResizedNotification, kAXTitleChangedNotification] {
-                AXObserverAddNotification(obs, window.element, name as CFString, nil)
+                AXObserverAddNotification(obs.object, window.element, name as CFString, nil)
             }
         }
     }
@@ -226,7 +227,9 @@ extension WindowManager {
 
 package func axCallback(_: AXObserver, _ element: AXUIElement, _ notification: CFString,
                         _: UnsafeMutableRawPointer?) {
-    WindowManager.shared.handle(notification as String, element)
+    let name = notification as String
+    let reference = AXReference(element)
+    onMainThread { WindowManager.shared.handle(name, reference.object) }
 }
 
 extension WindowManager {

@@ -2,7 +2,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-final class KeyHelp {
+@MainActor final class KeyHelp {
     static let shared = KeyHelp()
 
     private let model = KeyHelpModel()
@@ -23,11 +23,12 @@ final class KeyHelp {
 
     func install() {
         Hotkeys.shared.onFlagsChanged = { [weak self] flags in self?.flagsChanged(Self.mods(flags)) }
-        fireObserver = NotificationCenter.default.addObserver(
-            forName: Hotkeys.didFire, object: nil, queue: .main
-        ) { [weak self] note in
-            if let bind = note.userInfo?["bind"] as? KeyBinding { self?.fired(bind) }
-        }
+        fireObserver = NotificationCenter.default.observeOnMain(
+            Hotkeys.didFire, payload: { $0.userInfo?["bind"] as? KeyBinding },
+            handler: { [weak self] bind in
+                if let bind { self?.fired(bind) }
+            }
+        )
         Hotkeys.shared.onHelpKey = { [weak self] in self?.toggle() }
     }
 
@@ -150,7 +151,7 @@ final class KeyHelp {
     }
 }
 
-final class KeyHelpModel: ObservableObject {
+@MainActor final class KeyHelpModel: ObservableObject {
     enum Reason { case hold, toggle, menu }
 
     @Published var shown = false

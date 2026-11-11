@@ -3,7 +3,7 @@ import CatWMKit
 import CoreText
 import SwiftUI
 
-struct Squish<Trigger: Equatable>: ViewModifier {
+struct Squish<Trigger: Equatable & Sendable>: ViewModifier {
     let trigger: Trigger
     let delay: Double
     let anchor: UnitPoint
@@ -31,7 +31,7 @@ struct Squish<Trigger: Equatable>: ViewModifier {
 }
 
 extension View {
-    func squish<T: Equatable>(
+    func squish<T: Equatable & Sendable>(
         on trigger: T, when: Bool = true, delay: Double = 0, anchor: UnitPoint = .bottom
     ) -> some View {
         modifier(Squish(trigger: trigger, delay: delay, anchor: anchor, enabled: when))

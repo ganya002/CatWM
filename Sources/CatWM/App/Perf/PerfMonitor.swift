@@ -3,7 +3,7 @@ import CatWMKit
 import CryptoKit
 import QuartzCore
 
-final class PerfMonitor {
+@MainActor final class PerfMonitor {
     static let shared = PerfMonitor()
 
     private struct Event {
@@ -50,7 +50,7 @@ final class PerfMonitor {
                        (NSWorkspace.sessionDidResignActiveNotification, true),
                        (NSWorkspace.sessionDidBecomeActiveNotification, false)]
         for (name, value) in changes {
-            observers.append(center.addObserver(forName: name, object: nil, queue: .main) { [unowned self] _ in
+            observers.append(center.observeOnMain(name) { [unowned self] in
                 asleep = value
             })
         }
@@ -154,7 +154,7 @@ final class PerfMonitor {
     }
 
     private static func upload(_ event: Event, fingerprint digest: String, count: Int, to url: URL,
-                               done: @escaping (Bool) -> Void) {
+                               done: @escaping @MainActor (Bool) -> Void) {
         let system = ProcessInfo.processInfo.operatingSystemVersion
         let config = WindowManager.shared.config
         var body: [String: Any] = [
@@ -194,6 +194,6 @@ final class PerfMonitor {
         sysctlbyname("hw.model", nil, &size, nil, 0)
         var buffer = [CChar](repeating: 0, count: size)
         sysctlbyname("hw.model", &buffer, &size, nil, 0)
-        return String(cString: buffer)
+        return buffer.withUnsafeBufferPointer { $0.baseAddress.map(String.init(cString:)) } ?? ""
     }()
 }

@@ -16,14 +16,14 @@ private var catalogRoot: URL {
     URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
 }
 
-@Test func generatedAgentConfigMatchesTheCatalog() throws {
+@Test @MainActor func generatedAgentConfigMatchesTheCatalog() throws {
     let directory = catalogRoot.appendingPathComponent("Resources/AgentDocs")
     let template = try String(contentsOf: directory.appendingPathComponent("config.template.md"), encoding: .utf8)
     let actual = try String(contentsOf: directory.appendingPathComponent("config.md"), encoding: .utf8)
     #expect(actual == AgentConfigDocs.render(template), "Run ./build.sh --dev")
 }
 
-@Test func everySettingHasOneRendererPlacement() throws {
+@Test @MainActor func everySettingHasOneRendererPlacement() throws {
     let directory = catalogRoot.appendingPathComponent("Sources/CatWM/Settings/Panes")
     let files = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
     let expression = try NSRegularExpression(
@@ -52,7 +52,7 @@ private var catalogRoot: URL {
     #expect(Set(placed).count == placed.count)
 }
 
-@Test func settingsKeepTheirRowOrder() {
+@Test @MainActor func settingsKeepTheirRowOrder() {
     #expect(
         preservesOriginalOrder(
             OptionRows.options(pane: .windows, section: "Focus", advanced: false).map(\.settingInfo.id),
@@ -74,7 +74,7 @@ private var catalogRoot: URL {
             ]))
 }
 
-@Test func pointerCatalogKeepsItsOrderAndUniqueIdentities() {
+@Test @MainActor func pointerCatalogKeepsItsOrderAndUniqueIdentities() {
     #expect(
         preservesOriginalOrder(
             PointerActions.all.map(\.id),
@@ -90,7 +90,7 @@ private var catalogRoot: URL {
     }
 }
 
-@Test func pointerAvailabilityKeepsWindowRules() {
+@Test @MainActor func pointerAvailabilityKeepsWindowRules() {
     let floating = CursorShortcutSpec.Context(
         floating: true, tiled: false, zoomed: false, nativeFullscreen: false,
         canMakeMain: false, multipleLayouts: false, multipleDisplays: false, virtualWorkspace: false)
@@ -108,7 +108,7 @@ private var catalogRoot: URL {
     #expect(PointerActions.all.first { $0.id == "zoom" }?.selected(tiled) == true)
 }
 
-@Test func dispatcherRegistryContainsEveryActionAndNoDuplicates() {
+@Test @MainActor func dispatcherRegistryContainsEveryActionAndNoDuplicates() {
     #expect(Set(Actions.dispatchers).count == Actions.dispatchers.count)
     #expect(Actions.all.allSatisfy { Actions.dispatchers.contains($0.dispatcher) })
     for effect in FocusEffect.all {
@@ -126,7 +126,7 @@ private var catalogRoot: URL {
     }
 #endif
 
-@Test func catalogLintRejectsTheFormerWorkflow() throws {
+@Test @MainActor func catalogLintRejectsTheFormerWorkflow() throws {
     let process = Process()
     process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
     process.arguments = [catalogRoot.appendingPathComponent("Tools/test-catalog-rules.py").path]
@@ -139,14 +139,14 @@ private var catalogRoot: URL {
     #expect(process.terminationStatus == 0, "\(output)")
 }
 
-@Test func shortcutActionMenuKeepsItsOriginalWindowOrder() {
+@Test @MainActor func shortcutActionMenuKeepsItsOriginalWindowOrder() {
     let original = [
         "togglefloating ", "fullscreen ", "nativefullscreen ", "killactive ", "minimize ", "sort ", "sort-undo "
     ]
     #expect(preservesOriginalOrder(Actions.all.filter { $0.category == .window }.map(\.id), original))
 }
 
-@Test func customSearchEntriesUseTheirDeclaredAnchor() throws {
+@Test @MainActor func customSearchEntriesUseTheirDeclaredAnchor() throws {
     let root = catalogRoot.appendingPathComponent("Sources/CatWM/Settings")
     let files = try #require(FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil))
     var source = ""
@@ -164,7 +164,7 @@ private var catalogRoot: URL {
     }
 }
 
-@Test func directionCatalogKeepsActionAndHintNames() {
+@Test @MainActor func directionCatalogKeepsActionAndHintNames() {
     #expect(Direction.allCases.map(\.rawValue) == ["l", "r", "u", "d"])
     #expect(Direction.allCases.map(\.title) == ["Left", "Right", "Up", "Down"])
     #expect(Direction.hintArrows == [

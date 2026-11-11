@@ -1,23 +1,24 @@
 import AppKit
 @testable import CatWM
 @testable import CatWMKit
+import os
 import Testing
 
+private struct ReaderState { var reads = 0, completed = false }
+
 @MainActor @Suite struct PermissionWatcherTests {
-    private final class Reader {
-        private let lock = NSLock()
-        private var reads = 0
-        private var completed = false
+    private final class Reader: Sendable {
+        private let state = OSAllocatedUnfairLock(initialState: ReaderState())
         let release = DispatchSemaphore(value: 0)
-        var count: Int { lock.withLock { reads } }
-        var finished: Bool { lock.withLock { completed } }
+        var count: Int { state.withLock { $0.reads } }
+        var finished: Bool { state.withLock { $0.completed } }
 
         func read() -> Set<Permission> {
-            let count = lock.withLock { reads += 1; return reads }
+            let count = state.withLock { $0.reads += 1; return $0.reads }
             if count < 3 { return [.accessibility, .inputMonitoring] }
             if count == 3 {
                 _ = release.wait(timeout: .now() + 30)
-                lock.withLock { completed = true }
+                state.withLock { $0.completed = true }
                 return [.accessibility]
             }
             return []

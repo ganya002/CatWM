@@ -186,7 +186,7 @@ struct KeyEditor: View {
     }
 }
 
-final class KeyDraft: ObservableObject {
+@MainActor final class KeyDraft: ObservableObject {
     @Published var dispatcher: String
     @Published var args: String
     @Published var flags: NSEvent.ModifierFlags

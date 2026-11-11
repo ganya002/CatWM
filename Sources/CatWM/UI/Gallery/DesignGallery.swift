@@ -4,7 +4,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-final class DesignGallery: NSObject {
+@MainActor final class DesignGallery: NSObject {
     static let shared = DesignGallery()
     private var window: NSWindow?
 

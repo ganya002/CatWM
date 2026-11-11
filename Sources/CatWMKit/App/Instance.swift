@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 package struct InstancePaths: Equatable {
     package static let maxLength = 24
@@ -70,29 +71,32 @@ package struct InstancePaths: Equatable {
     }
 }
 
-package final class Embedding {
-    private let lock = NSLock()
-    private var id: String?
-    private var frozen = false
-    private var hostScope: WindowScope?
+package final class Embedding: Sendable {
+    private struct State {
+        var id: String?
+        var frozen = false
+        var scope: WindowScope?
+    }
+
+    private let state = OSAllocatedUnfairLock(initialState: State())
 
     package var scope: WindowScope? {
-        get { lock.withLock { hostScope } }
-        set { lock.withLock { hostScope = newValue } }
+        get { state.withLock { $0.scope } }
+        set { state.withLock { $0.scope = newValue } }
     }
 
     package func claim(_ id: String) -> Bool {
-        lock.withLock {
-            guard !frozen || self.id == id else { return false }
-            self.id = id
+        state.withLock { state in
+            guard !state.frozen || state.id == id else { return false }
+            state.id = id
             return true
         }
     }
 
     package func freeze() -> String? {
-        lock.withLock {
-            frozen = true
-            return id
+        state.withLock { state in
+            state.frozen = true
+            return state.id
         }
     }
 }
@@ -129,7 +133,7 @@ package enum Instance {
 
     package static let keys = ProcessInfo.processInfo.environment["CATWM_KEYS"]
 
-    package static let defaults: UserDefaults = {
+    @MainActor package static let defaults: UserDefaults = {
         guard let suite = paths.defaultsSuite else { return .standard }
         guard let defaults = UserDefaults(suiteName: suite) else { fail("cannot open the defaults suite \(suite)") }
         return defaults

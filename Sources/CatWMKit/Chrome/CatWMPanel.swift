@@ -145,14 +145,14 @@ extension NSWindow {
     }
 }
 
-package final class DismissMonitor {
+@MainActor package final class DismissMonitor {
     private var monitors: [Any] = []
     private var screenObserver: Any?
 
     package init() {}
 
     package func start(keeps: @escaping (NSWindow?) -> Bool, swallowsClick: Bool = false, screens: Bool = false,
-                       key: ((NSEvent) -> Bool)? = nil, close: @escaping () -> Void) {
+                       key: ((NSEvent) -> Bool)? = nil, close: @escaping @MainActor () -> Void) {
         stop()
         if let key,
            let monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown, handler: { key($0) ? nil : $0 }) {
@@ -169,9 +169,9 @@ package final class DismissMonitor {
             return swallowsClick && event.type != .rightMouseDown ? nil : event
         }) { monitors.append(monitor) }
         if screens {
-            screenObserver = NotificationCenter.default.addObserver(
-                forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
-            ) { _ in close() }
+            screenObserver = NotificationCenter.default.observeOnMain(
+                NSApplication.didChangeScreenParametersNotification
+            ) { close() }
         }
     }
 

@@ -51,7 +51,7 @@ struct WhatsNewView: View {
     }
 }
 
-final class WhatsNewModel: ObservableObject {
+@MainActor final class WhatsNewModel: ObservableObject {
     @Published var versions = ""
     @Published var features: [Release.Feature] = []
     @Published var caret: CGFloat?

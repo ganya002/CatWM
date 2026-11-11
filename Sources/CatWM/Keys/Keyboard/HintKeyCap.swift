@@ -153,11 +153,16 @@ struct HintKeyCap: View {
 }
 
 struct KeyOutline: Shape {
-    let cap: KeyCap
+    private let outline: Path
+    private let width: CGFloat
+
+    @MainActor init(cap: KeyCap) {
+        outline = MacKeyCap.outline(of: cap)
+        width = CGFloat(cap.w)
+    }
 
     func path(in rect: CGRect) -> Path {
-        let scale = rect.width / CGFloat(cap.w)
-        return MacKeyCap.outline(of: cap).applying(CGAffineTransform(scaleX: scale, y: scale))
-            .offsetBy(dx: rect.minX, dy: rect.minY)
+        let scale = rect.width / width
+        return outline.applying(CGAffineTransform(scaleX: scale, y: scale)).offsetBy(dx: rect.minX, dy: rect.minY)
     }
 }

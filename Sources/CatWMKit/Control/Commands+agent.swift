@@ -5,7 +5,7 @@ extension CommandRegistry {
 
     private static func windowID(_ call: Invocation) -> CGWindowID { CGWindowID(call.args["window"]?.int ?? 0) }
 
-    private static func target(_ call: Invocation) throws -> (pid: pid_t, window: AXUIElement) {
+    @MainActor private static func target(_ call: Invocation) throws -> (pid: pid_t, window: AXUIElement) {
         let display = try call.manager.agents.display(for: call.client)
         let id = windowID(call)
         guard let pid = display.windowIDs().first(where: { $0.id == id })?.pid,

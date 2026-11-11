@@ -1,21 +1,24 @@
 import AppKit
 @testable import CatWMKit
+import os
 import Testing
 
 @MainActor @Suite struct AgentDisplayTests {
-    final class World {
+    @MainActor final class World {
         var windows: [CGWindowID: (pid: pid_t, frame: CGRect)] = [:]
         var refusals = 0
-        var callbacks: [pid_t: () -> Void] = [:]
-        var queue: [() -> Void] = []
+        var callbacks: [pid_t: @MainActor () -> Void] = [:]
+        var queue: [@MainActor () -> Void] = []
         var clock = 0.0
-        var disabled = 0
-        var enabled = 0
+        let switches = OSAllocatedUnfairLock(initialState: (disabled: 0, enabled: 0))
+        var disabled: Int { switches.withLock { $0.disabled } }
+        var enabled: Int { switches.withLock { $0.enabled } }
         let screen = CGRect(x: 3000, y: 0, width: 1920, height: 1080)
         let home = FileManager.default.temporaryDirectory.appendingPathComponent("catwm-agent-\(UUID().uuidString)")
 
         var updates: WindowServerUpdates {
-            WindowServerUpdates(disable: { self.disabled += 1; return true }, enable: { self.enabled += 1 })
+            WindowServerUpdates(disable: { [switches] in switches.withLock { $0.disabled += 1 }; return true },
+                                enable: { [switches] in switches.withLock { $0.enabled += 1 } })
         }
 
         var access: AgentDisplay.Windows {

@@ -8,13 +8,13 @@ private var projectRoot: URL {
     URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
 }
 
-private func reply(_ text: String) throws -> JSON {
+@MainActor private func reply(_ text: String) throws -> JSON {
     var data = Data()
     ControlServer.respond(to: Data(text.utf8), client: nil) { data = $0 }
     return try #require(JSON.parse(data))
 }
 
-@Suite struct ControlRegistryTests {
+@Suite @MainActor struct ControlRegistryTests {
     @Test func cliPreservesOptionsAfterSeparator() throws {
         let parsed = ControlCLI.options(["--json", "config.set", "some-key", "--", "tool", "--json"])
         #expect(parsed.compact)
@@ -232,6 +232,7 @@ private func reply(_ text: String) throws -> JSON {
         let manager = fake.makeManager()
         let window = fake.addWindow()
         #expect(await fake.settle(manager))
+        manager.isStarted = false
         manager.desktops.nativeCatalog.perDisplay = perDisplay
         manager.desktops.nativeCatalog.synchronize([.init(id: screen.uuid, spaces: [11, 12, 13])])
         let names = (1...3).map { perDisplay ? "\(screen.uuid)/\($0)" : "\($0)" }

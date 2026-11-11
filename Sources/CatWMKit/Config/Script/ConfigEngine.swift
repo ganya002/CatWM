@@ -1,5 +1,6 @@
-import Foundation
+@preconcurrency import Foundation
 import JavaScriptCore
+import os
 
 package final class ConfigEngine {
     package static let timeLimit = 1.0
@@ -177,28 +178,28 @@ package final class ConfigEngine {
 }
 
 private final class RunLoopThread {
-    private final class State {
-        package var loop: CFRunLoop?
-        package var running = true
+    private struct State {
+        var loop: CFRunLoop?
+        var running = true
     }
 
     private let runLoop: CFRunLoop
-    private let state = State()
+    private let state = OSAllocatedUnfairLock(initialState: State())
 
     package init(name: String) {
         let state = state
         let ready = DispatchSemaphore(value: 0)
         let thread = Thread {
-            state.loop = CFRunLoopGetCurrent()
+            state.withLock { $0.loop = CFRunLoopGetCurrent() }
             RunLoop.current.add(NSMachPort(), forMode: .default)
             ready.signal()
-            while state.running { RunLoop.current.run(mode: .default, before: .distantFuture) }
+            while state.withLock({ $0.running }) { RunLoop.current.run(mode: .default, before: .distantFuture) }
         }
         thread.name = name
         thread.qualityOfService = .userInitiated
         thread.start()
         ready.wait()
-        guard let loop = state.loop else { fatalError("the config thread has no run loop") }
+        guard let loop = state.withLock({ $0.loop }) else { fatalError("the config thread has no run loop") }
         runLoop = loop
     }
 
@@ -209,6 +210,6 @@ private final class RunLoopThread {
 
     package func stop() {
         let state = state
-        perform { state.running = false }
+        perform { state.withLock { $0.running = false } }
     }
 }

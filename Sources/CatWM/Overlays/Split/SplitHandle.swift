@@ -2,7 +2,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-final class SplitHandle {
+@MainActor final class SplitHandle {
     static let shared = SplitHandle()
     private var handles: [String: Handle] = [:]
 
@@ -32,7 +32,7 @@ final class SplitHandle {
 
     func confirmSwap(on screen: String) { handles[screen]?.confirm() }
 
-    private final class Handle {
+    @MainActor private final class Handle {
         private static let confirmDuration = 0.5
 
         private let panel = CatWMPanel(role: .overlay(.normal, clickThrough: false))

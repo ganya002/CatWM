@@ -1,6 +1,6 @@
 import Foundation
 
-package struct FocusEffect {
+package struct FocusEffect: Sendable {
     package let options: [ConfigOption]
     package let pointer: CursorShortcutSpec
     package var dispatcherBefore = "retile"

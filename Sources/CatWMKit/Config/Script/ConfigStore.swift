@@ -1,6 +1,7 @@
 import AppKit
+import os
 
-package final class ConfigStore {
+@MainActor package final class ConfigStore {
     package enum Source {
         case script, conf
     }
@@ -135,16 +136,16 @@ package final class ConfigStore {
         guard relevant else { return }
         let engine = engine ?? makeEngine()
         self.engine = engine
-        var finished = false
-        engine.run(.changed) { run in
+        let finished = OSAllocatedUnfairLock(initialState: false)
+        engine.run(.changed) { [weak self] run in
             DispatchQueue.main.async { [weak self] in
-                finished = true
+                finished.withLock { $0 = true }
                 guard let self, self.engine === engine else { return }
                 publish(run, notify: true)
             }
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + Self.timeLimit) { [weak self] in
-            guard let self, !finished, self.engine === engine else { return }
+            guard let self, !finished.withLock({ $0 }), self.engine === engine else { return }
             publish(stuck(engine), notify: true)
         }
     }

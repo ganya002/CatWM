@@ -1,6 +1,6 @@
 import Foundation
 
-package final class AgentSessions {
+@MainActor package final class AgentSessions {
     private let make: () -> AgentDisplay?
     private var displays: [ObjectIdentifier: AgentDisplay] = [:]
     private var opening: Set<ObjectIdentifier> = []

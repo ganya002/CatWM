@@ -4,7 +4,7 @@ import CoreGraphics
 import Foundation
 import Testing
 
-@Suite struct TemplatePlacementTests {
+@Suite @MainActor struct TemplatePlacementTests {
     @Test func aMinimizedZoomedWindowOnThePreferredDisplayKeepsZoom() {
         let template = WorkspaceTemplateTests().template()
         let saved = template.windows[0]

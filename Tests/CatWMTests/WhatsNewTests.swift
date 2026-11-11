@@ -3,7 +3,7 @@
 import Foundation
 import Testing
 
-@Suite struct WhatsNewTests {
+@Suite @MainActor struct WhatsNewTests {
     private let releases = [
         Release(version: "0.4", features: [
             .init(id: "0.4.a", symbol: "sparkles", title: "A", text: "")

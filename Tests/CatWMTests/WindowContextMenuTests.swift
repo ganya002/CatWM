@@ -2,7 +2,7 @@
 @testable import CatWMKit
 import Testing
 
-@Suite struct WindowContextMenuTests {
+@Suite @MainActor struct WindowContextMenuTests {
     final class Runs { var list: [String] = [] }
 
     func input(_ runs: Runs = Runs(), grouped: Bool = false, tiled: Bool = true, workspaces: [String] = [],

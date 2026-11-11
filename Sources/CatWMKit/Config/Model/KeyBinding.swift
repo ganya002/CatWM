@@ -1,6 +1,6 @@
 import AppKit
 
-package struct KeyBinding: Equatable {
+package struct KeyBinding: Equatable, Sendable {
     package let keyCode: UInt16
     package let mods: CGEventFlags
     package let dispatcher: String

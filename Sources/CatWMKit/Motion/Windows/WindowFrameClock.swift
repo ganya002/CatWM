@@ -1,12 +1,12 @@
 import AppKit
 import QuartzCore
 
-package final class WindowFrameClock: NSObject {
+@MainActor package final class WindowFrameClock: NSObject {
     package let displayID: CGDirectDisplayID?
     private var link: CADisplayLink?
-    private let update: (CFTimeInterval) -> Void
+    private let update: @MainActor (CFTimeInterval) -> Void
 
-    package init(screen: NSScreen, update: @escaping (CFTimeInterval) -> Void) {
+    package init(screen: NSScreen, update: @escaping @MainActor (CFTimeInterval) -> Void) {
         displayID = screen.displayID
         self.update = update
         super.init()

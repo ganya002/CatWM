@@ -8,7 +8,7 @@ private let notes = SwitcherItem(id: 3, pid: 30, app: "Notes", title: "Shopping 
 private let safariTwo = SwitcherItem(id: 4, pid: 10, app: "Safari", title: "Swift Forums", workspace: "1")
 private let all = [safari, slack, notes, safariTwo]
 
-@Suite struct SwitcherSearchTests {
+@Suite @MainActor struct SwitcherSearchTests {
     @Test func anEmptyQueryKeepsTheRecentOrder() {
         #expect(SwitcherSearch.results(all, query: "") == all)
     }
@@ -43,7 +43,7 @@ private let all = [safari, slack, notes, safariTwo]
     }
 }
 
-@Suite struct SwitcherModelTests {
+@Suite @MainActor struct SwitcherModelTests {
     @Test func selectionWrapsBothWays() {
         let model = SwitcherModel()
         model.begin(all, selection: 1)
@@ -92,7 +92,7 @@ private let all = [safari, slack, notes, safariTwo]
     }
 }
 
-@Test func spaceLabelsNumberDesktopsAndNameFullScreenSpaces() {
+@Test @MainActor func spaceLabelsNumberDesktopsAndNameFullScreenSpaces() {
     let main = Spaces.DisplaySpaces(ids: [11, 12, 13, 14], desktops: [0, 1, 3], current: 0)
     let side = Spaces.DisplaySpaces(ids: [21, 0], desktops: [0], current: 0)
     #expect(WindowManager.spaceLabels([main, side]) == [

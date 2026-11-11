@@ -3,7 +3,7 @@ import AppKit
 package enum DesktopUI {
     package static let owners = ["com.apple.WindowManager", "com.apple.dock"]
 
-    package static func prepare() {
+    @MainActor package static func prepare() {
         DesktopMenuBar.recover()
         DesktopMenuBarCover.shared.prepare()
         for screen in Screen.all() { _ = isSettled(screen) }

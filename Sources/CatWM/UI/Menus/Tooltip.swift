@@ -2,7 +2,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-final class Tooltip {
+@MainActor final class Tooltip {
     static let shared = Tooltip()
 
     private var panel: NSPanel?
@@ -69,11 +69,10 @@ final class Tooltip {
         tipPanel.setFrame(frame, display: true)
         tipPanel.orderFrontRegardless()
         watch?.invalidate()
-        watch = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self, weak view] _ in
-            guard let self else { return }
+        watch = Timer.onMain(every: 0.25, owner: self) { [weak view] tip in
             guard let view, let window = view.window, window.isVisible, window.occlusionState.contains(.visible),
                   window.convertToScreen(view.convert(view.bounds, to: nil)).contains(NSEvent.mouseLocation)
-            else { self.hide(); return }
+            else { tip.hide(); return }
         }
         if monitor == nil {
             let events: NSEvent.EventTypeMask = [.leftMouseDown, .rightMouseDown, .keyDown, .scrollWheel]

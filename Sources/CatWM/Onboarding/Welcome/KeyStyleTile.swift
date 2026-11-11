@@ -8,7 +8,7 @@ struct KeyStyleTile: View {
     let action: () -> Void
     @StateObject private var model = Model()
 
-    final class Model: ObservableObject { @Published var hover = false }
+    @MainActor final class Model: ObservableObject { @Published var hover = false }
 
     var body: some View {
         Button(action: action) {
@@ -56,7 +56,7 @@ struct KeyStyleTile: View {
     }
 }
 
-enum KeyStyle: String, CaseIterable {
+@MainActor enum KeyStyle: String, CaseIterable {
     case vim, wasd
 
     var configID: String { ConfigLibrary.builtInPrefix + (self == .vim ? "keyboard.default" : "keyboard.wasd") }

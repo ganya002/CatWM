@@ -23,7 +23,7 @@ private func plan(items: [SortItem]? = nil, lanes: [SortLane]? = nil, taken: Set
                     existing: lanes.map(\.workspace), taken: taken, active: "1")
 }
 
-@Suite struct SortPlanTests {
+@Suite @MainActor struct SortPlanTests {
     @Test func workspacesSortNumericallyThenByName() {
         #expect(["10", "web", "2", "1", "chat"].sorted(by: SortPlan.order) == ["1", "2", "10", "chat", "web"])
     }
@@ -173,7 +173,7 @@ private func plan(items: [SortItem]? = nil, lanes: [SortLane]? = nil, taken: Set
     }
 }
 
-@Suite struct SortFullscreenTests {
+@Suite @MainActor struct SortFullscreenTests {
     private func plain() -> SortPlan {
         SortPlan(
             display: "D",

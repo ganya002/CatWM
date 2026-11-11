@@ -3,7 +3,7 @@
 import CoreGraphics
 import Testing
 
-@Suite struct SortRenumberSameNumberTests {
+@Suite @MainActor struct SortRenumberSameNumberTests {
     @Test func typingTheOwnNumberWithALeadingZeroChangesNothing() {
         let model = SortModel()
         let item = SortItem(id: 1, title: "A", app: "App", bundleID: nil, icon: nil, recency: 1)

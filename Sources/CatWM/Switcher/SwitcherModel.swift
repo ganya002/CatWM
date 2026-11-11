@@ -2,7 +2,7 @@ import CatWMKit
 import CoreGraphics
 import SwiftUI
 
-final class SwitcherModel: ObservableObject {
+@MainActor final class SwitcherModel: ObservableObject {
     @Published private(set) var items: [SwitcherItem] = []
     @Published private(set) var results: [SwitcherItem] = []
     @Published private(set) var query = ""

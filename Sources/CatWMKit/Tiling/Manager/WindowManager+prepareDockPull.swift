@@ -1,7 +1,7 @@
 import AppKit
 
 extension WindowManager {
-    package func prepareDockPull(at point: CGPoint) -> (() -> Void)? {
+    package func prepareDockPull(at point: CGPoint) -> (@MainActor @Sendable () -> Void)? {
         let deadline = Date().addingTimeInterval(0.15)
         guard isStarted, config.virtualWorkspaces, !closeAndSort.sortSession, dockArea.contains(point),
               Spaces.canMoveWindows,

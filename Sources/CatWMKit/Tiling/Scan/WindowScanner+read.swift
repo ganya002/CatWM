@@ -1,6 +1,6 @@
 import AppKit
 
-extension WindowScanner {
+nonisolated extension WindowScanner {
     package static func read(_ job: Job, discovered: (AppScan) -> Void) -> AppScan {
         dispatchPrecondition(condition: .notOnQueue(.main))
         var scan = AppScan()

@@ -1,15 +1,15 @@
 import AppKit
 @testable import CatWM
 @testable import CatWMKit
+import os
 import Testing
 
-@Suite struct TemplateMotionTests {
-    final class ResultBox: @unchecked Sendable {
-        private let lock = NSLock()
-        private var stored = false
+@Suite @MainActor struct TemplateMotionTests {
+    final class ResultBox: Sendable {
+        private let stored = OSAllocatedUnfairLock(initialState: false)
         var value: Bool {
-            get { lock.withLock { stored } }
-            set { lock.withLock { stored = newValue } }
+            get { stored.withLock { $0 } }
+            set { stored.withLock { $0 = newValue } }
         }
     }
 
@@ -47,15 +47,15 @@ import Testing
 
     @Test func cancellingDuringReadInvalidatesTheFollowingWrite() async {
         let writer = AXWriter(pid: getpid())
-        let started = DispatchSemaphore(value: 0)
         let release = DispatchSemaphore(value: 0)
         let valid = ResultBox()
-        writer.run(for: 42) { isCurrent in
-            started.signal()
-            _ = release.wait(timeout: .now() + 2)
-            valid.value = isCurrent()
+        await withCheckedContinuation { started in
+            writer.run(for: 42) { isCurrent in
+                started.resume()
+                _ = release.wait(timeout: .now() + 2)
+                valid.value = isCurrent()
+            }
         }
-        #expect(started.wait(timeout: .now() + 2) == .success)
         writer.cancel(42)
         release.signal()
         await drain(writer)

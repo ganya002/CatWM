@@ -31,7 +31,7 @@ package struct CommandArg {
     }
 }
 
-package struct Field {
+package struct Field: Sendable {
     package let name: String
     package let type: String
     package let summary: String
@@ -72,12 +72,12 @@ package struct Invocation {
     package func text(_ name: String) -> String { args[name]?.string ?? "" }
 }
 
-package enum CommandBody {
-    case now((Invocation) throws -> JSON)
-    case later(@MainActor (Invocation) async throws -> JSON)
+package enum CommandBody: Sendable {
+    case now(@MainActor @Sendable (Invocation) throws -> JSON)
+    case later(@MainActor @Sendable (Invocation) async throws -> JSON)
 }
 
-package struct Command {
+package struct Command: Sendable {
     package let name: String
     package let group: String
     package let summary: String
@@ -88,7 +88,7 @@ package struct Command {
 
     package init(name: String, group: String, summary: String, args: [CommandArg] = [],
                  result: ResultShape = .none, access: CommandAccess = .public,
-                 run: @escaping (Invocation) throws -> JSON) {
+                 run: @escaping @MainActor @Sendable (Invocation) throws -> JSON) {
         (self.name, self.group, self.summary, self.args, self.result, self.access) =
             (name, group, summary, args, result, access)
         body = .now(run)
@@ -96,7 +96,7 @@ package struct Command {
 
     package static func later(name: String, group: String, summary: String, args: [CommandArg] = [],
                               result: ResultShape = .none, access: CommandAccess = .public,
-                              run: @escaping @MainActor (Invocation) async throws -> JSON) -> Command {
+                              run: @escaping @MainActor @Sendable (Invocation) async throws -> JSON) -> Command {
         var command = Command(name: name, group: group, summary: summary, args: args, result: result,
                               access: access) { _ in .null }
         command.body = .later(run)

@@ -1,6 +1,6 @@
 import AppKit
 
-package protocol WindowPresentation: AnyObject {
+@MainActor package protocol WindowPresentation: AnyObject, Sendable {
     func prepare(_ moves: [Animator.Move], spec: MotionSpec)
     func follow(_ moves: [Animator.Move])
     func sizing(for move: Animator.Move, from: CGRect, spec: MotionSpec) -> ColorFillSizing?

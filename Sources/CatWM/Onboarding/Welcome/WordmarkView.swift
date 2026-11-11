@@ -29,7 +29,7 @@ struct WordmarkView: View {
     }
 }
 
-final class WordmarkModel: ObservableObject {
+@MainActor final class WordmarkModel: ObservableObject {
     @Published var subtitle = false
     @Published var landed = false
 }

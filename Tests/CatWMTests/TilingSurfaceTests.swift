@@ -48,7 +48,7 @@ private final class RecordingSurface: TilingSurface {
     func preview(_: String, _: String) -> Bool { false }
 }
 
-@Suite struct TilingSurfaceTests {
+@Suite @MainActor struct TilingSurfaceTests {
     @Test @MainActor func theEngineRunsHeadlessByDefault() {
         #expect(WindowManager(config: .parse(defaultText)).surface is HeadlessSurface)
     }
@@ -88,7 +88,7 @@ private final class RecordingSurface: TilingSurface {
     }
 }
 
-@Suite struct TabDragLifecycleTests {
+@Suite @MainActor struct TabDragLifecycleTests {
     @Test func aCancelledDragCleansThePreviewAndANewDragCanJoin() {
         let drag = TabDrag()
         let surface = RecordingSurface()

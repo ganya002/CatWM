@@ -26,7 +26,7 @@ package struct StepCost {
     }
 }
 
-package struct WindowWriteCost {
+package struct WindowWriteCost: Sendable {
     private var cost = StepCost()
     private var sampledAt: CFTimeInterval?
     private static let lifetime: CFTimeInterval = 1

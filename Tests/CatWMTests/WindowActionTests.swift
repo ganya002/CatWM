@@ -3,7 +3,7 @@
 import Foundation
 import Testing
 
-@Suite struct WindowActionTests {
+@Suite @MainActor struct WindowActionTests {
     @Test func namesAndAliasesAreUniqueAndResolve() {
         let names = WindowActions.all.flatMap { [$0.name] + $0.aliases }
         #expect(Set(names).count == names.count)

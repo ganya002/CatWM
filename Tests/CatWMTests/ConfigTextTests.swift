@@ -2,7 +2,7 @@
 @testable import CatWMKit
 import Testing
 
-@Suite struct ConfigTextTests {
+@Suite @MainActor struct ConfigTextTests {
     @Test func openingAndSavingKeepsTextExactly() {
         let text = "# personal config\r\n\r\nwindow-margins = off # keep me\r\nunknown = value\r\n"
         #expect(ConfigDocument(text: text).serialize() == text)
@@ -70,14 +70,14 @@ import Testing
     }
 }
 
-@Test func aLaterCompositePaddingDoesNotHideAnOptionWrite() {
+@Test @MainActor func aLaterCompositePaddingDoesNotHideAnOptionWrite() {
     let source = ConfigText("screen-padding-left = 10\ngaps_out = 20\n")
     let saved = Config.parse(source.setting(option: "screen-padding-left", to: "40"))
     #expect(saved.paddingLeft == 40)
     #expect(saved.paddingRight == 20)
 }
 
-@Test func exportingKeyboardSettingsIncludesIndentedBinds() {
+@Test @MainActor func exportingKeyboardSettingsIncludesIndentedBinds() {
     let doc = ConfigDocument(text: "$mod = CTRL\nsubmap = window\n  bind = , H, movefocus, l\nsubmap = reset\n")
     let parsed = Config.parse(doc.keyboardText())
     #expect(parsed.errors.isEmpty)
@@ -85,7 +85,7 @@ import Testing
     #expect(parsed.bindings.first?.submap == "window")
 }
 
-@Test func deletingABindKeepsItsCommentAndUnknownNeighbours() {
+@Test @MainActor func deletingABindKeepsItsCommentAndUnknownNeighbours() {
     let doc = ConfigDocument(text: "bind = CTRL, H, movefocus, l # left\nunknown = keep\n")
     doc.binds.removeAll()
     let saved = doc.serialize()
@@ -93,14 +93,14 @@ import Testing
     #expect(Config.parse(saved).bindings.isEmpty)
 }
 
-@Test func anExportedSettingsSnapshotEscapesHashes() {
+@Test @MainActor func anExportedSettingsSnapshotEscapesHashes() {
     let doc = ConfigDocument(text: "keyboard-help-key = ##\nfloating = com.example.##app\n")
     let snapshot = Config.parse(doc.serialize(includeKeyboard: false, includeAnimation: false))
     #expect(snapshot.keyboardHelpKey == "#")
     #expect(snapshot.floating == ["com.example.#app"])
 }
 
-@Test func editingAHashEscapesItExactlyOnce() {
+@Test @MainActor func editingAHashEscapesItExactlyOnce() {
     let doc = ConfigDocument(text: "keyboard-help-key = ? # toggle help\n")
     doc.config.keyboardHelpKey = "#"
     let text = doc.serialize()
@@ -112,7 +112,7 @@ import Testing
     "$mod = CTRL\nbind = $mod, J, movefocus, d\n",
     "$gap = 8\n$mod = CTRL\nbind = $mod, J, movefocus, d\n"
 ])
-func aKeyboardImportKeepsSettingsThatUsedReplacedVariables(_ keyboard: String) {
+@MainActor func aKeyboardImportKeepsSettingsThatUsedReplacedVariables(_ keyboard: String) {
     let doc = ConfigDocument(text: """
     $gap = 24
     window-margin-size = $gap # spacing
@@ -131,7 +131,7 @@ func aKeyboardImportKeepsSettingsThatUsedReplacedVariables(_ keyboard: String) {
 }
 
 @Test(arguments: ["\n", "\r\n"])
-func editingListsKeepsTheirCommentsAndPosition(newline: String) {
+@MainActor func editingListsKeepsTheirCommentsAndPosition(newline: String) {
     let original = ["# apps", "floating = com.apple.calculator # utilities",
                     "# cycle", "layouts = bsp, wide # preferred order", "window-margins = false", ""]
         .joined(separator: newline)
@@ -156,7 +156,7 @@ func editingListsKeepsTheirCommentsAndPosition(newline: String) {
     #expect(Config.parse(editedAgain).floating.isEmpty)
 }
 
-@Test func editingListsUpdatesTheLastAssignment() {
+@Test @MainActor func editingListsUpdatesTheLastAssignment() {
     let text = "floating = com.example.first\nfloating = com.example.last # active\n"
         + "layouts = bsp\nlayouts = wide # active\n"
     let doc = ConfigDocument(text: text)
@@ -169,7 +169,7 @@ func editingListsKeepsTheirCommentsAndPosition(newline: String) {
     #expect(Config.parse(saved).layouts == [.tall])
 }
 
-@Test func editingMissingListsAddsAssignments() {
+@Test @MainActor func editingMissingListsAddsAssignments() {
     let doc = ConfigDocument(text: "# personal config\n")
     doc.config.floating = ["com.example.Utility"]
     doc.config.layouts = [.tall]

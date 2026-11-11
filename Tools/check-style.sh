@@ -17,7 +17,7 @@ STYLE = re.compile(
     r"|\.shadow\("
 )
 PANEL = re.compile(r"\bNSPanel\(")
-SOURCES = ("Sources/CatWM/", "Sources/CatWMKit/")
+SOURCES = ("Sources/CatWM/", "Sources/CatWMKit/", "Sources/native-traffic-light/")
 MOTION_DIRS = ("Sources/CatWM/Motion/", "Sources/CatWMKit/Motion/")
 MOTION_TILING = tuple("Sources/CatWMKit/Motion/" + name + "/" for name in ("Engine", "Windows", "Desktop"))
 ANIMATION_ENGINE = re.compile(

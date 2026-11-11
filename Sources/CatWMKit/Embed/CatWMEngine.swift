@@ -11,7 +11,7 @@ public final class CatWMEngine {
     public let name: String
     private let paths: InstancePaths
     private let backend: any WindowBackend
-    private let readPermissions: () -> Set<Permission>
+    private let readPermissions: @Sendable () -> Set<Permission>
     private let store: ConfigStore
     private var manager: WindowManager
     private var permissions: PermissionWatcher?
@@ -30,7 +30,7 @@ public final class CatWMEngine {
     }
 
     package init(paths: InstancePaths, defaults: UserDefaults, backend: any WindowBackend,
-                 permissions: @escaping () -> Set<Permission>) {
+                 permissions: @escaping @Sendable () -> Set<Permission>) {
         name = paths.id ?? ""
         self.paths = paths
         self.backend = backend

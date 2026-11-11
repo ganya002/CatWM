@@ -1,6 +1,7 @@
 import AppKit
 @testable import CatWM
 @testable import CatWMKit
+import os
 import Testing
 
 @Suite struct WindowObservationTests {
@@ -11,18 +12,18 @@ import Testing
     @Test @MainActor func emptyRestorationRepliesDuringTheTerminationRunLoop() {
         let manager = WindowManager(config: .parse(defaultText))
         manager.config.virtualWorkspaces = false
-        var returned = false
-        var completed = false
+        let returned = OSAllocatedUnfairLock(initialState: false)
+        let completed = OSAllocatedUnfairLock(initialState: false)
         manager.restoreHiddenWindows {
-            #expect(returned)
-            completed = true
+            #expect(returned.withLock { $0 })
+            completed.withLock { $0 = true }
         }
-        returned = true
+        returned.withLock { $0 = true }
         let deadline = Date().addingTimeInterval(2)
-        while !completed && Date() < deadline {
+        while !completed.withLock({ $0 }) && Date() < deadline {
             RunLoop.current.run(mode: .modalPanel, before: Date().addingTimeInterval(0.005))
         }
-        #expect(completed)
+        #expect(completed.withLock { $0 })
     }
 
     @Test @MainActor func floatingFocusUsesThePendingUnparkDestination() {

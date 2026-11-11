@@ -3,7 +3,7 @@ import AppKit
 @testable import CatWMKit
 import Testing
 
-@Suite struct WorkspaceTemplateTests {
+@Suite @MainActor struct WorkspaceTemplateTests {
     func template() -> WorkspaceTemplate {
         WorkspaceTemplate(name: "Writing", tilingEnabled: true, displays: [
             .init(id: "external", name: "Desk", frame: CGRect(x: 0, y: 0, width: 2000, height: 1200),

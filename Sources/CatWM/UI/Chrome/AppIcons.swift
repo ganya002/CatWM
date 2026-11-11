@@ -1,7 +1,7 @@
 import AppKit
 import CatWMKit
 
-final class AppIcons {
+@MainActor final class AppIcons {
     static let shared = AppIcons()
     private var cache: [pid_t: NSImage] = [:]
 

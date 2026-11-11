@@ -2,7 +2,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-final class SortModel: ObservableObject {
+@MainActor final class SortModel: ObservableObject {
     @Published var displays: [SortDisplay] = []
     @Published var current = ""
     @Published var plans: [String: SortPlan] = [:] {

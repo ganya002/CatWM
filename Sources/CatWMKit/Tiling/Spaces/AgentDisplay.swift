@@ -1,11 +1,11 @@
 import AppKit
 import ApplicationServices
 
-package final class AgentDisplay {
-    private static let vendor: UInt32 = 0x4341
-    private static let product: UInt32 = 0x5701
+@MainActor package final class AgentDisplay {
+    nonisolated private static let vendor: UInt32 = 0x4341
+    nonisolated private static let product: UInt32 = 0x5701
 
-    package static func owns(_ id: CGDirectDisplayID) -> Bool {
+    nonisolated package static func owns(_ id: CGDirectDisplayID) -> Bool {
         CGDisplayVendorNumber(id) == vendor && CGDisplayModelNumber(id) == product
     }
 
@@ -21,12 +21,12 @@ package final class AgentDisplay {
     }
 
     package struct Windows {
-        package var ids: (pid_t) -> [CGWindowID]
-        package var bounds: (CGWindowID) -> CGRect?
-        package var move: (pid_t, CGWindowID, CGPoint) -> Bool
-        package var watch: (pid_t, @escaping () -> Void) -> AnyObject?
+        package var ids: @MainActor (pid_t) -> [CGWindowID]
+        package var bounds: @MainActor (CGWindowID) -> CGRect?
+        package var move: @MainActor (pid_t, CGWindowID, CGPoint) -> Bool
+        package var watch: @MainActor (pid_t, @escaping @MainActor () -> Void) -> AnyObject?
 
-        package static let live = Windows(
+        @MainActor package static let live = Windows(
             ids: { axApp($0).elements(kAXWindowsAttribute).compactMap(\.windowID) },
             bounds: { id in
                 let info = CGWindowListCopyWindowInfo(.optionIncludingWindow, id) as? [[String: Any]]
@@ -44,7 +44,7 @@ package final class AgentDisplay {
 
     private final class Poll {
         var deadline: TimeInterval
-        var work: () -> Void = {}
+        var work: @MainActor () -> Void = {}
         init(deadline: TimeInterval) { self.deadline = deadline }
     }
 
@@ -62,8 +62,10 @@ package final class AgentDisplay {
     private let updates: WindowServerUpdates
     private let paths: InstancePaths
     private let settle: Double
-    private let schedule: (TimeInterval, @escaping () -> Void) -> Void
-    private let now: () -> TimeInterval
+    package typealias Schedule = @MainActor (TimeInterval, @escaping @MainActor @Sendable () -> Void) -> Void
+
+    private let schedule: Schedule
+    private let now: @MainActor () -> TimeInterval
     private var watches: [pid_t: AnyObject?] = [:]
     private var claimed = false
     private var closing = false
@@ -71,8 +73,8 @@ package final class AgentDisplay {
 
     package init?(backing: Backing? = AgentDisplay.makeVirtual(), windows: Windows = .live,
                   updates: WindowServerUpdates = .shared, home: URL = Instance.paths.home, settle: Double = 0.25,
-                  now: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime },
-                  schedule: @escaping (TimeInterval, @escaping () -> Void) -> Void = { delay, work in
+                  now: @escaping @MainActor () -> TimeInterval = { ProcessInfo.processInfo.systemUptime },
+                  schedule: @escaping Schedule = { delay, work in
                       DispatchQueue.main.asyncAfter( // style-ok: polls the window server, which has no event
                           deadline: .now() + delay, execute: work)
                   }) {
@@ -82,7 +84,9 @@ package final class AgentDisplay {
         (self.settle, self.now, self.schedule) = (settle, now, schedule)
     }
 
-    deinit { close() }
+    deinit {
+        if claimed { Self.removeClaim(paths, id) }
+    }
 
     package func close() {
         watches = [:]
@@ -127,13 +131,12 @@ package final class AgentDisplay {
     @MainActor
     private func exit(of app: NSRunningApplication, grace: TimeInterval) async {
         guard !app.isTerminated else { return }
+        let wait = ExitWait()
         await withCheckedContinuation { (done: CheckedContinuation<Void, Never>) in
-            var token: NSKeyValueObservation?
-            token = app.observe(\.isTerminated, options: [.initial]) { app, _ in
+            wait.done = done
+            wait.token = app.observe(\.isTerminated, options: [.initial]) { [wait] app, _ in
                 guard app.isTerminated else { return }
-                token?.invalidate()
-                token = nil
-                done.resume()
+                DispatchQueue.main.async { wait.finish() }
             }
             schedule(grace) { if !app.isTerminated { app.forceTerminate() } }
         }
@@ -170,9 +173,9 @@ package final class AgentDisplay {
         polls[pid] = poll
         var lease: WindowServerUpdates.Lease?
         var began = now()
-        poll.work = { [weak self, weak poll] in
+        poll.work = { @MainActor [weak self, weak poll] in
             guard let self, let poll else { return }
-            func strays() -> [CGWindowID] {
+            @MainActor func strays() -> [CGWindowID] {
                 self.windows.ids(pid).filter { id in
                     !(self.windows.bounds(id).map { target.contains($0.center) } ?? false)
                 }
@@ -213,28 +216,46 @@ package final class AgentDisplay {
             if !pids.isEmpty {
                 try paths.writeClaim(ScopeClaim(owner: getpid(), scope: WindowScope(pids: pids, display: uuid)))
             } else if claimed {
-                try paths.removeClaim()
-                try FileManager.default.removeItem(at: paths.configFolder)
+                Self.removeClaim(paths, id)
             }
         }
         claimed = !pids.isEmpty
     }
+
+    nonisolated private static func removeClaim(_ paths: InstancePaths, _ id: CGDirectDisplayID) {
+        Log.attempt("remove the claim of display \(id)") {
+            try paths.removeClaim()
+            try FileManager.default.removeItem(at: paths.configFolder)
+        }
+    }
 }
 
-private final class AXWindowCreated {
+@MainActor private final class ExitWait {
+    var token: NSKeyValueObservation?
+    var done: CheckedContinuation<Void, Never>?
+
+    func finish() {
+        token?.invalidate()
+        token = nil
+        done?.resume()
+        done = nil
+    }
+}
+
+@MainActor private final class AXWindowCreated {
     private let pid: pid_t
-    private let created: () -> Void
-    private var observer: AXObserver?
+    private let created: @MainActor () -> Void
+    private var observer: AXReference<AXObserver>?
     private var attempts = 0
 
-    init(pid: pid_t, _ created: @escaping () -> Void) {
+    init(pid: pid_t, _ created: @escaping @MainActor () -> Void) {
         (self.pid, self.created) = (pid, created)
         register()
     }
 
     deinit {
         guard let observer else { return }
-        CFRunLoopRemoveSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(observer), .defaultMode)
+        CFRunLoopRemoveSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(observer.object), .defaultMode)
     }
 
     private func register() {
@@ -243,8 +264,11 @@ private final class AXWindowCreated {
         let callback: AXObserverCallback = { _, element, notification, refcon in
             guard let refcon else { return }
             let watch = Unmanaged<AXWindowCreated>.fromOpaque(refcon).takeUnretainedValue()
-            if notification as String == kAXWindowCreatedNotification { watch.follow(element) }
-            watch.created()
+            let (element, isNew) = (AXReference(element), notification as String == kAXWindowCreatedNotification)
+            onMainThread {
+                if isNew { watch.follow(element.object) }
+                watch.created()
+            }
         }
         guard AXObserverCreate(pid, callback, &made) == .success, let made,
               AXObserverAddNotification(made, axApp(pid), kAXWindowCreatedNotification as CFString,
@@ -259,14 +283,14 @@ private final class AXWindowCreated {
             return
         }
         CFRunLoopAddSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(made), .defaultMode)
-        observer = made
+        observer = AXReference(made)
         axApp(pid).elements(kAXWindowsAttribute).forEach(follow)
         created()
     }
 
     private func follow(_ window: AXUIElement) {
         guard let observer else { return }
-        AXObserverAddNotification(observer, window, kAXMovedNotification as CFString,
+        AXObserverAddNotification(observer.object, window, kAXMovedNotification as CFString,
                                   Unmanaged.passUnretained(self).toOpaque())
     }
 }

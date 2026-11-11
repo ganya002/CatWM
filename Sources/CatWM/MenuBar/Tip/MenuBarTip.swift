@@ -2,7 +2,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-final class MenuBarTip {
+@MainActor final class MenuBarTip {
     private struct Placement {
         let state: MenuBarTipModel.State
         let anchor: NSRect?
@@ -32,7 +32,7 @@ final class MenuBarTip {
             panel = tipPanel
             host = hosting
         }
-        timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in self?.update() }
+        timer = Timer.onMain(every: 0.25, owner: self) { $0.update() }
         timer?.tolerance = 0.05
         update()
     }
@@ -110,7 +110,7 @@ final class MenuBarTip {
     }
 }
 
-final class MenuBarTipModel: ObservableObject {
+@MainActor final class MenuBarTipModel: ObservableObject {
     enum State { case move, good, hidden }
     @Published var state = State.move
     @Published var caret: CGFloat?

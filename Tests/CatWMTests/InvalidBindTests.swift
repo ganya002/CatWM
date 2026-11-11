@@ -2,7 +2,7 @@
 @testable import CatWMKit
 import Testing
 
-@Suite struct InvalidBindTests {
+@Suite @MainActor struct InvalidBindTests {
     @Test(arguments: ["bind", "binde"])
     func invalidKeyListDoesNotInstallPartOfABind(_ kind: String) throws {
         let config = Config.parse("""
@@ -17,7 +17,7 @@ import Testing
         #expect(config.bindings.map(\.keyCode) == [downCode, upCode])
         #expect(config.bindings.map(\.arg) == ["d", "u"])
         let hotkeys = Hotkeys()
-        hotkeys.setBindings(config.bindings)
+        hotkeys.setBindings(config.bindings, config: config, input: GlobalInput(scope: nil, keys: nil))
         let leftCode = try #require(keyCodes["h"])
         #expect(hotkeys.lookup(leftCode, []) == nil)
     }

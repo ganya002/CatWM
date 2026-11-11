@@ -10,7 +10,7 @@ struct SideItem: View {
     let action: () -> Void
     @StateObject private var model = Model()
 
-    final class Model: ObservableObject {
+    @MainActor final class Model: ObservableObject {
         @Published var hover = false
     }
 

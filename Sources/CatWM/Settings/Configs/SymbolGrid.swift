@@ -5,7 +5,7 @@ import SwiftUI
 struct SymbolGrid: View {
     @Binding var selection: String?
     let close: () -> Void
-    private final class Query: ObservableObject { @Published var text = "" }
+    @MainActor private final class Query: ObservableObject { @Published var text = "" }
     @StateObject private var query = Query()
 
     private var shown: [String] {

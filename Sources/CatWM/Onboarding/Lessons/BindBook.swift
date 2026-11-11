@@ -1,7 +1,7 @@
 import AppKit
 import CatWMKit
 
-struct BindBook {
+@MainActor struct BindBook {
     let binds: [KeyBinding]
     let enter: KeyBinding?
     let mode: String

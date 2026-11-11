@@ -55,13 +55,13 @@ struct MenuRoot: View {
 }
 
 struct RowFrameKey: PreferenceKey {
-    static var defaultValue: [String: CGRect] = [:]
+    static let defaultValue: [String: CGRect] = [:]
     static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) {
         value.merge(nextValue()) { $1 }
     }
 }
 
 struct ColumnHeightKey: PreferenceKey {
-    static var defaultValue: [Int: CGFloat] = [:]
+    static let defaultValue: [Int: CGFloat] = [:]
     static func reduce(value: inout [Int: CGFloat], nextValue: () -> [Int: CGFloat]) { value.merge(nextValue()) { $1 } }
 }

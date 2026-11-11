@@ -67,7 +67,7 @@ struct TileItem: ViewModifier {
     }
 }
 
-struct TileProgress: ViewModifier, Animatable {
+nonisolated struct TileProgress: ViewModifier, Animatable {
     var progress: Double
     let shown: Bool
     let surface: Bool
@@ -78,7 +78,7 @@ struct TileProgress: ViewModifier, Animatable {
         set { progress = newValue }
     }
 
-    func body(content: Content) -> some View {
+    @MainActor func body(content: Content) -> some View {
         let config = WindowManager.shared.config
         let eased = CGFloat(shown ? config.animationCurve.progress(progress, bounce: config.animationBounce) : progress)
         if surface {

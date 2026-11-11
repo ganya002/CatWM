@@ -1,23 +1,24 @@
 import ApplicationServices
+import os
 import QuartzCore
 
-package final class AXStalls {
+package final class AXStalls: Sendable {
     package static let shared = AXStalls()
     package static let hangLine: CFTimeInterval = 0.25
     package static let memory: CFTimeInterval = 3
 
-    private let lock = NSLock()
-    private var stalledAt: [pid_t: CFTimeInterval] = [:]
-    private let now: () -> CFTimeInterval
+    private let stalledAt = OSAllocatedUnfairLock(initialState: [pid_t: CFTimeInterval]())
+    private let now: @Sendable () -> CFTimeInterval
 
-    package init(now: @escaping () -> CFTimeInterval = CACurrentMediaTime) { self.now = now }
+    package init(now: @escaping @Sendable () -> CFTimeInterval = CACurrentMediaTime) { self.now = now }
 
     package func note(_ element: AXUIElement, _ error: AXError, since start: CFTimeInterval) {
         switch error {
         case .success:
-            lock.withLock {
-                guard !stalledAt.isEmpty, let pid = element.ownerPID else { return }
-                stalledAt[pid] = nil
+            let pid = element.ownerPID
+            stalledAt.withLock { stalled in
+                guard !stalled.isEmpty, let pid else { return }
+                stalled[pid] = nil
             }
         case .cannotComplete:
             let took = now() - start
@@ -29,20 +30,20 @@ package final class AXStalls {
     }
 
     package func record(_ pid: pid_t, _ error: AXError, took seconds: CFTimeInterval) {
-        lock.withLock {
+        stalledAt.withLock { stalled in
             switch error {
-            case .success: stalledAt[pid] = nil
-            case .cannotComplete where seconds >= Self.hangLine: stalledAt[pid] = now()
+            case .success: stalled[pid] = nil
+            case .cannotComplete where seconds >= Self.hangLine: stalled[pid] = now()
             default: break
             }
         }
     }
 
     package func isStalled(_ pid: pid_t) -> Bool {
-        lock.withLock {
-            guard let since = stalledAt[pid] else { return false }
+        stalledAt.withLock { stalled in
+            guard let since = stalled[pid] else { return false }
             if now() - since < Self.memory { return true }
-            stalledAt[pid] = nil
+            stalled[pid] = nil
             return false
         }
     }

@@ -9,7 +9,7 @@ extension IntroScore {
             Log.info("intro: audio engine failed (\(error.localizedDescription))")
             return
         }
-        keepAlive = self
+        playback.withLock { $0.keepAlive = self }
         let start = DispatchTime.now()
         queue.async { [self] in
             var last = 0.0
@@ -24,9 +24,8 @@ extension IntroScore {
 
     func fadeOut(over seconds: Double = 1.2) {
         queue.async { [self] in
-            guard keepAlive != nil else { return }
-            pending.forEach { $0.cancel() }
-            pending = []
+            guard isPlaying else { return }
+            cancelPending()
             let steps = 24, from = engine.mainMixerNode.outputVolume
             for i in 1...steps {
                 schedule(.now() + seconds * Double(i) / Double(steps)) { [weak self] in
@@ -37,10 +36,16 @@ extension IntroScore {
         }
     }
 
-    func schedule(_ when: DispatchTime, _ block: @escaping () -> Void) {
-        let work = DispatchWorkItem(block: block)
-        pending.append(work)
-        queue.asyncAfter(deadline: when, execute: work)
+    func schedule(_ when: DispatchTime, _ block: @escaping @Sendable () -> Void) {
+        let generation = playback.withLock { $0.generation }
+        queue.asyncAfter(deadline: when) { [playback] in
+            guard playback.withLock({ $0.generation == generation }) else { return }
+            block()
+        }
+    }
+
+    private func cancelPending() {
+        playback.withLock { $0.generation += 1 }
     }
 
     func noteOn(_ note: Note) {
@@ -54,11 +59,14 @@ extension IntroScore {
     }
 
     func stop() {
-        pending.forEach { $0.cancel() }
-        pending = []
+        cancelPending()
         for sampler in samplers.values { (0...127).forEach { sampler.stopNote(UInt8($0), onChannel: 0) } }
         engine.stop()
-        keepAlive = nil
+        let retained = playback.withLock { state in
+            defer { state.keepAlive = nil }
+            return state.keepAlive
+        }
+        withExtendedLifetime(retained) {}
     }
 
     static var orchestra: [Note] {

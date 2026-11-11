@@ -9,7 +9,7 @@ struct Sidebar: View {
     @ObservedObject private var library = SettingsWindow.shared.library
     @StateObject private var gaze = Gaze()
 
-    final class Gaze: ObservableObject {
+    @MainActor final class Gaze: ObservableObject {
         @Published var look: CGVector?
     }
 
@@ -96,7 +96,7 @@ struct FeedbackButton: View {
 }
 
 struct Wordmark: View {
-    private final class Model: ObservableObject {
+    @MainActor private final class Model: ObservableObject {
         @Published var hover = false
         @Published var bumps = 0
     }

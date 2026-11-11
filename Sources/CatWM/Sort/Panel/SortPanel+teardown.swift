@@ -22,7 +22,7 @@ extension SortPanel {
         panel.delegate = nil
         generation += 1
         let gen = generation
-        let done = { [weak self] in
+        let done: @MainActor @Sendable () -> Void = { [weak self] in
             guard let self, gen == generation else { return }
             panel.orderOut(nil)
             panel.contentView = nil

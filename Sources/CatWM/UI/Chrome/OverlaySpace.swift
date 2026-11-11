@@ -1,7 +1,7 @@
 import AppKit
 import CatWMKit
 
-enum OverlaySpace {
+@MainActor enum OverlaySpace {
     private typealias ConnFn = @convention(c) () -> Int32
     private typealias CreateFn = @convention(c) (Int32, Int32, CFDictionary?) -> UInt64
     private typealias LevelFn = @convention(c) (Int32, UInt64, Int32) -> Int32

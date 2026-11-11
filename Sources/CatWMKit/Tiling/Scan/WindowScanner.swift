@@ -1,35 +1,36 @@
 import AppKit
 import QuartzCore
 
-package final class WindowScanner {
-    package struct Job {
+@MainActor package final class WindowScanner {
+    package struct Job: Sendable {
         package let pid: pid_t
         package let listWindows: Bool
         package let known: [CGWindowID: Window]
         package let fullscreen: Set<CGWindowID>
         package let minimized: Set<CGWindowID>
 
-        package init(pid: pid_t, listWindows: Bool, known: [CGWindowID: Window]) {
+        @MainActor package init(pid: pid_t, listWindows: Bool, known: [CGWindowID: Window]) {
             self.pid = pid; self.listWindows = listWindows; self.known = known
             fullscreen = Set(known.values.filter(\.fullscreen).map(\.id))
             minimized = Set(known.values.filter(\.minimized).map(\.id))
         }
     }
 
-    package struct Found {
-        package let element: AXUIElement
+    package struct Found: Sendable {
+        private let reference: AXReference<AXUIElement>
+        package var element: AXUIElement { reference.object }
         package let frame: CGRect
         package let title: String?
         package let resizable: Bool
         package var frameRevision: Int?
 
         package init(element: AXUIElement, frame: CGRect, title: String?, resizable: Bool, frameRevision: Int? = nil) {
-            (self.element, self.frame, self.title) = (element, frame, title)
+            (reference, self.frame, self.title) = (AXReference(element), frame, title)
             (self.resizable, self.frameRevision) = (resizable, frameRevision)
         }
     }
 
-    package struct AppScan {
+    package struct AppScan: Sendable {
         package var readAt = Date()
         package var listed: [CGWindowID] = []
         package var found: [CGWindowID: Found] = [:]
@@ -44,30 +45,34 @@ package final class WindowScanner {
         }
     }
 
-    package static let deadline = 0.25
+    package nonisolated static let deadline = 0.25
 
     package private(set) var results: [pid_t: AppScan] = [:]
     package private(set) var desktop = WindowServerObservation()
     package private(set) var applications: [RunningApplicationSnapshot] = []
     package private(set) var claimed: Set<pid_t> = []
     private var observingDesktop = false
-    private var pendingDesktop: (known: Set<CGWindowID>, done: () -> Void)?
-    private let readDesktop: (Set<CGWindowID>) -> WindowServerObservation
-    private let readApplications: () -> [RunningApplicationSnapshot]
+    private var pendingDesktop: (known: Set<CGWindowID>, done: @MainActor () -> Void)?
+    private let readDesktop: @MainActor (Set<CGWindowID>) -> WindowServerObservation
+    private let readApplications: @Sendable () -> [RunningApplicationSnapshot]
     private let scope: WindowScope?
     private let claims: ScopeClaims?
     package private(set) var lastScan: CFTimeInterval = 0
     private var busy: [pid_t: UUID] = [:]
-    private var idleWaiters: [() -> Void] = []
+    private var idleWaiters: [@MainActor () -> Void] = []
     private var queues: [pid_t: DispatchQueue] = [:]
-    private let read: (Job, (AppScan) -> Void) -> AppScan
+    private let read: @Sendable (Job, @Sendable (AppScan) -> Void) -> AppScan
     private let scanDeadline: TimeInterval
 
-    package init(read: @escaping (Job, (AppScan) -> Void) -> AppScan = { AXBackend.shared.scan($0, discovered: $1) },
-                 readDesktop: @escaping (Set<CGWindowID>) -> WindowServerObservation = {
+    package init(read: @escaping @Sendable (Job, @Sendable (AppScan) -> Void) -> AppScan = {
+                     AXBackend.shared.scan($0, discovered: $1)
+    },
+                 readDesktop: @escaping @MainActor (Set<CGWindowID>) -> WindowServerObservation = {
                      AXBackend.shared.desktop(known: $0)
                  },
-                 readApplications: @escaping () -> [RunningApplicationSnapshot] = { AXBackend.shared.applications() },
+                 readApplications: @escaping @Sendable () -> [RunningApplicationSnapshot] = {
+                     AXBackend.shared.applications()
+                 },
                  deadline: TimeInterval = WindowScanner.deadline,
                  scope: WindowScope? = nil, claims: ScopeClaims? = nil) {
         self.read = read
@@ -78,7 +83,7 @@ package final class WindowScanner {
         self.claims = claims
     }
 
-    package func observeDesktop(known: Set<CGWindowID>, done: @escaping () -> Void) {
+    package func observeDesktop(known: Set<CGWindowID>, done: @escaping @MainActor () -> Void) {
         guard !observingDesktop else {
             pendingDesktop = ((pendingDesktop?.known ?? []).union(known), done)
             return
@@ -86,7 +91,7 @@ package final class WindowScanner {
         observingDesktop = true
         DispatchQueue.global(qos: .userInitiated).async { [weak self, readDesktop, readApplications, scope, claims] in
             let claimed = claims?.claimedPids() ?? []
-            let keep = { (pid: pid_t) in scope?.pids.contains(pid) ?? !claimed.contains(pid) }
+            let keep = { @Sendable (pid: pid_t) in scope?.pids.contains(pid) ?? !claimed.contains(pid) }
             let applications = readApplications().filter { keep($0.pid) }
             DispatchQueue.main.async {
                 guard let self else { return }
@@ -105,66 +110,51 @@ package final class WindowScanner {
         }
     }
 
-    package func watchClaims(_ changed: @escaping () -> Void) { claims?.watch(changed) }
+    package func watchClaims(_ changed: @escaping @Sendable () -> Void) { claims?.watch(changed) }
     package func stopWatchingClaims() { claims?.stop() }
 
     package func keeps(_ pid: pid_t) -> Bool { scope?.pids.contains(pid) ?? !claimed.contains(pid) }
 
-    package func scan(_ jobs: [Job], done: @escaping () -> Void, updated: @escaping () -> Void,
-                      readAll: ((_ all: Bool) -> Void)? = nil) {
+    package func scan(_ jobs: [Job], done: @escaping @MainActor () -> Void, updated: @escaping @MainActor () -> Void,
+                      readAll: (@MainActor (_ all: Bool) -> Void)? = nil) {
         lastScan = CACurrentMediaTime()
         let running = Set(jobs.map(\.pid))
         for pid in results.keys where !running.contains(pid) { forget(pid) }
         let asked = jobs.filter { busy[$0.pid] == nil }
-        var waiting = asked.count
-        var finished = false
-        var updateQueued = false
-        func publish() {
-            guard !updateQueued else { return }
-            updateQueued = true
-            DispatchQueue.main.async {
-                updateQueued = false
-                if !finished { updated() }
-            }
-        }
-        func finish() {
-            guard !finished else { return }
-            finished = true
-            done()
-        }
-        guard waiting > 0 else { finish(); readAll?(asked.count == jobs.count); return }
+        let progress = ScanProgress(waiting: asked.count, done: done, updated: updated)
+        guard progress.waiting > 0 else { progress.finish(); readAll?(asked.count == jobs.count); return }
         for job in asked {
             let token = UUID()
             busy[job.pid] = token
             run(job.pid) { [weak self, read] in
                 let start = CACurrentMediaTime()
-                let scan = read(job) { discovery in
-                    self?.acceptDiscovery(discovery, pid: job.pid, token: token) {
-                        if finished { updated() } else { publish() }
-                    }
+                let scan = read(job) { [weak self] discovery in
+                    self?.acceptDiscovery(discovery, pid: job.pid, token: token) { progress.discovered() }
                 }
                 let elapsed = CACurrentMediaTime() - start
-                DispatchQueue.main.async {
+                DispatchQueue.main.async { [weak self] in
                     guard let self else { return }
-                    waiting -= 1
+                    progress.waiting -= 1
                     if self.busy[job.pid] == token {
                         self.busy[job.pid] = nil
                         self.results[job.pid] = scan
                         Log.debug(String(format: "scan: pid %d windows %d %.1fms",
                                          job.pid, scan.listed.count, elapsed * 1000))
-                        if finished {
+                        if progress.finished {
                             updated()
-                        } else if waiting > 0, scan.hasNewWindows(comparedTo: job.known) { publish() }
+                        } else if progress.waiting > 0, scan.hasNewWindows(comparedTo: job.known) { progress.publish() }
                     }
-                    if waiting == 0 { finish(); readAll?(asked.count == jobs.count) }
+                    if progress.waiting == 0 { progress.finish(); readAll?(asked.count == jobs.count) }
                     self.notifyIdle()
                 }
             }
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + scanDeadline) { finish() } // style-ok: limit for a hung app
+        let limit = DispatchTime.now() + scanDeadline
+        DispatchQueue.main.asyncAfter(deadline: limit) { progress.finish() } // style-ok: limit for a hung app
     }
 
-    private func acceptDiscovery(_ scan: AppScan, pid: pid_t, token: UUID, notify: @escaping () -> Void) {
+    private nonisolated func acceptDiscovery(_ scan: AppScan, pid: pid_t, token: UUID,
+                                             notify: @escaping @MainActor () -> Void) {
         DispatchQueue.main.async { [weak self] in
             guard let self, self.busy[pid] == token else { return }
             self.results[pid] = scan
@@ -172,7 +162,7 @@ package final class WindowScanner {
         }
     }
 
-    package func whenIdle(_ action: @escaping () -> Void) {
+    package func whenIdle(_ action: @escaping @MainActor () -> Void) {
         guard !busy.isEmpty else { return action() }
         idleWaiters.append(action)
     }
@@ -197,14 +187,47 @@ package final class WindowScanner {
 
     package var queueCount: Int { queues.count }
 
-    package func run(_ pid: pid_t, _ work: @escaping () -> Void) {
+    package func run(_ pid: pid_t, _ work: @escaping @Sendable () -> Void) {
         let queue = queues[pid] ?? DispatchQueue(label: "catwm.scan.\(pid)", qos: .userInitiated)
         queues[pid] = queue
         queue.async(execute: work)
     }
 }
 
-package struct RunningApplicationSnapshot {
+@MainActor private final class ScanProgress {
+    var waiting: Int
+    private(set) var finished = false
+    private var updateQueued = false
+    private let done: @MainActor () -> Void
+    private let updated: @MainActor () -> Void
+
+    init(waiting: Int, done: @escaping @MainActor () -> Void, updated: @escaping @MainActor () -> Void) {
+        self.waiting = waiting
+        self.done = done
+        self.updated = updated
+    }
+
+    func publish() {
+        guard !updateQueued else { return }
+        updateQueued = true
+        DispatchQueue.main.async {
+            self.updateQueued = false
+            if !self.finished { self.updated() }
+        }
+    }
+
+    func finish() {
+        guard !finished else { return }
+        finished = true
+        done()
+    }
+
+    func discovered() {
+        if finished { updated() } else { publish() }
+    }
+}
+
+package struct RunningApplicationSnapshot: Sendable {
     package let pid: pid_t
     package let bundleID: String?
     package let regular: Bool

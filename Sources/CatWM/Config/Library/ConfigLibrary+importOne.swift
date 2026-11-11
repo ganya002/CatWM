@@ -92,7 +92,7 @@ extension ConfigLibrary {
         return alert.runModal() == .alertFirstButtonReturn
     }
 
-    static func color(hex: String) -> Color? {
+    nonisolated static func color(hex: String) -> Color? {
         let digits = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
         guard digits.count == 6 || digits.count == 8, let value = UInt64(digits, radix: 16) else { return nil }
         let hasAlpha = digits.count == 8
@@ -103,7 +103,7 @@ extension ConfigLibrary {
         return Color(.sRGB, red: red, green: green, blue: blue, opacity: alpha)
     }
 
-    static func prefersDarkText(hex: String) -> Bool {
+    nonisolated static func prefersDarkText(hex: String) -> Bool {
         let digits = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
         guard digits.count >= 6, let value = UInt64(digits.prefix(6), radix: 16) else { return false }
         let red = Double((value >> 16) & 0xFF) / 255

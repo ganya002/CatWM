@@ -2,7 +2,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-final class PracticeAppDelegate: NSObject, NSApplicationDelegate {
+@MainActor final class PracticeAppDelegate: NSObject, NSApplicationDelegate {
     private let parent: pid_t
     private let desk: [DemoApp], other: [DemoApp]
     private var parentWatch: DispatchSourceProcess?
@@ -66,7 +66,7 @@ final class PracticeAppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
-enum PracticeDesk {
+@MainActor enum PracticeDesk {
     static let deskCount = 5
     static let otherCount = 2
 

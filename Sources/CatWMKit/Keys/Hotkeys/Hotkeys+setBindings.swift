@@ -1,11 +1,14 @@
 import AppKit
 
 extension Hotkeys {
-    package func setBindings(_ list: [KeyBinding]) {
+    package func setBindings(_ list: [KeyBinding], config: Config, input: GlobalInput) {
+        self.input = input
+        mainMod = config.mainMod
+        helpKey = config.keyboardHelpKey
         tables = [:]
         for bind in list { tables[bind.submap, default: [:]][Self.key(bind.keyCode, bind.mods)] = bind }
-        if WindowManager.shared.input.capsLock {
-            CapsLockChord.shared.setBound(list.contains { $0.keyCode == CapsLockChord.keyCode })
+        if input.capsLock {
+            chord.setBound(list.contains { $0.keyCode == CapsLockChord.keyCode })
         }
         if !submap.isEmpty, tables[submap] == nil { setSubmap("") }
     }
@@ -25,9 +28,9 @@ extension Hotkeys {
     }
 
     @discardableResult
-    package func start() -> Bool {
+    package func start(input: GlobalInput) -> Bool {
+        self.input = input
         if tap != nil { return true }
-        let input = WindowManager.shared.input
         guard input.keys else { return false }
         capsLock = input.capsLock
         let mask = CGEventMask(1 << CGEventType.keyDown.rawValue) | CGEventMask(1 << CGEventType.flagsChanged.rawValue)
@@ -35,12 +38,12 @@ extension Hotkeys {
             | CGEventMask(1 << CGEventType.rightMouseUp.rawValue)
         guard let newTap = CGEvent.tapCreate(tap: .cghidEventTap, place: .headInsertEventTap,
                                              options: .defaultTap, eventsOfInterest: mask, callback: tapCallback,
-                                             userInfo: nil) else { return false }
+                                             userInfo: Unmanaged.passUnretained(self).toOpaque()) else { return false }
         tap = newTap
         CFRunLoopAddSource(CFRunLoopGetMain(), CFMachPortCreateRunLoopSource(nil, newTap, 0), .commonModes)
         CGEvent.tapEnable(tap: newTap, enable: true)
         startSwipes()
-        if capsLock { CapsLockChord.shared.start() }
+        if capsLock { chord.start() }
         return true
     }
 
@@ -49,7 +52,7 @@ extension Hotkeys {
         tap = nil
         if let swipeMonitor { NSEvent.removeMonitor(swipeMonitor) }
         swipeMonitor = nil
-        if capsLock { CapsLockChord.shared.stop() }
+        if capsLock { chord.stop() }
         setSubmap("")
     }
 
@@ -127,7 +130,7 @@ extension Hotkeys {
             CFMachPortInvalidate(tap)
             self.tap = nil
         }
-        start()
+        start(input: input)
     }
 
     package func reenable() { if let tap { CGEvent.tapEnable(tap: tap, enable: true) } }
@@ -160,13 +163,13 @@ extension Hotkeys {
             }
             return
         }
-        let allowed = WindowManager.shared.config.mainMod.union(modeChord)
+        let allowed = mainMod.union(modeChord)
         if lastMods.isEmpty, mods.rawValue.nonzeroBitCount == 1, allowed.contains(mods) {
             tapDown = TapDown(flag: mods, time: ProcessInfo.processInfo.systemUptime, clicks: Self.clicks())
         }
     }
 
-    package static func clicks() -> UInt32 {
+    package nonisolated static func clicks() -> UInt32 {
         [CGEventType.leftMouseDown, .rightMouseDown, .otherMouseDown]
             .reduce(0) { $0 &+ CGEventSource.counterForEventType(.combinedSessionState, eventType: $1) }
     }

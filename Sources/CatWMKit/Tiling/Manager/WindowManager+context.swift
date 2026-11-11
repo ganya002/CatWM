@@ -117,9 +117,9 @@ extension WindowManager {
     package func toggleNativeFullscreen() {
         guard let app = NSWorkspace.shared.frontmostApplication else { return }
         let pid = app.processIdentifier
-        let known = focusedWindow()?.element
+        let known = focusedWindow().map { AXReference($0.element) }
         scanner.run(pid) { [weak self] in
-            guard let element = known ?? axApp(pid).element(kAXFocusedWindowAttribute) else { return }
+            guard let element = known?.object ?? axApp(pid).element(kAXFocusedWindowAttribute) else { return }
             let isOn = element.flag("AXFullScreen")
             let done: Bool
             if element.isSettable("AXFullScreen") {

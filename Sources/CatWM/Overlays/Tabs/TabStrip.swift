@@ -3,7 +3,7 @@ import CatWMKit
 import NativeTrafficLight
 import SwiftUI
 
-enum TabStrip {
+@MainActor enum TabStrip {
     static let height = TabGeometry.stripHeight
     static let corner: CGFloat = Theme.Radius.pane
     static let panelHeight = height + corner
@@ -24,7 +24,7 @@ enum TabStrip {
     static func fade(_ duration: Double) -> Double { animated ? duration : 0 }
 }
 
-final class TabStripModel: ObservableObject {
+@MainActor final class TabStripModel: ObservableObject {
     struct Tab: Identifiable, Equatable {
         let id: CGWindowID
         var title: String

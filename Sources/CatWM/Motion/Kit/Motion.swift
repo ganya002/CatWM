@@ -3,7 +3,7 @@ import CatWMKit
 import CoreText
 import SwiftUI
 
-enum Motion {
+@MainActor enum Motion {
     static let easeOut = Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: Theme.medium)
     static let spring = Animation.spring(response: 0.3, dampingFraction: 0.7)
     static let snap = Animation.spring(response: 0.34, dampingFraction: 0.7)
@@ -44,7 +44,7 @@ enum Motion {
 
     static func tabFade(_ animation: Animation) -> Animation? { TabStrip.animated ? animation : nil }
 
-    enum Curve {
+    @MainActor enum Curve {
         static let easeOut = CAMediaTimingFunction(controlPoints: 0.2, 0.8, 0.2, 1)
         static let settle = CAMediaTimingFunction(controlPoints: 0.2, 0.9, 0.2, 1)
         static let exit = CAMediaTimingFunction(name: .easeIn)

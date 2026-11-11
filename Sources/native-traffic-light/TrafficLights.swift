@@ -1,13 +1,13 @@
 import AppKit
 
 public final class TrafficLights: NSView {
-    public enum Light: CaseIterable {
+    public enum Light: CaseIterable, Sendable {
         case close
         case minimize
         case zoom
     }
 
-    public struct Buttons: OptionSet {
+    public struct Buttons: OptionSet, Sendable {
         public let rawValue: Int
         public init(rawValue: Int) { self.rawValue = rawValue }
         public static let close = Buttons(rawValue: 1)
@@ -72,8 +72,6 @@ public final class TrafficLights: NSView {
         super.init(coder: coder)
         clipsToBounds = false
     }
-
-    deinit { removeFlagsMonitors() }
 
     public override var isFlipped: Bool { true }
     public override var mouseDownCanMoveWindow: Bool { false }
@@ -252,6 +250,10 @@ public final class TrafficLights: NSView {
     }
 }
 
+private func onMain<T: Sendable>(_ body: @MainActor () -> T) -> T {
+    MainActor.assumeIsolated(body) // style-ok: AppKit calls the accessibility getters on the main thread
+}
+
 final class LightElement: NSAccessibilityElement {
     let light: TrafficLights.Light
     weak var owner: TrafficLights?
@@ -263,10 +265,11 @@ final class LightElement: NSAccessibilityElement {
     }
 
     var subrole: NSAccessibility.Subrole {
+        let owner = owner
         switch light {
         case .close: return .closeButton
         case .minimize: return .minimizeButton
-        case .zoom: return owner?.zoomEntersFullScreen == true ? .fullScreenButton : .zoomButton
+        case .zoom: return onMain { owner?.zoomEntersFullScreen == true } ? .fullScreenButton : .zoomButton
         }
     }
 
@@ -277,16 +280,25 @@ final class LightElement: NSAccessibilityElement {
     }
     override func accessibilityLabel() -> String? { accessibilityRoleDescription() }
     override func accessibilityParent() -> Any? { owner }
-    override func isAccessibilityEnabled() -> Bool { owner?.enabledButtons.includes(light) ?? false }
+    override func isAccessibilityEnabled() -> Bool {
+        let (owner, light) = (owner, light)
+        return onMain { owner?.enabledButtons.includes(light) ?? false }
+    }
 
     override func accessibilityFrame() -> NSRect {
-        guard let owner, let rect = owner.frame(of: light), let window = owner.window else { return .zero }
-        return window.convertToScreen(owner.convert(rect, to: nil))
+        let (owner, light) = (owner, light)
+        return onMain {
+            guard let owner, let rect = owner.frame(of: light), let window = owner.window else { return .zero }
+            return window.convertToScreen(owner.convert(rect, to: nil))
+        }
     }
 
     override func accessibilityPerformPress() -> Bool {
-        guard let owner, owner.enabledButtons.includes(light) else { return false }
-        owner.perform(light)
-        return true
+        let (owner, light) = (owner, light)
+        return onMain {
+            guard let owner, owner.enabledButtons.includes(light) else { return false }
+            owner.perform(light)
+            return true
+        }
     }
 }

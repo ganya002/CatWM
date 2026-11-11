@@ -2,7 +2,7 @@
 @testable import CatWMKit
 import Testing
 
-@Suite struct ConfigBlockTests {
+@Suite @MainActor struct ConfigBlockTests {
     @Test func unmatchedClosingBraceReportsItsLine() {
         let config = Config.parse("# config\r\n} # stray brace\r\nwindow-margins = false\r\n")
         #expect(config.errors == ["line 2: unexpected `}` (no open block)"])

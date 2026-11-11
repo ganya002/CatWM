@@ -2,7 +2,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-extension PanelMotion {
+@MainActor extension PanelMotion {
     static var current: PanelMotion { PanelMotionDemo.shared.preview ?? WindowManager.shared.config.panelAnimation }
 
     var outDuration: Double {

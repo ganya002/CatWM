@@ -146,7 +146,7 @@ struct ConfigSheetView: View {
     }
 }
 
-final class ConfigEditorModel: ObservableObject {
+@MainActor final class ConfigEditorModel: ObservableObject {
     @Published var name = ""
     @Published var symbol: String?
     @Published var hasColor = false

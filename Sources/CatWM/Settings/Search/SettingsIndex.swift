@@ -2,7 +2,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-enum SettingsIndex {
+@MainActor enum SettingsIndex {
     static let all: [SettingEntry] = {
         let options = Options.all.compactMap { option -> SettingEntry? in
             guard let setting = option.setting else { return nil }

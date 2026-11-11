@@ -3,31 +3,31 @@
 import Foundation
 import Testing
 
-@Test func launchKeepsAURLWithTwoDots() throws {
+@Test @MainActor func launchKeepsAURLWithTwoDots() throws {
     let url = "https://github.com/a/b/compare/main..dev"
     let pairs = try BindRange.pairs(key: "G", dispatcher: "launch", arg: url).get()
     #expect(pairs.map(\.arg) == [url])
 }
 
-@Test func launchKeepsAPathRangeThatDoesNotMatchTheKeys() throws {
+@Test @MainActor func launchKeepsAPathRangeThatDoesNotMatchTheKeys() throws {
     let pairs = try BindRange.pairs(key: "T", dispatcher: "launch", arg: "~/Code/a|b").get()
     #expect(pairs.map(\.arg) == ["~/Code/a|b"])
 }
 
-@Test func launchStillSpreadsAppsOverAKeyRange() throws {
+@Test @MainActor func launchStillSpreadsAppsOverAKeyRange() throws {
     let pairs = try BindRange.pairs(key: "1|2", dispatcher: "launch", arg: "Safari|Mail").get()
     #expect(pairs.map(\.key) == ["1", "2"])
     #expect(pairs.map(\.arg) == ["Safari", "Mail"])
 }
 
-@Test func otherDispatchersStillReportABadRange() {
+@Test @MainActor func otherDispatchersStillReportABadRange() {
     guard case .failure = BindRange.pairs(key: "1..3", dispatcher: "workspace", arg: "a..b1") else {
         Issue.record("expected a failure")
         return
     }
 }
 
-@Test func submapWithNoBindsIsAConfigError() {
+@Test @MainActor func submapWithNoBindsIsAConfigError() {
     let config = Config.parse("""
     bind = CTRL, W, submap, Window
     submap = window
@@ -37,7 +37,7 @@ import Testing
     #expect(config.errors == ["`submap, Window` enters a mode with no binds (did you mean `window`?)"])
 }
 
-@Test func submapWithBindsIsNoError() {
+@Test @MainActor func submapWithBindsIsNoError() {
     let config = Config.parse("""
     bind = CTRL, W, submap, window
     submap = window
@@ -47,16 +47,17 @@ import Testing
     #expect(config.errors.isEmpty)
 }
 
-@Test func hotkeysStayOutOfAModeWithNoBinds() {
+@Test @MainActor func hotkeysStayOutOfAModeWithNoBinds() {
     let hotkeys = Hotkeys()
-    hotkeys.setBindings(Config.parse("submap = window\nbind = , H, movefocus, l\nsubmap = reset").bindings)
+    let config = Config.parse("submap = window\nbind = , H, movefocus, l\nsubmap = reset")
+    hotkeys.setBindings(config.bindings, config: config, input: GlobalInput(scope: nil, keys: nil))
     hotkeys.setSubmap("Window")
     #expect(hotkeys.submap.isEmpty)
     hotkeys.setSubmap("window")
     #expect(hotkeys.submap == "window")
 }
 
-@Test func logTailStartsOnAFullLine() {
+@Test @MainActor func logTailStartsOnAFullLine() {
     let line = Data(String(repeating: "x", count: 99).utf8) + Data("\n".utf8)
     let data = Data((0..<(Log.keptSize / 100 + 10)).flatMap { _ in line })
     let tail = Log.tail(of: data)
@@ -66,7 +67,7 @@ import Testing
     #expect(Log.tail(of: line) == line)
 }
 
-@Test func testsLogToATemporaryFile() throws {
+@Test @MainActor func testsLogToATemporaryFile() throws {
     let real = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/CatWM.log")
     let marker = "log test \(UUID().uuidString)"
     Log.info(marker)
@@ -76,7 +77,7 @@ import Testing
     #expect(!realText.contains(marker))
 }
 
-@Test func numberRowRangeCanRunBackwards() throws {
+@Test @MainActor func numberRowRangeCanRunBackwards() throws {
     let pairs = try BindRange.pairs(key: "0..1", dispatcher: "workspace", arg: "10..1").get()
     #expect(pairs.map(\.key) == ["0", "9", "8", "7", "6", "5", "4", "3", "2", "1"])
     #expect(pairs.map(\.arg) == ["10", "9", "8", "7", "6", "5", "4", "3", "2", "1"])

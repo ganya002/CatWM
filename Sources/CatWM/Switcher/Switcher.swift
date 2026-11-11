@@ -2,7 +2,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-final class Switcher {
+@MainActor final class Switcher {
     static let shared = Switcher()
 
     let model = SwitcherModel()

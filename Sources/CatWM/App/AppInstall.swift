@@ -2,13 +2,13 @@ import CatWMKit
 import Foundation
 import ServiceManagement
 
-final class LoginItem {
+@MainActor final class LoginItem {
     static let shared = LoginItem()
     private var status = SMAppService.mainApp.status
     var isEnabled: Bool { status == .enabled }
     var needsApproval: Bool { status == .requiresApproval }
 
-    func refresh(then done: @escaping () -> Void) {
+    func refresh(then done: @escaping @MainActor () -> Void) {
         DispatchQueue.global(qos: .utility).async {
             let next = SMAppService.mainApp.status
             DispatchQueue.main.async {
@@ -22,7 +22,7 @@ final class LoginItem {
 
     @discardableResult
     func set(_ enabled: Bool, available: Bool = LoginItem.isAvailable,
-             service: (Bool) throws -> Void = LoginItem.applyToMainApp) -> Bool {
+             service: @MainActor (Bool) throws -> Void = LoginItem.applyToMainApp) -> Bool {
         guard available else { return false }
         do {
             try service(enabled)
