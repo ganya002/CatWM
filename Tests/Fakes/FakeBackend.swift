@@ -353,15 +353,16 @@ extension FakeBackend {
 
     @MainActor private final class Waiter {
         private var done: CheckedContinuation<Bool, Never>?
-        private var deadline: DispatchWorkItem?
+        private var deadline: DispatchSourceTimer?
         private var cleanUp: (() -> Void)?
 
         func start(_ done: CheckedContinuation<Bool, Never>, until end: Date, _ start: (Waiter) -> () -> Void) {
             self.done = done
-            let deadline = DispatchWorkItem { [weak self] in self?.finish(false) }
+            let deadline = DispatchSource.makeTimerSource(queue: .main)
+            deadline.schedule(deadline: .now() + max(end.timeIntervalSinceNow, 0))
+            deadline.setEventHandler { [weak self] in self?.finish(false) }
+            deadline.resume()
             self.deadline = deadline
-            DispatchQueue.main.asyncAfter( // style-ok: deadline of a wait
-                deadline: .now() + max(end.timeIntervalSinceNow, 0), execute: deadline)
             let cleanUp = start(self)
             if self.done == nil { cleanUp() } else { self.cleanUp = cleanUp }
         }
@@ -370,6 +371,7 @@ extension FakeBackend {
             guard let done else { return }
             self.done = nil
             deadline?.cancel()
+            deadline = nil
             cleanUp?()
             cleanUp = nil
             done.resume(returning: met)

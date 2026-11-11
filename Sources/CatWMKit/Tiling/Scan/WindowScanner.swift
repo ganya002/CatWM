@@ -149,8 +149,7 @@ import QuartzCore
                 }
             }
         }
-        let limit = DispatchTime.now() + scanDeadline
-        DispatchQueue.main.asyncAfter(deadline: limit) { progress.finish() } // style-ok: limit for a hung app
+        progress.expire(after: scanDeadline)
     }
 
     private nonisolated func acceptDiscovery(_ scan: AppScan, pid: pid_t, token: UUID,
@@ -198,6 +197,7 @@ import QuartzCore
     var waiting: Int
     private(set) var finished = false
     private var updateQueued = false
+    private var limit: DispatchSourceTimer?
     private let done: @MainActor () -> Void
     private let updated: @MainActor () -> Void
 
@@ -216,9 +216,19 @@ import QuartzCore
         }
     }
 
+    func expire(after seconds: TimeInterval) {
+        let limit = DispatchSource.makeTimerSource(queue: .main)
+        limit.schedule(deadline: .now() + seconds)
+        limit.setEventHandler { [weak self] in self?.finish() }
+        limit.resume()
+        self.limit = limit
+    }
+
     func finish() {
         guard !finished else { return }
         finished = true
+        limit?.cancel()
+        limit = nil
         done()
     }
 

@@ -99,7 +99,15 @@ struct Usage {
             writes += fake.writes.count
             fake.clearWrites()
         }
-        for step in 0..<130 { await act(step) }
+        var chunks = 0
+        var quiet = 0
+        while quiet < 2 {
+            guard chunks < 20 else { fail("the footprint kept growing after \(chunks * 390) actions") }
+            let before = Usage.now().footprint
+            for step in 0..<390 { await act(step) }
+            quiet = Usage.now().footprint - before > 64 / 1024.0 ? 0 : quiet + 1
+            chunks += 1
+        }
         let start = Usage.now()
         for step in 0..<390 {
             let before = Usage.now().cpu

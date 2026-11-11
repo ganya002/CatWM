@@ -162,6 +162,23 @@ import Testing
         await drain(scanner, pid: 1)
     }
 
+    @Test @MainActor func aFinishedScanReleasesItsCallbacksBeforeTheDeadline() async {
+        final class Probe {}
+        let scanner = WindowScanner(read: { _, _ in WindowScanner.AppScan() }, deadline: 60)
+        weak var released: Probe?
+        var completed = false
+        do {
+            let probe = Probe()
+            released = probe
+            scanner.scan([.init(pid: 1, listWindows: true, known: [:])],
+                         done: { _ = probe; completed = true }, updated: { _ = probe })
+        }
+        await drain(scanner, pid: 1)
+        await withCheckedContinuation { continuation in DispatchQueue.main.async { continuation.resume() } }
+        #expect(completed)
+        #expect(released == nil)
+    }
+
     @Test @MainActor func terminationDiscardsAnInFlightScan() async {
         let release = DispatchSemaphore(value: 0)
         let scanner = WindowScanner { _, _ in
