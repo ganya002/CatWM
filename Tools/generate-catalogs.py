@@ -63,7 +63,7 @@ def render():
     metric_source = "\n#if DEBUG\nenum GalleryMetrics {\n" + "\n".join(metrics) + "\n}\n#endif\n"
     return ("import AppKit\nimport CatWMKit\n" + metric_source + gallery
             + "\n#if DEBUG\nextension ColorToken {\n    static let all: [ColorToken] = [\n" + tokens + "\n    ]\n}\n#endif\n"
-            + "\nenum CustomSettingsIndex {\n    static let all: [SettingEntry] = [\n" + entries + "\n    ]\n}\n"
+            + "\n@MainActor enum CustomSettingsIndex {\n    static let all: [SettingEntry] = [\n" + entries + "\n    ]\n}\n"
             + "\nenum OptionPlacements {\n    static let all: [OptionPlacement] = [\n" + placement_rows + "\n    ]\n}\n")
 
 
