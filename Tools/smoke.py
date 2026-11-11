@@ -28,7 +28,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "Clients/python"))
 from catwm import CatWM, CatWMError  # noqa: E402
-from catwm.testing import Events, wait_until  # noqa: E402
+from catwm.testing import Events, Sandbox, wait_until  # noqa: E402
 
 APP = ROOT / "build/CatWM.app/Contents/MacOS/CatWM"
 INSTANCE = "smoke"
@@ -449,6 +449,23 @@ def app(smoke):
             except OSError:
                 pass
         smoke.check(f"raw request {line[:40]!r}")
+
+    smoke.steps += 1
+    try:
+        with Sandbox() as box:
+            window = box.launch("com.apple.calculator")
+            box.key(window, "1")
+            box.screenshot(window, str(smoke.out / "agent.png"))
+            box.text(window)
+    except (CatWMError, OSError) as error:
+        smoke.refused["agent display"] = str(error)
+    smoke.check("agent display")
+    # The display belongs to its connection, so CatWM must close it alone when a client vanishes.
+    try:
+        Sandbox().client.close()
+    except (CatWMError, OSError) as error:
+        smoke.refused["agent display, connection lost"] = str(error)
+    smoke.check("agent display, connection lost")
 
     for name, style in [("modefx", "all"), ("panelfx", "all")]:
         smoke.step(f"{name} {style}", name, {"style": style})
