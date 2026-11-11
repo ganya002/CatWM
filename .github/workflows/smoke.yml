@@ -1,0 +1,45 @@
+name: smoke
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: smoke (${{ matrix.suite }})
+    runs-on: xcode-27
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [windows, workspaces, app]
+    steps:
+      - uses: actions/checkout@v5
+      - run: sudo xcode-select -s /Applications/Xcode_27.2.app
+      - uses: actions/cache@v4
+        with:
+          path: .build
+          key: smoke-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Package.resolved') }}
+          restore-keys: |
+            smoke-${{ runner.os }}-${{ runner.arch }}-
+      # A debug build keeps the assertions and preconditions, so a broken invariant crashes here.
+      - run: CATWM_INSTANCE=smoke ./build.sh --dev
+      - run: python3 Tools/smoke.py --suite ${{ matrix.suite }} --out smoke
+      - if: always() && hashFiles('smoke/summary.md') != ''
+        run: cat smoke/summary.md >> "$GITHUB_STEP_SUMMARY"
+      - if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: smoke-${{ matrix.suite }}
+          path: smoke
+          if-no-files-found: warn
