@@ -19,6 +19,7 @@ import os
     var heldOverrides: [String: JSON] = [:]
     package private(set) var source = Source.script
     package private(set) var isLoaded = false
+    var conversionFailure: ConfigDiagnostic?
     package private(set) var base = Config()
     package private(set) var current = Config()
     package private(set) var failures: [ConfigDiagnostic] = []
@@ -57,9 +58,8 @@ import os
             return loadConf()
         }
         source = .script
-        let legacy = convertLegacyScript()
         writeTypes()
-        publish(evaluate(), notify: false, extra: legacy.map { [$0] } ?? [])
+        publish(evaluate(), notify: false, extra: conversionFailure.map { [$0] } ?? [])
         return current
     }
 

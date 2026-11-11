@@ -1,7 +1,12 @@
 import Foundation
 
 extension ConfigStore {
-    func convertLegacyScript() -> ConfigDiagnostic? {
+    package func convertLegacyConfig() {
+        guard !embedded, !isLoaded else { return }
+        conversionFailure = convertLegacyScript()
+    }
+
+    private func convertLegacyScript() -> ConfigDiagnostic? {
         guard let text = try? String(contentsOf: scriptURL, encoding: .utf8),
               text.range(of: #"(?m)^\s*export\s+default\b"#, options: .regularExpression) != nil else { return nil }
         let fail = { (reason: String) in

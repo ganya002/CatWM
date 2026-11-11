@@ -9,6 +9,11 @@ import Testing
         return ConfigStore(folder: folder.url, defaults: UserDefaults(suiteName: suite) ?? .standard)
     }
 
+    private func converted(_ store: ConfigStore) -> Config {
+        store.convertLegacyConfig()
+        return store.load()
+    }
+
     private func text(_ folder: ConfigFolder, _ name: String = "catwm.config.ts") throws -> String {
         try String(contentsOf: folder.url.appendingPathComponent(name), encoding: .utf8)
     }
@@ -28,7 +33,7 @@ import Testing
         let expected = try old(folder)
         let store = store(folder)
 
-        let config = store.load()
+        let config = converted(store)
 
         #expect(store.failures.isEmpty)
         #expect(config.changes(from: expected).isEmpty)
@@ -63,7 +68,7 @@ import Testing
         let expected = try old(folder)
         let store = store(folder)
 
-        let config = store.load()
+        let config = converted(store)
 
         #expect(store.failures.isEmpty)
         #expect(config.changes(from: expected).isEmpty)
@@ -84,7 +89,7 @@ import Testing
         ])
         defer { folder.remove() }
 
-        let config = store(folder).load()
+        let config = converted(store(folder))
 
         #expect(config.windowMarginSize == 3)
         #expect(try text(folder, "catwm.config.ts.bak") == "keep me\n")
@@ -97,7 +102,7 @@ import Testing
         defer { folder.remove() }
         let store = store(folder)
 
-        _ = store.load()
+        _ = converted(store)
 
         #expect(try text(folder) == original)
         #expect(!FileManager.default.fileExists(atPath: folder.url.appendingPathComponent("catwm.config.ts.bak").path))
@@ -130,11 +135,23 @@ import Testing
         defer { folder.remove() }
         let store = store(folder)
 
-        let config = store.load()
+        let config = converted(store)
 
         #expect(config.windowMarginSize == 9 && store.failures.isEmpty)
         #expect(try text(folder) == original)
         #expect(!FileManager.default.fileExists(atPath: folder.url.appendingPathComponent("catwm.config.ts.bak").path))
+    }
+
+    @Test func aLoadAloneNeverConverts() throws {
+        let original = "export default { gaps: { size: 3 } }\n"
+        let folder = try ConfigFolder(["catwm.config.ts": original])
+        defer { folder.remove() }
+        let store = store(folder)
+
+        _ = store.load()
+
+        #expect(try text(folder) == original)
+        #expect(store.failures.first?.phase == .validate)
     }
 
     @Test func embeddedModeNeverConverts() throws {
