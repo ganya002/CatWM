@@ -6,6 +6,7 @@ trap 'rm -rf "$PROBE_DIR"' EXIT
 swiftc -package-name CatWM -D CATWM_RESIZE_PROBE \
   Tools/WindowResizeProbe.swift Tools/ResizeProbeAnimation.swift \
   Sources/CatWMKit/Motion/Windows/WindowSceneCapture.swift \
+  Sources/CatWMKit/Motion/Windows/WindowFillObservation.swift \
   Sources/CatWMKit/Motion/Windows/WindowScenePlacement.swift \
   Sources/CatWMKit/Motion/Windows/WindowResizeScene.swift \
   Sources/CatWMKit/Motion/Windows/WindowFrameClock.swift \

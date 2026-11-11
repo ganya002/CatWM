@@ -70,13 +70,15 @@ package final class WindowResizeFill {
         panel.contentView = view
     }
 
-    package func update(desired: CGRect, actual: CGRect, order: [CGWindowID]? = nil) {
+    package func update(desired: CGRect, actual: CGRect, order: [CGWindowID]? = nil, screens: [Screen]? = nil) {
         guard !desired.isNull, !actual.isNull, desired.width > 0, desired.height > 0,
               actual.width > 0, actual.height > 0,
               desired.width >= appearance.minimumSize.width, desired.height >= appearance.minimumSize.height,
               actual.width >= appearance.minimumSize.width, actual.height >= appearance.minimumSize.height,
               desired.minY == actual.minY, desired.intersects(actual),
-              let screen = Screen.all().first(where: { $0.frame.contains(desired) && $0.frame.contains(actual) }),
+              let screen = (screens ?? Screen.all()).first(where: {
+                  $0.frame.contains(desired) && $0.frame.contains(actual)
+              }),
               let native = screen.nsScreen,
               abs(outline.contentsScale - native.backingScaleFactor) < 0.01 else { close(); return }
         if actual.contains(desired) || desired.approxEqual(actual, tolerance: 0.25) { close(); return }

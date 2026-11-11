@@ -75,7 +75,12 @@ child and closes the scene; it does not move user windows.
 Set `CATWM_RESIZE_FILL=1` at launch to test color-only fills during tiling. The default is off.
 This mode takes precedence over `CATWM_RESIZE_SCENE`; it doesn't enable captured-window compositing.
 `Animator` sends presentation samples and cancellations through `WindowPresentation`. `WindowResizeFills`
-uses those samples to update the fill against the actual WindowServer frame while AX writes continue.
+uses those samples to update the fill while AX writes continue. `WindowFillObserver` reads WindowServer
+frames and stacking order off the animation thread, with at most one read in flight. Pending requests
+coalesce. A cancelled animation cannot receive an earlier read. The main thread uses the latest
+outline and cuts out the union of the observed native frame and its latest requested frame. That
+conservative cutout can leave less fill visible; it avoids painting over either known native footprint.
+Screen descriptions refresh with idle preparation rather than on every animation tick.
 It closes fills when placement ends, the window is cancelled, or the presentation becomes obstructed.
 `AppSurface` prepares appearances on a serial background queue when windows are idle. A cache miss uses
 normal AX motion, so capture never blocks the start of an animation. Width-only changes reuse the

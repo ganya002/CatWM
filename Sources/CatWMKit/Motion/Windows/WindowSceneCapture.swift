@@ -137,6 +137,20 @@ package struct WindowSceneCapture {
         return WindowServerList.onScreen(connection: orderSession.connection)
     }
 
+    package static func observe(_ participants: Set<CGWindowID>) -> WindowFillObservation? {
+        guard let order = windowOrder() else { return nil }
+        var frames: [CGWindowID: CGRect] = [:]
+        var remaining = participants
+        for id in order {
+            let frame = participants.contains(id) ? currentFrame(id) : occludingFrame(id)
+            guard let frame else { return nil }
+            frames[id] = frame
+            remaining.remove(id)
+            if remaining.isEmpty { break }
+        }
+        return WindowFillObservation(participants: participants, order: order, frames: frames)
+    }
+
     package static func canPresent(
         _ regions: [CGRect], participants: Set<CGWindowID>, excluding excluded: Set<CGWindowID> = [],
         order requested: [CGWindowID]? = nil
