@@ -1,728 +1,590 @@
 package enum Sucrase {
     static let source = ##"""
-(()=>{var aa=Object.create;var{getPrototypeOf:ca,defineProperty:uo,getOwnPropertyNames:la}=Object;var po=Object.prot\##
-otype.hasOwnProperty;function ua(e){return this[e]}var pa,fa,Yt=(e,n,s)=>{var o=e!=null&&typeof e==="object";if(o){v\##
-ar i=n?pa??=new WeakMap:fa??=new WeakMap,l=i.get(e);if(l)return l}s=e!=null?aa(ca(e)):{};let p=n||!e||!e.__esModule|\##
-|!po.call(e,"default")?uo(s,"default",{value:e,enumerable:!0}):s;if(e&&typeof e==="object"||typeof e==="function"){f\##
-or(let d of la(e))if(!po.call(p,d))uo(p,d,{get:ua.bind(e,d),enumerable:!0})}if(o)i.set(e,p);return p};var bt=(e,n)=>\##
-()=>(n||e((n={exports:{}}).exports,n),n.exports);var Do=bt(function(pr,fr){(function(e,n){typeof pr==="object"&&type\##
-of fr<"u"?fr.exports=n():typeof define==="function"&&define.amd?define(n):(e=typeof globalThis<"u"?globalThis:e||sel\##
-f,e.resolveURI=n())})(pr,function(){let e=/^[\w+.-]+:\/\//,n=/^([\w+.-]+:)\/\/([^@/#?]*@)?([^:/#?]*)(:\d+)?(\/[^#?]*\##
-)?(\?[^#]*)?(#.*)?/,s=/^file:(?:\/\/((?![a-z]:)[^/#?]*)?)?(\/?[^#?]*)(\?[^#]*)?(#.*)?/i;function o(b){return e.test(\##
-b)}function i(b){return b.startsWith("//")}function l(b){return b.startsWith("/")}function p(b){return b.startsWith(\##
-"file:")}function d(b){return/^[.?#]/.test(b)}function k(b){let N=n.exec(b);return _(N[1],N[2]||"",N[3],N[4]||"",N[5\##
-]||"/",N[6]||"",N[7]||"")}function g(b){let N=s.exec(b),R=N[2];return _("file:","",N[1]||"","",l(R)?R:"/"+R,N[3]||""\##
-,N[4]||"")}function _(b,N,R,z,W,G,se){return{scheme:b,user:N,host:R,port:z,path:W,query:G,hash:se,type:7}}function w\##
-(b){if(i(b)){let R=k("http:"+b);return R.scheme="",R.type=6,R}if(l(b)){let R=k("http://foo.com"+b);return R.scheme="\##
-",R.host="",R.type=5,R}if(p(b))return g(b);if(o(b))return k(b);let N=k("http://foo.com/"+b);return N.scheme="",N.hos\##
-t="",N.type=b?b.startsWith("?")?3:b.startsWith("#")?2:4:1,N}function E(b){if(b.endsWith("/.."))return b;let N=b.last\##
-IndexOf("/");return b.slice(0,N+1)}function D(b,N){if(M(N,N.type),b.path==="/")b.path=N.path;else b.path=E(N.path)+b\##
-.path}function M(b,N){let R=N<=4,z=b.path.split("/"),W=1,G=0,se=!1;for(let ae=1;ae<z.length;ae++){let de=z[ae];if(!d\##
-e){se=!0;continue}if(se=!1,de===".")continue;if(de===".."){if(G)se=!0,G--,W--;else if(R)z[W++]=de;continue}z[W++]=de\##
-,G++}let me="";for(let ae=1;ae<W;ae++)me+="/"+z[ae];if(!me||se&&!me.endsWith("/.."))me+="/";b.path=me}function H(b,N\##
-){if(!b&&!N)return"";let R=w(b),z=R.type;if(N&&z!==7){let G=w(N),se=G.type;switch(z){case 1:R.hash=G.hash;case 2:R.q\##
-uery=G.query;case 3:case 4:D(R,G);case 5:R.user=G.user,R.host=G.host,R.port=G.port;case 6:R.scheme=G.scheme}if(se>z)\##
-z=se}M(R,z);let W=R.query+R.hash;switch(z){case 2:case 3:return W;case 4:{let G=R.path.slice(1);if(!G)return W||".";\##
-if(d(N||b)&&!d(G))return"./"+G+W;return G+W}case 5:return R.path+W;default:return R.scheme+"//"+R.user+R.host+R.port\##
-+R.path+W}}return H})});var cn=bt(function(we){var sc=we&&we.__extends||function(){var e=function(n,s){return e=Obje\##
-ct.setPrototypeOf||{__proto__:[]}instanceof Array&&function(o,i){o.__proto__=i}||function(o,i){for(var l in i)if(i.h\##
-asOwnProperty(l))o[l]=i[l]},e(n,s)};return function(n,s){e(n,s);function o(){this.constructor=n}n.prototype=s===null\##
-?Object.create(s):(o.prototype=s.prototype,new o)}}();Object.defineProperty(we,"__esModule",{value:!0});we.DetailCon\##
-text=we.NoopContext=we.VError=void 0;var Vo=function(e){sc(n,e);function n(s,o){var i=e.call(this,o)||this;return i.\##
-path=s,Object.setPrototypeOf(i,n.prototype),i}return n}(Error);we.VError=Vo;var rc=function(){function e(){}return e\##
-.prototype.fail=function(n,s,o){return!1},e.prototype.unionResolver=function(){return this},e.prototype.createContex\##
-t=function(){return this},e.prototype.resolveUnion=function(n){},e}();we.NoopContext=rc;var Wo=function(){function e\##
-(){this._propNames=[""],this._messages=[null],this._score=0}return e.prototype.fail=function(n,s,o){return this._pro\##
-pNames.push(n),this._messages.push(s),this._score+=o,!1},e.prototype.unionResolver=function(){return new oc},e.proto\##
-type.resolveUnion=function(n){var s,o,i=n,l=null;for(var p=0,d=i.contexts;p<d.length;p++){var k=d[p];if(!l||k._score\##
->=l._score)l=k}if(l&&l._score>0)(s=this._propNames).push.apply(s,l._propNames),(o=this._messages).push.apply(o,l._me\##
-ssages)},e.prototype.getError=function(n){var s=[];for(var o=this._propNames.length-1;o>=0;o--){var i=this._propName\##
-s[o];n+=typeof i==="number"?"["+i+"]":i?"."+i:"";var l=this._messages[o];if(l)s.push(n+" "+l)}return new Vo(n,s.join\##
-("; "))},e.prototype.getErrorDetail=function(n){var s=[];for(var o=this._propNames.length-1;o>=0;o--){var i=this._pr\##
-opNames[o];n+=typeof i==="number"?"["+i+"]":i?"."+i:"";var l=this._messages[o];if(l)s.push({path:n,message:l})}var p\##
-=null;for(var o=s.length-1;o>=0;o--){if(p)s[o].nested=[p];p=s[o]}return p},e}();we.DetailContext=Wo;var oc=function(\##
-){function e(){this.contexts=[]}return e.prototype.createContext=function(){var n=new Wo;return this.contexts.push(n\##
-),n},e}()});var br=bt(function(T){var fe=T&&T.__extends||function(){var e=function(n,s){return e=Object.setPrototype\##
-Of||{__proto__:[]}instanceof Array&&function(o,i){o.__proto__=i}||function(o,i){for(var l in i)if(i.hasOwnProperty(l\##
-))o[l]=i[l]},e(n,s)};return function(n,s){e(n,s);function o(){this.constructor=n}n.prototype=s===null?Object.create(\##
-s):(o.prototype=s.prototype,new o)}}();Object.defineProperty(T,"__esModule",{value:!0});T.basicTypes=T.BasicType=T.T\##
-ParamList=T.TParam=T.param=T.TFunc=T.func=T.TProp=T.TOptional=T.opt=T.TIface=T.iface=T.TEnumLiteral=T.enumlit=T.TEnu\##
-mType=T.enumtype=T.TIntersection=T.intersection=T.TUnion=T.union=T.TTuple=T.tuple=T.TArray=T.array=T.TLiteral=T.lit=\##
-T.TName=T.name=T.TType=void 0;var Xo=cn(),ce=function(){function e(){}return e}();T.TType=ce;function Fe(e){return t\##
-ypeof e==="string"?Jo(e):e}function gr(e,n){var s=e[n];if(!s)throw Error("Unknown type "+n);return s}function Jo(e){\##
-return new _r(e)}T.name=Jo;var _r=function(e){fe(n,e);function n(s){var o=e.call(this)||this;return o.name=s,o._fail\##
-Msg="is not a "+s,o}return n.prototype.getChecker=function(s,o,i){var l=this,p=gr(s,this.name),d=p.getChecker(s,o,i)\##
-;if(p instanceof re||p instanceof n)return d;return function(k,g){return d(k,g)?!0:g.fail(null,l._failMsg,0)}},n}(ce\##
-);T.TName=_r;function ic(e){return new yr(e)}T.lit=ic;var yr=function(e){fe(n,e);function n(s){var o=e.call(this)||t\##
-his;return o.value=s,o.name=JSON.stringify(s),o._failMsg="is not "+o.name,o}return n.prototype.getChecker=function(s\##
-,o){var i=this;return function(l,p){return l===i.value?!0:p.fail(null,i._failMsg,-1)}},n}(ce);T.TLiteral=yr;function\##
- ac(e){return new zo(Fe(e))}T.array=ac;var zo=function(e){fe(n,e);function n(s){var o=e.call(this)||this;return o.tt\##
-ype=s,o}return n.prototype.getChecker=function(s,o){var i=this.ttype.getChecker(s,o);return function(l,p){if(!Array.\##
-isArray(l))return p.fail(null,"is not an array",0);for(var d=0;d<l.length;d++){var k=i(l[d],p);if(!k)return p.fail(d\##
-,null,1)}return!0}},n}(ce);T.TArray=zo;function cc(){var e=[];for(var n=0;n<arguments.length;n++)e[n]=arguments[n];r\##
-eturn new Ko(e.map(function(s){return Fe(s)}))}T.tuple=cc;var Ko=function(e){fe(n,e);function n(s){var o=e.call(this\##
-)||this;return o.ttypes=s,o}return n.prototype.getChecker=function(s,o){var i=this.ttypes.map(function(p){return p.g\##
-etChecker(s,o)}),l=function(p,d){if(!Array.isArray(p))return d.fail(null,"is not an array",0);for(var k=0;k<i.length\##
-;k++){var g=i[k](p[k],d);if(!g)return d.fail(k,null,1)}return!0};if(!o)return l;return function(p,d){if(!l(p,d))retu\##
-rn!1;return p.length<=i.length?!0:d.fail(i.length,"is extraneous",2)}},n}(ce);T.TTuple=Ko;function lc(){var e=[];for\##
-(var n=0;n<arguments.length;n++)e[n]=arguments[n];return new Yo(e.map(function(s){return Fe(s)}))}T.union=lc;var Yo=\##
-function(e){fe(n,e);function n(s){var o=e.call(this)||this;o.ttypes=s;var i=s.map(function(p){return p instanceof _r\##
-||p instanceof yr?p.name:null}).filter(function(p){return p}),l=s.length-i.length;if(i.length){if(l>0)i.push(l+" mor\##
-e");o._failMsg="is none of "+i.join(", ")}else o._failMsg="is none of "+l+" types";return o}return n.prototype.getCh\##
-ecker=function(s,o){var i=this,l=this.ttypes.map(function(p){return p.getChecker(s,o)});return function(p,d){var k=d\##
-.unionResolver();for(var g=0;g<l.length;g++){var _=l[g](p,k.createContext());if(_)return!0}return d.resolveUnion(k),\##
-d.fail(null,i._failMsg,0)}},n}(ce);T.TUnion=Yo;function uc(){var e=[];for(var n=0;n<arguments.length;n++)e[n]=argume\##
-nts[n];return new Qo(e.map(function(s){return Fe(s)}))}T.intersection=uc;var Qo=function(e){fe(n,e);function n(s){va\##
-r o=e.call(this)||this;return o.ttypes=s,o}return n.prototype.getChecker=function(s,o){var i=new Set,l=this.ttypes.m\##
-ap(function(p){return p.getChecker(s,o,i)});return function(p,d){var k=l.every(function(g){return g(p,d)});if(k)retu\##
-rn!0;return d.fail(null,null,0)}},n}(ce);T.TIntersection=Qo;function pc(e){return new Ir(e)}T.enumtype=pc;var Ir=fun\##
-ction(e){fe(n,e);function n(s){var o=e.call(this)||this;return o.members=s,o.validValues=new Set,o._failMsg="is not \##
-a valid enum value",o.validValues=new Set(Object.keys(s).map(function(i){return s[i]})),o}return n.prototype.getChec\##
-ker=function(s,o){var i=this;return function(l,p){return i.validValues.has(l)?!0:p.fail(null,i._failMsg,0)}},n}(ce);\##
-T.TEnumType=Ir;function fc(e,n){return new Zo(e,n)}T.enumlit=fc;var Zo=function(e){fe(n,e);function n(s,o){var i=e.c\##
-all(this)||this;return i.enumName=s,i.prop=o,i._failMsg="is not "+s+"."+o,i}return n.prototype.getChecker=function(s\##
-,o){var i=this,l=gr(s,this.enumName);if(!(l instanceof Ir))throw Error("Type "+this.enumName+" used in enumlit is no\##
-t an enum type");var p=l.members[this.prop];if(!l.members.hasOwnProperty(this.prop))throw Error("Unknown value "+thi\##
-s.enumName+"."+this.prop+" used in enumlit");return function(d,k){return d===p?!0:k.fail(null,i._failMsg,-1)}},n}(ce\##
-);T.TEnumLiteral=Zo;function hc(e){return Object.keys(e).map(function(n){return mc(n,e[n])})}function mc(e,n){return\##
- n instanceof Tr?new kr(e,n.ttype,!0):new kr(e,Fe(n),!1)}function dc(e,n){return new e1(e,hc(n))}T.iface=dc;var e1=f\##
-unction(e){fe(n,e);function n(s,o){var i=e.call(this)||this;return i.bases=s,i.props=o,i.propSet=new Set(o.map(funct\##
-ion(l){return l.name})),i}return n.prototype.getChecker=function(s,o,i){var l=this,p=this.bases.map(function(E){retu\##
-rn gr(s,E).getChecker(s,o)}),d=this.props.map(function(E){return E.ttype.getChecker(s,o)}),k=new Xo.NoopContext,g=th\##
-is.props.map(function(E,D){return!E.isOpt&&!d[D](void 0,k)}),_=function(E,D){if(typeof E!=="object"||E===null)return\##
- D.fail(null,"is not an object",0);for(var M=0;M<p.length;M++)if(!p[M](E,D))return!1;for(var M=0;M<d.length;M++){var\##
- H=l.props[M].name,b=E[H];if(b===void 0){if(g[M])return D.fail(H,"is missing",1)}else{var N=d[M](b,D);if(!N)return D\##
-.fail(H,null,1)}}return!0};if(!o)return _;var w=this.propSet;if(i)this.propSet.forEach(function(E){return i.add(E)})\##
-,w=i;return function(E,D){if(!_(E,D))return!1;for(var M in E)if(!w.has(M))return D.fail(M,"is extraneous",2);return!\##
-0}},n}(ce);T.TIface=e1;function kc(e){return new Tr(Fe(e))}T.opt=kc;var Tr=function(e){fe(n,e);function n(s){var o=e\##
-.call(this)||this;return o.ttype=s,o}return n.prototype.getChecker=function(s,o){var i=this.ttype.getChecker(s,o);re\##
-turn function(l,p){return l===void 0||i(l,p)}},n}(ce);T.TOptional=Tr;var kr=function(){function e(n,s,o){this.name=n\##
-,this.ttype=s,this.isOpt=o}return e}();T.TProp=kr;function xc(e){var n=[];for(var s=1;s<arguments.length;s++)n[s-1]=\##
-arguments[s];return new t1(new s1(n),Fe(e))}T.func=xc;var t1=function(e){fe(n,e);function n(s,o){var i=e.call(this)|\##
-|this;return i.paramList=s,i.result=o,i}return n.prototype.getChecker=function(s,o){return function(i,l){return type\##
-of i==="function"?!0:l.fail(null,"is not a function",0)}},n}(ce);T.TFunc=t1;function gc(e,n,s){return new n1(e,Fe(n)\##
-,Boolean(s))}T.param=gc;var n1=function(){function e(n,s,o){this.name=n,this.ttype=s,this.isOpt=o}return e}();T.TPar\##
-am=n1;var s1=function(e){fe(n,e);function n(s){var o=e.call(this)||this;return o.params=s,o}return n.prototype.getCh\##
-ecker=function(s,o){var i=this,l=this.params.map(function(g){return g.ttype.getChecker(s,o)}),p=new Xo.NoopContext,d\##
-=this.params.map(function(g,_){return!g.isOpt&&!l[_](void 0,p)}),k=function(g,_){if(!Array.isArray(g))return _.fail(\##
-null,"is not an array",0);for(var w=0;w<l.length;w++){var E=i.params[w];if(g[w]===void 0){if(d[w])return _.fail(E.na\##
-me,"is missing",1)}else{var D=l[w](g[w],_);if(!D)return _.fail(E.name,null,1)}}return!0};if(!o)return k;return funct\##
-ion(g,_){if(!k(g,_))return!1;return g.length<=l.length?!0:_.fail(l.length,"is extraneous",2)}},n}(ce);T.TParamList=s\##
-1;var re=function(e){fe(n,e);function n(s,o){var i=e.call(this)||this;return i.validator=s,i.message=o,i}return n.pr\##
-ototype.getChecker=function(s,o){var i=this;return function(l,p){return i.validator(l)?!0:p.fail(null,i.message,0)}}\##
-,n}(ce);T.BasicType=re;T.basicTypes={any:new re(function(e){return!0},"is invalid"),number:new re(function(e){return\##
- typeof e==="number"},"is not a number"),object:new re(function(e){return typeof e==="object"&&e},"is not an object"\##
-),boolean:new re(function(e){return typeof e==="boolean"},"is not a boolean"),string:new re(function(e){return typeo\##
-f e==="string"},"is not a string"),symbol:new re(function(e){return typeof e==="symbol"},"is not a symbol"),void:new\##
- re(function(e){return e==null},"is not void"),undefined:new re(function(e){return e===void 0},"is not undefined"),n\##
-ull:new re(function(e){return e===null},"is not null"),never:new re(function(e){return!1},"is unexpected"),Date:new \##
-re(Go("[object Date]"),"is not a Date"),RegExp:new re(Go("[object RegExp]"),"is not a RegExp")};var _c=Object.protot\##
-ype.toString;function Go(e){return function(n){return typeof n==="object"&&n&&_c.call(n)===e}}if(typeof Buffer<"u")T\##
-.basicTypes.Buffer=new re(function(e){return Buffer.isBuffer(e)},"is not a Buffer");var yc=function(e){T.basicTypes[\##
-e.name]=new re(function(n){return n instanceof e},"is not a "+e.name)};for(Pt=0,ln=[Int8Array,Uint8Array,Uint8Clampe\##
-dArray,Int16Array,Uint16Array,Int32Array,Uint32Array,Float32Array,Float64Array,ArrayBuffer];Pt<ln.length;Pt++)xr=ln[\##
-Pt],yc(xr);var xr,Pt,ln});var wr=bt(function(F){var Ic=F&&F.__spreadArrays||function(){for(var e=0,n=0,s=arguments.l\##
-ength;n<s;n++)e+=arguments[n].length;for(var o=Array(e),i=0,n=0;n<s;n++)for(var l=arguments[n],p=0,d=l.length;p<d;p+\##
-+,i++)o[i]=l[p];return o};Object.defineProperty(F,"__esModule",{value:!0});F.Checker=F.createCheckers=void 0;var Nt=\##
-br(),pt=cn(),V=br();Object.defineProperty(F,"TArray",{enumerable:!0,get:function(){return V.TArray}});Object.defineP\##
-roperty(F,"TEnumType",{enumerable:!0,get:function(){return V.TEnumType}});Object.defineProperty(F,"TEnumLiteral",{en\##
-umerable:!0,get:function(){return V.TEnumLiteral}});Object.defineProperty(F,"TFunc",{enumerable:!0,get:function(){re\##
-turn V.TFunc}});Object.defineProperty(F,"TIface",{enumerable:!0,get:function(){return V.TIface}});Object.definePrope\##
-rty(F,"TLiteral",{enumerable:!0,get:function(){return V.TLiteral}});Object.defineProperty(F,"TName",{enumerable:!0,g\##
-et:function(){return V.TName}});Object.defineProperty(F,"TOptional",{enumerable:!0,get:function(){return V.TOptional\##
-}});Object.defineProperty(F,"TParam",{enumerable:!0,get:function(){return V.TParam}});Object.defineProperty(F,"TPara\##
-mList",{enumerable:!0,get:function(){return V.TParamList}});Object.defineProperty(F,"TProp",{enumerable:!0,get:funct\##
-ion(){return V.TProp}});Object.defineProperty(F,"TTuple",{enumerable:!0,get:function(){return V.TTuple}});Object.def\##
-ineProperty(F,"TType",{enumerable:!0,get:function(){return V.TType}});Object.defineProperty(F,"TUnion",{enumerable:!\##
-0,get:function(){return V.TUnion}});Object.defineProperty(F,"TIntersection",{enumerable:!0,get:function(){return V.T\##
-Intersection}});Object.defineProperty(F,"array",{enumerable:!0,get:function(){return V.array}});Object.definePropert\##
-y(F,"enumlit",{enumerable:!0,get:function(){return V.enumlit}});Object.defineProperty(F,"enumtype",{enumerable:!0,ge\##
-t:function(){return V.enumtype}});Object.defineProperty(F,"func",{enumerable:!0,get:function(){return V.func}});Obje\##
-ct.defineProperty(F,"iface",{enumerable:!0,get:function(){return V.iface}});Object.defineProperty(F,"lit",{enumerabl\##
-e:!0,get:function(){return V.lit}});Object.defineProperty(F,"name",{enumerable:!0,get:function(){return V.name}});Ob\##
-ject.defineProperty(F,"opt",{enumerable:!0,get:function(){return V.opt}});Object.defineProperty(F,"param",{enumerabl\##
-e:!0,get:function(){return V.param}});Object.defineProperty(F,"tuple",{enumerable:!0,get:function(){return V.tuple}}\##
-);Object.defineProperty(F,"union",{enumerable:!0,get:function(){return V.union}});Object.defineProperty(F,"intersect\##
-ion",{enumerable:!0,get:function(){return V.intersection}});Object.defineProperty(F,"BasicType",{enumerable:!0,get:f\##
-unction(){return V.BasicType}});var Tc=cn();Object.defineProperty(F,"VError",{enumerable:!0,get:function(){return Tc\##
-.VError}});function bc(){var e=[];for(var n=0;n<arguments.length;n++)e[n]=arguments[n];var s=Object.assign.apply(Obj\##
-ect,Ic([{},Nt.basicTypes],e)),o={};for(var i=0,l=e;i<l.length;i++){var p=l[i];for(var d=0,k=Object.keys(p);d<k.lengt\##
-h;d++){var g=k[d];o[g]=new r1(s,p[g])}}return o}F.createCheckers=bc;var r1=function(){function e(n,s,o){if(o===void \##
-0)o="value";if(this.suite=n,this.ttype=s,this._path=o,this.props=new Map,s instanceof Nt.TIface)for(var i=0,l=s.prop\##
-s;i<l.length;i++){var p=l[i];this.props.set(p.name,p.ttype)}this.checkerPlain=this.ttype.getChecker(n,!1),this.check\##
-erStrict=this.ttype.getChecker(n,!0)}return e.prototype.setReportedPath=function(n){this._path=n},e.prototype.check=\##
-function(n){return this._doCheck(this.checkerPlain,n)},e.prototype.test=function(n){return this.checkerPlain(n,new p\##
-t.NoopContext)},e.prototype.validate=function(n){return this._doValidate(this.checkerPlain,n)},e.prototype.strictChe\##
-ck=function(n){return this._doCheck(this.checkerStrict,n)},e.prototype.strictTest=function(n){return this.checkerStr\##
-ict(n,new pt.NoopContext)},e.prototype.strictValidate=function(n){return this._doValidate(this.checkerStrict,n)},e.p\##
-rototype.getProp=function(n){var s=this.props.get(n);if(!s)throw Error("Type has no property "+n);return new e(this.\##
-suite,s,this._path+"."+n)},e.prototype.methodArgs=function(n){var s=this._getMethod(n);return new e(this.suite,s.par\##
-amList)},e.prototype.methodResult=function(n){var s=this._getMethod(n);return new e(this.suite,s.result)},e.prototyp\##
-e.getArgs=function(){if(!(this.ttype instanceof Nt.TFunc))throw Error("getArgs() applied to non-function");return ne\##
-w e(this.suite,this.ttype.paramList)},e.prototype.getResult=function(){if(!(this.ttype instanceof Nt.TFunc))throw Er\##
-ror("getResult() applied to non-function");return new e(this.suite,this.ttype.result)},e.prototype.getType=function(\##
-){return this.ttype},e.prototype._doCheck=function(n,s){var o=new pt.NoopContext;if(!n(s,o)){var i=new pt.DetailCont\##
-ext;throw n(s,i),i.getError(this._path)}},e.prototype._doValidate=function(n,s){var o=new pt.NoopContext;if(n(s,o))r\##
-eturn null;var i=new pt.DetailContext;return n(s,i),i.getErrorDetail(this._path)},e.prototype._getMethod=function(n)\##
-{var s=this.props.get(n);if(!s)throw Error("Type has no property "+n);if(!(s instanceof Nt.TFunc))throw Error("Prope\##
-rty "+n+" is not a method");return s},e}();F.Checker=r1});var Hi=bt(function(Kt){Kt.__esModule=!0;Kt.LinesAndColumns\##
-=void 0;var qn=`
-`,$i="\r",Ui=function(){function e(n){this.string=n;var s=[0];for(var o=0;o<n.length;)switch(n[o]){case qn:o+=qn.len\##
-gth,s.push(o);break;case $i:if(o+=$i.length,n[o]===qn)o+=qn.length;s.push(o);break;default:o++;break}this.offsets=s}\##
-return e.prototype.locationForIndex=function(n){if(n<0||n>this.string.length)return null;var s=0,o=this.offsets;whil\##
-e(o[s+1]<=n)s++;var i=n-o[s];return{line:s,column:i}},e.prototype.indexForLocation=function(n){var{line:s,column:o}=\##
-n;if(s<0||s>=this.offsets.length)return null;if(o<0||o>this.lengthOfLine(s))return null;return this.offsets[s]+o},e.\##
-prototype.lengthOfLine=function(n){var s=this.offsets[n],o=n===this.offsets.length-1?this.string.length:this.offsets\##
-[n+1];return o-s},e}();Kt.LinesAndColumns=Ui;Kt.default=Ui});var c;(function(e){e[e.NONE=0]="NONE";let s=1;e[e._abst\##
-ract=s]="_abstract";let o=s+1;e[e._accessor=o]="_accessor";let i=o+1;e[e._as=i]="_as";let l=i+1;e[e._assert=l]="_ass\##
-ert";let p=l+1;e[e._asserts=p]="_asserts";let d=p+1;e[e._async=d]="_async";let k=d+1;e[e._await=k]="_await";let g=k+\##
-1;e[e._checks=g]="_checks";let _=g+1;e[e._constructor=_]="_constructor";let w=_+1;e[e._declare=w]="_declare";let E=w\##
-+1;e[e._enum=E]="_enum";let D=E+1;e[e._exports=D]="_exports";let M=D+1;e[e._from=M]="_from";let H=M+1;e[e._get=H]="_\##
-get";let b=H+1;e[e._global=b]="_global";let N=b+1;e[e._implements=N]="_implements";let R=N+1;e[e._infer=R]="_infer";\##
-let z=R+1;e[e._interface=z]="_interface";let W=z+1;e[e._is=W]="_is";let G=W+1;e[e._keyof=G]="_keyof";let se=G+1;e[e.\##
-_mixins=se]="_mixins";let me=se+1;e[e._module=me]="_module";let ae=me+1;e[e._namespace=ae]="_namespace";let de=ae+1;\##
-e[e._of=de]="_of";let Xe=de+1;e[e._opaque=Xe]="_opaque";let Je=Xe+1;e[e._out=Je]="_out";let ze=Je+1;e[e._override=ze\##
-]="_override";let Ke=ze+1;e[e._private=Ke]="_private";let Ye=Ke+1;e[e._protected=Ye]="_protected";let Qe=Ye+1;e[e._p\##
-roto=Qe]="_proto";let Ze=Qe+1;e[e._public=Ze]="_public";let et=Ze+1;e[e._readonly=et]="_readonly";let tt=et+1;e[e._r\##
-equire=tt]="_require";let nt=tt+1;e[e._satisfies=nt]="_satisfies";let st=nt+1;e[e._set=st]="_set";let rt=st+1;e[e._s\##
-tatic=rt]="_static";let ot=rt+1;e[e._symbol=ot]="_symbol";let it=ot+1;e[e._type=it]="_type";let at=it+1;e[e._unique=\##
-at]="_unique";let Tt=at+1;e[e._using=Tt]="_using"})(c||(c={}));var t;(function(e){e[e.PRECEDENCE_MASK=15]="PRECEDENC\##
-E_MASK";let s=16;e[e.IS_KEYWORD=s]="IS_KEYWORD";let o=32;e[e.IS_ASSIGN=o]="IS_ASSIGN";let i=64;e[e.IS_RIGHT_ASSOCIAT\##
-IVE=i]="IS_RIGHT_ASSOCIATIVE";let l=128;e[e.IS_PREFIX=l]="IS_PREFIX";let p=256;e[e.IS_POSTFIX=p]="IS_POSTFIX";let d=\##
-512;e[e.IS_EXPRESSION_START=d]="IS_EXPRESSION_START";let k=512;e[e.num=k]="num";let g=1536;e[e.bigint=g]="bigint";le\##
-t _=2560;e[e.decimal=_]="decimal";let w=3584;e[e.regexp=w]="regexp";let E=4608;e[e.string=E]="string";let D=5632;e[e\##
-.name=D]="name";let M=6144;e[e.eof=M]="eof";let H=7680;e[e.bracketL=H]="bracketL";let b=8192;e[e.bracketR=b]="bracke\##
-tR";let N=9728;e[e.braceL=N]="braceL";let R=10752;e[e.braceBarL=R]="braceBarL";let z=11264;e[e.braceR=z]="braceR";le\##
-t W=12288;e[e.braceBarR=W]="braceBarR";let G=13824;e[e.parenL=G]="parenL";let se=14336;e[e.parenR=se]="parenR";let m\##
-e=15360;e[e.comma=me]="comma";let ae=16384;e[e.semi=ae]="semi";let de=17408;e[e.colon=de]="colon";let Xe=18432;e[e.d\##
-oubleColon=Xe]="doubleColon";let Je=19456;e[e.dot=Je]="dot";let ze=20480;e[e.question=ze]="question";let Ke=21504;e[\##
-e.questionDot=Ke]="questionDot";let Ye=22528;e[e.arrow=Ye]="arrow";let Qe=23552;e[e.template=Qe]="template";let Ze=2\##
-4576;e[e.ellipsis=Ze]="ellipsis";let et=25600;e[e.backQuote=et]="backQuote";let tt=27136;e[e.dollarBraceL=tt]="dolla\##
-rBraceL";let nt=27648;e[e.at=nt]="at";let st=29184;e[e.hash=st]="hash";let rt=29728;e[e.eq=rt]="eq";let ot=30752;e[e\##
-.assign=ot]="assign";let it=32640;e[e.preIncDec=it]="preIncDec";let at=33664;e[e.postIncDec=at]="postIncDec";let Tt=\##
-34432;e[e.bang=Tt]="bang";let $n=35456;e[e.tilde=$n]="tilde";let Un=35841;e[e.pipeline=Un]="pipeline";let Hn=36866;e\##
-[e.nullishCoalescing=Hn]="nullishCoalescing";let Vn=37890;e[e.logicalOR=Vn]="logicalOR";let Wn=38915;e[e.logicalAND=\##
-Wn]="logicalAND";let Gn=39940;e[e.bitwiseOR=Gn]="bitwiseOR";let Xn=40965;e[e.bitwiseXOR=Xn]="bitwiseXOR";let Jn=4199\##
-0;e[e.bitwiseAND=Jn]="bitwiseAND";let zn=43015;e[e.equality=zn]="equality";let Kn=44040;e[e.lessThan=Kn]="lessThan";\##
-let Yn=45064;e[e.greaterThan=Yn]="greaterThan";let Qn=46088;e[e.relationalOrEqual=Qn]="relationalOrEqual";let Zn=471\##
-13;e[e.bitShiftL=Zn]="bitShiftL";let es=48137;e[e.bitShiftR=es]="bitShiftR";let ts=49802;e[e.plus=ts]="plus";let ns=\##
-50826;e[e.minus=ns]="minus";let ss=51723;e[e.modulo=ss]="modulo";let rs=52235;e[e.star=rs]="star";let os=53259;e[e.s\##
-lash=os]="slash";let is=54348;e[e.exponent=is]="exponent";let as=55296;e[e.jsxName=as]="jsxName";let cs=56320;e[e.js\##
-xText=cs]="jsxText";let ls=57344;e[e.jsxEmptyText=ls]="jsxEmptyText";let us=58880;e[e.jsxTagStart=us]="jsxTagStart";\##
-let ps=59392;e[e.jsxTagEnd=ps]="jsxTagEnd";let fs=60928;e[e.typeParameterStart=fs]="typeParameterStart";let hs=61440\##
-;e[e.nonNullAssertion=hs]="nonNullAssertion";let ms=62480;e[e._break=ms]="_break";let ds=63504;e[e._case=ds]="_case"\##
-;let ks=64528;e[e._catch=ks]="_catch";let xs=65552;e[e._continue=xs]="_continue";let gs=66576;e[e._debugger=gs]="_de\##
-bugger";let _s=67600;e[e._default=_s]="_default";let ys=68624;e[e._do=ys]="_do";let Is=69648;e[e._else=Is]="_else";l\##
-et Ts=70672;e[e._finally=Ts]="_finally";let bs=71696;e[e._for=bs]="_for";let ws=73232;e[e._function=ws]="_function";\##
-let Ss=73744;e[e._if=Ss]="_if";let Es=74768;e[e._return=Es]="_return";let As=75792;e[e._switch=As]="_switch";let vs=\##
-77456;e[e._throw=vs]="_throw";let Cs=77840;e[e._try=Cs]="_try";let Ps=78864;e[e._var=Ps]="_var";let Ns=79888;e[e._le\##
-t=Ns]="_let";let Rs=80912;e[e._const=Rs]="_const";let Ls=81936;e[e._while=Ls]="_while";let Ds=82960;e[e._with=Ds]="_\##
-with";let Os=84496;e[e._new=Os]="_new";let Fs=85520;e[e._this=Fs]="_this";let Ms=86544;e[e._super=Ms]="_super";let j\##
-s=87568;e[e._class=js]="_class";let Bs=88080;e[e._extends=Bs]="_extends";let qs=89104;e[e._export=qs]="_export";let \##
-$s=90640;e[e._import=$s]="_import";let Us=91664;e[e._yield=Us]="_yield";let Hs=92688;e[e._null=Hs]="_null";let Vs=93\##
-712;e[e._true=Vs]="_true";let Ws=94736;e[e._false=Ws]="_false";let Gs=95256;e[e._in=Gs]="_in";let Xs=96280;e[e._inst\##
-anceof=Xs]="_instanceof";let Js=97936;e[e._typeof=Js]="_typeof";let zs=98960;e[e._void=zs]="_void";let Wi=99984;e[e.\##
-_delete=Wi]="_delete";let Gi=100880;e[e._async=Gi]="_async";let Xi=101904;e[e._get=Xi]="_get";let Ji=102928;e[e._set\##
-=Ji]="_set";let zi=103952;e[e._declare=zi]="_declare";let Ki=104976;e[e._readonly=Ki]="_readonly";let Yi=106000;e[e.\##
-_abstract=Yi]="_abstract";let Qi=107024;e[e._static=Qi]="_static";let Zi=107536;e[e._public=Zi]="_public";let ea=108\##
-560;e[e._private=ea]="_private";let ta=109584;e[e._protected=ta]="_protected";let na=110608;e[e._override=na]="_over\##
-ride";let sa=112144;e[e._as=sa]="_as";let ra=113168;e[e._enum=ra]="_enum";let oa=114192;e[e._type=oa]="_type";let ia\##
-=115216;e[e._implements=ia]="_implements"})(t||(t={}));function Ks(e){switch(e){case t.num:return"num";case t.bigint\##
-:return"bigint";case t.decimal:return"decimal";case t.regexp:return"regexp";case t.string:return"string";case t.name\##
-:return"name";case t.eof:return"eof";case t.bracketL:return"[";case t.bracketR:return"]";case t.braceL:return"{";cas\##
-e t.braceBarL:return"{|";case t.braceR:return"}";case t.braceBarR:return"|}";case t.parenL:return"(";case t.parenR:r\##
-eturn")";case t.comma:return",";case t.semi:return";";case t.colon:return":";case t.doubleColon:return"::";case t.do\##
-t:return".";case t.question:return"?";case t.questionDot:return"?.";case t.arrow:return"=>";case t.template:return"t\##
-emplate";case t.ellipsis:return"...";case t.backQuote:return"`";case t.dollarBraceL:return"${";case t.at:return"@";c\##
-ase t.hash:return"#";case t.eq:return"=";case t.assign:return"_=";case t.preIncDec:return"++/--";case t.postIncDec:r\##
-eturn"++/--";case t.bang:return"!";case t.tilde:return"~";case t.pipeline:return"|>";case t.nullishCoalescing:return\##
-"??";case t.logicalOR:return"||";case t.logicalAND:return"&&";case t.bitwiseOR:return"|";case t.bitwiseXOR:return"^"\##
-;case t.bitwiseAND:return"&";case t.equality:return"==/!=";case t.lessThan:return"<";case t.greaterThan:return">";ca\##
-se t.relationalOrEqual:return"<=/>=";case t.bitShiftL:return"<<";case t.bitShiftR:return">>/>>>";case t.plus:return"\##
-+";case t.minus:return"-";case t.modulo:return"%";case t.star:return"*";case t.slash:return"/";case t.exponent:retur\##
-n"**";case t.jsxName:return"jsxName";case t.jsxText:return"jsxText";case t.jsxEmptyText:return"jsxEmptyText";case t.\##
-jsxTagStart:return"jsxTagStart";case t.jsxTagEnd:return"jsxTagEnd";case t.typeParameterStart:return"typeParameterSta\##
-rt";case t.nonNullAssertion:return"nonNullAssertion";case t._break:return"break";case t._case:return"case";case t._c\##
-atch:return"catch";case t._continue:return"continue";case t._debugger:return"debugger";case t._default:return"defaul\##
-t";case t._do:return"do";case t._else:return"else";case t._finally:return"finally";case t._for:return"for";case t._f\##
-unction:return"function";case t._if:return"if";case t._return:return"return";case t._switch:return"switch";case t._t\##
-hrow:return"throw";case t._try:return"try";case t._var:return"var";case t._let:return"let";case t._const:return"cons\##
-t";case t._while:return"while";case t._with:return"with";case t._new:return"new";case t._this:return"this";case t._s\##
-uper:return"super";case t._class:return"class";case t._extends:return"extends";case t._export:return"export";case t.\##
-_import:return"import";case t._yield:return"yield";case t._null:return"null";case t._true:return"true";case t._false\##
-:return"false";case t._in:return"in";case t._instanceof:return"instanceof";case t._typeof:return"typeof";case t._voi\##
-d:return"void";case t._delete:return"delete";case t._async:return"async";case t._get:return"get";case t._set:return"\##
-set";case t._declare:return"declare";case t._readonly:return"readonly";case t._abstract:return"abstract";case t._sta\##
-tic:return"static";case t._public:return"public";case t._private:return"private";case t._protected:return"protected"\##
-;case t._override:return"override";case t._as:return"as";case t._enum:return"enum";case t._type:return"type";case t.\##
-_implements:return"implements";default:return""}}class ue{constructor(e,n,s){this.startTokenIndex=e,this.endTokenInd\##
-ex=n,this.isFunctionScope=s}}class fo{constructor(e,n,s,o,i,l,p,d,k,g,_,w,E){this.potentialArrowAt=e,this.noAnonFunc\##
-tionType=n,this.inDisallowConditionalTypesContext=s,this.tokensLength=o,this.scopesLength=i,this.pos=l,this.type=p,t\##
-his.contextualKeyword=d,this.start=k,this.end=g,this.isType=_,this.scopeDepth=w,this.error=E}}class te{constructor()\##
-{te.prototype.__init.call(this),te.prototype.__init2.call(this),te.prototype.__init3.call(this),te.prototype.__init4\##
-.call(this),te.prototype.__init5.call(this),te.prototype.__init6.call(this),te.prototype.__init7.call(this),te.proto\##
-type.__init8.call(this),te.prototype.__init9.call(this),te.prototype.__init10.call(this),te.prototype.__init11.call(\##
-this),te.prototype.__init12.call(this),te.prototype.__init13.call(this)}__init(){this.potentialArrowAt=-1}__init2(){\##
-this.noAnonFunctionType=!1}__init3(){this.inDisallowConditionalTypesContext=!1}__init4(){this.tokens=[]}__init5(){th\##
-is.scopes=[]}__init6(){this.pos=0}__init7(){this.type=t.eof}__init8(){this.contextualKeyword=c.NONE}__init9(){this.s\##
-tart=0}__init10(){this.end=0}__init11(){this.isType=!1}__init12(){this.scopeDepth=0}__init13(){this.error=null}snaps\##
-hot(){return new fo(this.potentialArrowAt,this.noAnonFunctionType,this.inDisallowConditionalTypesContext,this.tokens\##
-.length,this.scopes.length,this.pos,this.type,this.contextualKeyword,this.start,this.end,this.isType,this.scopeDepth\##
-,this.error)}restoreFromSnapshot(e){this.potentialArrowAt=e.potentialArrowAt,this.noAnonFunctionType=e.noAnonFunctio\##
-nType,this.inDisallowConditionalTypesContext=e.inDisallowConditionalTypesContext,this.tokens.length=e.tokensLength,t\##
-his.scopes.length=e.scopesLength,this.pos=e.pos,this.type=e.type,this.contextualKeyword=e.contextualKeyword,this.sta\##
-rt=e.start,this.end=e.end,this.isType=e.isType,this.scopeDepth=e.scopeDepth,this.error=e.error}}var u;(function(e){e\##
-[e.backSpace=8]="backSpace";let s=10;e[e.lineFeed=s]="lineFeed";let o=9;e[e.tab=o]="tab";let i=13;e[e.carriageReturn\##
-=i]="carriageReturn";let l=14;e[e.shiftOut=l]="shiftOut";let p=32;e[e.space=p]="space";let d=33;e[e.exclamationMark=\##
-d]="exclamationMark";let k=34;e[e.quotationMark=k]="quotationMark";let g=35;e[e.numberSign=g]="numberSign";let _=36;\##
-e[e.dollarSign=_]="dollarSign";let w=37;e[e.percentSign=w]="percentSign";let E=38;e[e.ampersand=E]="ampersand";let D\##
-=39;e[e.apostrophe=D]="apostrophe";let M=40;e[e.leftParenthesis=M]="leftParenthesis";let H=41;e[e.rightParenthesis=H\##
-]="rightParenthesis";let b=42;e[e.asterisk=b]="asterisk";let N=43;e[e.plusSign=N]="plusSign";let R=44;e[e.comma=R]="\##
-comma";let z=45;e[e.dash=z]="dash";let W=46;e[e.dot=W]="dot";let G=47;e[e.slash=G]="slash";let se=48;e[e.digit0=se]=\##
-"digit0";let me=49;e[e.digit1=me]="digit1";let ae=50;e[e.digit2=ae]="digit2";let de=51;e[e.digit3=de]="digit3";let X\##
-e=52;e[e.digit4=Xe]="digit4";let Je=53;e[e.digit5=Je]="digit5";let ze=54;e[e.digit6=ze]="digit6";let Ke=55;e[e.digit\##
-7=Ke]="digit7";let Ye=56;e[e.digit8=Ye]="digit8";let Qe=57;e[e.digit9=Qe]="digit9";let Ze=58;e[e.colon=Ze]="colon";l\##
-et et=59;e[e.semicolon=et]="semicolon";let tt=60;e[e.lessThan=tt]="lessThan";let nt=61;e[e.equalsTo=nt]="equalsTo";l\##
-et st=62;e[e.greaterThan=st]="greaterThan";let rt=63;e[e.questionMark=rt]="questionMark";let ot=64;e[e.atSign=ot]="a\##
-tSign";let it=65;e[e.uppercaseA=it]="uppercaseA";let at=66;e[e.uppercaseB=at]="uppercaseB";let Tt=67;e[e.uppercaseC=\##
-Tt]="uppercaseC";let $n=68;e[e.uppercaseD=$n]="uppercaseD";let Un=69;e[e.uppercaseE=Un]="uppercaseE";let Hn=70;e[e.u\##
-ppercaseF=Hn]="uppercaseF";let Vn=71;e[e.uppercaseG=Vn]="uppercaseG";let Wn=72;e[e.uppercaseH=Wn]="uppercaseH";let G\##
-n=73;e[e.uppercaseI=Gn]="uppercaseI";let Xn=74;e[e.uppercaseJ=Xn]="uppercaseJ";let Jn=75;e[e.uppercaseK=Jn]="upperca\##
-seK";let zn=76;e[e.uppercaseL=zn]="uppercaseL";let Kn=77;e[e.uppercaseM=Kn]="uppercaseM";let Yn=78;e[e.uppercaseN=Yn\##
-]="uppercaseN";let Qn=79;e[e.uppercaseO=Qn]="uppercaseO";let Zn=80;e[e.uppercaseP=Zn]="uppercaseP";let es=81;e[e.upp\##
-ercaseQ=es]="uppercaseQ";let ts=82;e[e.uppercaseR=ts]="uppercaseR";let ns=83;e[e.uppercaseS=ns]="uppercaseS";let ss=\##
-84;e[e.uppercaseT=ss]="uppercaseT";let rs=85;e[e.uppercaseU=rs]="uppercaseU";let os=86;e[e.uppercaseV=os]="uppercase\##
-V";let is=87;e[e.uppercaseW=is]="uppercaseW";let as=88;e[e.uppercaseX=as]="uppercaseX";let cs=89;e[e.uppercaseY=cs]=\##
-"uppercaseY";let ls=90;e[e.uppercaseZ=ls]="uppercaseZ";let us=91;e[e.leftSquareBracket=us]="leftSquareBracket";let p\##
-s=92;e[e.backslash=ps]="backslash";let fs=93;e[e.rightSquareBracket=fs]="rightSquareBracket";let hs=94;e[e.caret=hs]\##
-="caret";let ms=95;e[e.underscore=ms]="underscore";let ds=96;e[e.graveAccent=ds]="graveAccent";let ks=97;e[e.lowerca\##
-seA=ks]="lowercaseA";let xs=98;e[e.lowercaseB=xs]="lowercaseB";let gs=99;e[e.lowercaseC=gs]="lowercaseC";let _s=100;\##
-e[e.lowercaseD=_s]="lowercaseD";let ys=101;e[e.lowercaseE=ys]="lowercaseE";let Is=102;e[e.lowercaseF=Is]="lowercaseF\##
-";let Ts=103;e[e.lowercaseG=Ts]="lowercaseG";let bs=104;e[e.lowercaseH=bs]="lowercaseH";let ws=105;e[e.lowercaseI=ws\##
-]="lowercaseI";let Ss=106;e[e.lowercaseJ=Ss]="lowercaseJ";let Es=107;e[e.lowercaseK=Es]="lowercaseK";let As=108;e[e.\##
-lowercaseL=As]="lowercaseL";let vs=109;e[e.lowercaseM=vs]="lowercaseM";let Cs=110;e[e.lowercaseN=Cs]="lowercaseN";le\##
-t Ps=111;e[e.lowercaseO=Ps]="lowercaseO";let Ns=112;e[e.lowercaseP=Ns]="lowercaseP";let Rs=113;e[e.lowercaseQ=Rs]="l\##
-owercaseQ";let Ls=114;e[e.lowercaseR=Ls]="lowercaseR";let Ds=115;e[e.lowercaseS=Ds]="lowercaseS";let Os=116;e[e.lowe\##
-rcaseT=Os]="lowercaseT";let Fs=117;e[e.lowercaseU=Fs]="lowercaseU";let Ms=118;e[e.lowercaseV=Ms]="lowercaseV";let js\##
-=119;e[e.lowercaseW=js]="lowercaseW";let Bs=120;e[e.lowercaseX=Bs]="lowercaseX";let qs=121;e[e.lowercaseY=qs]="lower\##
-caseY";let $s=122;e[e.lowercaseZ=$s]="lowercaseZ";let Us=123;e[e.leftCurlyBrace=Us]="leftCurlyBrace";let Hs=124;e[e.\##
-verticalBar=Hs]="verticalBar";let Vs=125;e[e.rightCurlyBrace=Vs]="rightCurlyBrace";let Ws=126;e[e.tilde=Ws]="tilde";\##
-let Gs=160;e[e.nonBreakingSpace=Gs]="nonBreakingSpace";let Xs=5760;e[e.oghamSpaceMark=Xs]="oghamSpaceMark";let Js=82\##
-32;e[e.lineSeparator=Js]="lineSeparator";let zs=8233;e[e.paragraphSeparator=zs]="paragraphSeparator"})(u||(u={}));va\##
-r ct,L,O,r,x,ho;function qe(){return ho++}function mo(e){if("pos"in e){let n=ha(e.pos);e.message+=` (${n.line}:${n.c\##
-olumn})`,e.loc=n}return e}class ko{constructor(e,n){this.line=e,this.column=n}}function ha(e){let n=1,s=1;for(let o=\##
-0;o<e;o++)if(x.charCodeAt(o)===u.lineFeed)n++,s=1;else s++;return new ko(n,s)}function xo(e,n,s,o){x=e,r=new te,ho=1\##
-,ct=n,L=s,O=o}function y(e){return r.contextualKeyword===e}function lt(e){let n=Ee();return n.type===t.name&&n.conte\##
-xtualKeyword===e}function K(e){return r.contextualKeyword===e&&f(t.name)}function X(e){if(!K(e))A()}function ne(){re\##
-turn a(t.eof)||a(t.braceR)||ee()}function ee(){let e=r.tokens[r.tokens.length-1],n=e?e.end:0;for(let s=n;s<r.start;s\##
-++){let o=x.charCodeAt(s);if(o===u.lineFeed||o===u.carriageReturn||o===8232||o===8233)return!0}return!1}function Qt(\##
-){let e=wt();for(let n=r.end;n<e;n++){let s=x.charCodeAt(n);if(s===u.lineFeed||s===u.carriageReturn||s===8232||s===8\##
-233)return!0}return!1}function ke(){return f(t.semi)||ne()}function q(){if(!ke())A('Unexpected token, expected ";"')\##
-}function h(e){if(!f(e))A(`Unexpected token, expected "${Ks(e)}"`)}function A(e="Unexpected token",n=r.start){if(r.e\##
-rror)return;let s=SyntaxError(e);s.pos=n,r.error=s,r.pos=x.length,v(t.eof)}var Ys=[9,11,12,u.space,u.nonBreakingSpac\##
-e,u.oghamSpaceMark,8192,8193,8194,8195,8196,8197,8198,8199,8200,8201,8202,8239,8287,12288,65279],Qs=/(?:\s|\/\/.*|\/\##
-\*[^]*?\*\/)*/g,Zs=new Uint8Array(65536);for(let e of Ys)Zs[e]=1;function ma(e){if(e<48)return e===36;if(e<58)return\##
-!0;if(e<65)return!1;if(e<91)return!0;if(e<97)return e===95;if(e<123)return!0;if(e<128)return!1;throw Error("Should n\##
-ot be called with non-ASCII char code.")}var oe=new Uint8Array(65536);for(let e=0;e<128;e++)oe[e]=ma(e)?1:0;for(let \##
-e=128;e<65536;e++)oe[e]=1;for(let e of Ys)oe[e]=0;oe[8232]=0;oe[8233]=0;var Ae=oe.slice();for(let e=u.digit0;e<=u.di\##
-git9;e++)Ae[e]=0;var er=new Int32Array([-1,27,783,918,1755,2376,2862,3483,-1,3699,-1,4617,4752,4833,5130,5508,5940,-\##
-1,6480,6939,7749,8181,8451,8613,-1,8829,-1,-1,-1,54,243,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,432,-1,-1,-1,67\##
-5,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,81,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,108,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,135,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,162,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1\##
-89,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,216,-1,-1,-1,-1,-1,-1,c._abstract<<1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,270,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,297,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,324,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,351,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,378,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,405,-1,-1,-1,-1,-1,-1,-1,-1,c._accessor<<1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,c._as<<1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,459,-1,-1,-1,-1,-1,594,-1,-1,-1,-\##
-1,-1,-1,486,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,513,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,540,-1,-1,-1,-1\##
-,-1,-1,c._assert<<1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,567,-1,-1,-1,-1,-1,-1,-1,c._asserts<<1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,621,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,648,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,c._async<<1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,702,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,729,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,756,-1,-1,-1,-1,-1,-1,c._aw\##
-ait<<1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,810,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,837,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,864,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,891,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,(t._break<<1)+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,945,-1,-1,-1,-1,-1,-1,1107,-1,-1,-1,1242,-1,-1,1350,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,972,1026,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,99\##
-9,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,(t._case<<1)+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1053,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1080,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,(t._catch<<1)+1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1134,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1161,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1188,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,1215,-1,-1,-1,-1,-1,-1,-1,c._checks<<1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1269,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1296,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,1323,-1,-1,-1,-1,-1,-1,-1,(t._class<<1)+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1377,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1404,1620,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,1431,-1,-1,-1,-1,-1,-1,(t._const<<1)+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1458,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1485,-1,-1,-1,-1,-1,-1,-1,-1,1\##
-512,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,1539,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1566,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1593,-1,-1,-1,-1,-1,-1,-1,-1,c._constructor<<1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1647,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1674,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1701,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1728,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,(t._continue<<1)+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1782,-1,-1,-1,-1,-1,-1,-1,-1,-1,2349,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,1809,1971,-1,-1,2106,-1,-1,-1,-1,-1,2241,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1836,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1863,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1890,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,1917,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,1944,-1,-1,-1,-1,-1,-1,-1,-1,(t._debugger<<1)+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1998,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2025,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,2052,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2079,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,c._declare<<1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2133,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,2160,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2187,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2214,-1,-1,-1,-1,-1,-1,(t._default<<1)+1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2268,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2295,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,2322,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,(t._delete<<1)+1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,(t._do<<1)+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2403,-1,2484,-1,-1,-1,-1,-1,-1,-1,-1,-1,2565\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2430,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2457,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,(t._else<<1)+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2511,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2538,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,c._enum<<1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2592,-1,-1,\##
--1,2727,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2619,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2646,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,2673,-1,-1,-1,-1,-1,-1,(t._export<<1)+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,27\##
-00,-1,-1,-1,-1,-1,-1,-1,c._exports<<1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,2754,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,2781,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2808,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2835,-1,-1,-1,-1,-1,-1,-1,(t._extends<<1)+\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2889,-1,-1,-1,-1,-1,-1,-1,2997,-1\##
-,-1,-1,-1,-1,3159,-1,-1,3213,-1,-1,3294,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2916,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2943,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,2970,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,(t._false<<1)+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3024,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,3051,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,3078,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3105,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3132,-1\##
-,(t._finally<<1)+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3186,-1,-1,-1,-1,-1,-1,-1,-1,(t._for<<1)+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3240,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3267,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,c._from<<1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3321,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3348,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3375,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3402,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3429,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3456,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,(t._function<<1)+1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3510,-1,-1,-1,-1,-1,-1,\##
-3564,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3537,-1,-\##
-1,-1,-1,-1,-1,c._get<<1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3591,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3618,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3645,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3672,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,c._global<<1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3726,-1,-1,-1,-1,-1,-1,3753,4077,-1,-\##
-1,-1,-1,4590,-1,-1,-1,-1,-1,-1,-1,(t._if<<1)+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3780,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,3807,-1,-1,3996,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3834,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3861,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,3888,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,3915,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3942,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3969,-1,-1,-1,-1,-1,-1,-1,c._implements<<1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,4023,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4050,-1,-1,-1,-\##
-1,-1,-1,(t._import<<1)+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,(t._in<<1)+1,\##
--1,-1,-1,-1,-1,4104,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4185,4401,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4131,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4158,-1,-1,\##
--1,-1,-1,-1,-1,-1,c._infer<<1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4212,-1,-1,-1,-1,-1,-1,-1,4239,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4266,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,4293,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4320,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4347,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4374,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,(t._ins\##
-tanceof<<1)+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4428,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,445\##
-5,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4482,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4509\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4536,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4563,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,c._interface<<1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,c._is<<1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4644,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,4671,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4698,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4725,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,c._keyof<<1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4779,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4806,-1,-1,-1,-1,-1,-1,(t._let<<1)+1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4860,-1,-1,-1,-1,-1,4995,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4887,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,4914,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,4941,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4968,-1,-1,-1,\##
--1,-1,-1,-1,c._mixins<<1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5\##
-022,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,5049,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5076,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,5103,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,c._module<<1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5157,-1,-1,-1,5373,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,5427,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5184,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,5211,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,5238,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5265,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,5292,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5319,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5346,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,c._namespace<<1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5400,-1,-1,-1,(t._new<<1)+1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5454,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5481,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,(t._null<<1)+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
-5535,-1,-1,-1,-1,-1,-1,-1,-1,-1,5562,-1,-1,-1,-1,5697,5751,-1,-1,-1,-1,c._of<<1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5589,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5616,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5643,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5670,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,c._opaque<<1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5724,-1,-1,-1,-1,-1,-1,c._out<<1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5778,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5805,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5832,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5859,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5886,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,5913,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,c._override<<1,-1,-1,-1,-1\##
+(()=>{var yi=Object.create;var{getPrototypeOf:Ti,defineProperty:j1,getOwnPropertyNames:bi}=Object;var q1=Object.prot\##
+otype.hasOwnProperty;function wi(e){return this[e]}var Si,Ei,$1=(e,s,r)=>{var o=e!=null&&typeof e==="object";if(o){v\##
+ar a=s?Si??=new WeakMap:Ei??=new WeakMap,u=a.get(e);if(u)return u}r=e!=null?yi(Ti(e)):{};let m=s||!e||!e.__esModule|\##
+|!q1.call(e,"default")?j1(r,"default",{value:e,enumerable:!0}):r;if(e&&typeof e==="object"||typeof e==="function"){f\##
+or(let x of bi(e))if(!q1.call(m,x))j1(m,x,{get:wi.bind(e,x),enumerable:!0})}if(o)a.set(e,m);return m};var H1=(e,s)=>\##
+()=>(s||e((s={exports:{}}).exports,s),s.exports);var ur=H1(function(zn,Kn){(function(e,s){typeof zn==="object"&&type\##
+of Kn<"u"?Kn.exports=s():typeof define==="function"&&define.amd?define(s):(e=typeof globalThis<"u"?globalThis:e||sel\##
+f,e.resolveURI=s())})(zn,function(){let e=/^[\w+.-]+:\/\//,s=/^([\w+.-]+:)\/\/([^@/#?]*@)?([^:/#?]*)(:\d+)?(\/[^#?]*\##
+)?(\?[^#]*)?(#.*)?/,r=/^file:(?:\/\/((?![a-z]:)[^/#?]*)?)?(\/?[^#?]*)(\?[^#]*)?(#.*)?/i;function o(I){return e.test(\##
+I)}function a(I){return I.startsWith("//")}function u(I){return I.startsWith("/")}function m(I){return I.startsWith(\##
+"file:")}function x(I){return/^[.?#]/.test(I)}function k(I){let N=s.exec(I);return y(N[1],N[2]||"",N[3],N[4]||"",N[5\##
+]||"/",N[6]||"",N[7]||"")}function T(I){let N=r.exec(I),P=N[2];return y("file:","",N[1]||"","",u(P)?P:"/"+P,N[3]||""\##
+,N[4]||"")}function y(I,N,P,W,B,j,Z){return{scheme:I,user:N,host:P,port:W,path:B,query:j,hash:Z,type:7}}function C(I\##
+){if(a(I)){let P=k("http:"+I);return P.scheme="",P.type=6,P}if(u(I)){let P=k("http://foo.com"+I);return P.scheme="",\##
+P.host="",P.type=5,P}if(m(I))return T(I);if(o(I))return k(I);let N=k("http://foo.com/"+I);return N.scheme="",N.host=\##
+"",N.type=I?I.startsWith("?")?3:I.startsWith("#")?2:4:1,N}function L(I){if(I.endsWith("/.."))return I;let N=I.lastIn\##
+dexOf("/");return I.slice(0,N+1)}function M(I,N){if(z(N,N.type),I.path==="/")I.path=N.path;else I.path=L(N.path)+I.p\##
+ath}function z(I,N){let P=N<=4,W=I.path.split("/"),B=1,j=0,Z=!1;for(let se=1;se<W.length;se++){let ce=W[se];if(!ce){\##
+Z=!0;continue}if(Z=!1,ce===".")continue;if(ce===".."){if(j)Z=!0,j--,B--;else if(P)W[B++]=ce;continue}W[B++]=ce,j++}l\##
+et ae="";for(let se=1;se<B;se++)ae+="/"+W[se];if(!ae||Z&&!ae.endsWith("/.."))ae+="/";I.path=ae}function U(I,N){if(!I\##
+&&!N)return"";let P=C(I),W=P.type;if(N&&W!==7){let j=C(N),Z=j.type;switch(W){case 1:P.hash=j.hash;case 2:P.query=j.q\##
+uery;case 3:case 4:M(P,j);case 5:P.user=j.user,P.host=j.host,P.port=j.port;case 6:P.scheme=j.scheme}if(Z>W)W=Z}z(P,W\##
+);let B=P.query+P.hash;switch(W){case 2:case 3:return B;case 4:{let j=P.path.slice(1);if(!j)return B||".";if(x(N||I)\##
+&&!x(j))return"./"+j+B;return j+B}case 5:return P.path+B;default:return P.scheme+"//"+P.user+P.host+P.port+P.path+B}\##
+}return U})});var ni=H1(function(Mt){Mt.__esModule=!0;Mt.LinesAndColumns=void 0;var bs=`
+`,ti="\r",si=function(){function e(s){this.string=s;var r=[0];for(var o=0;o<s.length;)switch(s[o]){case bs:o+=bs.len\##
+gth,r.push(o);break;case ti:if(o+=ti.length,s[o]===bs)o+=bs.length;r.push(o);break;default:o++;break}this.offsets=r}\##
+return e.prototype.locationForIndex=function(s){if(s<0||s>this.string.length)return null;var r=0,o=this.offsets;whil\##
+e(o[r+1]<=s)r++;var a=s-o[r];return{line:r,column:a}},e.prototype.indexForLocation=function(s){var{line:r,column:o}=\##
+s;if(r<0||r>=this.offsets.length)return null;if(o<0||o>this.lengthOfLine(r))return null;return this.offsets[r]+o},e.\##
+prototype.lengthOfLine=function(s){var r=this.offsets[s],o=s===this.offsets.length-1?this.string.length:this.offsets\##
+[s+1];return o-r},e}();Mt.LinesAndColumns=si;Mt.default=si});var c;(function(e){e[e.NONE=0]="NONE";let r=1;e[e._abst\##
+ract=r]="_abstract";let o=r+1;e[e._accessor=o]="_accessor";let a=o+1;e[e._as=a]="_as";let u=a+1;e[e._assert=u]="_ass\##
+ert";let m=u+1;e[e._asserts=m]="_asserts";let x=m+1;e[e._async=x]="_async";let k=x+1;e[e._await=k]="_await";let T=k+\##
+1;e[e._checks=T]="_checks";let y=T+1;e[e._constructor=y]="_constructor";let C=y+1;e[e._declare=C]="_declare";let L=C\##
++1;e[e._enum=L]="_enum";let M=L+1;e[e._exports=M]="_exports";let z=M+1;e[e._from=z]="_from";let U=z+1;e[e._get=U]="_\##
+get";let I=U+1;e[e._global=I]="_global";let N=I+1;e[e._implements=N]="_implements";let P=N+1;e[e._infer=P]="_infer";\##
+let W=P+1;e[e._interface=W]="_interface";let B=W+1;e[e._is=B]="_is";let j=B+1;e[e._keyof=j]="_keyof";let Z=j+1;e[e._\##
+mixins=Z]="_mixins";let ae=Z+1;e[e._module=ae]="_module";let se=ae+1;e[e._namespace=se]="_namespace";let ce=se+1;e[e\##
+._of=ce]="_of";let Be=ce+1;e[e._opaque=Be]="_opaque";let je=Be+1;e[e._out=je]="_out";let qe=je+1;e[e._override=qe]="\##
+_override";let $e=qe+1;e[e._private=$e]="_private";let He=$e+1;e[e._protected=He]="_protected";let Ue=He+1;e[e._prot\##
+o=Ue]="_proto";let We=Ue+1;e[e._public=We]="_public";let Ve=We+1;e[e._readonly=Ve]="_readonly";let Ge=Ve+1;e[e._requ\##
+ire=Ge]="_require";let Xe=Ge+1;e[e._satisfies=Xe]="_satisfies";let Je=Xe+1;e[e._set=Je]="_set";let ze=Je+1;e[e._stat\##
+ic=ze]="_static";let Ke=ze+1;e[e._symbol=Ke]="_symbol";let Ye=Ke+1;e[e._type=Ye]="_type";let Qe=Ye+1;e[e._unique=Qe]\##
+="_unique";let ft=Qe+1;e[e._using=ft]="_using"})(c||(c={}));var t;(function(e){e[e.PRECEDENCE_MASK=15]="PRECEDENCE_M\##
+ASK";let r=16;e[e.IS_KEYWORD=r]="IS_KEYWORD";let o=32;e[e.IS_ASSIGN=o]="IS_ASSIGN";let a=64;e[e.IS_RIGHT_ASSOCIATIVE\##
+=a]="IS_RIGHT_ASSOCIATIVE";let u=128;e[e.IS_PREFIX=u]="IS_PREFIX";let m=256;e[e.IS_POSTFIX=m]="IS_POSTFIX";let x=512\##
+;e[e.IS_EXPRESSION_START=x]="IS_EXPRESSION_START";let k=512;e[e.num=k]="num";let T=1536;e[e.bigint=T]="bigint";let y\##
+=2560;e[e.decimal=y]="decimal";let C=3584;e[e.regexp=C]="regexp";let L=4608;e[e.string=L]="string";let M=5632;e[e.na\##
+me=M]="name";let z=6144;e[e.eof=z]="eof";let U=7680;e[e.bracketL=U]="bracketL";let I=8192;e[e.bracketR=I]="bracketR"\##
+;let N=9728;e[e.braceL=N]="braceL";let P=10752;e[e.braceBarL=P]="braceBarL";let W=11264;e[e.braceR=W]="braceR";let B\##
+=12288;e[e.braceBarR=B]="braceBarR";let j=13824;e[e.parenL=j]="parenL";let Z=14336;e[e.parenR=Z]="parenR";let ae=153\##
+60;e[e.comma=ae]="comma";let se=16384;e[e.semi=se]="semi";let ce=17408;e[e.colon=ce]="colon";let Be=18432;e[e.double\##
+Colon=Be]="doubleColon";let je=19456;e[e.dot=je]="dot";let qe=20480;e[e.question=qe]="question";let $e=21504;e[e.que\##
+stionDot=$e]="questionDot";let He=22528;e[e.arrow=He]="arrow";let Ue=23552;e[e.template=Ue]="template";let We=24576;\##
+e[e.ellipsis=We]="ellipsis";let Ve=25600;e[e.backQuote=Ve]="backQuote";let Ge=27136;e[e.dollarBraceL=Ge]="dollarBrac\##
+eL";let Xe=27648;e[e.at=Xe]="at";let Je=29184;e[e.hash=Je]="hash";let ze=29728;e[e.eq=ze]="eq";let Ke=30752;e[e.assi\##
+gn=Ke]="assign";let Ye=32640;e[e.preIncDec=Ye]="preIncDec";let Qe=33664;e[e.postIncDec=Qe]="postIncDec";let ft=34432\##
+;e[e.bang=ft]="bang";let ws=35456;e[e.tilde=ws]="tilde";let Ss=35841;e[e.pipeline=Ss]="pipeline";let Es=36866;e[e.nu\##
+llishCoalescing=Es]="nullishCoalescing";let As=37890;e[e.logicalOR=As]="logicalOR";let Cs=38915;e[e.logicalAND=Cs]="\##
+logicalAND";let Ns=39940;e[e.bitwiseOR=Ns]="bitwiseOR";let Ps=40965;e[e.bitwiseXOR=Ps]="bitwiseXOR";let Rs=41990;e[e\##
+.bitwiseAND=Rs]="bitwiseAND";let vs=43015;e[e.equality=vs]="equality";let Ls=44040;e[e.lessThan=Ls]="lessThan";let D\##
+s=45064;e[e.greaterThan=Ds]="greaterThan";let Fs=46088;e[e.relationalOrEqual=Fs]="relationalOrEqual";let Os=47113;e[\##
+e.bitShiftL=Os]="bitShiftL";let Ms=48137;e[e.bitShiftR=Ms]="bitShiftR";let Bs=49802;e[e.plus=Bs]="plus";let js=50826\##
+;e[e.minus=js]="minus";let qs=51723;e[e.modulo=qs]="modulo";let $s=52235;e[e.star=$s]="star";let Hs=53259;e[e.slash=\##
+Hs]="slash";let Us=54348;e[e.exponent=Us]="exponent";let Ws=55296;e[e.jsxName=Ws]="jsxName";let Vs=56320;e[e.jsxText\##
+=Vs]="jsxText";let Gs=57344;e[e.jsxEmptyText=Gs]="jsxEmptyText";let Xs=58880;e[e.jsxTagStart=Xs]="jsxTagStart";let J\##
+s=59392;e[e.jsxTagEnd=Js]="jsxTagEnd";let zs=60928;e[e.typeParameterStart=zs]="typeParameterStart";let Ks=61440;e[e.\##
+nonNullAssertion=Ks]="nonNullAssertion";let Ys=62480;e[e._break=Ys]="_break";let Qs=63504;e[e._case=Qs]="_case";let \##
+Zs=64528;e[e._catch=Zs]="_catch";let en=65552;e[e._continue=en]="_continue";let tn=66576;e[e._debugger=tn]="_debugge\##
+r";let sn=67600;e[e._default=sn]="_default";let nn=68624;e[e._do=nn]="_do";let rn=69648;e[e._else=rn]="_else";let on\##
+=70672;e[e._finally=on]="_finally";let an=71696;e[e._for=an]="_for";let cn=73232;e[e._function=cn]="_function";let l\##
+n=73744;e[e._if=ln]="_if";let un=74768;e[e._return=un]="_return";let pn=75792;e[e._switch=pn]="_switch";let fn=77456\##
+;e[e._throw=fn]="_throw";let hn=77840;e[e._try=hn]="_try";let mn=78864;e[e._var=mn]="_var";let dn=79888;e[e._let=dn]\##
+="_let";let kn=80912;e[e._const=kn]="_const";let xn=81936;e[e._while=xn]="_while";let gn=82960;e[e._with=gn]="_with"\##
+;let _n=84496;e[e._new=_n]="_new";let In=85520;e[e._this=In]="_this";let yn=86544;e[e._super=yn]="_super";let Tn=875\##
+68;e[e._class=Tn]="_class";let bn=88080;e[e._extends=bn]="_extends";let wn=89104;e[e._export=wn]="_export";let Sn=90\##
+640;e[e._import=Sn]="_import";let En=91664;e[e._yield=En]="_yield";let An=92688;e[e._null=An]="_null";let Cn=93712;e\##
+[e._true=Cn]="_true";let Nn=94736;e[e._false=Nn]="_false";let Pn=95256;e[e._in=Pn]="_in";let Rn=96280;e[e._instanceo\##
+f=Rn]="_instanceof";let vn=97936;e[e._typeof=vn]="_typeof";let Ln=98960;e[e._void=Ln]="_void";let oi=99984;e[e._dele\##
+te=oi]="_delete";let ii=100880;e[e._async=ii]="_async";let ai=101904;e[e._get=ai]="_get";let ci=102928;e[e._set=ci]=\##
+"_set";let li=103952;e[e._declare=li]="_declare";let ui=104976;e[e._readonly=ui]="_readonly";let pi=106000;e[e._abst\##
+ract=pi]="_abstract";let fi=107024;e[e._static=fi]="_static";let hi=107536;e[e._public=hi]="_public";let mi=108560;e\##
+[e._private=mi]="_private";let di=109584;e[e._protected=di]="_protected";let ki=110608;e[e._override=ki]="_override"\##
+;let xi=112144;e[e._as=xi]="_as";let gi=113168;e[e._enum=gi]="_enum";let _i=114192;e[e._type=_i]="_type";let Ii=1152\##
+16;e[e._implements=Ii]="_implements"})(t||(t={}));function Dn(e){switch(e){case t.num:return"num";case t.bigint:retu\##
+rn"bigint";case t.decimal:return"decimal";case t.regexp:return"regexp";case t.string:return"string";case t.name:retu\##
+rn"name";case t.eof:return"eof";case t.bracketL:return"[";case t.bracketR:return"]";case t.braceL:return"{";case t.b\##
+raceBarL:return"{|";case t.braceR:return"}";case t.braceBarR:return"|}";case t.parenL:return"(";case t.parenR:return\##
+")";case t.comma:return",";case t.semi:return";";case t.colon:return":";case t.doubleColon:return"::";case t.dot:ret\##
+urn".";case t.question:return"?";case t.questionDot:return"?.";case t.arrow:return"=>";case t.template:return"templa\##
+te";case t.ellipsis:return"...";case t.backQuote:return"`";case t.dollarBraceL:return"${";case t.at:return"@";case t\##
+.hash:return"#";case t.eq:return"=";case t.assign:return"_=";case t.preIncDec:return"++/--";case t.postIncDec:return\##
+"++/--";case t.bang:return"!";case t.tilde:return"~";case t.pipeline:return"|>";case t.nullishCoalescing:return"??";\##
+case t.logicalOR:return"||";case t.logicalAND:return"&&";case t.bitwiseOR:return"|";case t.bitwiseXOR:return"^";case\##
+ t.bitwiseAND:return"&";case t.equality:return"==/!=";case t.lessThan:return"<";case t.greaterThan:return">";case t.\##
+relationalOrEqual:return"<=/>=";case t.bitShiftL:return"<<";case t.bitShiftR:return">>/>>>";case t.plus:return"+";ca\##
+se t.minus:return"-";case t.modulo:return"%";case t.star:return"*";case t.slash:return"/";case t.exponent:return"**"\##
+;case t.jsxName:return"jsxName";case t.jsxText:return"jsxText";case t.jsxEmptyText:return"jsxEmptyText";case t.jsxTa\##
+gStart:return"jsxTagStart";case t.jsxTagEnd:return"jsxTagEnd";case t.typeParameterStart:return"typeParameterStart";c\##
+ase t.nonNullAssertion:return"nonNullAssertion";case t._break:return"break";case t._case:return"case";case t._catch:\##
+return"catch";case t._continue:return"continue";case t._debugger:return"debugger";case t._default:return"default";ca\##
+se t._do:return"do";case t._else:return"else";case t._finally:return"finally";case t._for:return"for";case t._functi\##
+on:return"function";case t._if:return"if";case t._return:return"return";case t._switch:return"switch";case t._throw:\##
+return"throw";case t._try:return"try";case t._var:return"var";case t._let:return"let";case t._const:return"const";ca\##
+se t._while:return"while";case t._with:return"with";case t._new:return"new";case t._this:return"this";case t._super:\##
+return"super";case t._class:return"class";case t._extends:return"extends";case t._export:return"export";case t._impo\##
+rt:return"import";case t._yield:return"yield";case t._null:return"null";case t._true:return"true";case t._false:retu\##
+rn"false";case t._in:return"in";case t._instanceof:return"instanceof";case t._typeof:return"typeof";case t._void:ret\##
+urn"void";case t._delete:return"delete";case t._async:return"async";case t._get:return"get";case t._set:return"set";\##
+case t._declare:return"declare";case t._readonly:return"readonly";case t._abstract:return"abstract";case t._static:r\##
+eturn"static";case t._public:return"public";case t._private:return"private";case t._protected:return"protected";case\##
+ t._override:return"override";case t._as:return"as";case t._enum:return"enum";case t._type:return"type";case t._impl\##
+ements:return"implements";default:return""}}class re{constructor(e,s,r){this.startTokenIndex=e,this.endTokenIndex=s,\##
+this.isFunctionScope=r}}class U1{constructor(e,s,r,o,a,u,m,x,k,T,y,C,L){this.potentialArrowAt=e,this.noAnonFunctionT\##
+ype=s,this.inDisallowConditionalTypesContext=r,this.tokensLength=o,this.scopesLength=a,this.pos=u,this.type=m,this.c\##
+ontextualKeyword=x,this.start=k,this.end=T,this.isType=y,this.scopeDepth=C,this.error=L}}class Y{constructor(){Y.pro\##
+totype.__init.call(this),Y.prototype.__init2.call(this),Y.prototype.__init3.call(this),Y.prototype.__init4.call(this\##
+),Y.prototype.__init5.call(this),Y.prototype.__init6.call(this),Y.prototype.__init7.call(this),Y.prototype.__init8.c\##
+all(this),Y.prototype.__init9.call(this),Y.prototype.__init10.call(this),Y.prototype.__init11.call(this),Y.prototype\##
+.__init12.call(this),Y.prototype.__init13.call(this)}__init(){this.potentialArrowAt=-1}__init2(){this.noAnonFunction\##
+Type=!1}__init3(){this.inDisallowConditionalTypesContext=!1}__init4(){this.tokens=[]}__init5(){this.scopes=[]}__init\##
+6(){this.pos=0}__init7(){this.type=t.eof}__init8(){this.contextualKeyword=c.NONE}__init9(){this.start=0}__init10(){t\##
+his.end=0}__init11(){this.isType=!1}__init12(){this.scopeDepth=0}__init13(){this.error=null}snapshot(){return new U1\##
+(this.potentialArrowAt,this.noAnonFunctionType,this.inDisallowConditionalTypesContext,this.tokens.length,this.scopes\##
+.length,this.pos,this.type,this.contextualKeyword,this.start,this.end,this.isType,this.scopeDepth,this.error)}restor\##
+eFromSnapshot(e){this.potentialArrowAt=e.potentialArrowAt,this.noAnonFunctionType=e.noAnonFunctionType,this.inDisall\##
+owConditionalTypesContext=e.inDisallowConditionalTypesContext,this.tokens.length=e.tokensLength,this.scopes.length=e\##
+.scopesLength,this.pos=e.pos,this.type=e.type,this.contextualKeyword=e.contextualKeyword,this.start=e.start,this.end\##
+=e.end,this.isType=e.isType,this.scopeDepth=e.scopeDepth,this.error=e.error}}var l;(function(e){e[e.backSpace=8]="ba\##
+ckSpace";let r=10;e[e.lineFeed=r]="lineFeed";let o=9;e[e.tab=o]="tab";let a=13;e[e.carriageReturn=a]="carriageReturn\##
+";let u=14;e[e.shiftOut=u]="shiftOut";let m=32;e[e.space=m]="space";let x=33;e[e.exclamationMark=x]="exclamationMark\##
+";let k=34;e[e.quotationMark=k]="quotationMark";let T=35;e[e.numberSign=T]="numberSign";let y=36;e[e.dollarSign=y]="\##
+dollarSign";let C=37;e[e.percentSign=C]="percentSign";let L=38;e[e.ampersand=L]="ampersand";let M=39;e[e.apostrophe=\##
+M]="apostrophe";let z=40;e[e.leftParenthesis=z]="leftParenthesis";let U=41;e[e.rightParenthesis=U]="rightParenthesis\##
+";let I=42;e[e.asterisk=I]="asterisk";let N=43;e[e.plusSign=N]="plusSign";let P=44;e[e.comma=P]="comma";let W=45;e[e\##
+.dash=W]="dash";let B=46;e[e.dot=B]="dot";let j=47;e[e.slash=j]="slash";let Z=48;e[e.digit0=Z]="digit0";let ae=49;e[\##
+e.digit1=ae]="digit1";let se=50;e[e.digit2=se]="digit2";let ce=51;e[e.digit3=ce]="digit3";let Be=52;e[e.digit4=Be]="\##
+digit4";let je=53;e[e.digit5=je]="digit5";let qe=54;e[e.digit6=qe]="digit6";let $e=55;e[e.digit7=$e]="digit7";let He\##
+=56;e[e.digit8=He]="digit8";let Ue=57;e[e.digit9=Ue]="digit9";let We=58;e[e.colon=We]="colon";let Ve=59;e[e.semicolo\##
+n=Ve]="semicolon";let Ge=60;e[e.lessThan=Ge]="lessThan";let Xe=61;e[e.equalsTo=Xe]="equalsTo";let Je=62;e[e.greaterT\##
+han=Je]="greaterThan";let ze=63;e[e.questionMark=ze]="questionMark";let Ke=64;e[e.atSign=Ke]="atSign";let Ye=65;e[e.\##
+uppercaseA=Ye]="uppercaseA";let Qe=66;e[e.uppercaseB=Qe]="uppercaseB";let ft=67;e[e.uppercaseC=ft]="uppercaseC";let \##
+ws=68;e[e.uppercaseD=ws]="uppercaseD";let Ss=69;e[e.uppercaseE=Ss]="uppercaseE";let Es=70;e[e.uppercaseF=Es]="upperc\##
+aseF";let As=71;e[e.uppercaseG=As]="uppercaseG";let Cs=72;e[e.uppercaseH=Cs]="uppercaseH";let Ns=73;e[e.uppercaseI=N\##
+s]="uppercaseI";let Ps=74;e[e.uppercaseJ=Ps]="uppercaseJ";let Rs=75;e[e.uppercaseK=Rs]="uppercaseK";let vs=76;e[e.up\##
+percaseL=vs]="uppercaseL";let Ls=77;e[e.uppercaseM=Ls]="uppercaseM";let Ds=78;e[e.uppercaseN=Ds]="uppercaseN";let Fs\##
+=79;e[e.uppercaseO=Fs]="uppercaseO";let Os=80;e[e.uppercaseP=Os]="uppercaseP";let Ms=81;e[e.uppercaseQ=Ms]="uppercas\##
+eQ";let Bs=82;e[e.uppercaseR=Bs]="uppercaseR";let js=83;e[e.uppercaseS=js]="uppercaseS";let qs=84;e[e.uppercaseT=qs]\##
+="uppercaseT";let $s=85;e[e.uppercaseU=$s]="uppercaseU";let Hs=86;e[e.uppercaseV=Hs]="uppercaseV";let Us=87;e[e.uppe\##
+rcaseW=Us]="uppercaseW";let Ws=88;e[e.uppercaseX=Ws]="uppercaseX";let Vs=89;e[e.uppercaseY=Vs]="uppercaseY";let Gs=9\##
+0;e[e.uppercaseZ=Gs]="uppercaseZ";let Xs=91;e[e.leftSquareBracket=Xs]="leftSquareBracket";let Js=92;e[e.backslash=Js\##
+]="backslash";let zs=93;e[e.rightSquareBracket=zs]="rightSquareBracket";let Ks=94;e[e.caret=Ks]="caret";let Ys=95;e[\##
+e.underscore=Ys]="underscore";let Qs=96;e[e.graveAccent=Qs]="graveAccent";let Zs=97;e[e.lowercaseA=Zs]="lowercaseA";\##
+let en=98;e[e.lowercaseB=en]="lowercaseB";let tn=99;e[e.lowercaseC=tn]="lowercaseC";let sn=100;e[e.lowercaseD=sn]="l\##
+owercaseD";let nn=101;e[e.lowercaseE=nn]="lowercaseE";let rn=102;e[e.lowercaseF=rn]="lowercaseF";let on=103;e[e.lowe\##
+rcaseG=on]="lowercaseG";let an=104;e[e.lowercaseH=an]="lowercaseH";let cn=105;e[e.lowercaseI=cn]="lowercaseI";let ln\##
+=106;e[e.lowercaseJ=ln]="lowercaseJ";let un=107;e[e.lowercaseK=un]="lowercaseK";let pn=108;e[e.lowercaseL=pn]="lower\##
+caseL";let fn=109;e[e.lowercaseM=fn]="lowercaseM";let hn=110;e[e.lowercaseN=hn]="lowercaseN";let mn=111;e[e.lowercas\##
+eO=mn]="lowercaseO";let dn=112;e[e.lowercaseP=dn]="lowercaseP";let kn=113;e[e.lowercaseQ=kn]="lowercaseQ";let xn=114\##
+;e[e.lowercaseR=xn]="lowercaseR";let gn=115;e[e.lowercaseS=gn]="lowercaseS";let _n=116;e[e.lowercaseT=_n]="lowercase\##
+T";let In=117;e[e.lowercaseU=In]="lowercaseU";let yn=118;e[e.lowercaseV=yn]="lowercaseV";let Tn=119;e[e.lowercaseW=T\##
+n]="lowercaseW";let bn=120;e[e.lowercaseX=bn]="lowercaseX";let wn=121;e[e.lowercaseY=wn]="lowercaseY";let Sn=122;e[e\##
+.lowercaseZ=Sn]="lowercaseZ";let En=123;e[e.leftCurlyBrace=En]="leftCurlyBrace";let An=124;e[e.verticalBar=An]="vert\##
+icalBar";let Cn=125;e[e.rightCurlyBrace=Cn]="rightCurlyBrace";let Nn=126;e[e.tilde=Nn]="tilde";let Pn=160;e[e.nonBre\##
+akingSpace=Pn]="nonBreakingSpace";let Rn=5760;e[e.oghamSpaceMark=Rn]="oghamSpaceMark";let vn=8232;e[e.lineSeparator=\##
+vn]="lineSeparator";let Ln=8233;e[e.paragraphSeparator=Ln]="paragraphSeparator"})(l||(l={}));var Ze,R,v,n,d,W1;funct\##
+ion Re(){return W1++}function V1(e){if("pos"in e){let s=Ai(e.pos);e.message+=` (${s.line}:${s.column})`,e.loc=s}retu\##
+rn e}class G1{constructor(e,s){this.line=e,this.column=s}}function Ai(e){let s=1,r=1;for(let o=0;o<e;o++)if(d.charCo\##
+deAt(o)===l.lineFeed)s++,r=1;else r++;return new G1(s,r)}function X1(e,s,r,o){d=e,n=new Y,W1=1,Ze=s,R=r,v=o}function\##
+ g(e){return n.contextualKeyword===e}function et(e){let s=ge();return s.type===t.name&&s.contextualKeyword===e}funct\##
+ion V(e){return n.contextualKeyword===e&&p(t.name)}function q(e){if(!V(e))w()}function Q(){return i(t.eof)||i(t.brac\##
+eR)||K()}function K(){let e=n.tokens[n.tokens.length-1],s=e?e.end:0;for(let r=s;r<n.start;r++){let o=d.charCodeAt(r)\##
+;if(o===l.lineFeed||o===l.carriageReturn||o===8232||o===8233)return!0}return!1}function Bt(){let e=ht();for(let s=n.\##
+end;s<e;s++){let r=d.charCodeAt(s);if(r===l.lineFeed||r===l.carriageReturn||r===8232||r===8233)return!0}return!1}fun\##
+ction le(){return p(t.semi)||Q()}function F(){if(!le())w('Unexpected token, expected ";"')}function f(e){if(!p(e))w(\##
+`Unexpected token, expected "${Dn(e)}"`)}function w(e="Unexpected token",s=n.start){if(n.error)return;let r=SyntaxEr\##
+ror(e);r.pos=s,n.error=r,n.pos=d.length,S(t.eof)}var Fn=[9,11,12,l.space,l.nonBreakingSpace,l.oghamSpaceMark,8192,81\##
+93,8194,8195,8196,8197,8198,8199,8200,8201,8202,8239,8287,12288,65279],On=/(?:\s|\/\/.*|\/\*[^]*?\*\/)*/g,Mn=new Uin\##
+t8Array(65536);for(let e of Fn)Mn[e]=1;function Ci(e){if(e<48)return e===36;if(e<58)return!0;if(e<65)return!1;if(e<9\##
+1)return!0;if(e<97)return e===95;if(e<123)return!0;if(e<128)return!1;throw Error("Should not be called with non-ASCI\##
+I char code.")}var ee=new Uint8Array(65536);for(let e=0;e<128;e++)ee[e]=Ci(e)?1:0;ee.fill(1,128);for(let e of Fn)ee[\##
+e]=0;ee[8232]=0;ee[8233]=0;var _e=ee.slice();for(let e=l.digit0;e<=l.digit9;e++)_e[e]=0;var Bn=new Int32Array(JSON.p\##
+arse("[-1,27,783,918,1755,2376,2862,3483,-1,3699,-1,4617,4752,4833,5130,5508,5940,-1,6480,6939,7749,8181,8451,8613,-\##
+1,8829,-1,-1,-1,54,243,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,432,-1,-1,-1,675,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,81,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,108,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,135,-1,-1,-1,-1,-1,-1,-1,-1,-1,162,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,189,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,216,-1,-1,-1,-1,-\##
+1,-1,2,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,270,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,297,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,324,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,351,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,378,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,405,-1,-1,-1,-1,-1,-1,-1,-1,4,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,459,-1,-1,-1,-1,-1,594,-1,-1,-1,-1,-1,-1,486,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,513,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,540,-1,-1,-1,-1,-1,-1,8,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,567\##
+,-1,-1,-1,-1,-1,-1,-1,10,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,621,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,648,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,12,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,702,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,729,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,756,-1,-\##
+1,-1,-1,-1,-1,14,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,810,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,837,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,864,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,891,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,124961,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,945,-1,-1,-1,-1,-1,-1,1107,-1,-1,-1,1242,-1,-1,1350,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,972,1026,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,9\##
+99,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,127009,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1053,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,1080,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,129057,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1134,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1161,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,1188,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,1215,-1,-1,-1,-1,-1,-1,-1,16,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,1269,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,1296,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1323,-\##
+1,-1,-1,-1,-1,-1,-1,175137,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1377,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,1404,1620,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1431,-1,-1,-1,-\##
+1,-1,-1,161825,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1458,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1485,-1,-1,-1,-1,-1,-1,-1,-1,1512,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1539,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1566,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,1593,-1,-1,-1,-1,-1,-1,-1,-1,18,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1647,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,1674,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,1701,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1728,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,13110\##
+5,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1782,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,2349,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1809,1971,-1,-1,2106,-1,-1,-1,-1,-1,2241,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1836,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,1863,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1890,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1917,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1944,-1,-1,-1,-1,-1,-1,-1,-1,133153,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1998,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,2025,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2052,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2079,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,20,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,2133,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2160,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2187,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2214,-1,-1,-1,-1,-1,-1,135201,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2268,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2295,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,2322,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,199969,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,137249,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2403,-1,2484,-1,-1,-1,-1,-1,-1,-1,-1,-1,2565,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2430,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2457,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,139297,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2511,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,2538,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,22,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2592,-1,-1,-1,2727,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2619,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,2646,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2\##
+673,-1,-1,-1,-1,-1,-1,178209,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2700,-1,-1,-1,-1,-1,-1,-1,24,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2754,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2781,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,2808,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2835,-1,-1,-1,-1,-1,-1,-1,176161,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2889,-1,-1,-1,-1,-1,-1,-1,2997,-1,-1,-1,-1,-1,3159,-1,-1,3213,-1,-1,3294,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2916,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,2943,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2970,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,189473,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3024,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3051,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3078,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3105,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3132,-1,141345,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3186,-1,-1,-1,-1,-1,-1,-1,-1,143393,-1\##
 ,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,5967,-1,-1,6345,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5994,-1,-1,-1,-1,-1,6129,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6021,-1,-1,-1,-1,-1,6048,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6\##
-075,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6102,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,c._private<\##
-<1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,6156,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6183,-1,-1,-1,-1,-1,-1,-1,-1,-1,6318,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,6210,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6237,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6264,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6291,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,c._protected<<1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,c._proto<<1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6372,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6399,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6426,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6453,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,c._public<<1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6507,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,65\##
-34,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6696,-1,-1,6831,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6561,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6588,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6615,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,6642,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,6669,-1,c._readonly<<1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6723,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,6750,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,67\##
-77,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6804,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,c._req\##
-uire<<1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6858,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6885,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6912,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,(t._return<<1\##
-)+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6966,-1,-1,-1,7182,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7236,7371,-1,7479,-1,7614,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,6993,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7020,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7047,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7074,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7101,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,7128,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7155,-1,-1,-1,-1,-1,-1,-1,c._satisfies<<1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7209,-1,-1,-1,-1,-\##
-1,-1,c._set<<1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7263,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,7290,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7317,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,7344,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,c._static<<1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7398,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7425,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7452,-1,-1,-1,-1,-1,-1,-1,-1,(t._super<<1)+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7506,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7533,-1,-1,-1,-1,-1,-1,-1,-1,-1,7560,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7587,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,(t._switch<<1)+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7641,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7668,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7695,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7722,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,c._sym\##
-bol<<1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7776,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,7938,-1,-1,-1,-1,-1,-1,8046,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7803,-1,-1,-1,-1,-1,-1,-1,-1,7857\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7830,-1,-1,-1,-1,-1,-1,-1,(t._this\##
-<<1)+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,7884,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,7911,-1,-1,-1,(t._throw<<1)+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7965,-1,-1,-1,8019,-1,-1,-1,-1,-1,-1,7992,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,(t._true<<1)+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,(t._try<<1)+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8073,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8100,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,c._type<<1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8127,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8154,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,(t._ty\##
-peof<<1)+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,8208,-1,-1,-1,-1,8343,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8235,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8262,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8289,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8316,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,c._unique<<1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8370,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,8397,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8424,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,c._using<<1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,8478,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8532,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8505,-1,-1,-1,-1,-1,-1,-1,-1,(t._var<<1)+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8559,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,8586,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,(t._void<<1)+1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8640,8748,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8667,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8694,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8721,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,(t._while<<1)+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8775,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,8802,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,(t._with<<1)+1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8856,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8883,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
--1,-1,-1,-1,-1,-1,-1,-1,8910,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8937,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,(t._yield<<1)+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
-,-1,-1,-1,-1,-1]);function tr(){let e=0,n=0,s=r.pos;while(s<x.length){if(n=x.charCodeAt(s),n<u.lowercaseA||n>u.lower\##
-caseZ)break;let i=er[e+(n-u.lowercaseA)+1];if(i===-1)break;else e=i,s++}let o=er[e];if(o>-1&&!oe[n]){if(r.pos=s,o&1)\##
-v(o>>>1);else v(t.name,o>>>1);return}while(s<x.length){let i=x.charCodeAt(s);if(oe[i])s++;else if(i===u.backslash){i\##
-f(s+=2,x.charCodeAt(s)===u.leftCurlyBrace){while(s<x.length&&x.charCodeAt(s)!==u.rightCurlyBrace)s++;s++}}else if(i=\##
-==u.atSign&&x.charCodeAt(s+1)===u.atSign)s+=2;else break}r.pos=s,v(t.name)}var I;(function(e){e[e.Access=0]="Access"\##
-;let s=1;e[e.ExportAccess=s]="ExportAccess";let o=s+1;e[e.TopLevelDeclaration=o]="TopLevelDeclaration";let i=o+1;e[e\##
-.FunctionScopedDeclaration=i]="FunctionScopedDeclaration";let l=i+1;e[e.BlockScopedDeclaration=l]="BlockScopedDeclar\##
-ation";let p=l+1;e[e.ObjectShorthandTopLevelDeclaration=p]="ObjectShorthandTopLevelDeclaration";let d=p+1;e[e.Object\##
-ShorthandFunctionScopedDeclaration=d]="ObjectShorthandFunctionScopedDeclaration";let k=d+1;e[e.ObjectShorthandBlockS\##
-copedDeclaration=k]="ObjectShorthandBlockScopedDeclaration";let g=k+1;e[e.ObjectShorthand=g]="ObjectShorthand";let _\##
-=g+1;e[e.ImportDeclaration=_]="ImportDeclaration";let w=_+1;e[e.ObjectKey=w]="ObjectKey";let E=w+1;e[e.ImportAccess=\##
-E]="ImportAccess"})(I||(I={}));var pe;(function(e){e[e.NoChildren=0]="NoChildren";let s=1;e[e.OneChild=s]="OneChild"\##
-;let o=s+1;e[e.StaticChildren=o]="StaticChildren";let i=o+1;e[e.KeyAfterPropSpread=i]="KeyAfterPropSpread"})(pe||(pe\##
-={}));function Zt(e){let n=e.identifierRole;return n===I.TopLevelDeclaration||n===I.FunctionScopedDeclaration||n===I\##
-.BlockScopedDeclaration||n===I.ObjectShorthandTopLevelDeclaration||n===I.ObjectShorthandFunctionScopedDeclaration||n\##
-===I.ObjectShorthandBlockScopedDeclaration}function go(e){let n=e.identifierRole;return n===I.FunctionScopedDeclarat\##
-ion||n===I.BlockScopedDeclaration||n===I.ObjectShorthandFunctionScopedDeclaration||n===I.ObjectShorthandBlockScopedD\##
-eclaration}function en(e){let n=e.identifierRole;return n===I.TopLevelDeclaration||n===I.ObjectShorthandTopLevelDecl\##
-aration||n===I.ImportDeclaration}function _o(e){let n=e.identifierRole;return n===I.TopLevelDeclaration||n===I.Block\##
-ScopedDeclaration||n===I.ObjectShorthandTopLevelDeclaration||n===I.ObjectShorthandBlockScopedDeclaration}function yo\##
-(e){let n=e.identifierRole;return n===I.FunctionScopedDeclaration||n===I.ObjectShorthandFunctionScopedDeclaration}fu\##
-nction Io(e){return e.identifierRole===I.ObjectShorthandTopLevelDeclaration||e.identifierRole===I.ObjectShorthandBlo\##
-ckScopedDeclaration||e.identifierRole===I.ObjectShorthandFunctionScopedDeclaration}class ut{constructor(){this.type=\##
-r.type,this.contextualKeyword=r.contextualKeyword,this.start=r.start,this.end=r.end,this.scopeDepth=r.scopeDepth,thi\##
-s.isType=r.isType,this.identifierRole=null,this.jsxRole=null,this.shadowsGlobal=!1,this.isAsyncOperation=!1,this.con\##
-textId=null,this.rhsEndIndex=null,this.isExpression=!1,this.numNullishCoalesceStarts=0,this.numNullishCoalesceEnds=0\##
-,this.isOptionalChainStart=!1,this.isOptionalChainEnd=!1,this.subscriptStartIndex=null,this.nullishStartIndex=null}}\##
-function m(){r.tokens.push(new ut),or()}function Te(){r.tokens.push(new ut),r.start=r.pos,Ca()}function To(){if(r.ty\##
-pe===t.assign)--r.pos;Ea()}function P(e){for(let s=r.tokens.length-e;s<r.tokens.length;s++)r.tokens[s].isType=!0;let\##
- n=r.isType;return r.isType=!0,n}function C(e){r.isType=e}function f(e){if(a(e))return m(),!0;else return!1}function\##
- tn(e){let n=r.isType;r.isType=!0,f(e),r.isType=n}function a(e){return r.type===e}function U(){let e=r.snapshot();m(\##
-);let n=r.type;return r.restoreFromSnapshot(e),n}class bo{constructor(e,n){this.type=e,this.contextualKeyword=n}}fun\##
-ction Ee(){let e=r.snapshot();m();let n=r.type,s=r.contextualKeyword;return r.restoreFromSnapshot(e),new bo(n,s)}fun\##
-ction wt(){return sr(r.pos)}function sr(e){Qs.lastIndex=e;let n=Qs.exec(x);return e+n[0].length}function rr(){return\##
- x.charCodeAt(wt())}function or(){if(ar(),r.start=r.pos,r.pos>=x.length){let e=r.tokens;if(e.length>=2&&e[e.length-1\##
-].start>=x.length&&e[e.length-2].start>=x.length)A("Unexpectedly reached the end of input.");v(t.eof);return}da(x.ch\##
-arCodeAt(r.pos))}function da(e){if(Ae[e]||e===u.backslash||e===u.atSign&&x.charCodeAt(r.pos+1)===u.atSign)tr();else \##
-cr(e)}function ka(){while(x.charCodeAt(r.pos)!==u.asterisk||x.charCodeAt(r.pos+1)!==u.slash)if(r.pos++,r.pos>x.lengt\##
-h){A("Unterminated comment",r.pos-2);return}r.pos+=2}function ir(e){let n=x.charCodeAt(r.pos+=e);if(r.pos<x.length)w\##
-hile(n!==u.lineFeed&&n!==u.carriageReturn&&n!==u.lineSeparator&&n!==u.paragraphSeparator&&++r.pos<x.length)n=x.charC\##
-odeAt(r.pos)}function ar(){while(r.pos<x.length){let e=x.charCodeAt(r.pos);switch(e){case u.carriageReturn:if(x.char\##
-CodeAt(r.pos+1)===u.lineFeed)++r.pos;case u.lineFeed:case u.lineSeparator:case u.paragraphSeparator:++r.pos;break;ca\##
-se u.slash:switch(x.charCodeAt(r.pos+1)){case u.asterisk:r.pos+=2,ka();break;case u.slash:ir(2);break;default:return\##
-}break;default:if(Zs[e])++r.pos;else return}}}function v(e,n=c.NONE){r.end=r.pos,r.type=e,r.contextualKeyword=n}func\##
-tion xa(){let e=x.charCodeAt(r.pos+1);if(e>=u.digit0&&e<=u.digit9){So(!0);return}if(e===u.dot&&x.charCodeAt(r.pos+2)\##
-===u.dot)r.pos+=3,v(t.ellipsis);else++r.pos,v(t.dot)}function ga(){if(x.charCodeAt(r.pos+1)===u.equalsTo)j(t.assign,\##
-2);else j(t.slash,1)}function _a(e){let n=e===u.asterisk?t.star:t.modulo,s=1,o=x.charCodeAt(r.pos+1);if(e===u.asteri\##
-sk&&o===u.asterisk)s++,o=x.charCodeAt(r.pos+2),n=t.exponent;if(o===u.equalsTo&&x.charCodeAt(r.pos+2)!==u.greaterThan\##
-)s++,n=t.assign;j(n,s)}function ya(e){let n=x.charCodeAt(r.pos+1);if(n===e){if(x.charCodeAt(r.pos+2)===u.equalsTo)j(\##
-t.assign,3);else j(e===u.verticalBar?t.logicalOR:t.logicalAND,2);return}if(e===u.verticalBar){if(n===u.greaterThan){\##
-j(t.pipeline,2);return}else if(n===u.rightCurlyBrace&&O){j(t.braceBarR,2);return}}if(n===u.equalsTo){j(t.assign,2);r\##
-eturn}j(e===u.verticalBar?t.bitwiseOR:t.bitwiseAND,1)}function Ia(){if(x.charCodeAt(r.pos+1)===u.equalsTo)j(t.assign\##
-,2);else j(t.bitwiseXOR,1)}function Ta(e){let n=x.charCodeAt(r.pos+1);if(n===e){j(t.preIncDec,2);return}if(n===u.equ\##
-alsTo)j(t.assign,2);else if(e===u.plusSign)j(t.plus,1);else j(t.minus,1)}function ba(){let e=x.charCodeAt(r.pos+1);i\##
-f(e===u.lessThan){if(x.charCodeAt(r.pos+2)===u.equalsTo){j(t.assign,3);return}if(r.isType)j(t.lessThan,1);else j(t.b\##
-itShiftL,2);return}if(e===u.equalsTo)j(t.relationalOrEqual,2);else j(t.lessThan,1)}function wo(){if(r.isType){j(t.gr\##
-eaterThan,1);return}let e=x.charCodeAt(r.pos+1);if(e===u.greaterThan){let n=x.charCodeAt(r.pos+2)===u.greaterThan?3:\##
-2;if(x.charCodeAt(r.pos+n)===u.equalsTo){j(t.assign,n+1);return}j(t.bitShiftR,n);return}if(e===u.equalsTo)j(t.relati\##
-onalOrEqual,2);else j(t.greaterThan,1)}function nn(){if(r.type===t.greaterThan)r.pos-=1,wo()}function wa(e){let n=x.\##
-charCodeAt(r.pos+1);if(n===u.equalsTo){j(t.equality,x.charCodeAt(r.pos+2)===u.equalsTo?3:2);return}if(e===u.equalsTo\##
-&&n===u.greaterThan){r.pos+=2,v(t.arrow);return}j(e===u.equalsTo?t.eq:t.bang,1)}function Sa(){let e=x.charCodeAt(r.p\##
-os+1),n=x.charCodeAt(r.pos+2);if(e===u.questionMark&&!(O&&r.isType))if(n===u.equalsTo)j(t.assign,3);else j(t.nullish\##
-Coalescing,2);else if(e===u.dot&&!(n>=u.digit0&&n<=u.digit9))r.pos+=2,v(t.questionDot);else++r.pos,v(t.question)}fun\##
-ction cr(e){switch(e){case u.numberSign:++r.pos,v(t.hash);return;case u.dot:xa();return;case u.leftParenthesis:++r.p\##
-os,v(t.parenL);return;case u.rightParenthesis:++r.pos,v(t.parenR);return;case u.semicolon:++r.pos,v(t.semi);return;c\##
-ase u.comma:++r.pos,v(t.comma);return;case u.leftSquareBracket:++r.pos,v(t.bracketL);return;case u.rightSquareBracke\##
-t:++r.pos,v(t.bracketR);return;case u.leftCurlyBrace:if(O&&x.charCodeAt(r.pos+1)===u.verticalBar)j(t.braceBarL,2);el\##
-se++r.pos,v(t.braceL);return;case u.rightCurlyBrace:++r.pos,v(t.braceR);return;case u.colon:if(x.charCodeAt(r.pos+1)\##
-===u.colon)j(t.doubleColon,2);else++r.pos,v(t.colon);return;case u.questionMark:Sa();return;case u.atSign:++r.pos,v(\##
-t.at);return;case u.graveAccent:++r.pos,v(t.backQuote);return;case u.digit0:{let n=x.charCodeAt(r.pos+1);if(n===u.lo\##
-wercaseX||n===u.uppercaseX||n===u.lowercaseO||n===u.uppercaseO||n===u.lowercaseB||n===u.uppercaseB){Aa();return}}cas\##
-e u.digit1:case u.digit2:case u.digit3:case u.digit4:case u.digit5:case u.digit6:case u.digit7:case u.digit8:case u.\##
-digit9:So(!1);return;case u.quotationMark:case u.apostrophe:va(e);return;case u.slash:ga();return;case u.percentSign\##
-:case u.asterisk:_a(e);return;case u.verticalBar:case u.ampersand:ya(e);return;case u.caret:Ia();return;case u.plusS\##
-ign:case u.dash:Ta(e);return;case u.lessThan:ba();return;case u.greaterThan:wo();return;case u.equalsTo:case u.excla\##
-mationMark:wa(e);return;case u.tilde:j(t.tilde,1);return;default:break}A(`Unexpected character '${String.fromCharCod\##
-e(e)}'`,r.pos)}function j(e,n){r.pos+=n,v(e)}function Ea(){let e=r.pos,n=!1,s=!1;for(;;){if(r.pos>=x.length){A("Unte\##
-rminated regular expression",e);return}let o=x.charCodeAt(r.pos);if(n)n=!1;else{if(o===u.leftSquareBracket)s=!0;else\##
- if(o===u.rightSquareBracket&&s)s=!1;else if(o===u.slash&&!s)break;n=o===u.backslash}++r.pos}++r.pos,Pa(),v(t.regexp\##
-)}function nr(){while(!0){let e=x.charCodeAt(r.pos);if(e>=u.digit0&&e<=u.digit9||e===u.underscore)r.pos++;else break\##
-}}function Aa(){r.pos+=2;while(!0){let n=x.charCodeAt(r.pos);if(n>=u.digit0&&n<=u.digit9||n>=u.lowercaseA&&n<=u.lowe\##
-rcaseF||n>=u.uppercaseA&&n<=u.uppercaseF||n===u.underscore)r.pos++;else break}if(x.charCodeAt(r.pos)===u.lowercaseN)\##
-++r.pos,v(t.bigint);else v(t.num)}function So(e){let n=!1,s=!1;if(!e)nr();let o=x.charCodeAt(r.pos);if(o===u.dot)++r\##
-.pos,nr(),o=x.charCodeAt(r.pos);if(o===u.uppercaseE||o===u.lowercaseE){if(o=x.charCodeAt(++r.pos),o===u.plusSign||o=\##
-==u.dash)++r.pos;nr(),o=x.charCodeAt(r.pos)}if(o===u.lowercaseN)++r.pos,n=!0;else if(o===u.lowercaseM)++r.pos,s=!0;i\##
-f(n){v(t.bigint);return}if(s){v(t.decimal);return}v(t.num)}function va(e){r.pos++;for(;;){if(r.pos>=x.length){A("Unt\##
-erminated string constant");return}let n=x.charCodeAt(r.pos);if(n===u.backslash)r.pos++;else if(n===e)break;r.pos++}\##
-r.pos++,v(t.string)}function Ca(){for(;;){if(r.pos>=x.length){A("Unterminated template");return}let e=x.charCodeAt(r\##
-.pos);if(e===u.graveAccent||e===u.dollarSign&&x.charCodeAt(r.pos+1)===u.leftCurlyBrace){if(r.pos===r.start&&a(t.temp\##
-late))if(e===u.dollarSign){r.pos+=2,v(t.dollarBraceL);return}else{++r.pos,v(t.backQuote);return}v(t.template);return\##
-}if(e===u.backslash)r.pos++;r.pos++}}function Pa(){while(r.pos<x.length){let e=x.charCodeAt(r.pos);if(oe[e])r.pos++;\##
-else if(e===u.backslash){if(r.pos+=2,x.charCodeAt(r.pos)===u.leftCurlyBrace){while(r.pos<x.length&&x.charCodeAt(r.po\##
-s)!==u.rightCurlyBrace)r.pos++;r.pos++}}else break}}function be(e,n=e.currentIndex()){let s=n+1;if(sn(e,s)){let o=e.\##
-identifierNameAtIndex(n);return{isType:!1,leftName:o,rightName:o,endIndex:s}}if(s++,sn(e,s))return{isType:!0,leftNam\##
-e:null,rightName:null,endIndex:s};if(s++,sn(e,s))return{isType:!1,leftName:e.identifierNameAtIndex(n),rightName:e.id\##
-entifierNameAtIndex(n+2),endIndex:s};if(s++,sn(e,s))return{isType:!0,leftName:null,rightName:null,endIndex:s};throw \##
-Error(`Unexpected import/export specifier at ${n}`)}function sn(e,n){let s=e.tokens[n];return s.type===t.braceR||s.t\##
-ype===t.comma}var Eo=new Map([["quot",'"'],["amp","&"],["apos","'"],["lt","<"],["gt",">"],["nbsp"," "],["iexcl","¡"]\##
-,["cent","¢"],["pound","£"],["curren","¤"],["yen","¥"],["brvbar","¦"],["sect","§"],["uml","¨"],["copy","©"],["ordf",\##
-"ª"],["laquo","«"],["not","¬"],["shy","­"],["reg","®"],["macr","¯"],["deg","°"],["plusmn","±"],["sup2","²"],["sup3",\##
-"³"],["acute","´"],["micro","µ"],["para","¶"],["middot","·"],["cedil","¸"],["sup1","¹"],["ordm","º"],["raquo","»"],[\##
-"frac14","¼"],["frac12","½"],["frac34","¾"],["iquest","¿"],["Agrave","À"],["Aacute","Á"],["Acirc","Â"],["Atilde","Ã"\##
-],["Auml","Ä"],["Aring","Å"],["AElig","Æ"],["Ccedil","Ç"],["Egrave","È"],["Eacute","É"],["Ecirc","Ê"],["Euml","Ë"],[\##
-"Igrave","Ì"],["Iacute","Í"],["Icirc","Î"],["Iuml","Ï"],["ETH","Ð"],["Ntilde","Ñ"],["Ograve","Ò"],["Oacute","Ó"],["O\##
-circ","Ô"],["Otilde","Õ"],["Ouml","Ö"],["times","×"],["Oslash","Ø"],["Ugrave","Ù"],["Uacute","Ú"],["Ucirc","Û"],["Uu\##
-ml","Ü"],["Yacute","Ý"],["THORN","Þ"],["szlig","ß"],["agrave","à"],["aacute","á"],["acirc","â"],["atilde","ã"],["aum\##
-l","ä"],["aring","å"],["aelig","æ"],["ccedil","ç"],["egrave","è"],["eacute","é"],["ecirc","ê"],["euml","ë"],["igrave\##
-","ì"],["iacute","í"],["icirc","î"],["iuml","ï"],["eth","ð"],["ntilde","ñ"],["ograve","ò"],["oacute","ó"],["ocirc","\##
-ô"],["otilde","õ"],["ouml","ö"],["divide","÷"],["oslash","ø"],["ugrave","ù"],["uacute","ú"],["ucirc","û"],["uuml","ü\##
-"],["yacute","ý"],["thorn","þ"],["yuml","ÿ"],["OElig","Œ"],["oelig","œ"],["Scaron","Š"],["scaron","š"],["Yuml","Ÿ"],\##
-["fnof","ƒ"],["circ","ˆ"],["tilde","˜"],["Alpha","Α"],["Beta","Β"],["Gamma","Γ"],["Delta","Δ"],["Epsilon","Ε"],["Zet\##
-a","Ζ"],["Eta","Η"],["Theta","Θ"],["Iota","Ι"],["Kappa","Κ"],["Lambda","Λ"],["Mu","Μ"],["Nu","Ν"],["Xi","Ξ"],["Omicr\##
-on","Ο"],["Pi","Π"],["Rho","Ρ"],["Sigma","Σ"],["Tau","Τ"],["Upsilon","Υ"],["Phi","Φ"],["Chi","Χ"],["Psi","Ψ"],["Omeg\##
-a","Ω"],["alpha","α"],["beta","β"],["gamma","γ"],["delta","δ"],["epsilon","ε"],["zeta","ζ"],["eta","η"],["theta","θ"\##
-],["iota","ι"],["kappa","κ"],["lambda","λ"],["mu","μ"],["nu","ν"],["xi","ξ"],["omicron","ο"],["pi","π"],["rho","ρ"],\##
-["sigmaf","ς"],["sigma","σ"],["tau","τ"],["upsilon","υ"],["phi","φ"],["chi","χ"],["psi","ψ"],["omega","ω"],["thetasy\##
-m","ϑ"],["upsih","ϒ"],["piv","ϖ"],["ensp"," "],["emsp"," "],["thinsp"," "],["zwnj","‌"],["zwj","‍"],["lrm","‎"],["rl\##
-m","‏"],["ndash","–"],["mdash","—"],["lsquo","‘"],["rsquo","’"],["sbquo","‚"],["ldquo","“"],["rdquo","”"],["bdquo","\##
-„"],["dagger","†"],["Dagger","‡"],["bull","•"],["hellip","…"],["permil","‰"],["prime","′"],["Prime","″"],["lsaquo","\##
-‹"],["rsaquo","›"],["oline","‾"],["frasl","⁄"],["euro","€"],["image","ℑ"],["weierp","℘"],["real","ℜ"],["trade","™"],\##
-["alefsym","ℵ"],["larr","←"],["uarr","↑"],["rarr","→"],["darr","↓"],["harr","↔"],["crarr","↵"],["lArr","⇐"],["uArr",\##
-"⇑"],["rArr","⇒"],["dArr","⇓"],["hArr","⇔"],["forall","∀"],["part","∂"],["exist","∃"],["empty","∅"],["nabla","∇"],["\##
-isin","∈"],["notin","∉"],["ni","∋"],["prod","∏"],["sum","∑"],["minus","−"],["lowast","∗"],["radic","√"],["prop","∝"]\##
-,["infin","∞"],["ang","∠"],["and","∧"],["or","∨"],["cap","∩"],["cup","∪"],["int","∫"],["there4","∴"],["sim","∼"],["c\##
-ong","≅"],["asymp","≈"],["ne","≠"],["equiv","≡"],["le","≤"],["ge","≥"],["sub","⊂"],["sup","⊃"],["nsub","⊄"],["sube",\##
-"⊆"],["supe","⊇"],["oplus","⊕"],["otimes","⊗"],["perp","⊥"],["sdot","⋅"],["lceil","⌈"],["rceil","⌉"],["lfloor","⌊"],\##
-["rfloor","⌋"],["lang","〈"],["rang","〉"],["loz","◊"],["spades","♠"],["clubs","♣"],["hearts","♥"],["diams","♦"]]);fun\##
-ction St(e){let[n,s]=Ao(e.jsxPragma||"React.createElement"),[o,i]=Ao(e.jsxFragmentPragma||"React.Fragment");return{b\##
-ase:n,suffix:s,fragmentBase:o,fragmentSuffix:i}}function Ao(e){let n=e.indexOf(".");if(n===-1)n=e.length;return[e.sl\##
-ice(0,n),e.slice(n)]}class Y{getPrefixCode(){return""}getHoistedCode(){return""}getSuffixCode(){return""}}class ve e\##
-xtends Y{__init(){this.lastLineNumber=1}__init2(){this.lastIndex=0}__init3(){this.filenameVarName=null}__init4(){thi\##
-s.esmAutomaticImportNameResolutions={}}__init5(){this.cjsAutomaticModuleNameResolutions={}}constructor(e,n,s,o,i){su\##
-per();this.rootTransformer=e,this.tokens=n,this.importProcessor=s,this.nameManager=o,this.options=i,ve.prototype.__i\##
-nit.call(this),ve.prototype.__init2.call(this),ve.prototype.__init3.call(this),ve.prototype.__init4.call(this),ve.pr\##
-ototype.__init5.call(this),this.jsxPragmaInfo=St(i),this.isAutomaticRuntime=i.jsxRuntime==="automatic",this.jsxImpor\##
-tSource=i.jsxImportSource||"react"}process(){if(this.tokens.matches1(t.jsxTagStart))return this.processJSXTag(),!0;r\##
-eturn!1}getPrefixCode(){let e="";if(this.filenameVarName)e+=`const ${this.filenameVarName} = ${JSON.stringify(this.o\##
-ptions.filePath||"")};`;if(this.isAutomaticRuntime)if(this.importProcessor)for(let[n,s]of Object.entries(this.cjsAut\##
-omaticModuleNameResolutions))e+=`var ${s} = require("${n}");`;else{let{createElement:n,...s}=this.esmAutomaticImport\##
-NameResolutions;if(n)e+=`import {createElement as ${n}} from "${this.jsxImportSource}";`;let o=Object.entries(s).map\##
-(([i,l])=>`${i} as ${l}`).join(", ");if(o){let i=this.jsxImportSource+(this.options.production?"/jsx-runtime":"/jsx-\##
-dev-runtime");e+=`import {${o}} from "${i}";`}}return e}processJSXTag(){let{jsxRole:e,start:n}=this.tokens.currentTo\##
-ken(),s=this.options.production?null:this.getElementLocationCode(n);if(this.isAutomaticRuntime&&e!==pe.KeyAfterPropS\##
-pread)this.transformTagToJSXFunc(s,e);else this.transformTagToCreateElement(s)}getElementLocationCode(e){return`line\##
-Number: ${this.getLineNumberForIndex(e)}`}getLineNumberForIndex(e){let n=this.tokens.code;while(this.lastIndex<e&&th\##
-is.lastIndex<n.length){if(n[this.lastIndex]===`
-`)this.lastLineNumber++;this.lastIndex++}return this.lastLineNumber}transformTagToJSXFunc(e,n){let s=n===pe.StaticCh\##
-ildren;this.tokens.replaceToken(this.getJSXFuncInvocationCode(s));let o=null;if(this.tokens.matches1(t.jsxTagEnd))th\##
-is.tokens.replaceToken(`${this.getFragmentCode()}, {`),this.processAutomaticChildrenAndEndProps(n);else{if(this.proc\##
+1,-1,3240,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3267,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,26,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,3321,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3348,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3375,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,3402,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,3429,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3456,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,146465,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3510,-1\##
+,-1,-1,-1,-1,-1,3564,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,3537,-1,-1,-1,-1,-1,-1,28,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3591,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3618,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3645,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3672,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,30,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3726,-1,-1,-1,-1,-1,-1,3753,4077,-1,-1\##
+,-1,-1,4590,-1,-1,-1,-1,-1,-1,-1,147489,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3780,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,3807,-1,-1,3996,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3834,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3861,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,3888,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,391\##
+5,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3942,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3969,-1,-1,-1,-1,-1,-1,-1,32,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4023,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4050,-1,-1,-1,-1,-1,-1,181281,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,190513,-1,-1,-1,-1,-1,4104,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,4185,4401,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4131,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4158,-1,-1,-1,-1,-1,-1,-1,-1,34,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,4212,-1,-1,-1,-1,-1,-1,-1,4239,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4266,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4293,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4320,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4347,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,43\##
+74,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,192561,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4428,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4455,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4482,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4509,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,4536,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,45\##
+63,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,36,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,38,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,4644,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4671,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4698,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4725,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,40,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4779,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4806,-1,-1,-1,-1,-1,-1,15977\##
+7,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4860,-1,-\##
+1,-1,-1,-1,4995,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,4887,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,4914,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,4941,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,4968,-1,-1,-1,-1,-1,-1,-1,42,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,5022,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,5049,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5076,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5103,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,44,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5157,-1,-1,-1,5373,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,5427,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5184,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,5211,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,5238,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5265,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,5292,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5319,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5346,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,46,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5400,-1,-1,-1,168993,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5454,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5481,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,185377,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5535,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,5562,-1,-1,-1,-1,5697,5751,-1,-1,-1,-1,48,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,5589,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,5616,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,5643,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5670,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,50,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,5724,-1,-1,-1,-1,-1,-1,52,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,5778,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,5805,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5832,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5859,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,5886,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5913,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,54,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,5967,-1,-1,6345,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,5994,-1,-1,-1,-1,-1,6129,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,6021,-1,-1,-1,-1,-1,6048,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6075,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6102,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,56,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6156,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6183,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,6318,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6210,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6237,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,6264,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6291,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,58,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,60,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6372,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6399,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6426,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+6453,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,62,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6507,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,6534,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6696,-1,-1,6831,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6561,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6588,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6615,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6642,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6669,-1,64,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6723,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,6750,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,677\##
+7,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6804,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,66,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,6858,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6885,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6912,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,149537,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6966,-1,-1,-1,7182,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,7236,7371,-1,7479,-1,7614,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,6993,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7020,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,7047,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7074,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7101,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,7128,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,7155,-1,-1,-1,-1,-1,-1,-1,68,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7209,-1,-1,-1,-1,-1,-1,70,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7263,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7290,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,7317,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7344,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,72,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7398,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7425,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7452,-1,-1,-\##
+1,-1,-1,-1,-1,-1,173089,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,7506,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,7533,-1,-1,-1,-1,-1,-1,-1,-1,-1,7560,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,7587,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,151585,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7641,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,7668,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7695,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7722,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,74,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,7776,-1,-1,-1,-1,-1,-1,-1,-1,-1,7938,-1,-1,-1,-1,-1,-1,8046,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,7803,-1,-1,-1,-1,-1,-1,-1,-1,7857,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,7830,-1,-1,-1,-1,-1,-1,-1,171041,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7884,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7911,-1,-1,-1,154913,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,7965,-1,-1,-1,8019,-1,-1,-1,-1,-1,-1,7\##
+992,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,187425,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,155681,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8073,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8100,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,76,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8127,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8154,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,195873,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+8208,-1,-1,-1,-1,8343,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8235,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8262,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8289,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8316,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,78,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,8370,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,8397,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8424,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,80,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8478,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,8532,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,850\##
+5,-1,-1,-1,-1,-1,-1,-1,-1,157729,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,-1,8559,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8586,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,197921,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8640,8748,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,8667,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8694,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8721,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+163873,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8775,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8802,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1\##
+,-1,-1,-1,-1,-1,-1,165921,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,8856,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8883,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,8910,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-\##
+1,-1,-1,-1,-1,-1,8937,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,183329,-1,-1,-1,-1,-1,-1,-1,\##
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1]"));function jn(){let e=0,s=0,r=n.pos;while(r<d.length){if(\##
+s=d.charCodeAt(r),s<l.lowercaseA||s>l.lowercaseZ)break;let a=Bn[e+(s-l.lowercaseA)+1];if(a===-1)break;else e=a,r++}l\##
+et o=Bn[e];if(o>-1&&!ee[s]){if(n.pos=r,o&1)S(o>>>1);else S(t.name,o>>>1);return}while(r<d.length){let a=d.charCodeAt\##
+(r);if(ee[a])r++;else if(a===l.backslash){if(r+=2,d.charCodeAt(r)===l.leftCurlyBrace){while(r<d.length&&d.charCodeAt\##
+(r)!==l.rightCurlyBrace)r++;r++}}else if(a===l.atSign&&d.charCodeAt(r+1)===l.atSign)r+=2;else break}n.pos=r,S(t.name\##
+)}var _;(function(e){e[e.Access=0]="Access";let r=1;e[e.ExportAccess=r]="ExportAccess";let o=r+1;e[e.TopLevelDeclara\##
+tion=o]="TopLevelDeclaration";let a=o+1;e[e.FunctionScopedDeclaration=a]="FunctionScopedDeclaration";let u=a+1;e[e.B\##
+lockScopedDeclaration=u]="BlockScopedDeclaration";let m=u+1;e[e.ObjectShorthandTopLevelDeclaration=m]="ObjectShortha\##
+ndTopLevelDeclaration";let x=m+1;e[e.ObjectShorthandFunctionScopedDeclaration=x]="ObjectShorthandFunctionScopedDecla\##
+ration";let k=x+1;e[e.ObjectShorthandBlockScopedDeclaration=k]="ObjectShorthandBlockScopedDeclaration";let T=k+1;e[e\##
+.ObjectShorthand=T]="ObjectShorthand";let y=T+1;e[e.ImportDeclaration=y]="ImportDeclaration";let C=y+1;e[e.ObjectKey\##
+=C]="ObjectKey";let L=C+1;e[e.ImportAccess=L]="ImportAccess"})(_||(_={}));var oe;(function(e){e[e.NoChildren=0]="NoC\##
+hildren";let r=1;e[e.OneChild=r]="OneChild";let o=r+1;e[e.StaticChildren=o]="StaticChildren";let a=o+1;e[e.KeyAfterP\##
+ropSpread=a]="KeyAfterPropSpread"})(oe||(oe={}));function jt(e){let s=e.identifierRole;return s===_.TopLevelDeclarat\##
+ion||s===_.FunctionScopedDeclaration||s===_.BlockScopedDeclaration||s===_.ObjectShorthandTopLevelDeclaration||s===_.\##
+ObjectShorthandFunctionScopedDeclaration||s===_.ObjectShorthandBlockScopedDeclaration}function J1(e){let s=e.identif\##
+ierRole;return s===_.FunctionScopedDeclaration||s===_.BlockScopedDeclaration||s===_.ObjectShorthandFunctionScopedDec\##
+laration||s===_.ObjectShorthandBlockScopedDeclaration}function qt(e){let s=e.identifierRole;return s===_.TopLevelDec\##
+laration||s===_.ObjectShorthandTopLevelDeclaration||s===_.ImportDeclaration}function z1(e){let s=e.identifierRole;re\##
+turn s===_.TopLevelDeclaration||s===_.BlockScopedDeclaration||s===_.ObjectShorthandTopLevelDeclaration||s===_.Object\##
+ShorthandBlockScopedDeclaration}function K1(e){let s=e.identifierRole;return s===_.FunctionScopedDeclaration||s===_.\##
+ObjectShorthandFunctionScopedDeclaration}function Y1(e){return e.identifierRole===_.ObjectShorthandTopLevelDeclarati\##
+on||e.identifierRole===_.ObjectShorthandBlockScopedDeclaration||e.identifierRole===_.ObjectShorthandFunctionScopedDe\##
+claration}class tt{constructor(){this.type=n.type,this.contextualKeyword=n.contextualKeyword,this.start=n.start,this\##
+.end=n.end,this.scopeDepth=n.scopeDepth,this.isType=n.isType,this.identifierRole=null,this.jsxRole=null,this.shadows\##
+Global=!1,this.isAsyncOperation=!1,this.contextId=null,this.rhsEndIndex=null,this.isExpression=!1,this.numNullishCoa\##
+lesceStarts=0,this.numNullishCoalesceEnds=0,this.isOptionalChainStart=!1,this.isOptionalChainEnd=!1,this.subscriptSt\##
+artIndex=null,this.nullishStartIndex=null}}function h(){n.tokens.push(new tt),Un()}function de(){n.tokens.push(new t\##
+t),n.start=n.pos,Ui()}function Q1(){if(n.type===t.assign)--n.pos;qi()}function A(e){for(let r=n.tokens.length-e;r<n.\##
+tokens.length;r++)n.tokens[r].isType=!0;let s=n.isType;return n.isType=!0,s}function E(e){n.isType=e}function p(e){i\##
+f(i(e))return h(),!0;else return!1}function $t(e){let s=n.isType;n.isType=!0,p(e),n.isType=s}function i(e){return n.\##
+type===e}function O(){let e=n.snapshot();h();let s=n.type;return n.restoreFromSnapshot(e),s}class Z1{constructor(e,s\##
+){this.type=e,this.contextualKeyword=s}}function ge(){let e=n.snapshot();h();let s=n.type,r=n.contextualKeyword;retu\##
+rn n.restoreFromSnapshot(e),new Z1(s,r)}function ht(){return $n(n.pos)}function $n(e){On.lastIndex=e;let s=On.exec(d\##
+);return e+s[0].length}function Hn(){return d.charCodeAt(ht())}function Un(){if(Vn(),n.start=n.pos,n.pos>=d.length){\##
+let e=n.tokens;if(e.length>=2&&e[e.length-1].start>=d.length&&e[e.length-2].start>=d.length)w("Unexpectedly reached \##
+the end of input.");S(t.eof);return}Ni(d.charCodeAt(n.pos))}function Ni(e){if(_e[e]||e===l.backslash||e===l.atSign&&\##
+d.charCodeAt(n.pos+1)===l.atSign)jn();else Gn(e)}function Pi(){while(d.charCodeAt(n.pos)!==l.asterisk||d.charCodeAt(\##
+n.pos+1)!==l.slash)if(n.pos++,n.pos>d.length){w("Unterminated comment",n.pos-2);return}n.pos+=2}function Wn(e){let s\##
+=d.charCodeAt(n.pos+=e);if(n.pos<d.length)while(s!==l.lineFeed&&s!==l.carriageReturn&&s!==l.lineSeparator&&s!==l.par\##
+agraphSeparator&&++n.pos<d.length)s=d.charCodeAt(n.pos)}function Vn(){while(n.pos<d.length){let e=d.charCodeAt(n.pos\##
+);switch(e){case l.carriageReturn:if(d.charCodeAt(n.pos+1)===l.lineFeed)++n.pos;case l.lineFeed:case l.lineSeparator\##
+:case l.paragraphSeparator:++n.pos;break;case l.slash:switch(d.charCodeAt(n.pos+1)){case l.asterisk:n.pos+=2,Pi();br\##
+eak;case l.slash:Wn(2);break;default:return}break;default:if(Mn[e])++n.pos;else return}}}function S(e,s=c.NONE){n.en\##
+d=n.pos,n.type=e,n.contextualKeyword=s}function Ri(){let e=d.charCodeAt(n.pos+1);if(e>=l.digit0&&e<=l.digit9){tr(!0)\##
+;return}if(e===l.dot&&d.charCodeAt(n.pos+2)===l.dot)n.pos+=3,S(t.ellipsis);else++n.pos,S(t.dot)}function vi(){if(d.c\##
+harCodeAt(n.pos+1)===l.equalsTo)D(t.assign,2);else D(t.slash,1)}function Li(e){let s=e===l.asterisk?t.star:t.modulo,\##
+r=1,o=d.charCodeAt(n.pos+1);if(e===l.asterisk&&o===l.asterisk)r++,o=d.charCodeAt(n.pos+2),s=t.exponent;if(o===l.equa\##
+lsTo&&d.charCodeAt(n.pos+2)!==l.greaterThan)r++,s=t.assign;D(s,r)}function Di(e){let s=d.charCodeAt(n.pos+1);if(s===\##
+e){if(d.charCodeAt(n.pos+2)===l.equalsTo)D(t.assign,3);else D(e===l.verticalBar?t.logicalOR:t.logicalAND,2);return}i\##
+f(e===l.verticalBar){if(s===l.greaterThan){D(t.pipeline,2);return}else if(s===l.rightCurlyBrace&&v){D(t.braceBarR,2)\##
+;return}}if(s===l.equalsTo){D(t.assign,2);return}D(e===l.verticalBar?t.bitwiseOR:t.bitwiseAND,1)}function Fi(){if(d.\##
+charCodeAt(n.pos+1)===l.equalsTo)D(t.assign,2);else D(t.bitwiseXOR,1)}function Oi(e){let s=d.charCodeAt(n.pos+1);if(\##
+s===e){D(t.preIncDec,2);return}if(s===l.equalsTo)D(t.assign,2);else if(e===l.plusSign)D(t.plus,1);else D(t.minus,1)}\##
+function Mi(){let e=d.charCodeAt(n.pos+1);if(e===l.lessThan){if(d.charCodeAt(n.pos+2)===l.equalsTo){D(t.assign,3);re\##
+turn}if(n.isType)D(t.lessThan,1);else D(t.bitShiftL,2);return}if(e===l.equalsTo)D(t.relationalOrEqual,2);else D(t.le\##
+ssThan,1)}function er(){if(n.isType){D(t.greaterThan,1);return}let e=d.charCodeAt(n.pos+1);if(e===l.greaterThan){let\##
+ s=d.charCodeAt(n.pos+2)===l.greaterThan?3:2;if(d.charCodeAt(n.pos+s)===l.equalsTo){D(t.assign,s+1);return}D(t.bitSh\##
+iftR,s);return}if(e===l.equalsTo)D(t.relationalOrEqual,2);else D(t.greaterThan,1)}function Ht(){if(n.type===t.greate\##
+rThan)n.pos-=1,er()}function Bi(e){let s=d.charCodeAt(n.pos+1);if(s===l.equalsTo){D(t.equality,d.charCodeAt(n.pos+2)\##
+===l.equalsTo?3:2);return}if(e===l.equalsTo&&s===l.greaterThan){n.pos+=2,S(t.arrow);return}D(e===l.equalsTo?t.eq:t.b\##
+ang,1)}function ji(){let e=d.charCodeAt(n.pos+1),s=d.charCodeAt(n.pos+2);if(e===l.questionMark&&!(v&&n.isType))if(s=\##
+==l.equalsTo)D(t.assign,3);else D(t.nullishCoalescing,2);else if(e===l.dot&&!(s>=l.digit0&&s<=l.digit9))n.pos+=2,S(t\##
+.questionDot);else++n.pos,S(t.question)}function Gn(e){switch(e){case l.numberSign:++n.pos,S(t.hash);return;case l.d\##
+ot:Ri();return;case l.leftParenthesis:++n.pos,S(t.parenL);return;case l.rightParenthesis:++n.pos,S(t.parenR);return;\##
+case l.semicolon:++n.pos,S(t.semi);return;case l.comma:++n.pos,S(t.comma);return;case l.leftSquareBracket:++n.pos,S(\##
+t.bracketL);return;case l.rightSquareBracket:++n.pos,S(t.bracketR);return;case l.leftCurlyBrace:if(v&&d.charCodeAt(n\##
+.pos+1)===l.verticalBar)D(t.braceBarL,2);else++n.pos,S(t.braceL);return;case l.rightCurlyBrace:++n.pos,S(t.braceR);r\##
+eturn;case l.colon:if(d.charCodeAt(n.pos+1)===l.colon)D(t.doubleColon,2);else++n.pos,S(t.colon);return;case l.questi\##
+onMark:ji();return;case l.atSign:++n.pos,S(t.at);return;case l.graveAccent:++n.pos,S(t.backQuote);return;case l.digi\##
+t0:{let s=d.charCodeAt(n.pos+1);if(s===l.lowercaseX||s===l.uppercaseX||s===l.lowercaseO||s===l.uppercaseO||s===l.low\##
+ercaseB||s===l.uppercaseB){$i();return}}case l.digit1:case l.digit2:case l.digit3:case l.digit4:case l.digit5:case l\##
+.digit6:case l.digit7:case l.digit8:case l.digit9:tr(!1);return;case l.quotationMark:case l.apostrophe:Hi(e);return;\##
+case l.slash:vi();return;case l.percentSign:case l.asterisk:Li(e);return;case l.verticalBar:case l.ampersand:Di(e);r\##
+eturn;case l.caret:Fi();return;case l.plusSign:case l.dash:Oi(e);return;case l.lessThan:Mi();return;case l.greaterTh\##
+an:er();return;case l.equalsTo:case l.exclamationMark:Bi(e);return;case l.tilde:D(t.tilde,1);return;default:break}w(\##
+`Unexpected character '${String.fromCharCode(e)}'`,n.pos)}function D(e,s){n.pos+=s,S(e)}function qi(){let e=n.pos,s=\##
+!1,r=!1;for(;;){if(n.pos>=d.length){w("Unterminated regular expression",e);return}let o=d.charCodeAt(n.pos);if(s)s=!\##
+1;else{if(o===l.leftSquareBracket)r=!0;else if(o===l.rightSquareBracket&&r)r=!1;else if(o===l.slash&&!r)break;s=o===\##
+l.backslash}++n.pos}++n.pos,Wi(),S(t.regexp)}function qn(){while(!0){let e=d.charCodeAt(n.pos);if(e>=l.digit0&&e<=l.\##
+digit9||e===l.underscore)n.pos++;else break}}function $i(){n.pos+=2;while(!0){let s=d.charCodeAt(n.pos);if(s>=l.digi\##
+t0&&s<=l.digit9||s>=l.lowercaseA&&s<=l.lowercaseF||s>=l.uppercaseA&&s<=l.uppercaseF||s===l.underscore)n.pos++;else b\##
+reak}if(d.charCodeAt(n.pos)===l.lowercaseN)++n.pos,S(t.bigint);else S(t.num)}function tr(e){let s=!1,r=!1;if(!e)qn()\##
+;let o=d.charCodeAt(n.pos);if(o===l.dot)++n.pos,qn(),o=d.charCodeAt(n.pos);if(o===l.uppercaseE||o===l.lowercaseE){if\##
+(o=d.charCodeAt(++n.pos),o===l.plusSign||o===l.dash)++n.pos;qn(),o=d.charCodeAt(n.pos)}if(o===l.lowercaseN)++n.pos,s\##
+=!0;else if(o===l.lowercaseM)++n.pos,r=!0;if(s){S(t.bigint);return}if(r){S(t.decimal);return}S(t.num)}function Hi(e)\##
+{n.pos++;for(;;){if(n.pos>=d.length){w("Unterminated string constant");return}let s=d.charCodeAt(n.pos);if(s===l.bac\##
+kslash)n.pos++;else if(s===e)break;n.pos++}n.pos++,S(t.string)}function Ui(){for(;;){if(n.pos>=d.length){w("Untermin\##
+ated template");return}let e=d.charCodeAt(n.pos);if(e===l.graveAccent||e===l.dollarSign&&d.charCodeAt(n.pos+1)===l.l\##
+eftCurlyBrace){if(n.pos===n.start&&i(t.template))if(e===l.dollarSign){n.pos+=2,S(t.dollarBraceL);return}else{++n.pos\##
+,S(t.backQuote);return}S(t.template);return}if(e===l.backslash)n.pos++;n.pos++}}function Wi(){while(n.pos<d.length){\##
+let e=d.charCodeAt(n.pos);if(ee[e])n.pos++;else if(e===l.backslash){if(n.pos+=2,d.charCodeAt(n.pos)===l.leftCurlyBra\##
+ce){while(n.pos<d.length&&d.charCodeAt(n.pos)!==l.rightCurlyBrace)n.pos++;n.pos++}}else break}}function ke(e,s=e.cur\##
+rentIndex()){let r=s+1;if(Ut(e,r)){let o=e.identifierNameAtIndex(s);return{isType:!1,leftName:o,rightName:o,endIndex\##
+:r}}if(r++,Ut(e,r))return{isType:!0,leftName:null,rightName:null,endIndex:r};if(r++,Ut(e,r))return{isType:!1,leftNam\##
+e:e.identifierNameAtIndex(s),rightName:e.identifierNameAtIndex(s+2),endIndex:r};if(r++,Ut(e,r))return{isType:!0,left\##
+Name:null,rightName:null,endIndex:r};throw Error(`Unexpected import/export specifier at ${s}`)}function Ut(e,s){let \##
+r=e.tokens[s];return r.type===t.braceR||r.type===t.comma}var sr=new Map([["quot",'"'],["amp","&"],["apos","'"],["lt"\##
+,"<"],["gt",">"],["nbsp","\u00a0"],["iexcl","\u00a1"],["cent","\u00a2"],["pound","\u00a3"],["curren","\u00a4"],["yen\##
+","\u00a5"],["brvbar","\u00a6"],["sect","\u00a7"],["uml","\u00a8"],["copy","\u00a9"],["ordf","\u00aa"],["laquo","\u0\##
+0ab"],["not","\u00ac"],["shy","\u00ad"],["reg","\u00ae"],["macr","\u00af"],["deg","\u00b0"],["plusmn","\u00b1"],["su\##
+p2","\u00b2"],["sup3","\u00b3"],["acute","\u00b4"],["micro","\u00b5"],["para","\u00b6"],["middot","\u00b7"],["cedil"\##
+,"\u00b8"],["sup1","\u00b9"],["ordm","\u00ba"],["raquo","\u00bb"],["frac14","\u00bc"],["frac12","\u00bd"],["frac34",\##
+"\u00be"],["iquest","\u00bf"],["Agrave","\u00c0"],["Aacute","\u00c1"],["Acirc","\u00c2"],["Atilde","\u00c3"],["Auml"\##
+,"\u00c4"],["Aring","\u00c5"],["AElig","\u00c6"],["Ccedil","\u00c7"],["Egrave","\u00c8"],["Eacute","\u00c9"],["Ecirc\##
+","\u00ca"],["Euml","\u00cb"],["Igrave","\u00cc"],["Iacute","\u00cd"],["Icirc","\u00ce"],["Iuml","\u00cf"],["ETH","\\##
+u00d0"],["Ntilde","\u00d1"],["Ograve","\u00d2"],["Oacute","\u00d3"],["Ocirc","\u00d4"],["Otilde","\u00d5"],["Ouml","\##
+\u00d6"],["times","\u00d7"],["Oslash","\u00d8"],["Ugrave","\u00d9"],["Uacute","\u00da"],["Ucirc","\u00db"],["Uuml","\##
+\u00dc"],["Yacute","\u00dd"],["THORN","\u00de"],["szlig","\u00df"],["agrave","\u00e0"],["aacute","\u00e1"],["acirc",\##
+"\u00e2"],["atilde","\u00e3"],["auml","\u00e4"],["aring","\u00e5"],["aelig","\u00e6"],["ccedil","\u00e7"],["egrave",\##
+"\u00e8"],["eacute","\u00e9"],["ecirc","\u00ea"],["euml","\u00eb"],["igrave","\u00ec"],["iacute","\u00ed"],["icirc",\##
+"\u00ee"],["iuml","\u00ef"],["eth","\u00f0"],["ntilde","\u00f1"],["ograve","\u00f2"],["oacute","\u00f3"],["ocirc","\\##
+u00f4"],["otilde","\u00f5"],["ouml","\u00f6"],["divide","\u00f7"],["oslash","\u00f8"],["ugrave","\u00f9"],["uacute",\##
+"\u00fa"],["ucirc","\u00fb"],["uuml","\u00fc"],["yacute","\u00fd"],["thorn","\u00fe"],["yuml","\u00ff"],["OElig","\u\##
+0152"],["oelig","\u0153"],["Scaron","\u0160"],["scaron","\u0161"],["Yuml","\u0178"],["fnof","\u0192"],["circ","\u02c\##
+6"],["tilde","\u02dc"],["Alpha","\u0391"],["Beta","\u0392"],["Gamma","\u0393"],["Delta","\u0394"],["Epsilon","\u0395\##
+"],["Zeta","\u0396"],["Eta","\u0397"],["Theta","\u0398"],["Iota","\u0399"],["Kappa","\u039a"],["Lambda","\u039b"],["\##
+Mu","\u039c"],["Nu","\u039d"],["Xi","\u039e"],["Omicron","\u039f"],["Pi","\u03a0"],["Rho","\u03a1"],["Sigma","\u03a3\##
+"],["Tau","\u03a4"],["Upsilon","\u03a5"],["Phi","\u03a6"],["Chi","\u03a7"],["Psi","\u03a8"],["Omega","\u03a9"],["alp\##
+ha","\u03b1"],["beta","\u03b2"],["gamma","\u03b3"],["delta","\u03b4"],["epsilon","\u03b5"],["zeta","\u03b6"],["eta",\##
+"\u03b7"],["theta","\u03b8"],["iota","\u03b9"],["kappa","\u03ba"],["lambda","\u03bb"],["mu","\u03bc"],["nu","\u03bd"\##
+],["xi","\u03be"],["omicron","\u03bf"],["pi","\u03c0"],["rho","\u03c1"],["sigmaf","\u03c2"],["sigma","\u03c3"],["tau\##
+","\u03c4"],["upsilon","\u03c5"],["phi","\u03c6"],["chi","\u03c7"],["psi","\u03c8"],["omega","\u03c9"],["thetasym","\##
+\u03d1"],["upsih","\u03d2"],["piv","\u03d6"],["ensp","\u2002"],["emsp","\u2003"],["thinsp","\u2009"],["zwnj","\u200c\##
+"],["zwj","\u200d"],["lrm","\u200e"],["rlm","\u200f"],["ndash","\u2013"],["mdash","\u2014"],["lsquo","\u2018"],["rsq\##
+uo","\u2019"],["sbquo","\u201a"],["ldquo","\u201c"],["rdquo","\u201d"],["bdquo","\u201e"],["dagger","\u2020"],["Dagg\##
+er","\u2021"],["bull","\u2022"],["hellip","\u2026"],["permil","\u2030"],["prime","\u2032"],["Prime","\u2033"],["lsaq\##
+uo","\u2039"],["rsaquo","\u203a"],["oline","\u203e"],["frasl","\u2044"],["euro","\u20ac"],["image","\u2111"],["weier\##
+p","\u2118"],["real","\u211c"],["trade","\u2122"],["alefsym","\u2135"],["larr","\u2190"],["uarr","\u2191"],["rarr","\##
+\u2192"],["darr","\u2193"],["harr","\u2194"],["crarr","\u21b5"],["lArr","\u21d0"],["uArr","\u21d1"],["rArr","\u21d2"\##
+],["dArr","\u21d3"],["hArr","\u21d4"],["forall","\u2200"],["part","\u2202"],["exist","\u2203"],["empty","\u2205"],["\##
+nabla","\u2207"],["isin","\u2208"],["notin","\u2209"],["ni","\u220b"],["prod","\u220f"],["sum","\u2211"],["minus","\\##
+u2212"],["lowast","\u2217"],["radic","\u221a"],["prop","\u221d"],["infin","\u221e"],["ang","\u2220"],["and","\u2227"\##
+],["or","\u2228"],["cap","\u2229"],["cup","\u222a"],["int","\u222b"],["there4","\u2234"],["sim","\u223c"],["cong","\\##
+u2245"],["asymp","\u2248"],["ne","\u2260"],["equiv","\u2261"],["le","\u2264"],["ge","\u2265"],["sub","\u2282"],["sup\##
+","\u2283"],["nsub","\u2284"],["sube","\u2286"],["supe","\u2287"],["oplus","\u2295"],["otimes","\u2297"],["perp","\u\##
+22a5"],["sdot","\u22c5"],["lceil","\u2308"],["rceil","\u2309"],["lfloor","\u230a"],["rfloor","\u230b"],["lang","\u23\##
+29"],["rang","\u232a"],["loz","\u25ca"],["spades","\u2660"],["clubs","\u2663"],["hearts","\u2665"],["diams","\u2666"\##
+]]);function mt(e){let[s,r]=nr(e.jsxPragma||"React.createElement"),[o,a]=nr(e.jsxFragmentPragma||"React.Fragment");r\##
+eturn{base:s,suffix:r,fragmentBase:o,fragmentSuffix:a}}function nr(e){let s=e.indexOf(".");if(s===-1)s=e.length;retu\##
+rn[e.slice(0,s),e.slice(s)]}class G{getPrefixCode(){return""}getHoistedCode(){return""}getSuffixCode(){return""}}cla\##
+ss Ie extends G{__init(){this.lastLineNumber=1}__init2(){this.lastIndex=0}__init3(){this.filenameVarName=null}__init\##
+4(){this.esmAutomaticImportNameResolutions={}}__init5(){this.cjsAutomaticModuleNameResolutions={}}constructor(e,s,r,\##
+o,a){super();this.rootTransformer=e,this.tokens=s,this.importProcessor=r,this.nameManager=o,this.options=a,Ie.protot\##
+ype.__init.call(this),Ie.prototype.__init2.call(this),Ie.prototype.__init3.call(this),Ie.prototype.__init4.call(this\##
+),Ie.prototype.__init5.call(this),this.jsxPragmaInfo=mt(a),this.isAutomaticRuntime=a.jsxRuntime==="automatic",this.j\##
+sxImportSource=a.jsxImportSource||"react"}process(){if(this.tokens.matches1(t.jsxTagStart))return this.processJSXTag\##
+(),!0;return!1}getPrefixCode(){let e="";if(this.filenameVarName)e+=`const ${this.filenameVarName} = ${JSON.stringify\##
+(this.options.filePath||"")};`;if(this.isAutomaticRuntime)if(this.importProcessor)for(let[s,r]of Object.entries(this\##
+.cjsAutomaticModuleNameResolutions))e+=`var ${r} = require("${s}");`;else{let{createElement:s,...r}=this.esmAutomati\##
+cImportNameResolutions;if(s)e+=`import {createElement as ${s}} from "${this.jsxImportSource}";`;let o=Object.entries\##
+(r).map(([a,u])=>`${a} as ${u}`).join(", ");if(o){let a=this.jsxImportSource+(this.options.production?"/jsx-runtime"\##
+:"/jsx-dev-runtime");e+=`import {${o}} from "${a}";`}}return e}processJSXTag(){let{jsxRole:e,start:s}=this.tokens.cu\##
+rrentToken(),r=this.options.production?null:this.getElementLocationCode(s);if(this.isAutomaticRuntime&&e!==oe.KeyAft\##
+erPropSpread)this.transformTagToJSXFunc(r,e);else this.transformTagToCreateElement(r)}getElementLocationCode(e){retu\##
+rn`lineNumber: ${this.getLineNumberForIndex(e)}`}getLineNumberForIndex(e){let s=this.tokens.code;while(this.lastInde\##
+x<e&&this.lastIndex<s.length){if(s[this.lastIndex]===`
+`)this.lastLineNumber++;this.lastIndex++}return this.lastLineNumber}transformTagToJSXFunc(e,s){let r=s===oe.StaticCh\##
+ildren;this.tokens.replaceToken(this.getJSXFuncInvocationCode(r));let o=null;if(this.tokens.matches1(t.jsxTagEnd))th\##
+is.tokens.replaceToken(`${this.getFragmentCode()}, {`),this.processAutomaticChildrenAndEndProps(s);else{if(this.proc\##
 essTagIntro(),this.tokens.appendCode(", {"),o=this.processProps(!0),this.tokens.matches2(t.slash,t.jsxTagEnd))this.t\##
 okens.appendCode("}");else if(this.tokens.matches1(t.jsxTagEnd))this.tokens.removeToken(),this.processAutomaticChild\##
-renAndEndProps(n);else throw Error("Expected either /> or > at the end of the tag.");if(o)this.tokens.appendCode(`, \##
-${o}`)}if(!this.options.production){if(o===null)this.tokens.appendCode(", void 0");this.tokens.appendCode(`, ${s}, $\##
+renAndEndProps(s);else throw Error("Expected either /> or > at the end of the tag.");if(o)this.tokens.appendCode(`, \##
+${o}`)}if(!this.options.production){if(o===null)this.tokens.appendCode(", void 0");this.tokens.appendCode(`, ${r}, $\##
 {this.getDevSource(e)}, this`)}this.tokens.removeInitialToken();while(!this.tokens.matches1(t.jsxTagEnd))this.tokens\##
 .removeToken();this.tokens.replaceToken(")")}transformTagToCreateElement(e){if(this.tokens.replaceToken(this.getCrea\##
 teElementInvocationCode()),this.tokens.matches1(t.jsxTagEnd))this.tokens.replaceToken(`${this.getFragmentCode()}, nu\##
@@ -737,156 +599,156 @@ v-runtime")}getCreateElementInvocationCode(){if(this.isAutomaticRuntime)return t
 eplacement(e.base)||e.base:e.base}${e.suffix}(`}}getFragmentCode(){if(this.isAutomaticRuntime)return this.claimAutoI\##
 mportedName("Fragment",this.options.production?"/jsx-runtime":"/jsx-dev-runtime");else{let{jsxPragmaInfo:e}=this;ret\##
 urn(this.importProcessor?this.importProcessor.getIdentifierReplacement(e.fragmentBase)||e.fragmentBase:e.fragmentBas\##
-e)+e.fragmentSuffix}}claimAutoImportedFuncInvocation(e,n){let s=this.claimAutoImportedName(e,n);if(this.importProces\##
-sor)return`${s}.call(void 0, `;else return`${s}(`}claimAutoImportedName(e,n){if(this.importProcessor){let s=this.jsx\##
-ImportSource+n;if(!this.cjsAutomaticModuleNameResolutions[s])this.cjsAutomaticModuleNameResolutions[s]=this.importPr\##
-ocessor.getFreeIdentifierForPath(s);return`${this.cjsAutomaticModuleNameResolutions[s]}.${e}`}else{if(!this.esmAutom\##
+e)+e.fragmentSuffix}}claimAutoImportedFuncInvocation(e,s){let r=this.claimAutoImportedName(e,s);if(this.importProces\##
+sor)return`${r}.call(void 0, `;else return`${r}(`}claimAutoImportedName(e,s){if(this.importProcessor){let r=this.jsx\##
+ImportSource+s;if(!this.cjsAutomaticModuleNameResolutions[r])this.cjsAutomaticModuleNameResolutions[r]=this.importPr\##
+ocessor.getFreeIdentifierForPath(r);return`${this.cjsAutomaticModuleNameResolutions[r]}.${e}`}else{if(!this.esmAutom\##
 aticImportNameResolutions[e])this.esmAutomaticImportNameResolutions[e]=this.nameManager.claimFreeName(`_${e}`);retur\##
 n this.esmAutomaticImportNameResolutions[e]}}processTagIntro(){let e=this.tokens.currentIndex()+1;while(this.tokens.\##
 tokens[e].isType||!this.tokens.matches2AtIndex(e-1,t.jsxName,t.jsxName)&&!this.tokens.matches2AtIndex(e-1,t.greaterT\##
 han,t.jsxName)&&!this.tokens.matches1AtIndex(e,t.braceL)&&!this.tokens.matches1AtIndex(e,t.jsxTagEnd)&&!this.tokens.\##
-matches2AtIndex(e,t.slash,t.jsxTagEnd))e++;if(e===this.tokens.currentIndex()+1){let n=this.tokens.identifierName();i\##
-f(lr(n))this.tokens.replaceToken(`'${n}'`)}while(this.tokens.currentIndex()<e)this.rootTransformer.processToken()}pr\##
-ocessPropsObjectWithDevInfo(e){let n=this.options.production?"":`__self: this, __source: ${this.getDevSource(e)}`;if\##
-(!this.tokens.matches1(t.jsxName)&&!this.tokens.matches1(t.braceL)){if(n)this.tokens.appendCode(`, {${n}}`);else thi\##
-s.tokens.appendCode(", null");return}if(this.tokens.appendCode(", {"),this.processProps(!1),n)this.tokens.appendCode\##
-(` ${n}}`);else this.tokens.appendCode("}")}processProps(e){let n=null;while(!0){if(this.tokens.matches2(t.jsxName,t\##
-.eq)){let s=this.tokens.identifierName();if(e&&s==="key"){if(n!==null)this.tokens.appendCode(n.replace(/[^\n]/g,""))\##
-;this.tokens.removeToken(),this.tokens.removeToken();let o=this.tokens.snapshot();this.processPropValue(),n=this.tok\##
-ens.dangerouslyGetAndRemoveCodeSinceSnapshot(o);continue}else this.processPropName(s),this.tokens.replaceToken(": ")\##
-,this.processPropValue()}else if(this.tokens.matches1(t.jsxName)){let s=this.tokens.identifierName();this.processPro\##
-pName(s),this.tokens.appendCode(": true")}else if(this.tokens.matches1(t.braceL))this.tokens.replaceToken(""),this.r\##
-ootTransformer.processBalancedCode(),this.tokens.replaceToken("");else break;this.tokens.appendCode(",")}return n}pr\##
+matches2AtIndex(e,t.slash,t.jsxTagEnd))e++;if(e===this.tokens.currentIndex()+1){let s=this.tokens.identifierName();i\##
+f(Xn(s))this.tokens.replaceToken(`'${s}'`)}while(this.tokens.currentIndex()<e)this.rootTransformer.processToken()}pr\##
+ocessPropsObjectWithDevInfo(e){let s=this.options.production?"":`__self: this, __source: ${this.getDevSource(e)}`;if\##
+(!this.tokens.matches1(t.jsxName)&&!this.tokens.matches1(t.braceL)){if(s)this.tokens.appendCode(`, {${s}}`);else thi\##
+s.tokens.appendCode(", null");return}if(this.tokens.appendCode(", {"),this.processProps(!1),s)this.tokens.appendCode\##
+(` ${s}}`);else this.tokens.appendCode("}")}processProps(e){let s=null;while(!0){if(this.tokens.matches2(t.jsxName,t\##
+.eq)){let r=this.tokens.identifierName();if(e&&r==="key"){if(s!==null)this.tokens.appendCode(s.replace(/[^\n]/g,""))\##
+;this.tokens.removeToken(),this.tokens.removeToken();let o=this.tokens.snapshot();this.processPropValue(),s=this.tok\##
+ens.dangerouslyGetAndRemoveCodeSinceSnapshot(o);continue}else this.processPropName(r),this.tokens.replaceToken(": ")\##
+,this.processPropValue()}else if(this.tokens.matches1(t.jsxName)){let r=this.tokens.identifierName();this.processPro\##
+pName(r),this.tokens.appendCode(": true")}else if(this.tokens.matches1(t.braceL))this.tokens.replaceToken(""),this.r\##
+ootTransformer.processBalancedCode(),this.tokens.replaceToken("");else break;this.tokens.appendCode(",")}return s}pr\##
 ocessPropName(e){if(e.includes("-"))this.tokens.replaceToken(`'${e}'`);else this.tokens.copyToken()}processPropValue\##
 (){if(this.tokens.matches1(t.braceL))this.tokens.replaceToken(""),this.rootTransformer.processBalancedCode(),this.to\##
 kens.replaceToken("");else if(this.tokens.matches1(t.jsxTagStart))this.processJSXTag();else this.processStringPropVa\##
-lue()}processStringPropValue(){let e=this.tokens.currentToken(),n=this.tokens.code.slice(e.start+1,e.end-1),s=vo(n),\##
-o=Ra(n);this.tokens.replaceToken(o+s)}processAutomaticChildrenAndEndProps(e){if(e===pe.StaticChildren)this.tokens.ap\##
-pendCode(" children: ["),this.processChildren(!1),this.tokens.appendCode("]}");else{if(e===pe.OneChild)this.tokens.a\##
-ppendCode(" children: ");this.processChildren(!1),this.tokens.appendCode("}")}}processChildren(e){let n=e;while(!0){\##
-if(this.tokens.matches2(t.jsxTagStart,t.slash))return;let s=!1;if(this.tokens.matches1(t.braceL))if(this.tokens.matc\##
-hes2(t.braceL,t.braceR))this.tokens.replaceToken(""),this.tokens.replaceToken("");else this.tokens.replaceToken(n?",\##
- ":""),this.rootTransformer.processBalancedCode(),this.tokens.replaceToken(""),s=!0;else if(this.tokens.matches1(t.j\##
-sxTagStart))this.tokens.appendCode(n?", ":""),this.processJSXTag(),s=!0;else if(this.tokens.matches1(t.jsxText)||thi\##
-s.tokens.matches1(t.jsxEmptyText))s=this.processChildTextElement(n);else throw Error("Unexpected token when processi\##
-ng JSX children.");if(s)n=!0}}processChildTextElement(e){let n=this.tokens.currentToken(),s=this.tokens.code.slice(n\##
-.start,n.end),o=vo(s),i=Na(s);if(i==='""')return this.tokens.replaceToken(o),!1;else return this.tokens.replaceToken\##
-(`${e?", ":""}${i}${o}`),!0}getDevSource(e){return`{fileName: ${this.getFilenameVarName()}, ${e}}`}getFilenameVarNam\##
+lue()}processStringPropValue(){let e=this.tokens.currentToken(),s=this.tokens.code.slice(e.start+1,e.end-1),r=rr(s),\##
+o=Gi(s);this.tokens.replaceToken(o+r)}processAutomaticChildrenAndEndProps(e){if(e===oe.StaticChildren)this.tokens.ap\##
+pendCode(" children: ["),this.processChildren(!1),this.tokens.appendCode("]}");else{if(e===oe.OneChild)this.tokens.a\##
+ppendCode(" children: ");this.processChildren(!1),this.tokens.appendCode("}")}}processChildren(e){let s=e;while(!0){\##
+if(this.tokens.matches2(t.jsxTagStart,t.slash))return;let r=!1;if(this.tokens.matches1(t.braceL))if(this.tokens.matc\##
+hes2(t.braceL,t.braceR))this.tokens.replaceToken(""),this.tokens.replaceToken("");else this.tokens.replaceToken(s?",\##
+ ":""),this.rootTransformer.processBalancedCode(),this.tokens.replaceToken(""),r=!0;else if(this.tokens.matches1(t.j\##
+sxTagStart))this.tokens.appendCode(s?", ":""),this.processJSXTag(),r=!0;else if(this.tokens.matches1(t.jsxText)||thi\##
+s.tokens.matches1(t.jsxEmptyText))r=this.processChildTextElement(s);else throw Error("Unexpected token when processi\##
+ng JSX children.");if(r)s=!0}}processChildTextElement(e){let s=this.tokens.currentToken(),r=this.tokens.code.slice(s\##
+.start,s.end),o=rr(r),a=Vi(r);if(a==='""')return this.tokens.replaceToken(o),!1;else return this.tokens.replaceToken\##
+(`${e?", ":""}${a}${o}`),!0}getDevSource(e){return`{fileName: ${this.getFilenameVarName()}, ${e}}`}getFilenameVarNam\##
 e(){if(!this.filenameVarName)this.filenameVarName=this.nameManager.claimFreeName("_jsxFileName");return this.filenam\##
-eVarName}}function lr(e){let n=e.charCodeAt(0);return n>=u.lowercaseA&&n<=u.lowercaseZ}function Na(e){let n="",s="",\##
-o=!1,i=!1;for(let l=0;l<e.length;l++){let p=e[l];if(p===" "||p==="\t"||p==="\r"){if(!o)s+=p}else if(p===`
-`)s="",o=!0;else{if(i&&o)n+=" ";if(n+=s,s="",p==="&"){let{entity:d,newI:k}=Co(e,l+1);l=k-1,n+=d}else n+=p;i=!0,o=!1}\##
-}if(!o)n+=s;return JSON.stringify(n)}function vo(e){let n=0,s=0;for(let o of e)if(o===`
-`)n++,s=0;else if(o===" ")s++;return`
-`.repeat(n)+" ".repeat(s)}function Ra(e){let n="";for(let s=0;s<e.length;s++){let o=e[s];if(o===`
-`)if(/\s/.test(e[s+1])){n+=" ";while(s<e.length&&/\s/.test(e[s+1]))s++}else n+=`
-`;else if(o==="&"){let{entity:i,newI:l}=Co(e,s+1);n+=i,s=l-1}else n+=o}return JSON.stringify(n)}function Co(e,n){let\##
- s="",o=0,i,l=n;if(e[l]==="#"){let p=10;l++;let d;if(e[l]==="x"){p=16,l++,d=l;while(l<e.length&&Da(e.charCodeAt(l)))\##
-l++}else{d=l;while(l<e.length&&La(e.charCodeAt(l)))l++}if(e[l]===";"){let k=e.slice(d,l);if(k)l++,i=String.fromCodeP\##
-oint(parseInt(k,p))}}else while(l<e.length&&o++<10){let p=e[l];if(l++,p===";"){i=Eo.get(s);break}s+=p}if(!i)return{e\##
-ntity:"&",newI:n};return{entity:i,newI:l}}function La(e){return e>=u.digit0&&e<=u.digit9}function Da(e){return e>=u.\##
-digit0&&e<=u.digit9||e>=u.lowercaseA&&e<=u.lowercaseF||e>=u.uppercaseA&&e<=u.uppercaseF}function rn(e,n){let s=St(n)\##
-,o=new Set;for(let i=0;i<e.tokens.length;i++){let l=e.tokens[i];if(l.type===t.name&&!l.isType&&(l.identifierRole===I\##
-.Access||l.identifierRole===I.ObjectShorthand||l.identifierRole===I.ExportAccess)&&!l.shadowsGlobal)o.add(e.identifi\##
-erNameForToken(l));if(l.type===t.jsxTagStart)o.add(s.base);if(l.type===t.jsxTagStart&&i+1<e.tokens.length&&e.tokens[\##
-i+1].type===t.jsxTagEnd)o.add(s.base),o.add(s.fragmentBase);if(l.type===t.jsxName&&l.identifierRole===I.Access){let \##
-p=e.identifierNameForToken(l);if(!lr(p)||e.tokens[i+1].type===t.dot)o.add(e.identifierNameForToken(l))}}return o}cla\##
-ss Ce{__init(){this.nonTypeIdentifiers=new Set}__init2(){this.importInfoByPath=new Map}__init3(){this.importsToRepla\##
+eVarName}}function Xn(e){let s=e.charCodeAt(0);return s>=l.lowercaseA&&s<=l.lowercaseZ}function Vi(e){let s="",r="",\##
+o=!1,a=!1;for(let u=0;u<e.length;u++){let m=e[u];if(m===" "||m==="\t"||m==="\r"){if(!o)r+=m}else if(m===`
+`)r="",o=!0;else{if(a&&o)s+=" ";if(s+=r,r="",m==="&"){let{entity:x,newI:k}=or(e,u+1);u=k-1,s+=x}else s+=m;a=!0,o=!1}\##
+}if(!o)s+=r;return JSON.stringify(s)}function rr(e){let s=0,r=0;for(let o of e)if(o===`
+`)s++,r=0;else if(o===" ")r++;return`
+`.repeat(s)+" ".repeat(r)}function Gi(e){let s="";for(let r=0;r<e.length;r++){let o=e[r];if(o===`
+`)if(/\s/.test(e[r+1])){s+=" ";while(r<e.length&&/\s/.test(e[r+1]))r++}else s+=`
+`;else if(o==="&"){let{entity:a,newI:u}=or(e,r+1);s+=a,r=u-1}else s+=o}return JSON.stringify(s)}function or(e,s){let\##
+ r="",o=0,a,u=s;if(e[u]==="#"){let m=10;u++;let x;if(e[u]==="x"){m=16,u++,x=u;while(u<e.length&&Ji(e.charCodeAt(u)))\##
+u++}else{x=u;while(u<e.length&&Xi(e.charCodeAt(u)))u++}if(e[u]===";"){let k=e.slice(x,u);if(k)u++,a=String.fromCodeP\##
+oint(parseInt(k,m))}}else while(u<e.length&&o++<10){let m=e[u];if(u++,m===";"){a=sr.get(r);break}r+=m}if(!a)return{e\##
+ntity:"&",newI:s};return{entity:a,newI:u}}function Xi(e){return e>=l.digit0&&e<=l.digit9}function Ji(e){return e>=l.\##
+digit0&&e<=l.digit9||e>=l.lowercaseA&&e<=l.lowercaseF||e>=l.uppercaseA&&e<=l.uppercaseF}function Wt(e,s){let r=mt(s)\##
+,o=new Set;for(let a=0;a<e.tokens.length;a++){let u=e.tokens[a];if(u.type===t.name&&!u.isType&&(u.identifierRole===_\##
+.Access||u.identifierRole===_.ObjectShorthand||u.identifierRole===_.ExportAccess)&&!u.shadowsGlobal)o.add(e.identifi\##
+erNameForToken(u));if(u.type===t.jsxTagStart)o.add(r.base);if(u.type===t.jsxTagStart&&a+1<e.tokens.length&&e.tokens[\##
+a+1].type===t.jsxTagEnd)o.add(r.base),o.add(r.fragmentBase);if(u.type===t.jsxName&&u.identifierRole===_.Access){let \##
+m=e.identifierNameForToken(u);if(!Xn(m)||e.tokens[a+1].type===t.dot)o.add(e.identifierNameForToken(u))}}return o}cla\##
+ss ye{__init(){this.nonTypeIdentifiers=new Set}__init2(){this.importInfoByPath=new Map}__init3(){this.importsToRepla\##
 ce=new Map}__init4(){this.identifierReplacements=new Map}__init5(){this.exportBindingsByLocalName=new Map}constructo\##
-r(e,n,s,o,i,l,p){this.nameManager=e,this.tokens=n,this.enableLegacyTypeScriptModuleInterop=s,this.options=o,this.isT\##
-ypeScriptTransformEnabled=i,this.keepUnusedImports=l,this.helperManager=p,Ce.prototype.__init.call(this),Ce.prototyp\##
-e.__init2.call(this),Ce.prototype.__init3.call(this),Ce.prototype.__init4.call(this),Ce.prototype.__init5.call(this)\##
+r(e,s,r,o,a,u,m){this.nameManager=e,this.tokens=s,this.enableLegacyTypeScriptModuleInterop=r,this.options=o,this.isT\##
+ypeScriptTransformEnabled=a,this.keepUnusedImports=u,this.helperManager=m,ye.prototype.__init.call(this),ye.prototyp\##
+e.__init2.call(this),ye.prototype.__init3.call(this),ye.prototype.__init4.call(this),ye.prototype.__init5.call(this)\##
 }preprocessTokens(){for(let e=0;e<this.tokens.tokens.length;e++){if(this.tokens.matches1AtIndex(e,t._import)&&!this.\##
 tokens.matches3AtIndex(e,t._import,t.name,t.eq))this.preprocessImportAtIndex(e);if(this.tokens.matches1AtIndex(e,t._\##
 export)&&!this.tokens.matches2AtIndex(e,t._export,t.eq))this.preprocessExportAtIndex(e)}this.generateImportReplaceme\##
-nts()}pruneTypeOnlyImports(){this.nonTypeIdentifiers=rn(this.tokens,this.options);for(let[e,n]of this.importInfoByPa\##
-th.entries()){if(n.hasBareImport||n.hasStarExport||n.exportStarNames.length>0||n.namedExports.length>0)continue;if([\##
-...n.defaultNames,...n.wildcardNames,...n.namedImports.map(({localName:o})=>o)].every((o)=>this.shouldAutomaticallyE\##
+nts()}pruneTypeOnlyImports(){this.nonTypeIdentifiers=Wt(this.tokens,this.options);for(let[e,s]of this.importInfoByPa\##
+th.entries()){if(s.hasBareImport||s.hasStarExport||s.exportStarNames.length>0||s.namedExports.length>0)continue;if([\##
+...s.defaultNames,...s.wildcardNames,...s.namedImports.map(({localName:o})=>o)].every((o)=>this.shouldAutomaticallyE\##
 lideImportedName(o)))this.importsToReplace.set(e,"")}}shouldAutomaticallyElideImportedName(e){return this.isTypeScri\##
 ptTransformEnabled&&!this.keepUnusedImports&&!this.nonTypeIdentifiers.has(e)}generateImportReplacements(){for(let[e,\##
-n]of this.importInfoByPath.entries()){let{defaultNames:s,wildcardNames:o,namedImports:i,namedExports:l,exportStarNam\##
-es:p,hasStarExport:d}=n;if(s.length===0&&o.length===0&&i.length===0&&l.length===0&&p.length===0&&!d){this.importsToR\##
-eplace.set(e,`require('${e}');`);continue}let k=this.getFreeIdentifierForPath(e),g;if(this.enableLegacyTypeScriptMod\##
-uleInterop)g=k;else g=o.length>0?o[0]:this.getFreeIdentifierForPath(e);let _=`var ${k} = require('${e}');`;if(o.leng\##
-th>0)for(let w of o){let E=this.enableLegacyTypeScriptModuleInterop?k:`${this.helperManager.getHelperName("interopRe\##
-quireWildcard")}(${k})`;_+=` var ${w} = ${E};`}else if(p.length>0&&g!==k)_+=` var ${g} = ${this.helperManager.getHel\##
-perName("interopRequireWildcard")}(${k});`;else if(s.length>0&&g!==k)_+=` var ${g} = ${this.helperManager.getHelperN\##
-ame("interopRequireDefault")}(${k});`;for(let{importedName:w,localName:E}of l)_+=` ${this.helperManager.getHelperNam\##
-e("createNamedExportFrom")}(${k}, '${E}', '${w}');`;for(let w of p)_+=` exports.${w} = ${g};`;if(d)_+=` ${this.helpe\##
-rManager.getHelperName("createStarExport")}(${k});`;this.importsToReplace.set(e,_);for(let w of s)this.identifierRep\##
-lacements.set(w,`${g}.default`);for(let{importedName:w,localName:E}of i)this.identifierReplacements.set(E,`${k}.${w}\##
-`)}}getFreeIdentifierForPath(e){let n=e.split("/"),o=n[n.length-1].replace(/\W/g,"");return this.nameManager.claimFr\##
-eeName(`_${o}`)}preprocessImportAtIndex(e){let n=[],s=[],o=[];if(e++,(this.tokens.matchesContextualAtIndex(e,c._type\##
+s]of this.importInfoByPath.entries()){let{defaultNames:r,wildcardNames:o,namedImports:a,namedExports:u,exportStarNam\##
+es:m,hasStarExport:x}=s;if(r.length===0&&o.length===0&&a.length===0&&u.length===0&&m.length===0&&!x){this.importsToR\##
+eplace.set(e,`require('${e}');`);continue}let k=this.getFreeIdentifierForPath(e),T;if(this.enableLegacyTypeScriptMod\##
+uleInterop)T=k;else T=o.length>0?o[0]:this.getFreeIdentifierForPath(e);let y=`var ${k} = require('${e}');`;if(o.leng\##
+th>0)for(let C of o){let L=this.enableLegacyTypeScriptModuleInterop?k:`${this.helperManager.getHelperName("interopRe\##
+quireWildcard")}(${k})`;y+=` var ${C} = ${L};`}else if(m.length>0&&T!==k)y+=` var ${T} = ${this.helperManager.getHel\##
+perName("interopRequireWildcard")}(${k});`;else if(r.length>0&&T!==k)y+=` var ${T} = ${this.helperManager.getHelperN\##
+ame("interopRequireDefault")}(${k});`;for(let{importedName:C,localName:L}of u)y+=` ${this.helperManager.getHelperNam\##
+e("createNamedExportFrom")}(${k}, '${L}', '${C}');`;for(let C of m)y+=` exports.${C} = ${T};`;if(x)y+=` ${this.helpe\##
+rManager.getHelperName("createStarExport")}(${k});`;this.importsToReplace.set(e,y);for(let C of r)this.identifierRep\##
+lacements.set(C,`${T}.default`);for(let{importedName:C,localName:L}of a)this.identifierReplacements.set(L,`${k}.${C}\##
+`)}}getFreeIdentifierForPath(e){let s=e.split("/"),o=s[s.length-1].replace(/\W/g,"");return this.nameManager.claimFr\##
+eeName(`_${o}`)}preprocessImportAtIndex(e){let s=[],r=[],o=[];if(e++,(this.tokens.matchesContextualAtIndex(e,c._type\##
 )||this.tokens.matches1AtIndex(e,t._typeof))&&!this.tokens.matches1AtIndex(e+1,t.comma)&&!this.tokens.matchesContext\##
 ualAtIndex(e+1,c._from))return;if(this.tokens.matches1AtIndex(e,t.parenL))return;if(this.tokens.matches1AtIndex(e,t.\##
-name)){if(n.push(this.tokens.identifierNameAtIndex(e)),e++,this.tokens.matches1AtIndex(e,t.comma))e++}if(this.tokens\##
-.matches1AtIndex(e,t.star))e+=2,s.push(this.tokens.identifierNameAtIndex(e)),e++;if(this.tokens.matches1AtIndex(e,t.\##
-braceL)){let p=this.getNamedImports(e+1);e=p.newIndex;for(let d of p.namedImports)if(d.importedName==="default")n.pu\##
-sh(d.localName);else o.push(d)}if(this.tokens.matchesContextualAtIndex(e,c._from))e++;if(!this.tokens.matches1AtInde\##
-x(e,t.string))throw Error("Expected string token at the end of import statement.");let i=this.tokens.stringValueAtIn\##
-dex(e),l=this.getImportInfo(i);if(l.defaultNames.push(...n),l.wildcardNames.push(...s),l.namedImports.push(...o),n.l\##
-ength===0&&s.length===0&&o.length===0)l.hasBareImport=!0}preprocessExportAtIndex(e){if(this.tokens.matches2AtIndex(e\##
+name)){if(s.push(this.tokens.identifierNameAtIndex(e)),e++,this.tokens.matches1AtIndex(e,t.comma))e++}if(this.tokens\##
+.matches1AtIndex(e,t.star))e+=2,r.push(this.tokens.identifierNameAtIndex(e)),e++;if(this.tokens.matches1AtIndex(e,t.\##
+braceL)){let m=this.getNamedImports(e+1);e=m.newIndex;for(let x of m.namedImports)if(x.importedName==="default")s.pu\##
+sh(x.localName);else o.push(x)}if(this.tokens.matchesContextualAtIndex(e,c._from))e++;if(!this.tokens.matches1AtInde\##
+x(e,t.string))throw Error("Expected string token at the end of import statement.");let a=this.tokens.stringValueAtIn\##
+dex(e),u=this.getImportInfo(a);if(u.defaultNames.push(...s),u.wildcardNames.push(...r),u.namedImports.push(...o),s.l\##
+ength===0&&r.length===0&&o.length===0)u.hasBareImport=!0}preprocessExportAtIndex(e){if(this.tokens.matches2AtIndex(e\##
 ,t._export,t._var)||this.tokens.matches2AtIndex(e,t._export,t._let)||this.tokens.matches2AtIndex(e,t._export,t._cons\##
 t))this.preprocessVarExportAtIndex(e);else if(this.tokens.matches2AtIndex(e,t._export,t._function)||this.tokens.matc\##
-hes2AtIndex(e,t._export,t._class)){let n=this.tokens.identifierNameAtIndex(e+2);this.addExportBinding(n,n)}else if(t\##
-his.tokens.matches3AtIndex(e,t._export,t.name,t._function)){let n=this.tokens.identifierNameAtIndex(e+3);this.addExp\##
-ortBinding(n,n)}else if(this.tokens.matches2AtIndex(e,t._export,t.braceL))this.preprocessNamedExportAtIndex(e);else \##
+hes2AtIndex(e,t._export,t._class)){let s=this.tokens.identifierNameAtIndex(e+2);this.addExportBinding(s,s)}else if(t\##
+his.tokens.matches3AtIndex(e,t._export,t.name,t._function)){let s=this.tokens.identifierNameAtIndex(e+3);this.addExp\##
+ortBinding(s,s)}else if(this.tokens.matches2AtIndex(e,t._export,t.braceL))this.preprocessNamedExportAtIndex(e);else \##
 if(this.tokens.matches2AtIndex(e,t._export,t.star))this.preprocessExportStarAtIndex(e)}preprocessVarExportAtIndex(e)\##
-{let n=0;for(let s=e+2;;s++)if(this.tokens.matches1AtIndex(s,t.braceL)||this.tokens.matches1AtIndex(s,t.dollarBraceL\##
-)||this.tokens.matches1AtIndex(s,t.bracketL))n++;else if(this.tokens.matches1AtIndex(s,t.braceR)||this.tokens.matche\##
-s1AtIndex(s,t.bracketR))n--;else if(n===0&&!this.tokens.matches1AtIndex(s,t.name))break;else if(this.tokens.matches1\##
+{let s=0;for(let r=e+2;;r++)if(this.tokens.matches1AtIndex(r,t.braceL)||this.tokens.matches1AtIndex(r,t.dollarBraceL\##
+)||this.tokens.matches1AtIndex(r,t.bracketL))s++;else if(this.tokens.matches1AtIndex(r,t.braceR)||this.tokens.matche\##
+s1AtIndex(r,t.bracketR))s--;else if(s===0&&!this.tokens.matches1AtIndex(r,t.name))break;else if(this.tokens.matches1\##
 AtIndex(1,t.eq)){let o=this.tokens.currentToken().rhsEndIndex;if(o==null)throw Error("Expected = token with an end i\##
-ndex.");s=o-1}else{let o=this.tokens.tokens[s];if(Zt(o)){let i=this.tokens.identifierNameAtIndex(s);this.identifierR\##
-eplacements.set(i,`exports.${i}`)}}}preprocessNamedExportAtIndex(e){e+=2;let{newIndex:n,namedImports:s}=this.getName\##
-dImports(e);if(e=n,this.tokens.matchesContextualAtIndex(e,c._from))e++;else{for(let{importedName:l,localName:p}of s)\##
-this.addExportBinding(l,p);return}if(!this.tokens.matches1AtIndex(e,t.string))throw Error("Expected string token at \##
-the end of import statement.");let o=this.tokens.stringValueAtIndex(e);this.getImportInfo(o).namedExports.push(...s)\##
-}preprocessExportStarAtIndex(e){let n=null;if(this.tokens.matches3AtIndex(e,t._export,t.star,t._as))e+=3,n=this.toke\##
+ndex.");r=o-1}else{let o=this.tokens.tokens[r];if(jt(o)){let a=this.tokens.identifierNameAtIndex(r);this.identifierR\##
+eplacements.set(a,`exports.${a}`)}}}preprocessNamedExportAtIndex(e){e+=2;let{newIndex:s,namedImports:r}=this.getName\##
+dImports(e);if(e=s,this.tokens.matchesContextualAtIndex(e,c._from))e++;else{for(let{importedName:u,localName:m}of r)\##
+this.addExportBinding(u,m);return}if(!this.tokens.matches1AtIndex(e,t.string))throw Error("Expected string token at \##
+the end of import statement.");let o=this.tokens.stringValueAtIndex(e);this.getImportInfo(o).namedExports.push(...r)\##
+}preprocessExportStarAtIndex(e){let s=null;if(this.tokens.matches3AtIndex(e,t._export,t.star,t._as))e+=3,s=this.toke\##
 ns.identifierNameAtIndex(e),e+=2;else e+=3;if(!this.tokens.matches1AtIndex(e,t.string))throw Error("Expected string \##
-token at the end of star export statement.");let s=this.tokens.stringValueAtIndex(e),o=this.getImportInfo(s);if(n!==\##
-null)o.exportStarNames.push(n);else o.hasStarExport=!0}getNamedImports(e){let n=[];while(!0){if(this.tokens.matches1\##
-AtIndex(e,t.braceR)){e++;break}let s=be(this.tokens,e);if(e=s.endIndex,!s.isType)n.push({importedName:s.leftName,loc\##
-alName:s.rightName});if(this.tokens.matches2AtIndex(e,t.comma,t.braceR)){e+=2;break}else if(this.tokens.matches1AtIn\##
+token at the end of star export statement.");let r=this.tokens.stringValueAtIndex(e),o=this.getImportInfo(r);if(s!==\##
+null)o.exportStarNames.push(s);else o.hasStarExport=!0}getNamedImports(e){let s=[];while(!0){if(this.tokens.matches1\##
+AtIndex(e,t.braceR)){e++;break}let r=ke(this.tokens,e);if(e=r.endIndex,!r.isType)s.push({importedName:r.leftName,loc\##
+alName:r.rightName});if(this.tokens.matches2AtIndex(e,t.comma,t.braceR)){e+=2;break}else if(this.tokens.matches1AtIn\##
 dex(e,t.braceR)){e++;break}else if(this.tokens.matches1AtIndex(e,t.comma))e++;else throw Error(`Unexpected token: ${\##
-JSON.stringify(this.tokens.tokens[e])}`)}return{newIndex:e,namedImports:n}}getImportInfo(e){let n=this.importInfoByP\##
-ath.get(e);if(n)return n;let s={defaultNames:[],wildcardNames:[],namedImports:[],namedExports:[],hasBareImport:!1,ex\##
-portStarNames:[],hasStarExport:!1};return this.importInfoByPath.set(e,s),s}addExportBinding(e,n){if(!this.exportBind\##
-ingsByLocalName.has(e))this.exportBindingsByLocalName.set(e,[]);this.exportBindingsByLocalName.get(e).push(n)}claimI\##
-mportCode(e){let n=this.importsToReplace.get(e);return this.importsToReplace.set(e,""),n||""}getIdentifierReplacemen\##
-t(e){return this.identifierReplacements.get(e)||null}resolveExportBinding(e){let n=this.exportBindingsByLocalName.ge\##
-t(e);if(!n||n.length===0)return null;return n.map((s)=>`exports.${s}`).join(" = ")}getGlobalNames(){return new Set([\##
-...this.identifierReplacements.keys(),...this.exportBindingsByLocalName.keys()])}}var Oa=44,Fa=59,Po="ABCDEFGHIJKLMN\##
-OPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",Lo=new Uint8Array(64),Ma=new Uint8Array(128);for(let e=0;e<Po.le\##
-ngth;e++){let n=Po.charCodeAt(e);Lo[e]=n,Ma[n]=e}function Et(e,n){do{let s=n&31;if(n>>>=5,n>0)s|=32;e.write(Lo[s])}w\##
-hile(n>0)}function At(e){return e<0?-e<<1|1:e<<1}var No=16384,Ro=typeof TextDecoder<"u"?new TextDecoder:typeof Buffe\##
-r<"u"?{decode(e){return Buffer.from(e.buffer,e.byteOffset,e.byteLength).toString()}}:{decode(e){let n="";for(let s=0\##
-;s<e.length;s++)n+=String.fromCharCode(e[s]);return n}},ja=class{constructor(){this.pos=0,this.out="",this.buffer=ne\##
-w Uint8Array(No)}write(e){let{buffer:n}=this;if(n[this.pos++]=e,this.pos===No)this.out+=Ro.decode(n),this.pos=0}flus\##
-h(){let{buffer:e,out:n,pos:s}=this;return s>0?n+Ro.decode(e.subarray(0,s)):n}};function ur(e){let n=new ja,s=0,o=0,i\##
-=0,l=0;for(let p=0;p<e.length;p++){let d=e[p];if(p>0)n.write(Fa);if(d.length===0)continue;let k=0;for(let g=0;g<d.le\##
-ngth;g++){let _=d[g];if(g>0)n.write(Oa);if(Et(n,At(_[0]-k)),k=_[0],_.length===1)continue;if(Et(n,At(_[1]-s)),Et(n,At\##
-(_[2]-o)),Et(n,At(_[3]-i)),s=_[1],o=_[2],i=_[3],_.length===4)continue;Et(n,At(_[4]-l)),l=_[4]}}return n.flush()}var \##
-Ba=Yt(Do(),1);var hr=class{constructor(){this._indexes={__proto__:null},this.array=[]}};function jo(e){return e}func\##
-tion qa(e,n){return jo(e)._indexes[n]}function Oo(e,n){let s=qa(e,n);if(s!==void 0)return s;let{array:o,_indexes:i}=\##
-jo(e),l=o.push(n);return i[n]=l-1}var $a=0,Ua=1,Ha=2,Va=3,Wa=4,Bo=-1,qo=class{constructor({file:e,sourceRoot:n}={}){\##
-this._names=new hr,this._sources=new hr,this._sourcesContent=[],this._mappings=[],this.file=e,this.sourceRoot=n,this\##
-._ignoreList=new hr}};function $o(e){return e}var on=(e,n,s,o,i,l,p,d)=>Xa(!0,e,n,s,o,i,l,p,d);function Ga(e){let{_m\##
-appings:n,_sources:s,_sourcesContent:o,_names:i,_ignoreList:l}=$o(e);return Ka(n),{version:3,file:e.file||void 0,nam\##
-es:i.array,sourceRoot:e.sourceRoot||void 0,sources:s.array,sourcesContent:o,mappings:n,ignoreList:l.array}}function \##
-Uo(e){let n=Ga(e);return Object.assign({},n,{mappings:ur(n.mappings)})}function Xa(e,n,s,o,i,l,p,d,k){let{_mappings:\##
-g,_sources:_,_sourcesContent:w,_names:E}=$o(n),D=Ja(g,s),M=za(D,o);if(!i){if(e&&Ya(D,M))return;return Mo(D,M,[o])}Fo\##
-(l),Fo(p);let H=Oo(_,i),b=d?Oo(E,d):Bo;if(H===w.length)w[H]=k!=null?k:null;if(e&&Qa(D,M,H,l,p,b))return;return Mo(D,\##
-M,d?[o,H,l,p,b]:[o,H,l,p])}function Fo(e){}function Ja(e,n){for(let s=e.length;s<=n;s++)e[s]=[];return e[n]}function\##
- za(e,n){let s=e.length;for(let o=s-1;o>=0;s=o--){let i=e[o];if(n>=i[$a])break}return s}function Mo(e,n,s){for(let o\##
-=e.length;o>n;o--)e[o]=e[o-1];e[n]=s}function Ka(e){let{length:n}=e,s=n;for(let o=s-1;o>=0;s=o,o--)if(e[o].length>0)\##
-break;if(s<n)e.length=s}function Ya(e,n){if(n===0)return!0;return e[n-1].length===1}function Qa(e,n,s,o,i,l){if(n===\##
-0)return!1;let p=e[n-1];if(p.length===1)return!1;return s===p[Ua]&&o===p[Ha]&&i===p[Va]&&l===(p.length===5?p[Wa]:Bo)\##
-}function mr({code:e,mappings:n},s,o,i,l){let p=Za(i,l),d=new qo({file:o.compiledFilename}),k=0,g=n[0];while(g===voi\##
-d 0&&k<n.length-1)k++,g=n[k];let _=0,w=0;if(g!==w)on(d,_,0,s,_,0);for(let H=0;H<e.length;H++){if(H===g){let b=g-w,N=\##
-p[k];on(d,_,b,s,_,N);while((g===H||g===void 0)&&k<n.length-1)k++,g=n[k]}if(e.charCodeAt(H)===u.lineFeed){if(_++,w=H+\##
-1,g!==w)on(d,_,0,s,_,0)}}let{sourceRoot:E,sourcesContent:D,...M}=Uo(d);return M}function Za(e,n){let s=Array(n.lengt\##
-h),o=0,i=n[o].start,l=0;for(let p=0;p<e.length;p++){if(p===i)s[o]=i-l,o++,i=n[o].start;if(e.charCodeAt(p)===u.lineFe\##
-ed)l=p+1}return s}var ec={require:`
+JSON.stringify(this.tokens.tokens[e])}`)}return{newIndex:e,namedImports:s}}getImportInfo(e){let s=this.importInfoByP\##
+ath.get(e);if(s)return s;let r={defaultNames:[],wildcardNames:[],namedImports:[],namedExports:[],hasBareImport:!1,ex\##
+portStarNames:[],hasStarExport:!1};return this.importInfoByPath.set(e,r),r}addExportBinding(e,s){if(!this.exportBind\##
+ingsByLocalName.has(e))this.exportBindingsByLocalName.set(e,[]);this.exportBindingsByLocalName.get(e).push(s)}claimI\##
+mportCode(e){let s=this.importsToReplace.get(e);return this.importsToReplace.set(e,""),s||""}getIdentifierReplacemen\##
+t(e){return this.identifierReplacements.get(e)||null}resolveExportBinding(e){let s=this.exportBindingsByLocalName.ge\##
+t(e);if(!s||s.length===0)return null;return s.map((r)=>`exports.${r}`).join(" = ")}getGlobalNames(){return new Set([\##
+...this.identifierReplacements.keys(),...this.exportBindingsByLocalName.keys()])}}var zi=44,Ki=59,ir="ABCDEFGHIJKLMN\##
+OPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",lr=new Uint8Array(64),Yi=new Uint8Array(128);for(let e=0;e<ir.le\##
+ngth;e++){let s=ir.charCodeAt(e);lr[e]=s,Yi[s]=e}function dt(e,s){do{let r=s&31;if(s>>>=5,s>0)r|=32;e.write(lr[r])}w\##
+hile(s>0)}function kt(e){return e<0?-e<<1|1:e<<1}var ar=16384,cr=typeof TextDecoder<"u"?new TextDecoder:typeof Buffe\##
+r<"u"?{decode(e){return Buffer.from(e.buffer,e.byteOffset,e.byteLength).toString()}}:{decode(e){let s="";for(let r=0\##
+;r<e.length;r++)s+=String.fromCharCode(e[r]);return s}},Qi=class{constructor(){this.pos=0,this.out="",this.buffer=ne\##
+w Uint8Array(ar)}write(e){let{buffer:s}=this;if(s[this.pos++]=e,this.pos===ar)this.out+=cr.decode(s),this.pos=0}flus\##
+h(){let{buffer:e,out:s,pos:r}=this;return r>0?s+cr.decode(e.subarray(0,r)):s}};function Jn(e){let s=new Qi,r=0,o=0,a\##
+=0,u=0;for(let m=0;m<e.length;m++){let x=e[m];if(m>0)s.write(Ki);if(x.length===0)continue;let k=0;for(let T=0;T<x.le\##
+ngth;T++){let y=x[T];if(T>0)s.write(zi);if(dt(s,kt(y[0]-k)),k=y[0],y.length===1)continue;if(dt(s,kt(y[1]-r)),dt(s,kt\##
+(y[2]-o)),dt(s,kt(y[3]-a)),r=y[1],o=y[2],a=y[3],y.length===4)continue;dt(s,kt(y[4]-u)),u=y[4]}}return s.flush()}var \##
+Zi=$1(ur(),1);var Yn=class{constructor(){this._indexes={__proto__:null},this.array=[]}};function mr(e){return e}func\##
+tion ea(e,s){return mr(e)._indexes[s]}function pr(e,s){let r=ea(e,s);if(r!==void 0)return r;let{array:o,_indexes:a}=\##
+mr(e),u=o.push(s);return a[s]=u-1}var ta=0,sa=1,na=2,ra=3,oa=4,dr=-1,kr=class{constructor({file:e,sourceRoot:s}={}){\##
+this._names=new Yn,this._sources=new Yn,this._sourcesContent=[],this._mappings=[],this.file=e,this.sourceRoot=s,this\##
+._ignoreList=new Yn}};function xr(e){return e}var Vt=(e,s,r,o,a,u,m,x)=>aa(!0,e,s,r,o,a,u,m,x);function ia(e){let{_m\##
+appings:s,_sources:r,_sourcesContent:o,_names:a,_ignoreList:u}=xr(e);return ua(s),{version:3,file:e.file||void 0,nam\##
+es:a.array,sourceRoot:e.sourceRoot||void 0,sources:r.array,sourcesContent:o,mappings:s,ignoreList:u.array}}function \##
+gr(e){let s=ia(e);return Object.assign({},s,{mappings:Jn(s.mappings)})}function aa(e,s,r,o,a,u,m,x,k){let{_mappings:\##
+T,_sources:y,_sourcesContent:C,_names:L}=xr(s),M=ca(T,r),z=la(M,o);if(!a){if(e&&pa(M,z))return;return hr(M,z,[o])}fr\##
+(u),fr(m);let U=pr(y,a),I=x?pr(L,x):dr;if(U===C.length)C[U]=k!=null?k:null;if(e&&fa(M,z,U,u,m,I))return;return hr(M,\##
+z,x?[o,U,u,m,I]:[o,U,u,m])}function fr(e){}function ca(e,s){for(let r=e.length;r<=s;r++)e[r]=[];return e[s]}function\##
+ la(e,s){let r=e.length;for(let o=r-1;o>=0;r=o--){let a=e[o];if(s>=a[ta])break}return r}function hr(e,s,r){for(let o\##
+=e.length;o>s;o--)e[o]=e[o-1];e[s]=r}function ua(e){let{length:s}=e,r=s;for(let o=r-1;o>=0;r=o,o--)if(e[o].length>0)\##
+break;if(r<s)e.length=r}function pa(e,s){if(s===0)return!0;return e[s-1].length===1}function fa(e,s,r,o,a,u){if(s===\##
+0)return!1;let m=e[s-1];if(m.length===1)return!1;return r===m[sa]&&o===m[na]&&a===m[ra]&&u===(m.length===5?m[oa]:dr)\##
+}function Qn({code:e,mappings:s},r,o,a,u){let m=ha(a,u),x=new kr({file:o.compiledFilename}),k=0,T=s[0];while(T===voi\##
+d 0&&k<s.length-1)k++,T=s[k];let y=0,C=0;if(T!==C)Vt(x,y,0,r,y,0);for(let U=0;U<e.length;U++){if(U===T){let I=T-C,N=\##
+m[k];Vt(x,y,I,r,y,N);while((T===U||T===void 0)&&k<s.length-1)k++,T=s[k]}if(e.charCodeAt(U)===l.lineFeed){if(y++,C=U+\##
+1,T!==C)Vt(x,y,0,r,y,0)}}let{sourceRoot:L,sourcesContent:M,...z}=gr(x);return z}function ha(e,s){let r=Array(s.lengt\##
+h),o=0,a=s[o].start,u=0;for(let m=0;m<e.length;m++){if(m===a)r[o]=a-u,o++,a=s[o].start;if(e.charCodeAt(m)===l.lineFe\##
+ed)u=m+1}return r}var ma={require:`
     import {createRequire as CREATE_REQUIRE_NAME} from "module";
     const require = CREATE_REQUIRE_NAME(import.meta.url);
   `,interopRequireWildcard:`
@@ -996,509 +858,501 @@ ed)l=p+1}return s}var ec={require:`
       const result = await ASYNC_OPTIONAL_CHAIN_NAME(ops);
       return result == null ? true : result;
     }
-  `};class vt{__init(){this.helperNames={}}__init2(){this.createRequireName=null}constructor(e){this.nameManager=e,v\##
-t.prototype.__init.call(this),vt.prototype.__init2.call(this)}getHelperName(e){let n=this.helperNames[e];if(n)return\##
- n;return n=this.nameManager.claimFreeName(`_${e}`),this.helperNames[e]=n,n}emitHelpers(){let e="";if(this.helperNam\##
+  `};class xt{__init(){this.helperNames={}}__init2(){this.createRequireName=null}constructor(e){this.nameManager=e,x\##
+t.prototype.__init.call(this),xt.prototype.__init2.call(this)}getHelperName(e){let s=this.helperNames[e];if(s)return\##
+ s;return s=this.nameManager.claimFreeName(`_${e}`),this.helperNames[e]=s,s}emitHelpers(){let e="";if(this.helperNam\##
 es.optionalChainDelete)this.getHelperName("optionalChain");if(this.helperNames.asyncOptionalChainDelete)this.getHelp\##
-erName("asyncOptionalChain");for(let[n,s]of Object.entries(ec)){let o=this.helperNames[n],i=s;if(n==="optionalChainD\##
-elete")i=i.replace("OPTIONAL_CHAIN_NAME",this.helperNames.optionalChain);else if(n==="asyncOptionalChainDelete")i=i.\##
-replace("ASYNC_OPTIONAL_CHAIN_NAME",this.helperNames.asyncOptionalChain);else if(n==="require"){if(this.createRequir\##
-eName===null)this.createRequireName=this.nameManager.claimFreeName("_createRequire");i=i.replace(/CREATE_REQUIRE_NAM\##
-E/g,this.createRequireName)}if(o)e+=" ",e+=i.replace(n,o).replace(/\s+/g," ").trim()}return e}}function an(e,n,s){if\##
-(!tc(e,s))return;nc(e,n,s)}function tc(e,n){for(let s of e.tokens)if(s.type===t.name&&!s.isType&&go(s)&&n.has(e.iden\##
-tifierNameForToken(s)))return!0;return!1}function nc(e,n,s){let o=[],i=n.length-1;for(let l=e.tokens.length-1;;l--){\##
-while(o.length>0&&o[o.length-1].startTokenIndex===l+1)o.pop();while(i>=0&&n[i].endTokenIndex===l+1)o.push(n[i]),i--;\##
-if(l<0)break;let p=e.tokens[l],d=e.identifierNameForToken(p);if(o.length>1&&!p.isType&&p.type===t.name&&s.has(d)){if\##
-(_o(p))Ho(o[o.length-1],e,d);else if(yo(p)){let k=o.length-1;while(k>0&&!o[k].isFunctionScope)k--;if(k<0)throw Error\##
-("Did not find parent function scope.");Ho(o[k],e,d)}}}if(o.length>0)throw Error("Expected empty scope stack after p\##
-rocessing file.")}function Ho(e,n,s){for(let o=e.startTokenIndex;o<e.endTokenIndex;o++){let i=n.tokens[o];if((i.type\##
-===t.name||i.type===t.jsxName)&&n.identifierNameForToken(i)===s)i.shadowsGlobal=!0}}function dr(e,n){let s=[];for(le\##
-t o of n)if(o.type===t.name)s.push(e.slice(o.start,o.end));return s}class Ct{__init(){this.usedNames=new Set}constru\##
-ctor(e,n){Ct.prototype.__init.call(this),this.usedNames=new Set(dr(e,n))}claimFreeName(e){let n=this.findFreeName(e)\##
-;return this.usedNames.add(n),n}findFreeName(e){if(!this.usedNames.has(e))return e;let n=2;while(this.usedNames.has(\##
-e+String(n)))n++;return e+String(n)}}var i1=Yt(wr());var B=Yt(wr()),wc=B.union(B.lit("jsx"),B.lit("typescript"),B.li\##
-t("flow"),B.lit("imports"),B.lit("react-hot-loader"),B.lit("jest")),Sc=B.iface([],{compiledFilename:"string"}),Ec=B.\##
-iface([],{transforms:B.array("Transform"),disableESTransforms:B.opt("boolean"),jsxRuntime:B.opt(B.union(B.lit("class\##
-ic"),B.lit("automatic"),B.lit("preserve"))),production:B.opt("boolean"),jsxImportSource:B.opt("string"),jsxPragma:B.\##
-opt("string"),jsxFragmentPragma:B.opt("string"),keepUnusedImports:B.opt("boolean"),preserveDynamicImport:B.opt("bool\##
-ean"),injectCreateRequireForImportRequire:B.opt("boolean"),enableLegacyTypeScriptModuleInterop:B.opt("boolean"),enab\##
-leLegacyBabel5ModuleInterop:B.opt("boolean"),sourceMapOptions:B.opt("SourceMapOptions"),filePath:B.opt("string")}),A\##
-c={Transform:wc,SourceMapOptions:Sc,Options:Ec},o1=Ac;var{Options:vc}=i1.createCheckers(o1);function a1(e){vc.strict\##
-Check(e)}function Sr(){m(),Q(!1)}function Er(e){m(),Lt(e)}function ye(e){S(),un(e)}function ft(){S(),r.tokens[r.toke\##
-ns.length-1].identifierRole=I.ImportDeclaration}function un(e){let n;if(r.scopeDepth===0)n=I.TopLevelDeclaration;els\##
-e if(e)n=I.BlockScopedDeclaration;else n=I.FunctionScopedDeclaration;r.tokens[r.tokens.length-1].identifierRole=n}fu\##
-nction Lt(e){switch(r.type){case t._this:{let n=P(0);m(),C(n);return}case t._yield:case t.name:{r.type=t.name,ye(e);\##
-return}case t.bracketL:{m(),Dt(t.bracketR,e,!0);return}case t.braceL:Ft(!0,e);return;default:A()}}function Dt(e,n,s=\##
-!1,o=!1,i=0){let l=!0,p=!1,d=r.tokens.length;while(!f(e)&&!r.error){if(l)l=!1;else if(h(t.comma),r.tokens[r.tokens.l\##
-ength-1].contextId=i,!p&&r.tokens[d].isType)r.tokens[r.tokens.length-1].isType=!0,p=!0;if(s&&a(t.comma));else if(f(e\##
-))break;else if(a(t.ellipsis)){Er(n),c1(),f(t.comma),h(e);break}else Cc(o,n)}}function Cc(e,n){if(e)Ot([c._public,c.\##
-_protected,c._private,c._readonly,c._override]);Rt(n),c1(),Rt(n,!0)}function c1(){if(O)u1();else if(L)l1()}function \##
-Rt(e,n=!1){if(!n)Lt(e);if(!f(t.eq))return;let s=r.tokens.length-1;Q(),r.tokens[s].rhsEndIndex=r.tokens.length}functi\##
-on vr(){return a(t.name)}function Pc(){return a(t.name)||Boolean(r.type&t.IS_KEYWORD)||a(t.string)||a(t.num)||a(t.bi\##
-gint)||a(t.decimal)}function k1(){let e=r.snapshot();if(m(),(a(t.bracketL)||a(t.braceL)||a(t.star)||a(t.ellipsis)||a\##
-(t.hash)||Pc())&&!ee())return!0;else return r.restoreFromSnapshot(e),!1}function Ot(e){while(!0)if(x1(e)===null)brea\##
-k}function x1(e){if(!a(t.name))return null;let n=r.contextualKeyword;if(e.indexOf(n)!==-1&&k1()){switch(n){case c._r\##
-eadonly:r.tokens[r.tokens.length-1].type=t._readonly;break;case c._abstract:r.tokens[r.tokens.length-1].type=t._abst\##
-ract;break;case c._static:r.tokens[r.tokens.length-1].type=t._static;break;case c._public:r.tokens[r.tokens.length-1\##
-].type=t._public;break;case c._private:r.tokens[r.tokens.length-1].type=t._private;break;case c._protected:r.tokens[\##
-r.tokens.length-1].type=t._protected;break;case c._override:r.tokens[r.tokens.length-1].type=t._override;break;case \##
-c._declare:r.tokens[r.tokens.length-1].type=t._declare;break;default:break}return n}return null}function jt(){S();wh\##
-ile(f(t.dot))S()}function Nc(){if(jt(),!ee()&&a(t.lessThan))dt()}function Rc(){m(),mt()}function Lc(){m()}function D\##
-c(){if(h(t._typeof),a(t._import))g1();else jt();if(!ee()&&a(t.lessThan))dt()}function g1(){if(h(t._import),h(t.paren\##
-L),h(t.string),h(t.parenR),f(t.dot))jt();if(a(t.lessThan))dt()}function Oc(){f(t._const);let e=f(t._in),n=K(c._out);\##
-if(f(t._const),(e||n)&&!a(t.name))r.tokens[r.tokens.length-1].type=t.name;else S();if(f(t._extends))J();if(f(t.eq))J\##
-()}function Be(){if(a(t.lessThan))fn()}function fn(){let e=P(0);if(a(t.lessThan)||a(t.typeParameterStart))m();else A\##
-();while(!f(t.greaterThan)&&!r.error)Oc(),f(t.comma);C(e)}function Nr(e){let n=e===t.arrow;if(Be(),h(t.parenL),r.sco\##
-peDepth++,Fc(!1),r.scopeDepth--,n)Mt(e);else if(a(e))Mt(e)}function Fc(e){Dt(t.parenR,e)}function pn(){if(!f(t.comma\##
-))q()}function p1(){Nr(t.colon),pn()}function Mc(){let e=r.snapshot();m();let n=f(t.name)&&a(t.colon);return r.resto\##
-reFromSnapshot(e),n}function _1(){if(!(a(t.bracketL)&&Mc()))return!1;let e=P(0);return h(t.bracketL),S(),mt(),h(t.br\##
-acketR),$e(),pn(),C(e),!0}function f1(e){if(f(t.question),!e&&(a(t.parenL)||a(t.lessThan)))Nr(t.colon),pn();else $e(\##
-),pn()}function jc(){if(a(t.parenL)||a(t.lessThan)){p1();return}if(a(t._new)){if(m(),a(t.parenL)||a(t.lessThan))p1()\##
-;else f1(!1);return}let e=!!x1([c._readonly]);if(_1())return;if((y(c._get)||y(c._set))&&k1());Ue(-1),f1(e)}function \##
-Bc(){y1()}function y1(){h(t.braceL);while(!f(t.braceR)&&!r.error)jc()}function qc(){let e=r.snapshot(),n=$c();return\##
- r.restoreFromSnapshot(e),n}function $c(){if(m(),f(t.plus)||f(t.minus))return y(c._readonly);if(y(c._readonly))m();i\##
-f(!a(t.bracketL))return!1;if(m(),!vr())return!1;return m(),a(t._in)}function Uc(){S(),h(t._in),J()}function Hc(){if(\##
-h(t.braceL),a(t.plus)||a(t.minus))m(),X(c._readonly);else K(c._readonly);if(h(t.bracketL),Uc(),K(c._as))J();if(h(t.b\##
-racketR),a(t.plus)||a(t.minus))m(),h(t.question);else f(t.question);sl(),q(),h(t.braceR)}function Vc(){h(t.bracketL)\##
-;while(!f(t.bracketR)&&!r.error)Wc(),f(t.comma)}function Wc(){if(f(t.ellipsis))J();else J(),f(t.question);if(f(t.col\##
-on))J()}function Gc(){h(t.parenL),J(),h(t.parenR)}function Xc(){Te(),Te();while(!a(t.backQuote)&&!r.error)h(t.dollar\##
-BraceL),J(),Te(),Te();m()}var Me;(function(e){e[e.TSFunctionType=0]="TSFunctionType";let s=1;e[e.TSConstructorType=s\##
-]="TSConstructorType";let o=s+1;e[e.TSAbstractConstructorType=o]="TSAbstractConstructorType"})(Me||(Me={}));function\##
- Ar(e){if(e===Me.TSAbstractConstructorType)X(c._abstract);if(e===Me.TSConstructorType||e===Me.TSAbstractConstructorT\##
-ype)h(t._new);let n=r.inDisallowConditionalTypesContext;r.inDisallowConditionalTypesContext=!1,Nr(t.arrow),r.inDisal\##
-lowConditionalTypesContext=n}function Jc(){switch(r.type){case t.name:Nc();return;case t._void:case t._null:m();retu\##
-rn;case t.string:case t.num:case t.bigint:case t.decimal:case t._true:case t._false:je();return;case t.minus:m(),je(\##
-);return;case t._this:{if(Lc(),y(c._is)&&!ee())Rc();return}case t._typeof:Dc();return;case t._import:g1();return;cas\##
-e t.braceL:if(qc())Hc();else Bc();return;case t.bracketL:Vc();return;case t.parenL:Gc();return;case t.backQuote:Xc()\##
-;return;default:if(r.type&t.IS_KEYWORD){m(),r.tokens[r.tokens.length-1].type=t.name;return}break}A()}function zc(){J\##
-c();while(!ee()&&f(t.bracketL))if(!f(t.bracketR))J(),h(t.bracketR)}function Kc(){if(X(c._infer),S(),a(t._extends)){l\##
-et e=r.snapshot();h(t._extends);let n=r.inDisallowConditionalTypesContext;if(r.inDisallowConditionalTypesContext=!0,\##
-J(),r.inDisallowConditionalTypesContext=n,r.error||!r.inDisallowConditionalTypesContext&&a(t.question))r.restoreFrom\##
-Snapshot(e)}}function Cr(){if(y(c._keyof)||y(c._unique)||y(c._readonly))m(),Cr();else if(y(c._infer))Kc();else{let e\##
-=r.inDisallowConditionalTypesContext;r.inDisallowConditionalTypesContext=!1,zc(),r.inDisallowConditionalTypesContext\##
-=e}}function h1(){if(f(t.bitwiseAND),Cr(),a(t.bitwiseAND))while(f(t.bitwiseAND))Cr()}function Yc(){if(f(t.bitwiseOR)\##
-,h1(),a(t.bitwiseOR))while(f(t.bitwiseOR))h1()}function Qc(){if(a(t.lessThan))return!0;return a(t.parenL)&&el()}func\##
-tion Zc(){if(a(t.name)||a(t._this))return m(),!0;if(a(t.braceL)||a(t.bracketL)){let e=1;m();while(e>0&&!r.error){if(\##
-a(t.braceL)||a(t.bracketL))e++;else if(a(t.braceR)||a(t.bracketR))e--;m()}return!0}return!1}function el(){let e=r.sn\##
-apshot(),n=tl();return r.restoreFromSnapshot(e),n}function tl(){if(m(),a(t.parenR)||a(t.ellipsis))return!0;if(Zc()){\##
-if(a(t.colon)||a(t.comma)||a(t.question)||a(t.eq))return!0;if(a(t.parenR)){if(m(),a(t.arrow))return!0}}return!1}func\##
-tion Mt(e){let n=P(0);if(h(e),!rl())J();C(n)}function nl(){if(a(t.colon))Mt(t.colon)}function $e(){if(a(t.colon))mt(\##
-)}function sl(){if(f(t.colon))J()}function rl(){let e=r.snapshot();if(y(c._asserts))if(m(),K(c._is))return J(),!0;el\##
-se if(vr()||a(t._this)){if(m(),K(c._is))J();return!0}else return r.restoreFromSnapshot(e),!1;else if(vr()||a(t._this\##
-))if(m(),y(c._is)&&!ee())return m(),J(),!0;else return r.restoreFromSnapshot(e),!1;return!1}function mt(){let e=P(0)\##
-;h(t.colon),J(),C(e)}function J(){if(m1(),r.inDisallowConditionalTypesContext||ee()||!f(t._extends))return;let e=r.i\##
-nDisallowConditionalTypesContext;r.inDisallowConditionalTypesContext=!0,m1(),r.inDisallowConditionalTypesContext=e,h\##
-(t.question),J(),h(t.colon),J()}function ol(){return y(c._abstract)&&U()===t._new}function m1(){if(Qc()){Ar(Me.TSFun\##
-ctionType);return}if(a(t._new)){Ar(Me.TSConstructorType);return}else if(ol()){Ar(Me.TSAbstractConstructorType);retur\##
-n}Yc()}function I1(){let e=P(1);J(),h(t.greaterThan),C(e),kt()}function T1(){if(f(t.jsxTagStart)){r.tokens[r.tokens.\##
-length-1].type=t.typeParameterStart;let e=P(1);while(!a(t.greaterThan)&&!r.error)J(),f(t.comma);he(),C(e)}}function \##
-b1(){while(!a(t.braceL)&&!r.error)il(),f(t.comma)}function il(){if(jt(),a(t.lessThan))dt()}function al(){if(ye(!1),B\##
-e(),f(t._extends))b1();y1()}function cl(){ye(!1),Be(),h(t.eq),J(),q()}function ll(){if(a(t.string))je();else S();if(\##
-f(t.eq)){let e=r.tokens.length-1;Q(),r.tokens[e].rhsEndIndex=r.tokens.length}}function Rr(){ye(!1),h(t.braceL);while\##
-(!f(t.braceR)&&!r.error)ll(),f(t.comma)}function Lr(){h(t.braceL),xt(t.braceR)}function Pr(){if(ye(!1),f(t.dot))Pr()\##
-;else Lr()}function w1(){if(y(c._global))S();else if(a(t.string))ge();else A();if(a(t.braceL))Lr();else q()}function\##
- hn(){ft(),h(t.eq),pl(),q()}function ul(){return y(c._require)&&U()===t.parenL}function pl(){if(ul())fl();else jt()}\##
-function fl(){if(X(c._require),h(t.parenL),!a(t.string))A();je(),h(t.parenR)}function hl(){if(ke())return!1;switch(r\##
-.type){case t._function:{let e=P(1);m();let n=r.start;return Pe(n,!0),C(e),!0}case t._class:{let e=P(1);return Re(!0\##
-,!1),C(e),!0}case t._const:if(a(t._const)&&lt(c._enum)){let e=P(1);return h(t._const),X(c._enum),r.tokens[r.tokens.l\##
-ength-1].type=t._enum,Rr(),C(e),!0}case t._var:case t._let:{let e=P(1);return qt(r.type!==t._var),C(e),!0}case t.nam\##
-e:{let e=P(1),n=r.contextualKeyword,s=!1;if(n===c._global)w1(),s=!0;else s=mn(n,!0);return C(e),s}default:return!1}}\##
-function d1(){return mn(r.contextualKeyword,!0)}function ml(e){switch(e){case c._declare:{let n=r.tokens.length-1;if\##
-(hl())return r.tokens[n].type=t._declare,!0;break}case c._global:if(a(t.braceL))return Lr(),!0;break;default:return \##
-mn(e,!1)}return!1}function mn(e,n){switch(e){case c._abstract:if(ht(n)&&a(t._class))return r.tokens[r.tokens.length-\##
-1].type=t._abstract,Re(!0,!1),!0;break;case c._enum:if(ht(n)&&a(t.name))return r.tokens[r.tokens.length-1].type=t._e\##
-num,Rr(),!0;break;case c._interface:if(ht(n)&&a(t.name)){let s=P(n?2:1);return al(),C(s),!0}break;case c._module:if(\##
-ht(n)){if(a(t.string)){let s=P(n?2:1);return w1(),C(s),!0}else if(a(t.name)){let s=P(n?2:1);return Pr(),C(s),!0}}bre\##
-ak;case c._namespace:if(ht(n)&&a(t.name)){let s=P(n?2:1);return Pr(),C(s),!0}break;case c._type:if(ht(n)&&a(t.name))\##
-{let s=P(n?2:1);return cl(),C(s),!0}break;default:break}return!1}function ht(e){if(e)return m(),!0;else return!ke()}\##
-function dl(){let e=r.snapshot();if(fn(),Ne(),nl(),h(t.arrow),r.error)return r.restoreFromSnapshot(e),!1;return He(!\##
-0),!0}function Dr(){if(r.type===t.bitShiftL)r.pos-=1,v(t.lessThan);dt()}function dt(){let e=P(0);h(t.lessThan);while\##
-(!a(t.greaterThan)&&!r.error)J(),f(t.comma);if(!e)C(e),nn(),h(t.greaterThan),r.tokens[r.tokens.length-1].isType=!0;e\##
-lse h(t.greaterThan),C(e)}function Or(){if(a(t.name))switch(r.contextualKeyword){case c._abstract:case c._declare:ca\##
-se c._enum:case c._interface:case c._module:case c._namespace:case c._type:return!0;default:break}return!1}function \##
-S1(e,n){if(a(t.colon))Mt(t.colon);if(!a(t.braceL)&&ke()){let s=r.tokens.length-1;while(s>=0&&(r.tokens[s].start>=e||\##
-r.tokens[s].type===t._default||r.tokens[s].type===t._export))r.tokens[s].isType=!0,s--;return}He(!1,n)}function E1(e\##
-,n,s){if(!ee()&&f(t.bang)){r.tokens[r.tokens.length-1].type=t.nonNullAssertion;return}if(a(t.lessThan)||a(t.bitShift\##
-L)){let o=r.snapshot();if(!n&&Fr()){if(dl())return}if(Dr(),!n&&f(t.parenL))r.tokens[r.tokens.length-1].subscriptStar\##
-tIndex=e,Ie();else if(a(t.backQuote))dn();else if(r.type===t.greaterThan||r.type!==t.parenL&&Boolean(r.type&t.IS_EXP\##
-RESSION_START)&&!ee())A();if(r.error)r.restoreFromSnapshot(o);else return}else if(!n&&a(t.questionDot)&&U()===t.less\##
-Than)m(),r.tokens[e].isOptionalChainStart=!0,r.tokens[r.tokens.length-1].subscriptStartIndex=e,dt(),h(t.parenL),Ie()\##
-;Bt(e,n,s)}function A1(){if(f(t._import)){if(y(c._type)&&U()!==t.eq)X(c._type);return hn(),!0}else if(f(t.eq))return\##
- Z(),q(),!0;else if(K(c._as))return X(c._namespace),S(),q(),!0;else{if(y(c._type)){let e=U();if(e===t.braceL||e===t.\##
-star)m()}return!1}}function v1(){if(S(),a(t.comma)||a(t.braceR)){r.tokens[r.tokens.length-1].identifierRole=I.Import\##
-Declaration;return}if(S(),a(t.comma)||a(t.braceR)){r.tokens[r.tokens.length-1].identifierRole=I.ImportDeclaration,r.\##
-tokens[r.tokens.length-2].isType=!0,r.tokens[r.tokens.length-1].isType=!0;return}if(S(),a(t.comma)||a(t.braceR)){r.t\##
-okens[r.tokens.length-3].identifierRole=I.ImportAccess,r.tokens[r.tokens.length-1].identifierRole=I.ImportDeclaratio\##
-n;return}S(),r.tokens[r.tokens.length-3].identifierRole=I.ImportAccess,r.tokens[r.tokens.length-1].identifierRole=I.\##
-ImportDeclaration,r.tokens[r.tokens.length-4].isType=!0,r.tokens[r.tokens.length-3].isType=!0,r.tokens[r.tokens.leng\##
-th-2].isType=!0,r.tokens[r.tokens.length-1].isType=!0}function C1(){if(S(),a(t.comma)||a(t.braceR)){r.tokens[r.token\##
-s.length-1].identifierRole=I.ExportAccess;return}if(S(),a(t.comma)||a(t.braceR)){r.tokens[r.tokens.length-1].identif\##
-ierRole=I.ExportAccess,r.tokens[r.tokens.length-2].isType=!0,r.tokens[r.tokens.length-1].isType=!0;return}if(S(),a(t\##
-.comma)||a(t.braceR)){r.tokens[r.tokens.length-3].identifierRole=I.ExportAccess;return}S(),r.tokens[r.tokens.length-\##
-3].identifierRole=I.ExportAccess,r.tokens[r.tokens.length-4].isType=!0,r.tokens[r.tokens.length-3].isType=!0,r.token\##
-s[r.tokens.length-2].isType=!0,r.tokens[r.tokens.length-1].isType=!0}function P1(){if(y(c._abstract)&&U()===t._class\##
-)return r.type=t._abstract,m(),Re(!0,!0),!0;if(y(c._interface)){let e=P(2);return mn(c._interface,!0),C(e),!0}return\##
-!1}function N1(){if(r.type===t._const){let e=Ee();if(e.type===t.name&&e.contextualKeyword===c._enum)return h(t._cons\##
-t),X(c._enum),r.tokens[r.tokens.length-1].type=t._enum,Rr(),!0}return!1}function R1(e){let n=r.tokens.length;Ot([c._\##
-abstract,c._readonly,c._declare,c._static,c._override]);let s=r.tokens.length;if(_1()){let i=e?n-1:n;for(let l=i;l<s\##
-;l++)r.tokens[l].isType=!0;return!0}return!1}function L1(e){if(!ml(e))q()}function D1(){let e=K(c._declare);if(e)r.t\##
-okens[r.tokens.length-1].type=t._declare;let n=!1;if(a(t.name))if(e){let s=P(2);n=d1(),C(s)}else n=d1();if(!n)if(e){\##
-let s=P(2);ie(!0),C(s)}else ie(!0)}function O1(e){if(e&&(a(t.lessThan)||a(t.bitShiftL)))Dr();if(K(c._implements)){r.\##
-tokens[r.tokens.length-1].type=t._implements;let n=P(1);b1(),C(n)}}function F1(){Be()}function M1(){Be()}function j1\##
-(){let e=P(0);if(!ee())f(t.bang);$e(),C(e)}function B1(){if(a(t.colon))mt()}function q1(e,n){if(ct)return kl(e,n);el\##
-se return xl(e,n)}function kl(e,n){if(!a(t.lessThan))return xe(e,n);let s=r.snapshot(),o=xe(e,n);if(r.error)r.restor\##
-eFromSnapshot(s);else return o;if(r.type=t.typeParameterStart,fn(),o=xe(e,n),!o)A();return o}function xl(e,n){if(!a(\##
-t.lessThan))return xe(e,n);let s=r.snapshot();fn();let o=xe(e,n);if(!o)A();if(r.error)r.restoreFromSnapshot(s);else \##
-return o;return xe(e,n)}function $1(){if(a(t.colon)){let e=r.snapshot();if(Mt(t.colon),ne())A();if(!a(t.arrow))A();i\##
-f(r.error)r.restoreFromSnapshot(e)}return f(t.arrow)}function l1(){let e=P(0);f(t.question),$e(),C(e)}function U1(){\##
-if(a(t.lessThan)||a(t.bitShiftL))Dr();Mr()}function gl(){let e=!1,n=!1;while(!0){if(r.pos>=x.length){A("Unterminated\##
- JSX contents");return}let s=x.charCodeAt(r.pos);if(s===u.lessThan||s===u.leftCurlyBrace){if(r.pos===r.start){if(s==\##
-=u.lessThan){r.pos++,v(t.jsxTagStart);return}cr(s);return}if(e&&!n)v(t.jsxEmptyText);else v(t.jsxText);return}if(s==\##
-=u.lineFeed)e=!0;else if(s!==u.space&&s!==u.carriageReturn&&s!==u.tab)n=!0;r.pos++}}function _l(e){r.pos++;for(;;){i\##
-f(r.pos>=x.length){A("Unterminated string constant");return}if(x.charCodeAt(r.pos)===e){r.pos++;break}r.pos++}v(t.st\##
-ring)}function yl(){let e;do{if(r.pos>x.length){A("Unexpectedly reached the end of input.");return}e=x.charCodeAt(++\##
-r.pos)}while(oe[e]||e===u.dash);v(t.jsxName)}function jr(){he()}function H1(e){if(jr(),!f(t.colon)){r.tokens[r.token\##
-s.length-1].identifierRole=e;return}jr()}function V1(){let e=r.tokens.length;H1(I.Access);let n=!1;while(a(t.dot))n=\##
-!0,he(),jr();if(!n){let s=r.tokens[e],o=x.charCodeAt(s.start);if(o>=u.lowercaseA&&o<=u.lowercaseZ)s.identifierRole=n\##
-ull}}function Il(){switch(r.type){case t.braceL:m(),Z(),he();return;case t.jsxTagStart:Br(),he();return;case t.strin\##
-g:he();return;default:A("JSX value should be either an expression or a quoted JSX text")}}function Tl(){h(t.ellipsis\##
-),Z()}function bl(e){if(a(t.jsxTagEnd))return!1;if(V1(),L)T1();let n=!1;while(!a(t.slash)&&!a(t.jsxTagEnd)&&!r.error\##
-){if(f(t.braceL)){n=!0,h(t.ellipsis),Q(),he();continue}if(n&&r.end-r.start===3&&x.charCodeAt(r.start)===u.lowercaseK\##
-&&x.charCodeAt(r.start+1)===u.lowercaseE&&x.charCodeAt(r.start+2)===u.lowercaseY)r.tokens[e].jsxRole=pe.KeyAfterProp\##
-Spread;if(H1(I.ObjectKey),a(t.eq))he(),Il()}let s=a(t.slash);if(s)he();return s}function wl(){if(a(t.jsxTagEnd))retu\##
-rn;V1()}function W1(){let e=r.tokens.length-1;r.tokens[e].jsxRole=pe.NoChildren;let n=0;if(!bl(e)){gt();while(!0)swi\##
-tch(r.type){case t.jsxTagStart:if(he(),a(t.slash)){if(he(),wl(),r.tokens[e].jsxRole!==pe.KeyAfterPropSpread){if(n===\##
-1)r.tokens[e].jsxRole=pe.OneChild;else if(n>1)r.tokens[e].jsxRole=pe.StaticChildren}return}n++,W1(),gt();break;case \##
-t.jsxText:n++,gt();break;case t.jsxEmptyText:gt();break;case t.braceL:if(m(),a(t.ellipsis))Tl(),gt(),n+=2;else{if(!a\##
-(t.braceR))n++,Z();gt()}break;default:A();return}}}function Br(){he(),W1()}function he(){r.tokens.push(new ut),ar(),\##
-r.start=r.pos;let e=x.charCodeAt(r.pos);if(Ae[e])yl();else if(e===u.quotationMark||e===u.apostrophe)_l(e);else switc\##
-h(++r.pos,e){case u.greaterThan:v(t.jsxTagEnd);break;case u.lessThan:v(t.jsxTagStart);break;case u.slash:v(t.slash);\##
-break;case u.equalsTo:v(t.eq);break;case u.leftCurlyBrace:v(t.braceL);break;case u.dot:v(t.dot);break;case u.colon:v\##
-(t.colon);break;default:A()}}function gt(){r.tokens.push(new ut),r.start=r.pos,gl()}function G1(e){if(a(t.question))\##
-{let n=U();if(n===t.colon||n===t.comma||n===t.parenR)return}qr(e)}function X1(){if(tn(t.question),a(t.colon)){if(L)m\##
-t();else if(O)Le()}}class J1{constructor(e){this.stop=e}}function Z(e=!1){if(Q(e),a(t.comma))while(f(t.comma))Q(e)}f\##
-unction Q(e=!1,n=!1){if(L)return q1(e,n);else if(O)return si(e,n);else return xe(e,n)}function xe(e,n){if(a(t._yield\##
-))return ql(),!1;if(a(t.parenL)||a(t.name)||a(t._yield))r.potentialArrowAt=r.start;let s=Sl(e);if(n)Wr();if(r.type&t\##
-.IS_ASSIGN)return m(),Q(e),!1;return s}function Sl(e){if(Al(e))return!0;return El(e),!1}function El(e){if(L||O)G1(e)\##
-;else qr(e)}function qr(e){if(f(t.question))Q(),h(t.colon),Q(e)}function Al(e){let n=r.tokens.length;if(kt())return!\##
-0;return kn(n,-1,e),!1}function kn(e,n,s){if(L&&(t._in&t.PRECEDENCE_MASK)>n&&!ee()&&(K(c._as)||K(c._satisfies))){let\##
- i=P(1);J(),C(i),nn(),kn(e,n,s);return}let o=r.type&t.PRECEDENCE_MASK;if(o>0&&(!s||!a(t._in))){if(o>n){let i=r.type;\##
-if(m(),i===t.nullishCoalescing)r.tokens[r.tokens.length-1].nullishStartIndex=e;let l=r.tokens.length;if(kt(),kn(l,i&\##
-t.IS_RIGHT_ASSOCIATIVE?o-1:o,s),i===t.nullishCoalescing)r.tokens[e].numNullishCoalesceStarts++,r.tokens[r.tokens.len\##
-gth-1].numNullishCoalesceEnds++;kn(e,n,s)}}}function kt(){if(L&&!ct&&f(t.lessThan))return I1(),!1;if(y(c._module)&&r\##
-r()===u.leftCurlyBrace&&!Qt())return $l(),!1;if(r.type&t.IS_PREFIX)return m(),kt(),!1;if($r())return!0;while(r.type&\##
-t.IS_POSTFIX&&!ne()){if(r.type===t.preIncDec)r.type=t.postIncDec;m()}return!1}function $r(){let e=r.tokens.length;if\##
-(ge())return!0;if(Ur(e),r.tokens.length>e&&r.tokens[e].isOptionalChainStart)r.tokens[r.tokens.length-1].isOptionalCh\##
-ainEnd=!0;return!1}function Ur(e,n=!1){if(O)oi(e,n);else Hr(e,n)}function Hr(e,n=!1){let s=new J1(!1);do vl(e,n,s);w\##
-hile(!s.stop&&!r.error)}function vl(e,n,s){if(L)E1(e,n,s);else if(O)Z1(e,n,s);else Bt(e,n,s)}function Bt(e,n,s){if(!\##
-n&&f(t.doubleColon))Vr(),s.stop=!0,Ur(e,n);else if(a(t.questionDot)){if(r.tokens[e].isOptionalChainStart=!0,n&&U()==\##
-=t.parenL){s.stop=!0;return}if(m(),r.tokens[r.tokens.length-1].subscriptStartIndex=e,f(t.bracketL))Z(),h(t.bracketR)\##
-;else if(f(t.parenL))Ie();else xn()}else if(f(t.dot))r.tokens[r.tokens.length-1].subscriptStartIndex=e,xn();else if(\##
-f(t.bracketL))r.tokens[r.tokens.length-1].subscriptStartIndex=e,Z(),h(t.bracketR);else if(!n&&a(t.parenL))if(Fr()){l\##
-et o=r.snapshot(),i=r.tokens.length;m(),r.tokens[r.tokens.length-1].subscriptStartIndex=e;let l=qe();if(r.tokens[r.t\##
-okens.length-1].contextId=l,Ie(),r.tokens[r.tokens.length-1].contextId=l,Cl())r.restoreFromSnapshot(o),s.stop=!0,r.s\##
-copeDepth++,Ne(),Pl(i)}else{m(),r.tokens[r.tokens.length-1].subscriptStartIndex=e;let o=qe();r.tokens[r.tokens.lengt\##
-h-1].contextId=o,Ie(),r.tokens[r.tokens.length-1].contextId=o}else if(a(t.backQuote))dn();else s.stop=!0}function Fr\##
-(){return r.tokens[r.tokens.length-1].contextualKeyword===c._async&&!ne()}function Ie(){let e=!0;while(!f(t.parenR)&\##
-&!r.error){if(e)e=!1;else if(h(t.comma),f(t.parenR))break;Y1(!1)}}function Cl(){return a(t.colon)||a(t.arrow)}functi\##
-on Pl(e){if(L)B1();else if(O)ni();h(t.arrow),_t(e)}function Vr(){let e=r.tokens.length;ge(),Ur(e,!0)}function ge(){i\##
-f(f(t.modulo))return S(),!1;if(a(t.jsxText)||a(t.jsxEmptyText))return je(),!1;else if(a(t.lessThan)&&ct)return r.typ\##
-e=t.jsxTagStart,Br(),m(),!1;let e=r.potentialArrowAt===r.start;switch(r.type){case t.slash:case t.assign:To();case t\##
-._super:case t._this:case t.regexp:case t.num:case t.bigint:case t.decimal:case t.string:case t._null:case t._true:c\##
-ase t._false:return m(),!1;case t._import:if(m(),a(t.dot))r.tokens[r.tokens.length-1].type=t.name,m(),S();return!1;c\##
-ase t.name:{let n=r.tokens.length,s=r.start,o=r.contextualKeyword;if(S(),o===c._await)return Bl(),!1;else if(o===c._\##
-async&&a(t._function)&&!ne())return m(),Pe(s,!1),!1;else if(e&&o===c._async&&!ne()&&a(t.name))return r.scopeDepth++,\##
-ye(!1),h(t.arrow),_t(n),!0;else if(a(t._do)&&!ne())return m(),De(),!1;if(e&&!ne()&&a(t.arrow))return r.scopeDepth++,\##
-un(!1),h(t.arrow),_t(n),!0;return r.tokens[r.tokens.length-1].identifierRole=I.Access,!1}case t._do:return m(),De(),\##
-!1;case t.parenL:return z1(e);case t.bracketL:return m(),K1(t.bracketR,!0),!1;case t.braceL:return Ft(!1,!1),!1;case\##
- t._function:return Nl(),!1;case t.at:In();case t._class:return Re(!1),!1;case t._new:return Ll(),!1;case t.backQuot\##
-e:return dn(),!1;case t.doubleColon:return m(),Vr(),!1;case t.hash:{let n=rr();if(Ae[n]||n===u.backslash)xn();else m\##
-();return!1}default:return A(),!1}}function xn(){f(t.hash),S()}function Nl(){let e=r.start;if(S(),f(t.dot))S();Pe(e,\##
-!1)}function je(){m()}function $t(){h(t.parenL),Z(),h(t.parenR)}function z1(e){let n=r.snapshot(),s=r.tokens.length;\##
-h(t.parenL);let o=!0;while(!a(t.parenR)&&!r.error){if(o)o=!1;else if(h(t.comma),a(t.parenR))break;if(a(t.ellipsis)){\##
-Er(!1),Wr();break}else Q(!1,!0)}if(h(t.parenR),e&&Rl()){if(gn()){if(r.restoreFromSnapshot(n),r.scopeDepth++,Ne(),gn(\##
-),_t(s),r.error)return r.restoreFromSnapshot(n),z1(!1),!1;return!0}}return!1}function Rl(){return a(t.colon)||!ne()}\##
-function gn(){if(L)return $1();else if(O)return ri();else return f(t.arrow)}function Wr(){if(L||O)X1()}function Ll()\##
-{if(h(t._new),f(t.dot)){S();return}if(Dl(),O)ei();if(f(t.parenL))K1(t.parenR)}function Dl(){Vr(),f(t.questionDot)}fu\##
-nction dn(){Te(),Te();while(!a(t.backQuote)&&!r.error)h(t.dollarBraceL),Z(),Te(),Te();m()}function Ft(e,n){let s=qe(\##
-),o=!0;m(),r.tokens[r.tokens.length-1].contextId=s;while(!f(t.braceR)&&!r.error){if(o)o=!1;else if(h(t.comma),f(t.br\##
-aceR))break;let i=!1;if(a(t.ellipsis)){let l=r.tokens.length;if(Sr(),e){if(r.tokens.length===l+2)un(n);if(f(t.braceR\##
-))break}continue}if(!e)i=f(t.star);if(!e&&y(c._async)){if(i)A();if(S(),a(t.colon)||a(t.parenL)||a(t.braceR)||a(t.eq)\##
-||a(t.comma));else{if(a(t.star))m(),i=!0;Ue(s)}}else Ue(s);jl(e,n,s)}r.tokens[r.tokens.length-1].contextId=s}functio\##
-n Ol(e){return!e&&(a(t.string)||a(t.num)||a(t.bracketL)||a(t.name)||!!(r.type&t.IS_KEYWORD))}function Fl(e,n){let s=\##
-r.start;if(a(t.parenL)){if(e)A();return _n(s,!1),!0}if(Ol(e))return Ue(n),_n(s,!1),!0;return!1}function Ml(e,n){if(f\##
-(t.colon)){if(e)Rt(n);else Q(!1);return}let s;if(e)if(r.scopeDepth===0)s=I.ObjectShorthandTopLevelDeclaration;else i\##
-f(n)s=I.ObjectShorthandBlockScopedDeclaration;else s=I.ObjectShorthandFunctionScopedDeclaration;else s=I.ObjectShort\##
-hand;r.tokens[r.tokens.length-1].identifierRole=s,Rt(n,!0)}function jl(e,n,s){if(L)F1();else if(O)ti();if(!Fl(e,s))M\##
-l(e,n)}function Ue(e){if(O)yn();if(f(t.bracketL))r.tokens[r.tokens.length-1].contextId=e,Q(),h(t.bracketR),r.tokens[\##
-r.tokens.length-1].contextId=e;else{if(a(t.num)||a(t.string)||a(t.bigint)||a(t.decimal))ge();else xn();r.tokens[r.to\##
-kens.length-1].identifierRole=I.ObjectKey,r.tokens[r.tokens.length-1].contextId=e}}function _n(e,n){let s=qe();r.sco\##
-peDepth++;let o=r.tokens.length;Ne(n,s),Gr(e,s);let l=r.tokens.length;r.scopes.push(new ue(o,l,!0)),r.scopeDepth--}f\##
-unction _t(e){He(!0);let n=r.tokens.length;r.scopes.push(new ue(e,n,!0)),r.scopeDepth--}function Gr(e,n=0){if(L)S1(e\##
-,n);else if(O)Q1(n);else He(!1,n)}function He(e,n=0){if(e&&!a(t.braceL))Q();else De(!0,n)}function K1(e,n=!1){let s=\##
-!0;while(!f(e)&&!r.error){if(s)s=!1;else if(h(t.comma),f(e))break;Y1(n)}}function Y1(e){if(e&&a(t.comma));else if(a(\##
-t.ellipsis))Sr(),Wr();else if(a(t.question))m();else Q(!1,!0)}function S(){m(),r.tokens[r.tokens.length-1].type=t.na\##
-me}function Bl(){kt()}function ql(){if(m(),!a(t.semi)&&!ne())f(t.star),Q()}function $l(){X(c._module),h(t.braceL),xt\##
-(t.braceR)}function Ul(e){return(e.type===t.name||!!(e.type&t.IS_KEYWORD))&&e.contextualKeyword!==c._from}function S\##
-e(e){let n=P(0);h(e||t.colon),le(),C(n)}function ii(){if(h(t.modulo),X(c._checks),f(t.parenL))Z(),h(t.parenR)}functi\##
-on zr(){let e=P(0);if(h(t.colon),a(t.modulo))ii();else if(le(),a(t.modulo))ii();C(e)}function Hl(){m(),Kr(!0)}functi\##
-on Vl(){if(m(),S(),a(t.lessThan))_e();h(t.parenL),Jr(),h(t.parenR),zr(),q()}function Xr(){if(a(t._class))Hl();else i\##
-f(a(t._function))Vl();else if(a(t._var))Wl();else if(K(c._module))if(f(t.dot))Jl();else Gl();else if(y(c._type))zl()\##
-;else if(y(c._opaque))Kl();else if(y(c._interface))Yl();else if(a(t._export))Xl();else A()}function Wl(){m(),fi(),q(\##
-)}function Gl(){if(a(t.string))ge();else S();h(t.braceL);while(!a(t.braceR)&&!r.error)if(a(t._import))m(),so();else \##
-A();h(t.braceR)}function Xl(){if(h(t._export),f(t._default))if(a(t._function)||a(t._class))Xr();else le(),q();else i\##
-f(a(t._var)||a(t._function)||a(t._class)||y(c._opaque))Xr();else if(a(t.star)||a(t.braceL)||y(c._interface)||y(c._ty\##
-pe)||y(c._opaque))no();else A()}function Jl(){X(c._exports),Le(),q()}function zl(){m(),Qr()}function Kl(){m(),Zr(!0)\##
-}function Yl(){m(),Kr()}function Kr(e=!1){if(En(),a(t.lessThan))_e();if(f(t._extends))do Tn();while(!e&&f(t.comma));\##
-if(y(c._mixins)){m();do Tn();while(f(t.comma))}if(y(c._implements)){m();do Tn();while(f(t.comma))}bn(e,!1,e)}functio\##
-n Tn(){if(li(!1),a(t.lessThan))Ve()}function Yr(){Kr()}function En(){S()}function Qr(){if(En(),a(t.lessThan))_e();Se\##
-(t.eq),q()}function Zr(e){if(X(c._type),En(),a(t.lessThan))_e();if(a(t.colon))Se(t.colon);if(!e)Se(t.eq);q()}functio\##
-n Ql(){if(yn(),fi(),f(t.eq))le()}function _e(){let e=P(0);if(a(t.lessThan)||a(t.typeParameterStart))m();else A();do \##
-if(Ql(),!a(t.greaterThan))h(t.comma);while(!a(t.greaterThan)&&!r.error);h(t.greaterThan),C(e)}function Ve(){let e=P(\##
-0);h(t.lessThan);while(!a(t.greaterThan)&&!r.error)if(le(),!a(t.greaterThan))h(t.comma);h(t.greaterThan),C(e)}functi\##
-on Zl(){if(X(c._interface),f(t._extends))do Tn();while(f(t.comma));bn(!1,!1,!1)}function eo(){if(a(t.num)||a(t.strin\##
-g))ge();else S()}function eu(){if(U()===t.colon)eo(),Se();else le();h(t.bracketR),Se()}function tu(){if(eo(),h(t.bra\##
-cketR),h(t.bracketR),a(t.lessThan)||a(t.parenL))to();else f(t.question),Se()}function to(){if(a(t.lessThan))_e();h(t\##
-.parenL);while(!a(t.parenR)&&!a(t.ellipsis)&&!r.error)if(wn(),!a(t.parenR))h(t.comma);if(f(t.ellipsis))wn();h(t.pare\##
-nR),Se()}function nu(){to()}function bn(e,n,s){let o;if(n&&a(t.braceBarL))h(t.braceBarL),o=t.braceBarR;else h(t.brac\##
-eL),o=t.braceR;while(!a(o)&&!r.error){if(s&&y(c._proto)){let i=U();if(i!==t.colon&&i!==t.question)m(),e=!1}if(e&&y(c\##
-._static)){let i=U();if(i!==t.colon&&i!==t.question)m()}if(yn(),f(t.bracketL))if(f(t.bracketL))tu();else eu();else i\##
-f(a(t.parenL)||a(t.lessThan))nu();else{if(y(c._get)||y(c._set)){let i=U();if(i===t.name||i===t.string||i===t.num)m()\##
-}su()}ru()}h(o)}function su(){if(a(t.ellipsis)){if(h(t.ellipsis),!f(t.comma))f(t.semi);if(a(t.braceR))return;le()}el\##
-se if(eo(),a(t.lessThan)||a(t.parenL))to();else f(t.question),Se()}function ru(){if(!f(t.semi)&&!f(t.comma)&&!a(t.br\##
-aceR)&&!a(t.braceBarR))A()}function li(e){if(!e)S();while(f(t.dot))S()}function ou(){if(li(!0),a(t.lessThan))Ve()}fu\##
-nction iu(){h(t._typeof),ui()}function au(){h(t.bracketL);while(r.pos<x.length&&!a(t.bracketR)){if(le(),a(t.bracketR\##
-))break;h(t.comma)}h(t.bracketR)}function wn(){let e=U();if(e===t.colon||e===t.question)S(),f(t.question),Se();else \##
-le()}function Jr(){while(!a(t.parenR)&&!a(t.ellipsis)&&!r.error)if(wn(),!a(t.parenR))h(t.comma);if(f(t.ellipsis))wn(\##
-)}function ui(){let e=!1,n=r.noAnonFunctionType;switch(r.type){case t.name:{if(y(c._interface)){Zl();return}S(),ou()\##
-;return}case t.braceL:bn(!1,!1,!1);return;case t.braceBarL:bn(!1,!0,!1);return;case t.bracketL:au();return;case t.le\##
-ssThan:_e(),h(t.parenL),Jr(),h(t.parenR),h(t.arrow),le();return;case t.parenL:if(m(),!a(t.parenR)&&!a(t.ellipsis))if\##
-(a(t.name)){let s=U();e=s!==t.question&&s!==t.colon}else e=!0;if(e)if(r.noAnonFunctionType=!1,le(),r.noAnonFunctionT\##
-ype=n,r.noAnonFunctionType||!(a(t.comma)||a(t.parenR)&&U()===t.arrow)){h(t.parenR);return}else f(t.comma);Jr(),h(t.p\##
-arenR),h(t.arrow),le();return;case t.minus:m(),je();return;case t.string:case t.num:case t._true:case t._false:case \##
-t._null:case t._this:case t._void:case t.star:m();return;default:if(r.type===t._typeof){iu();return}else if(r.type&t\##
-.IS_KEYWORD){m(),r.tokens[r.tokens.length-1].type=t.name;return}}A()}function cu(){ui();while(!ne()&&(a(t.bracketL)|\##
-|a(t.questionDot)))if(f(t.questionDot),h(t.bracketL),f(t.bracketR));else le(),h(t.bracketR)}function pi(){if(f(t.que\##
-stion))pi();else cu()}function ai(){if(pi(),!r.noAnonFunctionType&&f(t.arrow))le()}function ci(){f(t.bitwiseAND),ai(\##
-);while(f(t.bitwiseAND))ai()}function lu(){f(t.bitwiseOR),ci();while(f(t.bitwiseOR))ci()}function le(){lu()}function\##
- Le(){Se()}function fi(){if(S(),a(t.colon))Le()}function yn(){if(a(t.plus)||a(t.minus))m(),r.tokens[r.tokens.length-\##
-1].isType=!0}function Q1(e){if(a(t.colon))zr();He(!1,e)}function Z1(e,n,s){if(a(t.questionDot)&&U()===t.lessThan){if\##
-(n){s.stop=!0;return}m(),Ve(),h(t.parenL),Ie();return}else if(!n&&a(t.lessThan)){let o=r.snapshot();if(Ve(),h(t.pare\##
-nL),Ie(),r.error)r.restoreFromSnapshot(o);else return}Bt(e,n,s)}function ei(){if(a(t.lessThan)){let e=r.snapshot();i\##
-f(Ve(),r.error)r.restoreFromSnapshot(e)}}function hi(){if(a(t.name)&&r.contextualKeyword===c._interface){let e=P(0);\##
-return m(),Yr(),C(e),!0}else if(y(c._enum))return Ei(),!0;return!1}function mi(){if(y(c._enum))return Ei(),!0;return\##
-!1}function di(e){if(e===c._declare){if(a(t._class)||a(t.name)||a(t._function)||a(t._var)||a(t._export)){let n=P(1);\##
-Xr(),C(n)}}else if(a(t.name)){if(e===c._interface){let n=P(1);Yr(),C(n)}else if(e===c._type){let n=P(1);Qr(),C(n)}el\##
-se if(e===c._opaque){let n=P(1);Zr(!1),C(n)}}q()}function ki(){return y(c._type)||y(c._interface)||y(c._opaque)||y(c\##
-._enum)}function xi(){return a(t.name)&&(r.contextualKeyword===c._type||r.contextualKeyword===c._interface||r.contex\##
-tualKeyword===c._opaque||r.contextualKeyword===c._enum)}function gi(){if(y(c._type)){let e=P(1);if(m(),a(t.braceL))A\##
-n(),yt();else Qr();C(e)}else if(y(c._opaque)){let e=P(1);m(),Zr(!1),C(e)}else if(y(c._interface)){let e=P(1);m(),Yr(\##
-),C(e)}else ie(!0)}function _i(){return a(t.star)||y(c._type)&&U()===t.star}function yi(){if(K(c._type)){let e=P(2);\##
-Sn(),C(e)}else Sn()}function Ii(e){if(e&&a(t.lessThan))Ve();if(y(c._implements)){let n=P(0);m(),r.tokens[r.tokens.le\##
-ngth-1].type=t._implements;do if(En(),a(t.lessThan))Ve();while(f(t.comma));C(n)}}function ti(){if(a(t.lessThan)){if(\##
-_e(),!a(t.parenL))A()}}function u1(){let e=P(0);if(f(t.question),a(t.colon))Le();C(e)}function Ti(){if(a(t._typeof)|\##
-|y(c._type)){let e=Ee();if(Ul(e)||e.type===t.braceL||e.type===t.star)m()}}function bi(){let e=r.contextualKeyword===\##
-c._type||r.type===t._typeof;if(e)m();else S();if(y(c._as)&&!lt(c._as))if(S(),e&&!a(t.name)&&!(r.type&t.IS_KEYWORD));\##
-else S();else{if(e&&(a(t.name)||!!(r.type&t.IS_KEYWORD)))S();if(K(c._as))S()}}function wi(){if(a(t.lessThan)){let e=\##
-P(0);_e(),C(e)}}function Si(){if(a(t.colon))Le()}function ni(){if(a(t.colon)){let e=r.noAnonFunctionType;r.noAnonFun\##
-ctionType=!0,Le(),r.noAnonFunctionType=e}}function si(e,n){if(a(t.lessThan)){let s=r.snapshot(),o=xe(e,n);if(r.error\##
-)r.restoreFromSnapshot(s),r.type=t.typeParameterStart;else return o;let i=P(0);if(_e(),C(i),o=xe(e,n),o)return!0;A()\##
-}return xe(e,n)}function ri(){if(a(t.colon)){let e=P(0),n=r.snapshot(),s=r.noAnonFunctionType;if(r.noAnonFunctionTyp\##
-e=!0,zr(),r.noAnonFunctionType=s,ne())A();if(!a(t.arrow))A();if(r.error)r.restoreFromSnapshot(n);C(e)}return f(t.arr\##
-ow)}function oi(e,n=!1){if(r.tokens[r.tokens.length-1].contextualKeyword===c._async&&a(t.lessThan)){let s=r.snapshot\##
-();if(uu()&&!r.error)return;r.restoreFromSnapshot(s)}Hr(e,n)}function uu(){r.scopeDepth++;let e=r.tokens.length;if(N\##
-e(),!gn())return!1;return _t(e),!0}function Ei(){X(c._enum),r.tokens[r.tokens.length-1].type=t._enum,S(),pu()}functi\##
-on pu(){if(K(c._of))m();h(t.braceL),fu(),h(t.braceR)}function fu(){while(!a(t.braceR)&&!r.error){if(f(t.ellipsis))br\##
-eak;if(hu(),!a(t.braceR))h(t.comma)}}function hu(){if(S(),f(t.eq))m()}function Pi(){if(xt(t.eof),r.scopes.push(new u\##
-e(0,r.tokens.length,!0)),r.scopeDepth!==0)throw Error(`Invalid scope depth at end of file: ${r.scopeDepth}`);return \##
-new oo(r.tokens,r.scopes)}function ie(e){if(O){if(hi())return}if(a(t.at))In();mu(e)}function mu(e){if(L){if(N1())ret\##
-urn}let n=r.type;switch(n){case t._break:case t._continue:ku();return;case t._debugger:xu();return;case t._do:gu();r\##
-eturn;case t._for:_u();return;case t._function:if(U()===t.dot)break;if(!e)A();Tu();return;case t._class:if(!e)A();Re\##
-(!0);return;case t._if:bu();return;case t._return:wu();return;case t._switch:Su();return;case t._throw:Eu();return;c\##
-ase t._try:vu();return;case t._let:case t._const:if(!e)A();case t._var:qt(n!==t._var);return;case t._while:Cu();retu\##
-rn;case t.braceL:De();return;case t.semi:Pu();return;case t._export:case t._import:{let i=U();if(i===t.parenL||i===t\##
-.dot)break;if(m(),n===t._import)so();else no();return}case t.name:if(r.contextualKeyword===c._async){let i=r.start,l\##
-=r.snapshot();if(m(),a(t._function)&&!ne()){h(t._function),Pe(i,!0);return}else r.restoreFromSnapshot(l)}else if(r.c\##
-ontextualKeyword===c._using&&!Qt()&&U()===t.name){qt(!0);return}else if(Ni()){X(c._await),qt(!0);return}default:brea\##
-k}let s=r.tokens.length;Z();let o=null;if(r.tokens.length===s+1){let i=r.tokens[r.tokens.length-1];if(i.type===t.nam\##
-e)o=i.contextualKeyword}if(o==null){q();return}if(f(t.colon))Nu();else Ru(o)}function Ni(){if(!y(c._await))return!1;\##
-let e=r.snapshot();if(m(),!y(c._using)||ee())return r.restoreFromSnapshot(e),!1;if(m(),!a(t.name)||ee())return r.res\##
-toreFromSnapshot(e),!1;return r.restoreFromSnapshot(e),!0}function In(){while(a(t.at))Ri()}function Ri(){if(m(),f(t.\##
-parenL))Z(),h(t.parenR);else{S();while(f(t.dot))S();du()}}function du(){if(L)U1();else Mr()}function Mr(){if(f(t.par\##
-enL))Ie()}function ku(){if(m(),!ke())S(),q()}function xu(){m(),q()}function gu(){m(),ie(!1),h(t._while),$t(),f(t.sem\##
-i)}function _u(){r.scopeDepth++;let e=r.tokens.length;Iu();let n=r.tokens.length;r.scopes.push(new ue(e,n,!1)),r.sco\##
-peDepth--}function yu(){if(!y(c._using))return!1;if(lt(c._of))return!1;return!0}function Iu(){m();let e=!1;if(y(c._a\##
-wait))e=!0,m();if(h(t.parenL),a(t.semi)){if(e)A();ro();return}let n=Ni();if(n||a(t._var)||a(t._let)||a(t._const)||yu\##
-()){if(n)X(c._await);if(m(),Li(!0,r.type!==t._var),a(t._in)||y(c._of)){Ai(e);return}ro();return}if(Z(!0),a(t._in)||y\##
-(c._of)){Ai(e);return}if(e)A();ro()}function Tu(){let e=r.start;m(),Pe(e,!0)}function bu(){if(m(),$t(),ie(!1),f(t._e\##
-lse))ie(!1)}function wu(){if(m(),!ke())Z(),q()}function Su(){m(),$t(),r.scopeDepth++;let e=r.tokens.length;h(t.brace\##
-L);while(!a(t.braceR)&&!r.error)if(a(t._case)||a(t._default)){let s=a(t._case);if(m(),s)Z();h(t.colon)}else ie(!0);m\##
-();let n=r.tokens.length;r.scopes.push(new ue(e,n,!1)),r.scopeDepth--}function Eu(){m(),Z(),q()}function Au(){if(Lt(\##
-!0),L)$e()}function vu(){if(m(),De(),a(t._catch)){m();let e=null;if(a(t.parenL))r.scopeDepth++,e=r.tokens.length,h(t\##
-.parenL),Au(),h(t.parenR);if(De(),e!=null){let n=r.tokens.length;r.scopes.push(new ue(e,n,!1)),r.scopeDepth--}}if(f(\##
-t._finally))De()}function qt(e){m(),Li(!1,e),q()}function Cu(){m(),$t(),ie(!1)}function Pu(){m()}function Nu(){ie(!0\##
-)}function Ru(e){if(L)L1(e);else if(O)di(e);else q()}function De(e=!1,n=0){let s=r.tokens.length;if(r.scopeDepth++,h\##
-(t.braceL),n)r.tokens[r.tokens.length-1].contextId=n;if(xt(t.braceR),n)r.tokens[r.tokens.length-1].contextId=n;let o\##
-=r.tokens.length;r.scopes.push(new ue(s,o,e)),r.scopeDepth--}function xt(e){while(!f(e)&&!r.error)ie(!0)}function ro\##
-(){if(h(t.semi),!a(t.semi))Z();if(h(t.semi),!a(t.parenR))Z();h(t.parenR),ie(!1)}function Ai(e){if(e)K(c._of);else m(\##
-);Z(),h(t.parenR),ie(!1)}function Li(e,n){while(!0){if(Lu(n),f(t.eq)){let s=r.tokens.length-1;Q(e),r.tokens[s].rhsEn\##
-dIndex=r.tokens.length}if(!f(t.comma))break}}function Lu(e){if(Lt(e),L)j1();else if(O)Si()}function Pe(e,n,s=!1){if(\##
-a(t.star))m();if(n&&!s&&!a(t.name)&&!a(t._yield))A();let o=null;if(a(t.name)){if(!n)o=r.tokens.length,r.scopeDepth++\##
-;ye(!1)}let i=r.tokens.length;r.scopeDepth++,Ne(),Gr(e);let l=r.tokens.length;if(r.scopes.push(new ue(i,l,!0)),r.sco\##
-peDepth--,o!==null)r.scopes.push(new ue(o,l,!0)),r.scopeDepth--}function Ne(e=!1,n=0){if(L)M1();else if(O)wi();if(h(\##
-t.parenL),n)r.tokens[r.tokens.length-1].contextId=n;if(Dt(t.parenR,!1,!1,e,n),n)r.tokens[r.tokens.length-1].contextI\##
-d=n}function Re(e,n=!1){let s=qe();m(),r.tokens[r.tokens.length-1].contextId=s,r.tokens[r.tokens.length-1].isExpress\##
-ion=!e;let o=null;if(!e)o=r.tokens.length,r.scopeDepth++;Mu(e,n),ju();let i=r.tokens.length;if(Du(s),r.error)return;\##
-if(r.tokens[i].contextId=s,r.tokens[r.tokens.length-1].contextId=s,o!==null){let l=r.tokens.length;r.scopes.push(new\##
- ue(o,l,!1)),r.scopeDepth--}}function Di(){return a(t.eq)||a(t.semi)||a(t.braceR)||a(t.bang)||a(t.colon)}function Oi\##
-(){return a(t.parenL)||a(t.lessThan)}function Du(e){h(t.braceL);while(!f(t.braceR)&&!r.error){if(f(t.semi))continue;\##
-if(a(t.at)){Ri();continue}let n=r.start;Ou(n,e)}}function Ou(e,n){if(L)Ot([c._declare,c._public,c._protected,c._priv\##
-ate,c._override]);let s=!1;if(a(t.name)&&r.contextualKeyword===c._static){if(S(),Oi()){Ht(e,!1);return}else if(Di())\##
-{vn();return}if(r.tokens[r.tokens.length-1].type=t._static,s=!0,a(t.braceL)){r.tokens[r.tokens.length-1].contextId=n\##
-,De();return}}Fu(e,s,n)}function Fu(e,n,s){if(L){if(R1(n))return}if(f(t.star)){Ut(s),Ht(e,!1);return}Ut(s);let o=!1,\##
-i=r.tokens[r.tokens.length-1];if(i.contextualKeyword===c._constructor)o=!0;if(vi(),Oi())Ht(e,o);else if(Di())vn();el\##
-se if(i.contextualKeyword===c._async&&!ke()){if(r.tokens[r.tokens.length-1].type=t._async,a(t.star))m();Ut(s),vi(),H\##
-t(e,!1)}else if((i.contextualKeyword===c._get||i.contextualKeyword===c._set)&&!(ke()&&a(t.star))){if(i.contextualKey\##
-word===c._get)r.tokens[r.tokens.length-1].type=t._get;else r.tokens[r.tokens.length-1].type=t._set;Ut(s),Ht(e,!1)}el\##
-se if(i.contextualKeyword===c._accessor&&!ke())Ut(s),vn();else if(ke())vn();else A()}function Ht(e,n){if(L)Be();else\##
- if(O){if(a(t.lessThan))_e()}_n(e,n)}function Ut(e){Ue(e)}function vi(){if(L){let e=P(0);f(t.question),C(e)}}functio\##
-n vn(){if(L)tn(t.bang),$e();else if(O){if(a(t.colon))Le()}if(a(t.eq)){let e=r.tokens.length;m(),Q(),r.tokens[e].rhsE\##
-ndIndex=r.tokens.length}q()}function Mu(e,n=!1){if(L&&(!e||n)&&y(c._implements))return;if(a(t.name))ye(!0);if(L)Be()\##
-;else if(O){if(a(t.lessThan))_e()}}function ju(){let e=!1;if(f(t._extends))$r(),e=!0;else e=!1;if(L)O1(e);else if(O)\##
-Ii(e)}function no(){let e=r.tokens.length-1;if(L){if(A1())return}if(Uu())Hu();else if($u()){if(S(),a(t.comma)&&U()==\##
-=t.star)h(t.comma),h(t.star),X(c._as),S();else Fi();yt()}else if(f(t._default))Bu();else if(Wu())qu();else An(),yt()\##
-;r.tokens[e].rhsEndIndex=r.tokens.length}function Bu(){if(L){if(P1())return}if(O){if(mi())return}let e=r.start;if(f(\##
-t._function))Pe(e,!0,!0);else if(y(c._async)&&U()===t._function)K(c._async),f(t._function),Pe(e,!0,!0);else if(a(t._\##
-class))Re(!0,!0);else if(a(t.at))In(),Re(!0,!0);else Q(),q()}function qu(){if(L)D1();else if(O)gi();else ie(!0)}func\##
-tion $u(){if(L&&Or())return!1;else if(O&&xi())return!1;if(a(t.name))return r.contextualKeyword!==c._async;if(!a(t._d\##
-efault))return!1;let e=wt(),n=Ee(),s=n.type===t.name&&n.contextualKeyword===c._from;if(n.type===t.comma)return!0;if(\##
-s){let o=x.charCodeAt(sr(e+4));return o===u.quotationMark||o===u.apostrophe}return!1}function Fi(){if(f(t.comma))An(\##
-)}function yt(){if(K(c._from))ge(),Mi();q()}function Uu(){if(O)return _i();else return a(t.star)}function Hu(){if(O)\##
-yi();else Sn()}function Sn(){if(h(t.star),y(c._as))Vu();else yt()}function Vu(){m(),r.tokens[r.tokens.length-1].type\##
-=t._as,S(),Fi(),yt()}function Wu(){return L&&Or()||O&&ki()||r.type===t._var||r.type===t._const||r.type===t._let||r.t\##
-ype===t._function||r.type===t._class||y(c._async)||a(t.at)}function An(){let e=!0;h(t.braceL);while(!f(t.braceR)&&!r\##
-.error){if(e)e=!1;else if(h(t.comma),f(t.braceR))break;Gu()}}function Gu(){if(L){C1();return}if(S(),r.tokens[r.token\##
-s.length-1].identifierRole=I.ExportAccess,K(c._as))S()}function Xu(){let e=r.snapshot();if(X(c._module),K(c._from))i\##
-f(y(c._from))return r.restoreFromSnapshot(e),!0;else return r.restoreFromSnapshot(e),!1;else if(a(t.comma))return r.\##
-restoreFromSnapshot(e),!1;else return r.restoreFromSnapshot(e),!0}function Ju(){if(y(c._module)&&Xu())m()}function s\##
-o(){if(L&&a(t.name)&&U()===t.eq){hn();return}if(L&&y(c._type)){let e=Ee();if(e.type===t.name&&e.contextualKeyword!==\##
-c._from){if(X(c._type),U()===t.eq){hn();return}}else if(e.type===t.star||e.type===t.braceL)X(c._type)}if(a(t.string)\##
-)ge();else Ju(),Ku(),X(c._from),ge();Mi(),q()}function zu(){return a(t.name)}function Ci(){ft()}function Ku(){if(O)T\##
-i();let e=!0;if(zu()){if(Ci(),!f(t.comma))return}if(a(t.star)){m(),X(c._as),Ci();return}h(t.braceL);while(!f(t.brace\##
-R)&&!r.error){if(e)e=!1;else{if(f(t.colon))A("ES2015 named imports do not destructure. Use another statement for des\##
-tructuring after the import.");if(h(t.comma),f(t.braceR))break}Yu()}}function Yu(){if(L){v1();return}if(O){bi();retu\##
-rn}if(ft(),y(c._as))r.tokens[r.tokens.length-1].identifierRole=I.ImportAccess,m(),ft()}function Mi(){if(a(t._with)||\##
-y(c._assert)&&!ee())m(),Ft(!1,!1)}function ji(){if(r.pos===0&&x.charCodeAt(0)===u.numberSign&&x.charCodeAt(1)===u.ex\##
-clamationMark)ir(2);return or(),Pi()}class oo{constructor(e,n){this.tokens=e,this.scopes=n}}function Bi(e,n,s,o){if(\##
-o&&s)throw Error("Cannot combine flow and typescript plugins.");xo(e,n,s,o);let i=ji();if(r.error)throw mo(r.error);\##
-return i}function io(e){let n=e.currentIndex(),s=0,o=e.currentToken();do{let i=e.tokens[n];if(i.isOptionalChainStart\##
-)s++;if(i.isOptionalChainEnd)s--;if(s+=i.numNullishCoalesceStarts,s-=i.numNullishCoalesceEnds,i.contextualKeyword===\##
-c._await&&i.identifierRole==null&&i.scopeDepth===o.scopeDepth)return!0;n+=1}while(s>0&&n<e.tokens.length);return!1}c\##
-lass We{__init(){this.resultCode=""}__init2(){this.resultMappings=Array(this.tokens.length)}__init3(){this.tokenInde\##
-x=0}constructor(e,n,s,o,i){this.code=e,this.tokens=n,this.isFlowEnabled=s,this.disableESTransforms=o,this.helperMana\##
-ger=i,We.prototype.__init.call(this),We.prototype.__init2.call(this),We.prototype.__init3.call(this)}snapshot(){retu\##
-rn{resultCode:this.resultCode,tokenIndex:this.tokenIndex}}restoreToSnapshot(e){this.resultCode=e.resultCode,this.tok\##
-enIndex=e.tokenIndex}dangerouslyGetAndRemoveCodeSinceSnapshot(e){let n=this.resultCode.slice(e.resultCode.length);re\##
-turn this.resultCode=e.resultCode,n}reset(){this.resultCode="",this.resultMappings=Array(this.tokens.length),this.to\##
-kenIndex=0}matchesContextualAtIndex(e,n){return this.matches1AtIndex(e,t.name)&&this.tokens[e].contextualKeyword===n\##
-}identifierNameAtIndex(e){return this.identifierNameForToken(this.tokens[e])}identifierNameAtRelativeIndex(e){return\##
- this.identifierNameForToken(this.tokenAtRelativeIndex(e))}identifierName(){return this.identifierNameForToken(this.\##
-currentToken())}identifierNameForToken(e){return this.code.slice(e.start,e.end)}rawCodeForToken(e){return this.code.\##
-slice(e.start,e.end)}stringValueAtIndex(e){return this.stringValueForToken(this.tokens[e])}stringValue(){return this\##
-.stringValueForToken(this.currentToken())}stringValueForToken(e){return this.code.slice(e.start+1,e.end-1)}matches1A\##
-tIndex(e,n){return this.tokens[e].type===n}matches2AtIndex(e,n,s){return this.tokens[e].type===n&&this.tokens[e+1].t\##
-ype===s}matches3AtIndex(e,n,s,o){return this.tokens[e].type===n&&this.tokens[e+1].type===s&&this.tokens[e+2].type===\##
-o}matches1(e){return this.tokens[this.tokenIndex].type===e}matches2(e,n){return this.tokens[this.tokenIndex].type===\##
-e&&this.tokens[this.tokenIndex+1].type===n}matches3(e,n,s){return this.tokens[this.tokenIndex].type===e&&this.tokens\##
-[this.tokenIndex+1].type===n&&this.tokens[this.tokenIndex+2].type===s}matches4(e,n,s,o){return this.tokens[this.toke\##
-nIndex].type===e&&this.tokens[this.tokenIndex+1].type===n&&this.tokens[this.tokenIndex+2].type===s&&this.tokens[this\##
-.tokenIndex+3].type===o}matches5(e,n,s,o,i){return this.tokens[this.tokenIndex].type===e&&this.tokens[this.tokenInde\##
-x+1].type===n&&this.tokens[this.tokenIndex+2].type===s&&this.tokens[this.tokenIndex+3].type===o&&this.tokens[this.to\##
-kenIndex+4].type===i}matchesContextual(e){return this.matchesContextualAtIndex(this.tokenIndex,e)}matchesContextIdAn\##
-dLabel(e,n){return this.matches1(e)&&this.currentToken().contextId===n}previousWhitespaceAndComments(){let e=this.co\##
-de.slice(this.tokenIndex>0?this.tokens[this.tokenIndex-1].end:0,this.tokenIndex<this.tokens.length?this.tokens[this.\##
-tokenIndex].start:this.code.length);if(this.isFlowEnabled)e=e.replace(/@flow/g,"");return e}replaceToken(e){this.res\##
-ultCode+=this.previousWhitespaceAndComments(),this.appendTokenPrefix(),this.resultMappings[this.tokenIndex]=this.res\##
-ultCode.length,this.resultCode+=e,this.appendTokenSuffix(),this.tokenIndex++}replaceTokenTrimmingLeftWhitespace(e){t\##
-his.resultCode+=this.previousWhitespaceAndComments().replace(/[^\r\n]/g,""),this.appendTokenPrefix(),this.resultMapp\##
-ings[this.tokenIndex]=this.resultCode.length,this.resultCode+=e,this.appendTokenSuffix(),this.tokenIndex++}removeIni\##
-tialToken(){this.replaceToken("")}removeToken(){this.replaceTokenTrimmingLeftWhitespace("")}removeBalancedCode(){let\##
- e=0;while(!this.isAtEnd()){if(this.matches1(t.braceL))e++;else if(this.matches1(t.braceR)){if(e===0)return;e--}this\##
-.removeToken()}}copyExpectedToken(e){if(this.tokens[this.tokenIndex].type!==e)throw Error(`Expected token ${e}`);thi\##
-s.copyToken()}copyToken(){this.resultCode+=this.previousWhitespaceAndComments(),this.appendTokenPrefix(),this.result\##
-Mappings[this.tokenIndex]=this.resultCode.length,this.resultCode+=this.code.slice(this.tokens[this.tokenIndex].start\##
-,this.tokens[this.tokenIndex].end),this.appendTokenSuffix(),this.tokenIndex++}copyTokenWithPrefix(e){this.resultCode\##
-+=this.previousWhitespaceAndComments(),this.appendTokenPrefix(),this.resultCode+=e,this.resultMappings[this.tokenInd\##
-ex]=this.resultCode.length,this.resultCode+=this.code.slice(this.tokens[this.tokenIndex].start,this.tokens[this.toke\##
-nIndex].end),this.appendTokenSuffix(),this.tokenIndex++}appendTokenPrefix(){let e=this.currentToken();if(e.numNullis\##
-hCoalesceStarts||e.isOptionalChainStart)e.isAsyncOperation=io(this);if(this.disableESTransforms)return;if(e.numNulli\##
-shCoalesceStarts)for(let n=0;n<e.numNullishCoalesceStarts;n++){if(e.isAsyncOperation)this.resultCode+="await ",this.\##
-resultCode+=this.helperManager.getHelperName("asyncNullishCoalesce");else this.resultCode+=this.helperManager.getHel\##
-perName("nullishCoalesce");this.resultCode+="("}if(e.isOptionalChainStart){if(e.isAsyncOperation)this.resultCode+="a\##
-wait ";if(this.tokenIndex>0&&this.tokenAtRelativeIndex(-1).type===t._delete)if(e.isAsyncOperation)this.resultCode+=t\##
-his.helperManager.getHelperName("asyncOptionalChainDelete");else this.resultCode+=this.helperManager.getHelperName("\##
-optionalChainDelete");else if(e.isAsyncOperation)this.resultCode+=this.helperManager.getHelperName("asyncOptionalCha\##
-in");else this.resultCode+=this.helperManager.getHelperName("optionalChain");this.resultCode+="(["}}appendTokenSuffi\##
-x(){let e=this.currentToken();if(e.isOptionalChainEnd&&!this.disableESTransforms)this.resultCode+="])";if(e.numNulli\##
-shCoalesceEnds&&!this.disableESTransforms)for(let n=0;n<e.numNullishCoalesceEnds;n++)this.resultCode+="))"}appendCod\##
-e(e){this.resultCode+=e}currentToken(){return this.tokens[this.tokenIndex]}currentTokenCode(){let e=this.currentToke\##
-n();return this.code.slice(e.start,e.end)}tokenAtRelativeIndex(e){return this.tokens[this.tokenIndex+e]}currentIndex\##
-(){return this.tokenIndex}nextToken(){if(this.tokenIndex===this.tokens.length)throw Error("Unexpectedly reached end \##
-of input.");this.tokenIndex++}previousToken(){this.tokenIndex--}finish(){if(this.tokenIndex!==this.tokens.length)thr\##
-ow Error("Tried to finish processing tokens before reaching the end.");return this.resultCode+=this.previousWhitespa\##
-ceAndComments(),{code:this.resultCode,mappings:this.resultMappings}}isAtEnd(){return this.tokenIndex===this.tokens.l\##
-ength}}function co(e,n,s,o){let i=n.snapshot(),l=Qu(n),p=[],d=[],k=[],g=null,_=[],w=[],E=n.currentToken().contextId;\##
-if(E==null)throw Error("Expected non-null class context ID on class open-brace.");n.nextToken();while(!n.matchesCont\##
-extIdAndLabel(t.braceR,E))if(n.matchesContextual(c._constructor)&&!n.currentToken().isType)({constructorInitializerS\##
-tatements:p,constructorInsertPos:g}=qi(n));else if(n.matches1(t.semi)){if(!o)w.push({start:n.currentIndex(),end:n.cu\##
-rrentIndex()+1});n.nextToken()}else if(n.currentToken().isType)n.nextToken();else{let D=n.currentIndex(),M=!1,H=!1,b\##
-=!1;while(Cn(n.currentToken())){if(n.matches1(t._static))M=!0;if(n.matches1(t.hash))H=!0;if(n.matches1(t._declare)||\##
-n.matches1(t._abstract))b=!0;n.nextToken()}if(M&&n.matches1(t.braceL)){ao(n,E);continue}if(H){ao(n,E);continue}if(n.\##
-matchesContextual(c._constructor)&&!n.currentToken().isType){({constructorInitializerStatements:p,constructorInsertP\##
-os:g}=qi(n));continue}let N=n.currentIndex();if(Zu(n),n.matches1(t.lessThan)||n.matches1(t.parenL)){ao(n,E);continue\##
-}while(n.currentToken().isType)n.nextToken();if(n.matches1(t.eq)){let R=n.currentIndex(),z=n.currentToken().rhsEndIn\##
-dex;if(z==null)throw Error("Expected rhsEndIndex on class field assignment.");n.nextToken();while(n.currentIndex()<z\##
-)e.processToken();let W;if(M)W=s.claimFreeName("__initStatic"),k.push(W);else W=s.claimFreeName("__init"),d.push(W);\##
-_.push({initializerName:W,equalsIndex:R,start:N,end:n.currentIndex()})}else if(!o||b)w.push({start:D,end:n.currentIn\##
-dex()})}if(n.restoreToSnapshot(i),o)return{headerInfo:l,constructorInitializerStatements:p,instanceInitializerNames:\##
-[],staticInitializerNames:[],constructorInsertPos:g,fields:[],rangesToRemove:w};else return{headerInfo:l,constructor\##
-InitializerStatements:p,instanceInitializerNames:d,staticInitializerNames:k,constructorInsertPos:g,fields:_,rangesTo\##
-Remove:w}}function ao(e,n){e.nextToken();while(e.currentToken().contextId!==n)e.nextToken();while(Cn(e.tokenAtRelati\##
-veIndex(-1)))e.previousToken()}function Qu(e){let n=e.currentToken(),s=n.contextId;if(s==null)throw Error("Expected \##
-context ID on class token.");let o=n.isExpression;if(o==null)throw Error("Expected isExpression on class token.");le\##
-t i=null,l=!1;if(e.nextToken(),e.matches1(t.name))i=e.identifierName();while(!e.matchesContextIdAndLabel(t.braceL,s)\##
-){if(e.matches1(t._extends)&&!e.currentToken().isType)l=!0;e.nextToken()}return{isExpression:o,className:i,hasSuperc\##
-lass:l}}function qi(e){let n=[];e.nextToken();let s=e.currentToken().contextId;if(s==null)throw Error("Expected cont\##
-ext ID on open-paren starting constructor params.");while(!e.matchesContextIdAndLabel(t.parenR,s))if(e.currentToken(\##
-).contextId===s){if(e.nextToken(),Cn(e.currentToken())){e.nextToken();while(Cn(e.currentToken()))e.nextToken();let l\##
-=e.currentToken();if(l.type!==t.name)throw Error("Expected identifier after access modifiers in constructor arg.");l\##
-et p=e.identifierNameForToken(l);n.push(`this.${p} = ${p}`)}}else e.nextToken();e.nextToken();while(e.currentToken()\##
-.isType)e.nextToken();let o=e.currentIndex(),i=!1;while(!e.matchesContextIdAndLabel(t.braceR,s)){if(!i&&e.matches2(t\##
-._super,t.parenL)){e.nextToken();let l=e.currentToken().contextId;if(l==null)throw Error("Expected a context ID on t\##
-he super call");while(!e.matchesContextIdAndLabel(t.parenR,l))e.nextToken();o=e.currentIndex(),i=!0}e.nextToken()}re\##
-turn e.nextToken(),{constructorInitializerStatements:n,constructorInsertPos:o}}function Cn(e){return[t._async,t._get\##
-,t._set,t.plus,t.minus,t._readonly,t._static,t._public,t._private,t._protected,t._override,t._abstract,t.star,t._dec\##
-lare,t.hash].includes(e.type)}function Zu(e){if(e.matches1(t.bracketL)){let s=e.currentToken().contextId;if(s==null)\##
-throw Error("Expected class context ID on computed name open bracket.");while(!e.matchesContextIdAndLabel(t.bracketR\##
-,s))e.nextToken();e.nextToken()}else e.nextToken()}function Vt(e){if(e.removeInitialToken(),e.removeToken(),e.remove\##
-Token(),e.removeToken(),e.matches1(t.parenL))e.removeToken(),e.removeToken(),e.removeToken();else while(e.matches1(t\##
-.dot))e.removeToken(),e.removeToken()}var Pn={typeDeclarations:new Set,valueDeclarations:new Set};function Wt(e){let\##
- n=new Set,s=new Set;for(let o=0;o<e.tokens.length;o++){let i=e.tokens[o];if(i.type===t.name&&en(i))if(i.isType)n.ad\##
-d(e.identifierNameForToken(i));else s.add(e.identifierNameForToken(i))}return{typeDeclarations:n,valueDeclarations:s\##
-}}function Gt(e){let n=e.currentIndex();while(!e.matches1AtIndex(n,t.braceR))n++;return e.matchesContextualAtIndex(n\##
-+1,c._from)&&e.matches1AtIndex(n+2,t.string)}function Oe(e){if(e.matches2(t._with,t.braceL)||e.matches2(t.name,t.bra\##
-ceL)&&e.matchesContextual(c._assert))e.removeToken(),e.removeToken(),e.removeBalancedCode(),e.removeToken()}function\##
- Xt(e,n,s,o){if(!e||n)return!1;let i=s.currentToken();if(i.rhsEndIndex==null)throw Error("Expected non-null rhsEndIn\##
-dex on export token.");let l=i.rhsEndIndex-s.currentIndex();if(l!==3&&!(l===4&&s.matches1AtIndex(i.rhsEndIndex-1,t.s\##
-emi)))return!1;let p=s.tokenAtRelativeIndex(2);if(p.type!==t.name)return!1;let d=s.identifierNameForToken(p);return \##
-o.typeDeclarations.has(d)&&!o.valueDeclarations.has(d)}class Ge extends Y{__init(){this.hadExport=!1}__init2(){this.\##
-hadNamedExport=!1}__init3(){this.hadDefaultExport=!1}constructor(e,n,s,o,i,l,p,d,k,g,_,w){super();this.rootTransform\##
-er=e,this.tokens=n,this.importProcessor=s,this.nameManager=o,this.helperManager=i,this.reactHotLoaderTransformer=l,t\##
-his.enableLegacyBabel5ModuleInterop=p,this.enableLegacyTypeScriptModuleInterop=d,this.isTypeScriptTransformEnabled=k\##
-,this.isFlowTransformEnabled=g,this.preserveDynamicImport=_,this.keepUnusedImports=w,Ge.prototype.__init.call(this),\##
-Ge.prototype.__init2.call(this),Ge.prototype.__init3.call(this),this.declarationInfo=k?Wt(n):Pn}getPrefixCode(){let \##
-e="";if(this.hadExport)e+='Object.defineProperty(exports, "__esModule", {value: true});';return e}getSuffixCode(){if\##
-(this.enableLegacyBabel5ModuleInterop&&this.hadDefaultExport&&!this.hadNamedExport)return`
+erName("asyncOptionalChain");for(let[s,r]of Object.entries(ma)){let o=this.helperNames[s],a=r;if(s==="optionalChainD\##
+elete")a=a.replace("OPTIONAL_CHAIN_NAME",this.helperNames.optionalChain);else if(s==="asyncOptionalChainDelete")a=a.\##
+replace("ASYNC_OPTIONAL_CHAIN_NAME",this.helperNames.asyncOptionalChain);else if(s==="require"){if(this.createRequir\##
+eName===null)this.createRequireName=this.nameManager.claimFreeName("_createRequire");a=a.replace(/CREATE_REQUIRE_NAM\##
+E/g,this.createRequireName)}if(o)e+=" ",e+=a.replace(s,o).replace(/\s+/g," ").trim()}return e}}function Gt(e,s,r){if\##
+(!da(e,r))return;ka(e,s,r)}function da(e,s){for(let r of e.tokens)if(r.type===t.name&&!r.isType&&J1(r)&&s.has(e.iden\##
+tifierNameForToken(r)))return!0;return!1}function ka(e,s,r){let o=[],a=s.length-1;for(let u=e.tokens.length-1;;u--){\##
+while(o.length>0&&o[o.length-1].startTokenIndex===u+1)o.pop();while(a>=0&&s[a].endTokenIndex===u+1)o.push(s[a]),a--;\##
+if(u<0)break;let m=e.tokens[u],x=e.identifierNameForToken(m);if(o.length>1&&!m.isType&&m.type===t.name&&r.has(x)){if\##
+(z1(m))_r(o[o.length-1],e,x);else if(K1(m)){let k=o.length-1;while(k>0&&!o[k].isFunctionScope)k--;if(k<0)throw Error\##
+("Did not find parent function scope.");_r(o[k],e,x)}}}if(o.length>0)throw Error("Expected empty scope stack after p\##
+rocessing file.")}function _r(e,s,r){for(let o=e.startTokenIndex;o<e.endTokenIndex;o++){let a=s.tokens[o];if((a.type\##
+===t.name||a.type===t.jsxName)&&s.identifierNameForToken(a)===r)a.shadowsGlobal=!0}}function Zn(e,s){let r=[];for(le\##
+t o of s)if(o.type===t.name)r.push(e.slice(o.start,o.end));return r}class gt{__init(){this.usedNames=new Set}constru\##
+ctor(e,s){gt.prototype.__init.call(this),this.usedNames=new Set(Zn(e,s))}claimFreeName(e){let s=this.findFreeName(e)\##
+;return this.usedNames.add(s),s}findFreeName(e){if(!this.usedNames.has(e))return e;let s=2;while(this.usedNames.has(\##
+e+String(s)))s++;return e+String(s)}}function Ir(){}function e1(){h(),X(!1)}function t1(e){h(),It(e)}function he(e){\##
+b(),Xt(e)}function st(){b(),n.tokens[n.tokens.length-1].identifierRole=_.ImportDeclaration}function Xt(e){let s;if(n\##
+.scopeDepth===0)s=_.TopLevelDeclaration;else if(e)s=_.BlockScopedDeclaration;else s=_.FunctionScopedDeclaration;n.to\##
+kens[n.tokens.length-1].identifierRole=s}function It(e){switch(n.type){case t._this:{let s=A(0);h(),E(s);return}case\##
+ t._yield:case t.name:{n.type=t.name,he(e);return}case t.bracketL:{h(),yt(t.bracketR,e,!0);return}case t.braceL:bt(!\##
+0,e);return;default:w()}}function yt(e,s,r=!1,o=!1,a=0){let u=!0,m=!1,x=n.tokens.length;while(!p(e)&&!n.error){if(u)\##
+u=!1;else if(f(t.comma),n.tokens[n.tokens.length-1].contextId=a,!m&&n.tokens[x].isType)n.tokens[n.tokens.length-1].i\##
+sType=!0,m=!0;if(r&&i(t.comma));else if(p(e))break;else if(i(t.ellipsis)){t1(s),yr(),p(t.comma),f(e);break}else xa(o\##
+,s)}}function xa(e,s){if(e)Tt([c._public,c._protected,c._private,c._readonly,c._override]);_t(s),yr(),_t(s,!0)}funct\##
+ion yr(){if(v)br();else if(R)Tr()}function _t(e,s=!1){if(!s)It(e);if(!p(t.eq))return;let r=n.tokens.length-1;X(),n.t\##
+okens[r].rhsEndIndex=n.tokens.length}function n1(){return i(t.name)}function ga(){return i(t.name)||Boolean(n.type&t\##
+.IS_KEYWORD)||i(t.string)||i(t.num)||i(t.bigint)||i(t.decimal)}function Nr(){let e=n.snapshot();if(h(),(i(t.bracketL\##
+)||i(t.braceL)||i(t.star)||i(t.ellipsis)||i(t.hash)||ga())&&!K())return!0;else return n.restoreFromSnapshot(e),!1}fu\##
+nction Tt(e){while(!0)if(Pr(e)===null)break}function Pr(e){if(!i(t.name))return null;let s=n.contextualKeyword;if(e.\##
+indexOf(s)!==-1&&Nr()){switch(s){case c._readonly:n.tokens[n.tokens.length-1].type=t._readonly;break;case c._abstrac\##
+t:n.tokens[n.tokens.length-1].type=t._abstract;break;case c._static:n.tokens[n.tokens.length-1].type=t._static;break\##
+;case c._public:n.tokens[n.tokens.length-1].type=t._public;break;case c._private:n.tokens[n.tokens.length-1].type=t.\##
+_private;break;case c._protected:n.tokens[n.tokens.length-1].type=t._protected;break;case c._override:n.tokens[n.tok\##
+ens.length-1].type=t._override;break;case c._declare:n.tokens[n.tokens.length-1].type=t._declare;break;default:break\##
+}return s}return null}function St(){b();while(p(t.dot))b()}function _a(){if(St(),!K()&&i(t.lessThan))ot()}function I\##
+a(){h(),rt()}function ya(){h()}function Ta(){if(f(t._typeof),i(t._import))Rr();else St();if(!K()&&i(t.lessThan))ot()\##
+}function Rr(){if(f(t._import),f(t.parenL),f(t.string),f(t.parenR),p(t.dot))St();if(i(t.lessThan))ot()}function ba()\##
+{p(t._const);let e=p(t._in),s=V(c._out);if(p(t._const),(e||s)&&!i(t.name))n.tokens[n.tokens.length-1].type=t.name;el\##
+se b();if(p(t._extends))H();if(p(t.eq))H()}function Pe(){if(i(t.lessThan))zt()}function zt(){let e=A(0);if(i(t.lessT\##
+han)||i(t.typeParameterStart))h();else w();while(!p(t.greaterThan)&&!n.error)ba(),p(t.comma);E(e)}function i1(e){let\##
+ s=e===t.arrow;if(Pe(),f(t.parenL),n.scopeDepth++,wa(!1),n.scopeDepth--,s)wt(e);else if(i(e))wt(e)}function wa(e){yt\##
+(t.parenR,e)}function Jt(){if(!p(t.comma))F()}function wr(){i1(t.colon),Jt()}function Sa(){let e=n.snapshot();h();le\##
+t s=p(t.name)&&i(t.colon);return n.restoreFromSnapshot(e),s}function vr(){if(!(i(t.bracketL)&&Sa()))return!1;let e=A\##
+(0);return f(t.bracketL),b(),rt(),f(t.bracketR),ve(),Jt(),E(e),!0}function Sr(e){if(p(t.question),!e&&(i(t.parenL)||\##
+i(t.lessThan)))i1(t.colon),Jt();else ve(),Jt()}function Ea(){if(i(t.parenL)||i(t.lessThan)){wr();return}if(i(t._new)\##
+){if(h(),i(t.parenL)||i(t.lessThan))wr();else Sr(!1);return}let e=!!Pr([c._readonly]);if(vr())return;if((g(c._get)||\##
+g(c._set))&&Nr());Le(-1),Sr(e)}function Aa(){Lr()}function Lr(){f(t.braceL);while(!p(t.braceR)&&!n.error)Ea()}functi\##
+on Ca(){let e=n.snapshot(),s=Na();return n.restoreFromSnapshot(e),s}function Na(){if(h(),p(t.plus)||p(t.minus))retur\##
+n g(c._readonly);if(g(c._readonly))h();if(!i(t.bracketL))return!1;if(h(),!n1())return!1;return h(),i(t._in)}function\##
+ Pa(){b(),f(t._in),H()}function Ra(){if(f(t.braceL),i(t.plus)||i(t.minus))h(),q(c._readonly);else V(c._readonly);if(\##
+f(t.bracketL),Pa(),V(c._as))H();if(f(t.bracketR),i(t.plus)||i(t.minus))h(),f(t.question);else p(t.question);Va(),F()\##
+,f(t.braceR)}function va(){f(t.bracketL);while(!p(t.bracketR)&&!n.error)La(),p(t.comma)}function La(){if(p(t.ellipsi\##
+s))H();else H(),p(t.question);if(p(t.colon))H()}function Da(){f(t.parenL),H(),f(t.parenR)}function Fa(){de(),de();wh\##
+ile(!i(t.backQuote)&&!n.error)f(t.dollarBraceL),H(),de(),de();h()}var Ce;(function(e){e[e.TSFunctionType=0]="TSFunct\##
+ionType";let r=1;e[e.TSConstructorType=r]="TSConstructorType";let o=r+1;e[e.TSAbstractConstructorType=o]="TSAbstract\##
+ConstructorType"})(Ce||(Ce={}));function s1(e){if(e===Ce.TSAbstractConstructorType)q(c._abstract);if(e===Ce.TSConstr\##
+uctorType||e===Ce.TSAbstractConstructorType)f(t._new);let s=n.inDisallowConditionalTypesContext;n.inDisallowConditio\##
+nalTypesContext=!1,i1(t.arrow),n.inDisallowConditionalTypesContext=s}function Oa(){switch(n.type){case t.name:_a();r\##
+eturn;case t._void:case t._null:h();return;case t.string:case t.num:case t.bigint:case t.decimal:case t._true:case t\##
+._false:Ne();return;case t.minus:h(),Ne();return;case t._this:{if(ya(),g(c._is)&&!K())Ia();return}case t._typeof:Ta(\##
+);return;case t._import:Rr();return;case t.braceL:if(Ca())Ra();else Aa();return;case t.bracketL:va();return;case t.p\##
+arenL:Da();return;case t.backQuote:Fa();return;default:if(n.type&t.IS_KEYWORD){h(),n.tokens[n.tokens.length-1].type=\##
+t.name;return}break}w()}function Ma(){Oa();while(!K()&&p(t.bracketL))if(!p(t.bracketR))H(),f(t.bracketR)}function Ba\##
+(){if(q(c._infer),b(),i(t._extends)){let e=n.snapshot();f(t._extends);let s=n.inDisallowConditionalTypesContext;if(n\##
+.inDisallowConditionalTypesContext=!0,H(),n.inDisallowConditionalTypesContext=s,n.error||!n.inDisallowConditionalTyp\##
+esContext&&i(t.question))n.restoreFromSnapshot(e)}}function r1(){if(g(c._keyof)||g(c._unique)||g(c._readonly))h(),r1\##
+();else if(g(c._infer))Ba();else{let e=n.inDisallowConditionalTypesContext;n.inDisallowConditionalTypesContext=!1,Ma\##
+(),n.inDisallowConditionalTypesContext=e}}function Er(){if(p(t.bitwiseAND),r1(),i(t.bitwiseAND))while(p(t.bitwiseAND\##
+))r1()}function ja(){if(p(t.bitwiseOR),Er(),i(t.bitwiseOR))while(p(t.bitwiseOR))Er()}function qa(){if(i(t.lessThan))\##
+return!0;return i(t.parenL)&&Ha()}function $a(){if(i(t.name)||i(t._this))return h(),!0;if(i(t.braceL)||i(t.bracketL)\##
+){let e=1;h();while(e>0&&!n.error){if(i(t.braceL)||i(t.bracketL))e++;else if(i(t.braceR)||i(t.bracketR))e--;h()}retu\##
+rn!0}return!1}function Ha(){let e=n.snapshot(),s=Ua();return n.restoreFromSnapshot(e),s}function Ua(){if(h(),i(t.par\##
+enR)||i(t.ellipsis))return!0;if($a()){if(i(t.colon)||i(t.comma)||i(t.question)||i(t.eq))return!0;if(i(t.parenR)){if(\##
+h(),i(t.arrow))return!0}}return!1}function wt(e){let s=A(0);if(f(e),!Ga())H();E(s)}function Wa(){if(i(t.colon))wt(t.\##
+colon)}function ve(){if(i(t.colon))rt()}function Va(){if(p(t.colon))H()}function Ga(){let e=n.snapshot();if(g(c._ass\##
+erts))if(h(),V(c._is))return H(),!0;else if(n1()||i(t._this)){if(h(),V(c._is))H();return!0}else return n.restoreFrom\##
+Snapshot(e),!1;else if(n1()||i(t._this))if(h(),g(c._is)&&!K())return h(),H(),!0;else return n.restoreFromSnapshot(e)\##
+,!1;return!1}function rt(){let e=A(0);f(t.colon),H(),E(e)}function H(){if(Ar(),n.inDisallowConditionalTypesContext||\##
+K()||!p(t._extends))return;let e=n.inDisallowConditionalTypesContext;n.inDisallowConditionalTypesContext=!0,Ar(),n.i\##
+nDisallowConditionalTypesContext=e,f(t.question),H(),f(t.colon),H()}function Xa(){return g(c._abstract)&&O()===t._ne\##
+w}function Ar(){if(qa()){s1(Ce.TSFunctionType);return}if(i(t._new)){s1(Ce.TSConstructorType);return}else if(Xa()){s1\##
+(Ce.TSAbstractConstructorType);return}ja()}function Dr(){let e=A(1);H(),f(t.greaterThan),E(e),it()}function Fr(){if(\##
+p(t.jsxTagStart)){n.tokens[n.tokens.length-1].type=t.typeParameterStart;let e=A(1);while(!i(t.greaterThan)&&!n.error\##
+)H(),p(t.comma);ie(),E(e)}}function Or(){while(!i(t.braceL)&&!n.error)Ja(),p(t.comma)}function Ja(){if(St(),i(t.less\##
+Than))ot()}function za(){if(he(!1),Pe(),p(t._extends))Or();Lr()}function Ka(){he(!1),Pe(),f(t.eq),H(),F()}function Y\##
+a(){if(i(t.string))Ne();else b();if(p(t.eq)){let e=n.tokens.length-1;X(),n.tokens[e].rhsEndIndex=n.tokens.length}}fu\##
+nction a1(){he(!1),f(t.braceL);while(!p(t.braceR)&&!n.error)Ya(),p(t.comma)}function c1(){f(t.braceL),at(t.braceR)}f\##
+unction o1(){if(he(!1),p(t.dot))o1();else c1()}function Mr(){if(g(c._global))b();else if(i(t.string))pe();else w();i\##
+f(i(t.braceL))c1();else F()}function Kt(){st(),f(t.eq),Za(),F()}function Qa(){return g(c._require)&&O()===t.parenL}f\##
+unction Za(){if(Qa())ec();else St()}function ec(){if(q(c._require),f(t.parenL),!i(t.string))w();Ne(),f(t.parenR)}fun\##
+ction tc(){if(le())return!1;switch(n.type){case t._function:{let e=A(1);h();let s=n.start;return Te(s,!0),E(e),!0}ca\##
+se t._class:{let e=A(1);return we(!0,!1),E(e),!0}case t._const:if(i(t._const)&&et(c._enum)){let e=A(1);return f(t._c\##
+onst),q(c._enum),n.tokens[n.tokens.length-1].type=t._enum,a1(),E(e),!0}case t._var:case t._let:{let e=A(1);return At\##
+(n.type!==t._var),E(e),!0}case t.name:{let e=A(1),s=n.contextualKeyword,r=!1;if(s===c._global)Mr(),r=!0;else r=Yt(s,\##
+!0);return E(e),r}default:return!1}}function Cr(){return Yt(n.contextualKeyword,!0)}function sc(e){switch(e){case c.\##
+_declare:{let s=n.tokens.length-1;if(tc())return n.tokens[s].type=t._declare,!0;break}case c._global:if(i(t.braceL))\##
+return c1(),!0;break;default:return Yt(e,!1)}return!1}function Yt(e,s){switch(e){case c._abstract:if(nt(s)&&i(t._cla\##
+ss))return n.tokens[n.tokens.length-1].type=t._abstract,we(!0,!1),!0;break;case c._enum:if(nt(s)&&i(t.name))return n\##
+.tokens[n.tokens.length-1].type=t._enum,a1(),!0;break;case c._interface:if(nt(s)&&i(t.name)){let r=A(s?2:1);return z\##
+a(),E(r),!0}break;case c._module:if(nt(s)){if(i(t.string)){let r=A(s?2:1);return Mr(),E(r),!0}else if(i(t.name)){let\##
+ r=A(s?2:1);return o1(),E(r),!0}}break;case c._namespace:if(nt(s)&&i(t.name)){let r=A(s?2:1);return o1(),E(r),!0}bre\##
+ak;case c._type:if(nt(s)&&i(t.name)){let r=A(s?2:1);return Ka(),E(r),!0}break;default:break}return!1}function nt(e){\##
+if(e)return h(),!0;else return!le()}function nc(){let e=n.snapshot();if(zt(),be(),Wa(),f(t.arrow),n.error)return n.r\##
+estoreFromSnapshot(e),!1;return De(!0),!0}function l1(){if(n.type===t.bitShiftL)n.pos-=1,S(t.lessThan);ot()}function\##
+ ot(){let e=A(0);f(t.lessThan);while(!i(t.greaterThan)&&!n.error)H(),p(t.comma);if(!e)E(e),Ht(),f(t.greaterThan),n.t\##
+okens[n.tokens.length-1].isType=!0;else f(t.greaterThan),E(e)}function u1(){if(i(t.name))switch(n.contextualKeyword)\##
+{case c._abstract:case c._declare:case c._enum:case c._interface:case c._module:case c._namespace:case c._type:retur\##
+n!0;default:break}return!1}function Br(e,s){if(i(t.colon))wt(t.colon);if(!i(t.braceL)&&le()){let r=n.tokens.length-1\##
+;while(r>=0&&(n.tokens[r].start>=e||n.tokens[r].type===t._default||n.tokens[r].type===t._export))n.tokens[r].isType=\##
+!0,r--;return}De(!1,s)}function jr(e,s,r){if(!K()&&p(t.bang)){n.tokens[n.tokens.length-1].type=t.nonNullAssertion;re\##
+turn}if(i(t.lessThan)||i(t.bitShiftL)){let o=n.snapshot();if(!s&&p1()){if(nc())return}if(l1(),!s&&p(t.parenL))n.toke\##
+ns[n.tokens.length-1].subscriptStartIndex=e,me();else if(i(t.backQuote))Qt();else if(n.type===t.greaterThan||n.type!\##
+==t.parenL&&Boolean(n.type&t.IS_EXPRESSION_START)&&!K())w();if(n.error)n.restoreFromSnapshot(o);else return}else if(\##
+!s&&i(t.questionDot)&&O()===t.lessThan)h(),n.tokens[e].isOptionalChainStart=!0,n.tokens[n.tokens.length-1].subscript\##
+StartIndex=e,ot(),f(t.parenL),me();Et(e,s,r)}function qr(){if(p(t._import)){if(g(c._type)&&O()!==t.eq)q(c._type);ret\##
+urn Kt(),!0}else if(p(t.eq))return J(),F(),!0;else if(V(c._as))return q(c._namespace),b(),F(),!0;else{if(g(c._type))\##
+{let e=O();if(e===t.braceL||e===t.star)h()}return!1}}function $r(){if(b(),i(t.comma)||i(t.braceR)){n.tokens[n.tokens\##
+.length-1].identifierRole=_.ImportDeclaration;return}if(b(),i(t.comma)||i(t.braceR)){n.tokens[n.tokens.length-1].ide\##
+ntifierRole=_.ImportDeclaration,n.tokens[n.tokens.length-2].isType=!0,n.tokens[n.tokens.length-1].isType=!0;return}i\##
+f(b(),i(t.comma)||i(t.braceR)){n.tokens[n.tokens.length-3].identifierRole=_.ImportAccess,n.tokens[n.tokens.length-1]\##
+.identifierRole=_.ImportDeclaration;return}b(),n.tokens[n.tokens.length-3].identifierRole=_.ImportAccess,n.tokens[n.\##
+tokens.length-1].identifierRole=_.ImportDeclaration,n.tokens[n.tokens.length-4].isType=!0,n.tokens[n.tokens.length-3\##
+].isType=!0,n.tokens[n.tokens.length-2].isType=!0,n.tokens[n.tokens.length-1].isType=!0}function Hr(){if(b(),i(t.com\##
+ma)||i(t.braceR)){n.tokens[n.tokens.length-1].identifierRole=_.ExportAccess;return}if(b(),i(t.comma)||i(t.braceR)){n\##
+.tokens[n.tokens.length-1].identifierRole=_.ExportAccess,n.tokens[n.tokens.length-2].isType=!0,n.tokens[n.tokens.len\##
+gth-1].isType=!0;return}if(b(),i(t.comma)||i(t.braceR)){n.tokens[n.tokens.length-3].identifierRole=_.ExportAccess;re\##
+turn}b(),n.tokens[n.tokens.length-3].identifierRole=_.ExportAccess,n.tokens[n.tokens.length-4].isType=!0,n.tokens[n.\##
+tokens.length-3].isType=!0,n.tokens[n.tokens.length-2].isType=!0,n.tokens[n.tokens.length-1].isType=!0}function Ur()\##
+{if(g(c._abstract)&&O()===t._class)return n.type=t._abstract,h(),we(!0,!0),!0;if(g(c._interface)){let e=A(2);return \##
+Yt(c._interface,!0),E(e),!0}return!1}function Wr(){if(n.type===t._const){let e=ge();if(e.type===t.name&&e.contextual\##
+Keyword===c._enum)return f(t._const),q(c._enum),n.tokens[n.tokens.length-1].type=t._enum,a1(),!0}return!1}function V\##
+r(e){let s=n.tokens.length;Tt([c._abstract,c._readonly,c._declare,c._static,c._override]);let r=n.tokens.length;if(v\##
+r()){let a=e?s-1:s;for(let u=a;u<r;u++)n.tokens[u].isType=!0;return!0}return!1}function Gr(e){if(!sc(e))F()}function\##
+ Xr(){let e=V(c._declare);if(e)n.tokens[n.tokens.length-1].type=t._declare;let s=!1;if(i(t.name))if(e){let r=A(2);s=\##
+Cr(),E(r)}else s=Cr();if(!s)if(e){let r=A(2);te(!0),E(r)}else te(!0)}function Jr(e){if(e&&(i(t.lessThan)||i(t.bitShi\##
+ftL)))l1();if(V(c._implements)){n.tokens[n.tokens.length-1].type=t._implements;let s=A(1);Or(),E(s)}}function zr(){P\##
+e()}function Kr(){Pe()}function Yr(){let e=A(0);if(!K())p(t.bang);ve(),E(e)}function Qr(){if(i(t.colon))rt()}functio\##
+n Zr(e,s){if(Ze)return rc(e,s);else return oc(e,s)}function rc(e,s){if(!i(t.lessThan))return ue(e,s);let r=n.snapsho\##
+t(),o=ue(e,s);if(n.error)n.restoreFromSnapshot(r);else return o;if(n.type=t.typeParameterStart,zt(),o=ue(e,s),!o)w()\##
+;return o}function oc(e,s){if(!i(t.lessThan))return ue(e,s);let r=n.snapshot();zt();let o=ue(e,s);if(!o)w();if(n.err\##
+or)n.restoreFromSnapshot(r);else return o;return ue(e,s)}function eo(){if(i(t.colon)){let e=n.snapshot();if(wt(t.col\##
+on),Q())w();if(!i(t.arrow))w();if(n.error)n.restoreFromSnapshot(e)}return p(t.arrow)}function Tr(){let e=A(0);p(t.qu\##
+estion),ve(),E(e)}function to(){if(i(t.lessThan)||i(t.bitShiftL))l1();f1()}function ic(){let e=!1,s=!1;while(!0){if(\##
+n.pos>=d.length){w("Unterminated JSX contents");return}let r=d.charCodeAt(n.pos);if(r===l.lessThan||r===l.leftCurlyB\##
+race){if(n.pos===n.start){if(r===l.lessThan){n.pos++,S(t.jsxTagStart);return}Gn(r);return}if(e&&!s)S(t.jsxEmptyText)\##
+;else S(t.jsxText);return}if(r===l.lineFeed)e=!0;else if(r!==l.space&&r!==l.carriageReturn&&r!==l.tab)s=!0;n.pos++}}\##
+function ac(e){n.pos++;for(;;){if(n.pos>=d.length){w("Unterminated string constant");return}if(d.charCodeAt(n.pos)==\##
+=e){n.pos++;break}n.pos++}S(t.string)}function cc(){let e;do{if(n.pos>d.length){w("Unexpectedly reached the end of i\##
+nput.");return}e=d.charCodeAt(++n.pos)}while(ee[e]||e===l.dash);S(t.jsxName)}function h1(){ie()}function so(e){if(h1\##
+(),!p(t.colon)){n.tokens[n.tokens.length-1].identifierRole=e;return}h1()}function no(){let e=n.tokens.length;so(_.Ac\##
+cess);let s=!1;while(i(t.dot))s=!0,ie(),h1();if(!s){let r=n.tokens[e],o=d.charCodeAt(r.start);if(o>=l.lowercaseA&&o<\##
+=l.lowercaseZ)r.identifierRole=null}}function lc(){switch(n.type){case t.braceL:h(),J(),ie();return;case t.jsxTagSta\##
+rt:m1(),ie();return;case t.string:ie();return;default:w("JSX value should be either an expression or a quoted JSX te\##
+xt")}}function uc(){f(t.ellipsis),J()}function pc(e){if(i(t.jsxTagEnd))return!1;if(no(),R)Fr();let s=!1;while(!i(t.s\##
+lash)&&!i(t.jsxTagEnd)&&!n.error){if(p(t.braceL)){s=!0,f(t.ellipsis),X(),ie();continue}if(s&&n.end-n.start===3&&d.ch\##
+arCodeAt(n.start)===l.lowercaseK&&d.charCodeAt(n.start+1)===l.lowercaseE&&d.charCodeAt(n.start+2)===l.lowercaseY)n.t\##
+okens[e].jsxRole=oe.KeyAfterPropSpread;if(so(_.ObjectKey),i(t.eq))ie(),lc()}let r=i(t.slash);if(r)ie();return r}func\##
+tion fc(){if(i(t.jsxTagEnd))return;no()}function ro(){let e=n.tokens.length-1;n.tokens[e].jsxRole=oe.NoChildren;let \##
+s=0;if(!pc(e)){ct();while(!0)switch(n.type){case t.jsxTagStart:if(ie(),i(t.slash)){if(ie(),fc(),n.tokens[e].jsxRole!\##
+==oe.KeyAfterPropSpread){if(s===1)n.tokens[e].jsxRole=oe.OneChild;else if(s>1)n.tokens[e].jsxRole=oe.StaticChildren}\##
+return}s++,ro(),ct();break;case t.jsxText:s++,ct();break;case t.jsxEmptyText:ct();break;case t.braceL:if(h(),i(t.ell\##
+ipsis))uc(),ct(),s+=2;else{if(!i(t.braceR))s++,J();ct()}break;default:w();return}}}function m1(){ie(),ro()}function \##
+ie(){n.tokens.push(new tt),Vn(),n.start=n.pos;let e=d.charCodeAt(n.pos);if(_e[e])cc();else if(e===l.quotationMark||e\##
+===l.apostrophe)ac(e);else switch(++n.pos,e){case l.greaterThan:S(t.jsxTagEnd);break;case l.lessThan:S(t.jsxTagStart\##
+);break;case l.slash:S(t.slash);break;case l.equalsTo:S(t.eq);break;case l.leftCurlyBrace:S(t.braceL);break;case l.d\##
+ot:S(t.dot);break;case l.colon:S(t.colon);break;default:w()}}function ct(){n.tokens.push(new tt),n.start=n.pos,ic()}\##
+function oo(e){if(i(t.question)){let s=O();if(s===t.colon||s===t.comma||s===t.parenR)return}d1(e)}function io(){if($\##
+t(t.question),i(t.colon)){if(R)rt();else if(v)Se()}}class ao{constructor(e){this.stop=e}}function J(e=!1){if(X(e),i(\##
+t.comma))while(p(t.comma))X(e)}function X(e=!1,s=!1){if(R)return Zr(e,s);else if(v)return xo(e,s);else return ue(e,s\##
+)}function ue(e,s){if(i(t._yield))return Cc(),!1;if(i(t.parenL)||i(t.name)||i(t._yield))n.potentialArrowAt=n.start;l\##
+et r=hc(e);if(s)I1();if(n.type&t.IS_ASSIGN)return h(),X(e),!1;return r}function hc(e){if(dc(e))return!0;return mc(e)\##
+,!1}function mc(e){if(R||v)oo(e);else d1(e)}function d1(e){if(p(t.question))X(),f(t.colon),X(e)}function dc(e){let s\##
+=n.tokens.length;if(it())return!0;return Zt(s,-1,e),!1}function Zt(e,s,r){if(R&&(t._in&t.PRECEDENCE_MASK)>s&&!K()&&(\##
+V(c._as)||V(c._satisfies))){let a=A(1);H(),E(a),Ht(),Zt(e,s,r);return}let o=n.type&t.PRECEDENCE_MASK;if(o>0&&(!r||!i\##
+(t._in))){if(o>s){let a=n.type;if(h(),a===t.nullishCoalescing)n.tokens[n.tokens.length-1].nullishStartIndex=e;let u=\##
+n.tokens.length;if(it(),Zt(u,a&t.IS_RIGHT_ASSOCIATIVE?o-1:o,r),a===t.nullishCoalescing)n.tokens[e].numNullishCoalesc\##
+eStarts++,n.tokens[n.tokens.length-1].numNullishCoalesceEnds++;Zt(e,s,r)}}}function it(){if(R&&!Ze&&p(t.lessThan))re\##
+turn Dr(),!1;if(g(c._module)&&Hn()===l.leftCurlyBrace&&!Bt())return Nc(),!1;if(n.type&t.IS_PREFIX)return h(),it(),!1\##
+;if(k1())return!0;while(n.type&t.IS_POSTFIX&&!Q()){if(n.type===t.preIncDec)n.type=t.postIncDec;h()}return!1}function\##
+ k1(){let e=n.tokens.length;if(pe())return!0;if(x1(e),n.tokens.length>e&&n.tokens[e].isOptionalChainStart)n.tokens[n\##
+.tokens.length-1].isOptionalChainEnd=!0;return!1}function x1(e,s=!1){if(v)_o(e,s);else g1(e,s)}function g1(e,s=!1){l\##
+et r=new ao(!1);do kc(e,s,r);while(!r.stop&&!n.error)}function kc(e,s,r){if(R)jr(e,s,r);else if(v)fo(e,s,r);else Et(\##
+e,s,r)}function Et(e,s,r){if(!s&&p(t.doubleColon))_1(),r.stop=!0,x1(e,s);else if(i(t.questionDot)){if(n.tokens[e].is\##
+OptionalChainStart=!0,s&&O()===t.parenL){r.stop=!0;return}if(h(),n.tokens[n.tokens.length-1].subscriptStartIndex=e,p\##
+(t.bracketL))J(),f(t.bracketR);else if(p(t.parenL))me();else es()}else if(p(t.dot))n.tokens[n.tokens.length-1].subsc\##
+riptStartIndex=e,es();else if(p(t.bracketL))n.tokens[n.tokens.length-1].subscriptStartIndex=e,J(),f(t.bracketR);else\##
+ if(!s&&i(t.parenL))if(p1()){let o=n.snapshot(),a=n.tokens.length;h(),n.tokens[n.tokens.length-1].subscriptStartInde\##
+x=e;let u=Re();if(n.tokens[n.tokens.length-1].contextId=u,me(),n.tokens[n.tokens.length-1].contextId=u,xc())n.restor\##
+eFromSnapshot(o),r.stop=!0,n.scopeDepth++,be(),gc(a)}else{h(),n.tokens[n.tokens.length-1].subscriptStartIndex=e;let \##
+o=Re();n.tokens[n.tokens.length-1].contextId=o,me(),n.tokens[n.tokens.length-1].contextId=o}else if(i(t.backQuote))Q\##
+t();else r.stop=!0}function p1(){return n.tokens[n.tokens.length-1].contextualKeyword===c._async&&!Q()}function me()\##
+{let e=!0;while(!p(t.parenR)&&!n.error){if(e)e=!1;else if(f(t.comma),p(t.parenR))break;uo(!1)}}function xc(){return \##
+i(t.colon)||i(t.arrow)}function gc(e){if(R)Qr();else if(v)ko();f(t.arrow),lt(e)}function _1(){let e=n.tokens.length;\##
+pe(),x1(e,!0)}function pe(){if(p(t.modulo))return b(),!1;if(i(t.jsxText)||i(t.jsxEmptyText))return Ne(),!1;else if(i\##
+(t.lessThan)&&Ze)return n.type=t.jsxTagStart,m1(),h(),!1;let e=n.potentialArrowAt===n.start;switch(n.type){case t.sl\##
+ash:case t.assign:Q1();case t._super:case t._this:case t.regexp:case t.num:case t.bigint:case t.decimal:case t.strin\##
+g:case t._null:case t._true:case t._false:return h(),!1;case t._import:if(h(),i(t.dot))n.tokens[n.tokens.length-1].t\##
+ype=t.name,h(),b();return!1;case t.name:{let s=n.tokens.length,r=n.start,o=n.contextualKeyword;if(b(),o===c._await)r\##
+eturn Ac(),!1;else if(o===c._async&&i(t._function)&&!Q())return h(),Te(r,!1),!1;else if(e&&o===c._async&&!Q()&&i(t.n\##
+ame))return n.scopeDepth++,he(!1),f(t.arrow),lt(s),!0;else if(i(t._do)&&!Q())return h(),Ee(),!1;if(e&&!Q()&&i(t.arro\##
+w))return n.scopeDepth++,Xt(!1),f(t.arrow),lt(s),!0;return n.tokens[n.tokens.length-1].identifierRole=_.Access,!1}ca\##
+se t._do:return h(),Ee(),!1;case t.parenL:return co(e);case t.bracketL:return h(),lo(t.bracketR,!0),!1;case t.braceL\##
+:return bt(!1,!1),!1;case t._function:return _c(),!1;case t.at:rs();case t._class:return we(!1),!1;case t._new:retur\##
+n yc(),!1;case t.backQuote:return Qt(),!1;case t.doubleColon:return h(),_1(),!1;case t.hash:{let s=Hn();if(_e[s]||s=\##
+==l.backslash)es();else h();return!1}default:return w(),!1}}function es(){p(t.hash),b()}function _c(){let e=n.start;\##
+if(b(),p(t.dot))b();Te(e,!1)}function Ne(){h()}function Ct(){f(t.parenL),J(),f(t.parenR)}function co(e){let s=n.snap\##
+shot(),r=n.tokens.length;f(t.parenL);let o=!0;while(!i(t.parenR)&&!n.error){if(o)o=!1;else if(f(t.comma),i(t.parenR)\##
+)break;if(i(t.ellipsis)){t1(!1),I1();break}else X(!1,!0)}if(f(t.parenR),e&&Ic()){if(ts()){if(n.restoreFromSnapshot(s\##
+),n.scopeDepth++,be(),ts(),lt(r),n.error)return n.restoreFromSnapshot(s),co(!1),!1;return!0}}return!1}function Ic(){\##
+return i(t.colon)||!Q()}function ts(){if(R)return eo();else if(v)return go();else return p(t.arrow)}function I1(){if\##
+(R||v)io()}function yc(){if(f(t._new),p(t.dot)){b();return}if(Tc(),v)ho();if(p(t.parenL))lo(t.parenR)}function Tc(){\##
+_1(),p(t.questionDot)}function Qt(){de(),de();while(!i(t.backQuote)&&!n.error)f(t.dollarBraceL),J(),de(),de();h()}fu\##
+nction bt(e,s){let r=Re(),o=!0;h(),n.tokens[n.tokens.length-1].contextId=r;while(!p(t.braceR)&&!n.error){if(o)o=!1;e\##
+lse if(f(t.comma),p(t.braceR))break;let a=!1;if(i(t.ellipsis)){let u=n.tokens.length;if(e1(),e){if(n.tokens.length==\##
+=u+2)Xt(s);if(p(t.braceR))break}continue}if(!e)a=p(t.star);if(!e&&g(c._async)){if(a)w();if(b(),i(t.colon)||i(t.paren\##
+L)||i(t.braceR)||i(t.eq)||i(t.comma));else{if(i(t.star))h(),a=!0;Le(r)}}else Le(r);Ec(e,s,r)}n.tokens[n.tokens.lengt\##
+h-1].contextId=r}function bc(e){return!e&&(i(t.string)||i(t.num)||i(t.bracketL)||i(t.name)||!!(n.type&t.IS_KEYWORD))\##
+}function wc(e,s){let r=n.start;if(i(t.parenL)){if(e)w();return ss(r,!1),!0}if(bc(e))return Le(s),ss(r,!1),!0;return\##
+!1}function Sc(e,s){if(p(t.colon)){if(e)_t(s);else X(!1);return}let r;if(e)if(n.scopeDepth===0)r=_.ObjectShorthandTo\##
+pLevelDeclaration;else if(s)r=_.ObjectShorthandBlockScopedDeclaration;else r=_.ObjectShorthandFunctionScopedDeclarat\##
+ion;else r=_.ObjectShorthand;n.tokens[n.tokens.length-1].identifierRole=r,_t(s,!0)}function Ec(e,s,r){if(R)zr();else\##
+ if(v)mo();if(!wc(e,r))Sc(e,s)}function Le(e){if(v)ns();if(p(t.bracketL))n.tokens[n.tokens.length-1].contextId=e,X()\##
+,f(t.bracketR),n.tokens[n.tokens.length-1].contextId=e;else{if(i(t.num)||i(t.string)||i(t.bigint)||i(t.decimal))pe()\##
+;else es();n.tokens[n.tokens.length-1].identifierRole=_.ObjectKey,n.tokens[n.tokens.length-1].contextId=e}}function \##
+ss(e,s){let r=Re();n.scopeDepth++;let o=n.tokens.length;be(s,r),y1(e,r);let u=n.tokens.length;n.scopes.push(new re(o\##
+,u,!0)),n.scopeDepth--}function lt(e){De(!0);let s=n.tokens.length;n.scopes.push(new re(e,s,!0)),n.scopeDepth--}func\##
+tion y1(e,s=0){if(R)Br(e,s);else if(v)po(s);else De(!1,s)}function De(e,s=0){if(e&&!i(t.braceL))X();else Ee(!0,s)}fu\##
+nction lo(e,s=!1){let r=!0;while(!p(e)&&!n.error){if(r)r=!1;else if(f(t.comma),p(e))break;uo(s)}}function uo(e){if(e\##
+&&i(t.comma));else if(i(t.ellipsis))e1(),I1();else if(i(t.question))h();else X(!1,!0)}function b(){h(),n.tokens[n.to\##
+kens.length-1].type=t.name}function Ac(){it()}function Cc(){if(h(),!i(t.semi)&&!Q())p(t.star),X()}function Nc(){q(c.\##
+_module),f(t.braceL),at(t.braceR)}function Pc(e){return(e.type===t.name||!!(e.type&t.IS_KEYWORD))&&e.contextualKeywo\##
+rd!==c._from}function xe(e){let s=A(0);f(e||t.colon),ne(),E(s)}function Io(){if(f(t.modulo),q(c._checks),p(t.parenL)\##
+)J(),f(t.parenR)}function w1(){let e=A(0);if(f(t.colon),i(t.modulo))Io();else if(ne(),i(t.modulo))Io();E(e)}function\##
+ Rc(){h(),S1(!0)}function vc(){if(h(),b(),i(t.lessThan))fe();f(t.parenL),b1(),f(t.parenR),w1(),F()}function T1(){if(\##
+i(t._class))Rc();else if(i(t._function))vc();else if(i(t._var))Lc();else if(V(c._module))if(p(t.dot))Oc();else Dc();\##
+else if(g(c._type))Mc();else if(g(c._opaque))Bc();else if(g(c._interface))jc();else if(i(t._export))Fc();else w()}fu\##
+nction Lc(){h(),Eo(),F()}function Dc(){if(i(t.string))pe();else b();f(t.braceL);while(!i(t.braceR)&&!n.error)if(i(t.\##
+_import))h(),v1();else w();f(t.braceR)}function Fc(){if(f(t._export),p(t._default))if(i(t._function)||i(t._class))T1\##
+();else ne(),F();else if(i(t._var)||i(t._function)||i(t._class)||g(c._opaque))T1();else if(i(t.star)||i(t.braceL)||g\##
+(c._interface)||g(c._type)||g(c._opaque))R1();else w()}function Oc(){q(c._exports),Se(),F()}function Mc(){h(),A1()}f\##
+unction Bc(){h(),C1(!0)}function jc(){h(),S1()}function S1(e=!1){if(ls(),i(t.lessThan))fe();if(p(t._extends))do os()\##
+;while(!e&&p(t.comma));if(g(c._mixins)){h();do os();while(p(t.comma))}if(g(c._implements)){h();do os();while(p(t.com\##
+ma))}is(e,!1,e)}function os(){if(bo(!1),i(t.lessThan))Fe()}function E1(){S1()}function ls(){b()}function A1(){if(ls(\##
+),i(t.lessThan))fe();xe(t.eq),F()}function C1(e){if(q(c._type),ls(),i(t.lessThan))fe();if(i(t.colon))xe(t.colon);if(\##
+!e)xe(t.eq);F()}function qc(){if(ns(),Eo(),p(t.eq))ne()}function fe(){let e=A(0);if(i(t.lessThan)||i(t.typeParameter\##
+Start))h();else w();do if(qc(),!i(t.greaterThan))f(t.comma);while(!i(t.greaterThan)&&!n.error);f(t.greaterThan),E(e)\##
+}function Fe(){let e=A(0);f(t.lessThan);while(!i(t.greaterThan)&&!n.error)if(ne(),!i(t.greaterThan))f(t.comma);f(t.g\##
+reaterThan),E(e)}function $c(){if(q(c._interface),p(t._extends))do os();while(p(t.comma));is(!1,!1,!1)}function N1()\##
+{if(i(t.num)||i(t.string))pe();else b()}function Hc(){if(O()===t.colon)N1(),xe();else ne();f(t.bracketR),xe()}functi\##
+on Uc(){if(N1(),f(t.bracketR),f(t.bracketR),i(t.lessThan)||i(t.parenL))P1();else p(t.question),xe()}function P1(){if\##
+(i(t.lessThan))fe();f(t.parenL);while(!i(t.parenR)&&!i(t.ellipsis)&&!n.error)if(as(),!i(t.parenR))f(t.comma);if(p(t.\##
+ellipsis))as();f(t.parenR),xe()}function Wc(){P1()}function is(e,s,r){let o;if(s&&i(t.braceBarL))f(t.braceBarL),o=t.\##
+braceBarR;else f(t.braceL),o=t.braceR;while(!i(o)&&!n.error){if(r&&g(c._proto)){let a=O();if(a!==t.colon&&a!==t.ques\##
+tion)h(),e=!1}if(e&&g(c._static)){let a=O();if(a!==t.colon&&a!==t.question)h()}if(ns(),p(t.bracketL))if(p(t.bracketL\##
+))Uc();else Hc();else if(i(t.parenL)||i(t.lessThan))Wc();else{if(g(c._get)||g(c._set)){let a=O();if(a===t.name||a===\##
+t.string||a===t.num)h()}Vc()}Gc()}f(o)}function Vc(){if(i(t.ellipsis)){if(f(t.ellipsis),!p(t.comma))p(t.semi);if(i(t\##
+.braceR))return;ne()}else if(N1(),i(t.lessThan)||i(t.parenL))P1();else p(t.question),xe()}function Gc(){if(!p(t.semi\##
+)&&!p(t.comma)&&!i(t.braceR)&&!i(t.braceBarR))w()}function bo(e){if(!e)b();while(p(t.dot))b()}function Xc(){if(bo(!0\##
+),i(t.lessThan))Fe()}function Jc(){f(t._typeof),wo()}function zc(){f(t.bracketL);while(n.pos<d.length&&!i(t.bracketR\##
+)){if(ne(),i(t.bracketR))break;f(t.comma)}f(t.bracketR)}function as(){let e=O();if(e===t.colon||e===t.question)b(),p\##
+(t.question),xe();else ne()}function b1(){while(!i(t.parenR)&&!i(t.ellipsis)&&!n.error)if(as(),!i(t.parenR))f(t.comm\##
+a);if(p(t.ellipsis))as()}function wo(){let e=!1,s=n.noAnonFunctionType;switch(n.type){case t.name:{if(g(c._interface\##
+)){$c();return}b(),Xc();return}case t.braceL:is(!1,!1,!1);return;case t.braceBarL:is(!1,!0,!1);return;case t.bracket\##
+L:zc();return;case t.lessThan:fe(),f(t.parenL),b1(),f(t.parenR),f(t.arrow),ne();return;case t.parenL:if(h(),!i(t.par\##
+enR)&&!i(t.ellipsis))if(i(t.name)){let r=O();e=r!==t.question&&r!==t.colon}else e=!0;if(e)if(n.noAnonFunctionType=!1\##
+,ne(),n.noAnonFunctionType=s,n.noAnonFunctionType||!(i(t.comma)||i(t.parenR)&&O()===t.arrow)){f(t.parenR);return}els\##
+e p(t.comma);b1(),f(t.parenR),f(t.arrow),ne();return;case t.minus:h(),Ne();return;case t.string:case t.num:case t._t\##
+rue:case t._false:case t._null:case t._this:case t._void:case t.star:h();return;default:if(n.type===t._typeof){Jc();\##
+return}else if(n.type&t.IS_KEYWORD){h(),n.tokens[n.tokens.length-1].type=t.name;return}}w()}function Kc(){wo();while\##
+(!Q()&&(i(t.bracketL)||i(t.questionDot)))if(p(t.questionDot),f(t.bracketL),p(t.bracketR));else ne(),f(t.bracketR)}fu\##
+nction So(){if(p(t.question))So();else Kc()}function yo(){if(So(),!n.noAnonFunctionType&&p(t.arrow))ne()}function To\##
+(){p(t.bitwiseAND),yo();while(p(t.bitwiseAND))yo()}function Yc(){p(t.bitwiseOR),To();while(p(t.bitwiseOR))To()}funct\##
+ion ne(){Yc()}function Se(){xe()}function Eo(){if(b(),i(t.colon))Se()}function ns(){if(i(t.plus)||i(t.minus))h(),n.t\##
+okens[n.tokens.length-1].isType=!0}function po(e){if(i(t.colon))w1();De(!1,e)}function fo(e,s,r){if(i(t.questionDot)\##
+&&O()===t.lessThan){if(s){r.stop=!0;return}h(),Fe(),f(t.parenL),me();return}else if(!s&&i(t.lessThan)){let o=n.snaps\##
+hot();if(Fe(),f(t.parenL),me(),n.error)n.restoreFromSnapshot(o);else return}Et(e,s,r)}function ho(){if(i(t.lessThan)\##
+){let e=n.snapshot();if(Fe(),n.error)n.restoreFromSnapshot(e)}}function Ao(){if(i(t.name)&&n.contextualKeyword===c._\##
+interface){let e=A(0);return h(),E1(),E(e),!0}else if(g(c._enum))return qo(),!0;return!1}function Co(){if(g(c._enum)\##
+)return qo(),!0;return!1}function No(e){if(e===c._declare){if(i(t._class)||i(t.name)||i(t._function)||i(t._var)||i(t\##
+._export)){let s=A(1);T1(),E(s)}}else if(i(t.name)){if(e===c._interface){let s=A(1);E1(),E(s)}else if(e===c._type){l\##
+et s=A(1);A1(),E(s)}else if(e===c._opaque){let s=A(1);C1(!1),E(s)}}F()}function Po(){return g(c._type)||g(c._interfa\##
+ce)||g(c._opaque)||g(c._enum)}function Ro(){return i(t.name)&&(n.contextualKeyword===c._type||n.contextualKeyword===\##
+c._interface||n.contextualKeyword===c._opaque||n.contextualKeyword===c._enum)}function vo(){if(g(c._type)){let e=A(1\##
+);if(h(),i(t.braceL))us(),ut();else A1();E(e)}else if(g(c._opaque)){let e=A(1);h(),C1(!1),E(e)}else if(g(c._interfac\##
+e)){let e=A(1);h(),E1(),E(e)}else te(!0)}function Lo(){return i(t.star)||g(c._type)&&O()===t.star}function Do(){if(V\##
+(c._type)){let e=A(2);cs(),E(e)}else cs()}function Fo(e){if(e&&i(t.lessThan))Fe();if(g(c._implements)){let s=A(0);h(\##
+),n.tokens[n.tokens.length-1].type=t._implements;do if(ls(),i(t.lessThan))Fe();while(p(t.comma));E(s)}}function mo()\##
+{if(i(t.lessThan)){if(fe(),!i(t.parenL))w()}}function br(){let e=A(0);if(p(t.question),i(t.colon))Se();E(e)}function\##
+ Oo(){if(i(t._typeof)||g(c._type)){let e=ge();if(Pc(e)||e.type===t.braceL||e.type===t.star)h()}}function Mo(){let e=\##
+n.contextualKeyword===c._type||n.type===t._typeof;if(e)h();else b();if(g(c._as)&&!et(c._as))if(b(),e&&!i(t.name)&&!(\##
+n.type&t.IS_KEYWORD));else b();else{if(e&&(i(t.name)||!!(n.type&t.IS_KEYWORD)))b();if(V(c._as))b()}}function Bo(){if\##
+(i(t.lessThan)){let e=A(0);fe(),E(e)}}function jo(){if(i(t.colon))Se()}function ko(){if(i(t.colon)){let e=n.noAnonFu\##
+nctionType;n.noAnonFunctionType=!0,Se(),n.noAnonFunctionType=e}}function xo(e,s){if(i(t.lessThan)){let r=n.snapshot(\##
+),o=ue(e,s);if(n.error)n.restoreFromSnapshot(r),n.type=t.typeParameterStart;else return o;let a=A(0);if(fe(),E(a),o=\##
+ue(e,s),o)return!0;w()}return ue(e,s)}function go(){if(i(t.colon)){let e=A(0),s=n.snapshot(),r=n.noAnonFunctionType;\##
+if(n.noAnonFunctionType=!0,w1(),n.noAnonFunctionType=r,Q())w();if(!i(t.arrow))w();if(n.error)n.restoreFromSnapshot(s\##
+);E(e)}return p(t.arrow)}function _o(e,s=!1){if(n.tokens[n.tokens.length-1].contextualKeyword===c._async&&i(t.lessTh\##
+an)){let r=n.snapshot();if(Qc()&&!n.error)return;n.restoreFromSnapshot(r)}g1(e,s)}function Qc(){n.scopeDepth++;let e\##
+=n.tokens.length;if(be(),!ts())return!1;return lt(e),!0}function qo(){q(c._enum),n.tokens[n.tokens.length-1].type=t.\##
+_enum,b(),Zc()}function Zc(){if(V(c._of))h();f(t.braceL),el(),f(t.braceR)}function el(){while(!i(t.braceR)&&!n.error\##
+){if(p(t.ellipsis))break;if(tl(),!i(t.braceR))f(t.comma)}}function tl(){if(b(),p(t.eq))h()}function Wo(){if(at(t.eof\##
+),n.scopes.push(new re(0,n.tokens.length,!0)),n.scopeDepth!==0)throw Error(`Invalid scope depth at end of file: ${n.\##
+scopeDepth}`);return new D1(n.tokens,n.scopes)}function te(e){if(v){if(Ao())return}if(i(t.at))rs();sl(e)}function sl\##
+(e){if(R){if(Wr())return}let s=n.type;switch(s){case t._break:case t._continue:rl();return;case t._debugger:ol();ret\##
+urn;case t._do:il();return;case t._for:al();return;case t._function:if(O()===t.dot)break;if(!e)w();ul();return;case \##
+t._class:if(!e)w();we(!0);return;case t._if:pl();return;case t._return:fl();return;case t._switch:hl();return;case t\##
+._throw:ml();return;case t._try:kl();return;case t._let:case t._const:if(!e)w();case t._var:At(s!==t._var);return;ca\##
+se t._while:xl();return;case t.braceL:Ee();return;case t.semi:gl();return;case t._export:case t._import:{let a=O();i\##
+f(a===t.parenL||a===t.dot)break;if(h(),s===t._import)v1();else R1();return}case t.name:if(n.contextualKeyword===c._a\##
+sync){let a=n.start,u=n.snapshot();if(h(),i(t._function)&&!Q()){f(t._function),Te(a,!0);return}else n.restoreFromSna\##
+pshot(u)}else if(n.contextualKeyword===c._using&&!Bt()&&O()===t.name){At(!0);return}else if(Vo()){q(c._await),At(!0)\##
+;return}default:break}let r=n.tokens.length;J();let o=null;if(n.tokens.length===r+1){let a=n.tokens[n.tokens.length-\##
+1];if(a.type===t.name)o=a.contextualKeyword}if(o==null){F();return}if(p(t.colon))_l();else Il(o)}function Vo(){if(!g\##
+(c._await))return!1;let e=n.snapshot();if(h(),!g(c._using)||K())return n.restoreFromSnapshot(e),!1;if(h(),!i(t.name)\##
+||K())return n.restoreFromSnapshot(e),!1;return n.restoreFromSnapshot(e),!0}function rs(){while(i(t.at))Go()}functio\##
+n Go(){if(h(),p(t.parenL))J(),f(t.parenR);else{b();while(p(t.dot))b();nl()}}function nl(){if(R)to();else f1()}functi\##
+on f1(){if(p(t.parenL))me()}function rl(){if(h(),!le())b(),F()}function ol(){h(),F()}function il(){h(),te(!1),f(t._w\##
+hile),Ct(),p(t.semi)}function al(){n.scopeDepth++;let e=n.tokens.length;ll();let s=n.tokens.length;n.scopes.push(new\##
+ re(e,s,!1)),n.scopeDepth--}function cl(){if(!g(c._using))return!1;if(et(c._of))return!1;return!0}function ll(){h();\##
+let e=!1;if(g(c._await))e=!0,h();if(f(t.parenL),i(t.semi)){if(e)w();L1();return}let s=Vo();if(s||i(t._var)||i(t._let\##
+)||i(t._const)||cl()){if(s)q(c._await);if(h(),Xo(!0,n.type!==t._var),i(t._in)||g(c._of)){$o(e);return}L1();return}if\##
+(J(!0),i(t._in)||g(c._of)){$o(e);return}if(e)w();L1()}function ul(){let e=n.start;h(),Te(e,!0)}function pl(){if(h(),\##
+Ct(),te(!1),p(t._else))te(!1)}function fl(){if(h(),!le())J(),F()}function hl(){h(),Ct(),n.scopeDepth++;let e=n.token\##
+s.length;f(t.braceL);while(!i(t.braceR)&&!n.error)if(i(t._case)||i(t._default)){let r=i(t._case);if(h(),r)J();f(t.co\##
+lon)}else te(!0);h();let s=n.tokens.length;n.scopes.push(new re(e,s,!1)),n.scopeDepth--}function ml(){h(),J(),F()}fu\##
+nction dl(){if(It(!0),R)ve()}function kl(){if(h(),Ee(),i(t._catch)){h();let e=null;if(i(t.parenL))n.scopeDepth++,e=n\##
+.tokens.length,f(t.parenL),dl(),f(t.parenR);if(Ee(),e!=null){let s=n.tokens.length;n.scopes.push(new re(e,s,!1)),n.s\##
+copeDepth--}}if(p(t._finally))Ee()}function At(e){h(),Xo(!1,e),F()}function xl(){h(),Ct(),te(!1)}function gl(){h()}f\##
+unction _l(){te(!0)}function Il(e){if(R)Gr(e);else if(v)No(e);else F()}function Ee(e=!1,s=0){let r=n.tokens.length;i\##
+f(n.scopeDepth++,f(t.braceL),s)n.tokens[n.tokens.length-1].contextId=s;if(at(t.braceR),s)n.tokens[n.tokens.length-1]\##
+.contextId=s;let o=n.tokens.length;n.scopes.push(new re(r,o,e)),n.scopeDepth--}function at(e){while(!p(e)&&!n.error)\##
+te(!0)}function L1(){if(f(t.semi),!i(t.semi))J();if(f(t.semi),!i(t.parenR))J();f(t.parenR),te(!1)}function $o(e){if(\##
+e)V(c._of);else h();J(),f(t.parenR),te(!1)}function Xo(e,s){while(!0){if(yl(s),p(t.eq)){let r=n.tokens.length-1;X(e)\##
+,n.tokens[r].rhsEndIndex=n.tokens.length}if(!p(t.comma))break}}function yl(e){if(It(e),R)Yr();else if(v)jo()}functio\##
+n Te(e,s,r=!1){if(i(t.star))h();if(s&&!r&&!i(t.name)&&!i(t._yield))w();let o=null;if(i(t.name)){if(!s)o=n.tokens.len\##
+gth,n.scopeDepth++;he(!1)}let a=n.tokens.length;n.scopeDepth++,be(),y1(e);let u=n.tokens.length;if(n.scopes.push(new\##
+ re(a,u,!0)),n.scopeDepth--,o!==null)n.scopes.push(new re(o,u,!0)),n.scopeDepth--}function be(e=!1,s=0){if(R)Kr();el\##
+se if(v)Bo();if(f(t.parenL),s)n.tokens[n.tokens.length-1].contextId=s;if(yt(t.parenR,!1,!1,e,s),s)n.tokens[n.tokens.\##
+length-1].contextId=s}function we(e,s=!1){let r=Re();h(),n.tokens[n.tokens.length-1].contextId=r,n.tokens[n.tokens.l\##
+ength-1].isExpression=!e;let o=null;if(!e)o=n.tokens.length,n.scopeDepth++;Sl(e,s),El();let a=n.tokens.length;if(Tl(\##
+r),n.error)return;if(n.tokens[a].contextId=r,n.tokens[n.tokens.length-1].contextId=r,o!==null){let u=n.tokens.length\##
+;n.scopes.push(new re(o,u,!1)),n.scopeDepth--}}function Jo(){return i(t.eq)||i(t.semi)||i(t.braceR)||i(t.bang)||i(t.\##
+colon)}function zo(){return i(t.parenL)||i(t.lessThan)}function Tl(e){f(t.braceL);while(!p(t.braceR)&&!n.error){if(p\##
+(t.semi))continue;if(i(t.at)){Go();continue}let s=n.start;bl(s,e)}}function bl(e,s){if(R)Tt([c._declare,c._public,c.\##
+_protected,c._private,c._override]);let r=!1;if(i(t.name)&&n.contextualKeyword===c._static){if(b(),zo()){Pt(e,!1);re\##
+turn}else if(Jo()){ps();return}if(n.tokens[n.tokens.length-1].type=t._static,r=!0,i(t.braceL)){n.tokens[n.tokens.len\##
+gth-1].contextId=s,Ee();return}}wl(e,r,s)}function wl(e,s,r){if(R){if(Vr(s))return}if(p(t.star)){Nt(r),Pt(e,!1);retu\##
+rn}Nt(r);let o=!1,a=n.tokens[n.tokens.length-1];if(a.contextualKeyword===c._constructor)o=!0;if(Ho(),zo())Pt(e,o);el\##
+se if(Jo())ps();else if(a.contextualKeyword===c._async&&!le()){if(n.tokens[n.tokens.length-1].type=t._async,i(t.star\##
+))h();Nt(r),Ho(),Pt(e,!1)}else if((a.contextualKeyword===c._get||a.contextualKeyword===c._set)&&!(le()&&i(t.star))){\##
+if(a.contextualKeyword===c._get)n.tokens[n.tokens.length-1].type=t._get;else n.tokens[n.tokens.length-1].type=t._set\##
+;Nt(r),Pt(e,!1)}else if(a.contextualKeyword===c._accessor&&!le())Nt(r),ps();else if(le())ps();else w()}function Pt(e\##
+,s){if(R)Pe();else if(v){if(i(t.lessThan))fe()}ss(e,s)}function Nt(e){Le(e)}function Ho(){if(R){let e=A(0);p(t.quest\##
+ion),E(e)}}function ps(){if(R)$t(t.bang),ve();else if(v){if(i(t.colon))Se()}if(i(t.eq)){let e=n.tokens.length;h(),X(\##
+),n.tokens[e].rhsEndIndex=n.tokens.length}F()}function Sl(e,s=!1){if(R&&(!e||s)&&g(c._implements))return;if(i(t.name\##
+))he(!0);if(R)Pe();else if(v){if(i(t.lessThan))fe()}}function El(){let e=!1;if(p(t._extends))k1(),e=!0;else e=!1;if(\##
+R)Jr(e);else if(v)Fo(e)}function R1(){let e=n.tokens.length-1;if(R){if(qr())return}if(Pl())Rl();else if(Nl()){if(b()\##
+,i(t.comma)&&O()===t.star)f(t.comma),f(t.star),q(c._as),b();else Ko();ut()}else if(p(t._default))Al();else if(Ll())C\##
+l();else us(),ut();n.tokens[e].rhsEndIndex=n.tokens.length}function Al(){if(R){if(Ur())return}if(v){if(Co())return}l\##
+et e=n.start;if(p(t._function))Te(e,!0,!0);else if(g(c._async)&&O()===t._function)V(c._async),p(t._function),Te(e,!0\##
+,!0);else if(i(t._class))we(!0,!0);else if(i(t.at))rs(),we(!0,!0);else X(),F()}function Cl(){if(R)Xr();else if(v)vo(\##
+);else te(!0)}function Nl(){if(R&&u1())return!1;else if(v&&Ro())return!1;if(i(t.name))return n.contextualKeyword!==c\##
+._async;if(!i(t._default))return!1;let e=ht(),s=ge(),r=s.type===t.name&&s.contextualKeyword===c._from;if(s.type===t.\##
+comma)return!0;if(r){let o=d.charCodeAt($n(e+4));return o===l.quotationMark||o===l.apostrophe}return!1}function Ko()\##
+{if(p(t.comma))us()}function ut(){if(V(c._from))pe(),Yo();F()}function Pl(){if(v)return Lo();else return i(t.star)}f\##
+unction Rl(){if(v)Do();else cs()}function cs(){if(f(t.star),g(c._as))vl();else ut()}function vl(){h(),n.tokens[n.tok\##
+ens.length-1].type=t._as,b(),Ko(),ut()}function Ll(){return R&&u1()||v&&Po()||n.type===t._var||n.type===t._const||n.\##
+type===t._let||n.type===t._function||n.type===t._class||g(c._async)||i(t.at)}function us(){let e=!0;f(t.braceL);whil\##
+e(!p(t.braceR)&&!n.error){if(e)e=!1;else if(f(t.comma),p(t.braceR))break;Dl()}}function Dl(){if(R){Hr();return}if(b(\##
+),n.tokens[n.tokens.length-1].identifierRole=_.ExportAccess,V(c._as))b()}function Fl(){let e=n.snapshot();if(q(c._mo\##
+dule),V(c._from))if(g(c._from))return n.restoreFromSnapshot(e),!0;else return n.restoreFromSnapshot(e),!1;else if(i(\##
+t.comma))return n.restoreFromSnapshot(e),!1;else return n.restoreFromSnapshot(e),!0}function Ol(){if(g(c._module)&&F\##
+l())h()}function v1(){if(R&&i(t.name)&&O()===t.eq){Kt();return}if(R&&g(c._type)){let e=ge();if(e.type===t.name&&e.co\##
+ntextualKeyword!==c._from){if(q(c._type),O()===t.eq){Kt();return}}else if(e.type===t.star||e.type===t.braceL)q(c._ty\##
+pe)}if(i(t.string))pe();else Ol(),Bl(),q(c._from),pe();Yo(),F()}function Ml(){return i(t.name)}function Uo(){st()}fu\##
+nction Bl(){if(v)Oo();let e=!0;if(Ml()){if(Uo(),!p(t.comma))return}if(i(t.star)){h(),q(c._as),Uo();return}f(t.braceL\##
+);while(!p(t.braceR)&&!n.error){if(e)e=!1;else{if(p(t.colon))w("ES2015 named imports do not destructure. Use another\##
+ statement for destructuring after the import.");if(f(t.comma),p(t.braceR))break}jl()}}function jl(){if(R){$r();retu\##
+rn}if(v){Mo();return}if(st(),g(c._as))n.tokens[n.tokens.length-1].identifierRole=_.ImportAccess,h(),st()}function Yo\##
+(){if(i(t._with)||g(c._assert)&&!K())h(),bt(!1,!1)}function Qo(){if(n.pos===0&&d.charCodeAt(0)===l.numberSign&&d.cha\##
+rCodeAt(1)===l.exclamationMark)Wn(2);return Un(),Wo()}class D1{constructor(e,s){this.tokens=e,this.scopes=s}}functio\##
+n Zo(e,s,r,o){if(o&&r)throw Error("Cannot combine flow and typescript plugins.");X1(e,s,r,o);let a=Qo();if(n.error)t\##
+hrow V1(n.error);return a}function F1(e){let s=e.currentIndex(),r=0,o=e.currentToken();do{let a=e.tokens[s];if(a.isO\##
+ptionalChainStart)r++;if(a.isOptionalChainEnd)r--;if(r+=a.numNullishCoalesceStarts,r-=a.numNullishCoalesceEnds,a.con\##
+textualKeyword===c._await&&a.identifierRole==null&&a.scopeDepth===o.scopeDepth)return!0;s+=1}while(r>0&&s<e.tokens.l\##
+ength);return!1}class Oe{__init(){this.resultCode=""}__init2(){this.resultMappings=Array(this.tokens.length)}__init3\##
+(){this.tokenIndex=0}constructor(e,s,r,o,a){this.code=e,this.tokens=s,this.isFlowEnabled=r,this.disableESTransforms=\##
+o,this.helperManager=a,Oe.prototype.__init.call(this),Oe.prototype.__init2.call(this),Oe.prototype.__init3.call(this\##
+)}snapshot(){return{resultCode:this.resultCode,tokenIndex:this.tokenIndex}}restoreToSnapshot(e){this.resultCode=e.re\##
+sultCode,this.tokenIndex=e.tokenIndex}dangerouslyGetAndRemoveCodeSinceSnapshot(e){let s=this.resultCode.slice(e.resu\##
+ltCode.length);return this.resultCode=e.resultCode,s}reset(){this.resultCode="",this.resultMappings=Array(this.token\##
+s.length),this.tokenIndex=0}matchesContextualAtIndex(e,s){return this.matches1AtIndex(e,t.name)&&this.tokens[e].cont\##
+extualKeyword===s}identifierNameAtIndex(e){return this.identifierNameForToken(this.tokens[e])}identifierNameAtRelati\##
+veIndex(e){return this.identifierNameForToken(this.tokenAtRelativeIndex(e))}identifierName(){return this.identifierN\##
+ameForToken(this.currentToken())}identifierNameForToken(e){return this.code.slice(e.start,e.end)}rawCodeForToken(e){\##
+return this.code.slice(e.start,e.end)}stringValueAtIndex(e){return this.stringValueForToken(this.tokens[e])}stringVa\##
+lue(){return this.stringValueForToken(this.currentToken())}stringValueForToken(e){return this.code.slice(e.start+1,e\##
+.end-1)}matches1AtIndex(e,s){return this.tokens[e].type===s}matches2AtIndex(e,s,r){return this.tokens[e].type===s&&t\##
+his.tokens[e+1].type===r}matches3AtIndex(e,s,r,o){return this.tokens[e].type===s&&this.tokens[e+1].type===r&&this.to\##
+kens[e+2].type===o}matches1(e){return this.tokens[this.tokenIndex].type===e}matches2(e,s){return this.tokens[this.to\##
+kenIndex].type===e&&this.tokens[this.tokenIndex+1].type===s}matches3(e,s,r){return this.tokens[this.tokenIndex].type\##
+===e&&this.tokens[this.tokenIndex+1].type===s&&this.tokens[this.tokenIndex+2].type===r}matches4(e,s,r,o){return this\##
+.tokens[this.tokenIndex].type===e&&this.tokens[this.tokenIndex+1].type===s&&this.tokens[this.tokenIndex+2].type===r&\##
+&this.tokens[this.tokenIndex+3].type===o}matches5(e,s,r,o,a){return this.tokens[this.tokenIndex].type===e&&this.toke\##
+ns[this.tokenIndex+1].type===s&&this.tokens[this.tokenIndex+2].type===r&&this.tokens[this.tokenIndex+3].type===o&&th\##
+is.tokens[this.tokenIndex+4].type===a}matchesContextual(e){return this.matchesContextualAtIndex(this.tokenIndex,e)}m\##
+atchesContextIdAndLabel(e,s){return this.matches1(e)&&this.currentToken().contextId===s}previousWhitespaceAndComment\##
+s(){let e=this.code.slice(this.tokenIndex>0?this.tokens[this.tokenIndex-1].end:0,this.tokenIndex<this.tokens.length?\##
+this.tokens[this.tokenIndex].start:this.code.length);if(this.isFlowEnabled)e=e.replace(/@flow/g,"");return e}replace\##
+Token(e){this.resultCode+=this.previousWhitespaceAndComments(),this.appendTokenPrefix(),this.resultMappings[this.tok\##
+enIndex]=this.resultCode.length,this.resultCode+=e,this.appendTokenSuffix(),this.tokenIndex++}replaceTokenTrimmingLe\##
+ftWhitespace(e){this.resultCode+=this.previousWhitespaceAndComments().replace(/[^\r\n]/g,""),this.appendTokenPrefix(\##
+),this.resultMappings[this.tokenIndex]=this.resultCode.length,this.resultCode+=e,this.appendTokenSuffix(),this.token\##
+Index++}removeInitialToken(){this.replaceToken("")}removeToken(){this.replaceTokenTrimmingLeftWhitespace("")}removeB\##
+alancedCode(){let e=0;while(!this.isAtEnd()){if(this.matches1(t.braceL))e++;else if(this.matches1(t.braceR)){if(e===\##
+0)return;e--}this.removeToken()}}copyExpectedToken(e){if(this.tokens[this.tokenIndex].type!==e)throw Error(`Expected\##
+ token ${e}`);this.copyToken()}copyToken(){this.resultCode+=this.previousWhitespaceAndComments(),this.appendTokenPre\##
+fix(),this.resultMappings[this.tokenIndex]=this.resultCode.length,this.resultCode+=this.code.slice(this.tokens[this.\##
+tokenIndex].start,this.tokens[this.tokenIndex].end),this.appendTokenSuffix(),this.tokenIndex++}copyTokenWithPrefix(e\##
+){this.resultCode+=this.previousWhitespaceAndComments(),this.appendTokenPrefix(),this.resultCode+=e,this.resultMappi\##
+ngs[this.tokenIndex]=this.resultCode.length,this.resultCode+=this.code.slice(this.tokens[this.tokenIndex].start,this\##
+.tokens[this.tokenIndex].end),this.appendTokenSuffix(),this.tokenIndex++}appendTokenPrefix(){let e=this.currentToken\##
+();if(e.numNullishCoalesceStarts||e.isOptionalChainStart)e.isAsyncOperation=F1(this);if(this.disableESTransforms)ret\##
+urn;if(e.numNullishCoalesceStarts)for(let s=0;s<e.numNullishCoalesceStarts;s++){if(e.isAsyncOperation)this.resultCod\##
+e+="await ",this.resultCode+=this.helperManager.getHelperName("asyncNullishCoalesce");else this.resultCode+=this.hel\##
+perManager.getHelperName("nullishCoalesce");this.resultCode+="("}if(e.isOptionalChainStart){if(e.isAsyncOperation)th\##
+is.resultCode+="await ";if(this.tokenIndex>0&&this.tokenAtRelativeIndex(-1).type===t._delete)if(e.isAsyncOperation)t\##
+his.resultCode+=this.helperManager.getHelperName("asyncOptionalChainDelete");else this.resultCode+=this.helperManage\##
+r.getHelperName("optionalChainDelete");else if(e.isAsyncOperation)this.resultCode+=this.helperManager.getHelperName(\##
+"asyncOptionalChain");else this.resultCode+=this.helperManager.getHelperName("optionalChain");this.resultCode+="(["}\##
+}appendTokenSuffix(){let e=this.currentToken();if(e.isOptionalChainEnd&&!this.disableESTransforms)this.resultCode+="\##
+])";if(e.numNullishCoalesceEnds&&!this.disableESTransforms)for(let s=0;s<e.numNullishCoalesceEnds;s++)this.resultCod\##
+e+="))"}appendCode(e){this.resultCode+=e}currentToken(){return this.tokens[this.tokenIndex]}currentTokenCode(){let e\##
+=this.currentToken();return this.code.slice(e.start,e.end)}tokenAtRelativeIndex(e){return this.tokens[this.tokenInde\##
+x+e]}currentIndex(){return this.tokenIndex}nextToken(){if(this.tokenIndex===this.tokens.length)throw Error("Unexpect\##
+edly reached end of input.");this.tokenIndex++}previousToken(){this.tokenIndex--}finish(){if(this.tokenIndex!==this.\##
+tokens.length)throw Error("Tried to finish processing tokens before reaching the end.");return this.resultCode+=this\##
+.previousWhitespaceAndComments(),{code:this.resultCode,mappings:this.resultMappings}}isAtEnd(){return this.tokenInde\##
+x===this.tokens.length}}function M1(e,s,r,o){let a=s.snapshot(),u=ql(s),m=[],x=[],k=[],T=null,y=[],C=[],L=s.currentT\##
+oken().contextId;if(L==null)throw Error("Expected non-null class context ID on class open-brace.");s.nextToken();whi\##
+le(!s.matchesContextIdAndLabel(t.braceR,L))if(s.matchesContextual(c._constructor)&&!s.currentToken().isType)({constr\##
+uctorInitializerStatements:m,constructorInsertPos:T}=ei(s));else if(s.matches1(t.semi)){if(!o)C.push({start:s.curren\##
+tIndex(),end:s.currentIndex()+1});s.nextToken()}else if(s.currentToken().isType)s.nextToken();else{let M=s.currentIn\##
+dex(),z=!1,U=!1,I=!1;while(fs(s.currentToken())){if(s.matches1(t._static))z=!0;if(s.matches1(t.hash))U=!0;if(s.match\##
+es1(t._declare)||s.matches1(t._abstract))I=!0;s.nextToken()}if(z&&s.matches1(t.braceL)){O1(s,L);continue}if(U){O1(s,\##
+L);continue}if(s.matchesContextual(c._constructor)&&!s.currentToken().isType){({constructorInitializerStatements:m,c\##
+onstructorInsertPos:T}=ei(s));continue}let N=s.currentIndex();if($l(s),s.matches1(t.lessThan)||s.matches1(t.parenL))\##
+{O1(s,L);continue}while(s.currentToken().isType)s.nextToken();if(s.matches1(t.eq)){let P=s.currentIndex(),W=s.curren\##
+tToken().rhsEndIndex;if(W==null)throw Error("Expected rhsEndIndex on class field assignment.");s.nextToken();while(s\##
+.currentIndex()<W)e.processToken();let B;if(z)B=r.claimFreeName("__initStatic"),k.push(B);else B=r.claimFreeName("__\##
+init"),x.push(B);y.push({initializerName:B,equalsIndex:P,start:N,end:s.currentIndex()})}else if(!o||I)C.push({start:\##
+M,end:s.currentIndex()})}if(s.restoreToSnapshot(a),o)return{headerInfo:u,constructorInitializerStatements:m,instance\##
+InitializerNames:[],staticInitializerNames:[],constructorInsertPos:T,fields:[],rangesToRemove:C};else return{headerI\##
+nfo:u,constructorInitializerStatements:m,instanceInitializerNames:x,staticInitializerNames:k,constructorInsertPos:T,\##
+fields:y,rangesToRemove:C}}function O1(e,s){e.nextToken();while(e.currentToken().contextId!==s)e.nextToken();while(f\##
+s(e.tokenAtRelativeIndex(-1)))e.previousToken()}function ql(e){let s=e.currentToken(),r=s.contextId;if(r==null)throw\##
+ Error("Expected context ID on class token.");let o=s.isExpression;if(o==null)throw Error("Expected isExpression on \##
+class token.");let a=null,u=!1;if(e.nextToken(),e.matches1(t.name))a=e.identifierName();while(!e.matchesContextIdAnd\##
+Label(t.braceL,r)){if(e.matches1(t._extends)&&!e.currentToken().isType)u=!0;e.nextToken()}return{isExpression:o,clas\##
+sName:a,hasSuperclass:u}}function ei(e){let s=[];e.nextToken();let r=e.currentToken().contextId;if(r==null)throw Err\##
+or("Expected context ID on open-paren starting constructor params.");while(!e.matchesContextIdAndLabel(t.parenR,r))i\##
+f(e.currentToken().contextId===r){if(e.nextToken(),fs(e.currentToken())){e.nextToken();while(fs(e.currentToken()))e.\##
+nextToken();let u=e.currentToken();if(u.type!==t.name)throw Error("Expected identifier after access modifiers in con\##
+structor arg.");let m=e.identifierNameForToken(u);s.push(`this.${m} = ${m}`)}}else e.nextToken();e.nextToken();while\##
+(e.currentToken().isType)e.nextToken();let o=e.currentIndex(),a=!1;while(!e.matchesContextIdAndLabel(t.braceR,r)){if\##
+(!a&&e.matches2(t._super,t.parenL)){e.nextToken();let u=e.currentToken().contextId;if(u==null)throw Error("Expected \##
+a context ID on the super call");while(!e.matchesContextIdAndLabel(t.parenR,u))e.nextToken();o=e.currentIndex(),a=!0\##
+}e.nextToken()}return e.nextToken(),{constructorInitializerStatements:s,constructorInsertPos:o}}function fs(e){retur\##
+n[t._async,t._get,t._set,t.plus,t.minus,t._readonly,t._static,t._public,t._private,t._protected,t._override,t._abstr\##
+act,t.star,t._declare,t.hash].includes(e.type)}function $l(e){if(e.matches1(t.bracketL)){let r=e.currentToken().cont\##
+extId;if(r==null)throw Error("Expected class context ID on computed name open bracket.");while(!e.matchesContextIdAn\##
+dLabel(t.bracketR,r))e.nextToken();e.nextToken()}else e.nextToken()}function Rt(e){if(e.removeInitialToken(),e.remov\##
+eToken(),e.removeToken(),e.removeToken(),e.matches1(t.parenL))e.removeToken(),e.removeToken(),e.removeToken();else w\##
+hile(e.matches1(t.dot))e.removeToken(),e.removeToken()}var hs={typeDeclarations:new Set,valueDeclarations:new Set};f\##
+unction vt(e){let s=new Set,r=new Set;for(let o=0;o<e.tokens.length;o++){let a=e.tokens[o];if(a.type===t.name&&qt(a)\##
+)if(a.isType)s.add(e.identifierNameForToken(a));else r.add(e.identifierNameForToken(a))}return{typeDeclarations:s,va\##
+lueDeclarations:r}}function Lt(e){let s=e.currentIndex();while(!e.matches1AtIndex(s,t.braceR))s++;return e.matchesCo\##
+ntextualAtIndex(s+1,c._from)&&e.matches1AtIndex(s+2,t.string)}function Ae(e){if(e.matches2(t._with,t.braceL)||e.matc\##
+hes2(t.name,t.braceL)&&e.matchesContextual(c._assert))e.removeToken(),e.removeToken(),e.removeBalancedCode(),e.remov\##
+eToken()}function Dt(e,s,r,o){if(!e||s)return!1;let a=r.currentToken();if(a.rhsEndIndex==null)throw Error("Expected \##
+non-null rhsEndIndex on export token.");let u=a.rhsEndIndex-r.currentIndex();if(u!==3&&!(u===4&&r.matches1AtIndex(a.\##
+rhsEndIndex-1,t.semi)))return!1;let m=r.tokenAtRelativeIndex(2);if(m.type!==t.name)return!1;let x=r.identifierNameFo\##
+rToken(m);return o.typeDeclarations.has(x)&&!o.valueDeclarations.has(x)}class Me extends G{__init(){this.hadExport=!\##
+1}__init2(){this.hadNamedExport=!1}__init3(){this.hadDefaultExport=!1}constructor(e,s,r,o,a,u,m,x,k,T,y,C){super();t\##
+his.rootTransformer=e,this.tokens=s,this.importProcessor=r,this.nameManager=o,this.helperManager=a,this.reactHotLoad\##
+erTransformer=u,this.enableLegacyBabel5ModuleInterop=m,this.enableLegacyTypeScriptModuleInterop=x,this.isTypeScriptT\##
+ransformEnabled=k,this.isFlowTransformEnabled=T,this.preserveDynamicImport=y,this.keepUnusedImports=C,Me.prototype._\##
+_init.call(this),Me.prototype.__init2.call(this),Me.prototype.__init3.call(this),this.declarationInfo=k?vt(s):hs}get\##
+PrefixCode(){let e="";if(this.hadExport)e+='Object.defineProperty(exports, "__esModule", {value: true});';return e}g\##
+etSuffixCode(){if(this.enableLegacyBabel5ModuleInterop&&this.hadDefaultExport&&!this.hadNamedExport)return`
 module.exports = exports.default;
 `;return""}process(){if(this.tokens.matches3(t._import,t.name,t.eq))return this.processImportEquals();if(this.tokens\##
 .matches1(t._import))return this.processImport(),!0;if(this.tokens.matches2(t._export,t.eq))return this.tokens.repla\##
@@ -1507,34 +1361,34 @@ xport=!0,this.processExport();if(this.tokens.matches2(t.name,t.postIncDec)){if(t
 this.tokens.matches1(t.name)||this.tokens.matches1(t.jsxName))return this.processIdentifier();if(this.tokens.matches\##
 1(t.eq))return this.processAssignment();if(this.tokens.matches1(t.assign))return this.processComplexAssignment();if(\##
 this.tokens.matches1(t.preIncDec))return this.processPreIncDec();return!1}processImportEquals(){let e=this.tokens.id\##
-entifierNameAtIndex(this.tokens.currentIndex()+1);if(this.importProcessor.shouldAutomaticallyElideImportedName(e))Vt\##
+entifierNameAtIndex(this.tokens.currentIndex()+1);if(this.importProcessor.shouldAutomaticallyElideImportedName(e))Rt\##
 (this.tokens);else this.tokens.replaceToken("const");return!0}processImport(){if(this.tokens.matches2(t._import,t.pa\##
-renL)){if(this.preserveDynamicImport){this.tokens.copyToken();return}let n=this.enableLegacyTypeScriptModuleInterop?\##
+renL)){if(this.preserveDynamicImport){this.tokens.copyToken();return}let s=this.enableLegacyTypeScriptModuleInterop?\##
 "":`${this.helperManager.getHelperName("interopRequireWildcard")}(`;this.tokens.replaceToken(`Promise.resolve().then\##
-(() => ${n}require`);let s=this.tokens.currentToken().contextId;if(s==null)throw Error("Expected context ID on dynam\##
-ic import invocation.");this.tokens.copyToken();while(!this.tokens.matchesContextIdAndLabel(t.parenR,s))this.rootTra\##
-nsformer.processToken();this.tokens.replaceToken(n?")))":"))");return}if(this.removeImportAndDetectIfShouldElide())t\##
-his.tokens.removeToken();else{let n=this.tokens.stringValue();this.tokens.replaceTokenTrimmingLeftWhitespace(this.im\##
-portProcessor.claimImportCode(n)),this.tokens.appendCode(this.importProcessor.claimImportCode(n))}if(Oe(this.tokens)\##
+(() => ${s}require`);let r=this.tokens.currentToken().contextId;if(r==null)throw Error("Expected context ID on dynam\##
+ic import invocation.");this.tokens.copyToken();while(!this.tokens.matchesContextIdAndLabel(t.parenR,r))this.rootTra\##
+nsformer.processToken();this.tokens.replaceToken(s?")))":"))");return}if(this.removeImportAndDetectIfShouldElide())t\##
+his.tokens.removeToken();else{let s=this.tokens.stringValue();this.tokens.replaceTokenTrimmingLeftWhitespace(this.im\##
+portProcessor.claimImportCode(s)),this.tokens.appendCode(this.importProcessor.claimImportCode(s))}if(Ae(this.tokens)\##
 ,this.tokens.matches1(t.semi))this.tokens.removeToken()}removeImportAndDetectIfShouldElide(){if(this.tokens.removeIn\##
 itialToken(),this.tokens.matchesContextual(c._type)&&!this.tokens.matches1AtIndex(this.tokens.currentIndex()+1,t.com\##
 ma)&&!this.tokens.matchesContextualAtIndex(this.tokens.currentIndex()+1,c._from))return this.removeRemainingImport()\##
 ,!0;if(this.tokens.matches1(t.name)||this.tokens.matches1(t.star))return this.removeRemainingImport(),!1;if(this.tok\##
-ens.matches1(t.string))return!1;let e=!1,n=!1;while(!this.tokens.matches1(t.string)){if(!e&&this.tokens.matches1(t.b\##
-raceL)||this.tokens.matches1(t.comma)){if(this.tokens.removeToken(),!this.tokens.matches1(t.braceR))n=!0;if(this.tok\##
+ens.matches1(t.string))return!1;let e=!1,s=!1;while(!this.tokens.matches1(t.string)){if(!e&&this.tokens.matches1(t.b\##
+raceL)||this.tokens.matches1(t.comma)){if(this.tokens.removeToken(),!this.tokens.matches1(t.braceR))s=!0;if(this.tok\##
 ens.matches2(t.name,t.comma)||this.tokens.matches2(t.name,t.braceR)||this.tokens.matches4(t.name,t.name,t.name,t.com\##
 ma)||this.tokens.matches4(t.name,t.name,t.name,t.braceR))e=!0}this.tokens.removeToken()}if(this.keepUnusedImports)re\##
-turn!1;if(this.isTypeScriptTransformEnabled)return!e;else if(this.isFlowTransformEnabled)return n&&!e;else return!1}\##
+turn!1;if(this.isTypeScriptTransformEnabled)return!e;else if(this.isFlowTransformEnabled)return s&&!e;else return!1}\##
 removeRemainingImport(){while(!this.tokens.matches1(t.string))this.tokens.removeToken()}processIdentifier(){let e=th\##
-is.tokens.currentToken();if(e.shadowsGlobal)return!1;if(e.identifierRole===I.ObjectShorthand)return this.processObje\##
-ctShorthand();if(e.identifierRole!==I.Access)return!1;let n=this.importProcessor.getIdentifierReplacement(this.token\##
-s.identifierNameForToken(e));if(!n)return!1;let s=this.tokens.currentIndex()+1;while(s<this.tokens.tokens.length&&th\##
-is.tokens.tokens[s].type===t.parenR)s++;if(this.tokens.tokens[s].type===t.parenL)if(this.tokens.tokenAtRelativeIndex\##
-(1).type===t.parenL&&this.tokens.tokenAtRelativeIndex(-1).type!==t._new)this.tokens.replaceToken(`${n}.call(void 0, \##
+is.tokens.currentToken();if(e.shadowsGlobal)return!1;if(e.identifierRole===_.ObjectShorthand)return this.processObje\##
+ctShorthand();if(e.identifierRole!==_.Access)return!1;let s=this.importProcessor.getIdentifierReplacement(this.token\##
+s.identifierNameForToken(e));if(!s)return!1;let r=this.tokens.currentIndex()+1;while(r<this.tokens.tokens.length&&th\##
+is.tokens.tokens[r].type===t.parenR)r++;if(this.tokens.tokens[r].type===t.parenL)if(this.tokens.tokenAtRelativeIndex\##
+(1).type===t.parenL&&this.tokens.tokenAtRelativeIndex(-1).type!==t._new)this.tokens.replaceToken(`${s}.call(void 0, \##
 `),this.tokens.removeToken(),this.rootTransformer.processBalancedCode(),this.tokens.copyExpectedToken(t.parenR);else\##
- this.tokens.replaceToken(`(0, ${n})`);else this.tokens.replaceToken(n);return!0}processObjectShorthand(){let e=this\##
-.tokens.identifierName(),n=this.importProcessor.getIdentifierReplacement(e);if(!n)return!1;return this.tokens.replac\##
-eToken(`${e}: ${n}`),!0}processExport(){if(this.tokens.matches2(t._export,t._enum)||this.tokens.matches3(t._export,t\##
+ this.tokens.replaceToken(`(0, ${s})`);else this.tokens.replaceToken(s);return!0}processObjectShorthand(){let e=this\##
+.tokens.identifierName(),s=this.importProcessor.getIdentifierReplacement(e);if(!s)return!1;return this.tokens.replac\##
+eToken(`${e}: ${s}`),!0}processExport(){if(this.tokens.matches2(t._export,t._enum)||this.tokens.matches3(t._export,t\##
 ._const,t._enum))return this.hadNamedExport=!0,!1;if(this.tokens.matches2(t._export,t._default)){if(this.tokens.matc\##
 hes3(t._export,t._default,t._enum))return this.hadDefaultExport=!0,!1;return this.processExportDefault(),!0}else if(\##
 this.tokens.matches2(t._export,t.braceL))return this.processExportBindings(),!0;else if(this.tokens.matches2(t._expo\##
@@ -1542,41 +1396,41 @@ rt,t.name)&&this.tokens.matchesContextualAtIndex(this.tokens.currentIndex()+1,c.
 Token(),this.tokens.removeToken(),this.tokens.matches1(t.braceL)){while(!this.tokens.matches1(t.braceR))this.tokens.\##
 removeToken();this.tokens.removeToken()}else if(this.tokens.removeToken(),this.tokens.matches1(t._as))this.tokens.re\##
 moveToken(),this.tokens.removeToken();if(this.tokens.matchesContextual(c._from)&&this.tokens.matches1AtIndex(this.to\##
-kens.currentIndex()+1,t.string))this.tokens.removeToken(),this.tokens.removeToken(),Oe(this.tokens);return!0}if(this\##
+kens.currentIndex()+1,t.string))this.tokens.removeToken(),this.tokens.removeToken(),Ae(this.tokens);return!0}if(this\##
 .hadNamedExport=!0,this.tokens.matches2(t._export,t._var)||this.tokens.matches2(t._export,t._let)||this.tokens.match\##
 es2(t._export,t._const))return this.processExportVar(),!0;else if(this.tokens.matches2(t._export,t._function)||this.\##
 tokens.matches3(t._export,t.name,t._function))return this.processExportFunction(),!0;else if(this.tokens.matches2(t.\##
 _export,t._class)||this.tokens.matches3(t._export,t._abstract,t._class)||this.tokens.matches2(t._export,t.at))return\##
  this.processExportClass(),!0;else if(this.tokens.matches2(t._export,t.star))return this.processExportStar(),!0;else\##
- throw Error("Unrecognized export syntax.")}processAssignment(){let e=this.tokens.currentIndex(),n=this.tokens.token\##
-s[e-1];if(n.isType||n.type!==t.name)return!1;if(n.shadowsGlobal)return!1;if(e>=2&&this.tokens.matches1AtIndex(e-2,t.\##
-dot))return!1;if(e>=2&&[t._var,t._let,t._const].includes(this.tokens.tokens[e-2].type))return!1;let s=this.importPro\##
-cessor.resolveExportBinding(this.tokens.identifierNameForToken(n));if(!s)return!1;return this.tokens.copyToken(),thi\##
-s.tokens.appendCode(` ${s} =`),!0}processComplexAssignment(){let e=this.tokens.currentIndex(),n=this.tokens.tokens[e\##
--1];if(n.type!==t.name)return!1;if(n.shadowsGlobal)return!1;if(e>=2&&this.tokens.matches1AtIndex(e-2,t.dot))return!1\##
-;let s=this.importProcessor.resolveExportBinding(this.tokens.identifierNameForToken(n));if(!s)return!1;return this.t\##
-okens.appendCode(` = ${s}`),this.tokens.copyToken(),!0}processPreIncDec(){let e=this.tokens.currentIndex(),n=this.to\##
-kens.tokens[e+1];if(n.type!==t.name)return!1;if(n.shadowsGlobal)return!1;if(e+2<this.tokens.tokens.length&&(this.tok\##
+ throw Error("Unrecognized export syntax.")}processAssignment(){let e=this.tokens.currentIndex(),s=this.tokens.token\##
+s[e-1];if(s.isType||s.type!==t.name)return!1;if(s.shadowsGlobal)return!1;if(e>=2&&this.tokens.matches1AtIndex(e-2,t.\##
+dot))return!1;if(e>=2&&[t._var,t._let,t._const].includes(this.tokens.tokens[e-2].type))return!1;let r=this.importPro\##
+cessor.resolveExportBinding(this.tokens.identifierNameForToken(s));if(!r)return!1;return this.tokens.copyToken(),thi\##
+s.tokens.appendCode(` ${r} =`),!0}processComplexAssignment(){let e=this.tokens.currentIndex(),s=this.tokens.tokens[e\##
+-1];if(s.type!==t.name)return!1;if(s.shadowsGlobal)return!1;if(e>=2&&this.tokens.matches1AtIndex(e-2,t.dot))return!1\##
+;let r=this.importProcessor.resolveExportBinding(this.tokens.identifierNameForToken(s));if(!r)return!1;return this.t\##
+okens.appendCode(` = ${r}`),this.tokens.copyToken(),!0}processPreIncDec(){let e=this.tokens.currentIndex(),s=this.to\##
+kens.tokens[e+1];if(s.type!==t.name)return!1;if(s.shadowsGlobal)return!1;if(e+2<this.tokens.tokens.length&&(this.tok\##
 ens.matches1AtIndex(e+2,t.dot)||this.tokens.matches1AtIndex(e+2,t.bracketL)||this.tokens.matches1AtIndex(e+2,t.paren\##
-L)))return!1;let s=this.tokens.identifierNameForToken(n),o=this.importProcessor.resolveExportBinding(s);if(!o)return\##
+L)))return!1;let r=this.tokens.identifierNameForToken(s),o=this.importProcessor.resolveExportBinding(r);if(!o)return\##
 !1;return this.tokens.appendCode(`${o} = `),this.tokens.copyToken(),!0}processPostIncDec(){let e=this.tokens.current\##
-Index(),n=this.tokens.tokens[e],s=this.tokens.tokens[e+1];if(n.type!==t.name)return!1;if(n.shadowsGlobal)return!1;if\##
-(e>=1&&this.tokens.matches1AtIndex(e-1,t.dot))return!1;let o=this.tokens.identifierNameForToken(n),i=this.importProc\##
-essor.resolveExportBinding(o);if(!i)return!1;let l=this.tokens.rawCodeForToken(s),p=this.importProcessor.getIdentifi\##
-erReplacement(o)||o;if(l==="++")this.tokens.replaceToken(`(${p} = ${i} = ${p} + 1, ${p} - 1)`);else if(l==="--")this\##
-.tokens.replaceToken(`(${p} = ${i} = ${p} - 1, ${p} + 1)`);else throw Error(`Unexpected operator: ${l}`);return this\##
+Index(),s=this.tokens.tokens[e],r=this.tokens.tokens[e+1];if(s.type!==t.name)return!1;if(s.shadowsGlobal)return!1;if\##
+(e>=1&&this.tokens.matches1AtIndex(e-1,t.dot))return!1;let o=this.tokens.identifierNameForToken(s),a=this.importProc\##
+essor.resolveExportBinding(o);if(!a)return!1;let u=this.tokens.rawCodeForToken(r),m=this.importProcessor.getIdentifi\##
+erReplacement(o)||o;if(u==="++")this.tokens.replaceToken(`(${m} = ${a} = ${m} + 1, ${m} - 1)`);else if(u==="--")this\##
+.tokens.replaceToken(`(${m} = ${a} = ${m} - 1, ${m} + 1)`);else throw Error(`Unexpected operator: ${u}`);return this\##
 .tokens.removeToken(),!0}processExportDefault(){let e=!0;if(this.tokens.matches4(t._export,t._default,t._function,t.\##
 name)||this.tokens.matches5(t._export,t._default,t.name,t._function,t.name)&&this.tokens.matchesContextualAtIndex(th\##
-is.tokens.currentIndex()+2,c._async)){this.tokens.removeInitialToken(),this.tokens.removeToken();let n=this.processN\##
-amedFunction();this.tokens.appendCode(` exports.default = ${n};`)}else if(this.tokens.matches4(t._export,t._default,\##
+is.tokens.currentIndex()+2,c._async)){this.tokens.removeInitialToken(),this.tokens.removeToken();let s=this.processN\##
+amedFunction();this.tokens.appendCode(` exports.default = ${s};`)}else if(this.tokens.matches4(t._export,t._default,\##
 t._class,t.name)||this.tokens.matches5(t._export,t._default,t._abstract,t._class,t.name)||this.tokens.matches3(t._ex\##
 port,t._default,t.at)){if(this.tokens.removeInitialToken(),this.tokens.removeToken(),this.copyDecorators(),this.toke\##
-ns.matches1(t._abstract))this.tokens.removeToken();let n=this.rootTransformer.processNamedClass();this.tokens.append\##
-Code(` exports.default = ${n};`)}else if(Xt(this.isTypeScriptTransformEnabled,this.keepUnusedImports,this.tokens,thi\##
+ns.matches1(t._abstract))this.tokens.removeToken();let s=this.rootTransformer.processNamedClass();this.tokens.append\##
+Code(` exports.default = ${s};`)}else if(Dt(this.isTypeScriptTransformEnabled,this.keepUnusedImports,this.tokens,thi\##
 s.declarationInfo))e=!1,this.tokens.removeInitialToken(),this.tokens.removeToken(),this.tokens.removeToken();else if\##
-(this.reactHotLoaderTransformer){let n=this.nameManager.claimFreeName("_default");this.tokens.replaceToken(`let ${n}\##
-; exports.`),this.tokens.copyToken(),this.tokens.appendCode(` = ${n} =`),this.reactHotLoaderTransformer.setExtracted\##
-DefaultExportName(n)}else this.tokens.replaceToken("exports."),this.tokens.copyToken(),this.tokens.appendCode(" =");\##
+(this.reactHotLoaderTransformer){let s=this.nameManager.claimFreeName("_default");this.tokens.replaceToken(`let ${s}\##
+; exports.`),this.tokens.copyToken(),this.tokens.appendCode(` = ${s} =`),this.reactHotLoaderTransformer.setExtracted\##
+DefaultExportName(s)}else this.tokens.replaceToken("exports."),this.tokens.copyToken(),this.tokens.appendCode(" =");\##
 if(e)this.hadDefaultExport=!0}copyDecorators(){while(this.tokens.matches1(t.at))if(this.tokens.copyToken(),this.toke\##
 ns.matches1(t.parenL))this.tokens.copyExpectedToken(t.parenL),this.rootTransformer.processBalancedCode(),this.tokens\##
 .copyExpectedToken(t.parenR);else{this.tokens.copyExpectedToken(t.name);while(this.tokens.matches1(t.dot))this.token\##
@@ -1586,19 +1440,19 @@ portVar(){if(this.isSimpleExportVar())this.processSimpleExportVar();else this.pr
 rtVar(){let e=this.tokens.currentIndex();if(e++,e++,!this.tokens.matches1AtIndex(e,t.name))return!1;e++;while(e<this\##
 .tokens.tokens.length&&this.tokens.tokens[e].isType)e++;if(!this.tokens.matches1AtIndex(e,t.eq))return!1;return!0}pr\##
 ocessSimpleExportVar(){this.tokens.removeInitialToken(),this.tokens.copyToken();let e=this.tokens.identifierName();w\##
-hile(!this.tokens.matches1(t.eq))this.rootTransformer.processToken();let n=this.tokens.currentToken().rhsEndIndex;if\##
-(n==null)throw Error("Expected = token with an end index.");while(this.tokens.currentIndex()<n)this.rootTransformer.\##
+hile(!this.tokens.matches1(t.eq))this.rootTransformer.processToken();let s=this.tokens.currentToken().rhsEndIndex;if\##
+(s==null)throw Error("Expected = token with an end index.");while(this.tokens.currentIndex()<s)this.rootTransformer.\##
 processToken();this.tokens.appendCode(`; exports.${e} = ${e}`)}processComplexExportVar(){this.tokens.removeInitialTo\##
-ken(),this.tokens.removeToken();let e=this.tokens.matches1(t.braceL);if(e)this.tokens.appendCode("(");let n=0;while(\##
-!0)if(this.tokens.matches1(t.braceL)||this.tokens.matches1(t.dollarBraceL)||this.tokens.matches1(t.bracketL))n++,thi\##
-s.tokens.copyToken();else if(this.tokens.matches1(t.braceR)||this.tokens.matches1(t.bracketR))n--,this.tokens.copyTo\##
-ken();else if(n===0&&!this.tokens.matches1(t.name)&&!this.tokens.currentToken().isType)break;else if(this.tokens.mat\##
-ches1(t.eq)){let s=this.tokens.currentToken().rhsEndIndex;if(s==null)throw Error("Expected = token with an end index\##
-.");while(this.tokens.currentIndex()<s)this.rootTransformer.processToken()}else{let s=this.tokens.currentToken();if(\##
-Zt(s)){let o=this.tokens.identifierName(),i=this.importProcessor.getIdentifierReplacement(o);if(i===null)throw Error\##
-(`Expected a replacement for ${o} in \`export var\` syntax.`);if(Io(s))i=`${o}: ${i}`;this.tokens.replaceToken(i)}el\##
-se this.rootTransformer.processToken()}if(e){let s=this.tokens.currentToken().rhsEndIndex;if(s==null)throw Error("Ex\##
-pected = token with an end index.");while(this.tokens.currentIndex()<s)this.rootTransformer.processToken();this.toke\##
+ken(),this.tokens.removeToken();let e=this.tokens.matches1(t.braceL);if(e)this.tokens.appendCode("(");let s=0;while(\##
+!0)if(this.tokens.matches1(t.braceL)||this.tokens.matches1(t.dollarBraceL)||this.tokens.matches1(t.bracketL))s++,thi\##
+s.tokens.copyToken();else if(this.tokens.matches1(t.braceR)||this.tokens.matches1(t.bracketR))s--,this.tokens.copyTo\##
+ken();else if(s===0&&!this.tokens.matches1(t.name)&&!this.tokens.currentToken().isType)break;else if(this.tokens.mat\##
+ches1(t.eq)){let r=this.tokens.currentToken().rhsEndIndex;if(r==null)throw Error("Expected = token with an end index\##
+.");while(this.tokens.currentIndex()<r)this.rootTransformer.processToken()}else{let r=this.tokens.currentToken();if(\##
+jt(r)){let o=this.tokens.identifierName(),a=this.importProcessor.getIdentifierReplacement(o);if(a===null)throw Error\##
+(`Expected a replacement for ${o} in \`export var\` syntax.`);if(Y1(r))a=`${o}: ${a}`;this.tokens.replaceToken(a)}el\##
+se this.rootTransformer.processToken()}if(e){let r=this.tokens.currentToken().rhsEndIndex;if(r==null)throw Error("Ex\##
+pected = token with an end index.");while(this.tokens.currentIndex()<r)this.rootTransformer.processToken();this.toke\##
 ns.appendCode(")")}}processExportFunction(){this.tokens.replaceToken("");let e=this.processNamedFunction();this.toke\##
 ns.appendCode(` exports.${e} = ${e};`)}processNamedFunction(){if(this.tokens.matches1(t._function))this.tokens.copyT\##
 oken();else if(this.tokens.matches2(t.name,t._function)){if(!this.tokens.matchesContextual(c._async))throw Error("Ex\##
@@ -1611,23 +1465,23 @@ ansformer.processPossibleTypeRange(),this.tokens.copyExpectedToken(t.braceL),thi
 e(),this.tokens.copyExpectedToken(t.braceR),e}processExportClass(){if(this.tokens.removeInitialToken(),this.copyDeco\##
 rators(),this.tokens.matches1(t._abstract))this.tokens.removeToken();let e=this.rootTransformer.processNamedClass();\##
 this.tokens.appendCode(` exports.${e} = ${e};`)}processExportBindings(){this.tokens.removeInitialToken(),this.tokens\##
-.removeToken();let e=Gt(this.tokens),n=[];while(!0){if(this.tokens.matches1(t.braceR)){this.tokens.removeToken();bre\##
-ak}let s=be(this.tokens);while(this.tokens.currentIndex()<s.endIndex)this.tokens.removeToken();if(!(s.isType||!e&&th\##
-is.shouldElideExportedIdentifier(s.leftName))){let i=s.rightName;if(i==="default")this.hadDefaultExport=!0;else this\##
-.hadNamedExport=!0;let l=s.leftName,p=this.importProcessor.getIdentifierReplacement(l);n.push(`exports.${i} = ${p||l\##
+.removeToken();let e=Lt(this.tokens),s=[];while(!0){if(this.tokens.matches1(t.braceR)){this.tokens.removeToken();bre\##
+ak}let r=ke(this.tokens);while(this.tokens.currentIndex()<r.endIndex)this.tokens.removeToken();if(!(r.isType||!e&&th\##
+is.shouldElideExportedIdentifier(r.leftName))){let a=r.rightName;if(a==="default")this.hadDefaultExport=!0;else this\##
+.hadNamedExport=!0;let u=r.leftName,m=this.importProcessor.getIdentifierReplacement(u);s.push(`exports.${a} = ${m||u\##
 };`)}if(this.tokens.matches1(t.braceR)){this.tokens.removeToken();break}if(this.tokens.matches2(t.comma,t.braceR)){t\##
 his.tokens.removeToken(),this.tokens.removeToken();break}else if(this.tokens.matches1(t.comma))this.tokens.removeTok\##
 en();else throw Error(`Unexpected token: ${JSON.stringify(this.tokens.currentToken())}`)}if(this.tokens.matchesConte\##
-xtual(c._from)){this.tokens.removeToken();let s=this.tokens.stringValue();this.tokens.replaceTokenTrimmingLeftWhites\##
-pace(this.importProcessor.claimImportCode(s)),Oe(this.tokens)}else this.tokens.appendCode(n.join(" "));if(this.token\##
+xtual(c._from)){this.tokens.removeToken();let r=this.tokens.stringValue();this.tokens.replaceTokenTrimmingLeftWhites\##
+pace(this.importProcessor.claimImportCode(r)),Ae(this.tokens)}else this.tokens.appendCode(s.join(" "));if(this.token\##
 s.matches1(t.semi))this.tokens.removeToken()}processExportStar(){this.tokens.removeInitialToken();while(!this.tokens\##
 .matches1(t.string))this.tokens.removeToken();let e=this.tokens.stringValue();if(this.tokens.replaceTokenTrimmingLef\##
-tWhitespace(this.importProcessor.claimImportCode(e)),Oe(this.tokens),this.tokens.matches1(t.semi))this.tokens.remove\##
+tWhitespace(this.importProcessor.claimImportCode(e)),Ae(this.tokens),this.tokens.matches1(t.semi))this.tokens.remove\##
 Token()}shouldElideExportedIdentifier(e){return this.isTypeScriptTransformEnabled&&!this.keepUnusedImports&&!this.de\##
-clarationInfo.valueDeclarations.has(e)}}class Nn extends Y{constructor(e,n,s,o,i,l,p,d){super();this.tokens=e,this.n\##
-ameManager=n,this.helperManager=s,this.reactHotLoaderTransformer=o,this.isTypeScriptTransformEnabled=i,this.isFlowTr\##
-ansformEnabled=l,this.keepUnusedImports=p,this.nonTypeIdentifiers=i&&!p?rn(e,d):new Set,this.declarationInfo=i&&!p?W\##
-t(e):Pn,this.injectCreateRequireForImportRequire=Boolean(d.injectCreateRequireForImportRequire)}process(){if(this.to\##
+clarationInfo.valueDeclarations.has(e)}}class ms extends G{constructor(e,s,r,o,a,u,m,x){super();this.tokens=e,this.n\##
+ameManager=s,this.helperManager=r,this.reactHotLoaderTransformer=o,this.isTypeScriptTransformEnabled=a,this.isFlowTr\##
+ansformEnabled=u,this.keepUnusedImports=m,this.nonTypeIdentifiers=a&&!m?Wt(e,x):new Set,this.declarationInfo=a&&!m?v\##
+t(e):hs,this.injectCreateRequireForImportRequire=Boolean(x.injectCreateRequireForImportRequire)}process(){if(this.to\##
 kens.matches3(t._import,t.name,t.eq))return this.processImportEquals();if(this.tokens.matches4(t._import,t.name,t.na\##
 me,t.eq)&&this.tokens.matchesContextualAtIndex(this.tokens.currentIndex()+1,c._type)){this.tokens.removeInitialToken\##
 ();for(let e=0;e<7;e++)this.tokens.removeToken();return!0}if(this.tokens.matches2(t._export,t.eq))return this.tokens\##
@@ -1640,46 +1494,46 @@ rrentIndex()+1,c._type)){if(this.tokens.removeInitialToken(),this.tokens.removeT
 )){while(!this.tokens.matches1(t.braceR))this.tokens.removeToken();this.tokens.removeToken()}else if(this.tokens.rem\##
 oveToken(),this.tokens.matches1(t._as))this.tokens.removeToken(),this.tokens.removeToken();if(this.tokens.matchesCon\##
 textual(c._from)&&this.tokens.matches1AtIndex(this.tokens.currentIndex()+1,t.string))this.tokens.removeToken(),this.\##
-tokens.removeToken(),Oe(this.tokens);return!0}return!1}processImportEquals(){let e=this.tokens.identifierNameAtIndex\##
-(this.tokens.currentIndex()+1);if(this.shouldAutomaticallyElideImportedName(e))Vt(this.tokens);else if(this.injectCr\##
+tokens.removeToken(),Ae(this.tokens);return!0}return!1}processImportEquals(){let e=this.tokens.identifierNameAtIndex\##
+(this.tokens.currentIndex()+1);if(this.shouldAutomaticallyElideImportedName(e))Rt(this.tokens);else if(this.injectCr\##
 eateRequireForImportRequire)this.tokens.replaceToken("const"),this.tokens.copyToken(),this.tokens.copyToken(),this.t\##
 okens.replaceToken(this.helperManager.getHelperName("require"));else this.tokens.replaceToken("const");return!0}proc\##
 essImport(){if(this.tokens.matches2(t._import,t.parenL))return!1;let e=this.tokens.snapshot();if(this.removeImportTy\##
 peBindings()){this.tokens.restoreToSnapshot(e);while(!this.tokens.matches1(t.string))this.tokens.removeToken();if(th\##
-is.tokens.removeToken(),Oe(this.tokens),this.tokens.matches1(t.semi))this.tokens.removeToken()}return!0}removeImport\##
+is.tokens.removeToken(),Ae(this.tokens),this.tokens.matches1(t.semi))this.tokens.removeToken()}return!0}removeImport\##
 TypeBindings(){if(this.tokens.copyExpectedToken(t._import),this.tokens.matchesContextual(c._type)&&!this.tokens.matc\##
 hes1AtIndex(this.tokens.currentIndex()+1,t.comma)&&!this.tokens.matchesContextualAtIndex(this.tokens.currentIndex()+\##
 1,c._from))return!0;if(this.tokens.matches1(t.string))return this.tokens.copyToken(),!1;if(this.tokens.matchesContex\##
 tual(c._module)&&this.tokens.matchesContextualAtIndex(this.tokens.currentIndex()+2,c._from))this.tokens.copyToken();\##
-let e=!1,n=!1,s=!1;if(this.tokens.matches1(t.name)){if(this.shouldAutomaticallyElideImportedName(this.tokens.identif\##
+let e=!1,s=!1,r=!1;if(this.tokens.matches1(t.name)){if(this.shouldAutomaticallyElideImportedName(this.tokens.identif\##
 ierName())){if(this.tokens.removeToken(),this.tokens.matches1(t.comma))this.tokens.removeToken()}else if(e=!0,this.t\##
-okens.copyToken(),this.tokens.matches1(t.comma))s=!0,this.tokens.removeToken()}if(this.tokens.matches1(t.star))if(th\##
+okens.copyToken(),this.tokens.matches1(t.comma))r=!0,this.tokens.removeToken()}if(this.tokens.matches1(t.star))if(th\##
 is.shouldAutomaticallyElideImportedName(this.tokens.identifierNameAtRelativeIndex(2)))this.tokens.removeToken(),this\##
-.tokens.removeToken(),this.tokens.removeToken();else{if(s)this.tokens.appendCode(",");e=!0,this.tokens.copyExpectedT\##
+.tokens.removeToken(),this.tokens.removeToken();else{if(r)this.tokens.appendCode(",");e=!0,this.tokens.copyExpectedT\##
 oken(t.star),this.tokens.copyExpectedToken(t.name),this.tokens.copyExpectedToken(t.name)}else if(this.tokens.matches\##
-1(t.braceL)){if(s)this.tokens.appendCode(",");this.tokens.copyToken();while(!this.tokens.matches1(t.braceR)){n=!0;le\##
-t o=be(this.tokens);if(o.isType||this.shouldAutomaticallyElideImportedName(o.rightName)){while(this.tokens.currentIn\##
+1(t.braceL)){if(r)this.tokens.appendCode(",");this.tokens.copyToken();while(!this.tokens.matches1(t.braceR)){s=!0;le\##
+t o=ke(this.tokens);if(o.isType||this.shouldAutomaticallyElideImportedName(o.rightName)){while(this.tokens.currentIn\##
 dex()<o.endIndex)this.tokens.removeToken();if(this.tokens.matches1(t.comma))this.tokens.removeToken()}else{e=!0;whil\##
 e(this.tokens.currentIndex()<o.endIndex)this.tokens.copyToken();if(this.tokens.matches1(t.comma))this.tokens.copyTok\##
 en()}}this.tokens.copyExpectedToken(t.braceR)}if(this.keepUnusedImports)return!1;if(this.isTypeScriptTransformEnable\##
-d)return!e;else if(this.isFlowTransformEnabled)return n&&!e;else return!1}shouldAutomaticallyElideImportedName(e){re\##
+d)return!e;else if(this.isFlowTransformEnabled)return s&&!e;else return!1}shouldAutomaticallyElideImportedName(e){re\##
 turn this.isTypeScriptTransformEnabled&&!this.keepUnusedImports&&!this.nonTypeIdentifiers.has(e)}processExportDefaul\##
-t(){if(Xt(this.isTypeScriptTransformEnabled,this.keepUnusedImports,this.tokens,this.declarationInfo))return this.tok\##
+t(){if(Dt(this.isTypeScriptTransformEnabled,this.keepUnusedImports,this.tokens,this.declarationInfo))return this.tok\##
 ens.removeInitialToken(),this.tokens.removeToken(),this.tokens.removeToken(),!0;if(!(this.tokens.matches4(t._export,\##
 t._default,t._function,t.name)||this.tokens.matches5(t._export,t._default,t.name,t._function,t.name)&&this.tokens.ma\##
 tchesContextualAtIndex(this.tokens.currentIndex()+2,c._async)||this.tokens.matches4(t._export,t._default,t._class,t.\##
 name)||this.tokens.matches5(t._export,t._default,t._abstract,t._class,t.name))&&this.reactHotLoaderTransformer){let \##
-n=this.nameManager.claimFreeName("_default");return this.tokens.replaceToken(`let ${n}; export`),this.tokens.copyTok\##
-en(),this.tokens.appendCode(` ${n} =`),this.reactHotLoaderTransformer.setExtractedDefaultExportName(n),!0}return!1}p\##
+s=this.nameManager.claimFreeName("_default");return this.tokens.replaceToken(`let ${s}; export`),this.tokens.copyTok\##
+en(),this.tokens.appendCode(` ${s} =`),this.reactHotLoaderTransformer.setExtractedDefaultExportName(s),!0}return!1}p\##
 rocessNamedExports(){if(!this.isTypeScriptTransformEnabled)return!1;this.tokens.copyExpectedToken(t._export),this.to\##
-kens.copyExpectedToken(t.braceL);let e=Gt(this.tokens),n=!1;while(!this.tokens.matches1(t.braceR)){let s=be(this.tok\##
-ens);if(s.isType||!e&&this.shouldElideExportedName(s.leftName)){while(this.tokens.currentIndex()<s.endIndex)this.tok\##
-ens.removeToken();if(this.tokens.matches1(t.comma))this.tokens.removeToken()}else{n=!0;while(this.tokens.currentInde\##
-x()<s.endIndex)this.tokens.copyToken();if(this.tokens.matches1(t.comma))this.tokens.copyToken()}}if(this.tokens.copy\##
-ExpectedToken(t.braceR),!this.keepUnusedImports&&e&&!n)this.tokens.removeToken(),this.tokens.removeToken(),Oe(this.t\##
+kens.copyExpectedToken(t.braceL);let e=Lt(this.tokens),s=!1;while(!this.tokens.matches1(t.braceR)){let r=ke(this.tok\##
+ens);if(r.isType||!e&&this.shouldElideExportedName(r.leftName)){while(this.tokens.currentIndex()<r.endIndex)this.tok\##
+ens.removeToken();if(this.tokens.matches1(t.comma))this.tokens.removeToken()}else{s=!0;while(this.tokens.currentInde\##
+x()<r.endIndex)this.tokens.copyToken();if(this.tokens.matches1(t.comma))this.tokens.copyToken()}}if(this.tokens.copy\##
+ExpectedToken(t.braceR),!this.keepUnusedImports&&e&&!s)this.tokens.removeToken(),this.tokens.removeToken(),Ae(this.t\##
 okens);return!0}shouldElideExportedName(e){return this.isTypeScriptTransformEnabled&&!this.keepUnusedImports&&this.d\##
-eclarationInfo.typeDeclarations.has(e)&&!this.declarationInfo.valueDeclarations.has(e)}}class Rn extends Y{construct\##
-or(e,n,s){super();this.rootTransformer=e,this.tokens=n,this.isImportsTransformEnabled=s}process(){if(this.rootTransf\##
+eclarationInfo.typeDeclarations.has(e)&&!this.declarationInfo.valueDeclarations.has(e)}}class ds extends G{construct\##
+or(e,s,r){super();this.rootTransformer=e,this.tokens=s,this.isImportsTransformEnabled=r}process(){if(this.rootTransf\##
 ormer.processPossibleArrowParamEnd()||this.rootTransformer.processPossibleAsyncArrowWithTypeParams()||this.rootTrans\##
 former.processPossibleTypeRange())return!0;if(this.tokens.matches1(t._enum))return this.processEnum(),!0;if(this.tok\##
 ens.matches2(t._export,t._enum))return this.processNamedExportEnum(),!0;if(this.tokens.matches3(t._export,t._default\##
@@ -1690,39 +1544,39 @@ his.tokens.removeInitialToken(),this.tokens.removeToken();let e=this.tokens.iden
 .processEnum(),this.isImportsTransformEnabled)this.tokens.appendCode(` exports.default = ${e};`);else this.tokens.ap\##
 pendCode(` export default ${e};`)}processEnum(){this.tokens.replaceToken("const"),this.tokens.copyExpectedToken(t.na\##
 me);let e=!1;if(this.tokens.matchesContextual(c._of))this.tokens.removeToken(),e=this.tokens.matchesContextual(c._sy\##
-mbol),this.tokens.removeToken();let n=this.tokens.matches3(t.braceL,t.name,t.eq);this.tokens.appendCode(' = require(\##
-"flow-enums-runtime")');let s=!e&&!n;this.tokens.replaceTokenTrimmingLeftWhitespace(s?".Mirrored([":"({");while(!thi\##
+mbol),this.tokens.removeToken();let s=this.tokens.matches3(t.braceL,t.name,t.eq);this.tokens.appendCode(' = require(\##
+"flow-enums-runtime")');let r=!e&&!s;this.tokens.replaceTokenTrimmingLeftWhitespace(r?".Mirrored([":"({");while(!thi\##
 s.tokens.matches1(t.braceR)){if(this.tokens.matches1(t.ellipsis)){this.tokens.removeToken();break}if(this.processEnu\##
-mElement(e,n),this.tokens.matches1(t.comma))this.tokens.copyToken()}this.tokens.replaceToken(s?"]);":"});")}processE\##
-numElement(e,n){if(e){let s=this.tokens.identifierName();this.tokens.copyToken(),this.tokens.appendCode(`: Symbol("$\##
-{s}")`)}else if(n)this.tokens.copyToken(),this.tokens.replaceTokenTrimmingLeftWhitespace(":"),this.tokens.copyToken(\##
-);else this.tokens.replaceToken(`"${this.tokens.identifierName()}"`)}}function ep(e){let n=void 0,s=e[0],o=1;while(o\##
-<e.length){let i=e[o],l=e[o+1];if(o+=2,(i==="optionalAccess"||i==="optionalCall")&&s==null)return;if(i==="access"||i\##
-==="optionalAccess")n=s,s=l(s);else if(i==="call"||i==="optionalCall")s=l((...p)=>s.call(n,...p)),n=void 0}return s}\##
-var Ln="jest",tp=["mock","unmock","enableAutomock","disableAutomock"];class Jt extends Y{__init(){this.hoistedFuncti\##
-onNames=[]}constructor(e,n,s,o){super();this.rootTransformer=e,this.tokens=n,this.nameManager=s,this.importProcessor\##
-=o,Jt.prototype.__init.call(this)}process(){if(this.tokens.currentToken().scopeDepth===0&&this.tokens.matches4(t.nam\##
-e,t.dot,t.name,t.parenL)&&this.tokens.identifierName()===Ln){if(ep([this,"access",(e)=>e.importProcessor,"optionalAc\##
-cess",(e)=>e.getGlobalNames,"call",(e)=>e(),"optionalAccess",(e)=>e.has,"call",(e)=>e(Ln)]))return!1;return this.ext\##
+mElement(e,s),this.tokens.matches1(t.comma))this.tokens.copyToken()}this.tokens.replaceToken(r?"]);":"});")}processE\##
+numElement(e,s){if(e){let r=this.tokens.identifierName();this.tokens.copyToken(),this.tokens.appendCode(`: Symbol("$\##
+{r}")`)}else if(s)this.tokens.copyToken(),this.tokens.replaceTokenTrimmingLeftWhitespace(":"),this.tokens.copyToken(\##
+);else this.tokens.replaceToken(`"${this.tokens.identifierName()}"`)}}function Hl(e){let s=void 0,r=e[0],o=1;while(o\##
+<e.length){let a=e[o],u=e[o+1];if(o+=2,(a==="optionalAccess"||a==="optionalCall")&&r==null)return;if(a==="access"||a\##
+==="optionalAccess")s=r,r=u(r);else if(a==="call"||a==="optionalCall")r=u((...m)=>r.call(s,...m)),s=void 0}return r}\##
+var ks="jest",Ul=["mock","unmock","enableAutomock","disableAutomock"];class Ft extends G{__init(){this.hoistedFuncti\##
+onNames=[]}constructor(e,s,r,o){super();this.rootTransformer=e,this.tokens=s,this.nameManager=r,this.importProcessor\##
+=o,Ft.prototype.__init.call(this)}process(){if(this.tokens.currentToken().scopeDepth===0&&this.tokens.matches4(t.nam\##
+e,t.dot,t.name,t.parenL)&&this.tokens.identifierName()===ks){if(Hl([this,"access",(e)=>e.importProcessor,"optionalAc\##
+cess",(e)=>e.getGlobalNames,"call",(e)=>e(),"optionalAccess",(e)=>e.has,"call",(e)=>e(ks)]))return!1;return this.ext\##
 ractHoistedCalls()}return!1}getHoistedCode(){if(this.hoistedFunctionNames.length>0)return this.hoistedFunctionNames.\##
 map((e)=>`${e}();`).join("");return""}extractHoistedCalls(){this.tokens.removeToken();let e=!1;while(this.tokens.mat\##
-ches3(t.dot,t.name,t.parenL)){let n=this.tokens.identifierNameAtIndex(this.tokens.currentIndex()+1);if(tp.includes(n\##
+ches3(t.dot,t.name,t.parenL)){let s=this.tokens.identifierNameAtIndex(this.tokens.currentIndex()+1);if(Ul.includes(s\##
 )){let o=this.nameManager.claimFreeName("__jestHoist");this.hoistedFunctionNames.push(o),this.tokens.replaceToken(`f\##
-unction ${o}(){${Ln}.`),this.tokens.copyToken(),this.tokens.copyToken(),this.rootTransformer.processBalancedCode(),t\##
+unction ${o}(){${ks}.`),this.tokens.copyToken(),this.tokens.copyToken(),this.rootTransformer.processBalancedCode(),t\##
 his.tokens.copyExpectedToken(t.parenR),this.tokens.appendCode(";}"),e=!1}else{if(e)this.tokens.copyToken();else this\##
-.tokens.replaceToken(`${Ln}.`);this.tokens.copyToken(),this.tokens.copyToken(),this.rootTransformer.processBalancedC\##
-ode(),this.tokens.copyExpectedToken(t.parenR),e=!0}}return!0}}class Dn extends Y{constructor(e){super();this.tokens=\##
+.tokens.replaceToken(`${ks}.`);this.tokens.copyToken(),this.tokens.copyToken(),this.rootTransformer.processBalancedC\##
+ode(),this.tokens.copyExpectedToken(t.parenR),e=!0}}return!0}}class xs extends G{constructor(e){super();this.tokens=\##
 e}process(){if(this.tokens.matches1(t.num)){let e=this.tokens.currentTokenCode();if(e.includes("_"))return this.toke\##
-ns.replaceToken(e.replace(/_/g,"")),!0}return!1}}class On extends Y{constructor(e,n){super();this.tokens=e,this.name\##
-Manager=n}process(){if(this.tokens.matches2(t._catch,t.braceL))return this.tokens.copyToken(),this.tokens.appendCode\##
-(` (${this.nameManager.claimFreeName("e")})`),!0;return!1}}class Fn extends Y{constructor(e,n){super();this.tokens=e\##
-,this.nameManager=n}process(){if(this.tokens.matches1(t.nullishCoalescing)){let s=this.tokens.currentToken();if(this\##
-.tokens.tokens[s.nullishStartIndex].isAsyncOperation)this.tokens.replaceTokenTrimmingLeftWhitespace(", async () => (\##
+ns.replaceToken(e.replace(/_/g,"")),!0}return!1}}class gs extends G{constructor(e,s){super();this.tokens=e,this.name\##
+Manager=s}process(){if(this.tokens.matches2(t._catch,t.braceL))return this.tokens.copyToken(),this.tokens.appendCode\##
+(` (${this.nameManager.claimFreeName("e")})`),!0;return!1}}class _s extends G{constructor(e,s){super();this.tokens=e\##
+,this.nameManager=s}process(){if(this.tokens.matches1(t.nullishCoalescing)){let r=this.tokens.currentToken();if(this\##
+.tokens.tokens[r.nullishStartIndex].isAsyncOperation)this.tokens.replaceTokenTrimmingLeftWhitespace(", async () => (\##
 ");else this.tokens.replaceTokenTrimmingLeftWhitespace(", () => (");return!0}if(this.tokens.matches1(t._delete)){if(\##
-this.tokens.tokenAtRelativeIndex(1).isOptionalChainStart)return this.tokens.removeInitialToken(),!0}let n=this.token\##
-s.currentToken().subscriptStartIndex;if(n!=null&&this.tokens.tokens[n].isOptionalChainStart&&this.tokens.tokenAtRela\##
-tiveIndex(-1).type!==t._super){let s=this.nameManager.claimFreeName("_"),o;if(n>0&&this.tokens.matches1AtIndex(n-1,t\##
-._delete)&&this.isLastSubscriptInChain())o=`${s} => delete ${s}`;else o=`${s} => ${s}`;if(this.tokens.tokens[n].isAs\##
+this.tokens.tokenAtRelativeIndex(1).isOptionalChainStart)return this.tokens.removeInitialToken(),!0}let s=this.token\##
+s.currentToken().subscriptStartIndex;if(s!=null&&this.tokens.tokens[s].isOptionalChainStart&&this.tokens.tokenAtRela\##
+tiveIndex(-1).type!==t._super){let r=this.nameManager.claimFreeName("_"),o;if(s>0&&this.tokens.matches1AtIndex(s-1,t\##
+._delete)&&this.isLastSubscriptInChain())o=`${r} => delete ${r}`;else o=`${r} => ${r}`;if(this.tokens.tokens[s].isAs\##
 yncOperation)o=`async ${o}`;if(this.tokens.matches2(t.questionDot,t.parenL)||this.tokens.matches2(t.questionDot,t.le\##
 ssThan)){if(this.justSkippedSuper())this.tokens.appendCode(".bind(this)");this.tokens.replaceTokenTrimmingLeftWhites\##
 pace(`, 'optionalCall', ${o}`)}else if(this.tokens.matches2(t.questionDot,t.bracketL))this.tokens.replaceTokenTrimmi\##
@@ -1731,43 +1585,43 @@ mmingLeftWhitespace(`, 'optionalAccess', ${o}.`);else if(this.tokens.matches1(t.
 gLeftWhitespace(`, 'access', ${o}.`);else if(this.tokens.matches1(t.bracketL))this.tokens.replaceTokenTrimmingLeftWh\##
 itespace(`, 'access', ${o}[`);else if(this.tokens.matches1(t.parenL)){if(this.justSkippedSuper())this.tokens.appendC\##
 ode(".bind(this)");this.tokens.replaceTokenTrimmingLeftWhitespace(`, 'call', ${o}(`)}else throw Error("Unexpected su\##
-bscript operator in optional chain.");return!0}return!1}isLastSubscriptInChain(){let e=0;for(let n=this.tokens.curre\##
-ntIndex()+1;;n++){if(n>=this.tokens.tokens.length)throw Error("Reached the end of the code while finding the end of \##
-the access chain.");if(this.tokens.tokens[n].isOptionalChainStart)e++;else if(this.tokens.tokens[n].isOptionalChainE\##
-nd)e--;if(e<0)return!0;if(e===0&&this.tokens.tokens[n].subscriptStartIndex!=null)return!1}}justSkippedSuper(){let e=\##
-0,n=this.tokens.currentIndex()-1;while(!0){if(n<0)throw Error("Reached the start of the code while finding the start\##
- of the access chain.");if(this.tokens.tokens[n].isOptionalChainStart)e--;else if(this.tokens.tokens[n].isOptionalCh\##
-ainEnd)e++;if(e<0)return!1;if(e===0&&this.tokens.tokens[n].subscriptStartIndex!=null)return this.tokens.tokens[n-1].\##
-type===t._super;n--}}}class Mn extends Y{constructor(e,n,s,o){super();this.rootTransformer=e,this.tokens=n,this.impo\##
-rtProcessor=s,this.options=o}process(){let e=this.tokens.currentIndex();if(this.tokens.identifierName()==="createRea\##
-ctClass"){let n=this.importProcessor&&this.importProcessor.getIdentifierReplacement("createReactClass");if(n)this.to\##
-kens.replaceToken(`(0, ${n})`);else this.tokens.copyToken();return this.tryProcessCreateClassCall(e),!0}if(this.toke\##
+bscript operator in optional chain.");return!0}return!1}isLastSubscriptInChain(){let e=0;for(let s=this.tokens.curre\##
+ntIndex()+1;;s++){if(s>=this.tokens.tokens.length)throw Error("Reached the end of the code while finding the end of \##
+the access chain.");if(this.tokens.tokens[s].isOptionalChainStart)e++;else if(this.tokens.tokens[s].isOptionalChainE\##
+nd)e--;if(e<0)return!0;if(e===0&&this.tokens.tokens[s].subscriptStartIndex!=null)return!1}}justSkippedSuper(){let e=\##
+0,s=this.tokens.currentIndex()-1;while(!0){if(s<0)throw Error("Reached the start of the code while finding the start\##
+ of the access chain.");if(this.tokens.tokens[s].isOptionalChainStart)e--;else if(this.tokens.tokens[s].isOptionalCh\##
+ainEnd)e++;if(e<0)return!1;if(e===0&&this.tokens.tokens[s].subscriptStartIndex!=null)return this.tokens.tokens[s-1].\##
+type===t._super;s--}}}class Is extends G{constructor(e,s,r,o){super();this.rootTransformer=e,this.tokens=s,this.impo\##
+rtProcessor=r,this.options=o}process(){let e=this.tokens.currentIndex();if(this.tokens.identifierName()==="createRea\##
+ctClass"){let s=this.importProcessor&&this.importProcessor.getIdentifierReplacement("createReactClass");if(s)this.to\##
+kens.replaceToken(`(0, ${s})`);else this.tokens.copyToken();return this.tryProcessCreateClassCall(e),!0}if(this.toke\##
 ns.matches3(t.name,t.dot,t.name)&&this.tokens.identifierName()==="React"&&this.tokens.identifierNameAtIndex(this.tok\##
-ens.currentIndex()+2)==="createClass"){let n=this.importProcessor?this.importProcessor.getIdentifierReplacement("Rea\##
-ct")||"React":"React";if(n)this.tokens.replaceToken(n),this.tokens.copyToken(),this.tokens.copyToken();else this.tok\##
+ens.currentIndex()+2)==="createClass"){let s=this.importProcessor?this.importProcessor.getIdentifierReplacement("Rea\##
+ct")||"React":"React";if(s)this.tokens.replaceToken(s),this.tokens.copyToken(),this.tokens.copyToken();else this.tok\##
 ens.copyToken(),this.tokens.copyToken(),this.tokens.copyToken();return this.tryProcessCreateClassCall(e),!0}return!1\##
-}tryProcessCreateClassCall(e){let n=this.findDisplayName(e);if(!n)return;if(this.classNeedsDisplayName())this.tokens\##
-.copyExpectedToken(t.parenL),this.tokens.copyExpectedToken(t.braceL),this.tokens.appendCode(`displayName: '${n}',`),\##
+}tryProcessCreateClassCall(e){let s=this.findDisplayName(e);if(!s)return;if(this.classNeedsDisplayName())this.tokens\##
+.copyExpectedToken(t.parenL),this.tokens.copyExpectedToken(t.braceL),this.tokens.appendCode(`displayName: '${s}',`),\##
 this.rootTransformer.processBalancedCode(),this.tokens.copyExpectedToken(t.braceR),this.tokens.copyExpectedToken(t.p\##
 arenR)}findDisplayName(e){if(e<2)return null;if(this.tokens.matches2AtIndex(e-2,t.name,t.eq))return this.tokens.iden\##
-tifierNameAtIndex(e-2);if(e>=2&&this.tokens.tokens[e-2].identifierRole===I.ObjectKey)return this.tokens.identifierNa\##
+tifierNameAtIndex(e-2);if(e>=2&&this.tokens.tokens[e-2].identifierRole===_.ObjectKey)return this.tokens.identifierNa\##
 meAtIndex(e-2);if(this.tokens.matches2AtIndex(e-2,t._export,t._default))return this.getDisplayNameFromFilename();ret\##
-urn null}getDisplayNameFromFilename(){let n=(this.options.filePath||"unknown").split("/"),s=n[n.length-1],o=s.lastIn\##
-dexOf("."),i=o===-1?s:s.slice(0,o);if(i==="index"&&n[n.length-2])return n[n.length-2];else return i}classNeedsDispla\##
-yName(){let e=this.tokens.currentIndex();if(!this.tokens.matches2(t.parenL,t.braceL))return!1;let n=e+1,s=this.token\##
-s.tokens[n].contextId;if(s==null)throw Error("Expected non-null context ID on object open-brace.");for(;e<this.token\##
-s.tokens.length;e++){let o=this.tokens.tokens[e];if(o.type===t.braceR&&o.contextId===s){e++;break}if(this.tokens.ide\##
-ntifierNameAtIndex(e)==="displayName"&&this.tokens.tokens[e].identifierRole===I.ObjectKey&&o.contextId===s)return!1}\##
+urn null}getDisplayNameFromFilename(){let s=(this.options.filePath||"unknown").split("/"),r=s[s.length-1],o=r.lastIn\##
+dexOf("."),a=o===-1?r:r.slice(0,o);if(a==="index"&&s[s.length-2])return s[s.length-2];else return a}classNeedsDispla\##
+yName(){let e=this.tokens.currentIndex();if(!this.tokens.matches2(t.parenL,t.braceL))return!1;let s=e+1,r=this.token\##
+s.tokens[s].contextId;if(r==null)throw Error("Expected non-null context ID on object open-brace.");for(;e<this.token\##
+s.tokens.length;e++){let o=this.tokens.tokens[e];if(o.type===t.braceR&&o.contextId===r){e++;break}if(this.tokens.ide\##
+ntifierNameAtIndex(e)==="displayName"&&this.tokens.tokens[e].identifierRole===_.ObjectKey&&o.contextId===r)return!1}\##
 if(e===this.tokens.tokens.length)throw Error("Unexpected end of input when processing React class.");return this.tok\##
-ens.matches1AtIndex(e,t.parenR)||this.tokens.matches2AtIndex(e,t.comma,t.parenR)}}class zt extends Y{__init(){this.e\##
-xtractedDefaultExportName=null}constructor(e,n){super();this.tokens=e,this.filePath=n,zt.prototype.__init.call(this)\##
+ens.matches1AtIndex(e,t.parenR)||this.tokens.matches2AtIndex(e,t.comma,t.parenR)}}class Ot extends G{__init(){this.e\##
+xtractedDefaultExportName=null}constructor(e,s){super();this.tokens=e,this.filePath=s,Ot.prototype.__init.call(this)\##
 }setExtractedDefaultExportName(e){this.extractedDefaultExportName=e}getPrefixCode(){return`
       (function () {
         var enterModule = require('react-hot-loader').enterModule;
         enterModule && enterModule(module);
-      })();`.replace(/\s+/g," ").trim()}getSuffixCode(){let e=new Set;for(let s of this.tokens.tokens)if(!s.isType&&\##
-en(s)&&s.identifierRole!==I.ImportDeclaration)e.add(this.tokens.identifierNameForToken(s));let n=Array.from(e).map((\##
-s)=>({variableName:s,uniqueLocalName:s}));if(this.extractedDefaultExportName)n.push({variableName:this.extractedDefa\##
+      })();`.replace(/\s+/g," ").trim()}getSuffixCode(){let e=new Set;for(let r of this.tokens.tokens)if(!r.isType&&\##
+qt(r)&&r.identifierRole!==_.ImportDeclaration)e.add(this.tokens.identifierNameForToken(r));let s=Array.from(e).map((\##
+r)=>({variableName:r,uniqueLocalName:r}));if(this.extractedDefaultExportName)s.push({variableName:this.extractedDefa\##
 ultExportName,uniqueLocalName:"default"});return`
 ;(function () {
   var reactHotLoader = require('react-hot-loader').default;
@@ -1775,16 +1629,16 @@ ultExportName,uniqueLocalName:"default"});return`
   if (!reactHotLoader) {
     return;
   }
-${n.map(({variableName:s,uniqueLocalName:o})=>`  reactHotLoader.register(${s}, "${o}", ${JSON.stringify(this.filePat\##
+${s.map(({variableName:r,uniqueLocalName:o})=>`  reactHotLoader.register(${r}, "${o}", ${JSON.stringify(this.filePat\##
 h||"")});`).join(`
 `)}
   leaveModule(module);
-})();`}process(){return!1}}var np=new Set(["break","case","catch","class","const","continue","debugger","default","d\##
+})();`}process(){return!1}}var Wl=new Set(["break","case","catch","class","const","continue","debugger","default","d\##
 elete","do","else","export","extends","finally","for","function","if","import","in","instanceof","new","return","sup\##
 er","switch","this","throw","try","typeof","var","void","while","with","yield","enum","implements","interface","let"\##
-,"package","private","protected","public","static","await","false","null","true"]);function jn(e){if(e.length===0)re\##
-turn!1;if(!Ae[e.charCodeAt(0)])return!1;for(let n=1;n<e.length;n++)if(!oe[e.charCodeAt(n)])return!1;return!np.has(e)\##
-}class Bn extends Y{constructor(e,n,s){super();this.rootTransformer=e,this.tokens=n,this.isImportsTransformEnabled=s\##
+,"package","private","protected","public","static","await","false","null","true"]);function ys(e){if(e.length===0)re\##
+turn!1;if(!_e[e.charCodeAt(0)])return!1;for(let s=1;s<e.length;s++)if(!ee[e.charCodeAt(s)])return!1;return!Wl.has(e)\##
+}class Ts extends G{constructor(e,s,r){super();this.rootTransformer=e,this.tokens=s,this.isImportsTransformEnabled=r\##
 }process(){if(this.rootTransformer.processPossibleArrowParamEnd()||this.rootTransformer.processPossibleAsyncArrowWit\##
 hTypeParams()||this.rootTransformer.processPossibleTypeRange())return!0;if(this.tokens.matches1(t._public)||this.tok\##
 ens.matches1(t._protected)||this.tokens.matches1(t._private)||this.tokens.matches1(t._abstract)||this.tokens.matches\##
@@ -1792,105 +1646,105 @@ ens.matches1(t._protected)||this.tokens.matches1(t._private)||this.tokens.matche
 eInitialToken(),!0;if(this.tokens.matches1(t._enum)||this.tokens.matches2(t._const,t._enum))return this.processEnum(\##
 ),!0;if(this.tokens.matches2(t._export,t._enum)||this.tokens.matches3(t._export,t._const,t._enum))return this.proces\##
 sEnum(!0),!0;return!1}processEnum(e=!1){this.tokens.removeInitialToken();while(this.tokens.matches1(t._const)||this.\##
-tokens.matches1(t._enum))this.tokens.removeToken();let n=this.tokens.identifierName();if(this.tokens.removeToken(),e\##
-&&!this.isImportsTransformEnabled)this.tokens.appendCode("export ");if(this.tokens.appendCode(`var ${n}; (function (\##
-${n})`),this.tokens.copyExpectedToken(t.braceL),this.processEnumBody(n),this.tokens.copyExpectedToken(t.braceR),e&&t\##
-his.isImportsTransformEnabled)this.tokens.appendCode(`)(${n} || (exports.${n} = ${n} = {}));`);else this.tokens.appe\##
-ndCode(`)(${n} || (${n} = {}));`)}processEnumBody(e){let n=null;while(!0){if(this.tokens.matches1(t.braceR))break;le\##
-t{nameStringCode:s,variableName:o}=this.extractEnumKeyInfo(this.tokens.currentToken());if(this.tokens.removeInitialT\##
+tokens.matches1(t._enum))this.tokens.removeToken();let s=this.tokens.identifierName();if(this.tokens.removeToken(),e\##
+&&!this.isImportsTransformEnabled)this.tokens.appendCode("export ");if(this.tokens.appendCode(`var ${s}; (function (\##
+${s})`),this.tokens.copyExpectedToken(t.braceL),this.processEnumBody(s),this.tokens.copyExpectedToken(t.braceR),e&&t\##
+his.isImportsTransformEnabled)this.tokens.appendCode(`)(${s} || (exports.${s} = ${s} = {}));`);else this.tokens.appe\##
+ndCode(`)(${s} || (${s} = {}));`)}processEnumBody(e){let s=null;while(!0){if(this.tokens.matches1(t.braceR))break;le\##
+t{nameStringCode:r,variableName:o}=this.extractEnumKeyInfo(this.tokens.currentToken());if(this.tokens.removeInitialT\##
 oken(),this.tokens.matches3(t.eq,t.string,t.comma)||this.tokens.matches3(t.eq,t.string,t.braceR))this.processStringL\##
-iteralEnumMember(e,s,o);else if(this.tokens.matches1(t.eq))this.processExplicitValueEnumMember(e,s,o);else this.proc\##
-essImplicitValueEnumMember(e,s,o,n);if(this.tokens.matches1(t.comma))this.tokens.removeToken();if(o!=null)n=o;else n\##
-=`${e}[${s}]`}}extractEnumKeyInfo(e){if(e.type===t.name){let n=this.tokens.identifierNameForToken(e);return{nameStri\##
-ngCode:`"${n}"`,variableName:jn(n)?n:null}}else if(e.type===t.string){let n=this.tokens.stringValueForToken(e);retur\##
-n{nameStringCode:this.tokens.code.slice(e.start,e.end),variableName:jn(n)?n:null}}else throw Error("Expected name or\##
- string at beginning of enum element.")}processStringLiteralEnumMember(e,n,s){if(s!=null)this.tokens.appendCode(`con\##
-st ${s}`),this.tokens.copyToken(),this.tokens.copyToken(),this.tokens.appendCode(`; ${e}[${n}] = ${s};`);else this.t\##
-okens.appendCode(`${e}[${n}]`),this.tokens.copyToken(),this.tokens.copyToken(),this.tokens.appendCode(";")}processEx\##
-plicitValueEnumMember(e,n,s){let o=this.tokens.currentToken().rhsEndIndex;if(o==null)throw Error("Expected rhsEndInd\##
-ex on enum assign.");if(s!=null){this.tokens.appendCode(`const ${s}`),this.tokens.copyToken();while(this.tokens.curr\##
-entIndex()<o)this.rootTransformer.processToken();this.tokens.appendCode(`; ${e}[${e}[${n}] = ${s}] = ${n};`)}else{th\##
-is.tokens.appendCode(`${e}[${e}[${n}]`),this.tokens.copyToken();while(this.tokens.currentIndex()<o)this.rootTransfor\##
-mer.processToken();this.tokens.appendCode(`] = ${n};`)}}processImplicitValueEnumMember(e,n,s,o){let i=o!=null?`${o} \##
-+ 1`:"0";if(s!=null)this.tokens.appendCode(`const ${s} = ${i}; `),i=s;this.tokens.appendCode(`${e}[${e}[${n}] = ${i}\##
-] = ${n};`)}}class It{__init(){this.transformers=[]}__init2(){this.generatedVariables=[]}constructor(e,n,s,o){It.pro\##
-totype.__init.call(this),It.prototype.__init2.call(this),this.nameManager=e.nameManager,this.helperManager=e.helperM\##
-anager;let{tokenProcessor:i,importProcessor:l}=e;if(this.tokens=i,this.isImportsTransformEnabled=n.includes("imports\##
-"),this.isReactHotLoaderTransformEnabled=n.includes("react-hot-loader"),this.disableESTransforms=Boolean(o.disableES\##
-Transforms),!o.disableESTransforms)this.transformers.push(new Fn(i,this.nameManager)),this.transformers.push(new Dn(\##
-i)),this.transformers.push(new On(i,this.nameManager));if(n.includes("jsx")){if(o.jsxRuntime!=="preserve")this.trans\##
-formers.push(new ve(this,i,l,this.nameManager,o));this.transformers.push(new Mn(this,i,l,o))}let p=null;if(n.include\##
+iteralEnumMember(e,r,o);else if(this.tokens.matches1(t.eq))this.processExplicitValueEnumMember(e,r,o);else this.proc\##
+essImplicitValueEnumMember(e,r,o,s);if(this.tokens.matches1(t.comma))this.tokens.removeToken();if(o!=null)s=o;else s\##
+=`${e}[${r}]`}}extractEnumKeyInfo(e){if(e.type===t.name){let s=this.tokens.identifierNameForToken(e);return{nameStri\##
+ngCode:`"${s}"`,variableName:ys(s)?s:null}}else if(e.type===t.string){let s=this.tokens.stringValueForToken(e);retur\##
+n{nameStringCode:this.tokens.code.slice(e.start,e.end),variableName:ys(s)?s:null}}else throw Error("Expected name or\##
+ string at beginning of enum element.")}processStringLiteralEnumMember(e,s,r){if(r!=null)this.tokens.appendCode(`con\##
+st ${r}`),this.tokens.copyToken(),this.tokens.copyToken(),this.tokens.appendCode(`; ${e}[${s}] = ${r};`);else this.t\##
+okens.appendCode(`${e}[${s}]`),this.tokens.copyToken(),this.tokens.copyToken(),this.tokens.appendCode(";")}processEx\##
+plicitValueEnumMember(e,s,r){let o=this.tokens.currentToken().rhsEndIndex;if(o==null)throw Error("Expected rhsEndInd\##
+ex on enum assign.");if(r!=null){this.tokens.appendCode(`const ${r}`),this.tokens.copyToken();while(this.tokens.curr\##
+entIndex()<o)this.rootTransformer.processToken();this.tokens.appendCode(`; ${e}[${e}[${s}] = ${r}] = ${s};`)}else{th\##
+is.tokens.appendCode(`${e}[${e}[${s}]`),this.tokens.copyToken();while(this.tokens.currentIndex()<o)this.rootTransfor\##
+mer.processToken();this.tokens.appendCode(`] = ${s};`)}}processImplicitValueEnumMember(e,s,r,o){let a=o!=null?`${o} \##
++ 1`:"0";if(r!=null)this.tokens.appendCode(`const ${r} = ${a}; `),a=r;this.tokens.appendCode(`${e}[${e}[${s}] = ${a}\##
+] = ${s};`)}}class pt{__init(){this.transformers=[]}__init2(){this.generatedVariables=[]}constructor(e,s,r,o){pt.pro\##
+totype.__init.call(this),pt.prototype.__init2.call(this),this.nameManager=e.nameManager,this.helperManager=e.helperM\##
+anager;let{tokenProcessor:a,importProcessor:u}=e;if(this.tokens=a,this.isImportsTransformEnabled=s.includes("imports\##
+"),this.isReactHotLoaderTransformEnabled=s.includes("react-hot-loader"),this.disableESTransforms=Boolean(o.disableES\##
+Transforms),!o.disableESTransforms)this.transformers.push(new _s(a,this.nameManager)),this.transformers.push(new xs(\##
+a)),this.transformers.push(new gs(a,this.nameManager));if(s.includes("jsx")){if(o.jsxRuntime!=="preserve")this.trans\##
+formers.push(new Ie(this,a,u,this.nameManager,o));this.transformers.push(new Is(this,a,u,o))}let m=null;if(s.include\##
 s("react-hot-loader")){if(!o.filePath)throw Error("filePath is required when using the react-hot-loader transform.")\##
-;p=new zt(i,o.filePath),this.transformers.push(p)}if(n.includes("imports")){if(l===null)throw Error("Expected non-nu\##
-ll importProcessor with imports transform enabled.");this.transformers.push(new Ge(this,i,l,this.nameManager,this.he\##
-lperManager,p,s,Boolean(o.enableLegacyTypeScriptModuleInterop),n.includes("typescript"),n.includes("flow"),Boolean(o\##
-.preserveDynamicImport),Boolean(o.keepUnusedImports)))}else this.transformers.push(new Nn(i,this.nameManager,this.he\##
-lperManager,p,n.includes("typescript"),n.includes("flow"),Boolean(o.keepUnusedImports),o));if(n.includes("flow"))thi\##
-s.transformers.push(new Rn(this,i,n.includes("imports")));if(n.includes("typescript"))this.transformers.push(new Bn(\##
-this,i,n.includes("imports")));if(n.includes("jest"))this.transformers.push(new Jt(this,i,this.nameManager,l))}trans\##
-form(){this.tokens.reset(),this.processBalancedCode();let n=this.isImportsTransformEnabled?'"use strict";':"";for(le\##
-t l of this.transformers)n+=l.getPrefixCode();n+=this.helperManager.emitHelpers(),n+=this.generatedVariables.map((l)\##
-=>` var ${l};`).join("");for(let l of this.transformers)n+=l.getHoistedCode();let s="";for(let l of this.transformer\##
-s)s+=l.getSuffixCode();let o=this.tokens.finish(),{code:i}=o;if(i.startsWith("#!")){let l=i.indexOf(`
-`);if(l===-1)l=i.length,i+=`
-`;return{code:i.slice(0,l+1)+n+i.slice(l+1)+s,mappings:this.shiftMappings(o.mappings,n.length)}}else return{code:n+i\##
-+s,mappings:this.shiftMappings(o.mappings,n.length)}}processBalancedCode(){let e=0,n=0;while(!this.tokens.isAtEnd())\##
+;m=new Ot(a,o.filePath),this.transformers.push(m)}if(s.includes("imports")){if(u===null)throw Error("Expected non-nu\##
+ll importProcessor with imports transform enabled.");this.transformers.push(new Me(this,a,u,this.nameManager,this.he\##
+lperManager,m,r,Boolean(o.enableLegacyTypeScriptModuleInterop),s.includes("typescript"),s.includes("flow"),Boolean(o\##
+.preserveDynamicImport),Boolean(o.keepUnusedImports)))}else this.transformers.push(new ms(a,this.nameManager,this.he\##
+lperManager,m,s.includes("typescript"),s.includes("flow"),Boolean(o.keepUnusedImports),o));if(s.includes("flow"))thi\##
+s.transformers.push(new ds(this,a,s.includes("imports")));if(s.includes("typescript"))this.transformers.push(new Ts(\##
+this,a,s.includes("imports")));if(s.includes("jest"))this.transformers.push(new Ft(this,a,this.nameManager,u))}trans\##
+form(){this.tokens.reset(),this.processBalancedCode();let s=this.isImportsTransformEnabled?'"use strict";':"";for(le\##
+t u of this.transformers)s+=u.getPrefixCode();s+=this.helperManager.emitHelpers(),s+=this.generatedVariables.map((u)\##
+=>` var ${u};`).join("");for(let u of this.transformers)s+=u.getHoistedCode();let r="";for(let u of this.transformer\##
+s)r+=u.getSuffixCode();let o=this.tokens.finish(),{code:a}=o;if(a.startsWith("#!")){let u=a.indexOf(`
+`);if(u===-1)u=a.length,a+=`
+`;return{code:a.slice(0,u+1)+s+a.slice(u+1)+r,mappings:this.shiftMappings(o.mappings,s.length)}}else return{code:s+a\##
++r,mappings:this.shiftMappings(o.mappings,s.length)}}processBalancedCode(){let e=0,s=0;while(!this.tokens.isAtEnd())\##
 {if(this.tokens.matches1(t.braceL)||this.tokens.matches1(t.dollarBraceL))e++;else if(this.tokens.matches1(t.braceR))\##
-{if(e===0)return;e--}if(this.tokens.matches1(t.parenL))n++;else if(this.tokens.matches1(t.parenR)){if(n===0)return;n\##
+{if(e===0)return;e--}if(this.tokens.matches1(t.parenL))s++;else if(this.tokens.matches1(t.parenR)){if(s===0)return;s\##
 --}this.processToken()}}processToken(){if(this.tokens.matches1(t._class)){this.processClass();return}for(let e of th\##
 is.transformers)if(e.process())return;this.tokens.copyToken()}processNamedClass(){if(!this.tokens.matches2(t._class,\##
 t.name))throw Error("Expected identifier for exported class name.");let e=this.tokens.identifierNameAtIndex(this.tok\##
-ens.currentIndex()+1);return this.processClass(),e}processClass(){let e=co(this,this.tokens,this.nameManager,this.di\##
-sableESTransforms),n=(e.headerInfo.isExpression||!e.headerInfo.className)&&e.staticInitializerNames.length+e.instanc\##
-eInitializerNames.length>0,s=e.headerInfo.className;if(n)s=this.nameManager.claimFreeName("_class"),this.generatedVa\##
-riables.push(s),this.tokens.appendCode(` (${s} =`);let i=this.tokens.currentToken().contextId;if(i==null)throw Error\##
+ens.currentIndex()+1);return this.processClass(),e}processClass(){let e=M1(this,this.tokens,this.nameManager,this.di\##
+sableESTransforms),s=(e.headerInfo.isExpression||!e.headerInfo.className)&&e.staticInitializerNames.length+e.instanc\##
+eInitializerNames.length>0,r=e.headerInfo.className;if(s)r=this.nameManager.claimFreeName("_class"),this.generatedVa\##
+riables.push(r),this.tokens.appendCode(` (${r} =`);let a=this.tokens.currentToken().contextId;if(a==null)throw Error\##
 ("Expected class to have a context ID.");this.tokens.copyExpectedToken(t._class);while(!this.tokens.matchesContextId\##
-AndLabel(t.braceL,i))this.processToken();this.processClassBody(e,s);let l=e.staticInitializerNames.map((p)=>`${s}.${\##
-p}()`);if(n)this.tokens.appendCode(`, ${l.map((p)=>`${p}, `).join("")}${s})`);else if(e.staticInitializerNames.lengt\##
-h>0)this.tokens.appendCode(` ${l.map((p)=>`${p};`).join(" ")}`)}processClassBody(e,n){let{headerInfo:s,constructorIn\##
-sertPos:o,constructorInitializerStatements:i,fields:l,instanceInitializerNames:p,rangesToRemove:d}=e,k=0,g=0,_=this.\##
-tokens.currentToken().contextId;if(_==null)throw Error("Expected non-null context ID on class.");if(this.tokens.copy\##
+AndLabel(t.braceL,a))this.processToken();this.processClassBody(e,r);let u=e.staticInitializerNames.map((m)=>`${r}.${\##
+m}()`);if(s)this.tokens.appendCode(`, ${u.map((m)=>`${m}, `).join("")}${r})`);else if(e.staticInitializerNames.lengt\##
+h>0)this.tokens.appendCode(` ${u.map((m)=>`${m};`).join(" ")}`)}processClassBody(e,s){let{headerInfo:r,constructorIn\##
+sertPos:o,constructorInitializerStatements:a,fields:u,instanceInitializerNames:m,rangesToRemove:x}=e,k=0,T=0,y=this.\##
+tokens.currentToken().contextId;if(y==null)throw Error("Expected non-null context ID on class.");if(this.tokens.copy\##
 ExpectedToken(t.braceL),this.isReactHotLoaderTransformEnabled)this.tokens.appendCode("__reactstandin__regenerateByEv\##
-al(key, code) {this[key] = eval(code);}");let w=i.length+p.length>0;if(o===null&&w){let E=this.makeConstructorInitCo\##
-de(i,p,n);if(s.hasSuperclass){let D=this.nameManager.claimFreeName("args");this.tokens.appendCode(`constructor(...${\##
-D}) { super(...${D}); ${E}; }`)}else this.tokens.appendCode(`constructor() { ${E}; }`)}while(!this.tokens.matchesCon\##
-textIdAndLabel(t.braceR,_))if(k<l.length&&this.tokens.currentIndex()===l[k].start){let E=!1;if(this.tokens.matches1(\##
-t.bracketL))this.tokens.copyTokenWithPrefix(`${l[k].initializerName}() {this`);else if(this.tokens.matches1(t.string\##
-)||this.tokens.matches1(t.num))this.tokens.copyTokenWithPrefix(`${l[k].initializerName}() {this[`),E=!0;else this.to\##
-kens.copyTokenWithPrefix(`${l[k].initializerName}() {this.`);while(this.tokens.currentIndex()<l[k].end){if(E&&this.t\##
-okens.currentIndex()===l[k].equalsIndex)this.tokens.appendCode("]");this.processToken()}this.tokens.appendCode("}"),\##
-k++}else if(g<d.length&&this.tokens.currentIndex()>=d[g].start){if(this.tokens.currentIndex()<d[g].end)this.tokens.r\##
-emoveInitialToken();while(this.tokens.currentIndex()<d[g].end)this.tokens.removeToken();g++}else if(this.tokens.curr\##
-entIndex()===o){if(this.tokens.copyToken(),w)this.tokens.appendCode(`;${this.makeConstructorInitCode(i,p,n)};`);this\##
-.processToken()}else this.processToken();this.tokens.copyExpectedToken(t.braceR)}makeConstructorInitCode(e,n,s){retu\##
-rn[...e,...n.map((o)=>`${s}.prototype.${o}.call(this)`)].join(";")}processPossibleArrowParamEnd(){if(this.tokens.mat\##
+al(key, code) {this[key] = eval(code);}");let C=a.length+m.length>0;if(o===null&&C){let L=this.makeConstructorInitCo\##
+de(a,m,s);if(r.hasSuperclass){let M=this.nameManager.claimFreeName("args");this.tokens.appendCode(`constructor(...${\##
+M}) { super(...${M}); ${L}; }`)}else this.tokens.appendCode(`constructor() { ${L}; }`)}while(!this.tokens.matchesCon\##
+textIdAndLabel(t.braceR,y))if(k<u.length&&this.tokens.currentIndex()===u[k].start){let L=!1;if(this.tokens.matches1(\##
+t.bracketL))this.tokens.copyTokenWithPrefix(`${u[k].initializerName}() {this`);else if(this.tokens.matches1(t.string\##
+)||this.tokens.matches1(t.num))this.tokens.copyTokenWithPrefix(`${u[k].initializerName}() {this[`),L=!0;else this.to\##
+kens.copyTokenWithPrefix(`${u[k].initializerName}() {this.`);while(this.tokens.currentIndex()<u[k].end){if(L&&this.t\##
+okens.currentIndex()===u[k].equalsIndex)this.tokens.appendCode("]");this.processToken()}this.tokens.appendCode("}"),\##
+k++}else if(T<x.length&&this.tokens.currentIndex()>=x[T].start){if(this.tokens.currentIndex()<x[T].end)this.tokens.r\##
+emoveInitialToken();while(this.tokens.currentIndex()<x[T].end)this.tokens.removeToken();T++}else if(this.tokens.curr\##
+entIndex()===o){if(this.tokens.copyToken(),C)this.tokens.appendCode(`;${this.makeConstructorInitCode(a,m,s)};`);this\##
+.processToken()}else this.processToken();this.tokens.copyExpectedToken(t.braceR)}makeConstructorInitCode(e,s,r){retu\##
+rn[...e,...s.map((o)=>`${r}.prototype.${o}.call(this)`)].join(";")}processPossibleArrowParamEnd(){if(this.tokens.mat\##
 ches2(t.parenR,t.colon)&&this.tokens.tokenAtRelativeIndex(1).isType){let e=this.tokens.currentIndex()+1;while(this.t\##
 okens.tokens[e].isType)e++;if(this.tokens.matches1AtIndex(e,t.arrow)){this.tokens.removeInitialToken();while(this.to\##
 kens.currentIndex()<e)this.tokens.removeToken();return this.tokens.replaceTokenTrimmingLeftWhitespace(") =>"),!0}}re\##
 turn!1}processPossibleAsyncArrowWithTypeParams(){if(!this.tokens.matchesContextual(c._async)&&!this.tokens.matches1(\##
-t._async))return!1;let e=this.tokens.tokenAtRelativeIndex(1);if(e.type!==t.lessThan||!e.isType)return!1;let n=this.t\##
-okens.currentIndex()+1;while(this.tokens.tokens[n].isType)n++;if(this.tokens.matches1AtIndex(n,t.parenL)){this.token\##
-s.replaceToken("async ("),this.tokens.removeInitialToken();while(this.tokens.currentIndex()<n)this.tokens.removeToke\##
+t._async))return!1;let e=this.tokens.tokenAtRelativeIndex(1);if(e.type!==t.lessThan||!e.isType)return!1;let s=this.t\##
+okens.currentIndex()+1;while(this.tokens.tokens[s].isType)s++;if(this.tokens.matches1AtIndex(s,t.parenL)){this.token\##
+s.replaceToken("async ("),this.tokens.removeInitialToken();while(this.tokens.currentIndex()<s)this.tokens.removeToke\##
 n();return this.tokens.removeToken(),this.processBalancedCode(),this.processToken(),!0}return!1}processPossibleTypeR\##
 ange(){if(this.tokens.currentToken().isType){this.tokens.removeInitialToken();while(this.tokens.currentToken().isTyp\##
-e)this.tokens.removeToken();return!0}return!1}shiftMappings(e,n){for(let s=0;s<e.length;s++){let o=e[s];if(o!==void \##
-0)e[s]=o+n}return e}}var sp=Yt(Hi());function lo(e){let n=new Set;for(let s=0;s<e.tokens.length;s++)if(e.matches1AtI\##
-ndex(s,t._import)&&!e.matches3AtIndex(s,t._import,t.name,t.eq))rp(e,s,n);return n}function rp(e,n,s){if(n++,e.matche\##
-s1AtIndex(n,t.parenL))return;if(e.matches1AtIndex(n,t.name)){if(s.add(e.identifierNameAtIndex(n)),n++,e.matches1AtIn\##
-dex(n,t.comma))n++}if(e.matches1AtIndex(n,t.star))n+=2,s.add(e.identifierNameAtIndex(n)),n++;if(e.matches1AtIndex(n,\##
-t.braceL))n++,op(e,n,s)}function op(e,n,s){while(!0){if(e.matches1AtIndex(n,t.braceR))return;let o=be(e,n);if(n=o.en\##
-dIndex,!o.isType)s.add(o.rightName);if(e.matches2AtIndex(n,t.comma,t.braceR))return;else if(e.matches1AtIndex(n,t.br\##
-aceR))return;else if(e.matches1AtIndex(n,t.comma))n++;else throw Error(`Unexpected token: ${JSON.stringify(e.tokens[\##
-n])}`)}}function Vi(e,n){a1(n);try{let s=ip(e,n),i=new It(s,n.transforms,Boolean(n.enableLegacyBabel5ModuleInterop),\##
-n).transform(),l={code:i.code};if(n.sourceMapOptions){if(!n.filePath)throw Error("filePath must be specified when ge\##
-nerating a source map.");l={...l,sourceMap:mr(i,n.filePath,n.sourceMapOptions,e,s.tokenProcessor.tokens)}}return l}c\##
-atch(s){if(n.filePath)s.message=`Error transforming ${n.filePath}: ${s.message}`;throw s}}function ip(e,n){let s=n.t\##
-ransforms.includes("jsx"),o=n.transforms.includes("typescript"),i=n.transforms.includes("flow"),l=n.disableESTransfo\##
-rms===!0,p=Bi(e,s,o,i),{tokens:d,scopes:k}=p,g=new Ct(e,d),_=new vt(g),w=new We(e,d,i,l,_),E=Boolean(n.enableLegacyT\##
-ypeScriptModuleInterop),D=null;if(n.transforms.includes("imports")){if(D=new Ce(g,w,E,n,n.transforms.includes("types\##
-cript"),Boolean(n.keepUnusedImports),_),D.preprocessTokens(),an(w,k,D.getGlobalNames()),n.transforms.includes("types\##
-cript")&&!n.keepUnusedImports)D.pruneTypeOnlyImports()}else if(n.transforms.includes("typescript")&&!n.keepUnusedImp\##
-orts)an(w,k,lo(w));return{tokenProcessor:w,scopes:k,nameManager:g,importProcessor:D,helperManager:_}}globalThis.stri\##
-p=(e,n)=>Vi(e,{transforms:["typescript","imports"],filePath:n,production:!0,disableESTransforms:!0}).code;})();
+e)this.tokens.removeToken();return!0}return!1}shiftMappings(e,s){for(let r=0;r<e.length;r++){let o=e[r];if(o!==void \##
+0)e[r]=o+s}return e}}var Vl=$1(ni());function B1(e){let s=new Set;for(let r=0;r<e.tokens.length;r++)if(e.matches1AtI\##
+ndex(r,t._import)&&!e.matches3AtIndex(r,t._import,t.name,t.eq))Gl(e,r,s);return s}function Gl(e,s,r){if(s++,e.matche\##
+s1AtIndex(s,t.parenL))return;if(e.matches1AtIndex(s,t.name)){if(r.add(e.identifierNameAtIndex(s)),s++,e.matches1AtIn\##
+dex(s,t.comma))s++}if(e.matches1AtIndex(s,t.star))s+=2,r.add(e.identifierNameAtIndex(s)),s++;if(e.matches1AtIndex(s,\##
+t.braceL))s++,Xl(e,s,r)}function Xl(e,s,r){while(!0){if(e.matches1AtIndex(s,t.braceR))return;let o=ke(e,s);if(s=o.en\##
+dIndex,!o.isType)r.add(o.rightName);if(e.matches2AtIndex(s,t.comma,t.braceR))return;else if(e.matches1AtIndex(s,t.br\##
+aceR))return;else if(e.matches1AtIndex(s,t.comma))s++;else throw Error(`Unexpected token: ${JSON.stringify(e.tokens[\##
+s])}`)}}function ri(e,s){Ir(s);try{let r=Jl(e,s),a=new pt(r,s.transforms,Boolean(s.enableLegacyBabel5ModuleInterop),\##
+s).transform(),u={code:a.code};if(s.sourceMapOptions){if(!s.filePath)throw Error("filePath must be specified when ge\##
+nerating a source map.");u={...u,sourceMap:Qn(a,s.filePath,s.sourceMapOptions,e,r.tokenProcessor.tokens)}}return u}c\##
+atch(r){if(s.filePath)r.message=`Error transforming ${s.filePath}: ${r.message}`;throw r}}function Jl(e,s){let r=s.t\##
+ransforms.includes("jsx"),o=s.transforms.includes("typescript"),a=s.transforms.includes("flow"),u=s.disableESTransfo\##
+rms===!0,m=Zo(e,r,o,a),{tokens:x,scopes:k}=m,T=new gt(e,x),y=new xt(T),C=new Oe(e,x,a,u,y),L=Boolean(s.enableLegacyT\##
+ypeScriptModuleInterop),M=null;if(s.transforms.includes("imports")){if(M=new ye(T,C,L,s,s.transforms.includes("types\##
+cript"),Boolean(s.keepUnusedImports),y),M.preprocessTokens(),Gt(C,k,M.getGlobalNames()),s.transforms.includes("types\##
+cript")&&!s.keepUnusedImports)M.pruneTypeOnlyImports()}else if(s.transforms.includes("typescript")&&!s.keepUnusedImp\##
+orts)Gt(C,k,B1(C));return{tokenProcessor:C,scopes:k,nameManager:T,importProcessor:M,helperManager:y}}globalThis.stri\##
+p=(e,s)=>ri(e,{transforms:["typescript","imports"],filePath:s,production:!0,disableESTransforms:!0}).code;})();
 """##
 }

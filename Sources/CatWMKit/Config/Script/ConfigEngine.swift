@@ -41,6 +41,7 @@ package final class ConfigEngine {
     private var context: JSContext?
     private var value: JSON?
     private var files: [URL] = []
+    private var hasCollected = false
 
     package init(entry: URL, baseline: Config = Config(), legacy: Bool = false,
                  check: @escaping (JSON) -> [ConfigDiagnostic] = { _ in [] }) {
@@ -100,7 +101,7 @@ package final class ConfigEngine {
         let start = DispatchTime.now().uptimeNanoseconds
         let output = registry.invokeMethod("run", withArguments: [entry.path, isLegacy])?.toString() ?? ""
         let late = registry.invokeMethod("late", withArguments: [])?.toString() ?? "[]"
-        JSGarbageCollect(context.jsGlobalContextRef)
+        collectGarbage(context)
         guard let result = JSON.parse(Data(output.utf8)) else {
             let seconds = Double(DispatchTime.now().uptimeNanoseconds - start) / 1_000_000_000
             let message = seconds >= Self.timeLimit
@@ -165,6 +166,15 @@ package final class ConfigEngine {
             "renamed": .object(ConfigScript.renamed.mapValues(JSON.string))
         ])
         return (try? JSONEncoder().encode(value)).flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
+    }
+
+    private func collectGarbage(_ context: JSContext) {
+        typealias CollectNow = @convention(c) (JSContextRef?) -> Void
+        if !hasCollected, let collectNow: CollectNow = symbol("JSSynchronousGarbageCollectForDebugging") {
+            hasCollected = true
+            collectNow(context.jsGlobalContextRef)        } else {
+            JSGarbageCollect(context.jsGlobalContextRef)
+        }
     }
 
     private func makeContext() -> JSContext? {

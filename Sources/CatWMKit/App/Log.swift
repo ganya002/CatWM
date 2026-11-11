@@ -54,11 +54,14 @@ package enum Log {
         return String(decoding: data.prefix(Int(offset)), as: Unicode.UTF8.self)
     }
 
-    private static let time: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm:ss.SSS"
-        return formatter
-    }()
+    private static func time() -> String {
+        var now = timespec()
+        clock_gettime(CLOCK_REALTIME, &now)
+        var seconds = now.tv_sec
+        var parts = tm()
+        localtime_r(&seconds, &parts)
+        return String(format: "%02d:%02d:%02d.%03d", parts.tm_hour, parts.tm_min, parts.tm_sec, now.tv_nsec / 1_000_000)
+    }
 
     package static func info(_ message: @autoclosure () -> String) { write(message()) }
     package static func debug(_ message: @autoclosure () -> String) { if verbose { write(message()) } }
@@ -68,7 +71,7 @@ package enum Log {
     }
 
     private static func write(_ message: String) {
-        let line = Data("\(time.string(from: Date())) \(message)\n".utf8)
+        let line = Data("\(time()) \(message)\n".utf8)
         guard let handle = file.handle else { return }
         file.state.withLock { state in
             if state.size > UInt64(maxSize) { trim(handle, &state) }

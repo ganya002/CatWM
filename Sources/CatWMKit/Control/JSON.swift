@@ -31,7 +31,56 @@ public enum JSON: Equatable, Codable, Sendable {
 
     public subscript(key: String) -> JSON? { object?[key] }
 
-    package static func parse(_ data: Data) -> JSON? { try? JSONDecoder().decode(JSON.self, from: data) }
+    package static func parse(_ data: Data) -> JSON? {
+        guard let tree = try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed) else { return nil }
+        return JSON(tree)
+    }
+
+    private init?(_ tree: Any) {
+        switch tree {
+        case is NSNull: self = .null
+        case let string as String: self = .string(string)
+        case let items as [Any]:
+            var array: [JSON] = []
+            array.reserveCapacity(items.count)
+            for item in items {
+                guard let value = JSON(item) else { return nil }
+                array.append(value)
+            }
+            self = .array(array)
+        case let fields as [String: Any]:
+            var object: [String: JSON] = [:]
+            object.reserveCapacity(fields.count)
+            for (key, item) in fields {
+                guard let value = JSON(item) else { return nil }
+                object[key] = value
+            }
+            self = .object(object)
+        default:
+            let reference = tree as AnyObject
+            let type = CFGetTypeID(reference)
+            if type == CFBooleanGetTypeID() {
+                self = .bool(CFBooleanGetValue(unsafeBitCast(reference, to: CFBoolean.self)))
+            } else if type == CFNumberGetTypeID(),
+                      let number = Self.number(unsafeBitCast(reference, to: CFNumber.self)) {
+                self = number
+            } else {
+                return nil
+            }
+        }
+    }
+
+    private static func number(_ number: CFNumber) -> JSON? {
+        var value = 0.0
+        CFNumberGetValue(number, .float64Type, &value)
+        var integer: Int64 = 0
+        if !CFNumberIsFloatType(number), CFNumberGetValue(number, .sInt64Type, &integer), Double(integer) == value {
+            return .int(Int(integer))
+        }
+        guard value.isFinite else { return nil }
+        guard abs(value) <= 0x20_0000_0000_0000, let whole = Int(exactly: value) else { return .number(value) }
+        return .int(whole)
+    }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()

@@ -48,6 +48,14 @@ Floating has three sources: `floating.apps` (through `Window.autoFloating`), a r
 
 `catwm.bind(mods, key, () => …)` keeps the function in a table on the config thread and writes a reference (`{function: N}`) into the bind. The table is replaced only after a run succeeds. Pressing the key calls `ConfigEngine.call(function:window:)` with a snapshot of the focused window. The call runs off the main thread and main never waits on it: `ConfigStore.call` hands the request to the engine thread and returns, and the result comes back on main as the recorded actions. `WindowManager.run(_ binding:)` runs each on the window that was focused at the press, not the one focused when the result arrives, because the user can change focus during the hop. The hotkey handler of both surfaces calls it, so the app and embedded mode share one path. Actions still run if a save replaced the config in between, because the actions are plain data and a guard would drop a key the user did press. A throw or a timeout runs no actions and reports like a config error.
 
+## Start-up cost
+
+The first load pays for the whole engine: a JavaScript context, Sucrase and a cold first transform. The first-load perf row measures it, and the hot-reload row measures the saves after it. We chose to shrink that work and rejected skipping it.
+
+- `Tools/bundle-sucrase.sh` patches three start-up costs out of Sucrase and fails the build if a patch stops matching: a 65,536-step table loop, a 9,000-element array literal that JavaScriptCore compiles one element at a time, and the option checker, which CatWM's constant options never need. `Tools/embed-sucrase.py` writes the bundle as ASCII, because JavaScriptCore lexes 8-bit scripts faster and keeps them at half the size.
+- A transform cache on disk, or loading Sucrase only on a miss, would skip the cost on a repeat launch. The first save after a launch would then pay for Sucrase, and that save is the one the hot-reload row measures. A bytecode cache needs `JSScript`, which this macOS doesn't have.
+- The first run collects garbage at once, with the exported `JSSynchronousGarbageCollectForDebugging` and `JSGarbageCollect` as the fallback. JavaScriptCore otherwise collects the start-up garbage during the first save, and that save takes twice as long as the rest. The cost moves into the first load, which has the room.
+
 ## Applying a change
 
 `WindowManager.apply` compares the new `Config` with the old one (`Config.changes`) and applies only what differs. A bind change calls `surface.apply` and lays out nothing. A Desktop slide stops only when `virtual-workspaces` or `workspaces-per-display` changes. `refresh()` runs only for a field outside `WindowManager.liveFields`. An unchanged config with the same diagnostics does nothing, so the watcher event after an overrides write is free.
