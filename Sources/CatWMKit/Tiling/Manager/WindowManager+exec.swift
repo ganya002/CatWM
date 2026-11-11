@@ -14,10 +14,10 @@ extension WindowManager {
         focus(on: dst)
     }
 
-    package func moveToMonitor(_ spec: String) {
+    package func moveToMonitor(_ spec: String, window target: Window? = nil) {
         guard !restoringTemplate else { return }
         let screens = backend.screens()
-        guard let window = focusedWindow(), let src = screen(of: window, in: screens),
+        guard let window = target ?? focusedWindow(), let src = screen(of: window, in: screens),
               let dst = screen(from: src, spec: spec, in: screens), dst.uuid != src.uuid else { return }
         if window.isFloating {
             let frame = window.cachedFrame
@@ -26,8 +26,7 @@ extension WindowManager {
             origin.x = max(dst.visible.minX, min(origin.x, dst.visible.maxX - frame.width))
             origin.y = max(dst.visible.minY, min(origin.y, dst.visible.maxY - frame.height))
             animator.animate([.init(window: window, to: CGRect(origin: origin, size: frame.size), bounds: dst.visible)],
-                             duration: config.animate ? config.animationDuration : 0,
-                             curve: config.animationCurve, bounce: config.animationBounce)
+                             spec: motion(of: window))
             assignManagedWindow(window.id, to: shown[dst.uuid])
             scheduleRefresh()
         } else if sharesSpaces {
@@ -40,6 +39,6 @@ extension WindowManager {
             assignTabs(of: window.id, to: shown[dst.uuid])
             refresh()
         }
-        focus(window)
+        if target == nil { focus(window) }
     }
 }

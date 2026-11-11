@@ -19,7 +19,7 @@ struct AppSurface: TilingSurface {
             Tips.shared.modeChanged(name)
             manager?.modeChanged(name)
         }
-        Hotkeys.shared.handler = { [weak manager] binding in manager?.dispatch(binding.dispatcher, binding.arg) }
+        Hotkeys.shared.handler = { [weak manager] binding in manager?.run(binding) }
         Hotkeys.shared.onWindowModeClick = { point in
             let popup = Popup.shared
             if popup.hitsMenu(at: point) { return false }
@@ -172,7 +172,10 @@ struct AppSurface: TilingSurface {
 
     func abandonOverview() { SortPanel.shared.abandon() }
     func undoOverview() { SortPanel.shared.undoApplied() }
-    func refreshed(_ screens: [Screen]) { WindowManager.shared.watchCrowding(screens) }
+    func refreshed(_ screens: [Screen]) {
+        WindowManager.shared.watchCrowding(screens)
+        FocusDim.shared.followWorkspace()
+    }
     func openSwitcher(backward: Bool) { if features.contains(.switcher) { Switcher.shared.open(backward: backward) } }
     func focusChanged() { FocusDim.shared.update() }
     var loginItem: (enabled: Bool, needsApproval: Bool) { (LoginItem.shared.isEnabled, LoginItem.shared.needsApproval) }

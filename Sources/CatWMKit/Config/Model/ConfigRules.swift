@@ -74,3 +74,44 @@ package struct WorkspaceRule: Equatable, Sendable {
     package let when: Condition
     package let set: [String: ConfigValue]
 }
+
+package struct WorkspaceFacts: Sendable {
+    package var windows = 0
+    package var sameApp = 0
+    package var apps: [String] = []
+    package var layout: Layout
+    package var name: String
+    package var displays: [String] = []
+    package var focused = false
+
+    package init(layout: Layout, name: String) {
+        self.layout = layout
+        self.name = name
+    }
+
+    var facts: Facts {
+        [.windows: .int(windows), .sameApp: .int(sameApp), .apps: .array(apps.map(JSON.string)),
+         .layout: .string(layout.rawValue), .name: .string(name), .display: .array(displays.map(JSON.string)),
+         .focused: .bool(focused)]
+    }
+}
+
+extension Config {
+    package func matchingRules(for workspace: WorkspaceFacts) -> [WorkspaceRule] {
+        guard !workspaceRules.isEmpty else { return [] }
+        let facts = workspace.facts
+        return workspaceRules.filter { $0.when.holds(facts) }
+    }
+
+    package func resolved(for workspace: WorkspaceFacts) -> Config {
+        var result = self
+        var reader = ConfigScript.Reader(file: nil)
+        for rule in matchingRules(for: workspace) {
+            for (path, value) in rule.set {
+                guard let leaf = ConfigScript.leaves[path] else { continue }
+                reader.read(leaf, value, path: path, into: &result)
+            }
+        }
+        return result
+    }
+}

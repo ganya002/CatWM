@@ -16,6 +16,16 @@ extension Animator {
         }
     }
 
+    package struct Batch {
+        package let moves: [Move]
+        package let spec: MotionSpec
+
+        package init(moves: [Move], spec: MotionSpec) {
+            self.moves = moves
+            self.spec = spec
+        }
+    }
+
     package struct Item {
         let move: Move
         let start: CFTimeInterval

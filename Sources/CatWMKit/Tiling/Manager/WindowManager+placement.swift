@@ -44,6 +44,6 @@ extension WindowManager {
         rect.origin.y = max(screen.visible.minY, min(rect.minY, screen.visible.maxY - rect.height))
         floats.floatZoom[window.id] = nil
         animator.animate([.init(window: window, to: rect.pixelAligned, bounds: screen.visible)],
-                         spec: MotionSpec(config))
+                         spec: motion(of: window))
     }
 }

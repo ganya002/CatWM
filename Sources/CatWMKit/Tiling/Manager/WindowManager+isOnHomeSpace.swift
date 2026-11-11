@@ -50,8 +50,7 @@ extension WindowManager {
             guard !frame.approxEqual(edge, tolerance: 2), !animator.isMoving(id, to: edge) else { return }
             floats.floatFrames[id] = floatsFreely(id) ? frame : nil
             animator.animate([.init(window: window, to: edge, bounds: screen.visible)],
-                             duration: config.animationDuration, curve: config.animationCurve,
-                             bounce: config.animationBounce)
+                             spec: motion(forWorkspace: slide.workspace))
             return
         }
         floats.floatFrames[id] = floatsFreely(id) ? frame : nil
@@ -89,8 +88,7 @@ extension WindowManager {
         animator.quiet(id)
         if let from = slideStart(id, to: rect, on: screen) {
             animator.animate([.init(window: window, to: rect, bounds: screen.visible, from: from)],
-                             duration: config.animationDuration, curve: config.animationCurve,
-                             bounce: config.animationBounce)
+                             spec: motion(of: window))
             return
         }
         animator.animate([.init(window: window, to: rect, bounds: screen.visible)], duration: 0)
@@ -101,15 +99,16 @@ extension WindowManager {
             for id in old.outgoing where !visible.contains(id) { cornerPark(id, screens: backend.screens()) }
         }
         slide = nil
-        guard config.animate, config.animationDuration >= 0.01 else { return }
+        let spec = motion(forWorkspace: workspace)
+        guard spec.duration >= 0.01 else { return }
         let outgoing = visible.filter { workspaceOf[$0] == previous }
         let arriving = present.filter { workspaceOf[$0] == workspace }
         guard outgoing.count + arriving.count <= Self.maxAnimatedMoves else { return }
-        let until = CACurrentMediaTime() + config.animationDuration
+        let until = CACurrentMediaTime() + spec.duration
         slide = Slide(monitor: screen.uuid, workspace: workspace, outgoing: outgoing,
                       forward: workspaceSort(previous, workspace), until: until)
         DispatchQueue.main.asyncAfter( // style-ok: the slide is a time window for late windows
-            deadline: .now() + config.animationDuration + 0.2
+            deadline: .now() + spec.duration + 0.2
         ) { [weak self] in
             guard let self, self.slide?.until == until else { return }
             let screens = backend.screens()

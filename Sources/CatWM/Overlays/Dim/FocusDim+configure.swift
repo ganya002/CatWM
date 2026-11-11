@@ -32,7 +32,17 @@ extension FocusDim {
         }
     }
 
+    func followWorkspace() {
+        let manager = WindowManager.shared
+        guard manager.hasWorkspaceRules else { return }
+        let scoped = manager.config(for: manager.focusedWindow().flatMap { manager.workspaceOf[$0.id] }
+            ?? manager.currentWorkspace)
+        configure(dim: scoped.dimOtherWindows, strength: scoped.dimStrength,
+                  blur: scoped.blurOtherWindows, radius: Int(scoped.blurRadius))
+    }
+
     func update() {
+        followWorkspace()
         guard enabled, !pending else { return }
         pending = true
         DispatchQueue.main.async { [weak self] in

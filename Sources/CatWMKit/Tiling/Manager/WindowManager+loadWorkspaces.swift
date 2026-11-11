@@ -101,8 +101,8 @@ extension WindowManager {
         }
     }
 
-    package func moveFocusedWindow(to workspace: String, follow: Bool) {
-        guard let window = focusedWindow() else { return }
+    package func moveFocusedWindow(to workspace: String, follow: Bool, window target: Window? = nil) {
+        guard let window = target ?? focusedWindow() else { return }
         moveWindowAndTabs(window.id, to: workspace, follow: follow)
     }
 

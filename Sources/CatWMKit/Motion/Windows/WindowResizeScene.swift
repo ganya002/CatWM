@@ -61,6 +61,8 @@ import QuartzCore
         updateMasks()
     }
 
+    package func covers(_ id: CGWindowID) -> Bool { visible && ids.contains(id) }
+
     package func cover(_ id: CGWindowID, to target: CGRect) {
         placements[id]?.retarget(to: target)
         updateMasks()

@@ -182,8 +182,7 @@ extension WindowManager {
         if tabUI.drag.beginLifted(id) {
             focus(window, warp: false)
             animator.animate([.init(window: window, to: held, bounds: held)],
-                             duration: config.animate ? config.animationDuration : 0,
-                             curve: config.animationCurve, bounce: config.animationBounce)
+                             spec: motion(of: window))
         } else if !animator.retarget(window, to: held) {
             animator.position(window, at: held)
         }

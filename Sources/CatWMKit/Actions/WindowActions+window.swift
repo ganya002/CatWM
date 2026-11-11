@@ -34,7 +34,7 @@ extension WindowActions {
 
     package static let movewindowtomonitor = WindowAction.text(
         "movewindowtomonitor", "displays", "Move the focused window to another display", displayTarget
-    ) { $0.manager.moveToMonitor($0.arg) }
+    ) { $0.manager.moveToMonitor($0.arg, window: $0.target) }
 
     package static let movewindow = WindowAction.direction(
         "movewindow", "window", "Move the focused window in a direction",
@@ -68,20 +68,20 @@ extension WindowActions {
     package static let setfloating = WindowAction(
         name: "setfloating", group: "window", summary: "Float the focused window"
     ) { context in
-        if let window = context.manager.focusedWindow() { context.manager.setFloating(true, for: window) }
+        if let window = context.window { context.manager.setFloating(true, for: window) }
     }
 
     package static let settiled = WindowAction(
         name: "settiled", group: "window", summary: "Tile the focused window"
     ) { context in
-        if let window = context.manager.focusedWindow() { context.manager.setFloating(false, for: window) }
+        if let window = context.window { context.manager.setFloating(false, for: window) }
     }
 
     package static let resizeactive = WindowAction.text(
         "resizeactive", "window", "Set the size of the focused floating window",
         .text("size", "`exact W H`, the size in points. A tiled window keeps its size.")
     ) { context in
-        guard let window = context.manager.focusedWindow(), let size = context.exactPair else { return }
+        guard let window = context.window, let size = context.exactPair else { return }
         context.manager.resizeWindow(window, to: CGSize(width: size.x, height: size.y))
     }
 
@@ -90,19 +90,19 @@ extension WindowActions {
         .text("position", "`exact X Y`, the top-left corner in points from the top-left of the display's visible area."
               + " A tiled window stays in its tile.")
     ) { context in
-        guard let window = context.manager.focusedWindow(), let point = context.exactPair else { return }
+        guard let window = context.window, let point = context.exactPair else { return }
         context.manager.moveWindow(window, toOffset: point)
     }
 
     package static let centerwindow = WindowAction(
         name: "centerwindow", group: "window", summary: "Center the focused floating window on its display"
     ) { context in
-        if let window = context.manager.focusedWindow() { context.manager.centerWindow(window) }
+        if let window = context.window { context.manager.centerWindow(window) }
     }
 
     package static let fullscreen = WindowAction(
         name: "fullscreen", group: "window", summary: "Fill the screen with the focused window, inside the tiling"
-    ) { $0.manager.toggleZoom() }
+    ) { $0.manager.toggleZoom(of: $0.target) }
 
     package static let nativefullscreen = WindowAction(
         name: "nativefullscreen", group: "window", summary: "Give the focused window a macOS full screen Desktop"

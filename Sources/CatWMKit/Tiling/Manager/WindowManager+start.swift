@@ -243,9 +243,7 @@ extension WindowManager {
         applyWorkspaceChanges(changes, wasVirtual: old.virtualWorkspaces)
         Log.verbose = config.debugLogging || Log.verboseLaunch
         if !changes.isDisjoint(with: Self.surfaceFields) { surface.apply(config) }
-        if !changes.isDisjoint(with: Self.floatFields) {
-            for window in windows.values { window.autoFloating = shouldFloat(window) }
-        }
+        if !changes.isDisjoint(with: Self.floatFields.union(["windowRules"])) { applyFloatingChanges(from: old) }
         if isStarted, !changes.subtracting(Self.liveFields).isEmpty {
             corrections = [:]
             scheduleRefresh(after: 0)

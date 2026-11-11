@@ -85,6 +85,15 @@ import os
                                                                          message: message)], isStuck: true)
     }
 
+    package func call(function: Int, window: ConfigEngine.WindowSnapshot,
+                      then finish: @escaping @MainActor (ConfigEngine.FunctionRun) -> Void) {
+        guard let engine else {
+            let failure = ConfigDiagnostic(file: scriptURL.path, phase: .evaluate, message: "the config isn't loaded")
+            return finish(ConfigEngine.FunctionRun(failure: failure))
+        }
+        engine.call(function: function, window: window) { run in DispatchQueue.main.async { finish(run) } }
+    }
+
     package func reload() -> Config {
         guard isLoaded else { return load() }
         guard source == .script else { return loadConf() }

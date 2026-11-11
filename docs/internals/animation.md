@@ -8,6 +8,10 @@ CatWM animates real windows by writing AX frames, so the app's resize and redraw
 
 `Animator` steps on an `NSScreen` display link for the fastest display that holds an active destination. Each app writer samples at the link's `targetTimestamp`, or at its estimated write-completion time when it has fallen behind. Pending writes coalesce, so a slow app skips obsolete frames instead of replaying them. The estimate learns only from successful writes: samples are capped at 50 ms, it follows rising costs at 80% weight and falling costs at 40%, and it expires after one second idle. These are tuning heuristics. A successful AX write doesn't prove the app has drawn fresh pixels.
 
+## One motion per screen
+
+A refresh animates each screen's moves with the motion of that screen's workspace (a workspace rule can change it), so `applyTileMoves` hands the animator one batch per screen in a single `animate` call, and `maxAnimatedMoves` counts per batch. Two calls would break the resize scene: the second call sees a scene that doesn't cover its windows, closes it and drops the first call's items without landing them. One call builds one scene for the batches that animate (0.08 s or more), and a batch that doesn't animate lands at once. A visible scene holds back the live AX writes only of the windows it covers.
+
 ## Lab: resize animation
 
 `lab.resizeAnimation` picks `live` (the default), `snapshot` or `color-fill`. Both experiments try to hide the app's redraw latency.

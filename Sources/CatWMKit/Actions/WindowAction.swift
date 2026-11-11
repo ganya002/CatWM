@@ -3,6 +3,8 @@ import AppKit
 package struct ActionContext {
     package let manager: WindowManager
     package let arg: String
+    package var target: Window?
+    @MainActor package var window: Window? { target ?? manager.focusedWindow() }
 }
 
 package struct ActionPicker: Sendable {

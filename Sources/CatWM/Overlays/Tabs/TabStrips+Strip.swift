@@ -20,7 +20,7 @@ extension TabStrips {
             panel.contentView = view
         }
 
-        func show(_ group: TabGroups.Group, above slot: CGRect, focused: Bool, duration: Double) {
+        func show(_ group: TabGroups.Group, above slot: CGRect, focused: Bool, spec: MotionSpec) {
             hidden = false
             let manager = WindowManager.shared
             let tabs = group.members.compactMap { id in
@@ -38,9 +38,7 @@ extension TabStrips {
                 let wasVisible = panel.isVisible
                 target = frame
                 shifted = false
-                if wasVisible, duration > 0 {
-                    var spec = MotionSpec(WindowManager.shared.config)
-                    spec.duration = duration
+                if wasVisible, spec.duration > 0 {
                     glide.to(frame, on: panel, spec: spec)
                 } else {
                     glide.stop()

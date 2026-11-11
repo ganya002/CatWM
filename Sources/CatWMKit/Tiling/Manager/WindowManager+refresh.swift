@@ -10,12 +10,13 @@ extension WindowManager {
     private struct PlannedMoves {
         package var moves: [Animator.Move] = []
         package var instant: [Animator.Move] = []
+        package var motion: [(moves: [Animator.Move], spec: MotionSpec)] = []
     }
 
     package func refresh(instant instantLayout: Bool = false, placing only: Set<CGWindowID>? = nil) {
         guard isStarted, !nativeDesktop.isRunning, !desktops.nativeCreationBusy else { return }
         let timing = TilingTiming("refresh", windows: windows.count)
-        defer { timing.finish() }
+        defer { timing.finish(); applyDueWindowRules() }
         if scanner.lastScan == 0 { scheduleRefresh(after: 0) }
         let screens = backend.screens()
         timing.checkpoint("screens")
@@ -41,11 +42,12 @@ extension WindowManager {
         }
         observed.present.formUnion(restoredEarly.keys)
 
-        placeArrivals(observed, onScreen: onScreen, firstRun: firstRun)
+        let arrivals = placeArrivals(observed, onScreen: onScreen)
         forgetGoneWindows(present: observed.present)
         self.present = observed.present
         let plan = syncWorkspaces(screens: screens, present: observed.present)
         visible = plan.visible
+        resolveWorkspaces(screens: screens, arrivals: arrivals, firstRun: firstRun, timing: timing)
         guard !restoringTemplate else { notifyChange(); return }
         restoreTilingRecovery(observed.fresh)
         saveWorkspaces()
@@ -86,9 +88,10 @@ extension WindowManager {
             return
         }
         animator.animate(planned.instant, duration: 0)
-        let animated = !instantLayout && config.animate && planned.moves.count <= Self.maxAnimatedMoves
-        animator.animate(planned.moves, duration: animated ? config.animationDuration : 0,
-                         curve: config.animationCurve, bounce: config.animationBounce)
+        animator.animate(planned.motion.map { batch in
+            let animated = !instantLayout && batch.spec.duration > 0 && batch.moves.count <= Self.maxAnimatedMoves
+            return Animator.Batch(moves: batch.moves, spec: animated ? batch.spec : .instant)
+        })
     }
 
     private func updateKnownWindows() {
@@ -143,6 +146,7 @@ extension WindowManager {
                 window.autoFloating = shouldFloat(window, title: found.title, resizable: found.resizable || maximised)
                 observed.titles[id] = found.title
                 windows[id] = window
+                markForRules(window)
                 watch(window)
                 observed.fresh.append(window)
                 if onScreenIDs.contains(id), !maximised { observed.present.insert(id) }
@@ -162,7 +166,7 @@ extension WindowManager {
         return !(scan.fullscreen.contains(id) || scan.minimized.contains(id))
     }
 
-    private func placeArrivals(_ observed: ObservedWindows, onScreen: [CGWindowInfo], firstRun: Bool) {
+    private func placeArrivals(_ observed: ObservedWindows, onScreen: [CGWindowInfo]) -> [Window] {
         let fresh = observed.fresh
         let stacking = Dictionary(onScreen.enumerated().map { ($1.id, $0) }, uniquingKeysWith: { first, _ in first })
         let arrivals = fresh.sorted(by: { (stacking[$0.id] ?? 0) < (stacking[$1.id] ?? 0) })
@@ -170,11 +174,6 @@ extension WindowManager {
             restoreSavedWorkspace(window, titles: observed.titles)
         }
         if !pendingLaunches.isEmpty { arrivals.forEach(claimLaunch) }
-        if config.newWindowsToMain && !firstRun {
-            order.insert(contentsOf: arrivals.map(\.id), at: 0)
-        } else {
-            order.append(contentsOf: arrivals.map(\.id))
-        }
         for window in fresh {
             Log.debug(
                 "new window \(window.id) \(window.bundleID ?? "pid \(window.pid)") "
@@ -182,6 +181,17 @@ extension WindowManager {
             )
         }
         if !fresh.isEmpty { scheduleRefresh(after: 0.4) }
+        return arrivals
+    }
+
+    private func resolveWorkspaces(screens: [Screen], arrivals: [Window], firstRun: Bool, timing: TilingTiming) {
+        resolveWorkspaceConfigs(screens: screens)
+        timing.checkpoint("workspace rules")
+        guard !arrivals.isEmpty else { return }
+        let toMain = firstRun ? [] : arrivals.filter { config(for: workspaceOf[$0.id]).newWindowsToMain }
+        order.insert(contentsOf: toMain.map(\.id), at: 0)
+        let ids = Set(toMain.map(\.id))
+        order.append(contentsOf: arrivals.map(\.id).filter { !ids.contains($0) })
     }
 
     private func restoreSavedWorkspace(_ window: Window, titles: [CGWindowID: String?]) {
@@ -208,6 +218,12 @@ extension WindowManager {
     private func planTileMoves(screens: [Screen], only: Set<CGWindowID>?) -> PlannedMoves {
         var planned = PlannedMoves()
         for screen in screens {
+            let firstMove = planned.moves.count
+            defer {
+                if planned.moves.count > firstMove {
+                    planned.motion.append((Array(planned.moves[firstMove...]), motion(on: screen)))
+                }
+            }
             let screenState = state(for: screen)
             let ids = tiled(on: screen).filter { !nativeMoves.isMoving($0) }
             if let zoomed = screenState.zoomed,
@@ -279,6 +295,7 @@ extension WindowManager {
         window.title = found.title
         window.resizable = found.resizable
         let resizable = window.resizable || window.fullscreen
+        if retitled, !tabs.isGrouped(window.id), windows[window.id] === window { markForRules(window) }
         if (retitled && !tabs.isGrouped(window.id)) || wasResizable != resizable {
             window.autoFloating = shouldFloat(window, title: window.title, resizable: resizable)
             corrections[window.id] = nil
@@ -302,11 +319,12 @@ extension WindowManager {
         focus(window)
     }
 
-    package func layoutTargets(_ ids: [CGWindowID], _ screenState: ScreenState,
-                               on screen: Screen) -> [CGWindowID: CGRect]? {
-        guard let (raw, gap) = rawSlots(ids, on: screen, screenState, ratio: screenState.ratio) else { return nil }
+    package func layoutTargets(_ ids: [CGWindowID], _ screenState: ScreenState, on screen: Screen,
+                               workspace: String? = nil) -> [CGWindowID: CGRect]? {
+        guard let (raw, gap) = rawSlots(ids, on: screen, screenState, ratio: screenState.ratio,
+                                        workspace: workspace) else { return nil }
         let slots = fitMinimums(raw, mins: ids.map(slotMinimum), gap: gap)
-        let zoomed = usableRect(screen).pixelAligned
+        let zoomed = usableRect(screen, workspace: workspace).pixelAligned
         let bounds = screen.visible
         return Dictionary(zip(ids, slots).map { id, slot in
             (id, id == screenState.zoomed ? zoomed : clampToMinimum(slot, min: slotMinimum(id), bounds: bounds))

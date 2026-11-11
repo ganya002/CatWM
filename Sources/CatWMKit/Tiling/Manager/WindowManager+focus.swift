@@ -109,7 +109,7 @@ extension WindowManager {
         if layout == .widescreenTall, isMain, mains > 1, idx != mains - 1 { return }
         if layout == .widescreenTallRight, isMain, mains > 1, idx != 0 { return }
         if !isMain, [.threeColumnLeft, .threeColumnRight].contains(layout) { return }
-        let gap = windowGap(count: ids.count)
+        let gap = windowGap(count: ids.count, on: screen)
         let total = axis.horizontal ? rect.width : rect.height
         func boundary(_ slot: CGRect) -> CGFloat {
             switch (axis.horizontal, axis.fromStart, isMain) {
