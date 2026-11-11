@@ -3,14 +3,19 @@ import CatWMKit
 
 extension Motion {
     static func group(_ duration: Double, curve: CAMediaTimingFunction = Curve.settle, label: String = #fileID,
-                      changes: () -> Void, completion: (() -> Void)? = nil) {
+                      changes: () -> Void, completion: (@MainActor @Sendable () -> Void)? = nil) {
         PerfMonitor.shared.track("ui:" + label, for: duration)
         NSAnimationContext.runAnimationGroup({ context in
             context.duration = duration
             context.timingFunction = curve
             context.allowsImplicitAnimation = true
             changes()
-        }, completionHandler: completion)
+        }, completionHandler: onFinish(completion))
+    }
+
+    private static func onFinish(_ completion: (@MainActor @Sendable () -> Void)?) -> (@Sendable () -> Void)? {
+        guard let completion else { return nil }
+        return { onMainThread { completion() } }
     }
 
     static func setAlpha(_ alpha: CGFloat, on window: NSWindow) { window.animator().alphaValue = alpha }
@@ -18,16 +23,17 @@ extension Motion {
     static func setFrame(_ frame: NSRect, on window: NSWindow) { window.animator().setFrame(frame, display: true) }
 
     static func fade(_ window: NSWindow, to alpha: CGFloat, duration: Double = Theme.medium,
-                     curve: CAMediaTimingFunction = Curve.easeOut, then completion: (() -> Void)? = nil) {
+                     curve: CAMediaTimingFunction = Curve.easeOut,
+                     then completion: (@MainActor @Sendable () -> Void)? = nil) {
         NSAnimationContext.runAnimationGroup({ context in
             context.duration = duration
             context.timingFunction = curve
             window.animator().alphaValue = alpha
-        }, completionHandler: completion)
+        }, completionHandler: onFinish(completion))
     }
 }
 
-final class PanelGlide {
+@MainActor final class PanelGlide {
     private var timer: Timer?
     private var tracks: [Trajectory] = []
     private var start: CFTimeInterval = 0
@@ -49,12 +55,9 @@ final class PanelGlide {
             Trajectory(from: pair.0, to: pair.1, spec: spec, velocity: inherited?[index])
         }
         let duration = spec.duration
-        let newTimer = Timer(timeInterval: 1.0 / 120.0, repeats: true) { [weak self] timer in
-            guard let self else { return timer.invalidate() }
-            self.step(until: duration)
+        timer = Timer.onMain(every: 1.0 / 120.0, mode: .common, owner: self) { glide in
+            glide.step(until: duration)
         }
-        RunLoop.main.add(newTimer, forMode: .common)
-        timer = newTimer
     }
 
     func stop() {

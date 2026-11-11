@@ -3,7 +3,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-struct GalleryContent {
+@MainActor struct GalleryContent {
     @ObservedObject var model: GalleryModel
 
     func hex(_ path: KeyPath<Palette, Palette.Pair>) -> String {
@@ -18,9 +18,9 @@ struct GalleryContent {
     }
 }
 
-struct GalleryExample: Identifiable {
+struct GalleryExample: Identifiable, Sendable {
     let order: Int
-    let content: (GalleryModel) -> AnyView
+    let content: @MainActor @Sendable (GalleryModel) -> AnyView
     var id: Int { order }
 }
 

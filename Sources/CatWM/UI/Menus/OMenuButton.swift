@@ -3,14 +3,14 @@ import CatWMKit
 import SwiftUI
 
 struct OMenuButton<Label: View>: View {
-    let items: () -> [MenuItem]
+    let items: @MainActor () -> [MenuItem]
     var minWidth: CGFloat = 0
     var style: OButtonStyle?
     @ViewBuilder var label: Label
     @StateObject private var anchor = ScreenAnchor()
     @StateObject private var open = Flag()
 
-    init(minWidth: CGFloat = 0, style: OButtonStyle? = nil, items: @escaping () -> [MenuItem],
+    init(minWidth: CGFloat = 0, style: OButtonStyle? = nil, items: @escaping @MainActor () -> [MenuItem],
          @ViewBuilder label: () -> Label) {
         self.items = items
         self.minWidth = minWidth

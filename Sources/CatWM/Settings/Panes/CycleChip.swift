@@ -69,7 +69,7 @@ struct CycleChip: View {
     }
 }
 
-final class CycleDrag: ObservableObject {
+@MainActor final class CycleDrag: ObservableObject {
     @Published var layout: Layout?
     @Published var x: CGFloat = 0
     var origin = 0

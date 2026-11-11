@@ -2,7 +2,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-enum CrashWatch {
+@MainActor enum CrashWatch {
     private static let marker = Instance.supportFolder.appendingPathComponent("running")
     private static let reports = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent("Library/Logs/DiagnosticReports")

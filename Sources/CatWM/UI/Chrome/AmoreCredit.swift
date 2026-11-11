@@ -7,7 +7,7 @@ struct AmoreCredit: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.openURL) private var openURL
 
-    final class Model: ObservableObject { @Published var beats = 0 }
+    @MainActor final class Model: ObservableObject { @Published var beats = 0 }
 
     var body: some View {
         let hovering = hover.isOn, reduce = reduceMotion, beats = model.beats

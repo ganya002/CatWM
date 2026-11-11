@@ -2,7 +2,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-protocol Lesson: AnyObject {
+@MainActor protocol Lesson: AnyObject {
     func prepare(_ coach: Coach)
     var count: Int { get }
     var startIndex: Int { get }
@@ -11,11 +11,11 @@ protocol Lesson: AnyObject {
     func ended(_ how: Coach.Ending, at index: Int)
 }
 
-struct PlannedStep {
-    let build: (Coach) -> Coach.Step
+struct PlannedStep: Sendable {
+    let build: @MainActor @Sendable (Coach) -> Coach.Step
 }
 
-enum Steps {
+@MainActor enum Steps {
     typealias Step = Coach.Step
 }
 

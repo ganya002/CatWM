@@ -2,7 +2,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-final class Onboarding {
+@MainActor final class Onboarding {
     static let shared = Onboarding()
     static let doneKey = "didOnboard"
 

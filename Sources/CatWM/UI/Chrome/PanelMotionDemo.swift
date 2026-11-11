@@ -2,7 +2,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-final class PanelMotionDemo {
+@MainActor final class PanelMotionDemo {
     static let shared = PanelMotionDemo()
     private(set) var preview: PanelMotion?
     private var work: [DispatchWorkItem] = []

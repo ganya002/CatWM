@@ -5,7 +5,7 @@ import Combine
 import SwiftUI
 import UniformTypeIdentifiers
 
-final class ConfigDocument: ObservableObject {
+@MainActor final class ConfigDocument: ObservableObject {
     @Published var config = Config()
     @Published var vars: [VarRow] = []
     @Published var binds: [BindRow] = []
@@ -106,9 +106,7 @@ final class ConfigDocument: ObservableObject {
         autosave = objectWillChange
             .debounce(for: .milliseconds(50), scheduler: RunLoop.main)
             .sink { [weak self] in self?.autosaveIfNeeded() }
-        storeObserver = NotificationCenter.default.addObserver(
-            forName: .configStoreChanged, object: nil, queue: .main
-        ) { [weak self] _ in
+        storeObserver = NotificationCenter.default.observeOnMain(.configStoreChanged) { [weak self] in
             guard let self, !isDirty else { return }
             load()
         }

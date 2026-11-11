@@ -1,7 +1,7 @@
 import AppKit
 import CatWMKit
 
-enum MenuBarIcon {
+@MainActor enum MenuBarIcon {
     private struct Part {
         let width: CGFloat
         var gapAfter: CGFloat

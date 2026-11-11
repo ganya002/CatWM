@@ -4,7 +4,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-final class GalleryModel: ObservableObject {
+@MainActor final class GalleryModel: ObservableObject {
     @Published var appearance = GalleryAppearance.system
     @Published var isOn = true
     @Published var off = false
@@ -23,9 +23,9 @@ final class GalleryModel: ObservableObject {
     @Published var catMoves = CatMoves()
 }
 
-struct ColorToken: Identifiable {
+struct ColorToken: Identifiable, Sendable {
     let name: String
-    let path: KeyPath<Palette, Palette.Pair>
+    let path: KeyPath<Palette, Palette.Pair> & Sendable
     var id: String { name }
 }
 

@@ -2,7 +2,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-final class CursorActions {
+@MainActor final class CursorActions {
     static let shared = CursorActions()
 
     let model = CursorActionsModel()
@@ -37,7 +37,7 @@ struct QuickAction: Identifiable {
     let run: () -> Void
 }
 
-final class CursorActionsModel: ObservableObject {
+@MainActor final class CursorActionsModel: ObservableObject {
     @Published var title = ""
     @Published var actions: [QuickAction] = []
     @Published var hovered: String?
@@ -66,10 +66,14 @@ final class CursorActionsModel: ObservableObject {
 
 func cursorMoveCallback(proxy _: CGEventTapProxy, type: CGEventType, event: CGEvent,
                         refcon _: UnsafeMutableRawPointer?) -> Unmanaged<CGEvent>? {
-    if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-        CursorActions.shared.reenableMoveTap()
-    } else {
-        CursorActions.shared.follow(cgPoint: event.location)
+    let disabled = type == .tapDisabledByTimeout || type == .tapDisabledByUserInput
+    let location = event.location
+    onMainThread {
+        if disabled {
+            CursorActions.shared.reenableMoveTap()
+        } else {
+            CursorActions.shared.follow(cgPoint: location)
+        }
     }
     return Unmanaged.passUnretained(event)
 }

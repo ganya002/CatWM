@@ -2,7 +2,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-final class WhatsNew {
+@MainActor final class WhatsNew {
     static let shared = WhatsNew()
     static let seenKey = "whatsNew.seen"
     static let launchDelay: TimeInterval = 4

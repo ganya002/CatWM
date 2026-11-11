@@ -2,7 +2,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-final class SortNudge {
+@MainActor final class SortNudge {
     static let shared = SortNudge()
     private static let key = "sort.nudged"
 
@@ -82,7 +82,7 @@ final class SortNudge {
     }
 }
 
-final class SortNudgeModel: ObservableObject {
+@MainActor final class SortNudgeModel: ObservableObject {
     @Published var workspace = ""
     @Published var count = 0
     @Published var keys: [String] = []

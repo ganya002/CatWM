@@ -1,7 +1,7 @@
 import AppKit
 import CatWMKit
 
-final class ModeCursor {
+@MainActor final class ModeCursor {
     static let shared = ModeCursor()
 
     private typealias Connection = @convention(c) () -> Int32
@@ -53,9 +53,7 @@ final class ModeCursor {
         }
         if timer == nil {
             setInBackground?(true)
-            let repeating = Timer(timeInterval: 1.0 / 120, repeats: true) { [weak self] _ in self?.cursor?.set() }
-            RunLoop.main.add(repeating, forMode: .common)
-            timer = repeating
+            timer = Timer.onMain(every: 1.0 / 120, mode: .common, owner: self) { $0.cursor?.set() }
         }
         cursor.set()
     }

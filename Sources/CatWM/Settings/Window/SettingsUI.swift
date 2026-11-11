@@ -2,7 +2,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-final class SettingsUI: ObservableObject {
+@MainActor final class SettingsUI: ObservableObject {
     @Published var pane: Pane = .general
     @Published var search = ""
     @Published var shortcutFilter = ""
@@ -32,8 +32,8 @@ final class SettingsUI: ObservableObject {
         linkedPadding = Set(paddings).count == 1
         refreshStatus()
         timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            LoginItem.shared.refresh { self?.refreshStatus() }
+        timer = Timer.onMain(every: 1, owner: self) { session in
+            LoginItem.shared.refresh { [weak session] in session?.refreshStatus() }
         }
         timer?.tolerance = 0.2
     }
@@ -86,9 +86,9 @@ final class SettingsUI: ObservableObject {
         }
         Hotkeys.shared.paused = true
         if resignObserver == nil {
-            resignObserver = NotificationCenter.default.addObserver(
-                forName: NSApplication.didResignActiveNotification, object: nil, queue: .main
-            ) { [weak self] _ in
+            resignObserver = NotificationCenter.default.observeOnMain(
+                NSApplication.didResignActiveNotification
+            ) { [weak self] in
                 self?.recording = nil
             }
         }

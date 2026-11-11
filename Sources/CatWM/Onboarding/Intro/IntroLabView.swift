@@ -47,7 +47,7 @@ struct IntroLabView: View {
     }
 }
 
-final class IntroLab {
+@MainActor final class IntroLab {
     static let shared = IntroLab()
     private var window: NSPanel?
     private let model = IntroLabModel()
@@ -70,7 +70,7 @@ final class IntroLab {
     }
 }
 
-final class IntroLabModel: ObservableObject {
+@MainActor final class IntroLabModel: ObservableObject {
     @Published var playing: String?
     private var score: IntroScore?
 

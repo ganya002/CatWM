@@ -1,14 +1,14 @@
 import AppKit
 import CatWMKit
 
-struct Release {
-    struct Feature {
+struct Release: Sendable {
+    struct Feature: Sendable {
         let id: String
         let symbol: String
         let title: String
         let text: String
-        var action: (label: String, run: () -> Void)?
-        var tour: ((Coach) -> [PlannedStep])?
+        var action: (label: String, run: @MainActor @Sendable () -> Void)?
+        var tour: (@MainActor @Sendable (Coach) -> [PlannedStep])?
     }
 
     let version: String

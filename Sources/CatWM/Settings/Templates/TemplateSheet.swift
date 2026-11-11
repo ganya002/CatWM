@@ -42,7 +42,7 @@ struct TemplateSheet: View {
     }
 }
 
-final class TemplateEditorModel: ObservableObject {
+@MainActor final class TemplateEditorModel: ObservableObject {
     @Published var name = ""
 }
 

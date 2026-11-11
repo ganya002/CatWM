@@ -2,7 +2,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-final class HUD {
+@MainActor final class HUD {
     static let shared = HUD()
     private var panel: CatWMPanel?
     private var host: NSHostingView<HUDView>?
@@ -69,7 +69,7 @@ final class HUD {
     private func makePanel() -> CatWMPanel { CatWMPanel(role: .hud) }
 }
 
-final class HUDModel: ObservableObject {
+@MainActor final class HUDModel: ObservableObject {
     @Published var text = ""
     @Published var layout: Layout?
     @Published var warning = false

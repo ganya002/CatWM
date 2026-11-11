@@ -54,9 +54,9 @@ extension SortPanel {
         Hotkeys.shared.paused = true
         if !Hotkeys.shared.submap.isEmpty { Hotkeys.shared.setSubmap("") }
         installMonitors()
-        pruneTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            guard let self, active else { return }
-            model.prune(alive: manager.liveWindowIDs())
+        pruneTimer = Timer.onMain(every: 1, owner: self) { panel in
+            guard panel.active else { return }
+            panel.model.prune(alive: panel.manager.liveWindowIDs())
         }
 
         shownPanel.alphaValue = 1

@@ -51,18 +51,18 @@ extension FocusDim {
         for name in [NSWorkspace.didActivateApplicationNotification, NSWorkspace.activeSpaceDidChangeNotification,
                      NSWorkspace.didHideApplicationNotification, NSWorkspace.didUnhideApplicationNotification,
                      NSWorkspace.didTerminateApplicationNotification] {
-            notificationObservers.append(center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+            notificationObservers.append(center.observeOnMain(name) { [weak self] in
                 self?.update()
             })
         }
-        notificationObservers.append(NotificationCenter.default.addObserver(
-            forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
-        ) { [weak self] _ in
+        notificationObservers.append(NotificationCenter.default.observeOnMain(
+            NSApplication.didChangeScreenParametersNotification
+        ) { [weak self] in
             self?.rebuild()
         })
-        notificationObservers.append(NotificationCenter.default.addObserver(
-            forName: NSWindow.didBecomeKeyNotification, object: nil, queue: .main
-        ) { [weak self] _ in
+        notificationObservers.append(NotificationCenter.default.observeOnMain(
+            NSWindow.didBecomeKeyNotification
+        ) { [weak self] in
             self?.update()
         })
         NSEvent.addGlobalMonitorForEvents(matching: .leftMouseUp) { [weak self] _ in self?.update() }

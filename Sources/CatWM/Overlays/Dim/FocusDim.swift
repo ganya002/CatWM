@@ -4,16 +4,16 @@ import CatWMKit
 private typealias BlurConnectionFn = @convention(c) () -> Int32
 private typealias BlurRadiusFn = @convention(c) (Int32, UInt32, UInt32) -> Int32
 
-final class FocusDim {
-    struct FeatureMenu {
+@MainActor final class FocusDim {
+    struct FeatureMenu: Sendable {
         let key: String
         let title: String
-        let isOn: () -> Bool
+        let isOn: @MainActor @Sendable () -> Bool
     }
 
-    struct Feature {
+    struct Feature: Sendable {
         let effect: FocusEffect
-        let run: () -> Void
+        let run: @MainActor @Sendable () -> Void
         var menu: FeatureMenu?
     }
 

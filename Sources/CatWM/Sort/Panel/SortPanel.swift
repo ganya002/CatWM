@@ -2,7 +2,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-final class SortPanel: NSObject, NSWindowDelegate {
+@MainActor final class SortPanel: NSObject, NSWindowDelegate {
     static let shared = SortPanel()
 
     let manager = WindowManager.shared

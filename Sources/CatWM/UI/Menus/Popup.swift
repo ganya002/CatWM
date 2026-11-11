@@ -2,7 +2,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-final class Popup: NSObject, NSWindowDelegate {
+@MainActor final class Popup: NSObject, NSWindowDelegate {
     static let shared = Popup()
 
     private struct Entry {
@@ -37,7 +37,7 @@ final class Popup: NSObject, NSWindowDelegate {
 
     private(set) var generation = 0
 
-    func menu(_ items: @escaping () -> [MenuItem], from anchor: NSRect, minWidth: CGFloat = 0,
+    func menu(_ items: @escaping @MainActor () -> [MenuItem], from anchor: NSRect, minWidth: CGFloat = 0,
               onClose: (() -> Void)? = nil) {
         let model = MenuModel()
         model.searchable = false
@@ -67,7 +67,7 @@ final class Popup: NSObject, NSWindowDelegate {
         DispatchQueue.main.async { withAnimation(reduce ? Motion.fade : Motion.easeOut) { model.appeared = true } }
     }
 
-    func context(_ items: @escaping () -> [MenuItem], onClose: (() -> Void)? = nil) {
+    func context(_ items: @escaping @MainActor () -> [MenuItem], onClose: (() -> Void)? = nil) {
         closeAll()
         let point = NSEvent.mouseLocation
         menu(items, from: NSRect(x: point.x + 4, y: point.y + 4, width: 0, height: 0), onClose: onClose)
@@ -203,9 +203,9 @@ extension View {
     }
 }
 
-final class PopoverState: ObservableObject { var generation = -1 }
+@MainActor final class PopoverState: ObservableObject { var generation = -1 }
 
-final class ScreenAnchor: ObservableObject {
+@MainActor final class ScreenAnchor: ObservableObject {
     weak var view: NSView?
 
     var screenRect: NSRect? {

@@ -2,7 +2,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-final class Intro {
+@MainActor final class Intro {
     static let margin: CGFloat = 60
     static let count = 5
 

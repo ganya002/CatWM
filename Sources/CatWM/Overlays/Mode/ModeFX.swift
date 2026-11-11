@@ -2,7 +2,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-final class ModeFX {
+@MainActor final class ModeFX {
     static let shared = ModeFX()
 
     var style: ModeEffect = .draw
@@ -15,15 +15,15 @@ final class ModeFX {
 
     private init() {
         observers = [
-            NSWorkspace.shared.notificationCenter.addObserver(
-                forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main
-            ) { [weak self] _ in
+            NSWorkspace.shared.notificationCenter.observeOnMain(
+                NSWorkspace.activeSpaceDidChangeNotification
+            ) { [weak self] in
                 self?.reshape()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { self?.reshape() }
             },
-            NotificationCenter.default.addObserver(
-                forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
-            ) { [weak self] _ in
+            NotificationCenter.default.observeOnMain(
+                NSApplication.didChangeScreenParametersNotification
+            ) { [weak self] in
                 if self?.model.active == true { self?.layoutPanels() }
             }
         ]
@@ -129,7 +129,7 @@ final class ModeFX {
     }
 }
 
-final class ModeFXModel: ObservableObject {
+@MainActor final class ModeFXModel: ObservableObject {
     @Published var active = false
     @Published var enters = 0
     @Published var style: ModeEffect = .draw
@@ -137,7 +137,7 @@ final class ModeFXModel: ObservableObject {
     var cursor: CGPoint = .zero
 }
 
-final class ModeFXScreen: ObservableObject {
+@MainActor final class ModeFXScreen: ObservableObject {
     @Published private(set) var shape: ScreenShape
     @Published private(set) var origin: CGPoint
 

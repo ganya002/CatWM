@@ -2,6 +2,14 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
+private struct ModeFXScope<Value: Sendable, Content: View>: View {
+    let effect: ModeFXView
+    let value: Value
+    let content: @MainActor @Sendable (ModeFXView, Value) -> Content
+
+    var body: some View { content(effect, value) }
+}
+
 struct ModeFXView: View {
     @ObservedObject var model: ModeFXModel
     @ObservedObject var screen: ModeFXScreen
@@ -37,7 +45,7 @@ struct ModeFXView: View {
     private var color: Color { model.color }
     private var isOn: Bool { model.active }
 
-    private func border(width: CGFloat) -> some View {
+    func border(width: CGFloat) -> some View {
         ZStack {
             ForEach([false, true], id: \.self) { mirrored in
                 DrawnHalf(radius: radius, inset: (width - tuck) / 2,
@@ -77,17 +85,19 @@ struct ModeFXView: View {
         let corners = [CGPoint.zero, CGPoint(x: size.width, y: 0),
                        CGPoint(x: 0, y: size.height), CGPoint(x: size.width, y: size.height)]
         let reach = corners.map { hypot($0.x - point.x, $0.y - point.y) }.max() ?? 1000
-        return Color.clear.keyframeAnimator(initialValue: Ripple(), trigger: model.enters) { _, value in
-            ZStack {
-                Circle().strokeBorder(color.opacity(0.85), lineWidth: max(1, 30 * (1 - value.progress)))
-                    .blur(radius: 6)
-                    .frame(width: reach * 2 * value.progress, height: reach * 2 * value.progress)
-                    .position(point)
-                    .opacity(value.progress >= 1 ? 0 : 1 - value.progress * 0.6)
-                    .mask(notchCutout)
-                border(width: 3.5).opacity(value.edge)
+        return Color.clear.keyframeAnimator(initialValue: Ripple(), trigger: model.enters) { _, ripple in
+            ModeFXScope(effect: self, value: ripple) { effect, value in
+                ZStack {
+                    Circle().strokeBorder(effect.color.opacity(0.85), lineWidth: max(1, 30 * (1 - value.progress)))
+                        .blur(radius: 6)
+                        .frame(width: reach * 2 * value.progress, height: reach * 2 * value.progress)
+                        .position(point)
+                        .opacity(value.progress >= 1 ? 0 : 1 - value.progress * 0.6)
+                        .mask(effect.notchCutout)
+                    effect.border(width: 3.5).opacity(value.edge)
+                }
+                .clipShape(effect.shape)
             }
-            .clipShape(shape)
         } keyframes: { _ in
             KeyframeTrack(\.progress) {
                 CubicKeyframe(0, duration: 0.001)
@@ -102,20 +112,22 @@ struct ModeFXView: View {
     }
 
     private func corners(size: CGSize) -> some View {
-        Color.clear.keyframeAnimator(initialValue: 0.0, trigger: model.enters) { _, progress in
-            ZStack {
-                ForEach(0..<4) { i in
-                    Bracket(radius: 6)
-                        .stroke(color, style: StrokeStyle(lineWidth: 5, lineCap: .round))
-                        .frame(width: 70, height: 70)
-                        .offset(x: -40 * (1 - progress), y: -40 * (1 - progress))
-                        .rotationEffect(.degrees(Double(i) * 90))
-                        .frame(width: 70, height: 70)
-                        .position(corner(i, size))
+        Color.clear.keyframeAnimator(initialValue: 0.0, trigger: model.enters) { _, step in
+            ModeFXScope(effect: self, value: step) { effect, progress in
+                ZStack {
+                    ForEach(0..<4) { i in
+                        Bracket(radius: 6)
+                            .stroke(effect.color, style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                            .frame(width: 70, height: 70)
+                            .offset(x: -40 * (1 - progress), y: -40 * (1 - progress))
+                            .rotationEffect(.degrees(Double(i) * 90))
+                            .frame(width: 70, height: 70)
+                            .position(effect.corner(i, size))
+                    }
                 }
+                .opacity(min(1, progress * 1.5))
+                .mask(effect.notchCutout)
             }
-            .opacity(min(1, progress * 1.5))
-            .mask(notchCutout)
         } keyframes: { _ in
             KeyframeTrack {
                 CubicKeyframe(0, duration: 0.001)
@@ -126,23 +138,27 @@ struct ModeFXView: View {
     }
 
     private var draw: some View {
-        Color.clear.keyframeAnimator(initialValue: 0.0, trigger: model.enters) { _, progress in
-            ZStack {
-                ForEach([false, true], id: \.self) { mirrored in
-                    let half = DrawnHalf(radius: radius, inset: (4 - tuck) / 2,
-                                         notchHalfWidth: notchHalfWidth, notchHeight: notchHeight)
-                    ZStack {
-                        half.trim(from: 0, to: progress)
-                            .stroke(color, style: StrokeStyle(lineWidth: 4 + tuck, lineCap: .round, lineJoin: .miter))
-                        half.trim(from: max(0, progress - 0.06), to: progress)
-                            .stroke(color, style: StrokeStyle(lineWidth: 14, lineCap: .round)).blur(radius: 8)
-                            .opacity(progress >= 1 ? 0 : 1)
+        Color.clear.keyframeAnimator(initialValue: 0.0, trigger: model.enters) { _, step in
+            ModeFXScope(effect: self, value: step) { effect, progress in
+                ZStack {
+                    ForEach([false, true], id: \.self) { mirrored in
+                        let half = DrawnHalf(radius: effect.radius, inset: (4 - effect.tuck) / 2,
+                                             notchHalfWidth: effect.notchHalfWidth, notchHeight: effect.notchHeight)
+                        ZStack {
+                            half.trim(from: 0, to: progress)
+                                .stroke(effect.color, style: StrokeStyle(lineWidth: 4 + effect.tuck, lineCap: .round,
+                                                                         lineJoin: .miter))
+                            half.trim(from: max(0, progress - 0.06), to: progress)
+                                .stroke(effect.color, style: StrokeStyle(lineWidth: 14, lineCap: .round))
+                                .blur(radius: 8)
+                                .opacity(progress >= 1 ? 0 : 1)
+                        }
+                        .scaleEffect(x: mirrored ? -1 : 1, y: 1)
                     }
-                    .scaleEffect(x: mirrored ? -1 : 1, y: 1)
+                    effect.notchFill
                 }
-                notchFill
+                .compositingGroup()
             }
-            .compositingGroup()
         } keyframes: { _ in
             KeyframeTrack {
                 CubicKeyframe(0, duration: 0.001)

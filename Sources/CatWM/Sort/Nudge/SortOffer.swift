@@ -2,7 +2,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-final class SortOffer {
+@MainActor final class SortOffer {
     static let shared = SortOffer()
     private var panel: CatWMPanel?
     private var finish: ((Bool) -> Void)?

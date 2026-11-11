@@ -31,7 +31,7 @@ struct ConfigSelector: View {
     }
 }
 
-final class PopoverFlag: ObservableObject { @Published var open = false }
+@MainActor final class PopoverFlag: ObservableObject { @Published var open = false }
 
 func configFill(for config: SavedConfig) -> Color? {
     config.colorHex.flatMap { ConfigLibrary.color(hex: $0) }

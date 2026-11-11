@@ -10,7 +10,7 @@ struct LayoutPicker: View {
     @StateObject private var model = Model()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    final class Model: ObservableObject { @Published var hovered: Layout? }
+    @MainActor final class Model: ObservableObject { @Published var hovered: Layout? }
 
     var body: some View {
         let shown = model.hovered ?? selection

@@ -2,7 +2,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-final class Tips: ObservableObject {
+@MainActor final class Tips: ObservableObject {
     static let shared = Tips()
 
     enum TipPlace: Equatable { case settings(String), menuBar, modeBar }

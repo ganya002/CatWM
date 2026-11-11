@@ -2,7 +2,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-final class MenuModel: ObservableObject {
+@MainActor final class MenuModel: ObservableObject {
     @Published var items: [MenuItem] = []
     @Published var query = "" {
         didSet { if query.first?.isWhitespace == true { query = String(query.drop(while: \.isWhitespace)) } }
@@ -15,7 +15,7 @@ final class MenuModel: ObservableObject {
     var opensLeft = true
     var close: () -> Void = {}
     var searchable = true
-    var source: () -> [MenuItem] = MenuModel.build
+    var source: @MainActor () -> [MenuItem] = MenuModel.build
 
     var openWork: DispatchWorkItem?
     var opening: String?
@@ -83,7 +83,7 @@ struct MenuItem: Identifiable {
     }
 }
 
-struct ShortcutIndex {
+@MainActor struct ShortcutIndex {
     private var mode: [String: [String]] = [:]
     private var global: [String: [String]] = [:]
     var modeName: String?

@@ -4,14 +4,14 @@ import SwiftUI
 
 extension View {
     func oContextMenu(opened: @escaping (Bool) -> Void = { _ in },
-                      items: @escaping () -> [MenuItem]) -> some View {
+                      items: @escaping @MainActor () -> [MenuItem]) -> some View {
         overlay(ContextClickView(opened: opened, items: items))
     }
 }
 
 private struct ContextClickView: NSViewRepresentable {
     let opened: (Bool) -> Void
-    let items: () -> [MenuItem]
+    let items: @MainActor () -> [MenuItem]
 
     func makeNSView(context _: Context) -> ClickView { ClickView() }
 
@@ -22,7 +22,7 @@ private struct ContextClickView: NSViewRepresentable {
 
     final class ClickView: NSView {
         var opened: (Bool) -> Void = { _ in }
-        var items: () -> [MenuItem] = { [] }
+        var items: @MainActor () -> [MenuItem] = { [] }
 
         override func hitTest(_ point: NSPoint) -> NSView? {
             guard let event = NSApp.currentEvent else { return nil }

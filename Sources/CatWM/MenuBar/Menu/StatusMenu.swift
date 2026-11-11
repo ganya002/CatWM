@@ -2,7 +2,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-final class StatusMenu: NSObject, NSWindowDelegate {
+@MainActor final class StatusMenu: NSObject, NSWindowDelegate {
     static let shared = StatusMenu()
 
     weak var button: NSStatusBarButton?

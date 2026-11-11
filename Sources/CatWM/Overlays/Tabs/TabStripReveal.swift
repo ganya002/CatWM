@@ -1,7 +1,7 @@
 import AppKit
 import CatWMKit
 
-final class TabStripReveal {
+@MainActor final class TabStripReveal {
     struct Target {
         let group: Int
         let slot: CGRect

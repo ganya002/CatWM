@@ -154,7 +154,7 @@ struct WelcomeView: View {
     }
 }
 
-final class WelcomeModel: ObservableObject {
+@MainActor final class WelcomeModel: ObservableObject {
     enum Page { case permissions, keys }
     @Published var page = Page.permissions
     @Published var accessibility = false

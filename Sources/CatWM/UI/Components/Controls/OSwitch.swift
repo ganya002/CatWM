@@ -9,7 +9,7 @@ struct OSwitch: View {
     @Environment(\.isEnabled) private var enabled
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    final class SwitchState: ObservableObject {
+    @MainActor final class SwitchState: ObservableObject {
         @Published var pressed = false
         @Published var drag: CGFloat?
     }

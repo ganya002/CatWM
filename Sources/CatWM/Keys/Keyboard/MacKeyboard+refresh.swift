@@ -61,7 +61,7 @@ extension MacKeyboard {
         guard sysctlbyname(name, nil, &size, nil, 0) == 0, size > 0 else { return nil }
         var buf = [CChar](repeating: 0, count: size)
         guard sysctlbyname(name, &buf, &size, nil, 0) == 0 else { return nil }
-        return String(cString: buf)
+        return buf.withUnsafeBufferPointer { $0.baseAddress.map(String.init(cString:)) }
     }
 
     static func registryValue(_ path: String, _ key: String) -> Any? {

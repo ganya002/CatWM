@@ -4,7 +4,7 @@ import NativeTrafficLight
 import SwiftUI
 
 extension TabStrips {
-    final class Strip {
+    @MainActor final class Strip {
         private let panel = CatWMPanel(role: .attached)
         private let model = TabStripModel()
         private let view: TabStripInput

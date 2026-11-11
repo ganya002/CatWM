@@ -28,7 +28,7 @@ struct GeneralPane: View {
                         OButton("Open Login Items", size: .small) { LoginItem.shared.openSettings() }
                     }
                 }
-                if !status.inputMonitoring && CapsLockChord.shared.isBound {
+                if !status.inputMonitoring && Hotkeys.shared.capsLockChord?.isBound == true {
                     ORow(GeneralPane.searchInputMonitoring.title,
                          description: "Needs Input Monitoring; otherwise Caps Lock waits for a hold") {
                         OButton("Allow…", size: .small) { Permissions.requestInputMonitoring() }

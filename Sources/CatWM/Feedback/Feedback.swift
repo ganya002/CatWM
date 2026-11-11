@@ -2,7 +2,7 @@ import AppKit
 import CatWMKit
 import SwiftUI
 
-final class Feedback: ObservableObject {
+@MainActor final class Feedback: ObservableObject {
     static let shared = Feedback()
 
     @Published var isOpen = false
@@ -49,7 +49,7 @@ final class Feedback: ObservableObject {
         return value.flatMap(URL.init(string:))
     }
 
-    static func sendCrash(_ crash: URL, done: @escaping (Bool) -> Void) {
+    static func sendCrash(_ crash: URL, done: @escaping @MainActor (Bool) -> Void) {
         guard let endpoint else { return done(false) }
         let summary = CrashSummary(crash)
         let title = "Crash: " + (summary?.headline ?? crash.lastPathComponent)
@@ -64,7 +64,7 @@ final class Feedback: ObservableObject {
         let crash: URL?
     }
 
-    private static func post(_ report: Report, to url: URL, done: @escaping (Bool) -> Void) {
+    private static func post(_ report: Report, to url: URL, done: @escaping @MainActor (Bool) -> Void) {
         let title = String(report.title.prefix(110))
         let body = report.body
         let log = report.log
@@ -156,7 +156,7 @@ final class Feedback: ObservableObject {
         sysctlbyname("hw.model", nil, &size, nil, 0)
         var buf = [CChar](repeating: 0, count: max(size, 1))
         sysctlbyname("hw.model", &buf, &size, nil, 0)
-        return String(cString: buf)
+        return buf.withUnsafeBufferPointer { $0.baseAddress.map(String.init(cString:)) } ?? ""
     }
 
     private static func arch() -> String {

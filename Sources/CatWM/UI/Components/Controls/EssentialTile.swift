@@ -15,7 +15,7 @@ struct EssentialTile: View {
     @StateObject private var model = Model()
     @Environment(\.isEnabled) private var enabled
 
-    final class Model: ObservableObject {
+    @MainActor final class Model: ObservableObject {
         @Published var hover = false
         @Published var count = 0
     }

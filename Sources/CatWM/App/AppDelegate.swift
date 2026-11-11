@@ -1,7 +1,7 @@
 import AppKit
 import CatWMKit
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+@MainActor final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
     private var statusUpdatePending = false
 

@@ -21,13 +21,13 @@ extension Permission {
         }
     }
 
-    func request() {
+    @MainActor func request() {
         guard !isGranted else { return }
         if self == .screenRecording { ScreenRecording.shared.watching = true }
         PermissionGuide.shared.show(self)
     }
 
-    func reset() {
+    @MainActor func reset() {
         Process.runTool("/usr/bin/tccutil", ["reset", tccService, Bundle.main.bundleIdentifier ?? "local.catwm"])
         PermissionGuide.shared.show(self)
     }
@@ -41,13 +41,13 @@ extension Permission {
     }
 }
 
-enum Permissions {
+@MainActor enum Permissions {
     static func request() { Permission.accessibility.request() }
     static func reset() { Permission.accessibility.reset() }
     static func requestInputMonitoring() { Permission.inputMonitoring.request() }
 }
 
-final class PermissionGuide {
+@MainActor final class PermissionGuide {
     static let shared = PermissionGuide()
     @MainActor private lazy var flow = PermissionFlow.makeController()
     private var kind: Permission?
