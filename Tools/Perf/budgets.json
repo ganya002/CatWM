@@ -1,0 +1,92 @@
+{
+  "device": {
+    "name": "M1 MacBook Air",
+    "calibrate": 38.5
+  },
+  "rows": {
+    "app.launch.cpu": {
+      "group": "CPU",
+      "label": "App startup CPU time /5s",
+      "unit": "ms",
+      "cap": 400
+    },
+    "app.idle.cpu": {
+      "group": "CPU",
+      "label": "App idle CPU time /s",
+      "unit": "ms",
+      "cap": 3
+    },
+    "app.idle.wakeups": {
+      "group": "CPU",
+      "label": "App idle wakeups /s",
+      "unit": "wakeups",
+      "cap": 5
+    },
+    "engine.idle.cpu": {
+      "group": "CPU",
+      "label": "Engine idle CPU time /s, 20 windows",
+      "unit": "ms",
+      "cap": 0.8
+    },
+    "engine.tile.cpu": {
+      "group": "CPU",
+      "label": "Layout pass, 50 windows",
+      "unit": "ms",
+      "cap": 25
+    },
+    "engine.action.cpu": {
+      "group": "CPU",
+      "label": "CPU time per action",
+      "unit": "ms",
+      "cap": 1.6
+    },
+    "config.load.cpu": {
+      "group": "CPU",
+      "label": "Config parse and run, first load",
+      "unit": "ms",
+      "cap": 32
+    },
+    "config.reload.cpu": {
+      "group": "CPU",
+      "label": "Config hot reload",
+      "unit": "ms",
+      "cap": 5
+    },
+    "app.idle.footprint": {
+      "group": "Memory",
+      "label": "App idle footprint",
+      "unit": "MB",
+      "cap": 40
+    },
+    "app.peak.footprint": {
+      "group": "Memory",
+      "label": "App peak footprint",
+      "unit": "MB",
+      "cap": 45
+    },
+    "engine.idle.footprint": {
+      "group": "Memory",
+      "label": "Engine idle footprint, 20 windows",
+      "unit": "MB",
+      "cap": 8
+    },
+    "engine.tile.memory": {
+      "group": "Memory",
+      "label": "Added by layout pass, 50 windows",
+      "unit": "MB",
+      "cap": 5
+    },
+    "engine.action.growth": {
+      "group": "Memory",
+      "label": "Leak check, growth over 390 actions",
+      "unit": "KB",
+      "cap": 256
+    },
+    "config.load.memory": {
+      "group": "Memory",
+      "label": "Added by config load",
+      "unit": "MB",
+      "cap": 10
+    }
+  }
+}

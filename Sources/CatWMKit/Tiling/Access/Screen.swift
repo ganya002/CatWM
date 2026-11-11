@@ -9,6 +9,12 @@ package struct Screen {
     package let isBuiltin: Bool
     package let nsScreen: NSScreen?
 
+    package init(id: CGDirectDisplayID, uuid: String, frame: CGRect, visible: CGRect, isBuiltin: Bool,
+                 nsScreen: NSScreen?) {
+        (self.id, self.uuid, self.frame, self.visible) = (id, uuid, frame, visible)
+        (self.isBuiltin, self.nsScreen) = (isBuiltin, nsScreen)
+    }
+
     package var center: CGPoint { CGPoint(x: frame.midX, y: frame.midY) }
     package var name: String { nsScreen?.localizedName ?? uuid }
 

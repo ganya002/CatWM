@@ -39,6 +39,10 @@ let package = Package(
             linkerSettings: [.unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"])],
             plugins: [.plugin(name: "CatalogPlugin")]
         ),
+        .target(name: "CatWMFakes", dependencies: ["CatWMKit"], path: "Tests/Fakes"),
+        .executableTarget(
+            name: "CatWMPerf", dependencies: ["CatWMKit", "CatWMFakes"], path: "Tools/Perf", exclude: ["budgets.json"]
+        ),
         .testTarget(
             name: "NativeTrafficLightTests",
             dependencies: ["NativeTrafficLight"],
@@ -47,14 +51,14 @@ let package = Package(
         ),
         .testTarget(
             name: "CatWMTests",
-            dependencies: ["CatWM", "CatWMKit"],
+            dependencies: ["CatWM", "CatWMKit", "CatWMFakes"],
             path: "Tests/CatWMTests",
             exclude: ["Gallery"],
             swiftSettings: testSettings
         ),
         .testTarget(
             name: "CatWMGalleryTests",
-            dependencies: ["CatWM", "CatWMKit"],
+            dependencies: ["CatWM", "CatWMKit", "CatWMFakes"],
             path: "Tests/CatWMTests/Gallery",
             swiftSettings: testSettings
         )

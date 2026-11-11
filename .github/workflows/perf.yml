@@ -1,0 +1,70 @@
+name: perf
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: perf-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  perf:
+    runs-on: xcode-27
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - run: sudo xcode-select -s /Applications/Xcode_27.2.app
+      - uses: actions/cache@v4
+        with:
+          path: .build
+          key: perf-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Package.resolved') }}
+          restore-keys: |
+            perf-${{ runner.os }}-${{ runner.arch }}-
+      - run: CATWM_INSTANCE=perf ./build.sh
+      - id: perf
+        continue-on-error: true
+        run: python3 Tools/perf.py --runs 5 --out perf.md --json perf.json
+      - if: always() && hashFiles('perf.md') != ''
+        run: cat perf.md >> "$GITHUB_STEP_SUMMARY"
+      - if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: perf
+          path: |
+            perf.md
+            perf.json
+          if-no-files-found: warn
+      - if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && hashFiles('perf.md') != ''
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs')
+            const { owner, repo } = context.repo
+            const issue_number = context.payload.pull_request.number
+            const marker = '<!-- catwm-perf -->'
+            const body = `${marker}\n${fs.readFileSync('perf.md', 'utf8')}`
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner, repo, issue_number, per_page: 100,
+            })
+            const existing = comments.find(c => c.body?.includes(marker))
+
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body })
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body })
+            }
+      - if: steps.perf.outcome == 'failure'
+        run: |
+          echo "perf: a row is over its budget, or the run failed. See the table in the job summary." >&2
+          exit 1

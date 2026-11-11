@@ -22,6 +22,11 @@ package final class WindowScanner {
         package let title: String?
         package let resizable: Bool
         package var frameRevision: Int?
+
+        package init(element: AXUIElement, frame: CGRect, title: String?, resizable: Bool, frameRevision: Int? = nil) {
+            (self.element, self.frame, self.title) = (element, frame, title)
+            (self.resizable, self.frameRevision) = (resizable, frameRevision)
+        }
     }
 
     package struct AppScan {
@@ -31,6 +36,8 @@ package final class WindowScanner {
         package var fullscreen: Set<CGWindowID> = []
         package var minimized: Set<CGWindowID> = []
         package var gone: Set<CGWindowID> = []
+
+        package init() {}
 
         package func hasNewWindows(comparedTo known: [CGWindowID: Window]) -> Bool {
             found.contains { known[$0.key] == nil && !$0.value.frame.isNull }
@@ -202,6 +209,10 @@ package struct RunningApplicationSnapshot {
     package let bundleID: String?
     package let regular: Bool
     package let hidden: Bool
+
+    package init(pid: pid_t, bundleID: String?, regular: Bool, hidden: Bool) {
+        (self.pid, self.bundleID, self.regular, self.hidden) = (pid, bundleID, regular, hidden)
+    }
 
     package static func read() -> [Self] {
         dispatchPrecondition(condition: .notOnQueue(.main))
