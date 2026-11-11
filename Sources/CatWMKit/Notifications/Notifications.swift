@@ -1,6 +1,6 @@
 import AppKit
 
-package final class Notifications: NotificationSink {
+@MainActor package final class Notifications: NotificationSink {
     package struct Change: Equatable {
         package let window: CGWindowID
         package let app: String?
@@ -129,7 +129,7 @@ package final class Notifications: NotificationSink {
         resolve()
     }
 
-    package static let messageLimit = 50
+    package nonisolated static let messageLimit = 50
 
     private func drop(_ source: String) {
         for app in apps.keys { apps[app]?[source] = nil; if apps[app]?.isEmpty == true { apps[app] = nil } }

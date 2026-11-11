@@ -11,8 +11,8 @@ package enum CommandRegistry {
 
     package static var published: [Command] { all.filter { $0.access == .public } }
 
-    package static func execute(_ name: String, _ args: [String: JSON], client: ControlConnection?,
-                                manager: WindowManager = .shared) throws -> JSON {
+    @MainActor package static func execute(_ name: String, _ args: [String: JSON], client: ControlConnection?,
+                                           manager: WindowManager = .shared) throws -> JSON {
         guard let command = command(named: name) else { throw ControlError.unknownCommand(name) }
         guard command.access != .keybindOnly else { throw ControlError.forbidden(name) }
         let call = try Invocation(args: command.validate(args), client: client, manager: manager)
@@ -94,7 +94,7 @@ package enum CommandRegistry {
         }
     ]
 
-    private static func preview(_ name: String, _ call: Invocation, _ argument: String?) throws -> JSON {
+    @MainActor private static func preview(_ name: String, _ call: Invocation, _ argument: String?) throws -> JSON {
         guard call.manager.surface.preview(name, argument.map(call.text) ?? "") else {
             throw ControlError.failed("`\(name)` needs the CatWM app")
         }

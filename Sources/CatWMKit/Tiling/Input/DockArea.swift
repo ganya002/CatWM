@@ -1,6 +1,6 @@
 import AppKit
 
-package final class DockArea {
+@MainActor package final class DockArea {
     private var bands: [CGRect]?
     private var refreshed = Date.distantPast
     private var refreshQueued = false
@@ -10,14 +10,12 @@ package final class DockArea {
 
     package init() {}
 
-    deinit { stop() }
-
     package func start() {
         refresh()
         guard screenObserver == nil else { return }
-        screenObserver = NotificationCenter.default.addObserver(
-            forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
-        ) { [weak self] _ in self?.refresh() }
+        screenObserver = NotificationCenter.default.observeOnMain(
+            NSApplication.didChangeScreenParametersNotification
+        ) { [weak self] in self?.refresh() }
     }
 
     package func stop() {

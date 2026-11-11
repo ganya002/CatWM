@@ -1,6 +1,6 @@
 import AppKit
 
-package protocol TilingSurface {
+@MainActor package protocol TilingSurface {
     func start(_ manager: WindowManager)
     func apply(_ config: Config)
 

@@ -1,11 +1,12 @@
 import AppKit
+@preconcurrency import CoreGraphics
 
-package final class DockWindowPull {
-    package var prepare: ((CGPoint) -> (() -> Void)?)?
+@MainActor package final class DockWindowPull {
+    package var prepare: ((CGPoint) -> (@MainActor @Sendable () -> Void)?)?
     package var post: (CGEvent) -> Void = { $0.post(tap: .cgSessionEventTap) }
     private var tap: CFMachPort?
     private var source: CFRunLoopSource?
-    private var pending: (down: CGEvent, action: () -> Void)?
+    private var pending: (down: CGEvent, action: @MainActor @Sendable () -> Void)?
     private var hold: DispatchWorkItem?
     private static let replayMarker: Int64 = 0x4f55_4348_444f_434b
 
@@ -19,12 +20,7 @@ package final class DockWindowPull {
                                            callback: { _, type, event, context in
             guard let context else { return Unmanaged.passUnretained(event) }
             let owner = Unmanaged<DockWindowPull>.fromOpaque(context).takeUnretainedValue()
-            if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-                owner.giveBackClick()
-                if let tap = owner.tap { CGEvent.tapEnable(tap: tap, enable: true) }
-                return Unmanaged.passUnretained(event)
-            }
-            return owner.handle(type, event) ? nil : Unmanaged.passUnretained(event)
+            return onMainThread { owner.intercept(type, event) } ? nil : Unmanaged.passUnretained(event)
         }, userInfo: Unmanaged.passUnretained(self).toOpaque()) else { return false }
         tap = port
         source = CFMachPortCreateRunLoopSource(nil, port, 0)
@@ -48,6 +44,13 @@ package final class DockWindowPull {
         guard let tap else { return }
         if !enabled { giveBackClick() }
         CGEvent.tapEnable(tap: tap, enable: enabled)
+    }
+
+    private func intercept(_ type: CGEventType, _ event: CGEvent) -> Bool {
+        guard type == .tapDisabledByTimeout || type == .tapDisabledByUserInput else { return handle(type, event) }
+        giveBackClick()
+        if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
+        return false
     }
 
     package func handle(_ type: CGEventType, _ event: CGEvent) -> Bool {

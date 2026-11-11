@@ -123,11 +123,12 @@ extension WindowManager {
 
     package func isVirtual(_ workspace: String?) -> Bool { workspace.map { !$0.hasPrefix(Self.spacePrefix) } ?? false }
 
-    package static let spacePrefix = "space:"
-    package static func spaceWorkspace(display uuid: String,
-                                       space: UInt64) -> String { "\(spacePrefix)\(uuid):\(space)" }
+    package nonisolated static let spacePrefix = "space:"
+    package nonisolated static func spaceWorkspace(display uuid: String, space: UInt64) -> String {
+        "\(spacePrefix)\(uuid):\(space)"
+    }
 
-    package static let pendingPrefix = "sort-close:"
+    package nonisolated static let pendingPrefix = "sort-close:"
     package func isPending(_ workspace: String?) -> Bool { workspace?.hasPrefix(Self.pendingPrefix) == true }
 
     @discardableResult

@@ -5,7 +5,7 @@ package struct ActionContext {
     package let arg: String
 }
 
-package struct ActionPicker {
+package struct ActionPicker: Sendable {
     package let title: String
     package let category: ActionCategory
     package let args: String
@@ -28,16 +28,16 @@ package struct ActionPicker {
     }
 }
 
-package struct WindowAction {
+package struct WindowAction: Sendable {
     package let name: String
     package let group: String
     package let summary: String
     package var args: [CommandArg] = []
     var access: CommandAccess = .public
     package var aliases: [String] = []
-    package var argument: (Invocation) -> String = { _ in "" }
+    package var argument: @Sendable (Invocation) -> String = { _ in "" }
     package var pickers: [ActionPicker] = []
-    package let run: (ActionContext) -> Void
+    package let run: @MainActor @Sendable (ActionContext) -> Void
 
     package func action(for picker: ActionPicker) -> Action {
         Action(title: picker.title, category: picker.category, dispatcher: name, args: picker.args,
@@ -45,14 +45,14 @@ package struct WindowAction {
     }
 
     package static func direction(_ name: String, _ group: String, _ summary: String, pickers: [ActionPicker] = [],
-                                  run: @escaping (ActionContext) -> Void) -> Self {
+                                  run: @escaping @MainActor @Sendable (ActionContext) -> Void) -> Self {
         Self(name: name, group: group, summary: summary,
              args: [.choice("direction", ["left", "right", "up", "down"], "Direction")],
              argument: { $0.text("direction") }, pickers: pickers, run: run)
     }
 
     package static func step(_ name: String, _ group: String, _ summary: String, pickers: [ActionPicker] = [],
-                             run: @escaping (ActionContext) -> Void) -> Self {
+                             run: @escaping @MainActor @Sendable (ActionContext) -> Void) -> Self {
         Self(name: name, group: group, summary: summary,
              args: [.choice("step", ["next", "prev"], "Which way to go. The default is `next`.", required: false)],
              argument: { $0.text("step") }, pickers: pickers, run: run)
@@ -60,7 +60,7 @@ package struct WindowAction {
 
     package static func text(_ name: String, _ group: String, _ summary: String, _ arg: CommandArg,
                              access: CommandAccess = .public, aliases: [String] = [], pickers: [ActionPicker] = [],
-                             run: @escaping (ActionContext) -> Void) -> Self {
+                             run: @escaping @MainActor @Sendable (ActionContext) -> Void) -> Self {
         Self(name: name, group: group, summary: summary, args: [arg], access: access, aliases: aliases,
              argument: { $0.text(arg.name) }, pickers: pickers, run: run)
     }

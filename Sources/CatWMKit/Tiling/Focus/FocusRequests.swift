@@ -1,7 +1,7 @@
 import CoreGraphics
 import Foundation
 
-package struct FocusRequests {
+@MainActor package struct FocusRequests {
     package struct PendingFocus {
         package let id: CGWindowID
         package let pid: pid_t
@@ -34,7 +34,7 @@ package struct FocusRequests {
     package var focusReader = FocusReader()
     package private(set) var focusObservation = 0
     package private(set) var focusReads: Set<pid_t> = []
-    package var retryRead: (@escaping () -> Void) -> Void = { read in
+    package var retryRead: (@escaping @MainActor @Sendable () -> Void) -> Void = { read in
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: read) // style-ok: a busy app sends no AX event
     }
 

@@ -1,7 +1,7 @@
 import AppKit
 import QuartzCore
 
-package final class NativeDesktopController {
+@MainActor package final class NativeDesktopController {
     package struct Request: Equatable {
         package let workspace: String
         package let display: String
@@ -22,8 +22,8 @@ package final class NativeDesktopController {
     private var gestureEnded = true
     private var gestureProgress = 0.0
     private var requestedAt: CFTimeInterval = 0
-    @MainActor private var timing: DesktopTransitionTiming?
-    @MainActor private var warmGuard: DesktopGuardClient?
+    private var timing: DesktopTransitionTiming?
+    private var warmGuard: DesktopGuardClient?
 
     package func request(_ target: Request, since start: CFTimeInterval = CACurrentMediaTime()) {
         requested = target
@@ -77,7 +77,7 @@ package final class NativeDesktopController {
         }
     }
 
-    @MainActor private func transition(_ target: Request, since start: CFTimeInterval) async throws {
+    private func transition(_ target: Request, since start: CFTimeInterval) async throws {
         let timing = DesktopTransitionTiming(since: start)
         self.timing = timing; timing.checkpoint("queue")
         guard let screen = Screen.all().first(where: { $0.uuid == target.display }) else {
@@ -130,8 +130,8 @@ package final class NativeDesktopController {
         if Spaces.current(display: target.display) == target.space { onSettled(target, true) }
     }
 
-    @MainActor private func prepareWhileGuarding(_ target: Request, _ state: DesktopGuard.Context,
-                                                 _ recovery: DesktopGuardClient) async throws {
+    private func prepareWhileGuarding(_ target: Request, _ state: DesktopGuard.Context,
+                                      _ recovery: DesktopGuardClient) async throws {
         let launch = Task { @MainActor in try await recovery.start(state) }
         var preparation: Error?
         do { try await prepare(target) } catch { preparation = error }
@@ -139,8 +139,8 @@ package final class NativeDesktopController {
         if let preparation { try? await release(recovery); throw preparation }
     }
 
-    @MainActor private func compose(_ state: DesktopGuard.Context, screen: Screen, forward desktopOrder: Bool,
-                                    target: Request, recovery: DesktopGuardClient) async throws {
+    private func compose(_ state: DesktopGuard.Context, screen: Screen, forward desktopOrder: Bool,
+                         target: Request, recovery: DesktopGuardClient) async throws {
         let fresh = DesktopMenuBar.isFresh(state.destination)
         DesktopWallpaperCover.shared.prepare(on: screen, source: state.source, target: state.destination, fresh: fresh)
         let forward = isForward(state.source, state.destination, desktopOrder)
@@ -192,9 +192,9 @@ package final class NativeDesktopController {
         }
     }
 
-    @MainActor private func activate(_ state: DesktopGuard.Context, menu: DesktopMenuBarLease?,
-                                     wallpaper: DesktopWallpaperCover.Lease?,
-                                     screen: Screen, target: Request) async throws {
+    private func activate(_ state: DesktopGuard.Context, menu: DesktopMenuBarLease?,
+                          wallpaper: DesktopWallpaperCover.Lease?,
+                          screen: Screen, target: Request) async throws {
         let batch = WindowServerUpdates.shared.begin()
         if let menu, DesktopMenuBarNative.theme(state.destination) == menu.state.theme { menu.restore() }
         try check(DesktopBridge.setVisible([state.source], false), "Cannot hide the source Desktop")
@@ -209,14 +209,14 @@ package final class NativeDesktopController {
         await menu?.finish()
     }
 
-    @MainActor private func prepareMenuBar(_ state: DesktopGuard.Context, on screen: Screen,
-                                           recovery: DesktopGuardClient) async throws -> DesktopMenuBarLease? {
+    private func prepareMenuBar(_ state: DesktopGuard.Context, on screen: Screen,
+                                recovery: DesktopGuardClient) async throws -> DesktopMenuBarLease? {
         guard DesktopMenuBar.needsPreparation(source: state.source, target: state.destination) else { return nil }
         let cover = DesktopMenuBarCover.shared
-        async let image = cover.capture(on: screen, source: state.source, target: state.destination)
+        let image = Task { await cover.capture(on: screen, source: state.source, target: state.destination) }
         let background = await DesktopMenuBar.ready(source: state.source, target: state.destination, screen: screen)
         timing?.checkpoint("menu-ready")
-        guard let background else { DesktopMenuBarCover.shared.recycle(await image); return nil }
+        guard let background else { DesktopMenuBarCover.shared.recycle(await image.value); return nil }
         do {
             try background.persist()
             var guarded = state
@@ -227,11 +227,11 @@ package final class NativeDesktopController {
                 throw DesktopTransitionError.check("Cannot prepare the Desktop background")
             }
         } catch {
-            background.restore(); DesktopMenuBarCover.shared.recycle(await image)
+            background.restore(); DesktopMenuBarCover.shared.recycle(await image.value)
             throw error
         }
         timing?.checkpoint("menu-guard")
-        let panel = await image
+        let panel = await image.value
         timing?.checkpoint("menu-cover")
         if panel == nil {
             Log.info("native workspaces: no menu bar cover, screen recording "
@@ -243,7 +243,7 @@ package final class NativeDesktopController {
 
     private enum Retarget: Error { case changed }
 
-    @MainActor private func swipe(to target: Request) async throws {
+    private func swipe(to target: Request) async throws {
         let deadline = ProcessInfo.processInfo.systemUptime + 5
         func remaining() -> TimeInterval { deadline - ProcessInfo.processInfo.systemUptime }
         while Spaces.current(display: target.display) != target.space {
@@ -264,7 +264,7 @@ package final class NativeDesktopController {
 }
 
 extension NativeDesktopController {
-    @MainActor private func apply(_ state: DesktopGuard.Context, width: CGFloat, progress: Double) throws {
+    private func apply(_ state: DesktopGuard.Context, width: CGFloat, progress: Double) throws {
         let pose = min(1, max(0, progress))
         if pose > 0 { timing?.motion() }
         try check(DesktopBridge.transform(state.destination, x: (pose - 1) * width,
@@ -287,7 +287,7 @@ extension NativeDesktopController {
         if !condition { throw DesktopTransitionError.check(message) }
     }
 
-    @MainActor package func prewarmGuard() {
+    package func prewarmGuard() {
         guard guarded else { return }
         DesktopWallpaperCover.shared.prepare()
         guard warmGuard?.process.isRunning != true else { return }
@@ -295,13 +295,13 @@ extension NativeDesktopController {
         if (try? client.launch()) != nil { warmGuard = client }
     }
 
-    @MainActor private func acquireGuard() -> DesktopGuardClient {
+    private func acquireGuard() -> DesktopGuardClient {
         defer { warmGuard = nil }
         if let warmGuard, warmGuard.process.isRunning { return warmGuard }
         return DesktopGuardClient()
     }
 
-    @MainActor private func release(_ recovery: DesktopGuardClient) async throws {
+    private func release(_ recovery: DesktopGuardClient) async throws {
         try await recovery.release()
         if warmGuard?.process.isRunning != true {
             warmGuard = recovery

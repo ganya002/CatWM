@@ -1,6 +1,7 @@
 import AppKit
+import os
 
-package final class ControlServer {
+package final class ControlServer: Sendable {
     package static let shared = ControlServer()
 
     package static var socketPath: String {
@@ -14,31 +15,40 @@ package final class ControlServer {
                 "pid": .int(Int(getpid()))]
     }
 
+    private struct State {
+        var listener: DispatchSourceRead?
+        var clients: [ObjectIdentifier: ControlConnection] = [:]
+    }
+
     private let manager: WindowManager?
+    private let queue = DispatchQueue(label: "catwm.control.accept", qos: .userInitiated)
+    private let state = OSAllocatedUnfairLock(initialState: State())
 
     package init(manager: WindowManager? = nil) { self.manager = manager }
 
-    private let queue = DispatchQueue(label: "catwm.control.accept", qos: .userInitiated)
-    private var listener: DispatchSourceRead?
-    private var clients: [ObjectIdentifier: ControlConnection] = [:]
-
     package func start(path: String = ControlServer.socketPath) {
-        guard listener == nil else { return }
+        guard state.withLock({ $0.listener == nil }) else { return }
         guard let descriptor = Self.listen(on: path) else { return }
         let source = DispatchSource.makeReadSource(fileDescriptor: descriptor, queue: queue)
         source.setEventHandler { [weak self] in self?.accept(descriptor) }
         source.setCancelHandler { Darwin.close(descriptor); unlink(path) }
-        listener = source
+        state.withLock { $0.listener = source }
         source.resume()
         Log.info("control: listening on \(path)")
     }
 
     package func stop() {
+        let listener = state.withLock { state in
+            defer { state.listener = nil }
+            return state.listener
+        }
         listener?.cancel()
-        listener = nil
         queue.async { [self] in
-            clients.values.forEach { $0.close() }
-            clients = [:]
+            let closing = state.withLock { state in
+                defer { state.clients = [:] }
+                return Array(state.clients.values)
+            }
+            closing.forEach { $0.close() }
         }
     }
 
@@ -51,15 +61,18 @@ package final class ControlServer {
                 connection.send(Self.reply(to: line, client: connection, manager: manager ?? .shared))
             }
         }, onClose: { [weak self] connection in
-            self?.queue.async { self?.clients[ObjectIdentifier(connection)] = nil }
+            self?.queue.async { [weak self] in
+                self?.state.withLock { _ = $0.clients.removeValue(forKey: ObjectIdentifier(connection)) }
+            }
             DispatchQueue.main.async { EventBus.shared.remove(connection) }
         })
-        clients[ObjectIdentifier(connection)] = connection
+        state.withLock { $0.clients[ObjectIdentifier(connection)] = connection }
         connection.start()
         connection.send(JSON.object(["hello": Self.hello]).encoded() + Data("\n".utf8))
     }
 
-    package static func reply(to line: Data, client: ControlConnection?, manager: WindowManager = .shared) -> Data {
+    @MainActor package static func reply(to line: Data, client: ControlConnection?,
+                                         manager: WindowManager = .shared) -> Data {
         var id = JSON.null
         let response: JSON
         do {

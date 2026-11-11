@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 package enum Log {
     package static let url = NSClassFromString("XCTestCase") == nil
@@ -9,31 +10,35 @@ package enum Log {
     package static let maxSize = 2_000_000
     package static let keptSize = 500_000
 
-    private final class File {
-        package let lock = NSLock()
-        package let handle: FileHandle?
-        package var launchOffset: UInt64
-        package var size: UInt64
-        package var verbose = false
+    private struct FileState {
+        var launchOffset: UInt64
+        var size: UInt64
+        var verbose = false
+    }
 
-        package init() {
+    private final class File: Sendable {
+        let handle: FileHandle?
+        let state: OSAllocatedUnfairLock<FileState>
+
+        init() {
             let fileManager = FileManager.default
             if let size = (try? fileManager.attributesOfItem(atPath: url.path))?[.size] as? Int, size > maxSize,
                let data = fileManager.contents(atPath: url.path) {
                 try? tail(of: data).write(to: url)
             }
             if !fileManager.fileExists(atPath: url.path) { fileManager.createFile(atPath: url.path, contents: nil) }
-            handle = try? FileHandle(forWritingTo: url)
-            launchOffset = (try? handle?.seekToEnd()) ?? 0
-            size = launchOffset
+            let handle = try? FileHandle(forWritingTo: url)
+            let offset = (try? handle?.seekToEnd()) ?? 0
+            self.handle = handle
+            state = OSAllocatedUnfairLock(initialState: FileState(launchOffset: offset, size: offset))
         }
     }
 
     private static let file = File()
 
     package static var verbose: Bool {
-        get { file.lock.withLock { file.verbose } }
-        set { file.lock.withLock { file.verbose = newValue } }
+        get { file.state.withLock { $0.verbose } }
+        set { file.state.withLock { $0.verbose = newValue } }
     }
 
     package static func tail(of data: Data) -> Data {
@@ -44,7 +49,7 @@ package enum Log {
     }
 
     package static func beforeLaunch() -> String {
-        let offset = file.lock.withLock { file.launchOffset }
+        let offset = file.state.withLock { $0.launchOffset }
         guard let data = FileManager.default.contents(atPath: url.path) else { return "" }
         return String(decoding: data.prefix(Int(offset)), as: Unicode.UTF8.self)
     }
@@ -65,20 +70,20 @@ package enum Log {
     private static func write(_ message: String) {
         let line = Data("\(time.string(from: Date())) \(message)\n".utf8)
         guard let handle = file.handle else { return }
-        file.lock.withLock {
-            if file.size > UInt64(maxSize) { trim(handle) }
+        file.state.withLock { state in
+            if state.size > UInt64(maxSize) { trim(handle, &state) }
             try? handle.write(contentsOf: line)
-            file.size += UInt64(line.count)
+            state.size += UInt64(line.count)
         }
     }
 
-    private static func trim(_ handle: FileHandle) {
+    private static func trim(_ handle: FileHandle, _ state: inout FileState) {
         guard let data = FileManager.default.contents(atPath: url.path) else { return }
         let kept = tail(of: data)
         try? handle.truncate(atOffset: 0)
         try? handle.write(contentsOf: kept)
         let removed = UInt64(data.count - kept.count)
-        file.launchOffset = file.launchOffset > removed ? file.launchOffset - removed : 0
-        file.size = UInt64(kept.count)
+        state.launchOffset = state.launchOffset > removed ? state.launchOffset - removed : 0
+        state.size = UInt64(kept.count)
     }
 }

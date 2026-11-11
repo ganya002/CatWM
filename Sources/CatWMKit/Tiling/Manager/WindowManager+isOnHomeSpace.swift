@@ -1,4 +1,5 @@
 import AppKit
+import os
 
 package struct FloatState {
     package var floatFrames: [CGWindowID: CGRect] = [:]
@@ -124,10 +125,11 @@ extension WindowManager {
         return CGRect(x: x, y: target.minY, width: target.width, height: target.height)
     }
 
-    package func restoreHiddenWindows(completion: (() -> Void)? = nil) {
+    package func restoreHiddenWindows(completion: (@MainActor @Sendable () -> Void)? = nil) {
         cancelFocusRequest()
-        let deliver = {
-            if let completion { RunLoop.main.perform(inModes: [.common, .modalPanel]) { completion() } }
+        let deliver: @Sendable () -> Void = {
+            guard let completion else { return }
+            RunLoop.main.perform(inModes: [.common, .modalPanel]) { onMainThread { completion() } }
         }
         guard config.virtualWorkspaces || !shown.isEmpty else { deliver(); return }
         let screens = backend.screens()
@@ -150,12 +152,11 @@ extension WindowManager {
         }
         Log.info("workspaces: queued parked windows for restoration")
         if completion != nil {
-            let lock = NSLock()
-            var finished = false
-            let finish = {
-                let first = lock.withLock {
-                    guard !finished else { return false }
-                    finished = true
+            let finished = OSAllocatedUnfairLock(initialState: false)
+            let finish: @Sendable () -> Void = {
+                let first = finished.withLock { done in
+                    guard !done else { return false }
+                    done = true
                     return true
                 }
                 guard first else { return }

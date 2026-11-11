@@ -37,10 +37,13 @@ extension WindowManager {
             guard list || known[pid] != nil else { continue }
             jobs.append(.init(pid: pid, listWindows: list, known: known[pid] ?? [:]))
         }
-        let refresh: () -> Void = { [weak self] in self?.refresh() }
-        let readAll: ((Bool) -> Void)? = scanWaiters.isEmpty ? nil : { [weak self] all in
-            guard let self else { return }
-            if all { finishScan(request) } else { scanner.whenIdle { [weak self] in self?.scanAndRefresh() } }
+        let refresh: @MainActor () -> Void = { [weak self] in self?.refresh() }
+        var readAll: (@MainActor (Bool) -> Void)?
+        if !scanWaiters.isEmpty {
+            readAll = { [weak self] all in
+                guard let self else { return }
+                if all { finishScan(request) } else { scanner.whenIdle { [weak self] in self?.scanAndRefresh() } }
+            }
         }
         scanner.scan(jobs, done: refresh, updated: refresh, readAll: readAll)
     }

@@ -51,10 +51,11 @@ package enum NativeSpaceMove {
         return true
     }
 
-    private static let synchronousAddress: UnsafeMutableRawPointer? = {
+    private static let synchronousAddress: UInt? = {
         let name = "__ZL54_SLSPerformSynchronousBridgedWindowManagementOperation"
             + "P46SLSSynchronousBridgedWindowManagementOperation"
-        return dlsym(UnsafeMutableRawPointer(bitPattern: -2), String(name.dropFirst())) ?? localSymbol(name)
+        let address = dlsym(UnsafeMutableRawPointer(bitPattern: -2), String(name.dropFirst())) ?? localSymbol(name)
+        return address.map { UInt(bitPattern: $0) }
     }()
 
     package static func isDisplayIdle(_ display: String) -> Bool {
@@ -76,7 +77,8 @@ package enum NativeSpaceMove {
     ) -> AnyObject? {
         typealias Perform = @convention(c) (UnsafeMutableRawPointer) -> Unmanaged<AnyObject>?
         let selector = NSSelectorFromString(nameOfSelector)
-        guard let binding, let address = synchronousAddress, let type = NSClassFromString(name),
+        guard let binding, let bits = synchronousAddress,
+              let address = UnsafeMutableRawPointer(bitPattern: bits), let type = NSClassFromString(name),
               let method = class_getInstanceMethod(type, selector),
               let allocated = binding.allocate(type, allocate),
               let operation = initialize(allocated, selector, method_getImplementation(method)) else { return nil }
@@ -185,15 +187,15 @@ package enum NativeSpaceMove {
     }
 }
 
-package struct WindowSpaceMove {
+@MainActor package struct WindowSpaceMove {
     package var membership: () -> [UInt64]
     package var submit: () -> Bool
     package var isOnScreen: () -> Bool
     package var now: () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }
-    package var schedule: (TimeInterval, @escaping () -> Void) -> Void = { delay, work in
+    package var schedule: (TimeInterval, @escaping @MainActor () -> Void) -> Void = { delay, work in
         DispatchQueue.main.asyncAfter( // style-ok: polls Space membership, which has no event
-            deadline: .now() + delay, execute: work
-        )
+            deadline: .now() + delay
+        ) { work() }
     }
 
     package func run(to target: UInt64, waitUntilOnScreen: Bool, completion: @escaping (Bool) -> Void) {
@@ -203,7 +205,7 @@ package struct WindowSpaceMove {
         guard arrived || submit() else { completion(false); return }
         let deadline = now() + 0.5
         var retries = 0
-        func check() {
+        @MainActor func check() {
             if membership() == [target], !waitUntilOnScreen || isOnScreen() { completion(true); return }
             let remaining = deadline - now()
             guard remaining > 0 else { completion(false); return }

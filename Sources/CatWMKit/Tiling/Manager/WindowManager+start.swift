@@ -92,33 +92,36 @@ extension WindowManager {
     }
 
     private func observe(_ name: Notification.Name, in center: NotificationCenter,
-                         _ handler: @escaping (Notification) -> Void) {
-        notificationObservers.append((center, center.addObserver(forName: name, object: nil, queue: .main,
-                                                                  using: handler)))
+                         _ handler: @escaping @MainActor () -> Void) {
+        notificationObservers.append((center, center.observeOnMain(name, handler)))
+    }
+
+    private func observeApplication(_ name: Notification.Name, in center: NotificationCenter,
+                                    _ handler: @escaping @MainActor (NSRunningApplication?) -> Void) {
+        let payload: @Sendable (Notification) -> NSRunningApplication? = {
+            $0.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
+        }
+        notificationObservers.append((center, center.observeOnMain(name, payload: payload, handler: handler)))
     }
 
     private func observeApplicationNotifications() {
         let center = NSWorkspace.shared.notificationCenter
-        observe(NSWorkspace.didLaunchApplicationNotification, in: center) { [weak self] notification in
-            guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
-            else { return }
+        observeApplication(NSWorkspace.didLaunchApplicationNotification, in: center) { [weak self] app in
+            guard let app else { return }
             self?.applicationLaunched(app)
         }
-        observe(NSWorkspace.didTerminateApplicationNotification, in: center) { [weak self] notification in
-            guard let self,
-                  let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
-            else { return }
+        observeApplication(NSWorkspace.didTerminateApplicationNotification, in: center) { [weak self] app in
+            guard let self, let app else { return }
             applicationTerminated(app.processIdentifier)
         }
-        observe(NSWorkspace.willPowerOffNotification, in: center) { [weak self] _ in
+        observe(NSWorkspace.willPowerOffNotification, in: center) { [weak self] in
             Log.info("recovery: macOS is logging out or shutting down; keeping the state of quitting apps")
             self?.poweringOffAt = Date()
         }
         for name in [NSWorkspace.didHideApplicationNotification, NSWorkspace.didUnhideApplicationNotification] {
-            observe(name, in: center) { [weak self] _ in self?.scheduleRefresh() }
+            observe(name, in: center) { [weak self] in self?.scheduleRefresh() }
         }
-        observe(NSWorkspace.didActivateApplicationNotification, in: center) { [weak self] note in
-            let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
+        observeApplication(NSWorkspace.didActivateApplicationNotification, in: center) { [weak self] app in
             if let self, let echo = focusRequests.focusEcho, echo.matches(app?.processIdentifier),
                let window = windows[echo.id] {
                 focus(window, warp: false)
@@ -169,7 +172,7 @@ extension WindowManager {
 
     private func observeSpaceAndScreenNotifications() {
         let center = NSWorkspace.shared.notificationCenter
-        observe(NSWorkspace.activeSpaceDidChangeNotification, in: center) { [weak self] _ in
+        observe(NSWorkspace.activeSpaceDidChangeNotification, in: center) { [weak self] in
             guard let self else { return }
             scheduleRefresh(after: 0.15)
             if !config.virtualWorkspaces, config.enablesLayoutHUDOnSpaceChange, config.enablesLayoutHUD,
@@ -177,14 +180,14 @@ extension WindowManager {
                 surface.showHUD(state(for: screen).layout.title, layout: state(for: screen).layout, on: screen.nsScreen)
             }
         }
-        observe(NSApplication.didChangeScreenParametersNotification, in: .default) { [weak self] _ in
+        observe(NSApplication.didChangeScreenParametersNotification, in: .default) { [weak self] in
             self?.scheduleRefresh(after: 0.4)
         }
         observeLock()
     }
 
     private func observeLock() {
-        let leave: (Notification) -> Void = { [weak self] _ in self?.surface.leaveMode() }
+        let leave: @MainActor () -> Void = { [weak self] in self?.surface.leaveMode() }
         for name in [NSWorkspace.screensDidSleepNotification, NSWorkspace.sessionDidResignActiveNotification] {
             observe(name, in: NSWorkspace.shared.notificationCenter, leave)
         }

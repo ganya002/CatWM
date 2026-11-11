@@ -90,11 +90,11 @@ extension WindowManager {
         }
     }
 
-    package func dispatch(_ dispatcher: String, _ rawArg: String) {
+    @MainActor package func dispatch(_ dispatcher: String, _ rawArg: String) {
         dispatch(dispatcher, rawArg, inMode: surface.inMode)
     }
 
-    package func dispatch(_ dispatcher: String, _ rawArg: String, inMode: Bool) {
+    @MainActor package func dispatch(_ dispatcher: String, _ rawArg: String, inMode: Bool) {
         if let refusal = scopeRefusal(dispatcher) {
             Log.info(refusal)
             return

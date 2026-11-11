@@ -1,4 +1,5 @@
 import AppKit
+@preconcurrency import ApplicationServices
 
 extension WindowManager {
     package func observe(_ app: NSRunningApplication) {
@@ -226,7 +227,8 @@ extension WindowManager {
 
 package func axCallback(_: AXObserver, _ element: AXUIElement, _ notification: CFString,
                         _: UnsafeMutableRawPointer?) {
-    WindowManager.shared.handle(notification as String, element)
+    let name = notification as String
+    onMainThread { WindowManager.shared.handle(name, element) }
 }
 
 extension WindowManager {

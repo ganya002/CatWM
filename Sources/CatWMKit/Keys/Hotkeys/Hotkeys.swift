@@ -1,11 +1,11 @@
 import AppKit
 
-package final class Hotkeys {
+@MainActor package final class Hotkeys {
     package static let shared = Hotkeys()
-    package static let syntheticMarker: Int64 = 0x4859_5052
+    package nonisolated static let syntheticMarker: Int64 = 0x4859_5052
 
     package var handler: ((KeyBinding) -> Void)?
-    package static let didFire = Notification.Name("OuchHotkeyDidFire")
+    package nonisolated static let didFire = Notification.Name("OuchHotkeyDidFire")
     package var paused = false
     package var textInputActive = false
     package var tables: [String: [UInt64: KeyBinding]] = [:]
@@ -13,7 +13,7 @@ package final class Hotkeys {
     package var onSubmapChange: ((String) -> Void)?
     package var onWindowModeClick: ((CGPoint) -> Bool)?
     package var onFlagsChanged: ((CGEventFlags) -> Void)?
-    package var onHelpKey: (() -> Void)?
+    package var onHelpKey: (@MainActor @Sendable () -> Void)?
     package var onReturn: (() -> Bool)?
     package var onEscape: (() -> Bool)?
     package var onMenuKey: ((_ code: UInt16, _ flags: CGEventFlags, _ isRepeat: Bool) -> Bool)?
@@ -22,19 +22,23 @@ package final class Hotkeys {
     package var heldChord: CGEventFlags = []
     package var tap: CFMachPort?
     package var capsLock = false
-    package var capsLockChord: CapsLockChord? { capsLock ? .shared : nil }
+    package var input = GlobalInput(scope: nil, keys: nil)
+    package var mainMod: CGEventFlags = .maskAlternate
+    package var helpKey = "?"
+    package lazy var chord = CapsLockChord(hotkeys: self)
+    package var capsLockChord: CapsLockChord? { capsLock ? chord : nil }
     package var swipeMonitor: Any?
     package var scrollAccum: [Int: Double] = [:]
     package var lastScrollFire: [Int: TimeInterval] = [:]
 
     package enum Match { case bind(KeyBinding), swallow, pass }
 
-    package static let scrollStep = 40.0
+    package nonisolated static let scrollStep = 40.0
 
     package var isActive: Bool { tap.map { CGEvent.tapIsEnabled(tap: $0) } ?? false }
 
-    package static let tapMods: CGEventFlags = [.maskCommand, .maskAlternate, .maskControl, .maskShift]
-    package static let tapLimit = 0.35
+    package nonisolated static let tapMods: CGEventFlags = [.maskCommand, .maskAlternate, .maskControl, .maskShift]
+    package nonisolated static let tapLimit = 0.35
     package var modeChord: CGEventFlags = []
     package var lastMods: CGEventFlags = []
     package var tapDown: TapDown?

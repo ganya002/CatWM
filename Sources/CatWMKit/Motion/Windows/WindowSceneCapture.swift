@@ -27,7 +27,7 @@ package struct WindowSceneCapture {
     private static let windowOwner: Integer? = symbol("SLSGetWindowOwner")
     private static let windowLevel: Integer? = symbol("SLSGetWindowLevel")
 
-    private final class Session {
+    private final class Session: Sendable {
         package let connection: Int32
         package init?() {
             guard let newConnection, releaseConnection != nil else { return nil }
@@ -79,7 +79,7 @@ package struct WindowSceneCapture {
         guard unchanged() else { return nil }
         let ordered = ids.filter { frames[$0] != nil }
         let sources = Array(frames.values)
-        func image(_ ids: [CGWindowID], in rect: CGRect) -> CGImage? {
+        @Sendable func image(_ ids: [CGWindowID], in rect: CGRect) -> CGImage? {
             guard !ids.isEmpty else { return nil }
             let result = ids.withUnsafeBufferPointer { buffer -> Unmanaged<CFArray>? in
                 guard let base = buffer.baseAddress else { return nil }
@@ -93,8 +93,9 @@ package struct WindowSceneCapture {
             let region = sources.filter { $0.intersects(screen.frame) }.reduce(CGRect.null) { $0.union($1) }
             let results = OSAllocatedUnfairLock(initialState: [Int: CGImage]())
             let backgroundIDs = ids.filter { frames[$0] == nil && !excluded.contains($0) }
+            let screenFrame = screen.frame
             DispatchQueue.concurrentPerform(iterations: 2) { index in
-                if let captured = image(index == 0 ? ordered : backgroundIDs, in: index == 0 ? region : screen.frame) {
+                if let captured = image(index == 0 ? ordered : backgroundIDs, in: index == 0 ? region : screenFrame) {
                     results.withLock { $0[index] = captured }
                 }
             }

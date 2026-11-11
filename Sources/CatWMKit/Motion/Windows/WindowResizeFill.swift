@@ -1,7 +1,7 @@
 import AppKit
 import QuartzCore
 
-package final class WindowResizeFill {
+@MainActor package final class WindowResizeFill {
     private let panel: CatWMPanel
     private let root = CALayer()
     private let fill = CALayer()
@@ -18,7 +18,7 @@ package final class WindowResizeFill {
     private let appearance: WindowFillAppearance
     private let window: CGWindowID
     private var dismiss: DismissMonitor?
-    package var onDismiss: (() -> Void)?
+    package var onDismiss: (@MainActor () -> Void)?
 
     package var windowID: CGWindowID { CGWindowID(panel.windowNumber) }
 
@@ -167,5 +167,11 @@ package final class WindowResizeFill {
         panel.orderOut(nil)
     }
 
-    deinit { close() }
+    deinit {
+        let panel = panel, dismiss = dismiss
+        DispatchQueue.main.async {
+            dismiss?.stop()
+            panel.orderOut(nil)
+        }
+    }
 }

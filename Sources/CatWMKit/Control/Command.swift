@@ -31,7 +31,7 @@ package struct CommandArg {
     }
 }
 
-package struct Field {
+package struct Field: Sendable {
     package let name: String
     package let type: String
     package let summary: String
@@ -72,14 +72,14 @@ package struct Invocation {
     package func text(_ name: String) -> String { args[name]?.string ?? "" }
 }
 
-package struct Command {
+package struct Command: Sendable {
     package let name: String
     package let group: String
     package let summary: String
     package var args: [CommandArg] = []
     package var result = ResultShape.none
     package var access = CommandAccess.public
-    package let run: (Invocation) throws -> JSON
+    package let run: @MainActor @Sendable (Invocation) throws -> JSON
 
     package func validate(_ given: [String: JSON]) throws -> [String: JSON] {
         for key in given.keys where !args.contains(where: { $0.name == key }) {

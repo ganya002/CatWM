@@ -1,26 +1,21 @@
 import AppKit
 
-package final class WindowManager {
-    private final class Slot {
-        private let lock = NSLock()
-        private var installed: WindowManager?
-        private var standalone: WindowManager?
+@MainActor package final class WindowManager {
+    @MainActor private final class Slot {
+        var installed: WindowManager?
+        var standalone: WindowManager?
 
         var manager: WindowManager {
-            lock.withLock {
-                if let manager = installed ?? standalone { return manager }
-                let manager = WindowManager(config: ConfigStore.shared.load(), scope: Instance.scope)
-                standalone = manager
-                return manager
-            }
+            if let manager = installed ?? standalone { return manager }
+            let manager = WindowManager(config: ConfigStore.shared.load(), scope: Instance.scope)
+            standalone = manager
+            return manager
         }
-
-        func install(_ manager: WindowManager) { lock.withLock { installed = manager } }
     }
 
     private static let slot = Slot()
     package static var shared: WindowManager { slot.manager }
-    package static func install(_ manager: WindowManager) { slot.install(manager) }
+    package static func install(_ manager: WindowManager) { slot.installed = manager }
 
     package let backend: any WindowBackend
     package let scope: WindowScope?

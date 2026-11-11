@@ -1,21 +1,21 @@
 import AppKit
 
-package final class DesktopMenuBarCover {
+@MainActor package final class DesktopMenuBarCover {
     package static let shared = DesktopMenuBarCover()
     private typealias Capture = @convention(c) (CGDirectDisplayID, CGRect) -> Unmanaged<CGImage>?
     private typealias Connection = @convention(c) (Int32, UnsafeMutablePointer<Int32>) -> Int32
     private typealias CaptureWindows = @convention(c) (
         Int32, UnsafePointer<UInt32>, Int32, UInt32, CGRect
     ) -> Unmanaged<CFArray>?
-    private static let captureImage: Capture? = symbol(
+    private nonisolated static let captureImage: Capture? = symbol(
         "CGDisplayCreateImageForRect", in: "/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics")
-    private static let newConnection: Connection? = symbol("SLSNewConnection")
-    private static let connection: Int32? = {
+    private nonisolated static let newConnection: Connection? = symbol("SLSNewConnection")
+    private nonisolated static let connection: Int32? = {
         var connection: Int32 = 0
         guard let newConnection, newConnection(0, &connection) == 0, connection != 0 else { return nil }
         return connection
     }()
-    private static let captureWindows: CaptureWindows? = symbol("SLSHWCaptureWindowListInRect")
+    private nonisolated static let captureWindows: CaptureWindows? = symbol("SLSHWCaptureWindowListInRect")
 
     package func prepare() {
         let display = CGMainDisplayID()
@@ -51,10 +51,10 @@ package final class DesktopMenuBarCover {
             _ = NativeSpaceMove.move(window: CGWindowID(panel.windowNumber), to: target)
         }
     }
-    @MainActor private var pending: Pending?
-    @MainActor private var spare: CatWMPanel?
+    private var pending: Pending?
+    private var spare: CatWMPanel?
 
-    @MainActor package func begin(on screen: Screen, source: UInt64, target: UInt64) {
+    package func begin(on screen: Screen, source: UInt64, target: UInt64) {
         if let pending, pending.display == screen.id, pending.source == source, pending.isFresh {
             pending.move(to: target)
             return
@@ -70,7 +70,7 @@ package final class DesktopMenuBarCover {
         }
     }
 
-    @MainActor package func capture(on screen: Screen, source: UInt64, target: UInt64) async -> CatWMPanel? {
+    package func capture(on screen: Screen, source: UInt64, target: UInt64) async -> CatWMPanel? {
         guard let early = pending, early.display == screen.id, early.source == source, early.isFresh else {
             discard()
             guard let task = Self.image(on: screen), let image = await task.value else { return nil }
@@ -82,7 +82,7 @@ package final class DesktopMenuBarCover {
         return await show(image, in: early.panel, screen: screen, source: source, target: target)
     }
 
-    @MainActor private func discard() {
+    private func discard() {
         pending?.image.cancel()
         recycle(pending?.panel)
         pending = nil
@@ -93,7 +93,7 @@ package final class DesktopMenuBarCover {
         return nsScreen.frame.maxY - nsScreen.visibleFrame.maxY
     }
 
-    @MainActor private static func image(on screen: Screen) -> Task<CGImage?, Never>? {
+    private static func image(on screen: Screen) -> Task<CGImage?, Never>? {
         let height = menuHeight(screen)
         guard height > 0, let captureImage else { return nil }
         let id = screen.id, rect = CGRect(x: 0, y: 0, width: screen.frame.width, height: height)
@@ -104,7 +104,7 @@ package final class DesktopMenuBarCover {
         }
     }
 
-    private static func windowsImage(in rect: CGRect) -> CGImage? {
+    private nonisolated static func windowsImage(in rect: CGRect) -> CGImage? {
         guard let connection, let captureWindows,
               let list = CGWindowListCopyWindowInfo(.optionOnScreenOnly, kCGNullWindowID) as? [[String: Any]] else {
             return nil
@@ -129,12 +129,12 @@ package final class DesktopMenuBarCover {
         return CGRect(x: frame.minX, y: frame.maxY - height, width: screen.frame.width, height: height)
     }
 
-    @MainActor package func prewarm(on screen: Screen) {
+    package func prewarm(on screen: Screen) {
         guard spare == nil, Self.menuHeight(screen) > 0 else { return }
         spare = Self.makePanel(frame: Self.panelFrame(on: screen))
     }
 
-    @MainActor package func panel(on screen: Screen) -> CatWMPanel {
+    package func panel(on screen: Screen) -> CatWMPanel {
         let frame = Self.panelFrame(on: screen)
         guard let ready = spare else { return Self.makePanel(frame: frame) }
         spare = nil
@@ -142,7 +142,7 @@ package final class DesktopMenuBarCover {
         return ready
     }
 
-    @MainActor package func recycle(_ panel: CatWMPanel?) {
+    package func recycle(_ panel: CatWMPanel?) {
         guard let panel else { return }
         if panel.isVisible {
             DesktopMenuBarNative.orderOut(CGWindowID(panel.windowNumber))
@@ -152,7 +152,7 @@ package final class DesktopMenuBarCover {
         if spare == nil || spare === panel { spare = panel } else { panel.close() }
     }
 
-    @MainActor package static func makePanel(
+    package static func makePanel(
         frame: CGRect, level: NSWindow.Level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.statusWindow)) + 1)
     ) -> CatWMPanel {
         let panel = CatWMPanel(role: .fullscreenFX, frame: frame)
@@ -164,8 +164,8 @@ package final class DesktopMenuBarCover {
         return panel
     }
 
-    @MainActor private func show(_ image: CGImage, in panel: CatWMPanel, screen: Screen,
-                                 source: UInt64, target: UInt64) async -> CatWMPanel? {
+    private func show(_ image: CGImage, in panel: CatWMPanel, screen: Screen,
+                      source: UInt64, target: UInt64) async -> CatWMPanel? {
         let window = CGWindowID(panel.windowNumber)
         var placed = Spaces.of(window: window) == [target]
         if !placed, NativeSpaceMove.move(window: window, to: target) {

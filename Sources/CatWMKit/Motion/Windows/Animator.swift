@@ -3,7 +3,7 @@ import Foundation
 import os
 import QuartzCore
 
-package final class Animator {
+@MainActor package final class Animator {
     private var items: [CGWindowID: Item] = [:]
     private var landing: [CGWindowID: (move: Move, number: Int)] = [:]
     private var landings = 0
@@ -12,12 +12,11 @@ package final class Animator {
     private var writers: [pid_t: AXWriter] = [:]
     private var owners: [CGWindowID: pid_t] = [:]
     private var epochs: [CGWindowID: Int] = [:], epochCount = 0
-    private let focusLock = NSLock()
-    private var focusGeneration = 0
+    private let focusGeneration = OSAllocatedUnfairLock(initialState: 0)
     private var focusQueues: [pid_t: DispatchQueue] = [:]
     private let backend: any WindowBackend
     private let makeWriter: (pid_t) -> AXWriter
-    private let applyFocus: (Window, () -> Bool) -> Void
+    private let applyFocus: @Sendable (Window, @Sendable () -> Bool) -> Void
     package var makeResizeScene: (([Move]) -> WindowResizeScene?)?
     package var windowPresentation: (any WindowPresentation)?
     private var resizeScene: WindowResizeScene?
@@ -30,26 +29,33 @@ package final class Animator {
     package var onLanded: (() -> Void)?
 
     package init(backend: any WindowBackend = AXBackend.shared, makeWriter: ((pid_t) -> AXWriter)? = nil,
-                 applyFocus: @escaping (Window, () -> Bool) -> Void = { $0.focus(ifCurrent: $1) }) {
+                 applyFocus: @escaping @Sendable (Window, @Sendable () -> Bool) -> Void = { $0.focus(ifCurrent: $1) }) {
         self.backend = backend
         self.makeWriter = makeWriter ?? { AXWriter(pid: $0, backend: backend) }
         self.applyFocus = applyFocus
     }
 
-    deinit { clock?.stop(); resizeScene?.close(); windowPresentation?.close() }
+    deinit {
+        let clock = clock, scene = resizeScene, presentation = windowPresentation
+        DispatchQueue.main.async {
+            clock?.stop()
+            scene?.close()
+            presentation?.close()
+        }
+    }
 
-    package func cancelFocus() { focusLock.withLock { focusGeneration += 1 } }
+    package func cancelFocus() { focusGeneration.withLock { $0 += 1 } }
 
-    package func focus(_ window: Window, done: @escaping () -> Void = {}) {
-        let generation = focusLock.withLock { focusGeneration += 1; return focusGeneration }
+    package func focus(_ window: Window, done: @escaping @MainActor () -> Void = {}) {
+        let generation = focusGeneration.withLock { $0 += 1; return $0 }
         let queue = focusQueues[window.pid]
             ?? DispatchQueue(label: "catwm.focus-write.\(window.pid)", qos: .userInteractive)
         focusQueues[window.pid] = queue
-        queue.async { [weak self] in
-            guard let self else { return }
-            let isCurrent = { self.focusLock.withLock { self.focusGeneration == generation } }
+        let focusGeneration = focusGeneration, applyFocus = applyFocus
+        queue.async {
+            let isCurrent = { @Sendable in focusGeneration.withLock { $0 == generation } }
             guard isCurrent() else { return }
-            self.applyFocus(window, isCurrent)
+            applyFocus(window, isCurrent)
             DispatchQueue.main.async {
                 guard isCurrent() else { return }
                 done()
@@ -58,12 +64,13 @@ package final class Animator {
     }
 
     package func focusSink(_ window: CGWindowID) {
-        let generation = focusLock.withLock { focusGeneration += 1; return focusGeneration }
-        DispatchQueue.global(qos: .userInteractive).async { [weak self] in
-            guard let self, self.focusLock.withLock({ self.focusGeneration == generation }) else { return }
+        let generation = focusGeneration.withLock { $0 += 1; return $0 }
+        let focusGeneration = focusGeneration
+        DispatchQueue.global(qos: .userInteractive).async {
+            guard focusGeneration.withLock({ $0 == generation }) else { return }
             if !WindowServerFocus.focus(pid: getpid(), window: window) {
                 DispatchQueue.main.async {
-                    guard self.focusLock.withLock({ self.focusGeneration == generation }) else { return }
+                    guard focusGeneration.withLock({ $0 == generation }) else { return }
                     NSApp.activate(ignoringOtherApps: true)
                 }
             }
@@ -155,12 +162,12 @@ package final class Animator {
 
     package var activeWriterPids: Set<pid_t> { Set(writers.keys) }
 
-    package func afterPendingWrites(_ completion: @escaping () -> Void) {
-        afterPendingWrites(pids: nil, completion)
+    package func afterPendingWrites(pids: Set<pid_t>? = nil, _ completion: @escaping @MainActor @Sendable () -> Void) {
+        afterPendingWrites(pids: pids, completionQueue: .main) { onMainThread { completion() } }
     }
 
     package func afterPendingWrites(
-        pids: Set<pid_t>?, completionQueue: DispatchQueue = .main, _ completion: @escaping () -> Void
+        pids: Set<pid_t>?, completionQueue: DispatchQueue, _ completion: @escaping @Sendable () -> Void
     ) {
         let selected = pids.map { ids in ids.compactMap { writers[$0] } } ?? Array(writers.values)
         guard !selected.isEmpty else {

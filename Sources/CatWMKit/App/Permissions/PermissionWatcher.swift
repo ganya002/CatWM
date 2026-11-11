@@ -1,11 +1,11 @@
 import AppKit
 import SwiftUI
 
-package final class PermissionWatcher {
-    package static let shared = PermissionWatcher()
+@MainActor package final class PermissionWatcher {
+    package static let shared = PermissionWatcher(atLaunch: Permission.grantedAtLaunch)
     package let atLaunch: Set<Permission>
     package private(set) var granted: Set<Permission> = []
-    private let read: () -> Set<Permission>
+    private let read: @Sendable () -> Set<Permission>
     private let refreshScreenRecording: () -> Void
     private let queue = DispatchQueue(label: "catwm.permissions", qos: .utility)
     private var checking = false
@@ -14,16 +14,20 @@ package final class PermissionWatcher {
     private var accessibilityObserver: NSObjectProtocol?
     private var subscribers: [(_ granted: Set<Permission>, _ changed: Set<Permission>) -> Void] = []
 
-    private static func check() -> Set<Permission> { Set(Permission.allCases.filter(\.isGranted)) }
+    private nonisolated static func check() -> Set<Permission> { Set(Permission.allCases.filter(\.isGranted)) }
 
-    package init(read: @escaping () -> Set<Permission> = { PermissionWatcher.check() },
+    package init(read: @escaping @Sendable () -> Set<Permission> = { PermissionWatcher.check() },
                  refreshScreenRecording: @escaping () -> Void = { ScreenRecording.shared.refresh() }) {
         self.read = read
         self.refreshScreenRecording = refreshScreenRecording
         atLaunch = read()
     }
 
-    deinit { stop() }
+    private init(atLaunch: Set<Permission>) {
+        read = { PermissionWatcher.check() }
+        refreshScreenRecording = { ScreenRecording.shared.refresh() }
+        self.atLaunch = atLaunch
+    }
 
     package func stop() {
         timer?.invalidate()
@@ -36,9 +40,10 @@ package final class PermissionWatcher {
     package func start() {
         guard timer == nil else { return }
         granted = read()
-        timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in self?.tick() }
-        accessibilityObserver = DistributedNotificationCenter.default().addObserver(
-            forName: Notification.Name("com.apple.accessibility.api"), object: nil, queue: .main) { [weak self] _ in
+        timer = Timer.onMain(every: 1.5, owner: self) { $0.tick() }
+        accessibilityObserver = DistributedNotificationCenter.default().observeOnMain(
+            Notification.Name("com.apple.accessibility.api")
+        ) { [weak self] in
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { self?.tick() }
         }
     }

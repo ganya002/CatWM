@@ -15,7 +15,7 @@ package final class CursorRefresh {
     }
 
     package static func post() {
-        guard WindowManager.shared.input.pointerAndFocus, NSEvent.pressedMouseButtons == 0,
+        guard Instance.scope == nil, NSEvent.pressedMouseButtons == 0,
               let here = CGEvent(source: nil)?.location,
               let event = CGEvent(mouseEventSource: CGEventSource(stateID: .hidSystemState), mouseType: .mouseMoved,
                                   mouseCursorPosition: here, mouseButton: .left) else { return }

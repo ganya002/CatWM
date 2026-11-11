@@ -1,6 +1,6 @@
 import AppKit
 
-package struct CursorShortcutSpec: Identifiable {
+package struct CursorShortcutSpec: Identifiable, Sendable {
     package let id: String
     package let action: Action
     package let title: String
@@ -15,11 +15,11 @@ package struct CursorShortcutSpec: Identifiable {
     package var args: String { menuArgs ?? action.args }
     package var nextWorkspace = false
     package var hint: String?
-    package var available: (Context) -> Bool = { _ in true }
-    package var selected: (Context) -> Bool = { _ in false }
+    package var available: @Sendable (Context) -> Bool = { _ in true }
+    package var selected: @Sendable (Context) -> Bool = { _ in false }
     package var destructive = false
 
-    package struct Context {
+    package struct Context: Sendable {
         package let floating: Bool
         package let tiled: Bool
         package let zoomed: Bool

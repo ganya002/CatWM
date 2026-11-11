@@ -1,20 +1,21 @@
 import AppKit
+import os
 import SQLite3
-package final class NotificationDatabase: NotificationSource {
+@MainActor package final class NotificationDatabase: NotificationSource {
     package let name = "database"
     private weak var sink: NotificationSink?
     private let queue = DispatchQueue(label: "catwm.notifications.database", qos: .utility)
     private var watcher: DispatchSourceFileSystemObject?
     private var pending: DispatchWorkItem?
-    private let cache = Cache()
+    private nonisolated let cache = Cache()
 
-    package static let folder = FileManager.default.homeDirectoryForCurrentUser
+    package nonisolated static let folder = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent("Library/Group Containers/group.com.apple.usernoted/db2")
-    package static let path = folder.appendingPathComponent("db").path
-    package static let walPath = folder.appendingPathComponent("db-wal").path
+    package nonisolated static let path = folder.appendingPathComponent("db").path
+    package nonisolated static let walPath = folder.appendingPathComponent("db-wal").path
     package var changed: () -> Void = {}
 
-    package static var isReadable: Bool {
+    package nonisolated static var isReadable: Bool {
         let handle = open(path, O_RDONLY)
         guard handle >= 0 else { return false }
         close(handle)
@@ -77,29 +78,41 @@ package final class NotificationDatabase: NotificationSource {
     }
 
     private func read() {
-        queue.async { [weak self] in
-            guard let self, let changed = self.cache.load(from: Self.path) else { return }
+        queue.async { [weak self, cache] in
+            guard let changed = cache.load(from: Self.path) else { return }
             DispatchQueue.main.async {
-                guard let sink = self.sink else { return }
+                guard let self, let sink = self.sink else { return }
                 for (app, list) in changed { sink.report(messages: list, for: app, from: self.name) }
                 self.changed()
             }
         }
     }
 
-    package final class Cache {
+    package final class Cache: Sendable {
+        private let snapshot = OSAllocatedUnfairLock(initialState: Snapshot())
+
+        package init() {}
+
+        package func reset() { snapshot.withLock { $0.reset() } }
+
+        package func load(from path: String) -> [String: [NotificationMessage]]? {
+            snapshot.withLock { $0.load(from: path) }
+        }
+    }
+
+    private struct Snapshot: Sendable {
         private var rows: [Int64: NotificationMessage?] = [:]
         private var lists: [String: [NotificationMessage]] = [:]
         private var last: Int64 = 0
         private var touched: Set<String> = []
 
-        package func reset() {
+        mutating func reset() {
             rows = [:]
             lists = [:]
             last = 0
         }
 
-        package func load(from path: String) -> [String: [NotificationMessage]]? {
+        mutating func load(from path: String) -> [String: [NotificationMessage]]? {
             var database: OpaquePointer?
             guard sqlite3_open_v2(path, &database, SQLITE_OPEN_READONLY, nil) == SQLITE_OK, let database else {
                 sqlite3_close(database)
@@ -130,7 +143,7 @@ package final class NotificationDatabase: NotificationSource {
             return (Int(sqlite3_column_int64(statement, 0)), sqlite3_column_int64(statement, 1))
         }
 
-        private func add(from database: OpaquePointer) -> Bool {
+        private mutating func add(from database: OpaquePointer) -> Bool {
             let sql = "SELECT record.rec_id, app.identifier, record.data FROM record "
                 + "LEFT JOIN app ON app.app_id = record.app_id WHERE record.rec_id > ? ORDER BY record.rec_id"
             var statement: OpaquePointer?
@@ -154,7 +167,7 @@ package final class NotificationDatabase: NotificationSource {
         }
     }
 
-    package static func message(app: String, plist: Data) -> NotificationMessage {
+    package nonisolated static func message(app: String, plist: Data) -> NotificationMessage {
         let root = (try? PropertyListSerialization.propertyList(from: plist, format: nil)) as? [String: Any]
         let request = root?["req"] as? [String: Any] ?? [:]
         return NotificationMessage(app: app, title: request["titl"] as? String ?? "",

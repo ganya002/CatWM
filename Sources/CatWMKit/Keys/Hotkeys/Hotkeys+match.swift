@@ -25,7 +25,7 @@ extension Hotkeys {
             }
             if let help = onHelpKey, flags.isDisjoint(with: [.maskCommand, .maskControl]),
                event.getIntegerValueField(.keyboardEventAutorepeat) == 0,
-               Self.typed(event) == WindowManager.shared.config.keyboardHelpKey {
+               Self.typed(event) == helpKey {
                 DispatchQueue.main.async(execute: help)
                 return .swallow
             }
@@ -45,7 +45,7 @@ extension Hotkeys {
         bind.repeats || (event?.getIntegerValueField(.keyboardEventAutorepeat) ?? 0) == 0
     }
 
-    package static func key(_ code: UInt16, _ flags: CGEventFlags) -> UInt64 {
+    package nonisolated static func key(_ code: UInt16, _ flags: CGEventFlags) -> UInt64 {
         let mods = flags.intersection([.maskCommand, .maskAlternate, .maskControl, .maskShift])
         return mods.rawValue | UInt64(code)
     }
@@ -77,7 +77,7 @@ extension Hotkeys {
 }
 
 extension Hotkeys {
-    package static let windowMode = "window"
+    package nonisolated static let windowMode = "window"
 
     package func handlePointer(_ type: CGEventType, _ event: CGEvent) -> Bool {
         type == .scrollWheel ? handleScroll(event) : handleRightClick(type, event)

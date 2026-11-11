@@ -2,25 +2,42 @@ import AppKit
 import os
 import ScreenCaptureKit
 
-package final class ScreenRecording {
+package final class ScreenRecording: Sendable {
     package static let shared = ScreenRecording()
     private static let testDoneKey = "screenRecordingTestDone"
-    private let grantedLive = OSAllocatedUnfairLock(initialState: false)
-    private var checking = false
-    package var watching = false
 
-    package var isGranted: Bool { grantedLive.withLock { $0 } || CGPreflightScreenCaptureAccess() }
-    package var isTestDone: Bool { Instance.defaults.bool(forKey: Self.testDoneKey) }
+    private struct State {
+        var granted = false
+        var checking = false
+        var watching = false
+    }
+
+    private let state = OSAllocatedUnfairLock(initialState: State())
+
+    package var watching: Bool {
+        get { state.withLock { $0.watching } }
+        set { state.withLock { $0.watching = newValue } }
+    }
+
+    package var isGranted: Bool { state.withLock { $0.granted } || CGPreflightScreenCaptureAccess() }
+    @MainActor package var isTestDone: Bool { Instance.defaults.bool(forKey: Self.testDoneKey) }
 
     package func refresh() {
-        guard watching, !isGranted, !checking else { return }
-        checking = true
-        Task { @MainActor in
+        let start = state.withLock { state in
+            guard state.watching, !state.granted, !state.checking,
+                  !CGPreflightScreenCaptureAccess() else { return false }
+            state.checking = true
+            return true
+        }
+        guard start else { return }
+        Task {
             let content = try? await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
             let granted = content != nil
-            grantedLive.withLock { $0 = granted }
-            checking = false
-            if granted { watching = false }
+            state.withLock { state in
+                state.granted = granted
+                state.checking = false
+                if state.granted { state.watching = false }
+            }
         }
     }
 

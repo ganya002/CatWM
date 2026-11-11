@@ -1,6 +1,6 @@
 import AppKit
 
-package struct Config {
+package struct Config: Sendable {
     package init() {}
 
     package static let embedded: Config = {

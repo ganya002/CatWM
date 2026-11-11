@@ -7,8 +7,8 @@ package enum Spaces {
         return NativeSpaceMove.isAvailable
     }
 
-    package static func move(window id: CGWindowID, to target: UInt64, waitUntilOnScreen: Bool = false,
-                             completion: @escaping (Bool) -> Void) {
+    @MainActor package static func move(window id: CGWindowID, to target: UInt64, waitUntilOnScreen: Bool = false,
+                                        completion: @escaping @MainActor (Bool) -> Void) {
         guard target != 0, canMoveWindows else { completion(false); return }
         let move = WindowSpaceMove(
             membership: { of(window: id) }, submit: { NativeSpaceMove.move(window: id, to: target) },

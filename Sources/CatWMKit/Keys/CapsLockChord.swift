@@ -2,19 +2,21 @@ import AppKit
 import IOKit
 import IOKit.hid
 
-package final class CapsLockChord {
-    package static let shared = CapsLockChord()
-    package static let keyCode: UInt16 = 57
+@MainActor package final class CapsLockChord {
+    package nonisolated static let keyCode: UInt16 = 57
 
     private var timer: Timer?
     private var ticks = 0
     private var terminateObserver: NSObjectProtocol?
 
-    private init() {
-        timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in self?.tick() }
+    private unowned let hotkeys: Hotkeys
+
+    package init(hotkeys: Hotkeys) {
+        self.hotkeys = hotkeys
+        timer = Timer.onMain(every: 1.5, owner: self) { $0.tick() }
         terminateObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.willTerminateNotification, object: nil, queue: nil
-        ) { [weak self] _ in self?.restore() }
+        ) { [weak self] _ in onMainThread { self?.restore() } }
     }
 
     private func tick() {
@@ -23,12 +25,12 @@ package final class CapsLockChord {
         if ticks.isMultiple(of: 20) { refreshDelay() }
     }
 
-    package static func isLocked(_ flags: CGEventFlags) -> Bool { flags.contains(.maskAlphaShift) }
+    package nonisolated static func isLocked(_ flags: CGEventFlags) -> Bool { flags.contains(.maskAlphaShift) }
 
     package private(set) var isBound = false
 
     package func setBound(_ bound: Bool) {
-        let bound = bound && WindowManager.shared.input.capsLock
+        let bound = bound && hotkeys.input.capsLock
         guard bound != isBound else { return }
         isBound = bound
         Self.setDelay(bound ? 0 : -1)
@@ -38,8 +40,8 @@ package final class CapsLockChord {
         if isBound { Self.setDelay(0) }
     }
 
-    private static func setDelay(_ milliseconds: Int, wait: Bool = false) {
-        let run = {
+    private nonisolated static func setDelay(_ milliseconds: Int, wait: Bool = false) {
+        let run: @Sendable () -> Void = {
             Process.runTool("/usr/bin/hidutil", ["property",
                                                  "--matching", "{\"PrimaryUsagePage\":1,\"PrimaryUsage\":6}",
                                                  "--set", "{\"CapsLockDelayOverride\":\(milliseconds)}"])
@@ -61,7 +63,7 @@ package final class CapsLockChord {
 
     package var rawActive: Bool { hidManager != nil }
 
-    private let grantedAtLaunch = PermissionWatcher.shared.atLaunch.contains(.inputMonitoring)
+    private let grantedAtLaunch = Permission.grantedAtLaunch.contains(.inputMonitoring)
     private var rawMisses = 0
 
     package func start() {
@@ -74,16 +76,15 @@ package final class CapsLockChord {
         let manager = IOHIDManagerCreate(kCFAllocatorDefault, IOOptionBits(kIOHIDOptionsTypeNone))
         IOHIDManagerSetDeviceMatching(manager, [kIOHIDDeviceUsagePageKey: kHIDPage_GenericDesktop,
                                                 kIOHIDDeviceUsageKey: kHIDUsage_GD_Keyboard] as CFDictionary)
-        IOHIDManagerRegisterInputValueCallback(manager, { _, _, _, value in
+        IOHIDManagerRegisterInputValueCallback(manager, { context, _, _, value in
+            guard let context else { return }
             let element = IOHIDValueGetElement(value)
             guard IOHIDElementGetUsagePage(element) == UInt32(kHIDPage_KeyboardOrKeypad),
                   IOHIDElementGetUsage(element) == UInt32(kHIDUsage_KeyboardCapsLock) else { return }
-            if IOHIDValueGetIntegerValue(value) == 1 {
-                CapsLockChord.shared.rawDown()
-            } else {
-                CapsLockChord.shared.rawUp()
-            }
-        }, nil)
+            let chord = Unmanaged<CapsLockChord>.fromOpaque(context).takeUnretainedValue()
+            let down = IOHIDValueGetIntegerValue(value) == 1
+            onMainThread { if down { chord.rawDown() } else { chord.rawUp() } }
+        }, Unmanaged.passUnretained(self).toOpaque())
         IOHIDManagerScheduleWithRunLoop(manager, CFRunLoopGetMain(), CFRunLoopMode.commonModes.rawValue)
         if IOHIDManagerOpen(manager, IOOptionBits(kIOHIDOptionsTypeNone)) == kIOReturnSuccess {
             hidManager = manager
@@ -120,7 +121,7 @@ package final class CapsLockChord {
         if fired, now - slowAt < 0.3 { slowAt = 0; return }
         fired = false
         let flags = CGEventSource.flagsState(.combinedSessionState)
-        guard Hotkeys.shared.fireCapsLock(flags) else { return }
+        guard hotkeys.fireCapsLock(flags) else { return }
         fired = true
         lockBefore = Self.isLocked(flags)
     }

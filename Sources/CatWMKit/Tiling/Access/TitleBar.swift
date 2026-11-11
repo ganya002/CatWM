@@ -1,4 +1,5 @@
 import AppKit
+@preconcurrency import ApplicationServices
 import CoreGraphics
 
 package struct TitleBar: Equatable {
@@ -36,12 +37,13 @@ package struct TitleBar: Equatable {
     }
 }
 
-package final class TitleBarCache {
+@MainActor package final class TitleBarCache {
     private var entries: [CGWindowID: (width: CGFloat, bar: TitleBar)] = [:]
 
     package init() {}
 
-    package func titleBar(of window: Window, on scanner: WindowScanner, _ done: @escaping (TitleBar?) -> Void) {
+    package func titleBar(of window: Window, on scanner: WindowScanner,
+                          _ done: @escaping @MainActor (TitleBar?) -> Void) {
         dispatchPrecondition(condition: .onQueue(.main))
         let id = window.id, width = window.cachedFrame.width, element = window.element
         if let entry = entries[id], entry.width == width { return done(entry.bar) }

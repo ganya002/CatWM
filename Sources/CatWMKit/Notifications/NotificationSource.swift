@@ -1,7 +1,7 @@
 import AppKit
 import Foundation
 
-package protocol NotificationSource: AnyObject {
+@MainActor package protocol NotificationSource: AnyObject {
     var name: String { get }
     var isAvailable: Bool { get }
     var messagesClearOnFocus: Bool { get }
@@ -14,14 +14,14 @@ extension NotificationSource {
     package var messagesClearOnFocus: Bool { false }
 }
 
-package protocol NotificationSink: AnyObject {
+@MainActor package protocol NotificationSink: AnyObject {
     func report(app: String, _ badge: Badge?, from source: String)
     func report(window: CGWindowID, _ badge: Badge?, from source: String)
     func report(messages: [NotificationMessage], for app: String, from source: String)
     func add(_ message: NotificationMessage, from source: String)
 }
 
-package enum Badge: Equatable {
+package enum Badge: Equatable, Sendable {
     case count(Int)
     case dot
 
@@ -46,7 +46,7 @@ package enum Badge: Equatable {
     }
 }
 
-package struct NotificationMessage: Equatable {
+package struct NotificationMessage: Equatable, Sendable {
     package let app: String
     package var title = ""
     package var subtitle = ""

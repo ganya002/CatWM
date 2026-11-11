@@ -1,6 +1,6 @@
 import Foundation
 
-package struct Action: Identifiable {
+package struct Action: Identifiable, Sendable {
     package let title: String
     package let category: ActionCategory
     package let dispatcher: String

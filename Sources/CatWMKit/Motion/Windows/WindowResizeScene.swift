@@ -1,7 +1,7 @@
 import AppKit
 import QuartzCore
 
-package final class WindowResizeScene {
+@MainActor package final class WindowResizeScene {
     private final class SceneView: NSView {
         package override var isFlipped: Bool { true }
     }
@@ -14,8 +14,8 @@ package final class WindowResizeScene {
     }
     private var displays: [Display] = []
     private var placements: [CGWindowID: WindowScenePlacement]
-    package var onDismiss: (() -> Void)?
-    package var onContentsUpdate: ((CGWindowID, CGImage) -> Void)?
+    package var onDismiss: (@MainActor () -> Void)?
+    package var onContentsUpdate: (@MainActor (CGWindowID, CGImage) -> Void)?
     private var dismiss: DismissMonitor?
     private var capturing: Set<CGWindowID> = []
     package private(set) var visible = false
@@ -153,6 +153,4 @@ package final class WindowResizeScene {
         for display in displays { display.panel.orderOut(nil); display.panel.close() }
         displays.removeAll()
     }
-
-    deinit { close() }
 }

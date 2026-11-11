@@ -1,16 +1,16 @@
 import AppKit
 
-package final class FocusReader {
-    package enum Result { case focused(CGWindowID?), unavailable }
+@MainActor package final class FocusReader {
+    package enum Result: Sendable { case focused(CGWindowID?), unavailable }
 
-    private let read: (pid_t) -> Result
+    private let read: @Sendable (pid_t) -> Result
     private var queues: [pid_t: DispatchQueue] = [:]
 
-    package init(read: @escaping (pid_t) -> Result = { AXBackend.shared.focusedWindow(pid: $0) }) {
+    package init(read: @escaping @Sendable (pid_t) -> Result = { AXBackend.shared.focusedWindow(pid: $0) }) {
         self.read = read
     }
 
-    package func observe(_ pid: pid_t, done: @escaping (Result) -> Void) {
+    package func observe(_ pid: pid_t, done: @escaping @MainActor (Result) -> Void) {
         let queue = queues[pid] ?? DispatchQueue(label: "catwm.focus-read.\(pid)", qos: .userInteractive)
         queues[pid] = queue
         queue.async { [read] in
@@ -23,7 +23,7 @@ package final class FocusReader {
 
     package var queueCount: Int { queues.count }
 
-    package static func read(_ pid: pid_t) -> Result {
+    package nonisolated static func read(_ pid: pid_t) -> Result {
         dispatchPrecondition(condition: .notOnQueue(.main))
         var value: CFTypeRef?
         let result = AXUIElementCopyAttributeValue(axApp(pid), kAXFocusedWindowAttribute as CFString, &value)
@@ -33,7 +33,7 @@ package final class FocusReader {
         return resolve(unsafeDowncast(value, to: AXUIElement.self))
     }
 
-    package static func resolve(_ focusedElement: AXUIElement) -> Result {
+    package nonisolated static func resolve(_ focusedElement: AXUIElement) -> Result {
         var element = focusedElement
         if element.string(kAXRoleAttribute) == kAXSheetRole {
             guard let parent = element.element(kAXParentAttribute) else { return .focused(nil) }

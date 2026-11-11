@@ -1,13 +1,13 @@
 import AppKit
 
-package struct EventSpec {
+package struct EventSpec: Sendable {
     package let name: String
     package let summary: String
     package let data: [Field]
 }
 
-package struct StateSnapshot: Equatable {
-    package struct Entry: Equatable {
+package struct StateSnapshot: Equatable, Sendable {
+    package struct Entry: Equatable, Sendable {
         package var app: String?
         package var title: String?
     }
@@ -20,10 +20,10 @@ package struct StateSnapshot: Equatable {
     package var mode = ""
 }
 
-package final class EventBus {
+@MainActor package final class EventBus {
     package static let shared = EventBus()
 
-    package static let specs: [EventSpec] = [
+    package nonisolated static let specs: [EventSpec] = [
         EventSpec(name: "focus.changed", summary: "The focused window changed", data: [
             Field(name: "window", type: "int?", summary: "Window ID, or null when no window has focus"),
             Field(name: "app", type: "string?", summary: "Bundle ID"),
@@ -69,9 +69,9 @@ package final class EventBus {
         ])
     ]
 
-    package static let allNames = specs.map(\.name)
+    package nonisolated static let allNames = specs.map(\.name)
 
-    package static func names(_ raw: JSON?) throws -> [String] {
+    package nonisolated static func names(_ raw: JSON?) throws -> [String] {
         let requested = raw?.array?.compactMap(\.string) ?? []
         if let unknown = requested.first(where: { !allNames.contains($0) }) {
             throw ControlError.invalid("Unknown event `\(unknown)`. Events: \(allNames.joined(separator: ", "))")
@@ -141,7 +141,7 @@ package final class EventBus {
         for change in Self.changes(from: previous, to: current) { emit(change.0, change.1) }
     }
 
-    package static func changes(from old: StateSnapshot, to new: StateSnapshot) -> [(String, JSON)] {
+    package nonisolated static func changes(from old: StateSnapshot, to new: StateSnapshot) -> [(String, JSON)] {
         var out: [(String, JSON)] = []
         func info(_ id: CGWindowID, _ entry: StateSnapshot.Entry) -> [String: JSON] {
             ["window": .int(Int(id)), "app": entry.app.map(JSON.string) ?? .null,

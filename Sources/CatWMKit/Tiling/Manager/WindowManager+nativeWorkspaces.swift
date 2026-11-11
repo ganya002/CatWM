@@ -208,7 +208,7 @@ extension WindowManager {
 
     @MainActor package func removeDesktop(
         _ space: UInt64, on screen: Screen,
-        remove: (UInt64, Screen) async throws -> Void = DesktopLifecycle.remove
+        remove: @MainActor (UInt64, Screen) async throws -> Void = DesktopLifecycle.remove
     ) async throws {
         for attempt in 1... {
             _ = await poll(1, every: 10_000_000) { DesktopUI.isSettled(screen) }

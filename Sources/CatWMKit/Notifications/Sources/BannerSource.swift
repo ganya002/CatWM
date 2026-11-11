@@ -1,10 +1,11 @@
 import AppKit
-package final class BannerSource: NotificationSource {
+@preconcurrency import ApplicationServices
+@MainActor package final class BannerSource: NotificationSource {
     package let name: String
     package let messagesClearOnFocus = true
     package let reportsMessages: Bool
     package static let bundleID = "com.apple.notificationcenterui"
-    package static let subroles: Set<String> = ["AXNotificationCenterBanner", "AXNotificationCenterAlert"]
+    package nonisolated static let subroles: Set<String> = ["AXNotificationCenterBanner", "AXNotificationCenterAlert"]
     private weak var sink: NotificationSink?
     private let queue = DispatchQueue(label: "catwm.notifications.banner", qos: .utility)
     private var observer: AXObserver?
@@ -21,11 +22,13 @@ package final class BannerSource: NotificationSource {
 
     package func start(_ sink: NotificationSink) {
         self.sink = sink
-        launch = NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.didLaunchApplicationNotification, object: nil, queue: .main) { [weak self] note in
-            let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
-            if app?.bundleIdentifier == Self.bundleID { self?.observe() }
-        }
+        launch = NSWorkspace.shared.notificationCenter.observeOnMain(
+            NSWorkspace.didLaunchApplicationNotification,
+            payload: { ($0.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.bundleIdentifier },
+            handler: { [weak self] bundleID in
+                if bundleID == Self.bundleID { self?.observe() }
+            }
+        )
         observe()
     }
 
@@ -99,7 +102,7 @@ package final class BannerSource: NotificationSource {
         return nil
     }
 
-    private static func banners(in element: AXUIElement, depth: Int) -> [[String]] {
+    private nonisolated static func banners(in element: AXUIElement, depth: Int) -> [[String]] {
         guard depth < 8 else { return [] }
         if let subrole = element.string(kAXSubroleAttribute), subroles.contains(subrole) {
             var texts = statics(in: element, depth: 0)
@@ -111,7 +114,7 @@ package final class BannerSource: NotificationSource {
         return element.elements(kAXChildrenAttribute).flatMap { banners(in: $0, depth: depth + 1) }
     }
 
-    private static func statics(in element: AXUIElement, depth: Int) -> [String] {
+    private nonisolated static func statics(in element: AXUIElement, depth: Int) -> [String] {
         guard depth < 4 else { return [] }
         if element.string(kAXRoleAttribute) == kAXStaticTextRole {
             return element.string(kAXValueAttribute).map { [$0] } ?? []

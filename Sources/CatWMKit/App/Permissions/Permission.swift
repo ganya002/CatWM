@@ -15,6 +15,8 @@ package enum Permission: CaseIterable {
         }
     }
 
+    package static let grantedAtLaunch = Set(allCases.filter(\.isGranted))
+
     package var id: String {
         switch self {
         case .accessibility: "accessibility"

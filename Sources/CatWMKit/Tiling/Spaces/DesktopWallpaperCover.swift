@@ -43,9 +43,9 @@ import ScreenCaptureKit
             spare = DesktopMenuBarCover.makePanel(
                 frame: frame, level: NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)) + 1))
         }
-        switches = NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main
-        ) { _ in Task { @MainActor in DesktopWallpaperCover.shared.rememberAfterSwitch() } }
+        switches = NSWorkspace.shared.notificationCenter.observeOnMain(
+            NSWorkspace.activeSpaceDidChangeNotification
+        ) { Task { @MainActor in DesktopWallpaperCover.shared.rememberAfterSwitch() } }
         Task {
             await refresh()
             for screen in Screen.all() { await remember(on: screen) }
@@ -174,9 +174,9 @@ import ScreenCaptureKit
 
         package init(owner: DesktopWallpaperCover, panel: CatWMPanel, image: CGImage, screen: Screen, target: UInt64) {
             self.owner = owner; self.panel = panel; self.image = image; self.screen = screen; self.target = target
-            navigation = NSWorkspace.shared.notificationCenter.addObserver(
-                forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main
-            ) { [weak self] _ in
+            navigation = NSWorkspace.shared.notificationCenter.observeOnMain(
+                NSWorkspace.activeSpaceDidChangeNotification
+            ) { [weak self] in
                 Task { @MainActor in
                     if let self, self.watch != nil, Spaces.current(display: self.screen.uuid) != self.target {
                         self.drop()

@@ -1,7 +1,7 @@
 import AppKit
 import ApplicationServices
 
-package protocol WindowBackend: AnyObject {
+package protocol WindowBackend: Sendable {
     func applications() -> [RunningApplicationSnapshot]
     func desktop(known: Set<CGWindowID>) -> WindowServerObservation
     func scan(_ job: WindowScanner.Job, discovered: (WindowScanner.AppScan) -> Void) -> WindowScanner.AppScan
@@ -21,7 +21,7 @@ package protocol WindowBackend: AnyObject {
     func close(_ window: Window) -> String
 }
 
-package final class AXBackend: WindowBackend {
+package final class AXBackend: WindowBackend, Sendable {
     package static let shared = AXBackend()
 
     package func applications() -> [RunningApplicationSnapshot] { RunningApplicationSnapshot.read() }
