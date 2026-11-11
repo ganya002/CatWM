@@ -121,17 +121,20 @@ class Smoke:
         try:
             self.call("ping")
         except (CatWMError, OSError) as error:
-            try:
-                status = self.process.wait(timeout=2)
-            except subprocess.TimeoutExpired:
-                # The stacks of a hung main thread name the culprit.
-                subprocess.run(["sample", str(self.process.pid), "3", "-file", str(self.out / "hang.txt")],
-                               capture_output=True, check=False)
-                raise Failure(f"CatWM didn't answer ping within {HANG_SECONDS} s after `{name}`: {error}") from error
-            raise Failure(f"CatWM died during `{name}` with status {status}") from error
+            self.hang(f"ping after `{name}`", error)
         crashes = self.crash_reports()
         if crashes:
             raise Failure(f"crash report after `{name}`: {', '.join(path.name for path in crashes)}")
+
+    def hang(self, name, error):
+        """Fail for a CatWM that died or stopped answering, with the stacks of a hung one."""
+        try:
+            status = self.process.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            subprocess.run(["sample", str(self.process.pid), "3", "-file", str(self.out / "hang.txt")],
+                           capture_output=True, check=False)
+            raise Failure(f"CatWM didn't answer {name} within {HANG_SECONDS} s: {error}") from error
+        raise Failure(f"CatWM died during {name} with status {status}") from error
 
     def step(self, name, command, args=None):
         """Run one command and check that CatWM survived it."""
@@ -140,10 +143,10 @@ class Smoke:
             self.call(command, args)
         except CatWMError as error:
             if error.code in ("not_running", "closed"):
-                raise Failure(f"`{name}` lost the connection: {error}") from error
+                self.hang(f"`{name}`", error)
             self.refused[name] = f"{error.code}: {error.message}"
         except OSError as error:
-            raise Failure(f"`{name}` got no reply within {HANG_SECONDS} s: {error}") from error
+            self.hang(f"`{name}`", error)
         self.check(name)
 
     def run(self, command, *args):
@@ -497,7 +500,7 @@ def main():
     failure = None
     try:
         SUITES[args.suite](smoke)
-    except Failure as error:
+    except Exception as error:  # noqa: BLE001, so a bug in a suite still writes the summary
         failure = error
     finally:
         subprocess.run(["screencapture", "-x", str(args.out / "screen.png")], check=False)
