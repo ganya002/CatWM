@@ -1,15 +1,15 @@
 import AppKit
 @testable import CatWM
 @testable import CatWMKit
+import os
 import QuartzCore
 import Testing
 
 @Suite(.serialized, .enabled(if: ProcessInfo.processInfo.environment["CATWM_BENCH"] != nil))
 struct WindowBackendBenchmarkTests {
     final class CountingBackend: WindowBackend {
-        private let lock = NSLock()
-        private var count = 0
-        var writes: Int { lock.withLock { count } }
+        private let count = OSAllocatedUnfairLock(initialState: 0)
+        var writes: Int { count.withLock { $0 } }
 
         func applications() -> [RunningApplicationSnapshot] { [] }
         func desktop(known _: Set<CGWindowID>) -> WindowServerObservation { WindowServerObservation() }
@@ -22,8 +22,8 @@ struct WindowBackendBenchmarkTests {
         func isRunning(_: pid_t) -> Bool { true }
         func frontmostPID() -> pid_t? { nil }
         func frame(of _: Window) -> CGRect { .null }
-        func setPosition(_: Window, _: CGPoint) -> Bool { lock.withLock { count += 1 }; return true }
-        func setSize(_: Window, _: CGSize) -> Bool { lock.withLock { count += 1 }; return true }
+        func setPosition(_: Window, _: CGPoint) -> Bool { count.withLock { $0 += 1 }; return true }
+        func setSize(_: Window, _: CGSize) -> Bool { count.withLock { $0 += 1 }; return true }
         func blocksPlacement(_: Window) -> Bool { false }
         func suspendEnhancedUI(_: pid_t) -> Bool { false }
         func resumeEnhancedUI(_: pid_t) {}

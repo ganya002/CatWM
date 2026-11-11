@@ -1,20 +1,25 @@
 import AppKit
 @testable import CatWM
 @testable import CatWMKit
+import os
 import Testing
+
+private struct BlockingState {
+    var reads = 0
+    var readStarted: (@Sendable () -> Void)?
+    var onScreens: (@Sendable () -> Void)?
+}
 
 @Suite(.timeLimit(.minutes(1))) @MainActor struct ScanCompletionTests {
     final class BlockingBackend: WindowBackend {
         static let pid: pid_t = -300
         static let window: CGWindowID = 4_300
 
-        private let lock = NSLock()
-        private var reads = 0
-        private var readStarted: (() -> Void)?
+        private let state = OSAllocatedUnfairLock(initialState: BlockingState())
         let release = DispatchSemaphore(value: 0)
-        var onScreens: (() -> Void)?
 
-        func firstRead(started: @escaping () -> Void) { lock.withLock { readStarted = started } }
+        func firstRead(started: @escaping @Sendable () -> Void) { state.withLock { $0.readStarted = started } }
+        func onNextScreens(_ observer: @escaping @Sendable () -> Void) { state.withLock { $0.onScreens = observer } }
 
         func applications() -> [RunningApplicationSnapshot] {
             [RunningApplicationSnapshot(pid: Self.pid, bundleID: "test.blocking", regular: true, hidden: false)]
@@ -27,7 +32,7 @@ import Testing
         }
 
         func scan(_ job: WindowScanner.Job, discovered _: (WindowScanner.AppScan) -> Void) -> WindowScanner.AppScan {
-            let (first, started) = lock.withLock { reads += 1; return (reads == 1, readStarted) }
+            let (first, started) = state.withLock { $0.reads += 1; return ($0.reads == 1, $0.readStarted) }
             if first {
                 started?()
                 release.wait()
@@ -43,7 +48,7 @@ import Testing
 
         func focusedWindow(pid _: pid_t) -> FocusReader.Result { .focused(Self.window) }
         func screens() -> [Screen] {
-            onScreens?()
+            state.withLock { $0.onScreens.take() }?()
             let frame = CGRect(x: 0, y: 0, width: 1440, height: 900)
             return [Screen(id: 1, uuid: "blocking", frame: frame, visible: frame, isBuiltin: false, nsScreen: nil)]
         }
@@ -63,10 +68,7 @@ import Testing
 
     private func nextRefresh(_ backend: BlockingBackend) async {
         await withCheckedContinuation { done in
-            backend.onScreens = {
-                backend.onScreens = nil
-                DispatchQueue.main.async { done.resume() }
-            }
+            backend.onNextScreens { DispatchQueue.main.async { done.resume() } }
         }
     }
 

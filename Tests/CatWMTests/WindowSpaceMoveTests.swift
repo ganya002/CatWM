@@ -2,8 +2,8 @@
 @testable import CatWMKit
 import Testing
 
-@Suite struct WindowSpaceMoveTests {
-    private final class Server {
+@Suite @MainActor struct WindowSpaceMoveTests {
+    @MainActor private final class Server {
         var spaces: [UInt64] = [1]
         var visible = false
         var accepted = true

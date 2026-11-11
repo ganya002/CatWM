@@ -3,7 +3,7 @@ import AppKit
 @testable import CatWMKit
 import Testing
 
-@Suite struct SheetLeakPaddingAuditTests {
+@Suite @MainActor struct SheetLeakPaddingAuditTests {
     @Test func aStalledSheetReadKeepsTheAppAlive() {
         #expect(WindowManager.mayShowSheet(.stalled))
         #expect(WindowManager.mayShowSheet(.value([.value("AXButton"), .stalled])))

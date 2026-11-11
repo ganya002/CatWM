@@ -3,7 +3,7 @@
 import CoreGraphics
 import Testing
 
-struct TabStripRevealTests {
+@MainActor struct TabStripRevealTests {
     let slot = CGRect(x: 100, y: 200, width: 800, height: 600)
     let kitty = TitleBar(lights: CGRect(x: 8, y: 8, width: 52, height: 16), contentTop: 32, controlTop: 32)
 

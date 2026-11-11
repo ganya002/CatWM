@@ -53,13 +53,13 @@ private func values(_ config: Config) -> [String: String] {
     Dictionary(uniqueKeysWithValues: Options.all.map { ($0.key, $0.text(config)) })
 }
 
-@Test func defaultTextHasEveryOptionAtItsDefault() {
+@Test @MainActor func defaultTextHasEveryOptionAtItsDefault() {
     let config = Config.parse(defaultText)
     #expect(config.errors.isEmpty)
     #expect(values(config) == values(Config()))
 }
 
-@Test func savedFileReadsBackTheSame() {
+@Test @MainActor func savedFileReadsBackTheSame() {
     for text in [defaultText, changed] {
         let first = Config.parse(text)
         #expect(first.errors.isEmpty, "\(first.errors)")
@@ -72,7 +72,7 @@ private func values(_ config: Config) -> [String: String] {
     }
 }
 
-@Test func changedTextExercisesItsDeclaredOptions() {
+@Test @MainActor func changedTextExercisesItsDeclaredOptions() {
     let config = Config.parse(changed), defaults = Config()
     let options = changed.components(separatedBy: "\n").compactMap { line -> ConfigOption? in
         guard let key = line.split(separator: "=", maxSplits: 1).first else { return nil }
@@ -83,7 +83,7 @@ private func values(_ config: Config) -> [String: String] {
     }
 }
 
-@Test func everyOptionReadsAnAlternateValue() {
+@Test @MainActor func everyOptionReadsAnAlternateValue() {
     for option in Options.all {
         let candidates = option.choices.map(\.0) + ["true", "false", "1", "2", "0", "0.5", "x", "linear", "macbook-air"]
         let alternate = candidates.first { value in
@@ -100,7 +100,7 @@ private func values(_ config: Config) -> [String: String] {
     }
 }
 
-@Test func animationConfigCarriesTheAnimationGroup() {
+@Test @MainActor func animationConfigCarriesTheAnimationGroup() {
     let source = ConfigDocument(text: changed)
     let target = ConfigDocument(text: defaultText)
     target.applyAnimation(source.animationText())
@@ -110,7 +110,7 @@ private func values(_ config: Config) -> [String: String] {
     }
 }
 
-@Test func namesAreUniqueAndResolve() {
+@Test @MainActor func namesAreUniqueAndResolve() {
     let names = Options.all.flatMap(\.names).map(ConfigOption.norm)
     #expect(Set(names).count == names.count)
     for option in Options.all { for name in option.names { #expect(ConfigOption.named(name)?.key == option.key) } }
@@ -118,7 +118,7 @@ private func values(_ config: Config) -> [String: String] {
     #expect(Set(ids).count == ids.count)
 }
 
-@Test func agentDocsListEveryOptionWithItsDefault() throws {
+@Test @MainActor func agentDocsListEveryOptionWithItsDefault() throws {
     let url = URL(fileURLWithPath: #filePath)
         .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         .appendingPathComponent("Resources/AgentDocs/config.md")
@@ -134,7 +134,7 @@ private func values(_ config: Config) -> [String: String] {
     }
 }
 
-@Test func everyOptionHasItsOwnPathInTheTypeScriptConfig() {
+@Test @MainActor func everyOptionHasItsOwnPathInTheTypeScriptConfig() {
     let paths = Options.all.map(\.script)
     #expect(!paths.contains(""))
     #expect(Set(paths).count == paths.count)

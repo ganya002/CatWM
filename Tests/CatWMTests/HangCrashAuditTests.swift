@@ -3,7 +3,7 @@ import AppKit
 @testable import CatWMKit
 import Testing
 
-@Suite struct HangCrashAuditTests {
+@Suite @MainActor struct HangCrashAuditTests {
     @Test func aTerminatedAppReleasesItsScanAndFocusQueues() {
         let scanner = WindowScanner(read: { _, _ in .init() }, readDesktop: { _ in WindowServerObservation() })
         scanner.run(-41) {}

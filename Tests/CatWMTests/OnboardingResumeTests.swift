@@ -2,7 +2,7 @@
 @testable import CatWMKit
 import Testing
 
-@Suite struct OnboardingResumeTests {
+@Suite @MainActor struct OnboardingResumeTests {
     @Test func unfinishedOnboardingResumesAfterAccessibilityGrant() {
         #expect(Onboarding.shouldShow(firstRun: false, trusted: true, done: false, started: true))
     }

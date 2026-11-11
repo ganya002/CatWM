@@ -1,10 +1,17 @@
 import ApplicationServices
 @testable import CatWM
 @testable import CatWMKit
+import os
 import Testing
 
-@Suite struct AXStallMemoryTests {
-    final class Clock { var time: CFTimeInterval = 100 }
+@Suite @MainActor struct AXStallMemoryTests {
+    final class Clock: Sendable {
+        private let stored = OSAllocatedUnfairLock<CFTimeInterval>(initialState: 100)
+        var time: CFTimeInterval {
+            get { stored.withLock { $0 } }
+            set { stored.withLock { $0 = newValue } }
+        }
+    }
 
     @Test func aQuickAppIsNeverStalled() {
         let clock = Clock()

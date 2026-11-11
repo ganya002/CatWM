@@ -3,7 +3,7 @@ import AppKit
 @testable import CatWMKit
 import Testing
 
-@Suite struct WhatsNewTextFitTests {
+@Suite @MainActor struct WhatsNewTextFitTests {
     private func lines(_ text: String, width: CGFloat) -> Int {
         let style = NSMutableParagraphStyle()
         style.lineSpacing = 1.5

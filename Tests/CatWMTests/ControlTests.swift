@@ -8,11 +8,11 @@ private var projectRoot: URL {
     URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
 }
 
-private func reply(_ text: String) throws -> JSON {
+@MainActor private func reply(_ text: String) throws -> JSON {
     try #require(JSON.parse(ControlServer.reply(to: Data(text.utf8), client: nil)))
 }
 
-@Suite struct ControlRegistryTests {
+@Suite @MainActor struct ControlRegistryTests {
     @Test func cliPreservesOptionsAfterSeparator() throws {
         let parsed = ControlCLI.options(["--json", "config.set", "some-key", "--", "tool", "--json"])
         #expect(parsed.compact)

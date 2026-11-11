@@ -16,7 +16,7 @@ import Testing
         func close() { closed = true }
     }
 
-    @Test func cancelledMotionCancelsItsPresentationAndEmptyBatchesLeaveItAlone() throws {
+    @Test func cancelledMotionCancelsItsPresentationAndEmptyBatchesLeaveItAlone() async throws {
         let backend = FakeBackend()
         let frame = CGRect(x: 100, y: 100, width: 400, height: 300)
         let id = backend.addWindow(frame: frame)
@@ -35,6 +35,7 @@ import Testing
         animator?.cancel(id)
         #expect(presentation.cancelled.count == cancellations + 1)
         animator = nil
+        await withCheckedContinuation { turn in DispatchQueue.main.async { turn.resume() } }
         #expect(presentation.closed)
     }
 

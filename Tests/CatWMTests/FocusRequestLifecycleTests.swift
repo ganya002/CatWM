@@ -2,7 +2,7 @@
 @testable import CatWMKit
 import Testing
 
-@Suite struct FocusRequestLifecycleTests {
+@Suite @MainActor struct FocusRequestLifecycleTests {
     @Test func aReplyFromAnOlderObservationCannotConfirmNewState() {
         var focus = FocusRequests()
         let first = focus.beginObservation(pid: -1)

@@ -4,7 +4,7 @@ import AppKit
 import SQLite3
 import Testing
 
-@Suite struct NotificationsTests {
+@Suite @MainActor struct NotificationsTests {
     private final class Fake: NotificationSource {
         let name: String
         var messagesClearOnFocus = false
@@ -110,7 +110,7 @@ import Testing
     }
 }
 
-@Suite struct NotificationDatabaseCacheTests {
+@Suite @MainActor struct NotificationDatabaseCacheTests {
     private func plist(_ title: String) -> Data {
         let root: [String: Any] = ["app": "x", "req": ["titl": title, "body": "hi"]]
         return (try? PropertyListSerialization.data(fromPropertyList: root, format: .binary, options: 0)) ?? Data()

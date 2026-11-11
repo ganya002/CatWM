@@ -3,7 +3,7 @@ import AppKit
 @testable import CatWMKit
 import Testing
 
-@Suite struct TemplateMatchStabilityTests {
+@Suite @MainActor struct TemplateMatchStabilityTests {
     @Test func missingDocumentMetadataGetsTimeToSettle() {
         let saved = WorkspaceTemplateTests().template().windows[0]
         let candidate = WindowCandidate(
@@ -88,7 +88,7 @@ import Testing
     }
 }
 
-@Suite struct TemplateMatchStabilityCapTests {
+@Suite @MainActor struct TemplateMatchStabilityCapTests {
     @Test func aWindowWhoseTitleKeepsChangingStopsWaitingAtTheMaximum() {
         var saved = WorkspaceTemplateTests().template().windows[0]
         saved.document = nil
