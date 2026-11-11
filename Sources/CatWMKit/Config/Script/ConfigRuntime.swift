@@ -77,9 +77,9 @@ package enum ConfigRuntime {
         parents.pop();
       }
 
-      function rejectDefaultExports() {
-        for (const [path, module] of modules) {
-          if (!Object.prototype.hasOwnProperty.call(module.exports, "default")) continue;
+      function rejectDefaultExport(path) {
+        const module = modules.get(path);
+        if (module && Object.prototype.hasOwnProperty.call(module.exports, "default")) {
           const value = module.exports.default;
           const keys = value !== null && typeof value === "object" && !Array.isArray(value) ? Object.keys(value) : [];
           const examples = (keys.length > 0 ? keys.slice(0, 2) : ["gaps.size"]).map((key) => `catwm.${key} = …`);
@@ -106,7 +106,7 @@ package enum ConfigRuntime {
           catwmModule.begin();
           try {
             load(entry);
-            if (!legacy) rejectDefaultExports();
+            if (!legacy) rejectDefaultExport(entry);
             const written = catwmModule.finish();
             const value = legacy ? modules.get(entry).exports.default : written;
             check(value, "", entry, []);

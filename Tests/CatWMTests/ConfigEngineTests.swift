@@ -54,6 +54,23 @@ struct ConfigFolder {
         #expect(run.files.map(\.lastPathComponent).sorted() == ["catwm.config.ts", "gaps.ts"])
     }
 
+    @Test func anImportedModuleMayHaveADefaultExport() throws {
+        let folder = try ConfigFolder([
+            "catwm.config.ts": """
+            import { catwm } from "./catwm"
+            import double from "./double"
+            catwm.gaps.size = double(4)
+            """,
+            "double.ts": "export default function double(value: number) { return value * 2 }\n"
+        ])
+        defer { folder.remove() }
+
+        let run = ConfigEngine(entry: folder.entry).run()
+
+        #expect(run.failures.isEmpty)
+        #expect(run.value?["gaps"]?["size"] == .int(8))
+    }
+
     @Test func anObjectMergesAListOrScalarReplacesAndUndefinedResets() throws {
         let run = try run(
             "catwm.motion = { duration: 0.2 }",
@@ -205,8 +222,7 @@ struct ConfigFolder {
 
     @Test func aDefaultExportSaysHowToConvert() throws {
         let folder = try ConfigFolder([
-            "catwm.config.ts": "import \"./old\"\n",
-            "old.ts": "export default { gaps: { size: 4 }, layouts: [\"bsp\"] }\n"
+            "catwm.config.ts": "export default { gaps: { size: 4 }, layouts: [\"bsp\"] }\n"
         ])
         defer { folder.remove() }
 
@@ -214,7 +230,7 @@ struct ConfigFolder {
 
         #expect(run.value == nil)
         #expect(run.failures.first?.phase == .validate)
-        #expect(run.failures.first?.file == folder.url.appendingPathComponent("old.ts").path)
+        #expect(run.failures.first?.file == folder.entry.path)
         #expect(run.failures.first?.message == "`export default` no longer sets the config. Add "
             + "`import { catwm } from \"./catwm\"` and assign each option on it, such as "
             + "catwm.gaps = … and catwm.layouts = …")

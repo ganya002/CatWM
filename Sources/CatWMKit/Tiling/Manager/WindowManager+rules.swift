@@ -66,6 +66,7 @@ extension WindowManager {
             Log.info(refusal)
             return
         }
+        if action.dispatcher == WindowActions.fullscreen.name, isZoomed(window) { return }
         guard let command = WindowActions.named(action.dispatcher) else {
             Log.info("unknown dispatcher \(action.dispatcher)")
             return
@@ -106,7 +107,11 @@ extension WindowManager {
         return auto
     }
 
-    private func ruleFacts(of window: Window) -> Facts {
+    private func isZoomed(_ window: Window) -> Bool {
+        floats.floatZoom[window.id] != nil || screen(of: window).map { state(for: $0).zoomed == window.id } == true
+    }
+
+    func ruleFacts(of window: Window) -> Facts {
         var facts: Facts = [
             .pid: .int(Int(window.pid)), .floating: .bool(window.isFloating),
             .minimized: .bool(window.minimized), .fullscreen: .bool(window.fullscreen)
@@ -114,7 +119,8 @@ extension WindowManager {
         if let bundle = window.bundleID { facts[.app] = .string(bundle) }
         if let title = window.title { facts[.title] = .string(title) }
         if let workspace = workspaceOf[window.id] {
-            facts[.workspace] = .array([.string(workspace)] + (labels[workspace].map { [.string($0)] } ?? []))
+            facts[.workspace] = .array([.string(workspace), .string(workspaceNumber(workspace))]
+                + (labels[workspace].map { [.string($0)] } ?? []))
         }
         if let screen = screen(of: window) {
             facts[.display] = .array([.string(screen.uuid), .string(screen.name),

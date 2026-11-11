@@ -34,7 +34,6 @@ extension FocusDim {
 
     func followWorkspace() {
         let manager = WindowManager.shared
-        guard manager.hasWorkspaceRules else { return }
         let scoped = manager.config(for: manager.focusedWindow().flatMap { manager.workspaceOf[$0.id] }
             ?? manager.currentWorkspace)
         configure(dim: scoped.dimOtherWindows, strength: scoped.dimStrength,

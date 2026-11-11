@@ -117,6 +117,35 @@ import Testing
         #expect(await world.fake.wait(world.manager) { window.isFloating })
     }
 
+    @Test func aWorkspaceNumberMatchesAPerDisplayWorkspace() async throws {
+        let world = try makeWorld("catwm.windows({ workspace: \"1\" }, (win) => { win.float() })")
+        let id = world.fake.addWindow(bundleID: app)
+        #expect(await world.fake.settle(world.manager))
+        let screen = try #require(world.fake.screens().first)
+        let window = try #require(world.manager.windows[id])
+        world.manager.assignManagedWindow(id, to: WorkspaceKey.make("1", on: screen.uuid, perDisplay: true))
+
+        let rule = try #require(world.manager.config.windowRules.first)
+
+        #expect(rule.when.holds(world.manager.ruleFacts(of: window)))
+    }
+
+    @Test func aRuleDoesNotTakeAZoomedWindowOutOfFullscreen() async throws {
+        let world = try makeWorld()
+        let id = world.fake.addWindow(bundleID: app)
+        world.fake.addWindow(pid: -101, bundleID: "test.other.app")
+        #expect(await world.fake.settle(world.manager))
+        try await focus(id, in: world)
+        world.manager.dispatch("fullscreen", "")
+        let screen = try #require(world.fake.screens().first)
+        #expect(await world.fake.wait(world.manager) { world.manager.state(for: screen).zoomed == id })
+
+        try save(world, "catwm.windows({ app: \"\(app)\" }, (win) => { win.fullscreen() })")
+        #expect(await world.fake.settle(world.manager))
+
+        #expect(world.manager.state(for: screen).zoomed == id)
+    }
+
     @Test func aThrowingKeyFunctionRunsNoActions() async throws {
         let world = try makeWorld(
             "catwm.bind([\"alt\"], \"c\", () => {",
