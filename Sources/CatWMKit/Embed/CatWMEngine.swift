@@ -160,7 +160,7 @@ public final class CatWMEngine {
         } catch {
             throw EngineError.invalidValue(error.localizedDescription)
         }
-        if isRunning { try apply(store.reload(.changed)) }
+        if isRunning { try apply(store.reload()) }
     }
 
     public func resetOption(_ id: String) throws {
@@ -170,7 +170,7 @@ public final class CatWMEngine {
         } catch {
             throw EngineError.invalidValue(error.localizedDescription)
         }
-        if isRunning { try apply(store.reload(.changed)) }
+        if isRunning { try apply(store.reload()) }
     }
 
     private func apply(_ config: Config) throws {

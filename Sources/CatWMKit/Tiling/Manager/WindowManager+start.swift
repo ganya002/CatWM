@@ -227,11 +227,11 @@ extension WindowManager {
     }
 
     package func reload(showHUD: Bool = true) {
-        apply(store.reload(.all), showHUD: showHUD)
+        apply(store.reload(), showHUD: showHUD)
     }
 
     package func applyStoredConfig() {
-        apply(store.reload(.changed), showHUD: false)
+        apply(store.reload(), showHUD: false)
     }
 
     package func apply(_ next: Config, showHUD: Bool) {

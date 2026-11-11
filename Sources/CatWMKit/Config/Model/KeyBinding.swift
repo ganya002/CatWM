@@ -7,6 +7,7 @@ package struct KeyBinding: Equatable, Sendable {
     package let arg: String
     package var submap = ""
     package var repeats = false
+    package var function: Int?
 }
 
 package struct BindInterpretation {

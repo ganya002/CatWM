@@ -14,7 +14,7 @@ import Testing
         var result = Migrated(source: ConfigMigration.typescript(from: conf, header: ["// test"]))
         let folder = try ConfigFolder(["catwm.config.ts": result.source])
         defer { folder.remove() }
-        let run = ConfigEngine(entry: folder.entry).run(.all)
+        let run = ConfigEngine(entry: folder.entry).run()
         result.diagnostics = run.failures
         if let value = run.value { result.diagnostics += ConfigScript.read(value, into: &result.config, file: nil) }
         return result
@@ -53,15 +53,17 @@ import Testing
         #expect(result.diagnostics.isEmpty)
         #expect(result.config.changes(from: Config.parse(conf)).isEmpty)
         #expect(result.source.contains("const mod = \"cmd\""))
-        #expect(result.source.contains("{ mods: [mod, \"shift\"], key: \"3\", run: [\"movetoworkspace\", \"3\"] },"))
-        #expect(result.source.contains("run: [\"exec\", `open -a ${term}`]"))
-        #expect(result.source.contains("    // half the gap\n    size: 6,"))
-        #expect(result.source.contains("smart: false"))
+        #expect(result.source.contains("catwm.bind([mod, \"shift\"], \"3\", [\"movetoworkspace\", \"3\"])"))
+        #expect(result.source.contains("catwm.bind([mod], \"t\", [\"exec\", `open -a ${term}`])"))
+        #expect(result.source.contains("// half the gap\ncatwm.gaps.size = 6"))
+        #expect(result.source.contains("catwm.gaps.smart = false"))
+        #expect(result.source.contains("catwm.motion.enabled = false"))
         #expect(result.source.contains("// my main key\nconst mod"))
         let note = "// catwm migration: not converted (unknown option `frobnicate`): frobnicate = 7"
         #expect(result.source.contains(note))
-        #expect(result.source.contains("  submaps: {\n    resize: ["))
-        #expect(result.source.contains("      { key: \"escape\", run: [\"submap\", \"reset\"] },"))
+        #expect(result.source.contains("catwm.bind([], \"escape\", [\"submap\", \"reset\"], { submap: \"resize\" })"))
+        #expect(result.source.contains("catwm.bind([mod], \"l\", [\"splitratio\", \"+0.05\"], { repeat: true })"))
+        #expect(!result.source.contains("export default"))
     }
 
     @Test func aReassignedVariableKeepsTheValueOfEachBind() throws {

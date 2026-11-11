@@ -4,17 +4,17 @@ package enum ConfigRuntime {
     package static let source = #"""
     (() => {
       "use strict";
-      let records = new Map();
-      let previous = new Map();
       const compiled = new Map();
-      let ran = [];
+      const hostModule = /^\.{1,2}\/(.*\/)?catwm(\.js)?$/;
+      let modules = new Map();
       let touched = [];
+      let committed = [];
       const fail = (phase, file, line, message) => ({ catwmDiagnostic: true, phase, file, line, message });
 
       function load(path) {
         if (!touched.includes(path)) touched.push(path);
-        const known = records.get(path);
-        if (known) return known.module.exports;
+        const known = modules.get(path);
+        if (known) return known.exports;
         const source = catwmHost.read(path);
         if (typeof source !== "string") throw fail("resolve", path, null, "CatWM can't read this file");
         let entry = compiled.get(path);
@@ -29,56 +29,32 @@ package enum ConfigRuntime {
           entry = { source, factory: catwmHost.compile(path, code) };
           compiled.set(path, entry);
         }
-        const record = { module: { exports: {} }, deps: [], source };
-        records.set(path, record);
-        ran.push(path);
-        entry.factory.call(undefined, record.module.exports, (specifier) => {
+        const module = { exports: {} };
+        modules.set(path, module);
+        entry.factory.call(undefined, module.exports, (specifier) => {
+          if (hostModule.test(String(specifier))) return catwmModule.exports;
           const target = catwmHost.resolve(path, String(specifier));
           if (typeof target !== "string") {
             const candidate = catwmHost.candidate(path, String(specifier));
             if (typeof candidate === "string" && !touched.includes(candidate)) touched.push(candidate);
             throw fail("resolve", path, null, `can't find the module "${specifier}"`);
           }
-          if (!record.deps.includes(target)) record.deps.push(target);
           return load(target);
-        }, record.module);
-        return freeze(record.module.exports);
+        }, module);
+        return freeze(module.exports);
       }
 
       function freeze(value) {
-        if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
+        const host = catwmModule.hosts.has(value) || catwmModule.lists.has(value);
+        if (!host && value !== null && typeof value === "object" && !Object.isFrozen(value)) {
           Object.freeze(value);
           for (const key of Object.keys(value)) freeze(value[key]);
         }
         return value;
       }
 
-      function invalidate(changed) {
-        const stale = new Set(changed);
-        let grew = true;
-        while (grew) {
-          grew = false;
-          for (const [path, record] of records) {
-            if (!stale.has(path) && record.deps.some((dep) => stale.has(dep))) { stale.add(path); grew = true; }
-          }
-        }
-        for (const path of stale) records.delete(path);
-      }
-
-      function reachable(entry) {
-        const seen = new Set();
-        const walk = (path) => {
-          if (seen.has(path) || !records.has(path)) return;
-          seen.add(path);
-          records.get(path).deps.forEach(walk);
-        };
-        walk(entry);
-        for (const path of [...records.keys()]) if (!seen.has(path)) records.delete(path);
-        for (const path of [...compiled.keys()]) if (!seen.has(path)) compiled.delete(path);
-      }
-
       function check(value, path, entry, parents) {
-        const where = path || "the default export";
+        const where = path || "the config";
         if (typeof value === "function") {
           throw fail("validate", entry, null, `\`${where}\` is a function. A config holds only data`);
         }
@@ -101,37 +77,59 @@ package enum ConfigRuntime {
         parents.pop();
       }
 
+      function rejectDefaultExports() {
+        for (const [path, module] of modules) {
+          if (!Object.prototype.hasOwnProperty.call(module.exports, "default")) continue;
+          const value = module.exports.default;
+          const keys = value !== null && typeof value === "object" && !Array.isArray(value) ? Object.keys(value) : [];
+          const examples = (keys.length > 0 ? keys.slice(0, 2) : ["gaps.size"]).map((key) => `catwm.${key} = …`);
+          throw fail("validate", path, null, "`export default` no longer sets the config. Add "
+            + "`import { catwm } from \"./catwm\"` and assign each option on it, such as "
+            + examples.join(" and "));
+        }
+      }
+
       function describe(error) {
         if (error && error.catwmDiagnostic) return error;
+        if (error && error.catwmUsage) {
+          return { ...fail("validate", null, null, error.message), ...catwmModule.locate(error) };
+        }
         const message = error && error.message !== undefined ? `${error.name}: ${error.message}` : String(error);
         return fail("evaluate", error && error.sourceURL ? error.sourceURL : null,
                     error && typeof error.line === "number" ? error.line : null, message);
       }
 
       globalThis.catwmRegistry = {
-        changed() {
-          return [...records].filter(([path, record]) => catwmHost.read(path) !== record.source).map(([path]) => path);
-        },
-        run(entry, changed) {
-          const before = new Map(records);
-          previous = before;
-          ran = [];
+        run(entry) {
           touched = [];
-          if (changed === null) records.clear(); else invalidate(changed);
+          modules = new Map();
+          catwmModule.begin();
           try {
-            const exports = load(entry);
-            if (!exports || !Object.prototype.hasOwnProperty.call(exports, "default")) {
-              throw fail("validate", entry, null, "the config has no default export. Write `export default { … }`");
-            }
-            check(exports.default, "", entry, []);
-            reachable(entry);
-            return JSON.stringify({ value: exports.default, ran, files: [...records.keys()] });
+            load(entry);
+            rejectDefaultExports();
+            const value = catwmModule.finish();
+            check(value, "", entry, []);
+            for (const path of [...compiled.keys()]) if (!modules.has(path)) compiled.delete(path);
+            return JSON.stringify({ value, files: [...modules.keys()] });
           } catch (error) {
-            records = before;
-            return JSON.stringify({ error: describe(error), ran, files: touched });
+            catwmModule.finish();
+            return JSON.stringify({ error: describe(error), files: touched });
           }
         },
-        rollback() { records = previous; }
+        commit() { committed = catwmModule.functions(); },
+        late() { return catwmModule.takeLate(); },
+        call(index, snapshot) {
+          const run = committed[index];
+          if (typeof run !== "function") {
+            const message = "this key's function is from an older config";
+            return JSON.stringify({ error: fail("evaluate", null, null, message) });
+          }
+          try {
+            return JSON.stringify({ actions: catwmModule.call(run, snapshot) });
+          } catch (error) {
+            return JSON.stringify({ error: describe(error) });
+          }
+        }
       };
     })();
     """#

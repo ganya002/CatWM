@@ -111,7 +111,7 @@ extension ConfigStore {
             return ([:], [ConfigDiagnostic(file: overridesURL.path, phase: .read,
                                            message: "isn't a JSON object, so CatWM leaves it out")])
         }
-        return (object, [])
+        return (ConfigScript.renamingOverrides(object), [])
     }
 
     func writeOverrides(_ overrides: [String: JSON]) throws {

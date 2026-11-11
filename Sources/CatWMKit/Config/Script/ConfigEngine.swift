@@ -5,14 +5,8 @@ import os
 package final class ConfigEngine {
     package static let timeLimit = 1.0
 
-    package enum Pass {
-        case all
-        case changed
-    }
-
     package struct Run {
         package var value: JSON?
-        package var ran: [String] = []
         package var files: [URL] = []
         package var failures: [ConfigDiagnostic] = []
         package var isNew = false
@@ -20,15 +14,36 @@ package final class ConfigEngine {
         package var milliseconds = 0.0
     }
 
+    package struct WindowSnapshot: Sendable {
+        package var title: String
+        package var app: String
+        package var pid: Int
+        package var frame: CGRect
+
+        package init(title: String, app: String, pid: Int, frame: CGRect) {
+            self.title = title
+            self.app = app
+            self.pid = pid
+            self.frame = frame
+        }
+    }
+
+    package struct FunctionRun: Sendable {
+        package var actions: [RuleAction] = []
+        package var failure: ConfigDiagnostic?
+    }
+
     package let entry: URL
+    private let baseline: Config
     private let check: (JSON) -> [ConfigDiagnostic]
     private let thread = RunLoopThread(name: "CatWM config")
     private var context: JSContext?
     private var value: JSON?
     private var files: [URL] = []
 
-    package init(entry: URL, check: @escaping (JSON) -> [ConfigDiagnostic] = { _ in [] }) {
+    package init(entry: URL, baseline: Config = Config(), check: @escaping (JSON) -> [ConfigDiagnostic] = { _ in [] }) {
         self.entry = entry
+        self.baseline = baseline
         self.check = check
     }
 
@@ -38,9 +53,9 @@ package final class ConfigEngine {
         thread.stop()
     }
 
-    package func run(_ pass: Pass) -> Run { run(pass, timeout: .infinity) ?? Run() }
+    package func run() -> Run { run(timeout: .infinity) ?? Run() }
 
-    package func run(_ pass: Pass, timeout: TimeInterval) -> Run? {
+    package func run(timeout: TimeInterval) -> Run? {
         final class Box {
             package let lock = NSLock()
             package var run: Run?
@@ -48,7 +63,7 @@ package final class ConfigEngine {
         let box = Box()
         let done = DispatchSemaphore(value: 0)
         thread.perform {
-            let run = self.evaluate(pass)
+            let run = self.evaluate()
             box.lock.withLock { box.run = run }
             done.signal()
         }
@@ -57,62 +72,96 @@ package final class ConfigEngine {
         return box.lock.withLock { box.run }
     }
 
-    package func run(_ pass: Pass, then finish: @escaping (Run) -> Void) {
-        thread.perform { finish(self.evaluate(pass)) }
+    package func run(then finish: @escaping (Run) -> Void) {
+        thread.perform { finish(self.evaluate()) }
     }
 
-    private func evaluate(_ pass: Pass) -> Run {
+    package func call(function: Int, window: WindowSnapshot, then finish: @escaping (FunctionRun) -> Void) {
+        thread.perform { finish(self.invoke(function, window)) }
+    }
+
+    private func evaluate() -> Run {
         let start = DispatchTime.now().uptimeNanoseconds
-        var run = evaluateRegistry(pass)
+        var run = evaluateRegistry()
         run.milliseconds = Double(DispatchTime.now().uptimeNanoseconds - start) / 1_000_000
         return run
     }
 
-    private func evaluateRegistry(_ pass: Pass) -> Run {
+    private func evaluateRegistry() -> Run {
         guard let context = context ?? makeContext() else {
             return Run(value: value, files: files,
                        failures: [ConfigDiagnostic(phase: .read, message: "CatWM can't start its TypeScript engine")])
         }
         self.context = context
         guard let registry = context.objectForKeyedSubscript("catwmRegistry") else { return Run(value: value) }
-        var changed: Any = NSNull()
-        if pass == .changed, value != nil {
-            let paths = registry.invokeMethod("changed", withArguments: [])?.toArray() as? [String] ?? []
-            if paths.isEmpty { return Run(value: value, files: files) }
-            changed = paths
-        }
         let start = DispatchTime.now().uptimeNanoseconds
-        let output = registry.invokeMethod("run", withArguments: [entry.path, changed])?.toString() ?? ""
+        let output = registry.invokeMethod("run", withArguments: [entry.path])?.toString() ?? ""
+        let late = registry.invokeMethod("late", withArguments: [])?.toString() ?? "[]"
         JSGarbageCollect(context.jsGlobalContextRef)
         guard let result = JSON.parse(Data(output.utf8)) else {
             let seconds = Double(DispatchTime.now().uptimeNanoseconds - start) / 1_000_000_000
-            guard seconds >= Self.timeLimit else {
-                let failure = ConfigDiagnostic(file: entry.path, phase: .evaluate, message: "the config run failed")
-                return Run(value: value, files: files, failures: [failure])
-            }
-            registry.invokeMethod("rollback", withArguments: [])
-            let message = "the config ran longer than \(Int(Self.timeLimit)) s, so CatWM stopped it. "
-                + "Look for an endless loop"
+            let message = seconds >= Self.timeLimit
+                ? "the config ran longer than \(Int(Self.timeLimit)) s, so CatWM stopped it. Look for an endless loop"
+                : "the config run failed"
             return Run(value: value, files: files,
                        failures: [ConfigDiagnostic(file: entry.path, phase: .evaluate, message: message)])
         }
-        let ran = result["ran"]?.array?.compactMap(\.string) ?? []
-        if let error = result["error"] {
-            let tried = (result["files"]?.array ?? []).compactMap(\.string).map { URL(fileURLWithPath: $0) }
-            return Run(value: value, ran: ran, files: files + tried.filter { !files.contains($0) },
-                       failures: [ConfigDiagnostic(error) ?? ConfigDiagnostic(phase: .evaluate, message: "\(error)")])
-        }
+        let tried = (result["files"]?.array ?? []).compactMap(\.string).map { URL(fileURLWithPath: $0) }
+        var failures = result["error"].map {
+            [ConfigDiagnostic($0) ?? ConfigDiagnostic(phase: .evaluate, message: "\($0)")]
+        } ?? []
+        failures += (JSON.parse(Data(late.utf8))?.array ?? []).compactMap(ConfigDiagnostic.init)
         let next = result["value"] ?? .null
-        let problems = check(next)
-        if !problems.isEmpty {
-            registry.invokeMethod("rollback", withArguments: [])
-            let tried = (result["files"]?.array ?? []).compactMap(\.string).map { URL(fileURLWithPath: $0) }
-            return Run(value: value, ran: ran, files: files + tried.filter { !files.contains($0) }, failures: problems)
+        if failures.isEmpty { failures = check(next) }
+        guard failures.isEmpty else {
+            return Run(value: value, files: files + tried.filter { !files.contains($0) }, failures: failures)
         }
+        registry.invokeMethod("commit", withArguments: [])
         let isNew = next != value
         value = next
-        files = (result["files"]?.array ?? []).compactMap(\.string).map { URL(fileURLWithPath: $0) }
-        return Run(value: next, ran: ran, files: files, isNew: isNew)
+        files = tried
+        return Run(value: next, files: files, isNew: isNew)
+    }
+
+    private func invoke(_ function: Int, _ window: WindowSnapshot) -> FunctionRun {
+        guard let registry = context?.objectForKeyedSubscript("catwmRegistry") else {
+            return FunctionRun(failure: ConfigDiagnostic(file: entry.path, phase: .evaluate,
+                                                         message: "the config isn't loaded"))
+        }
+        let frame = window.frame
+        let snapshot: [String: Any] = [
+            "title": window.title, "app": window.app, "pid": window.pid,
+            "frame": ["x": frame.minX, "y": frame.minY, "width": frame.width, "height": frame.height]
+        ]
+        let start = DispatchTime.now().uptimeNanoseconds
+        let output = registry.invokeMethod("call", withArguments: [function, snapshot])?.toString() ?? ""
+        guard let result = JSON.parse(Data(output.utf8)) else {
+            let seconds = Double(DispatchTime.now().uptimeNanoseconds - start) / 1_000_000_000
+            let message = seconds >= Self.timeLimit
+                ? "the key's function ran longer than \(Int(Self.timeLimit)) s, so CatWM stopped it. "
+                    + "Look for an endless loop"
+                : "the key's function failed"
+            return FunctionRun(failure: ConfigDiagnostic(file: entry.path, phase: .evaluate, message: message))
+        }
+        if let error = result["error"] {
+            return FunctionRun(failure: ConfigDiagnostic(error)
+                ?? ConfigDiagnostic(file: entry.path, phase: .evaluate, message: "\(error)"))
+        }
+        let actions = (result["actions"]?.array ?? []).compactMap { action -> RuleAction? in
+            if let name = action.string { return RuleAction(dispatcher: name, arg: "") }
+            guard let parts = action.array, let name = parts.first?.string else { return nil }
+            return RuleAction(dispatcher: name, arg: parts.dropFirst().compactMap(\.string).joined(separator: ", "))
+        }
+        return FunctionRun(actions: actions)
+    }
+
+    private var setup: String {
+        let styles = MotionStyle.all.map { JSON.object(["id": .string($0.id), "fields": .object($0.fields)]) }
+        let value = JSON.object([
+            "defaults": ConfigScript.defaults(for: baseline), "styles": .array(styles),
+            "renamed": .object(ConfigScript.renamed.mapValues(JSON.string))
+        ])
+        return (try? JSONEncoder().encode(value)).flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
     }
 
     private func makeContext() -> JSContext? {
@@ -154,7 +203,9 @@ package final class ConfigEngine {
         host?.setValue(candidate, forProperty: "candidate")
         context.globalObject.setValue(host, forProperty: "catwmHost")
         context.evaluateScript(Sucrase.source, withSourceURL: URL(fileURLWithPath: "sucrase.js"))
+        context.evaluateScript(ConfigCatwm.source, withSourceURL: URL(fileURLWithPath: "catwm-module.js"))
         context.evaluateScript(ConfigRuntime.source, withSourceURL: URL(fileURLWithPath: "catwm-registry.js"))
+        context.objectForKeyedSubscript("catwmModule")?.invokeMethod("install", withArguments: [setup])
         if let exception = context.exception {
             Log.info("config: the TypeScript engine did not start: \(exception)")
             return nil

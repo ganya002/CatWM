@@ -11,6 +11,10 @@ Used as `bind = MODS, key, <dispatcher>, <args>` or `catwm dispatch <dispatcher>
 | `layoutmsg` | `swapwithmaster`, `swapsides`, `focusmaster`, `addmaster`, `removemaster`, `cyclenext`, `cycleprev`, `swapnext`, `swapprev`, `mfact ±0.05`, `orientationnext`, `orientationprev` | layout-specific actions (main pane) |
 | `splitratio` | `+0.05`, `-0.05`, `exact 0.6` | resize the main split |
 | `togglefloating` | | float/tile the focused window |
+| `setfloating` / `settiled` | | float or tile the focused window and keep the choice |
+| `resizeactive` | `exact W H` | set the size of the focused floating window, in points. The top-left corner stays. A tiled window is ignored |
+| `moveactive` | `exact X Y` | move the focused floating window's top-left corner to X, Y points from the top-left of its display's visible area. Kept on that display. A tiled window is ignored |
+| `centerwindow` | | center the focused floating window on its display's visible area. A tiled window is ignored |
 | `fullscreen` | | zoom the focused window |
 | `nativefullscreen` | | macOS Full Screen (the green button) for the focused window: it gets a Space of its own and leaves the tiling until it comes back |
 | `moveintogroup` | `l r u d` | add the focused window to the tabs of the window in that direction. The tabs share one tile, with a tab bar above it. You can also drag a window by its title bar onto the top of another window |

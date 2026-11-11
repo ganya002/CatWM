@@ -45,7 +45,7 @@ import os
     package func load() -> Config {
         isLoaded = true
         if embedded {
-            publish(evaluate(.all), notify: false)
+            publish(evaluate(), notify: false)
             return current
         }
         Log.attempt("create config folder") {
@@ -58,23 +58,23 @@ import os
         }
         source = .script
         writeTypes()
-        publish(evaluate(.all), notify: false)
+        publish(evaluate(), notify: false)
         return current
     }
 
     private func makeEngine() -> ConfigEngine {
         let scriptPath = scriptURL.path
         let baseline = baseline, embedded = embedded
-        return ConfigEngine(entry: scriptURL) { value in
+        return ConfigEngine(entry: scriptURL, baseline: baseline) { value in
             var config = baseline
             return ConfigScript.read(value, into: &config, file: scriptPath, embedded: embedded)
         }
     }
 
-    private func evaluate(_ pass: ConfigEngine.Pass) -> ConfigEngine.Run {
+    private func evaluate() -> ConfigEngine.Run {
         let engine = engine ?? makeEngine()
         self.engine = engine
-        return engine.run(pass, timeout: Self.timeLimit) ?? stuck(engine)
+        return engine.run(timeout: Self.timeLimit) ?? stuck(engine)
     }
 
     private func stuck(_ engine: ConfigEngine) -> ConfigEngine.Run {
@@ -85,10 +85,10 @@ import os
                                                                          message: message)], isStuck: true)
     }
 
-    package func reload(_ pass: ConfigEngine.Pass) -> Config {
+    package func reload() -> Config {
         guard isLoaded else { return load() }
         guard source == .script else { return loadConf() }
-        publish(evaluate(pass), notify: false)
+        publish(evaluate(), notify: false)
         return current
     }
 
@@ -108,7 +108,7 @@ import os
         self.entry = entry
         engine = nil
         files = []
-        return reload(.all)
+        return reload()
     }
 
     package func stopWatching() {
@@ -137,7 +137,7 @@ import os
         let engine = engine ?? makeEngine()
         self.engine = engine
         let finished = OSAllocatedUnfairLock(initialState: false)
-        engine.run(.changed) { [weak self] run in
+        engine.run { [weak self] run in
             DispatchQueue.main.async { [weak self] in
                 finished.withLock { $0 = true }
                 guard let self, self.engine === engine else { return }
@@ -182,15 +182,11 @@ import os
         self.failures = failures
         self.base = base
         self.current = current
-        let names = run.ran.map { URL(fileURLWithPath: $0).lastPathComponent }
         let time = String(format: "%.1f ms", run.milliseconds)
         if let failure = failures.first {
             Log.info("config: kept the last good config, \(failure.phase.rawValue) failed: \(failure.text) (\(time))")
-        } else if names.isEmpty {
-            Log.debug("config: no module changed (\(time))")
         } else {
-            let count = "\(names.count) of \(files.count) modules"
-            Log.info("config: ran \(names.joined(separator: ", ")) (\(count)) in \(time)")
+            Log.info("config: ran \(files.count) modules in \(time)")
         }
         watcher?.watch(folders)
         guard notify else { return }
@@ -239,7 +235,7 @@ extension ConfigStore {
         } catch {
             return fail(error.localizedDescription)
         }
-        guard let run = ConfigEngine(entry: trial).run(.all, timeout: Self.timeLimit) else {
+        guard let run = ConfigEngine(entry: trial).run(timeout: Self.timeLimit) else {
             return fail("the converted config didn't finish")
         }
         if let failure = run.failures.first { return fail(failure.message) }

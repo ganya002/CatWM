@@ -74,17 +74,7 @@ extension WindowManager {
 
     package func toggleFloating() {
         guard let window = focusedWindow() else { return }
-        window.userFloating = .chosen(!window.isFloating)
-        floats.floatZoom[window.id] = nil
-        if window.isFloating {
-            targets[window.id] = nil
-        } else {
-            if let screen = screen(containing: window.cachedFrame) {
-                assignManagedWindow(window.id, to: shown[screen.uuid])
-            }
-            corrections[window.id] = nil
-        }
-        refresh()
+        setFloating(!window.isFloating, for: window)
     }
 
     package func toggleZoom() {

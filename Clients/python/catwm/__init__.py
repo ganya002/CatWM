@@ -377,6 +377,33 @@ class CatWM:
         args: dict[str, Any] = {}
         self.call("togglefloating", args)
 
+    def setfloating(self) -> None:
+        """Float the focused window"""
+        args: dict[str, Any] = {}
+        self.call("setfloating", args)
+
+    def settiled(self) -> None:
+        """Tile the focused window"""
+        args: dict[str, Any] = {}
+        self.call("settiled", args)
+
+    def resizeactive(self, size: str) -> None:
+        """Set the size of the focused floating window"""
+        args: dict[str, Any] = {}
+        args["size"] = size
+        self.call("resizeactive", args)
+
+    def moveactive(self, position: str) -> None:
+        """Move the focused floating window"""
+        args: dict[str, Any] = {}
+        args["position"] = position
+        self.call("moveactive", args)
+
+    def centerwindow(self) -> None:
+        """Center the focused floating window on its display"""
+        args: dict[str, Any] = {}
+        self.call("centerwindow", args)
+
     def fullscreen(self) -> None:
         """Fill the screen with the focused window, inside the tiling"""
         args: dict[str, Any] = {}

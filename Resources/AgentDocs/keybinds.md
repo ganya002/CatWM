@@ -1,17 +1,21 @@
 # Keybinds
 
-A bind is a typed object in `binds` (every app) or in a mode of `submaps`:
+A bind is a `catwm.bind(mods, key, run, options?)` call. Put the calls at the top level of the config:
 
 ```ts
-{ mods: ["alt", "shift"], key: "tab", run: ["switcher", "prev"] }
-{ key: "h", run: ["movefocus", "l"], repeat: true }   // no mods: only in a mode
-{ mods: ["alt"], key: "o", run: "sort" }               // an action with no arguments
+import { catwm } from "./catwm"
+
+catwm.bind(["alt", "shift"], "tab", ["switcher", "prev"])
+catwm.bind([], "h", ["movefocus", "l"], { repeat: true, submap: "window" })   // no mods: only in a mode
+catwm.bind(["alt"], "o", "sort")                                               // an action with no arguments
+catwm.bind(["alt"], "c", () => catwm.window.focused.float())                   // a function that acts on the focused window
 ```
 
-- `mods`: any of `"cmd"`, `"alt"`, `"ctrl"`, `"shift"`. Leave it out in a mode. A constant such as `const mod = "alt"` works: `mods: [mod, "shift"]`.
+- `mods`: any of `"cmd"`, `"alt"`, `"ctrl"`, `"shift"`. Leave it out in a mode. A constant such as `const mod = "alt"` works: `[mod, "shift"]`.
 - `key`: a letter, digit, `f1`–`f12`, `space`, `return`, `escape`, `backspace`, arrows (`left right up down`), `capslock`, and so on, plus the scroll and swipe keys below. `catwm.d.ts` lists them all.
 - `run`: an action name, or the name and its arguments. The arguments are the ones the `.conf` file used after the dispatcher. [dispatchers.md](dispatchers.md) lists every action.
-- `repeat: true` runs the action again while the key is held.
+- `{ repeat: true }` runs the action again while the key is held. `{ submap: "name" }` puts the bind in a mode.
+- A function runs when the key is pressed. `catwm.window.focused` has `title`, `app`, `pid` and `frame`, and the methods `float()`, `tile()`, `resize(w, h)`, `move(x, y)`, `center()`, `fullscreen()` and `moveTo(workspace)`. A function that throws, or runs longer than the time limit, does nothing and shows an error like a broken config.
 - The macOS app-shortcut caveat: binding `cmd` combos like Q or C replaces the standard app shortcut. Settings → Shortcuts flags those in orange.
 
 ## Many keys at once
@@ -19,12 +23,14 @@ A bind is a typed object in `binds` (every app) or in a mode of `submaps`:
 There's no range syntax. Write ordinary TypeScript:
 
 ```ts
-import type { Bind } from "./catwm"
-const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"] as const
-const workspaces = keys.map((key, index): Bind => ({ mods: ["alt"], key, run: ["workspace", String(index + 1)] }))
-const focus = (["h", "j", "k", "l"] as const).map((key, index): Bind =>
-  ({ mods: ["alt", "ctrl"], key, run: ["movefocus", "ldur"[index]] }))
-export default { binds: [...workspaces, ...focus] }
+import { catwm } from "./catwm"
+
+for (const [index, key] of ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"].entries()) {
+  catwm.bind(["alt"], key, ["workspace", String(index + 1)])
+}
+for (const [index, key] of (["h", "j", "k", "l"] as const).entries()) {
+  catwm.bind(["alt", "ctrl"], key, ["movefocus", "ldur"[index]])
+}
 ```
 
 ## The old `.conf` syntax
@@ -34,16 +40,10 @@ export default { binds: [...workspaces, ...focus] }
 ## Window mode (submaps)
 
 ```ts
-binds: [
-  { mods: ["cmd"], key: "capslock", run: ["submap", "window"] },   // enter the mode (Caps Lock itself is left alone)
-],
-submaps: {
-  window: [
-    { key: "h", run: ["movefocus", "l"] },
-    { mods: ["shift"], key: "h", run: ["movewindow", "l"] },
-    { key: "escape", run: ["submap", "reset"] },
-  ],
-},
+catwm.bind(["cmd"], "capslock", ["submap", "window"])   // enter the mode (Caps Lock itself is left alone)
+catwm.bind([], "h", ["movefocus", "l"], { submap: "window" })
+catwm.bind(["shift"], "h", ["movewindow", "l"], { submap: "window" })
+catwm.bind([], "escape", ["submap", "reset"], { submap: "window" })
 ```
 
 - While on, "-- WINDOW --" appears at the screen bottom and the menu bar shows WINDOW.
@@ -57,8 +57,8 @@ submaps: {
 Keys: `mouse_up`, `mouse_down`, `mouse_left`, `mouse_right`; `swipe_left`, `swipe_right`, `swipe_up`, `swipe_down`.
 
 ```ts
-{ mods: ["alt"], key: "mouse_down", run: ["workspace", "e+1"] }
-{ mods: ["alt", "ctrl"], key: "swipe_left", run: ["workspace", "+1"] }
+catwm.bind(["alt"], "mouse_down", ["workspace", "e+1"])
+catwm.bind(["alt", "ctrl"], "swipe_left", ["workspace", "+1"])
 ```
 
 - Matched scrolls are consumed; unmatched ones reach the app. Direction follows natural-scrolling.

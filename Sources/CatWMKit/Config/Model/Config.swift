@@ -61,6 +61,8 @@ package struct Config: Sendable {
     package var keyboardFinish = "auto"
     package var bindings: [KeyBinding] = []
     package var bindRows: [BindRow] = []
+    package var windowRules: [WindowRule] = []
+    package var workspaceRules: [WorkspaceRule] = []
     package var features = Set(Feature.allCases)
     package var currentSubmap = ""
     package var errors: [String] = []
@@ -192,6 +194,8 @@ extension Config {
             changed.insert("bindings")
         }
         if features != other.features { changed.insert("features") }
+        if windowRules != other.windowRules { changed.insert("windowRules") }
+        if workspaceRules != other.workspaceRules { changed.insert("workspaceRules") }
         return changed
     }
 }

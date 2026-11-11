@@ -65,6 +65,41 @@ extension WindowActions {
         name: "togglefloating", group: "window", summary: "Float or tile the focused window"
     ) { $0.manager.toggleFloating() }
 
+    package static let setfloating = WindowAction(
+        name: "setfloating", group: "window", summary: "Float the focused window"
+    ) { context in
+        if let window = context.manager.focusedWindow() { context.manager.setFloating(true, for: window) }
+    }
+
+    package static let settiled = WindowAction(
+        name: "settiled", group: "window", summary: "Tile the focused window"
+    ) { context in
+        if let window = context.manager.focusedWindow() { context.manager.setFloating(false, for: window) }
+    }
+
+    package static let resizeactive = WindowAction.text(
+        "resizeactive", "window", "Set the size of the focused floating window",
+        .text("size", "`exact W H`, the size in points. A tiled window keeps its size.")
+    ) { context in
+        guard let window = context.manager.focusedWindow(), let size = context.exactPair else { return }
+        context.manager.resizeWindow(window, to: CGSize(width: size.x, height: size.y))
+    }
+
+    package static let moveactive = WindowAction.text(
+        "moveactive", "window", "Move the focused floating window",
+        .text("position", "`exact X Y`, the top-left corner in points from the top-left of the display's visible area."
+              + " A tiled window stays in its tile.")
+    ) { context in
+        guard let window = context.manager.focusedWindow(), let point = context.exactPair else { return }
+        context.manager.moveWindow(window, toOffset: point)
+    }
+
+    package static let centerwindow = WindowAction(
+        name: "centerwindow", group: "window", summary: "Center the focused floating window on its display"
+    ) { context in
+        if let window = context.manager.focusedWindow() { context.manager.centerWindow(window) }
+    }
+
     package static let fullscreen = WindowAction(
         name: "fullscreen", group: "window", summary: "Fill the screen with the focused window, inside the tiling"
     ) { $0.manager.toggleZoom() }

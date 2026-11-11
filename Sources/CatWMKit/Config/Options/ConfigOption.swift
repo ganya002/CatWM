@@ -15,6 +15,7 @@ package struct ConfigOption: Sendable {
     package var script = ""
     package var scriptKind = ScriptKind.string
     package var scriptType: String?
+    package var isScoped = false
     package let path: PartialKeyPath<Config> & Sendable
     package let read: @Sendable (inout Config, _ value: String, _ rawKey: String) -> String?
     package let text: @Sendable (Config) -> String
@@ -54,6 +55,7 @@ package struct ConfigOption: Sendable {
         option.scriptType = type
         return option
     }
+    package func scoped() -> Self { var option = self; option.isScoped = true; return option }
     package func aliases(_ names: String...) -> Self { var option = self; option.aliases = names; return option }
     package func section(_ title: String) -> Self { var option = self; option.section = title; return option }
     package func note(_ text: String) -> Self { var option = self; option.note = text; return option }

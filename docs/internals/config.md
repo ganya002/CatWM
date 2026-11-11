@@ -1,15 +1,35 @@
-# Config: TypeScript, HMR and overrides
+# Config: TypeScript, the `catwm` module and overrides
 
 `ConfigStore` (`Config/Script/`) owns the config that CatWM runs. It reads `catwm.config.ts` from `Instance.configFolder`, then `catwm.overrides.json`, and gives `WindowManager` one `Config`.
 
 ## Parts (`Sources/CatWMKit/Config/Script/`)
 
 - `ConfigEngine`: the system JavaScriptCore through its public API, on its own thread with a run loop. It loads the bundled `sucrase.js` (Sucrase 3.35.1, `Tools/bundle-sucrase.sh`) once and keeps the context loaded. Only the finished value goes to the main thread.
-- `ConfigRuntime`: the module registry in JavaScript. Sucrase turns `import` and `export` into `require` and `exports`, and each module runs as `function (exports, require, module)`. A run with changed files deletes them and every module that imports them, then runs the entry again. Every other module keeps its exports. A failed run, or a value that `ConfigScript` rejects, puts the last good registry back. CatWM doesn't use the native ES module loader: it's private API and keeps each old module for the life of the context.
-- `ConfigScript`: reads the value into `Config`. Each option's path comes from `.script(...)` in the option table. Only the paths in the value change, so reading the TypeScript value and then the overrides gives the precedence.
+- `ConfigRuntime`: the module registry in JavaScript. Sucrase turns `import` and `export` into `require` and `exports`, and each module runs as `function (exports, require, module)`. Every save runs the entry again from a fresh module map and keeps only the compiled functions, by file text, so Sucrase doesn't run twice on an unchanged file. A failed run, or a value that `ConfigScript` rejects, keeps the last good config and the key functions that went with it. CatWM doesn't use the native ES module loader: it's private API and keeps each old module for the life of the context.
+- `ConfigCatwm`: the host module that `import { catwm } from "./catwm"` resolves to. See "The `catwm` module".
+- `ConfigScript`: reads the store into `Config`. Each option's path comes from `.script(...)` in the option table. Only the paths in the value change, so reading the TypeScript value and then the overrides gives the precedence. `ConfigScript+rules` reads the recorded window and workspace rules into `Config.windowRules` and `Config.workspaceRules`.
 - `ConfigWatcher`: FSEvents on the config folder and the folders of the imported files, not on the files. Editors and CatWM save by rename.
 - `ConfigMigration`: turns `catwm.conf` text into TypeScript with `Config.parse` and `BindRange`. `ConfigStore` writes the result only when it runs and gives the same `Config`, never over an existing `catwm.config.ts`, and once (`DefaultsKey.migratedConfigToTypeScript`). A failed conversion leaves `catwm.conf` in use and reports why.
-- `ConfigTypes`: `catwm.d.ts` and `tsconfig.json`. CatWM writes the types each launch, and `./build.sh` writes the same file to `Resources/AgentDocs/catwm.d.ts`.
+- `ConfigTypes`: `catwm.d.ts` and `tsconfig.json`. The `catwm` object's types come from the option table, so a new option needs no second list. CatWM writes the types each launch, and `./build.sh` writes the same file to `Resources/AgentDocs/catwm.d.ts`.
+
+## The `catwm` module
+
+A config sets options as `catwm.gaps.size = 10` instead of exporting one object. We chose that over `export default` for three reasons. Every default is readable (`catwm.gaps.size + 2`), so a config can build on what it has. A small config is a few lines, not an object that repeats the structure. And a file that imports `catwm` can set options itself, so a helper module needs no return value to merge.
+
+- **One store, merged on write.** An object assignment merges recursively, a list or scalar replaces, and `undefined` resets to the default. A list is a real array with `remove(value)` added. We rejected `clear()`: assigning `[]` does the same.
+- **Writes happen while the config loads.** A write from a promise, or after the run, can't reach the result, so it is a `validate` error instead of a silent loss. `ConfigEngine.run` collects those late writes after the run.
+- **No `export default`.** A default export can't be merged with the store, so it is an error that shows the conversion.
+- **A full re-run on every save.** The earlier design re-ran only the changed modules and the modules that import them, which needed an import graph and a cache to invalidate. With one shared store a module's writes are part of the result, so a save that changes one file would have to replay the writes of the others. Running everything again costs a few milliseconds for a config of this size (the log line `config: ran N modules in X ms` shows it) and removes that state.
+- **Scoped options.** An entry in the option table can be `.scoped()`: a workspace could set it without changing anything else. The generated types, the validation of workspace rules and the `catwm.d.ts` scoped list all come from that flag.
+- **Motion styles** live in one list (`MotionStyle.all`). Settings → Motion and the `catwm` module read the same list, and `catwm.motion.style = "snappy"` expands to its field values at write time, so Swift never sees `style`.
+
+### Rules
+
+`catwm.windows(match, win => …)` and `catwm.workspaces(match, () => …)` run their function once while the config loads, in a recording mode. A window rule records actions, such as `setfloating` and `resizeactive exact 600 500`, as the same dispatchers a key runs. A workspace rule records the scoped options its function wrote. `ConfigScript` reads both into data on `Config` (`Condition`, `WindowRule`, `WorkspaceRule`), and a RegExp becomes an `NSRegularExpression`, or a diagnostic if it can't convert. Rules are data so that the window manager can evaluate them on its own thread without running JavaScript, and so that `Config.changes` can compare them. Nothing applies them yet.
+
+### Key functions
+
+`catwm.bind(mods, key, () => …)` keeps the function in a table on the config thread and writes a reference (`{function: N}`) into the bind. The table is replaced only after a run succeeds. Pressing the key calls `ConfigEngine.call(function:window:)` with a snapshot of the focused window. The call runs off the main thread and main never waits on it: the result comes back as the recorded actions, which then run like any bound action. A throw or a timeout runs no actions and reports like a config error.
 
 ## Applying a change
 
