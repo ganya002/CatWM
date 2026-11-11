@@ -1,6 +1,6 @@
 # Tiling observations
 
-Window-server observations run on a background queue. They capture visible windows and Desktop membership. Refresh and workspace staging use the last observation. The scan also captures app metadata, so a command does not enumerate running apps again.
+Window-server observations run on the main thread. They capture visible windows and Desktop membership. SkyLight window reads wait for WindowServer to apply this process's last Core Animation transaction, and they hold a lock for the whole process while they wait. A read on another thread blocks the main thread's next commit until a 500 ms timeout ends the wait. The running-app list and scope claims still load on a background queue first. Refresh and workspace staging use the last observation. The scan also captures app metadata, so a command does not enumerate running apps again.
 
 The scanner reads AX attributes on one serial queue per app. A scan returns window frames, titles, resize capability, minimized state and full-screen state. The main thread accepts each snapshot once. A frame revision prevents a delayed observation from replacing a newer placement.
 
