@@ -961,6 +961,212 @@
         "kind" : "list"
       },
       "summary" : "List the config options"
+    },
+    {
+      "args" : [
+
+      ],
+      "group" : "agent",
+      "name" : "agent.open",
+      "result" : {
+        "fields" : [
+          {
+            "name" : "uuid",
+            "summary" : "Display ID",
+            "type" : "string"
+          },
+          {
+            "name" : "frame",
+            "summary" : "Display frame",
+            "type" : "rect"
+          }
+        ],
+        "kind" : "object"
+      },
+      "summary" : "Open a private display for test apps"
+    },
+    {
+      "args" : [
+        {
+          "name" : "app",
+          "required" : true,
+          "summary" : "Bundle ID",
+          "type" : "string"
+        }
+      ],
+      "group" : "agent",
+      "name" : "agent.launch",
+      "result" : {
+        "fields" : [
+          {
+            "name" : "pid",
+            "summary" : "Process ID of the app",
+            "type" : "int"
+          }
+        ],
+        "kind" : "object"
+      },
+      "summary" : "Open an app on the agent display without focus. Fails if the app already runs"
+    },
+    {
+      "args" : [
+
+      ],
+      "group" : "agent",
+      "name" : "agent.windows",
+      "result" : {
+        "fields" : [
+          {
+            "name" : "id",
+            "summary" : "Window ID",
+            "type" : "int"
+          },
+          {
+            "name" : "pid",
+            "summary" : "Process ID",
+            "type" : "int"
+          },
+          {
+            "name" : "app",
+            "summary" : "Bundle ID",
+            "type" : "string?"
+          },
+          {
+            "name" : "title",
+            "summary" : "Window title",
+            "type" : "string?"
+          },
+          {
+            "name" : "frame",
+            "summary" : "Window frame",
+            "type" : "rect"
+          }
+        ],
+        "kind" : "list"
+      },
+      "summary" : "List the windows on the agent display"
+    },
+    {
+      "args" : [
+        {
+          "name" : "window",
+          "required" : true,
+          "summary" : "Window ID from `agent.windows`",
+          "type" : "int"
+        },
+        {
+          "name" : "text",
+          "required" : true,
+          "summary" : "Text to add after the current text",
+          "type" : "string"
+        }
+      ],
+      "group" : "agent",
+      "name" : "agent.type",
+      "result" : {
+        "fields" : [
+          {
+            "name" : "method",
+            "summary" : "`ax` or `events`",
+            "type" : "string"
+          }
+        ],
+        "kind" : "object"
+      },
+      "summary" : "Type text into a window without focusing it"
+    },
+    {
+      "args" : [
+        {
+          "name" : "window",
+          "required" : true,
+          "summary" : "Window ID from `agent.windows`",
+          "type" : "int"
+        },
+        {
+          "name" : "keys",
+          "required" : true,
+          "summary" : "Key, with modifiers: `return`, `cmd+a`, `cmd+shift+z`",
+          "type" : "string"
+        }
+      ],
+      "group" : "agent",
+      "name" : "agent.key",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Send a key to a window without focusing it"
+    },
+    {
+      "args" : [
+        {
+          "name" : "window",
+          "required" : true,
+          "summary" : "Window ID from `agent.windows`",
+          "type" : "int"
+        },
+        {
+          "name" : "button",
+          "required" : true,
+          "summary" : "Button title, such as `New Document`",
+          "type" : "string"
+        }
+      ],
+      "group" : "agent",
+      "name" : "agent.press",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Press a button of a window without focusing it"
+    },
+    {
+      "args" : [
+        {
+          "name" : "window",
+          "required" : true,
+          "summary" : "Window ID from `agent.windows`",
+          "type" : "int"
+        }
+      ],
+      "group" : "agent",
+      "name" : "agent.text",
+      "result" : {
+        "kind" : "text"
+      },
+      "summary" : "Read the text of a window"
+    },
+    {
+      "args" : [
+        {
+          "name" : "window",
+          "required" : true,
+          "summary" : "Window ID from `agent.windows`",
+          "type" : "int"
+        },
+        {
+          "name" : "path",
+          "required" : true,
+          "summary" : "Absolute path of the PNG file",
+          "type" : "string"
+        }
+      ],
+      "group" : "agent",
+      "name" : "agent.screenshot",
+      "result" : {
+        "kind" : "text"
+      },
+      "summary" : "Save one frame of a window as a PNG file"
+    },
+    {
+      "args" : [
+
+      ],
+      "group" : "agent",
+      "name" : "agent.close",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Quit the apps that opened on the agent display and close it"
     }
   ],
   "events" : [

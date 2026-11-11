@@ -60,6 +60,8 @@ package struct WindowScope: Equatable {
         "ping", "commands", "dispatch", "subscribe", "unsubscribe",
         "status", "windows", "workspaces", "screens", "dump", "config.get", "config.set", "config.options",
         "poststyle",
+        "agent.open", "agent.launch", "agent.windows", "agent.type", "agent.key", "agent.press", "agent.text",
+        "agent.screenshot", "agent.close",
         "movefocus", "cyclenext", "movewindow", "movewindowtomonitor", "swapwindow", "swapnext",
         "togglefloating", "fullscreen", "minimize", "killactive",
         "moveintogroup", "moveoutofgroup", "changegroupactive", "movegroupwindow",

@@ -87,6 +87,27 @@ export interface ConfigOptionsItem {
   summary: string;
 }
 
+export interface AgentOpenResult {
+  uuid: string;
+  frame: Rect;
+}
+
+export interface AgentLaunchResult {
+  pid: number;
+}
+
+export interface AgentWindowsItem {
+  id: number;
+  pid: number;
+  app: string | null;
+  title: string | null;
+  frame: Rect;
+}
+
+export interface AgentTypeResult {
+  method: string;
+}
+
 export interface FocusChangedData {
   window: number | null;
   app: string | null;
@@ -506,5 +527,50 @@ export class CatWM {
   /** List the config options */
   async configOptions(): Promise<ConfigOptionsItem[]> {
     return (await this.call("config.options")) as ConfigOptionsItem[];
+  }
+
+  /** Open a private display for test apps */
+  async agentOpen(): Promise<AgentOpenResult> {
+    return (await this.call("agent.open")) as AgentOpenResult;
+  }
+
+  /** Open an app on the agent display without focus. Fails if the app already runs */
+  async agentLaunch(app: string): Promise<AgentLaunchResult> {
+    return (await this.call("agent.launch", { "app": app })) as AgentLaunchResult;
+  }
+
+  /** List the windows on the agent display */
+  async agentWindows(): Promise<AgentWindowsItem[]> {
+    return (await this.call("agent.windows")) as AgentWindowsItem[];
+  }
+
+  /** Type text into a window without focusing it */
+  async agentType(window: number, text: string): Promise<AgentTypeResult> {
+    return (await this.call("agent.type", { "window": window, "text": text })) as AgentTypeResult;
+  }
+
+  /** Send a key to a window without focusing it */
+  async agentKey(window: number, keys: string): Promise<void> {
+    await this.call("agent.key", { "window": window, "keys": keys });
+  }
+
+  /** Press a button of a window without focusing it */
+  async agentPress(window: number, button: string): Promise<void> {
+    await this.call("agent.press", { "window": window, "button": button });
+  }
+
+  /** Read the text of a window */
+  async agentText(window: number): Promise<string> {
+    return (await this.call("agent.text", { "window": window })) as string;
+  }
+
+  /** Save one frame of a window as a PNG file */
+  async agentScreenshot(window: number, path: string): Promise<string> {
+    return (await this.call("agent.screenshot", { "window": window, "path": path })) as string;
+  }
+
+  /** Quit the apps that opened on the agent display and close it */
+  async agentClose(): Promise<void> {
+    await this.call("agent.close");
   }
 }

@@ -36,6 +36,8 @@ The CLI, the Python, TypeScript and Swift libraries (`Clients/`) and the key bin
 
 `exec` and `launch` are **refused** from the socket, because any process of the user could use them. They work only from key binds.
 
+The `agent.*` commands belong to the connection that runs `agent.open`, and a closed connection closes the display. The CLI closes after one command, so use a library (`Sandbox` in Python).
+
 ## Events
 
 `catwm events` and the `subscribe` command send these events: `focus.changed`, `window.added`, `window.removed`, `workspace.changed`, `layout.changed`, `tiling.changed`, `mode.changed`, `window.notifications` and `config.reloaded`. Each event is one JSON line: `{"event": "focus.changed", "data": {...}}`. The app sends no events when nobody subscribes.
