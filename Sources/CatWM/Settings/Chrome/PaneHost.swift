@@ -35,6 +35,7 @@ struct PaneHost: View {
                     case .templates: TemplatesPane(doc: doc, settingsUI: settingsUI)
                     case .motion: MotionPane(doc: doc, settingsUI: settingsUI)
                     case .shortcuts: ShortcutsPane(doc: doc, settingsUI: settingsUI)
+                    case .lab: LabPane(doc: doc, settingsUI: settingsUI)
                     }
                 }
                 .padding(.horizontal, Theme.Space.extraLarge).padding(.top, 22).padding(.bottom, 40)

@@ -229,12 +229,27 @@ package enum Options {
                      keywords: "border edge draw ripple corners submap indicator", advanced: true,
                      section: "Panels and window mode"),
 
+        .choice("resize-animation", \.resizeAnimation, noun: "resize animation").script("lab.resizeAnimation")
+            .documented(nil, "experimental: `live` resizes the real windows each frame, `color-fill` paints the "
+                            + "window colors around a smaller real window, `snapshot` animates captured windows; "
+                            + "`color-fill` and `snapshot` need Screen Recording")
+            .section("lab")
+            .note("Experimental: live resizes the real windows each frame. color-fill paints the window colors\n"
+                + "around them, snapshot animates captured windows. Both need Screen Recording.")
+            .setting(.lab, "lab.resizeAnimation", "Resize animation",
+                     help: "Color fills and snapshots keep slow apps smooth. Both need Screen Recording",
+                     keywords: "experimental resize scene snapshot capture color fill smooth screen recording"),
         .bool("debug-logging", \.debugLogging).script("debugLogging")
-            .documented("bool", "verbose log; prefer `--verbose`").section("diagnostics"),
+            .documented("bool", "verbose log; `--verbose` turns it on for one launch").section("diagnostics")
+            .setting(.lab, "lab.debugLogging", "Verbose logging", help: "Writes every step to the log",
+                     keywords: "debug log verbose console", section: "Diagnostics"),
         .bool("perf-reports", \.perfReports).script("perfReports")
             .documented("bool", "sends repeated slow animations and hangs (numbers and app bundle IDs only) "
                             + "to the developers")
             .note("Send repeated animation slowdowns and hangs (numbers and app IDs only) to the developers.")
+            .setting(.lab, "lab.perfReports", "Send performance reports",
+                     help: "Repeated slow animations and hangs. Numbers and app IDs only",
+                     keywords: "performance slow hang telemetry report privacy", section: "Diagnostics")
     ]
 }
 

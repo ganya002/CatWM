@@ -306,7 +306,7 @@ extension WindowManager {
 
     package static let surfaceFields: Set<String> = [
         "bindings", "mod", "virtual-workspaces", "mode-effect", "keyboard-finish", "tab-notification-badges",
-        "dim-other-windows", "dim-strength", "blur-other-windows", "blur-radius"
+        "dim-other-windows", "dim-strength", "blur-other-windows", "blur-radius", "resize-animation"
     ]
     package static let floatFields: Set<String> = ["floating", "floating-is-blacklist", "float-small-windows"]
     package static let liveFields: Set<String> = surfaceFields.subtracting(["virtual-workspaces"]).union([

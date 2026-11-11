@@ -40,7 +40,7 @@ A display link cannot remove that cost.
 
 ### Experimental resize scenes
 
-Start a named instance with `CATWM_RESIZE_SCENE=1` to enable snapshot compositing. `AppSurface` installs the
+Set Settings › Lab › Resize animation to `snapshot` (`lab.resizeAnimation`) to enable snapshot compositing. `AppSurface` installs the
 capture factory on `Animator`. `WindowSceneCapture` captures the visible source windows and the background
 without those windows. `WindowResizeScene` draws the background and scales each captured window independently
 inside a click-through `CatWMPanel`. Its layer rectangles use unrounded trajectory samples; AX writes still
@@ -72,8 +72,8 @@ child and closes the scene; it does not move user windows.
 
 ### Experimental background fills
 
-Set `CATWM_RESIZE_FILL=1` at launch to test color-only fills during tiling. The default is off.
-This mode takes precedence over `CATWM_RESIZE_SCENE`; it doesn't enable captured-window compositing.
+Set Settings › Lab › Resize animation to `color-fill` (`lab.resizeAnimation`) to test color-only fills during tiling.
+The default is `live`. It doesn't enable captured-window compositing.
 `Animator` sends presentation samples and cancellations through `WindowPresentation`. `WindowResizeFills`
 uses those samples to update the fill against the actual WindowServer frame while AX writes continue.
 It closes fills when placement ends, the window is cancelled, or the presentation becomes obstructed.
