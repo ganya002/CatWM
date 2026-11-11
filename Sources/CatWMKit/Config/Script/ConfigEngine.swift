@@ -172,7 +172,8 @@ package final class ConfigEngine {
         typealias CollectNow = @convention(c) (JSContextRef?) -> Void
         if !hasCollected, let collectNow: CollectNow = symbol("JSSynchronousGarbageCollectForDebugging") {
             hasCollected = true
-            collectNow(context.jsGlobalContextRef)        } else {
+            collectNow(context.jsGlobalContextRef)
+        } else {
             JSGarbageCollect(context.jsGlobalContextRef)
         }
     }
