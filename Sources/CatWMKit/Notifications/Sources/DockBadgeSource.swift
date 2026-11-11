@@ -104,24 +104,33 @@ private final class DockBadgePoller: Sendable {
     }
 
     func poll() {
-        var local = state.withLock { $0 }
-        local.passes += 1
-        if local.stale || local.items.isEmpty || local.passes.isMultiple(of: 3) {
-            local.items = appItems(&local.bundles)
-            local.stale = false
+        let (known, due, bundleCache) = state.withLock { state in
+            state.passes += 1
+            let due = state.stale || state.items.isEmpty || state.passes.isMultiple(of: 3)
+            if due { state.stale = false }
+            return (state.items, due, state.bundles)
         }
+        var bundles = bundleCache
+        let items = due ? appItems(&bundles) : known
         var badges: [String: Badge] = [:]
-        for item in local.items {
+        var sawStale = false
+        for item in items {
             var label: CFTypeRef?
             let result = AXUIElementCopyAttributeValue(item.element, "AXStatusLabel" as CFString, &label)
-            if result == .invalidUIElement || result == .cannotComplete { local.stale = true }
+            if result == .invalidUIElement || result == .cannotComplete { sawStale = true }
             if let badge = Badge(label: label as? String) { badges[item.app] = badge }
         }
-        let changed = badges != local.polled
-        if changed { local.polled = badges }
-        let result = local
-        state.withLock { $0 = result }
-        if changed { publish(badges) }
+        let (found, stale, learned) = (badges, sawStale, bundles)
+        let changed = state.withLock { state in
+            if due {
+                state.items = items
+                state.bundles = learned
+            }
+            if stale { state.stale = true }
+            defer { state.polled = found }
+            return found != state.polled
+        }
+        if changed { publish(found) }
     }
 
     private func appItems(_ bundles: inout [String: String]) -> [Item] {
