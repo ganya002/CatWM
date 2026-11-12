@@ -10,42 +10,70 @@ import SwiftUI
     private let queue = DispatchQueue(label: "catwm.permissions", qos: .utility)
     private var checking = false
     private var checkAgain = false
+    private let isWatched: @MainActor () -> Bool
     private var timer: Timer?
     private var accessibilityObserver: NSObjectProtocol?
+    private var activationObserver: NSObjectProtocol?
     private var subscribers: [(_ granted: Set<Permission>, _ changed: Set<Permission>) -> Void] = []
 
     private nonisolated static func check() -> Set<Permission> { Set(Permission.allCases.filter(\.isGranted)) }
 
+    package var isPolling: Bool { timer != nil }
+
+    private static func userIsInSettings() -> Bool {
+        guard let id = NSWorkspace.shared.frontmostApplication?.bundleIdentifier else { return false }
+        return id == "com.apple.systempreferences" || id == Bundle.main.bundleIdentifier
+    }
+
     package init(read: @escaping @Sendable () -> Set<Permission> = { PermissionWatcher.check() },
-                 refreshScreenRecording: @escaping () -> Void = { ScreenRecording.shared.refresh() }) {
+                 refreshScreenRecording: @escaping () -> Void = { ScreenRecording.shared.refresh() },
+                 isWatched: @escaping @MainActor () -> Bool = { true }) {
         self.read = read
         self.refreshScreenRecording = refreshScreenRecording
+        self.isWatched = isWatched
         atLaunch = read()
     }
 
     private init(atLaunch: Set<Permission>) {
         read = { PermissionWatcher.check() }
         refreshScreenRecording = { ScreenRecording.shared.refresh() }
+        isWatched = { PermissionWatcher.userIsInSettings() }
         self.atLaunch = atLaunch
     }
 
     package func stop() {
-        timer?.invalidate()
-        timer = nil
+        setPolling(false)
+        if let activationObserver { NSWorkspace.shared.notificationCenter.removeObserver(activationObserver) }
+        activationObserver = nil
         if let accessibilityObserver { DistributedNotificationCenter.default().removeObserver(accessibilityObserver) }
         accessibilityObserver = nil
         subscribers = []
     }
 
     package func start() {
-        guard timer == nil else { return }
+        guard activationObserver == nil else { return }
         granted = read()
-        timer = Timer.onMain(every: 1.5, owner: self) { $0.tick() }
+        setPolling(isWatched())
+        activationObserver = NSWorkspace.shared.notificationCenter.observeOnMain(
+            NSWorkspace.didActivateApplicationNotification
+        ) { [weak self] in self?.appSwitched() }
         accessibilityObserver = DistributedNotificationCenter.default().observeOnMain(
             Notification.Name("com.apple.accessibility.api")
         ) { [weak self] in
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { self?.tick() }
         }
+    }
+
+    private func setPolling(_ polling: Bool) {
+        timer?.invalidate()
+        timer = polling ? Timer.onMain(every: 1.5, owner: self) { $0.tick() } : nil
+    }
+
+    private func appSwitched() {
+        let watched = isWatched()
+        guard watched != isPolling else { return }
+        setPolling(watched)
+        tick()
     }
 
     package func subscribe(_ subscriber: @escaping (_ granted: Set<Permission>, _ changed: Set<Permission>) -> Void) {

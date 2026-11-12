@@ -73,4 +73,24 @@ private struct ReaderState { var reads = 0, completed = false }
         watcher.tick()
         #expect(await poll(15, every: 1_000_000) { notified })
     }
+
+    @Test func anUnwatchedWatcherChecksOnlyWhenWatchingChanges() async {
+        var watched = false
+        var refreshes = 0
+        let watcher = PermissionWatcher(read: { [.accessibility] }, refreshScreenRecording: { refreshes += 1 },
+                                        isWatched: { watched })
+        watcher.start()
+        defer { watcher.stop() }
+        #expect(!watcher.isPolling)
+        let center = NSWorkspace.shared.notificationCenter
+        center.post(name: NSWorkspace.didActivateApplicationNotification, object: nil)
+        watched = true
+        center.post(name: NSWorkspace.didActivateApplicationNotification, object: nil)
+        #expect(await poll(15, every: 1_000_000) { refreshes == 1 })
+        #expect(watcher.isPolling)
+        watched = false
+        center.post(name: NSWorkspace.didActivateApplicationNotification, object: nil)
+        #expect(await poll(15, every: 1_000_000) { refreshes == 2 })
+        #expect(!watcher.isPolling)
+    }
 }
