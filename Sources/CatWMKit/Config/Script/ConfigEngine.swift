@@ -227,6 +227,10 @@ package final class ConfigEngine {
         return context
     }
 
+    package static func useOneGCMarkerThread() {
+        setenv("JSC_numberOfGCMarkers", "1", 0)
+    }
+
     package static func resolve(_ specifier: String, from importer: String) -> String? {
         guard specifier.hasPrefix("./") || specifier.hasPrefix("../") || specifier.hasPrefix("/") else { return nil }
         let base = URL(fileURLWithPath: importer).deletingLastPathComponent()

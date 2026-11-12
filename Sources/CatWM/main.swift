@@ -67,6 +67,8 @@ for sig in [SIGTERM, SIGINT, SIGHUP] {
     signalSources.append(source)
 }
 
+ConfigEngine.useOneGCMarkerThread()
+
 let app = NSApplication.shared
 let delegate = AppDelegate()
 app.delegate = delegate
