@@ -63,4 +63,12 @@ import Testing
         #expect(tabs.armed == [5])
         #expect(tabs.isLocked(5), "the group of one keeps its lock")
     }
+
+    @Test func aNewAppsFirstWindowIsFocusedEvenIfTheAppActivatedFirst() async throws {
+        let (fake, manager, _, _) = try await world()
+        let fresh = fake.addWindow(pid: -405)
+        manager.focusRequests.report(pid: -405, id: nil)
+        #expect(await fake.settle(manager))
+        #expect(manager.focusedWindow()?.id == fresh)
+    }
 }

@@ -79,3 +79,10 @@ When an armed group shrinks to one window, that window stays a group of one, kee
 `windows` state reports `tabs` (member IDs in order, or the window itself for a group of one),
 `tabsLocked` and `tabBehind`, so an embedding host can draw its own group bar: embedded mode has no tab
 strips, but the 30 pt strip is still reserved above tabbed windows and above a group of one.
+
+## M7: a new app's first window gets focus
+
+An app activates before its first window exists, so the focus report says the app has no focused window,
+and nothing read it again when the window arrived: the window was frontmost but CatWM (and SkyRose's
+active border) didn't know. When a refresh brings in a window of the frontmost app while CatWM has no
+focused window, it reads the focus again. Possibly worth offering upstream.

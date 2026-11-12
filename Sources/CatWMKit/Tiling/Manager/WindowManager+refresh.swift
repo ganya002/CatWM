@@ -205,6 +205,9 @@ extension WindowManager {
             order.append(contentsOf: rest)
         }
         if !firstRun, let host { joinCollectingGroup(rest, host: host) }
+        if let front = frontmostPID(), reportedFocusedWindow() == nil, arrivals.contains(where: { $0.pid == front }) {
+            requestFocusObservation()
+        }
     }
 
     private func restoreSavedWorkspace(_ window: Window, titles: [CGWindowID: String?]) {
