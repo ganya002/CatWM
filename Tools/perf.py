@@ -119,14 +119,15 @@ def run_app(run, display=None):
 
 
 def profile_app(display, out):
-    """Sample one extra instance through launch and idle, after the measured runs, so a cost seen only on
-    another machine has a stack. The sampler's own cost lands in no measured row."""
+    """Run one extra instance after the measured runs, with a verbose log, and sample it through the seconds where
+    CI shows an idle burst, so a cost seen only on another machine has a stack and log lines. It adds to no row."""
     env = {**os.environ, "CATWM_INSTANCE": "perf-profile", "CATWM_SCOPE": scope(display)}
-    process = subprocess.Popen([str(APP)], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    process = subprocess.Popen([str(APP), "--verbose"], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
-        seconds = APP_LAUNCH_SECONDS + APP_IDLE_SECONDS
-        subprocess.run(["sample", str(process.pid), str(seconds), "1", "-mayDie", "-file", str(out)],
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False, timeout=seconds + 30)
+        time.sleep(4)
+        subprocess.run(["sample", str(process.pid), "8", "1", "-mayDie", "-file", str(out)],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False, timeout=60)
+        time.sleep(APP_LAUNCH_SECONDS + APP_IDLE_SECONDS - 12)
     finally:
         process.send_signal(signal.SIGTERM)
         try:
