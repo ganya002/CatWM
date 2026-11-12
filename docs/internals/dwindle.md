@@ -6,4 +6,6 @@ The tree stores only structure. Its leaves are the workspace's tiled windows in 
 
 A split with no explicit direction picks one from its rectangle on every layout (Hyprland without `preserve_split`). `togglesplit` fixes the direction of the focused window's parent split, `swapsplit` flips which side its first child takes, `splitratio` sets that split's ratio, and `resizeactive DX DY` moves the nearest split on each axis. Ratios stay within 0.1 to 0.9.
 
+Windows with a learned minimum size (`minSizes`, plus the gap) shape the layout instead of overlapping. An automatic split takes the other direction when its preferred one can't hold both halves' minimums and the other can, and every split moves its divider just enough to give each half its minimum when the room allows. The stored ratio doesn't change, so the layout springs back when the window closes. The generic `fitMinimums` pass only fits tiles that share an edge span, which nested dwindle splits rarely do.
+
 The tree isn't saved across restarts: a restart rebuilds it from `order` with automatic directions.

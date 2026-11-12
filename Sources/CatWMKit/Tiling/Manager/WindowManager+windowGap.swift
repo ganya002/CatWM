@@ -12,7 +12,10 @@ extension WindowManager {
         let gap = windowGap(count: ids.count, on: screen, workspace: workspace)
         let area = usableRect(screen, workspace: workspace).insetBy(dx: -gap / 2, dy: -gap / 2)
         if screenState.layout == .dwindle { screenState.dwindle.sync(ids) }
-        guard let raw = screenState.layout == .dwindle ? screenState.dwindle.frames(in: area)
+        let mins = ids.map { id in
+            minSizes[id].map { CGSize(width: $0.width + gap, height: $0.height + gap) } ?? .zero
+        }
+        guard let raw = screenState.layout == .dwindle ? screenState.dwindle.frames(in: area, minimums: mins)
             : screenState.layout.frames(count: ids.count, in: area, ratio: ratio, mainCount: screenState.mainCount)
         else { return nil }
         let slots = zip(ids, raw).map { id, frame in

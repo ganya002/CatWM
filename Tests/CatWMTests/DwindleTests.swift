@@ -42,6 +42,18 @@ import Testing
         #expect(tree.frames(in: area)[0].width == 1440)
     }
 
+    @Test func minimumSizesFlipAnAutomaticSplitOrMoveItsRatio() {
+        let rect = CGRect(x: 0, y: 0, width: 1000, height: 900)
+        var tree = DwindleTree()
+        tree.sync([1, 2])
+        #expect(tree.frames(in: rect, minimums: [CGSize(width: 600, height: 0), CGSize(width: 600, height: 0)]) == [
+            CGRect(x: 0, y: 0, width: 1000, height: 450), CGRect(x: 0, y: 450, width: 1000, height: 450)
+        ])
+        #expect(tree.frames(in: rect, minimums: [CGSize(width: 700, height: 0), .zero])[0].width == 700)
+        #expect(tree.frames(in: rect, minimums: [CGSize(width: 900, height: 600), CGSize(width: 900, height: 600)])
+            == tree.frames(in: rect))
+    }
+
     @Test func theManagerTilesWithTheTreeAndAppliesSplitCommands() async throws {
         let fake = FakeBackend()
         fake.addScreen(frame: area, visible: area)
