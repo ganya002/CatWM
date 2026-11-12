@@ -16,9 +16,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  perf:
+  measure:
+    name: perf measure (${{ matrix.shard }})
     runs-on: xcode-27
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v5
         with:
@@ -31,21 +36,42 @@ jobs:
           restore-keys: |
             perf-${{ runner.os }}-${{ runner.arch }}-
       - run: CATWM_INSTANCE=perf ./build.sh
-      - id: perf
-        continue-on-error: true
-        run: python3 Tools/perf.py --runs 5 --out perf.md --json perf.json --profile app-sample.txt
-      - if: always() && hashFiles('perf.md') != ''
-        run: cat perf.md >> "$GITHUB_STEP_SUMMARY"
+      # Each machine runs its share one at a time; the report job merges the three.
+      - run: python3 Tools/perf.py --runs 2 --json perf.json --no-check ${{ matrix.shard == 1 && '--profile app-sample.txt' || '' }}
       - if: always()
         uses: actions/upload-artifact@v5
         with:
-          name: perf
+          name: perf-${{ matrix.shard }}
           path: |
-            perf.md
             perf.json
             app-sample.txt
             ~/Library/Logs/CatWM-perf-*.log
           if-no-files-found: warn
+
+  report:
+    name: perf
+    needs: measure
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: perf-*
+          path: shards
+      - id: perf
+        continue-on-error: true
+        run: |
+          test "$(ls shards/perf-*/perf.json | wc -l)" -eq 3 || { echo "perf: a machine wrote no samples" >&2; exit 1; }
+          python3 Tools/perf.py --merge shards/perf-*/perf.json --out perf.md
+      - if: always() && hashFiles('perf.md') != ''
+        run: cat perf.md >> "$GITHUB_STEP_SUMMARY"
+      - if: always() && hashFiles('perf.md') != ''
+        uses: actions/upload-artifact@v5
+        with:
+          name: perf-report
+          path: perf.md
       - if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && hashFiles('perf.md') != ''
         uses: actions/github-script@v8
         with:
