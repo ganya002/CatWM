@@ -296,7 +296,8 @@ extension FakeBackend {
     @MainActor @discardableResult
     package func settle(_ manager: WindowManager, rounds: Int = 8, timeout: TimeInterval = 10) async -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
-        for _ in 0..<rounds {
+        var rounds = rounds
+        while rounds > 0 {
             let before = writes.count
             let scanned = await bounded(until: deadline) { waiter in
                 manager.scanAndRefresh { waiter.finish(true) }
@@ -307,7 +308,18 @@ extension FakeBackend {
                 manager.animator.afterPendingWrites { waiter.finish(true) }
                 return {}
             }) else { return false }
+            if ids.contains(where: manager.animator.isAnimating) {
+                let landed = manager.animator.onLanded
+                guard await bounded(until: deadline, { waiter in
+                    let check = { if !self.ids.contains(where: manager.animator.isAnimating) { waiter.finish(true) } }
+                    manager.animator.onLanded = { landed?(); check() }
+                    check()
+                    return { manager.animator.onLanded = landed }
+                }) else { return false }
+                continue
+            }
             if writes.count == before, Set(manager.windows.keys) == ids { return true }
+            rounds -= 1
         }
         return false
     }
