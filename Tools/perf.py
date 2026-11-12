@@ -5,7 +5,9 @@ The caps are for the device in budgets.json. A fixed benchmark (CatWMPerf calibr
 this machine is next to that device, and each CPU time in ms is scaled to that device before the check,
 so a faster or slower runner needs no new caps.
 
-Run `swift build -c release` and `CATWM_INSTANCE=perf ./build.sh` first. The runs go in parallel.
+Run `swift build -c release` and `CATWM_INSTANCE=perf ./build.sh` first. The calibration runs alone first, so
+another run can't slow it. Then the runs go in parallel, one less at a time than the machine has cores, so they
+don't compete for CPU.
 Each engine scenario runs in a new CatWMPerf process. The app scenario starts build/CatWM.app as the
 named instance `perf-<run>`, scoped to this process, so it manages no window. When a CatWM runs (a developer's
 Mac), the instances also go on a private agent display that it opens for this run, and they draw nothing on the
@@ -36,7 +38,7 @@ from catwm.testing import Sandbox  # noqa: E402
 PERF = ROOT / ".build/release/CatWMPerf"
 APP = ROOT / "build/CatWM.app/Contents/MacOS/CatWM"
 BUDGETS = ROOT / "Tools/Perf/budgets.json"
-ENGINE_SCENARIOS = ["calibrate", "engine-idle", "engine-tile", "engine-actions", "config-load"]
+ENGINE_SCENARIOS = ["engine-idle", "engine-tile", "engine-actions", "config-load"]
 APP_LAUNCH_SECONDS, APP_IDLE_SECONDS = 5, 20
 
 libc = ctypes.CDLL(None)
@@ -167,6 +169,8 @@ def main():
     parser.add_argument("--out", type=Path, help="write the Markdown table to this file")
     parser.add_argument("--json", type=Path, help="write the raw samples to this file")
     parser.add_argument("--skip-app", action="store_true", help="measure only the engine scenarios")
+    parser.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) - 1),
+                        help="runs at the same time (default: one less than the cores)")
     args = parser.parse_args()
 
     budgets = json.loads(BUDGETS.read_text())
@@ -182,8 +186,11 @@ def main():
         return results
 
     samples = {}
+    for _ in range(args.runs):
+        for metric, values in run_engine("calibrate").items():
+            samples.setdefault(metric, []).extend(values)
     try:
-        with ThreadPoolExecutor(max_workers=args.runs) as pool:
+        with ThreadPoolExecutor(max_workers=min(args.runs, args.jobs)) as pool:
             for results in pool.map(run, range(1, args.runs + 1)):
                 for result in results:
                     for metric, values in result.items():
