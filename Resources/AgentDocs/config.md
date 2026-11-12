@@ -50,6 +50,7 @@ Each option is a path on `catwm`: `gaps.size` is `catwm.gaps.size`. `padding` al
 | `gaps.enabled` | bool | `true` | gaps between windows. `.conf`: `window-margins` |
 | `gaps.size` | 0–100 points | `10` | `gaps_in` is accepted and doubled. `.conf`: `window-margin-size` |
 | `gaps.smart` | bool | `true` | no gaps with a single window. `.conf`: `smart-window-margins` / `smart-gaps` |
+| `gaps.single` | 0–200 points | `0` | extra space around a window that is alone, Hyprland `gaps_out` for one window. `.conf`: `single-window-padding` |
 | `padding.left` | 0–500 points | `10` | `screen-padding` or `gaps_out` sets all four sides. `.conf`: `screen-padding-left` |
 | `padding.right` | 0–500 points | `10` | `.conf`: `screen-padding-right` |
 | `padding.top` | 0–500 points | `10` | `.conf`: `screen-padding-top` |

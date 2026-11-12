@@ -86,7 +86,7 @@ struct ConfigFolder {
         #expect(run.failures.isEmpty)
         #expect(run.value?["motion"]?["duration"] == .number(0.2))
         #expect(run.value?["motion"]?["curve"] == .string("ease-out"))
-        #expect(run.value?["gaps"] == .object(["enabled": .bool(true), "size": .int(4), "smart": .bool(true)]))
+        #expect(run.value?["gaps"] == .object(["enabled": .bool(true), "size": .int(4), "smart": .bool(true), "single": .int(0)]))
         #expect(run.value?["layouts"] == .array([.string("bsp")]))
         #expect(run.value?["padding"]?["left"] == .int(3) && run.value?["padding"]?["right"] == .int(10))
         #expect(run.value?["focus"]?["followsMouse"] == .bool(true))
@@ -197,8 +197,8 @@ struct ConfigFolder {
         #expect(typo.failures.first?.phase == .validate)
         #expect(typo.failures.first?.line == 3)
         #expect(typo.failures.first?.message.hasPrefix("`gapz` is not a CatWM option (catwm has ") == true)
-        #expect(group.failures.first?.message == "`gaps` must be an object with enabled, size, smart")
-        #expect(nested.failures.first?.message == "`gaps.sise` is not a CatWM option (gaps has enabled, size, smart)")
+        #expect(group.failures.first?.message == "`gaps` must be an object with enabled, single, size, smart")
+        #expect(nested.failures.first?.message == "`gaps.sise` is not a CatWM option (gaps has enabled, single, size, smart)")
     }
 
     @Test func aConfigThatHoldsAFunctionIsRejected() throws {

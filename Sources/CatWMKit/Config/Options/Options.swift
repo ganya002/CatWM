@@ -20,6 +20,8 @@ package enum Options {
             .documented("bool", "no gaps with a single window").aliases("smart-gaps")
             .setting(.layout, "layout.smartGaps", "Smart gaps", help: "No gaps when a window is alone",
                      keywords: "single window no gaps", enabled: { $0.windowMargins }),
+        .points("single-window-padding", \.singleWindowPadding, valid: 0...200).script("gaps.single").scoped()
+            .documented("0–200 points", "extra space around a window that is alone, Hyprland `gaps_out` for one window"),
         .points("screen-padding-left", \.paddingLeft, valid: 0...500).script("padding.left").scoped()
             .documented("0–500 points", "`screen-padding` or `gaps_out` sets all four sides"),
         .points("screen-padding-right", \.paddingRight, valid: 0...500).script("padding.right").scoped()

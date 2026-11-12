@@ -328,6 +328,9 @@ export interface GapsOptions {
   /** Gaps between windows. Gaps between windows. Default: `true`. */
   get enabled(): boolean
   set enabled(value: boolean | undefined)
+  /** Extra space around a window that is alone, Hyprland `gaps_out` for one window. From 0 to 200. Default: `0`. */
+  get single(): number
+  set single(value: number | undefined)
   /** Gap size. `gaps_in` is accepted and doubled. From 0 to 100. Default: `10`. */
   get size(): number
   set size(value: number | undefined)
@@ -537,6 +540,9 @@ export interface ScopedGapsOptions {
   /** Gaps between windows. Gaps between windows. Default: `true`. */
   get enabled(): boolean
   set enabled(value: boolean | undefined)
+  /** Extra space around a window that is alone, Hyprland `gaps_out` for one window. From 0 to 200. Default: `0`. */
+  get single(): number
+  set single(value: number | undefined)
   /** Gap size. `gaps_in` is accepted and doubled. From 0 to 100. Default: `10`. */
   get size(): number
   set size(value: number | undefined)

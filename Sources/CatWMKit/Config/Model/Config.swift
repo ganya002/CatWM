@@ -13,6 +13,7 @@ package struct Config: Sendable {
     package var windowMargins = true
     package var windowMarginSize: CGFloat = 10
     package var smartWindowMargins = true
+    package var singleWindowPadding: CGFloat = 0
     package var paddingLeft: CGFloat = 10, paddingRight: CGFloat = 10
     package var paddingTop: CGFloat = 10, paddingBottom: CGFloat = 10
     package var mouseFollowsFocus = true

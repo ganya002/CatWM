@@ -86,3 +86,8 @@ An app activates before its first window exists, so the focus report says the ap
 and nothing read it again when the window arrived: the window was frontmost but CatWM (and SkyRose's
 active border) didn't know. When a refresh brings in a window of the frontmost app while CatWM has no
 focused window, it reads the focus again. Possibly worth offering upstream.
+
+## M8: `gaps.single`
+
+Extra space around a tiled window that is alone on its screen (Hyprland `gaps_out` for one window, SkyRose
+`gapsOutSingle`), on top of `padding`. Default 0, so nothing changes unless a config sets it.
