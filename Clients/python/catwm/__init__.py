@@ -418,6 +418,20 @@ class CatWM:
             args["window"] = window
         self.call("centerwindow", args)
 
+    def pseudo(self, window: int | None = None) -> None:
+        """Keep the focused tiled window at its own size inside its tile"""
+        args: dict[str, Any] = {}
+        if window is not None:
+            args["window"] = window
+        self.call("pseudo", args)
+
+    def pin(self, window: int | None = None) -> None:
+        """Show the focused floating window on every workspace"""
+        args: dict[str, Any] = {}
+        if window is not None:
+            args["window"] = window
+        self.call("pin", args)
+
     def fullscreen(self, window: int | None = None) -> None:
         """Fill the screen with the focused window, inside the tiling"""
         args: dict[str, Any] = {}

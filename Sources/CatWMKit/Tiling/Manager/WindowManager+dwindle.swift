@@ -15,6 +15,20 @@ extension WindowManager {
         return true
     }
 
+    package func togglePseudo(_ window: Window) {
+        guard !window.isFloating else { return }
+        if floats.pseudo.removeValue(forKey: window.id) == nil {
+            floats.pseudo[window.id] = floats.naturalSize[window.id] ?? window.cachedFrame.size
+        }
+        refresh()
+    }
+
+    package func togglePin(_ window: Window) {
+        guard window.isFloating else { return Log.info("pin: only a floating window can be pinned") }
+        guard config.parkedWorkspaces else { return Log.info("pin: needs parked workspaces") }
+        if floats.pinned.remove(window.id) == nil { floats.pinned.insert(window.id) }
+    }
+
     package func resizeWindow(_ window: Window, by delta: CGSize) {
         if changeDwindle(of: window, { $0.resize(at: $1, by: delta, in: $2) }) { return }
         let frame = animator.destination(window.id) ?? window.cachedFrame

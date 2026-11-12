@@ -125,6 +125,10 @@ export interface Actions {
   moveactive: [position: string | number]
   /** Center the focused floating window on its display. */
   centerwindow: [...args: (string | number)[]]
+  /** Keep the focused tiled window at its own size inside its tile. */
+  pseudo: [...args: (string | number)[]]
+  /** Show the focused floating window on every workspace. */
+  pin: [...args: (string | number)[]]
   /** Fill the screen with the focused window, inside the tiling. */
   fullscreen: [...args: (string | number)[]]
   /** Give the focused window a macOS full screen Desktop. */

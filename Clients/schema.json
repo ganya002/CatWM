@@ -369,6 +369,38 @@
         }
       ],
       "group" : "window",
+      "name" : "pseudo",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Keep the focused tiled window at its own size inside its tile"
+    },
+    {
+      "args" : [
+        {
+          "name" : "window",
+          "required" : false,
+          "summary" : "The id of the window to act on. The default is the focused window.",
+          "type" : "int"
+        }
+      ],
+      "group" : "window",
+      "name" : "pin",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Show the focused floating window on every workspace"
+    },
+    {
+      "args" : [
+        {
+          "name" : "window",
+          "required" : false,
+          "summary" : "The id of the window to act on. The default is the focused window.",
+          "type" : "int"
+        }
+      ],
+      "group" : "window",
       "name" : "fullscreen",
       "result" : {
         "kind" : "none"

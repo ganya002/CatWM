@@ -496,6 +496,20 @@ public final class CatWM: @unchecked Sendable {
         _ = try call("centerwindow", args)
     }
 
+    /// Keep the focused tiled window at its own size inside its tile
+    public func pseudo(window: Int? = nil) throws {
+        var args: [String: Any] = [:]
+        if let value = window { args["window"] = value }
+        _ = try call("pseudo", args)
+    }
+
+    /// Show the focused floating window on every workspace
+    public func pin(window: Int? = nil) throws {
+        var args: [String: Any] = [:]
+        if let value = window { args["window"] = value }
+        _ = try call("pin", args)
+    }
+
     /// Fill the screen with the focused window, inside the tiling
     public func fullscreen(window: Int? = nil) throws {
         var args: [String: Any] = [:]

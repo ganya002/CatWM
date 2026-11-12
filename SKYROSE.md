@@ -48,3 +48,11 @@ Hyprland's dwindle with `togglesplit`, `swapsplit`, `splitratio` on the focused 
 `resizeactive DX DY` (Hyprland's argument form; it used to be rejected). See `docs/internals/dwindle.md`.
 The tree lives in `ScreenState.dwindle` and maps positionally onto `order`, so CatWM's existing swap and
 move commands keep working.
+
+## M4b: `pseudo` and `pin`
+
+`pseudo` keeps a tiled window at its own size (the size it arrived with, or had when it last stopped
+floating), centered in its tile; it is applied in `rawSlots`, so every layout supports it. `pin` makes a
+floating window follow the shown workspace in parked mode (`showParkedWorkspace` reassigns pinned windows
+before the refresh parks the old workspace). Outside parked mode `pin` logs and does nothing, because
+native Desktops can't show another app's window everywhere without private API.

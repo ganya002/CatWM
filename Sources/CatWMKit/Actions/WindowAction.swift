@@ -98,7 +98,7 @@ extension ActionContext {
 package enum WindowActions {
     package static let all: [WindowAction] = [
         movefocus, cyclenext, focusmonitor, movewindow, movewindowtomonitor, swapwindow, swapnext,
-        togglefloating, setfloating, settiled, resizeactive, moveactive, centerwindow,
+        togglefloating, setfloating, settiled, resizeactive, moveactive, centerwindow, pseudo, pin,
         fullscreen, nativefullscreen, minimize, killactive,
         moveintogroup, moveoutofgroup, changegroupactive, movegroupwindow,
         layoutmsg, splitratio, cyclelayout, layout, toggletiling, retile,

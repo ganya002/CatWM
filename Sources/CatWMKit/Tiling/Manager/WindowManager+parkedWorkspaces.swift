@@ -32,6 +32,9 @@ extension WindowManager {
         if let previous, previous != workspace { previousWorkspace[screen.uuid] = previous }
         virtualShown[screen.uuid] = workspace
         model.show(workspace, on: screen.uuid)
+        for id in floats.pinned where windows[id]?.isFloating == true && workspaceOf[id] == previous {
+            model.assign(id, to: workspace)
+        }
         monitorOf[workspace] = screen.uuid
         if let previous, previous != workspace { beginSlide(from: previous, to: workspace, on: screen) }
         refresh()

@@ -82,4 +82,20 @@ import Testing
         #expect(fake.frame(of: lead) == CGRect(x: 0, y: 0, width: 800, height: 450))
         #expect(fake.frame(of: third) == CGRect(x: 0, y: 450, width: 800, height: 450))
     }
+
+    @Test func pseudoKeepsTheWindowsOwnSizeCenteredInItsTile() async throws {
+        let fake = FakeBackend()
+        fake.addScreen(frame: area, visible: area)
+        let first = fake.addWindow(pid: -521, frame: CGRect(x: 50, y: 50, width: 600, height: 400))
+        let second = fake.addWindow(pid: -522, frame: CGRect(x: 700, y: 50, width: 600, height: 400))
+        let manager = fake.makeManager { $0.layouts = [.dwindle] }
+        #expect(await fake.settle(manager))
+        let lead = fake.frame(of: first).minX == 0 ? first : second
+        try CommandRegistry.execute("pseudo", ["window": .int(Int(lead))], client: nil, manager: manager)
+        #expect(await fake.settle(manager))
+        #expect(fake.frame(of: lead) == CGRect(x: 100, y: 250, width: 600, height: 400))
+        try CommandRegistry.execute("pseudo", ["window": .int(Int(lead))], client: nil, manager: manager)
+        #expect(await fake.settle(manager))
+        #expect(fake.frame(of: lead) == CGRect(x: 0, y: 0, width: 800, height: 900))
+    }
 }

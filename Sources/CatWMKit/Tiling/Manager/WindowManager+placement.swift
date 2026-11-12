@@ -8,6 +8,8 @@ extension WindowManager {
         if floating {
             targets[window.id] = nil
         } else {
+            floats.pinned.remove(window.id)
+            if !window.cachedFrame.isNull { floats.naturalSize[window.id] = window.cachedFrame.size }
             if let screen = screen(containing: window.cachedFrame) {
                 assignManagedWindow(window.id, to: shown[screen.uuid])
             }

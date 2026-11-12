@@ -384,6 +384,16 @@ export class CatWM {
     await this.call("centerwindow", { "window": window });
   }
 
+  /** Keep the focused tiled window at its own size inside its tile */
+  async pseudo(window?: number): Promise<void> {
+    await this.call("pseudo", { "window": window });
+  }
+
+  /** Show the focused floating window on every workspace */
+  async pin(window?: number): Promise<void> {
+    await this.call("pin", { "window": window });
+  }
+
   /** Fill the screen with the focused window, inside the tiling */
   async fullscreen(window?: number): Promise<void> {
     await this.call("fullscreen", { "window": window });

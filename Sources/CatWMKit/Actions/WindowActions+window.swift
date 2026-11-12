@@ -107,6 +107,18 @@ extension WindowActions {
         if let window = context.window { context.manager.centerWindow(window) }
     }.targetingWindow()
 
+    package static let pseudo = WindowAction(
+        name: "pseudo", group: "window", summary: "Keep the focused tiled window at its own size inside its tile"
+    ) { context in
+        if let window = context.window { context.manager.togglePseudo(window) }
+    }.targetingWindow()
+
+    package static let pin = WindowAction(
+        name: "pin", group: "window", summary: "Show the focused floating window on every workspace"
+    ) { context in
+        if let window = context.window { context.manager.togglePin(window) }
+    }.targetingWindow()
+
     package static let fullscreen = WindowAction(
         name: "fullscreen", group: "window", summary: "Fill the screen with the focused window, inside the tiling"
     ) { $0.manager.toggleZoom(of: $0.target) }.targetingWindow()

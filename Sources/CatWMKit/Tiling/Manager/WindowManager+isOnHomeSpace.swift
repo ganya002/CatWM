@@ -6,6 +6,9 @@ package struct FloatState {
     package var floatZoom: [CGWindowID: CGRect] = [:]
     package var savedOwnerOf: [CGWindowID: String] = [:]
     package var savedFloating: [CGWindowID: Bool] = [:]
+    package var pinned: Set<CGWindowID> = []
+    package var pseudo: [CGWindowID: CGSize] = [:]
+    package var naturalSize: [CGWindowID: CGSize] = [:]
 }
 
 extension WindowManager {

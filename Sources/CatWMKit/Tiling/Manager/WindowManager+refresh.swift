@@ -187,6 +187,9 @@ extension WindowManager {
     private func resolveWorkspaces(screens: [Screen], arrivals: [Window], firstRun: Bool, timing: TilingTiming) {
         resolveWorkspaceConfigs(screens: screens)
         timing.checkpoint("workspace rules")
+        for window in arrivals where floats.naturalSize[window.id] == nil && !window.cachedFrame.isNull {
+            floats.naturalSize[window.id] = window.cachedFrame.size
+        }
         guard !arrivals.isEmpty else { return }
         let toMain = firstRun ? [] : arrivals.filter { config(for: workspaceOf[$0.id]).newWindowsToMain }
         order.insert(contentsOf: toMain.map(\.id), at: 0)

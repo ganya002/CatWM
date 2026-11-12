@@ -15,7 +15,12 @@ extension WindowManager {
         guard let raw = screenState.layout == .dwindle ? screenState.dwindle.frames(in: area)
             : screenState.layout.frames(count: ids.count, in: area, ratio: ratio, mainCount: screenState.mainCount)
         else { return nil }
-        let slots = raw.map { $0.insetBy(dx: gap / 2, dy: gap / 2).pixelAligned }
+        let slots = zip(ids, raw).map { id, frame in
+            let slot = frame.insetBy(dx: gap / 2, dy: gap / 2)
+            guard let size = floats.pseudo[id] else { return slot.pixelAligned }
+            let width = min(slot.width, size.width), height = min(slot.height, size.height)
+            return CGRect(x: slot.midX - width / 2, y: slot.midY - height / 2, width: width, height: height).pixelAligned
+        }
         guard slots.allSatisfy({ [$0.minX, $0.minY, $0.width, $0.height].allSatisfy(\.isFinite) }) else { return nil }
         return (slots, gap)
     }

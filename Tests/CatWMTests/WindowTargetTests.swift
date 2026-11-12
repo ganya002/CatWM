@@ -35,7 +35,7 @@ import Testing
         }
         let targeted = Set(WindowActions.all.filter(\.takesWindow).map(\.name))
         #expect(targeted == ["movewindowtomonitor", "togglefloating", "setfloating", "settiled", "resizeactive",
-                             "moveactive", "centerwindow", "fullscreen", "minimize", "killactive",
+                             "moveactive", "centerwindow", "pseudo", "pin", "fullscreen", "minimize", "killactive",
                              "movetoworkspace", "movetoworkspacesilent"])
     }
 }

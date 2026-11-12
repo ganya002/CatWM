@@ -50,6 +50,19 @@ import Testing
         #expect(parked(fake, manager, second))
     }
 
+    @Test func aPinnedFloatingWindowFollowsTheShownWorkspace() async throws {
+        let (fake, manager, first, second) = try await world()
+        let pinned = try #require(manager.windows[first])
+        manager.setFloating(true, for: pinned)
+        #expect(await fake.settle(manager))
+        try CommandRegistry.execute("pin", ["window": .int(Int(first))], client: nil, manager: manager)
+        manager.showWorkspaceCommand("2")
+        #expect(await fake.settle(manager))
+        #expect(manager.workspaceOf[first] == "2")
+        #expect(!parked(fake, manager, first))
+        #expect(parked(fake, manager, second))
+    }
+
     @Test func stepsAreHyprlandNumbers() {
         #expect(WindowManager.parkedStep(from: "3", by: 1) == "4")
         #expect(WindowManager.parkedStep(from: "1", by: -1) == "1")
