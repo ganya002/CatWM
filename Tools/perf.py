@@ -7,7 +7,8 @@ so a faster or slower runner needs no new caps.
 
 Run `swift build -c release` and `CATWM_INSTANCE=perf ./build.sh` first. The calibration runs alone first, so
 another run can't slow it. Then the runs go in parallel, one less at a time than the machine has cores, so they
-don't compete for CPU.
+don't compete for CPU. Only one app instance runs at a time, as on a user's Mac: two status items in one
+menu bar animate whenever the other appears or goes, and each instance would measure the other's start and quit.
 Each engine scenario runs in a new CatWMPerf process. The app scenario starts build/CatWM.app as the
 named instance `perf-<run>`, scoped to this process, so it manages no window. When a CatWM runs (a developer's
 Mac), the instances also go on a private agent display that it opens for this run, and they draw nothing on the
@@ -25,6 +26,7 @@ import signal
 import statistics
 import subprocess
 import sys
+import threading
 import time
 import unittest
 from concurrent.futures import ThreadPoolExecutor
@@ -196,10 +198,13 @@ def main():
         budgets["rows"] = {key: value for key, value in budgets["rows"].items() if not key.startswith("app.")}
     sandbox, display = (None, None) if args.skip_app else open_display()
 
+    one_app = threading.Lock()
+
     def run(number):
         results = [run_engine(scenario) for scenario in ENGINE_SCENARIOS]
         if not args.skip_app:
-            results.append(run_app(number, display))
+            with one_app:
+                results.append(run_app(number, display))
         print(f"perf: run {number} done", file=sys.stderr)
         return results
 
