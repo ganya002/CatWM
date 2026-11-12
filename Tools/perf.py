@@ -12,7 +12,8 @@ menu bar animate whenever the other appears or goes, and each instance would mea
 Each engine scenario runs in a new CatWMPerf process. The app scenario starts build/CatWM.app as the
 named instance `perf-<run>`, scoped to this process, so it manages no window. When a CatWM runs (a developer's
 Mac), the instances also go on a private agent display that it opens for this run, and they draw nothing on the
-real screens. Without one, CI runs them on the real display and says so, and anywhere else the script stops. The exit status is
+real screens. Without one, CI runs them on the real display and says so, and anywhere else the script stops. The idle
+window starts once macOS has finished measuring the launch, so it holds only CatWM's own idle work. The exit status is
 1 when a value is over its cap.
 
     python3 Tools/perf.py [--runs N] [--out report.md] [--json samples.json]
@@ -41,7 +42,8 @@ PERF = ROOT / ".build/release/CatWMPerf"
 APP = ROOT / "build/CatWM.app/Contents/MacOS/CatWM"
 BUDGETS = ROOT / "Tools/Perf/budgets.json"
 ENGINE_SCENARIOS = ["engine-idle", "engine-tile", "engine-actions", "config-load"]
-APP_LAUNCH_SECONDS, APP_IDLE_SECONDS = 5, 20
+APP_LAUNCH_SECONDS, APP_IDLE_SECONDS, APP_MEASURED_SECONDS = 5, 20, 20
+LAUNCH_MEASURED = ("ApplicationLaunchExtendedResponsive", "Bailing responsive launch check")
 
 libc = ctypes.CDLL(None)
 
@@ -91,16 +93,33 @@ def scope(display):
     return f"pids:{os.getpid()}" + (f";display:{display}" if display else "")
 
 
+def launch_measured(pid, since):
+    """Whether macOS has logged the end of its launch measurement for pid. Reads the stored log, because a live
+    stream makes the process send each message as it logs it, which the idle rows would count."""
+    seconds = math.ceil(time.monotonic() - since) + 1
+    log = subprocess.run(["log", "show", "--last", f"{seconds}s", "--signpost", "--info", "--style", "compact",
+                          "--predicate", f'subsystem == "com.apple.app_launch_measurement" AND processID == {pid}'],
+                         capture_output=True, text=True).stdout
+    return any(marker in log for marker in LAUNCH_MEASURED)
+
+
 def run_app(run, display=None):
     env = {**os.environ, "CATWM_INSTANCE": f"perf-{run}", "CATWM_SCOPE": scope(display)}
+    started = time.monotonic()
     process = subprocess.Popen([str(APP)], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     samples = {}
     try:
         time.sleep(APP_LAUNCH_SECONDS)
         if process.poll() is not None:
             sys.exit(f"perf: CatWM.app quit during launch with status {process.returncode}")
+        samples["app.launch.cpu"] = [usage(process.pid)["cpu"]]
+        while not launch_measured(process.pid, started):
+            if time.monotonic() - started >= APP_MEASURED_SECONDS:
+                print(f"perf: run {run} logged no end of the launch measurement in {APP_MEASURED_SECONDS} s",
+                      file=sys.stderr)
+                break
+            time.sleep(0.5)
         last = usage(process.pid)
-        samples["app.launch.cpu"] = [last["cpu"]]
         for _ in range(APP_IDLE_SECONDS):
             time.sleep(1)
             now = usage(process.pid)
