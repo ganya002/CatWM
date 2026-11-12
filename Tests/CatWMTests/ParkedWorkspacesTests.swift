@@ -50,6 +50,30 @@ import Testing
         #expect(parked(fake, manager, second))
     }
 
+    @Test func aFloatingWindowMovedToAnotherWorkspaceComesBackWhereItWas() async throws {
+        let (fake, manager, first, second) = try await world()
+        let window = try #require(manager.windows[second])
+        manager.setFloating(true, for: window)
+        #expect(await fake.settle(manager))
+        let before = fake.frame(of: second)
+        manager.moveToWorkspaceCommand("11", follow: false, window: window)
+        #expect(await fake.settle(manager))
+        #expect(parked(fake, manager, second))
+
+        manager.showWorkspaceCommand("11")
+        #expect(await fake.settle(manager))
+        #expect(!parked(fake, manager, second), "frame \(fake.frame(of: second)) visible \(manager.visible.contains(second)) float \(manager.floatsFreely(second)) busy \(manager.animator.isBusy(second)) ws \(String(describing: manager.workspaceOf[second])) shown \(manager.virtualShown)")
+        #expect(fake.frame(of: second).size == before.size)
+        #expect(parked(fake, manager, first))
+
+        manager.showWorkspaceCommand("1")
+        #expect(await fake.settle(manager))
+        #expect(parked(fake, manager, second))
+        manager.moveToWorkspaceCommand("1", follow: false, window: window)
+        #expect(await fake.settle(manager))
+        #expect(!parked(fake, manager, second), "moved back to the shown workspace: \(fake.frame(of: second))")
+    }
+
     @Test func aPinnedFloatingWindowFollowsTheShownWorkspace() async throws {
         let (fake, manager, first, second) = try await world()
         let pinned = try #require(manager.windows[first])

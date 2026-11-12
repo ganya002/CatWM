@@ -99,3 +99,12 @@ animations (workspace slides, tiling moves) to 30 fps under load. Measured on a 
 Air: frame gaps averaged 18–23 ms with spikes to 59 ms. The range is now pinned to the screen's
 own `maximumFramesPerSecond` (60 on an Air, 120 on a ProMotion MacBook Pro), so the link runs at
 the panel's rate and follows the screen the animation is on.
+
+## M10: floating windows come back when their workspace shows
+
+With parked workspaces, only tiled windows were placed again when their workspace was shown.
+`unpark(floating:)` existed (upstream dead code since the macOS Desktops switch) but nothing
+called it, so a floating window moved to another workspace stayed parked in the corner forever
+(seen live with Firefox). `refresh` now unparks every visible window that floats, from the frame
+it had before parking (or the screen centre). Test: `ParkedWorkspacesTests`
+`aFloatingWindowMovedToAnotherWorkspaceComesBackWhereItWas` (fails without the fix).

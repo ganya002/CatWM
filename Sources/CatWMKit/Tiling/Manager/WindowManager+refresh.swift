@@ -47,6 +47,9 @@ extension WindowManager {
         self.present = observed.present
         let plan = syncWorkspaces(screens: screens, present: observed.present)
         visible = plan.visible
+        if config.parkedWorkspaces {
+            for id in visible where floatsFreely(id) { unpark(floating: id, screens: screens) }
+        }
         resolveWorkspaces(screens: screens, arrivals: arrivals, firstRun: firstRun, timing: timing)
         guard !restoringTemplate else { notifyChange(); return }
         restoreTilingRecovery(observed.fresh)
