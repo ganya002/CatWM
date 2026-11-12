@@ -91,3 +91,11 @@ focused window, it reads the focus again. Possibly worth offering upstream.
 
 Extra space around a tiled window that is alone on its screen (Hyprland `gaps_out` for one window, SkyRose
 `gapsOutSingle`), on top of `padding`. Default 0, so nothing changes unless a config sets it.
+
+## M9: window motion at the display's full refresh rate
+
+`WindowFrameClock` asked for `minimum: min(30, rate)`, so macOS was free to drop window
+animations (workspace slides, tiling moves) to 30 fps under load. Measured on a 60 Hz MacBook
+Air: frame gaps averaged 18–23 ms with spikes to 59 ms. The range is now pinned to the screen's
+own `maximumFramesPerSecond` (60 on an Air, 120 on a ProMotion MacBook Pro), so the link runs at
+the panel's rate and follows the screen the animation is on.

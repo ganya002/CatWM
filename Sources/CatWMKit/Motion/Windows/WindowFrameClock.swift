@@ -12,7 +12,7 @@ import QuartzCore
         super.init()
         let link = screen.displayLink(target: self, selector: #selector(frame(_:)))
         let rate = Float(screen.maximumFramesPerSecond)
-        link.preferredFrameRateRange = CAFrameRateRange(minimum: min(30, rate), maximum: rate, preferred: rate)
+        link.preferredFrameRateRange = CAFrameRateRange(minimum: rate, maximum: rate, preferred: rate)
         self.link = link
         link.add(to: .main, forMode: .common)
     }
