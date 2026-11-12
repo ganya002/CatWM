@@ -9,6 +9,7 @@ package struct FloatState {
     package var pinned: Set<CGWindowID> = []
     package var pseudo: [CGWindowID: CGSize] = [:]
     package var naturalSize: [CGWindowID: CGSize] = [:]
+    package var special: (workspace: String, floating: [CGWindowID: Bool])?
 }
 
 extension WindowManager {

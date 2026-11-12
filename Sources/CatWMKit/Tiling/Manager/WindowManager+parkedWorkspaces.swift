@@ -53,3 +53,37 @@ extension WindowManager {
         return String(max(1, number + delta))
     }
 }
+
+extension WindowManager {
+    package static func specialWorkspace(_ raw: String) -> String {
+        let name = raw.split(separator: ":", maxSplits: 1).dropFirst().first.map(String.init) ?? ""
+        return "special:" + (name.isEmpty ? "special" : name)
+    }
+
+    package func toggleSpecialWorkspace(_ raw: String) {
+        guard config.parkedWorkspaces else { return Log.info("special workspace: needs parked workspaces") }
+        let workspace = Self.specialWorkspace(raw.isEmpty ? "special" : "special:" + raw)
+        let open = floats.special?.workspace
+        closeSpecialWorkspace()
+        guard open != workspace, let current = currentWorkspace else { return refresh() }
+        let members = order.filter { workspaceOf[$0] == workspace }.compactMap { windows[$0] }
+        floats.special = (workspace, Dictionary(uniqueKeysWithValues: members.map { ($0.id, $0.isFloating) }))
+        for window in members {
+            model.assign(window.id, to: current)
+            window.userFloating = .chosen(true)
+        }
+        refresh()
+        members.forEach(centerWindow)
+        if let first = members.last { focus(first) }
+    }
+
+    private func closeSpecialWorkspace() {
+        guard let (workspace, floating) = floats.special else { return }
+        floats.special = nil
+        for (id, wasFloating) in floating {
+            guard let window = windows[id] else { continue }
+            window.userFloating = .chosen(wasFloating)
+            model.assign(id, to: workspace)
+        }
+    }
+}

@@ -479,6 +479,11 @@ export class CatWM {
     await this.call("movetoworkspacesilent", { "workspace": workspace, "window": window });
   }
 
+  /** Show or hide a special workspace over the current one */
+  async togglespecialworkspace(name?: string): Promise<void> {
+    await this.call("togglespecialworkspace", { "name": name });
+  }
+
   /** Make the current Desktop the home Desktop */
   async sethomespace(): Promise<void> {
     await this.call("sethomespace");

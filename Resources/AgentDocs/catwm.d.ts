@@ -169,6 +169,8 @@ export interface Actions {
   movetoworkspace: [workspace: "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" | (string & {})]
   /** Move the focused window to a workspace and stay. */
   movetoworkspacesilent: [workspace: "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" | (string & {})]
+  /** Show or hide a special workspace over the current one. */
+  togglespecialworkspace: [name?: string | number]
   /** Make the current Desktop the home Desktop. */
   sethomespace: [...args: (string | number)[]]
   /** Open or close the Overview. */

@@ -83,6 +83,7 @@ extension WindowManager {
         if trimmed.isEmpty { return nil }
         if lower == "previous" { return currentScreen().flatMap { previousWorkspace[$0.uuid] } }
         if lower.hasPrefix("name:") { return String(trimmed.dropFirst(5)) }
+        if lower == "special" || lower.hasPrefix("special:") { return Self.specialWorkspace(trimmed) }
         for prefix in ["r", "m", ""] where lower.hasPrefix(prefix + "+") || lower.hasPrefix(prefix + "-") {
             guard let delta = Int(lower.dropFirst(prefix.count).replacingOccurrences(of: "+", with: "")) else { break }
             if config.parkedWorkspaces { return Self.parkedStep(from: cur, by: delta) }

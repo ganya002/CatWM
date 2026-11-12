@@ -34,6 +34,11 @@ extension WindowActions {
         }
     ) { $0.manager.moveToWorkspaceCommand($0.arg, follow: false, window: $0.target) }.targetingWindow()
 
+    package static let togglespecialworkspace = WindowAction.text(
+        "togglespecialworkspace", "workspaces", "Show or hide a special workspace over the current one",
+        .text("name", "The special workspace's name. The default is `special`.", required: false)
+    ) { $0.manager.toggleSpecialWorkspace($0.arg) }
+
     package static let sethomespace = WindowAction(
         name: "sethomespace", group: "workspaces", summary: "Make the current Desktop the home Desktop"
     ) { $0.manager.makeCurrentSpaceHome() }

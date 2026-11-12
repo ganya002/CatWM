@@ -138,6 +138,7 @@ extension WindowManager {
     }
 
     package func moveToWorkspaceCommand(_ arg: String, follow: Bool, window target: Window? = nil) {
+        if let id = (target ?? focusedWindow())?.id { floats.special?.floating[id] = nil }
         if namedWorkspaces {
             guard let workspace = resolveWorkspace(arg) else { return }
             moveFocusedWindow(to: workspace, follow: follow, window: target)

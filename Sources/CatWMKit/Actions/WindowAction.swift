@@ -102,7 +102,7 @@ package enum WindowActions {
         fullscreen, nativefullscreen, minimize, killactive,
         moveintogroup, moveoutofgroup, changegroupactive, movegroupwindow,
         layoutmsg, splitratio, cyclelayout, layout, toggletiling, retile,
-        workspace, movetoworkspace, movetoworkspacesilent, sethomespace,
+        workspace, movetoworkspace, movetoworkspacesilent, togglespecialworkspace, sethomespace,
         sort, sortUndo, switcher,
         submap, reload, exit, exec, launch
     ]

@@ -56,3 +56,11 @@ floating), centered in its tile; it is applied in `rawSlots`, so every layout su
 floating window follow the shown workspace in parked mode (`showParkedWorkspace` reassigns pinned windows
 before the refresh parks the old workspace). Outside parked mode `pin` logs and does nothing, because
 native Desktops can't show another app's window everywhere without private API.
+
+## M5: special workspace (`togglespecialworkspace`, `special:<name>`)
+
+Hyprland's scratchpad. `special` or `special:<name>` resolves to the workspace `special:<name>`, which is
+an ordinary parked workspace, so moving a window there hides it. `togglespecialworkspace` brings its
+windows onto the shown workspace as centered floating windows and remembers their floating state; a
+second toggle sends them back and restores it. Any explicit workspace move of one of those windows takes
+it out of the special set, which is how `movetoworkspace` out of special works. Parked mode only.

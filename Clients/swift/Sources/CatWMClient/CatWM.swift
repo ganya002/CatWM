@@ -627,6 +627,13 @@ public final class CatWM: @unchecked Sendable {
         _ = try call("movetoworkspacesilent", args)
     }
 
+    /// Show or hide a special workspace over the current one
+    public func togglespecialworkspace(name: String? = nil) throws {
+        var args: [String: Any] = [:]
+        if let value = name { args["name"] = value }
+        _ = try call("togglespecialworkspace", args)
+    }
+
     /// Make the current Desktop the home Desktop
     public func sethomespace() throws {
         let args: [String: Any] = [:]

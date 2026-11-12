@@ -63,6 +63,28 @@ import Testing
         #expect(parked(fake, manager, second))
     }
 
+    @Test func theSpecialWorkspaceFloatsOverTheCurrentOneAndGoesBack() async throws {
+        let (fake, manager, first, second) = try await world()
+        manager.moveToWorkspaceCommand("special", follow: false, window: try #require(manager.windows[second]))
+        #expect(await fake.settle(manager))
+        #expect(manager.workspaceOf[second] == "special:special")
+        #expect(parked(fake, manager, second))
+
+        manager.dispatch("togglespecialworkspace", "")
+        #expect(await fake.settle(manager))
+        #expect(manager.workspaceOf[second] == "1")
+        #expect(try #require(manager.windows[second]).isFloating)
+        #expect(!parked(fake, manager, second))
+        #expect(!parked(fake, manager, first))
+
+        manager.dispatch("togglespecialworkspace", "")
+        #expect(await fake.settle(manager))
+        #expect(manager.workspaceOf[second] == "special:special")
+        #expect(try !#require(manager.windows[second]).isFloating)
+        #expect(parked(fake, manager, second))
+        #expect(fake.frame(of: first).width > 1000)
+    }
+
     @Test func stepsAreHyprlandNumbers() {
         #expect(WindowManager.parkedStep(from: "3", by: 1) == "4")
         #expect(WindowManager.parkedStep(from: "1", by: -1) == "1")

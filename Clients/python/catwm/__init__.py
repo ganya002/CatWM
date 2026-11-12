@@ -540,6 +540,13 @@ class CatWM:
             args["window"] = window
         self.call("movetoworkspacesilent", args)
 
+    def togglespecialworkspace(self, name: str | None = None) -> None:
+        """Show or hide a special workspace over the current one"""
+        args: dict[str, Any] = {}
+        if name is not None:
+            args["name"] = name
+        self.call("togglespecialworkspace", args)
+
     def sethomespace(self) -> None:
         """Make the current Desktop the home Desktop"""
         args: dict[str, Any] = {}

@@ -690,6 +690,22 @@
     },
     {
       "args" : [
+        {
+          "name" : "name",
+          "required" : false,
+          "summary" : "The special workspace's name. The default is `special`.",
+          "type" : "string"
+        }
+      ],
+      "group" : "workspaces",
+      "name" : "togglespecialworkspace",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Show or hide a special workspace over the current one"
+    },
+    {
+      "args" : [
 
       ],
       "group" : "workspaces",
