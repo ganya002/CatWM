@@ -181,6 +181,7 @@ import Testing
     @Test func aDisplayIdThatIsNotTheAgentDisplayIsNotOwned() {
         #expect(CGMainDisplayID() != 0)
         #expect(!AgentDisplay.owns(CGMainDisplayID()))
-        #expect(NSScreen.userScreens.count == NSScreen.screens.count)
+        let agentDisplays = NSScreen.screens.filter { $0.displayID.map(AgentDisplay.owns) ?? false }
+        #expect(NSScreen.userScreens.count == NSScreen.screens.count - agentDisplays.count)
     }
 }
