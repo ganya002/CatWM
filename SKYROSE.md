@@ -40,7 +40,8 @@ snapshot resize scene, so SkyRose configures those instead of animating windows 
 missing in embedded mode: `CatWMEngine.onWindowFrames` (each animation frame's in-flight frames, fed from
 the `WindowPresentation` sampling in `Animator`) and the snapshot scene, whose install moved from the app's
 `AppSurface` into `Animator.useSnapshotScenes` so `EngineSurface` can call it. The host's own windows are
-excluded from the scene's occlusion check.
+excluded from the scene's occlusion check. `CatWMEngine.onStateChange` (the manager's `onChange`, run on
+every refresh) lets the host follow windows changing workspace, which emits no event.
 
 ## M4: dwindle layout
 

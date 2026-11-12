@@ -24,6 +24,10 @@ public final class CatWMEngine {
         didSet { manager.animator.onFrames = onWindowFrames }
     }
 
+    public var onStateChange: (@MainActor () -> Void)? {
+        didSet { manager.onChange = onStateChange }
+    }
+
     public convenience init(name: String? = nil) throws {
         guard let id = Self.instanceID(name) else { throw EngineError.invalidName(name ?? "") }
         guard Instance.embedding.claim(id), Instance.id == id else {
@@ -70,6 +74,7 @@ public final class CatWMEngine {
         Instance.embedding.scope = windowScope
         manager = Self.makeManager(backend: backend, config: loaded, scope: windowScope, store: store, paths: paths)
         manager.animator.onFrames = onWindowFrames
+        manager.onChange = onStateChange
         WindowManager.install(manager)
         Self.active.engine = self
         isRunning = true

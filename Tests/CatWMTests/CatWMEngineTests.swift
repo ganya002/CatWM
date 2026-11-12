@@ -64,9 +64,14 @@ import Testing
         let engine = try makeEngine()
         _ = fake.addScreen()
         engine.onWindowFrames = { _ in }
+        var changes = 0
+        engine.onStateChange = { changes += 1 }
         try engine.start(config: .text(Self.tiling + "\ncatwm.lab.resizeAnimation = \"snapshot\""))
         #expect(WindowManager.shared.animator.makeResizeScene != nil)
         #expect(WindowManager.shared.animator.onFrames != nil)
+        fake.addWindow()
+        #expect(await fake.settle(WindowManager.shared))
+        #expect(changes > 0)
         try engine.replaceConfig(Self.tiling)
         #expect(WindowManager.shared.animator.makeResizeScene == nil)
         await cleanUp(engine)
