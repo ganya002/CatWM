@@ -192,26 +192,22 @@ import Testing
         #expect(handles(to: paths.instancesFolder) == 0)
     }
 
-    @Test func aFolderChangeWithoutAClaimChangeStartsNoScan() throws {
+    @Test func aFolderChangeWithoutAClaimChangeStartsNoScan() async throws {
         let paths = try #require(InstancePaths(id: "plain", home: folder))
         let claims = ScopeClaims(folder: paths.instancesFolder, alive: { _ in true })
-        let scans = OSAllocatedUnfairLock(initialState: 0)
-        let changed = OSAllocatedUnfairLock(initialState: Set<pid_t>())
-        claims.watch { pids in
-            scans.withLock { $0 += 1 }
-            changed.withLock { $0 = pids }
-        }
+        let (changes, change) = AsyncStream.makeStream(of: Set<pid_t>.self)
+        var changed = changes.makeAsyncIterator()
+        claims.watch { change.yield($0) }
+        defer { claims.stop() }
         try FileManager.default.createDirectory(at: paths.configFolder, withIntermediateDirectories: true)
         try Data("1".utf8).write(to: paths.pidFile, options: .atomic)
         claims.folderChanged()
-        #expect(scans.withLock { $0 } == 0)
         try paths.writeClaim(ScopeClaim(owner: 1, scope: WindowScope(pids: [10])))
         claims.folderChanged()
-        #expect(scans.withLock { $0 } == 1)
-        #expect(changed.withLock { $0 } == [10])
+        #expect(await changed.next() == [10])
         try paths.writeClaim(ScopeClaim(owner: 1, scope: WindowScope(pids: [10, 11])))
         claims.folderChanged()
-        #expect(changed.withLock { $0 } == [11])
+        #expect(await changed.next() == [11])
     }
 
     @Test func aClaimOfAProcessThatIsNoAppStartsNoRefreshButAHeldOrRunningAppDoes() throws {
