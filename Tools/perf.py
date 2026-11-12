@@ -138,22 +138,15 @@ def run_app(run, display=None):
 
 
 def profile_app(display, out):
-    """Run one extra instance after the measured runs, with a verbose log, and sample it through the seconds where
-    CI shows an idle burst, so a cost seen only on another machine has a stack and log lines. It adds to no row."""
+    """Run one extra instance after the measured runs, with a verbose log, and sample its first idle seconds, so a
+    cost seen only on another machine has a stack and log lines. It adds to no row."""
     env = {**os.environ, "CATWM_INSTANCE": "perf-profile", "CATWM_SCOPE": scope(display)}
     process = subprocess.Popen([str(APP), "--verbose"], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    neighbours = []
     try:
-        time.sleep(4)
-        # The measured runs overlap another run's engine scenarios, and only they show the burst.
-        neighbours = [subprocess.Popen([str(PERF), name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                      for name in ENGINE_SCENARIOS]
+        time.sleep(APP_LAUNCH_SECONDS)
         subprocess.run(["sample", str(process.pid), "8", "1", "-mayDie", "-file", str(out)],
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False, timeout=60)
-        time.sleep(APP_LAUNCH_SECONDS + APP_IDLE_SECONDS - 12)
     finally:
-        for neighbour in neighbours:
-            neighbour.kill()
         process.send_signal(signal.SIGTERM)
         try:
             process.wait(timeout=10)
