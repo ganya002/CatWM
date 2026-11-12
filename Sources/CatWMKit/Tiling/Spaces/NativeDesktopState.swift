@@ -8,6 +8,12 @@ package struct NativeDesktopState {
         package let until: Date
     }
 
+    package struct SwitchTarget {
+        package let workspace: String
+        package let until: Date
+    }
+
+    package var switchTarget: SwitchTarget?
     package var nativeCatalog = NativeWorkspaceCatalog()
     package var lastNativeCatalogSaved: [String: UInt64] = [:]
     package var lastNativeCatalogHomes: [String: String] = [:]

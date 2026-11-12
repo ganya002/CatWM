@@ -120,6 +120,7 @@ extension WindowManager {
         let requestedAt = CACurrentMediaTime()
         updateNativeCatalog(backend.screens())
         desktops.nativeWorkspaceGeneration += 1
+        holdSwitchTarget(workspace)
         let generation = desktops.nativeWorkspaceGeneration
         let screen = currentScreen() ?? backend.screens().first
         guard !desktops.nativeCreationBusy, let entry = desktops.nativeCatalog.entry(workspace) else {
@@ -148,19 +149,28 @@ extension WindowManager {
                               since: requestedAt)
     }
 
-    private func releaseEmptyWorkspaces() {
-        guard config.removesEmptyWorkspaces, !closeAndSort.sortSession, !restoringTemplate, !nativeDesktop.isRunning,
-              nativeDesktop.requested == nil, !desktops.nativeCreationBusy, nativeMoves.isEmpty,
-              !scanner.desktop.allWindows.isEmpty else { return }
+    package func holdSwitchTarget(_ workspace: String) {
+        desktops.switchTarget = .init(workspace: workspace, until: Date().addingTimeInterval(5))
+    }
+
+    private func emptyNativeEntries() -> [NativeWorkspaceCatalog.Entry] {
+        let target = desktops.switchTarget.flatMap { $0.until > Date() ? $0.workspace : nil }
         let held = Set(workspaceOf.filter { windows[$0.key] != nil }.values).union(virtualShown.values)
-            .union(model.shownSet)
+            .union(model.shownSet).union([target, nativeDesktop.requested?.workspace].compactMap(\.self))
         let occupied = Set(scanner.desktop.allWindows.compactMap { window in
             scanner.desktop.spaces[window.id].flatMap { $0.count == 1 ? $0.first : nil }
         })
-        let empty = desktops.nativeCatalog.entries.filter {
+        return desktops.nativeCatalog.entries.filter {
             !held.contains($0.name) && !occupied.contains($0.space)
                 && backend.currentSpace(display: $0.display) != $0.space
         }
+    }
+
+    package func releaseEmptyWorkspaces() {
+        guard config.removesEmptyWorkspaces, !closeAndSort.sortSession, !restoringTemplate, !nativeDesktop.isRunning,
+              nativeDesktop.requested == nil, !desktops.nativeCreationBusy, nativeMoves.isEmpty,
+              !scanner.desktop.allWindows.isEmpty else { return }
+        let empty = emptyNativeEntries()
         if config.workspacesPerDisplay {
             func number(_ entry: NativeWorkspaceCatalog.Entry) -> Int { Int(WorkspaceKey.number(entry.name)) ?? 0 }
             let kept = desktops.nativeCatalog.entries.filter { entry in !empty.contains(entry) }
@@ -189,9 +199,9 @@ extension WindowManager {
             defer { self.desktops.nativeCreationBusy = false; self.scheduleRefresh(after: 0) }
             for entry in targets {
                 guard let screen = backend.screens().first(where: { $0.uuid == entry.display }),
-                      backend.currentSpace(display: entry.display) != entry.space else { continue }
+                      emptyNativeEntries().contains(entry) else { continue }
                 do {
-                    try await self.removeDesktop(entry.space, on: screen)
+                    try await self.removeDesktop(entry.space, on: screen, remove: self.desktopRemover)
                     if self.config.workspacesPerDisplay {
                         self.closeGap(after: entry)
                     } else {
@@ -266,6 +276,7 @@ extension WindowManager {
         nativeDesktop.settings = MotionSpec(config(for: workspace ?? currentWorkspace))
         nativeDesktop.onSettled = { [weak self] request, changed in
             guard let self else { return }
+            if self.desktops.switchTarget?.workspace == request.workspace { self.desktops.switchTarget = nil }
             if self.isVirtual(request.workspace) {
                 if changed, let old = self.virtualShown[request.display], old != request.workspace,
                    !self.closeAndSort.sortSession {

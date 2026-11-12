@@ -50,6 +50,7 @@ import AppKit
     package var windows: [CGWindowID: Window] = [:]
     package var observedApps: [(pid: pid_t, bundleID: String?)] = []
     package let nativeDesktop = NativeDesktopController()
+    package var desktopRemover: @MainActor (UInt64, Screen) async throws -> Void = DesktopLifecycle.remove
     package var desktops = NativeDesktopState()
     package let nativeGestures = DesktopGestureTap()
     package var nativeMoves = NativeWindowMoves()
