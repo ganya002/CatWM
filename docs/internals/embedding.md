@@ -17,3 +17,7 @@ One engine runs per process. A first config that fails starts nothing. A later b
 The library never sets the activation policy or main menu, terminates the app, installs signal handlers, stops other instances or asks for a permission. The Desktop slide needs a guard process, which is a second run of the executable, so embedded mode switches Desktops with the macOS swipe instead (`NativeDesktopController.guarded`).
 
 With a `scope`, the engine writes the same scope claim as a scoped instance, so the user's CatWM leaves those pids alone.
+
+## Motion for the host
+
+`onWindowFrames` hands the host every animation frame's in-flight window frames, so its own chrome (borders, focus rings) moves with the windows. It rides the same sampling as `WindowPresentation`, so the host sees exactly what is written and pays nothing when unset. `lab.resizeAnimation = "snapshot"` works embedded too: the scene is a click-through panel in the host's process, and the host's own windows are excluded from the occlusion check, because they would otherwise stop every scene.

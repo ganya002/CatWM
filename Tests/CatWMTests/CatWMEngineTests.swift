@@ -60,6 +60,18 @@ import Testing
         await cleanUp(engine)
     }
 
+    @Test func theHostGetsSnapshotScenesAndTheFramesHook() async throws {
+        let engine = try makeEngine()
+        _ = fake.addScreen()
+        engine.onWindowFrames = { _ in }
+        try engine.start(config: .text(Self.tiling + "\ncatwm.lab.resizeAnimation = \"snapshot\""))
+        #expect(WindowManager.shared.animator.makeResizeScene != nil)
+        #expect(WindowManager.shared.animator.onFrames != nil)
+        try engine.replaceConfig(Self.tiling)
+        #expect(WindowManager.shared.animator.makeResizeScene == nil)
+        await cleanUp(engine)
+    }
+
     @Test func aSecondStartFails() async throws {
         let engine = try makeEngine()
         try engine.start(config: .text(""))

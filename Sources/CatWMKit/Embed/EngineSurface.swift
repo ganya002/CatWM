@@ -11,6 +11,9 @@ struct EngineSurface: TilingSurface {
 
     func apply(_ config: Config) {
         Hotkeys.shared.setBindings(config.workspaceBindings, config: config, input: WindowManager.shared.input)
+        WindowManager.shared.animator.useSnapshotScenes(config.resizeAnimation == .snapshot) {
+            Set(NSApp.windows.map { CGWindowID($0.windowNumber) })
+        }
         guard WindowManager.shared.isStarted else { return }
         Notifications.shared.setEnabled(config.tabNotificationBadges)
     }

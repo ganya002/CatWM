@@ -27,6 +27,7 @@ import QuartzCore
     package var onMinimumSize: ((CGWindowID, CGSize) -> Void)?
     package var onTopRefused: ((_ target: CGRect, _ actual: CGRect) -> Void)?
     package var onLanded: (() -> Void)?
+    package var onFrames: (@MainActor ([CGWindowID: CGRect]) -> Void)?
 
     package init(backend: any WindowBackend = AXBackend.shared, makeWriter: ((pid_t) -> AXWriter)? = nil,
                  applyFocus: @escaping @Sendable (Window, @Sendable () -> Bool) -> Void = { $0.focus(ifCurrent: $1) }) {
@@ -295,10 +296,12 @@ extension Animator {
     }
 
     private func updateWindowPresentation(at time: CFTimeInterval = CACurrentMediaTime()) {
-        guard let windowPresentation else { return }
+        guard windowPresentation != nil || onFrames != nil else { return }
         let samples = items.mapValues { $0.frame(at: time, aligned: false) }
         let moving = following.frames.merging(samples) { _, frame in frame }
-        windowPresentation.update(moving.merging(landing.mapValues { $0.move.target }) { frame, _ in frame })
+        let frames = moving.merging(landing.mapValues { $0.move.target }) { frame, _ in frame }
+        windowPresentation?.update(frames)
+        onFrames?(frames)
     }
 
     private func prepareResizeScene(for moves: [Move]) {

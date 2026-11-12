@@ -32,3 +32,12 @@ with `targetingWindow()`, and its control command gains an optional `window` id.
 because it does not depend on focus. `togglefloating`, `minimize` and `killactive` now read
 `context.window`, so a window rule using them also acts on the rule's window. Keybind and config
 argument lists are unchanged: `window` exists only on the control command.
+
+## M3: frames hook and snapshot glide for embedded hosts
+
+SkyRose draws borders and wants Hyprland's glide. CatWM already has Bézier curves, durations and the
+snapshot resize scene, so SkyRose configures those instead of animating windows itself. Two things were
+missing in embedded mode: `CatWMEngine.onWindowFrames` (each animation frame's in-flight frames, fed from
+the `WindowPresentation` sampling in `Animator`) and the snapshot scene, whose install moved from the app's
+`AppSurface` into `Animator.useSnapshotScenes` so `EngineSurface` can call it. The host's own windows are
+excluded from the scene's occlusion check.
