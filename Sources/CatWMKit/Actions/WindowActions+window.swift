@@ -154,8 +154,22 @@ extension WindowActions {
         let candidates = manager.order.filter {
             manager.visible.contains($0) && !manager.tabs.isBehind($0) && $0 != window.id
         }.compactMap { manager.windows[$0] }.filter { !$0.isFloating }
-        guard case let .window(host) = manager.resolve(direction, from: window, among: candidates) else { return }
+        guard case let .window(host) = manager.resolve(direction, from: window, among: candidates),
+              !manager.tabs.isLocked(host.id) else { return }
         manager.joinTab(window.id, onto: host.id)
+    }
+
+    package static let togglegroup = WindowAction(
+        name: "togglegroup", group: "tabs",
+        summary: "Make the focused window a group that new windows join, or break up its group"
+    ) { context in
+        if let window = context.manager.focusedWindow() { context.manager.toggleGroup(window) }
+    }
+
+    package static let lockactivegroup = WindowAction(
+        name: "lockactivegroup", group: "tabs", summary: "Stop or let new windows join the focused group"
+    ) { context in
+        if let window = context.manager.focusedWindow() { context.manager.toggleGroupLock(window) }
     }
 
     package static let moveoutofgroup = WindowAction(

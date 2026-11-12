@@ -197,12 +197,14 @@ extension WindowManager {
         let rest = arrivals.map(\.id).filter { !ids.contains($0) }
         let focusedID = [focusRequests.reportedFocus?.id, focusedWindow()?.id].compactMap(\.self)
             .first { order.contains($0) }
+        let host = model.mostRecent(of: order)
         if !firstRun, let focused = focusedID.flatMap({ windows[$0] }), let at = order.firstIndex(of: focused.id),
            let screen = screen(of: focused), state(for: screen).layout == .dwindle {
             order.insert(contentsOf: rest, at: at + 1)
         } else {
             order.append(contentsOf: rest)
         }
+        if !firstRun, let host { joinCollectingGroup(rest, host: host) }
     }
 
     private func restoreSavedWorkspace(_ window: Window, titles: [CGWindowID: String?]) {

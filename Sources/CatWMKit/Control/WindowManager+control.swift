@@ -37,9 +37,15 @@ extension WindowManager {
                 "visible": .bool(visible.contains(window.id)),
                 "workspace": workspaceOf[window.id].map(JSON.string) ?? .null,
                 "screen": screen(of: window, in: screens).map { JSON.string($0.uuid) } ?? .null,
-                "frame": .rect(window.cachedFrame)
+                "frame": .rect(window.cachedFrame),
+                "tabs": tabMembers(window.id).map { .array($0.map { .int(Int($0)) }) } ?? .null,
+                "tabsLocked": .bool(tabs.isLocked(window.id))
             ]
         })
+    }
+
+    private func tabMembers(_ id: CGWindowID) -> [CGWindowID]? {
+        tabs.group(of: id)?.members ?? (tabs.armed.contains(id) ? [id] : nil)
     }
 
     package func workspacesJSON() -> JSON {

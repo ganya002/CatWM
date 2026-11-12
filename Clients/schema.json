@@ -521,6 +521,28 @@
     },
     {
       "args" : [
+
+      ],
+      "group" : "tabs",
+      "name" : "togglegroup",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Make the focused window a group that new windows join, or break up its group"
+    },
+    {
+      "args" : [
+
+      ],
+      "group" : "tabs",
+      "name" : "lockactivegroup",
+      "result" : {
+        "kind" : "none"
+      },
+      "summary" : "Stop or let new windows join the focused group"
+    },
+    {
+      "args" : [
         {
           "name" : "message",
           "required" : true,
@@ -947,6 +969,16 @@
             "name" : "workspace",
             "summary" : "Workspace name",
             "type" : "string?"
+          },
+          {
+            "name" : "tabs",
+            "summary" : "Window IDs of its tabs in order, or itself for a group of one",
+            "type" : "int[]?"
+          },
+          {
+            "name" : "tabsLocked",
+            "summary" : "New windows don't join its tabs",
+            "type" : "bool"
           },
           {
             "name" : "screen",

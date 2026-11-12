@@ -10,6 +10,8 @@ package struct TabGroups: Equatable {
     }
 
     package private(set) var groups: [Group] = []
+    package private(set) var armed: Set<CGWindowID> = []
+    private var locked: Set<CGWindowID> = []
     private var nextID = 1
 
     package var isEmpty: Bool { groups.isEmpty }
@@ -17,6 +19,29 @@ package struct TabGroups: Equatable {
     package func group(of id: CGWindowID) -> Group? { groups.first { $0.members.contains(id) } }
 
     package func isGrouped(_ id: CGWindowID) -> Bool { group(of: id) != nil }
+
+    package func collects(_ id: CGWindowID) -> Bool {
+        let members = group(of: id)?.members ?? [id]
+        return members.contains(where: armed.contains) && !isLocked(id)
+    }
+
+    package func isLocked(_ id: CGWindowID) -> Bool {
+        (group(of: id)?.members ?? [id]).contains(where: locked.contains)
+    }
+
+    package mutating func toggleArmed(_ id: CGWindowID) {
+        if armed.remove(id) == nil { armed.insert(id) } else { locked.remove(id) }
+    }
+
+    package mutating func toggleLocked(_ id: CGWindowID) {
+        let members = group(of: id)?.members ?? [id]
+        if members.contains(where: locked.contains) { locked.subtract(members) } else { locked.insert(id) }
+    }
+
+    package mutating func disarm(_ members: [CGWindowID]) {
+        armed.subtract(members)
+        locked.subtract(members)
+    }
 
     package func isBehind(_ id: CGWindowID) -> Bool { group(of: id).map { $0.active != id } ?? false }
 
@@ -50,11 +75,19 @@ package struct TabGroups: Equatable {
     package mutating func remove(_ id: CGWindowID) -> CGWindowID? {
         guard let index = index(of: id), let position = groups[index].members.firstIndex(of: id) else { return nil }
         var group = groups[index]
+        let wasArmed = group.members.contains(where: armed.contains)
+        let wasLocked = group.members.contains(where: locked.contains)
+        armed.remove(id)
+        locked.remove(id)
         group.members.remove(at: position)
         let heir = group.members[max(0, position - 1)]
         if group.active == id { group.active = heir }
         if group.members.count < 2 {
             groups.remove(at: index)
+            if wasArmed, let last = group.members.first {
+                armed.insert(last)
+                if wasLocked { locked.insert(last) }
+            }
         } else {
             groups[index] = group
         }

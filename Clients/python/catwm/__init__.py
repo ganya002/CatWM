@@ -69,6 +69,8 @@ class WindowsItem(TypedDict):
     fullscreen: bool
     visible: bool
     workspace: str | None
+    tabs: list[int] | None
+    tabsLocked: bool
     screen: str | None
     frame: Rect | None
 
@@ -483,6 +485,16 @@ class CatWM:
         if step is not None:
             args["step"] = step
         self.call("movegroupwindow", args)
+
+    def togglegroup(self) -> None:
+        """Make the focused window a group that new windows join, or break up its group"""
+        args: dict[str, Any] = {}
+        self.call("togglegroup", args)
+
+    def lockactivegroup(self) -> None:
+        """Stop or let new windows join the focused group"""
+        args: dict[str, Any] = {}
+        self.call("lockactivegroup", args)
 
     def layoutmsg(self, message: str) -> None:
         """Send a message to the layout"""

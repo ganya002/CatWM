@@ -145,6 +145,10 @@ export interface Actions {
   changegroupactive: [tab?: "f" | "b" | (string & {})]
   /** Move the focused tab along the strip. */
   movegroupwindow: [step?: "next" | "prev" | "f" | "b" | (string & {})]
+  /** Make the focused window a group that new windows join, or break up its group. */
+  togglegroup: [...args: (string | number)[]]
+  /** Stop or let new windows join the focused group. */
+  lockactivegroup: [...args: (string | number)[]]
   /** Send a message to the layout. */
   layoutmsg: [message: "focusmaster" | "swapsides" | "addmaster" | "removemaster" | (string & {})]
   /** Change the size of the main pane. */

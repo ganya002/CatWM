@@ -56,6 +56,8 @@ export interface WindowsItem {
   fullscreen: boolean;
   visible: boolean;
   workspace: string | null;
+  tabs: number[] | null;
+  tabsLocked: boolean;
   screen: string | null;
   frame: Rect | null;
 }
@@ -433,6 +435,16 @@ export class CatWM {
   /** Move the focused tab along the strip */
   async movegroupwindow(step?: Step): Promise<void> {
     await this.call("movegroupwindow", { "step": step });
+  }
+
+  /** Make the focused window a group that new windows join, or break up its group */
+  async togglegroup(): Promise<void> {
+    await this.call("togglegroup");
+  }
+
+  /** Stop or let new windows join the focused group */
+  async lockactivegroup(): Promise<void> {
+    await this.call("lockactivegroup");
   }
 
   /** Send a message to the layout */

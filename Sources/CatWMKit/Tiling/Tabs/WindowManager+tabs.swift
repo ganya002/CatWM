@@ -48,6 +48,35 @@ extension WindowManager {
         moveTabs(of: id, to: workspace) { member, _ in assignManagedWindow(member, to: workspace) }
     }
 
+    package func toggleGroup(_ window: Window) {
+        guard config.features.contains(.tabGroups), !window.isFloating else { return }
+        if let group = tabs.group(of: window.id) {
+            model.tabs.disarm(group.members)
+            for member in group.members where member != group.active { model.leaveTab(member) }
+            Log.info("tabs: broke up the group of \(window.bundleID ?? "window \(window.id)")")
+            refresh()
+            focus(window, warp: false)
+        } else {
+            model.tabs.toggleArmed(window.id)
+            notifyChange()
+        }
+    }
+
+    package func toggleGroupLock(_ window: Window) {
+        guard tabs.isGrouped(window.id) || tabs.armed.contains(window.id) else { return }
+        model.tabs.toggleLocked(window.id)
+        notifyChange()
+    }
+
+    package func joinCollectingGroup(_ arrivals: [CGWindowID], host: CGWindowID) {
+        guard config.features.contains(.tabGroups), tabs.collects(host), windows[host]?.isFloating == false,
+              let workspace = workspaceOf[host] else { return }
+        let target = tabs.group(of: host)?.active ?? host
+        for id in arrivals where workspaceOf[id] == workspace && windows[id]?.isFloating == false {
+            model.joinTab(id, onto: target)
+        }
+    }
+
     package func dissolveTabs() {
         tabUI.savedTabs = []
         let members = tabs.groups.flatMap { $0.members.dropFirst() }

@@ -100,7 +100,7 @@ package enum WindowActions {
         movefocus, cyclenext, focusmonitor, movewindow, movewindowtomonitor, swapwindow, swapnext,
         togglefloating, setfloating, settiled, resizeactive, moveactive, centerwindow, pseudo, pin,
         fullscreen, nativefullscreen, minimize, killactive,
-        moveintogroup, moveoutofgroup, changegroupactive, movegroupwindow,
+        moveintogroup, moveoutofgroup, changegroupactive, movegroupwindow, togglegroup, lockactivegroup,
         layoutmsg, splitratio, cyclelayout, layout, toggletiling, retile,
         workspace, movetoworkspace, movetoworkspacesilent, togglespecialworkspace, sethomespace,
         sort, sortUndo, switcher,

@@ -83,6 +83,8 @@ public struct WindowsItem: Codable, Equatable, Sendable {
     public let fullscreen: Bool
     public let visible: Bool
     public let workspace: String?
+    public let tabs: [Int]?
+    public let tabsLocked: Bool
     public let screen: String?
     public let frame: Rect?
 }
@@ -563,6 +565,18 @@ public final class CatWM: @unchecked Sendable {
         var args: [String: Any] = [:]
         if let value = step { args["step"] = value.rawValue }
         _ = try call("movegroupwindow", args)
+    }
+
+    /// Make the focused window a group that new windows join, or break up its group
+    public func togglegroup() throws {
+        let args: [String: Any] = [:]
+        _ = try call("togglegroup", args)
+    }
+
+    /// Stop or let new windows join the focused group
+    public func lockactivegroup() throws {
+        let args: [String: Any] = [:]
+        _ = try call("lockactivegroup", args)
     }
 
     /// Send a message to the layout
