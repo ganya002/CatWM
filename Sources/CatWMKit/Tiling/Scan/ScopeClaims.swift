@@ -25,7 +25,7 @@ package final class ScopeClaims: Sendable {
         var stamp: Date?
         var claims: [ScopeClaim] = []
         var pids: Set<pid_t> = []
-        var changed: (@Sendable () -> Void)?
+        var changed: (@Sendable (Set<pid_t>) -> Void)?
         var folderWatch: DispatchSourceFileSystemObject?
         var ownerWatches: [pid_t: DispatchSourceProcess] = [:]
     }
@@ -48,7 +48,7 @@ package final class ScopeClaims: Sendable {
 
     package func claimedPids() -> Set<pid_t> { state.withLock { read(&$0) } }
 
-    package func watch(_ changed: @escaping @Sendable () -> Void) {
+    package func watch(_ changed: @escaping @Sendable (_ pids: Set<pid_t>) -> Void) {
         Log.attempt("create \(folder.path)") {
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         }
@@ -80,11 +80,12 @@ package final class ScopeClaims: Sendable {
     }
 
     package func folderChanged() {
-        let notify = state.withLock { state -> (@Sendable () -> Void)? in
+        let (notify, pids) = state.withLock { state -> ((@Sendable (Set<pid_t>) -> Void)?, Set<pid_t>) in
             let before = state.pids
-            return before == read(&state) ? nil : state.changed
+            let after = read(&state)
+            return before == after ? (nil, []) : (state.changed, before.symmetricDifference(after))
         }
-        notify?()
+        notify?(pids)
     }
 
     package func ownerExited(_ owner: pid_t) {

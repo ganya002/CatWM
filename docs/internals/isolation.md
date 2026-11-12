@@ -74,6 +74,12 @@ The idle rows start once macOS has finished measuring the launch, not at a fixed
 
 The first config collection starts JavaScriptCore's parallel GC marker threads (`Heap Helper Thread`). They exit about 5 s later, and their thread-local libpas heaps are decommitted then. A Time Profiler recording of a lone instance on an agent display put an idle bump there: 1.2 ms and 5 wake-ups on an M4. `JSC_numberOfGCMarkers=1` (`ConfigEngine.useOneGCMarkerThread`, set in `main.swift` before JavaScriptCore starts) has one thread collect the config heap and removes the bump (0.1 ms and 0). Disabling the concurrent collector (`JSC_useConcurrentGC=0`) was rejected because it did not change the bump.
 
+## Another instance's start or exit costs a scoped instance nothing
+
+A scoped instance watches no claims folder, scans for no launch or quit of a pid outside its scope, and draws no status item, so another instance has no path to it. A two-instance run on an agent display showed it: instance A shows no change when B starts or quits.
+
+The default instance does watch the claims folder, so every scoped instance that starts or exits used to cost it a full scan, even when the claim named only the test's own Python pid. `ScopeClaims` now reports which pids changed, and `WindowManager.claimsChanged` schedules a refresh only when one of them is a pid the manager holds or a running application. A claim of a process that is no application cannot hide a window, and a pid that becomes an application later is filtered by the next scan anyway.
+
 ## An engine on a fake never reaches the user's input
 
 An engine built on `FakeBackend` must never reach the user's input: the perf tool, CI perf and `swift test` must not post a key, press the pointer, warp it or switch a Desktop. The engine reaches all of these through `WindowBackend`, and `RealInput` refuses the ones that skip it (see `fake-backend.md` for the decision and the alternative). The scope's `GlobalInput` was not enough: an unscoped manager has `pointerAndFocus` on, and a fake manager is unscoped.

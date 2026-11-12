@@ -110,7 +110,7 @@ import QuartzCore
         }
     }
 
-    package func watchClaims(_ changed: @escaping @Sendable () -> Void) { claims?.watch(changed) }
+    package func watchClaims(_ changed: @escaping @Sendable (_ pids: Set<pid_t>) -> Void) { claims?.watch(changed) }
     package func stopWatchingClaims() { claims?.stop() }
 
     package func keeps(_ pid: pid_t) -> Bool { scope?.pids.contains(pid) ?? !claimed.contains(pid) }

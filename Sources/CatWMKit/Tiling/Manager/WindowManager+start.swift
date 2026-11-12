@@ -64,7 +64,13 @@ extension WindowManager {
     }
 
     package func watchClaims() {
-        scanner.watchClaims { [weak self] in DispatchQueue.main.async { self?.scheduleRefresh() } }
+        scanner.watchClaims { [weak self] pids in DispatchQueue.main.async { self?.claimsChanged(pids) } }
+    }
+
+    package func claimsChanged(_ pids: Set<pid_t>) {
+        let held = Set(windows.values.map(\.pid)).union(observers.keys).union(observing.keys)
+        let matters = pids.contains { held.contains($0) || NSRunningApplication(processIdentifier: $0) != nil }
+        if matters { scheduleRefresh() }
     }
 
     package func stopTiling(then done: @escaping () -> Void = {}) {
