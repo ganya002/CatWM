@@ -74,6 +74,7 @@ Each option is a path on `catwm`: `gaps.size` is `catwm.gaps.size`. `padding` al
 | `focusDim.blur` | bool | `false` | blur every window but the focused one; combines with dimming. `.conf`: `blur-other-windows` |
 | `focusDim.blurRadius` | 1–100 (points) | `20` | rounded to whole points. The Settings slider shows 2–60. `.conf`: `blur-radius` |
 | `workspaces.virtual` | bool | `true` | true: CatWM controls native Desktops. false: macOS controls switching. See [workspaces.md](workspaces.md). `.conf`: `virtual-workspaces` |
+| `workspaces.parked` | bool | `false` | true: workspaces live on the current Desktop and CatWM parks the windows of hidden workspaces in a screen corner (SkyRose). Wins over `workspaces.virtual`. `.conf`: `parked-workspaces` |
 | `workspaces.stayAfterClose` | bool | `true` | `.conf`: `stay-on-workspace-after-close` |
 | `workspaces.removeEmpty` | bool | `true` | true: an empty workspace and its Desktop go away when you leave it. `.conf`: `remove-empty-workspaces` |
 | `workspaces.perDisplay` | bool | `true` | true: each display counts its own workspaces from 1, and `workspace 2` selects the second workspace on the current display. false: workspace numbers are shared by all displays. `.conf`: `workspaces-per-display` |

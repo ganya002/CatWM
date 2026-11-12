@@ -182,7 +182,8 @@ import AppKit
     package static func effective(_ config: Config, scope: WindowScope?) -> Config {
         var config = scope?.restrict(config) ?? config
         let features = config.features
-        if !features.contains(.desktops) { config.virtualWorkspaces = false }
+        if !features.contains(.desktops) || config.parkedWorkspaces { config.virtualWorkspaces = false }
+        if config.parkedWorkspaces { config.workspacesPerDisplay = false }
         if !features.contains(.mouse) {
             config.mouseSwapsWindows = false
             config.mouseResizesWindows = false

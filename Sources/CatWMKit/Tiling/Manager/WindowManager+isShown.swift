@@ -38,7 +38,7 @@ extension WindowManager {
     }
 
     package func workspaceSummary() -> WorkspaceSummary {
-        guard config.virtualWorkspaces, isStarted else { return WorkspaceSummary(current: nil, all: []) }
+        guard namedWorkspaces, isStarted else { return WorkspaceSummary(current: nil, all: []) }
         var counts: [String: Int] = [:]
         for (id, workspace) in workspaceOf where windows[id] != nil && isVirtual(workspace) && !isPending(workspace) {
             counts[workspace, default: 0] += 1
@@ -61,7 +61,7 @@ extension WindowManager {
         guard isStarted, let screen = currentScreen() else { return nil }
         let shownWorkspace = shown[screen.uuid]
         let workspace: String?
-        if config.virtualWorkspaces {
+        if namedWorkspaces {
             workspace = virtualShown[screen.uuid].map(workspaceNumber)
         } else if let list = Spaces.list(display: screen.uuid), let cur = list.current,
                   let index = list.desktops.firstIndex(of: cur) {
@@ -85,6 +85,7 @@ extension WindowManager {
         if lower.hasPrefix("name:") { return String(trimmed.dropFirst(5)) }
         for prefix in ["r", "m", ""] where lower.hasPrefix(prefix + "+") || lower.hasPrefix(prefix + "-") {
             guard let delta = Int(lower.dropFirst(prefix.count).replacingOccurrences(of: "+", with: "")) else { break }
+            if config.parkedWorkspaces { return Self.parkedStep(from: cur, by: delta) }
             if let name = desktops.nativeCatalog.step(from: cur, by: delta) { return name }
             let occupied = workspaceOf.contains { $0.value == cur && windows[$0.key] != nil }
             let display = desktops.nativeCatalog.entry(cur)?.display ?? currentScreen()?.uuid ?? ""
@@ -135,6 +136,7 @@ extension WindowManager {
     package func syncWorkspaces(screens: [Screen], present: Set<CGWindowID>) -> WorkspaceReconciliation {
         let timing = TilingTiming("reconcile", windows: present.count)
         defer { timing.finish() }
+        if config.parkedWorkspaces { return syncParkedWorkspaces(screens: screens, present: present) }
         if config.virtualWorkspaces { return syncNativeWorkspaces(screens: screens, present: present) }
         let held = desktops.movingToSpace || NSEvent.pressedMouseButtons & 1 != 0
         let observation = WorkspaceObservation(

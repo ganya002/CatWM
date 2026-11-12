@@ -426,6 +426,9 @@ export interface TabsOptions {
 }
 
 export interface WorkspacesOptions {
+  /** True: workspaces live on the current Desktop and CatWM parks the windows of hidden workspaces in a screen corner (SkyRose). Wins over `workspaces.virtual`. Default: `false`. */
+  get parked(): boolean
+  set parked(value: boolean | undefined)
   /** Number workspaces on each display. Each display starts at workspace 1. Off: all displays share one set of numbers. Default: `true`. */
   get perDisplay(): boolean
   set perDisplay(value: boolean | undefined)

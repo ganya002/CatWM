@@ -2,6 +2,7 @@ import AppKit
 
 extension WindowManager {
     package func moveWindow(_ window: Window, toWorkspace workspace: String, follow: Bool) {
+        if config.parkedWorkspaces { return moveParkedWindow(window, to: workspace, follow: follow) }
         guard config.virtualWorkspaces else { return }
         moveNativeWindow(window, to: workspace, follow: follow)
     }

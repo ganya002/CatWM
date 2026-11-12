@@ -40,6 +40,7 @@ package struct Config: Sendable {
     package var perfReports = false
     package var resizeAnimation: ResizeAnimation = .live
     package var virtualWorkspaces = true
+    package var parkedWorkspaces = false
     package var stayOnWorkspaceAfterClose = true
     package var removesEmptyWorkspaces = true
     package var workspacesPerDisplay = true

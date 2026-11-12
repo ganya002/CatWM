@@ -10,6 +10,7 @@ package struct FloatState {
 
 extension WindowManager {
     package func isOnHomeSpace(_ screen: Screen) -> Bool {
+        if config.parkedWorkspaces { return !Spaces.isFullscreen(display: screen.uuid) }
         if config.virtualWorkspaces { return !Spaces.isFullscreen(display: screen.uuid) }
         guard let home = desktops.homeSpace[screen.uuid] else { return true }
         return backend.currentSpace(display: screen.uuid) == home

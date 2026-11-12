@@ -130,7 +130,7 @@ extension WindowManager {
     }
 
     package func showWorkspaceCommand(_ arg: String) {
-        if config.virtualWorkspaces {
+        if namedWorkspaces {
             if let workspace = resolveWorkspace(arg) { showWorkspace(workspace) }
         } else if let number = Int(arg) {
             switchSpace(number)
@@ -138,7 +138,7 @@ extension WindowManager {
     }
 
     package func moveToWorkspaceCommand(_ arg: String, follow: Bool, window target: Window? = nil) {
-        if config.virtualWorkspaces {
+        if namedWorkspaces {
             guard let workspace = resolveWorkspace(arg) else { return }
             moveFocusedWindow(to: workspace, follow: follow, window: target)
         } else if let number = Int(arg) {

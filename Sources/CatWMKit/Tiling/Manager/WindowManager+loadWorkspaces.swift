@@ -74,6 +74,7 @@ extension WindowManager {
     package func showWorkspace(
         _ workspace: String, focusing preferred: Window? = nil, focus takesFocus: Bool = true
     ) {
+        if config.parkedWorkspaces { return showParkedWorkspace(workspace, focusing: preferred, focus: takesFocus) }
         guard config.virtualWorkspaces else { return }
         showNativeWorkspace(workspace, focusing: preferred, focus: takesFocus, quiet: closeAndSort.quietWorkspaceHUD)
     }

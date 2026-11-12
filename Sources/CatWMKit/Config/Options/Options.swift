@@ -290,6 +290,9 @@ extension Options {
             .setting(.windows, "windows.workspaces", "Control macOS Desktops with CatWM",
                      help: "CatWM controls workspace keys, animation and Overview",
                      keywords: "spaces desktops virtual", section: "Workspaces"),
+        .bool("parked-workspaces", \.parkedWorkspaces).script("workspaces.parked")
+            .documented("bool", "true: workspaces live on the current Desktop and CatWM parks the windows of "
+                + "hidden workspaces in a screen corner (SkyRose). Wins over `workspaces.virtual`"),
         .bool("stay-on-workspace-after-close", \.stayOnWorkspaceAfterClose).script("workspaces.stayAfterClose")
             .documented("bool", "")
             .setting(.windows, "windows.stay", "Stay on this workspace when closing a window", keywords: "close jump",
