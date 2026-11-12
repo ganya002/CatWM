@@ -189,11 +189,12 @@ private struct TabCell: View {
     let hovered: Bool
     let closeHovered: Bool
     let roomy: Bool
+    @ObservedObject private var icons = AppIcons.shared
 
     var body: some View {
         ZStack {
             HStack(spacing: Theme.Space.small - Theme.Space.xxs) {
-                Image(nsImage: AppIcons.shared.iconOrGeneric(for: tab.pid))
+                Image(nsImage: icons.iconOrGeneric(for: tab.pid))
                     .resizable()
                     .frame(width: TabStrip.iconSide, height: TabStrip.iconSide)
                     .opacity(active || hovered ? 1 : TabStrip.restingIcon)

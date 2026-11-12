@@ -26,6 +26,10 @@ Every target builds in Swift 6 mode, and none opts back to Swift 5. Refresh, lay
 
 Two `@preconcurrency` imports remain. `CoreGraphics` in `tapCallback.swift`: tap sources run on `CFRunLoopGetMain()`, so the `CGEvent` is already on the main thread, but the compiler can't see that handing it to the main actor is synchronous. `Foundation` in `ConfigEngine.swift`: the config thread owns its `CFRunLoop`.
 
+## App icons are bitmaps made off the main thread
+
+`NSRunningApplication.icon` is a lazy IconServices image, and its first draw waits on iconservicesagent over a synchronous XPC call on the drawing thread. On the smoke CI VMs that froze the main thread for 6 to 18 s inside a Core Animation commit (the menu bar button drawing `MenuBarIcon`), right after TextEdit's windows appeared. The control server answers on the main queue, so `ping` timed out, and a sample taken 2 s later showed an idle run loop because the stall had ended. `AppIcons` renders a 24 pt bitmap on a utility task from the app's bundle URL and returns nil until it is ready. Views observe it, and the menu bar redraws through `onLoad`. Prefetching was rejected because the first draw is the slow call, and any draw on main hits it.
+
 ## Deinit
 
 Isolated `deinit` needs a newer runtime than the macOS 14 target. A main-actor owner that must close a panel or stop a clock when it goes away (`Animator`, `WindowResizeFill`) captures those objects and closes them in `DispatchQueue.main.async`, one main turn after release. `PermissionWatcher`, `DockArea`, `WindowResizeScene` and `TrafficLights` lost their `deinit`. Their owners stop or close the first three explicitly. `TrafficLights` removes its flags monitors in `viewDidMoveToWindow` when the view leaves its window.

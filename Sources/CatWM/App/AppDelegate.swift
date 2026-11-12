@@ -19,6 +19,7 @@ import CatWMKit
         CrashWatch.start()
         PerfMonitor.shared.start()
         ConfigStore.shared.convertLegacyConfig()
+        AppIcons.shared.onLoad = { [weak self] in self?.scheduleStatusUpdate() }
         WindowManager.shared.surface = AppSurface()
         WindowManager.shared.onChange = { [weak self] in
             self?.scheduleStatusUpdate()

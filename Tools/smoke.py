@@ -135,11 +135,18 @@ class Smoke:
 
     def hang(self, name, error):
         """Fail for a CatWM that died or stopped answering, with the stacks of a hung one."""
+        if self.process.poll() is None:
+            # Sample at once: a stall can end within seconds, and a late sample only shows an idle run loop.
+            pid = str(self.process.pid)
+            sock = FOLDER / "catwm.sock"
+            state = subprocess.run(["ps", "-o", "pid,stat,etime,time,command", "-p", pid],
+                                   capture_output=True, text=True, check=False).stdout
+            (self.out / "hang-state.txt").write_text(
+                f"{state}socket {sock}: {sock.stat() if sock.exists() else 'missing'}\n")
+            subprocess.run(["sample", pid, "2", "-file", str(self.out / "hang.txt")], capture_output=True, check=False)
         try:
             status = self.process.wait(timeout=2)
         except subprocess.TimeoutExpired:
-            subprocess.run(["sample", str(self.process.pid), "3", "-file", str(self.out / "hang.txt")],
-                           capture_output=True, check=False)
             raise Failure(f"CatWM didn't answer {name} within {HANG_SECONDS} s: {error}") from error
         raise Failure(f"CatWM died during {name} with status {status}") from error
 
