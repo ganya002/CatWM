@@ -65,3 +65,6 @@ an ordinary parked workspace, so moving a window there hides it. `togglespecialw
 windows onto the shown workspace as centered floating windows and remembers their floating state; a
 second toggle sends them back and restores it. Any explicit workspace move of one of those windows takes
 it out of the special set, which is how `movetoworkspace` out of special works. Parked mode only.
+
+The `screens` state reports the open special workspace as `special` (null when none), so a host's bar can
+show it.

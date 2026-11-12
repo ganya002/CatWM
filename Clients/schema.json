@@ -1048,6 +1048,11 @@
             "name" : "focused",
             "summary" : "The display has focus",
             "type" : "bool"
+          },
+          {
+            "name" : "special",
+            "summary" : "The open special workspace",
+            "type" : "string?"
           }
         ],
         "kind" : "list"

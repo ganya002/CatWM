@@ -48,7 +48,8 @@ extension CommandRegistry {
             Field(name: "ratio", type: "number", summary: "Main pane ratio"),
             Field(name: "mainCount", type: "int", summary: "Number of main windows"),
             Field(name: "workspace", type: "string", summary: "Workspace shown on the display"),
-            Field(name: "focused", type: "bool", summary: "The display has focus")
+            Field(name: "focused", type: "bool", summary: "The display has focus"),
+            Field(name: "special", type: "string?", summary: "The open special workspace")
         ])) { call in call.manager.screensJSON() },
         Command(name: "dump", group: "state", summary: "Read a text report of the tiling state",
                 result: .text) { call in

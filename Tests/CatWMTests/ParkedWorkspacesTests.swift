@@ -76,6 +76,7 @@ import Testing
         #expect(try #require(manager.windows[second]).isFloating)
         #expect(!parked(fake, manager, second))
         #expect(!parked(fake, manager, first))
+        #expect(manager.screensJSON().array?.first?["special"] == .string("special:special"))
 
         manager.dispatch("togglespecialworkspace", "")
         #expect(await fake.settle(manager))
@@ -83,6 +84,7 @@ import Testing
         #expect(try !#require(manager.windows[second]).isFloating)
         #expect(parked(fake, manager, second))
         #expect(fake.frame(of: first).width > 1000)
+        #expect(manager.screensJSON().array?.first?["special"] == .null)
     }
 
     @Test func stepsAreHyprlandNumbers() {

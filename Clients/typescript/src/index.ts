@@ -77,6 +77,7 @@ export interface ScreensItem {
   mainCount: number;
   workspace: string;
   focused: boolean;
+  special: string | null;
 }
 
 export interface ConfigOptionsItem {

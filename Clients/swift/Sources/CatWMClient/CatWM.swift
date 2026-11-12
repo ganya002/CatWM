@@ -104,6 +104,7 @@ public struct ScreensItem: Codable, Equatable, Sendable {
     public let mainCount: Int
     public let workspace: String
     public let focused: Bool
+    public let special: String?
 }
 
 public struct ConfigOptionsItem: Codable, Equatable, Sendable {

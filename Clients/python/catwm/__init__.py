@@ -90,6 +90,7 @@ class ScreensItem(TypedDict):
     mainCount: int
     workspace: str
     focused: bool
+    special: str | None
 
 
 class ConfigOptionsItem(TypedDict):

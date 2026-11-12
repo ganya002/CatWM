@@ -67,7 +67,8 @@ extension WindowManager {
                 "frame": .rect(screen.frame), "usable": .rect(usableRect(screen)),
                 "layout": .string(screenState.layout.rawValue), "ratio": .number(Double(screenState.ratio)),
                 "mainCount": .int(screenState.mainCount), "workspace": .string(shown[screen.uuid] ?? ""),
-                "focused": .bool(screen.uuid == focused)
+                "focused": .bool(screen.uuid == focused),
+                "special": floats.special.map { .string($0.workspace) } ?? .null
             ]
         })
     }
