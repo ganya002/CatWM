@@ -128,9 +128,10 @@ struct SwitcherView: View {
 
 private struct AppIcon: View {
     let pid: pid_t
+    @ObservedObject private var icons = AppIcons.shared
 
     var body: some View {
-        if let icon = NSRunningApplication(processIdentifier: pid)?.icon {
+        if let icon = icons.icon(for: pid) {
             Image(nsImage: icon).resizable().frame(width: 16, height: 16)
         } else {
             Image(systemName: "macwindow").font(Theme.symbol()).foregroundStyle(Theme.inkMuted)

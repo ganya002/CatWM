@@ -92,7 +92,8 @@ extension MenuModel {
         let incoming = manager.windowsOnOtherDesktops().map { window in
             let app = NSRunningApplication(processIdentifier: window.pid)
             let title = window.element.string(kAXTitleAttribute) ?? "Untitled"
-            return MenuItem(id: "bring-\(window.id)", label: title.isEmpty ? "Untitled" : title, image: app?.icon,
+            return MenuItem(id: "bring-\(window.id)", label: title.isEmpty ? "Untitled" : title,
+                            image: AppIcons.shared.icon(for: window.pid),
                             value: app?.localizedName, keywords: "bring import window desktop space",
                             action: { manager.bringWindowHere(window) })
         }

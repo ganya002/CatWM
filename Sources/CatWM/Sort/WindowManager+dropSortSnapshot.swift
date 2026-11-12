@@ -80,7 +80,8 @@ extension WindowManager {
         let title = window.title ?? ""
         return SortItem(id: id, title: title.isEmpty ? "Untitled" : title,
                         app: app?.localizedName ?? window.bundleID ?? "App",
-                        bundleID: window.bundleID, icon: app?.icon, recency: rank[id] ?? 2000)
+                        bundleID: window.bundleID, icon: AppIcons.shared.icon(for: window.pid),
+                        recency: rank[id] ?? 2000)
     }
 
     static func shortName(_ screen: Screen) -> String {
