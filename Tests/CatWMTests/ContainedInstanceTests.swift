@@ -50,9 +50,9 @@ import Testing
         #expect(!panel.isVisible)
     }
 
-    @Test func aContainedInstanceShowsNoPermissionPrompt() {
+    @Test func aScopedInstanceShowsNoPermissionPrompt() {
         let guide = PermissionGuide()
-        guide.show(.accessibility, contained: true)
+        guide.show(.accessibility, scoped: true)
         #expect(guide.kind == nil)
     }
 }

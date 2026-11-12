@@ -56,6 +56,8 @@ Checked in code, no leak found. `restrict` turns Desktops off, so the Desktop sl
 
 An untrusted contained instance therefore just logs that it has no Accessibility permission. `ScopeLifetime` still ends it with its scope pids.
 
+`PermissionGuide.show` is the exception that keys on the scope alone, not on the display. A prompt opens System Settings, a separate process that no clamp can contain, and runs PermissionFlow's 30 Hz window tracker and 60 Hz panel animation. A scoped instance without a display (perf CI, which has no user CatWM to open an agent display) and without Accessibility would take that path on every launch, and CI measured a startup of 390–530 ms and an idle spike in the first seconds where a contained run takes about 100 ms and none. A scoped instance exists to be driven by a test, so nobody is there to answer the prompt.
+
 ## The perf app scenario on an agent display
 
 `Tools/perf.py` opens an agent display through the running user CatWM (`Sandbox`, one connection for the whole run) and scopes each instance with `;display:<uuid>`. All parallel runs share the display, since the instances manage no windows. The display belongs to the connection, so the kernel closes it if perf.py dies, and `ScopeLifetime` ends the instances with perf.py. With no CatWM socket, or one without `agent.open` (a build from before the agent display), CI keeps the old behaviour (scoped to its own pid on the real display, whose screen nobody watches) and says so. Anywhere else the script stops and asks for an agent display or `--skip-app`, because a fallback to the real display would put test instances on a developer's screen.

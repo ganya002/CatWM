@@ -53,8 +53,8 @@ extension Permission {
     private(set) var kind: Permission?
     var onGranted: (() -> Void)?
 
-    func show(_ kind: Permission, contained: Bool = Instance.isContained) {
-        guard !contained else { return Log.info("permissions: no prompt for \(kind.title) in a contained instance") }
+    func show(_ kind: Permission, scoped: Bool = Instance.scope != nil) {
+        guard !scoped else { return Log.info("permissions: no prompt for \(kind.title) in a scoped instance") }
         self.kind = kind
         Task { @MainActor in flow.authorize(pane: kind.pane, suggestedAppURLs: [Bundle.main.bundleURL]) }
     }
