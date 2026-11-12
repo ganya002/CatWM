@@ -123,12 +123,18 @@ def profile_app(display, out):
     CI shows an idle burst, so a cost seen only on another machine has a stack and log lines. It adds to no row."""
     env = {**os.environ, "CATWM_INSTANCE": "perf-profile", "CATWM_SCOPE": scope(display)}
     process = subprocess.Popen([str(APP), "--verbose"], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    neighbours = []
     try:
         time.sleep(4)
+        # The measured runs overlap another run's engine scenarios, and only they show the burst.
+        neighbours = [subprocess.Popen([str(PERF), name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                      for name in ENGINE_SCENARIOS]
         subprocess.run(["sample", str(process.pid), "8", "1", "-mayDie", "-file", str(out)],
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False, timeout=60)
         time.sleep(APP_LAUNCH_SECONDS + APP_IDLE_SECONDS - 12)
     finally:
+        for neighbour in neighbours:
+            neighbour.kill()
         process.send_signal(signal.SIGTERM)
         try:
             process.wait(timeout=10)
