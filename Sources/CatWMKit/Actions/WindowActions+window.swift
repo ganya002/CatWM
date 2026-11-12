@@ -80,11 +80,16 @@ extension WindowActions {
     }.targetingWindow()
 
     package static let resizeactive = WindowAction.text(
-        "resizeactive", "window", "Set the size of the focused floating window",
-        .text("size", "`exact W H`, the size in points. A tiled window keeps its size.")
+        "resizeactive", "window", "Resize the focused window",
+        .text("size", "`exact W H`, the size in points, or `DX DY` to grow by points. A tiled window changes size "
+              + "only in the dwindle layout.")
     ) { context in
-        guard let window = context.window, let size = context.exactPair else { return }
-        context.manager.resizeWindow(window, to: CGSize(width: size.x, height: size.y))
+        guard let window = context.window else { return }
+        if let size = context.exactPair {
+            context.manager.resizeWindow(window, to: CGSize(width: size.x, height: size.y))
+        } else if let delta = context.deltaPair {
+            context.manager.resizeWindow(window, by: delta)
+        }
     }.targetingWindow()
 
     package static let moveactive = WindowAction.text(

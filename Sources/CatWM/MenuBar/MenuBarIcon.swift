@@ -68,7 +68,7 @@ import CatWMKit
         case .fullscreen, .floating: (1, 1)
         case .twoPane, .twoPaneRight: (2, 1)
         case .tall, .tallRight, .wide, .column, .row: (3, 1)
-        case .bsp: (4, 1)
+        case .bsp, .dwindle: (4, 1)
         case .widescreenTall, .widescreenTallRight: (4, 2)
         case .threeColumnLeft, .threeColumnRight, .middleWide, .threeColumnMiddle: (5, 1)
         }

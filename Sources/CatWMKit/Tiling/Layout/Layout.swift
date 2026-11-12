@@ -2,6 +2,7 @@ import CoreGraphics
 
 package enum Layout: String, CaseIterable {
     case tall, tallRight = "tall-right", wide, middleWide = "middle-wide", fullscreen, column, row, floating, bsp
+    case dwindle
     case threeColumnLeft = "3column-left", threeColumnMiddle = "3column-middle", threeColumnRight = "3column-right"
     case twoPane = "two-pane", twoPaneRight = "two-pane-right"
     case widescreenTall = "widescreen-tall", widescreenTallRight = "widescreen-tall-right"
@@ -17,6 +18,7 @@ package enum Layout: String, CaseIterable {
         case .row: "Row"
         case .floating: "Floating"
         case .bsp: "Binary Space Partitioning"
+        case .dwindle: "Dwindle"
         case .threeColumnLeft: "3-Column Left"
         case .threeColumnMiddle: "3-Column Middle"
         case .threeColumnRight: "3-Column Right"
@@ -70,7 +72,7 @@ package enum Layout: String, CaseIterable {
             return middleFrames(count: count, in: rect, ratio: ratio, mains: mains)
         case .threeColumnLeft, .threeColumnRight:
             return sideFrames(count: count, in: rect, ratio: ratio, mains: mains)
-        case .bsp:
+        case .bsp, .dwindle:
             return Self.bspFrames(count: count, in: rect, ratio: ratio)
         }
     }

@@ -98,11 +98,14 @@ import Testing
 
         try await floatFocused(ids[0], in: fake, manager: manager)
         let floated = fake.frame(of: ids[0])
-        for argument in ["", "exact", "exact 500", "exact 0 300", "exact -5 300", "exact a b", "10 10", "exact 1 2 3"] {
+        for argument in ["", "exact", "exact 500", "exact 0 300", "exact -5 300", "exact a b", "exact 1 2 3", "10"] {
             manager.dispatch("resizeactive", argument)
             #expect(await fake.settle(manager))
             #expect(fake.frame(of: ids[0]) == floated, "argument: \(argument)")
         }
+        manager.dispatch("resizeactive", "10 -20")
+        #expect(await fake.settle(manager))
+        #expect(fake.frame(of: ids[0]).size == CGSize(width: floated.width + 10, height: floated.height - 20))
     }
 
     @Test func resizeIgnoresWindowThatCannotResize() async throws {

@@ -26,6 +26,7 @@ public enum Layout: String, CaseIterable, Sendable {
     case row = "row"
     case floating = "floating"
     case bsp = "bsp"
+    case dwindle = "dwindle"
     case _3columnLeft = "3column-left"
     case _3columnMiddle = "3column-middle"
     case _3columnRight = "3column-right"
@@ -472,7 +473,7 @@ public final class CatWM: @unchecked Sendable {
         _ = try call("settiled", args)
     }
 
-    /// Set the size of the focused floating window
+    /// Resize the focused window
     public func resizeactive(size: String, window: Int? = nil) throws {
         var args: [String: Any] = [:]
         args["size"] = size

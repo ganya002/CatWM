@@ -38,12 +38,13 @@ package final class ScreenState {
     package var zoomed: CGWindowID?
     var layouts: [Layout]?
     var layoutBeforeRule: Layout?
+    package var dwindle = DwindleTree()
     package init(layout: Layout) { self.layout = layout }
 
     package func copy() -> ScreenState {
         let clone = ScreenState(layout: layout)
         clone.ratio = ratio; clone.mainCount = mainCount; clone.zoomed = zoomed
-        clone.layouts = layouts; clone.layoutBeforeRule = layoutBeforeRule
+        clone.layouts = layouts; clone.layoutBeforeRule = layoutBeforeRule; clone.dwindle = dwindle
         return clone
     }
 }

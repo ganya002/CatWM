@@ -54,7 +54,7 @@ struct SortLayoutGlyph: View {
     private var paneCount: Int {
         switch layout {
         case .fullscreen: 1
-        case .bsp: 4
+        case .bsp, .dwindle: 4
         case .twoPane, .twoPaneRight: 2
         default: 3
         }

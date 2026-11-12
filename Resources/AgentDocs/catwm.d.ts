@@ -92,7 +92,7 @@ export type Key =
   | "swipe_up"
   | "swipe_down"
 
-export type Layout = "tall" | "tall-right" | "wide" | "middle-wide" | "fullscreen" | "column" | "row" | "floating" | "bsp" | "3column-left" | "3column-middle" | "3column-right" | "two-pane" | "two-pane-right" | "widescreen-tall" | "widescreen-tall-right"
+export type Layout = "tall" | "tall-right" | "wide" | "middle-wide" | "fullscreen" | "column" | "row" | "floating" | "bsp" | "dwindle" | "3column-left" | "3column-middle" | "3column-right" | "two-pane" | "two-pane-right" | "widescreen-tall" | "widescreen-tall-right"
 
 /** The motion styles of Settings → Motion. Setting one sets its fields together. */
 export type MotionStyle = "none" | "snappy" | "relaxed"
@@ -119,7 +119,7 @@ export interface Actions {
   setfloating: [...args: (string | number)[]]
   /** Tile the focused window. */
   settiled: [...args: (string | number)[]]
-  /** Set the size of the focused floating window. */
+  /** Resize the focused window. */
   resizeactive: [size: string | number]
   /** Move the focused floating window. */
   moveactive: [position: string | number]
@@ -148,9 +148,9 @@ export interface Actions {
   /** Use the next or previous layout. */
   cyclelayout: [step?: "next" | "prev" | (string & {})]
   /** Use a layout on the current screen. */
-  layout: [layout: "tall" | "tall-right" | "wide" | "middle-wide" | "fullscreen" | "column" | "row" | "floating" | "bsp" | "3column-left" | "3column-middle" | "3column-right" | "two-pane" | "two-pane-right" | "widescreen-tall" | "widescreen-tall-right" | (string & {})]
+  layout: [layout: "tall" | "tall-right" | "wide" | "middle-wide" | "fullscreen" | "column" | "row" | "floating" | "bsp" | "dwindle" | "3column-left" | "3column-middle" | "3column-right" | "two-pane" | "two-pane-right" | "widescreen-tall" | "widescreen-tall-right" | (string & {})]
   /** Use a layout on the current screen. */
-  setlayout: [layout: "tall" | "tall-right" | "wide" | "middle-wide" | "fullscreen" | "column" | "row" | "floating" | "bsp" | "3column-left" | "3column-middle" | "3column-right" | "two-pane" | "two-pane-right" | "widescreen-tall" | "widescreen-tall-right" | (string & {})]
+  setlayout: [layout: "tall" | "tall-right" | "wide" | "middle-wide" | "fullscreen" | "column" | "row" | "floating" | "bsp" | "dwindle" | "3column-left" | "3column-middle" | "3column-right" | "two-pane" | "two-pane-right" | "widescreen-tall" | "widescreen-tall-right" | (string & {})]
   /** Turn tiling on or off. */
   toggletiling: [...args: (string | number)[]]
   toggledim: []

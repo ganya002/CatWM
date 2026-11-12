@@ -41,3 +41,10 @@ missing in embedded mode: `CatWMEngine.onWindowFrames` (each animation frame's i
 the `WindowPresentation` sampling in `Animator`) and the snapshot scene, whose install moved from the app's
 `AppSurface` into `Animator.useSnapshotScenes` so `EngineSurface` can call it. The host's own windows are
 excluded from the scene's occlusion check.
+
+## M4: dwindle layout
+
+Hyprland's dwindle with `togglesplit`, `swapsplit`, `splitratio` on the focused split and relative
+`resizeactive DX DY` (Hyprland's argument form; it used to be rejected). See `docs/internals/dwindle.md`.
+The tree lives in `ScreenState.dwindle` and maps positionally onto `order`, so CatWM's existing swap and
+move commands keep working.

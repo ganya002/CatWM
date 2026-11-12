@@ -7,7 +7,7 @@ export const PROTOCOL = 1;
 
 export type Direction = "left" | "right" | "up" | "down";
 export type Step = "next" | "prev";
-export type Layout = "tall" | "tall-right" | "wide" | "middle-wide" | "fullscreen" | "column" | "row" | "floating" | "bsp" | "3column-left" | "3column-middle" | "3column-right" | "two-pane" | "two-pane-right" | "widescreen-tall" | "widescreen-tall-right";
+export type Layout = "tall" | "tall-right" | "wide" | "middle-wide" | "fullscreen" | "column" | "row" | "floating" | "bsp" | "dwindle" | "3column-left" | "3column-middle" | "3column-right" | "two-pane" | "two-pane-right" | "widescreen-tall" | "widescreen-tall-right";
 
 export interface Rect {
   x: number;
@@ -369,7 +369,7 @@ export class CatWM {
     await this.call("settiled", { "window": window });
   }
 
-  /** Set the size of the focused floating window */
+  /** Resize the focused window */
   async resizeactive(size: string, window?: number): Promise<void> {
     await this.call("resizeactive", { "size": size, "window": window });
   }

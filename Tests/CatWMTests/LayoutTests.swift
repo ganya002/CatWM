@@ -189,7 +189,7 @@ import Testing
 
     @Test func oneLargeWindowNeverCoversAnotherInAGridLayout() {
         let screen = CGRect(x: 0, y: 0, width: 1000, height: 600)
-        let stacked: [Layout] = [.floating, .fullscreen, .twoPane, .twoPaneRight, .bsp]
+        let stacked: [Layout] = [.floating, .fullscreen, .twoPane, .twoPaneRight, .bsp, .dwindle]
         for layout in Layout.allCases where !stacked.contains(layout) {
             for count in 2...5 {
                 for index in 0..<count {

@@ -80,6 +80,7 @@ extension Layout {
         case .row: "Equal-height rows"
         case .floating: "Windows stay where you put them"
         case .bsp: "Each window halves the last one"
+        case .dwindle: "Each new window splits the focused one, Hyprland style"
         case .threeColumnLeft: "Main left, two columns right"
         case .threeColumnMiddle: "Main in the middle column"
         case .threeColumnRight: "Main right, two columns left"

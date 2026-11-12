@@ -4,7 +4,8 @@ extension WindowActions {
     package static let layoutmsg = WindowAction.text(
         "layoutmsg", "layout", "Send a message to the layout",
         .text("message", "`swapwithmaster`, `swapsides`, `focusmaster`, `addmaster`, `removemaster`, "
-            + "`mfact <value>`, `orientationnext` or `orientationprev`"),
+            + "`mfact <value>`, `orientationnext`, `orientationprev`, or in the dwindle layout `togglesplit` and "
+            + "`swapsplit`"),
         pickers: [
             ActionPicker("Focus Main Window", .focus, "focusmaster", "star"),
             ActionPicker("Swap Sides", .layout, "swapsides", "arrow.left.arrow.right.square"),

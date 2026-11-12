@@ -79,6 +79,14 @@ extension ActionContext {
     package var backward: Bool { arg.lowercased().hasPrefix("prev") }
     package var tabBackward: Bool { backward || arg.lowercased().hasPrefix("b") }
 
+    var deltaPair: CGSize? {
+        let parts = arg.split(whereSeparator: \.isWhitespace)
+        guard parts.count == 2, let x = Double(parts[0]), let y = Double(parts[1]), x.isFinite, y.isFinite else {
+            return nil
+        }
+        return CGSize(width: x, height: y)
+    }
+
     var exactPair: CGPoint? {
         let parts = arg.lowercased().split(whereSeparator: \.isWhitespace)
         guard parts.count == 3, parts[0] == "exact", let x = Double(parts[1]), let y = Double(parts[2]),

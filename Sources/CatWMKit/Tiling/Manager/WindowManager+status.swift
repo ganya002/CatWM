@@ -165,6 +165,8 @@ extension WindowManager {
         case "mfact": adjustRatio(parts.dropFirst().joined(separator: " "))
         case "orientationnext": cycleLayout(1)
         case "orientationprev": cycleLayout(-1)
+        case "togglesplit": changeDwindle { $0.toggleSplit(at: $1, in: $2) }
+        case "swapsplit": changeDwindle { $0.swapSplit(at: $1, in: $2) }
         default: Log.info("unknown layoutmsg \(cmd)")
         }
     }
