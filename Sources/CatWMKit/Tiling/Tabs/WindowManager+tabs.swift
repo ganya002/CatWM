@@ -58,7 +58,7 @@ extension WindowManager {
             focus(window, warp: false)
         } else {
             model.tabs.toggleArmed(window.id)
-            notifyChange()
+            refresh()
         }
     }
 
@@ -293,8 +293,9 @@ extension WindowManager {
     }
 
     package func belowTabStrip(_ slot: CGRect, for id: CGWindowID) -> CGRect {
-        guard let group = tabs.group(of: id),
-              !config.autoHideTabStrip || surface.revealedTabGroup == group.id else { return slot }
+        let group = tabs.group(of: id)
+        guard group != nil || tabs.armed.contains(id),
+              !config.autoHideTabStrip || group == nil || surface.revealedTabGroup == group?.id else { return slot }
         let inset = TabGeometry.stripHeight
         return CGRect(x: slot.minX, y: slot.minY + inset, width: slot.width, height: max(0, slot.height - inset))
     }

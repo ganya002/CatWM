@@ -22,6 +22,8 @@ import Testing
         let (fake, manager, first, second) = try await world()
         manager.dispatch("togglegroup", "")
         #expect(manager.tabs.armed.contains(first))
+        #expect(await fake.settle(manager))
+        #expect(fake.frame(of: first).minY >= TabGeometry.stripHeight, "a group of one keeps room for its bar")
         #expect(!manager.tabs.isGrouped(second))
 
         let third = fake.addWindow(pid: -403)

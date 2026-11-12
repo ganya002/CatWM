@@ -78,4 +78,4 @@ makes `moveintogroup` refuse it). Only armed groups collect, so tabs made by dra
 When an armed group shrinks to one window, that window stays a group of one, keeping its lock. The
 `windows` state reports `tabs` (member IDs in order, or the window itself for a group of one),
 `tabsLocked` and `tabBehind`, so an embedding host can draw its own group bar: embedded mode has no tab
-strips, but the 30 pt strip is still reserved above tabbed windows.
+strips, but the 30 pt strip is still reserved above tabbed windows and above a group of one.
