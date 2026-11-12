@@ -33,7 +33,7 @@ jobs:
       - run: CATWM_INSTANCE=perf ./build.sh
       - id: perf
         continue-on-error: true
-        run: python3 Tools/perf.py --runs 5 --out perf.md --json perf.json
+        run: python3 Tools/perf.py --runs 5 --out perf.md --json perf.json --profile app-sample.txt
       - if: always() && hashFiles('perf.md') != ''
         run: cat perf.md >> "$GITHUB_STEP_SUMMARY"
       - if: always()
@@ -43,6 +43,7 @@ jobs:
           path: |
             perf.md
             perf.json
+            app-sample.txt
             ~/Library/Logs/CatWM-perf-*.log
           if-no-files-found: warn
       - if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && hashFiles('perf.md') != ''

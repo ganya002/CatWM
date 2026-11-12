@@ -116,6 +116,23 @@ def run_app(run, display=None):
     return samples
 
 
+def profile_app(display, out):
+    """Sample one extra instance through launch and idle, after the measured runs, so a cost seen only on
+    another machine has a stack. The sampler's own cost lands in no measured row."""
+    env = {**os.environ, "CATWM_INSTANCE": "perf-profile", "CATWM_SCOPE": scope(display)}
+    process = subprocess.Popen([str(APP)], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        seconds = APP_LAUNCH_SECONDS + APP_IDLE_SECONDS
+        subprocess.run(["sample", str(process.pid), str(seconds), "1", "-mayDie", "-file", str(out)],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False, timeout=seconds + 30)
+    finally:
+        process.send_signal(signal.SIGTERM)
+        try:
+            process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            process.kill()
+
+
 def machine():
     def read(key):
         return subprocess.run(["sysctl", "-n", key], capture_output=True, text=True).stdout.strip()
@@ -169,6 +186,7 @@ def main():
     parser.add_argument("--out", type=Path, help="write the Markdown table to this file")
     parser.add_argument("--json", type=Path, help="write the raw samples to this file")
     parser.add_argument("--skip-app", action="store_true", help="measure only the engine scenarios")
+    parser.add_argument("--profile", type=Path, help="after the runs, sample one app instance into this file")
     parser.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) - 1),
                         help="runs at the same time (default: one less than the cores)")
     args = parser.parse_args()
@@ -195,6 +213,8 @@ def main():
                 for result in results:
                     for metric, values in result.items():
                         samples.setdefault(metric, []).extend(values)
+        if args.profile and not args.skip_app:
+            profile_app(display, args.profile)
     finally:
         if sandbox:
             sandbox.close()
