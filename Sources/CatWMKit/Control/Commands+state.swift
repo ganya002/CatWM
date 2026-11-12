@@ -31,6 +31,7 @@ extension CommandRegistry {
             Field(name: "workspace", type: "string?", summary: "Workspace name"),
             Field(name: "tabs", type: "int[]?", summary: "Window IDs of its tabs in order, or itself for a group of one"),
             Field(name: "tabsLocked", type: "bool", summary: "New windows don't join its tabs"),
+            Field(name: "tabBehind", type: "bool", summary: "Another tab of its group is in front"),
             Field(name: "screen", type: "string?", summary: "Display ID"),
             Field(name: "frame", type: rect + "?", summary: "Last known frame")
         ])) { call in call.manager.windowsJSON() },

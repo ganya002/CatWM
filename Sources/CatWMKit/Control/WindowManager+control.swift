@@ -39,7 +39,8 @@ extension WindowManager {
                 "screen": screen(of: window, in: screens).map { JSON.string($0.uuid) } ?? .null,
                 "frame": .rect(window.cachedFrame),
                 "tabs": tabMembers(window.id).map { .array($0.map { .int(Int($0)) }) } ?? .null,
-                "tabsLocked": .bool(tabs.isLocked(window.id))
+                "tabsLocked": .bool(tabs.isLocked(window.id)),
+                "tabBehind": .bool(tabs.isBehind(window.id))
             ]
         })
     }

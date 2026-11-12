@@ -85,6 +85,7 @@ public struct WindowsItem: Codable, Equatable, Sendable {
     public let workspace: String?
     public let tabs: [Int]?
     public let tabsLocked: Bool
+    public let tabBehind: Bool
     public let screen: String?
     public let frame: Rect?
 }

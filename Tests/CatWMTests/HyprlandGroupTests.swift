@@ -27,6 +27,10 @@ import Testing
         let third = fake.addWindow(pid: -403)
         #expect(await fake.settle(manager))
         #expect(manager.tabs.group(of: first)?.members == [first, third])
+        let json = manager.windowsJSON().array ?? []
+        let entry = try #require(json.first { $0["id"] == .int(Int(first)) })
+        #expect(entry["tabs"] == .array([.int(Int(first)), .int(Int(third))]))
+        #expect(entry["tabBehind"] == .bool(true))
 
         manager.focus(try #require(manager.windows[first]))
         #expect(await fake.settle(manager))

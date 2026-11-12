@@ -981,6 +981,11 @@
             "type" : "bool"
           },
           {
+            "name" : "tabBehind",
+            "summary" : "Another tab of its group is in front",
+            "type" : "bool"
+          },
+          {
             "name" : "screen",
             "summary" : "Display ID",
             "type" : "string?"

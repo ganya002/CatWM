@@ -76,6 +76,6 @@ one; on a tabbed window it breaks the whole group up. A new tiled window joins t
 recently focused armed group on its workspace, unless that group is locked (`lockactivegroup`, which also
 makes `moveintogroup` refuse it). Only armed groups collect, so tabs made by dragging behave as before.
 When an armed group shrinks to one window, that window stays a group of one, keeping its lock. The
-`windows` state reports `tabs` (member IDs in order, or the window itself for a group of one) and
-`tabsLocked`, so an embedding host can draw its own group bar: embedded mode has no tab strips, but
-the 30 pt strip is still reserved above tabbed windows.
+`windows` state reports `tabs` (member IDs in order, or the window itself for a group of one),
+`tabsLocked` and `tabBehind`, so an embedding host can draw its own group bar: embedded mode has no tab
+strips, but the 30 pt strip is still reserved above tabbed windows.

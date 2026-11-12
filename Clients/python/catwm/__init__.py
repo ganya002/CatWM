@@ -71,6 +71,7 @@ class WindowsItem(TypedDict):
     workspace: str | None
     tabs: list[int] | None
     tabsLocked: bool
+    tabBehind: bool
     screen: str | None
     frame: Rect | None
 

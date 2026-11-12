@@ -58,6 +58,7 @@ export interface WindowsItem {
   workspace: string | null;
   tabs: number[] | null;
   tabsLocked: boolean;
+  tabBehind: boolean;
   screen: string | null;
   frame: Rect | null;
 }
