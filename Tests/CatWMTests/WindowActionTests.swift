@@ -32,7 +32,7 @@ import Testing
             #expect(command.group == action.group)
             #expect(command.summary == action.summary)
             #expect(command.access == action.access)
-            #expect(command.args.map(\.name) == action.args.map(\.name))
+            #expect(command.args.map(\.name) == action.args.map(\.name) + (action.takesWindow ? ["window"] : []))
             for alias in action.aliases { #expect(CommandRegistry.command(named: alias) == nil) }
         }
     }

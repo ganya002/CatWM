@@ -194,6 +194,12 @@
           "required" : true,
           "summary" : "`+1`, `-1`, `left`, `right`, `up`, `down` or a display number counting from 0",
           "type" : "string"
+        },
+        {
+          "name" : "window",
+          "required" : false,
+          "summary" : "The id of the window to act on. The default is the focused window.",
+          "type" : "int"
         }
       ],
       "group" : "displays",
@@ -247,7 +253,12 @@
     },
     {
       "args" : [
-
+        {
+          "name" : "window",
+          "required" : false,
+          "summary" : "The id of the window to act on. The default is the focused window.",
+          "type" : "int"
+        }
       ],
       "group" : "window",
       "name" : "togglefloating",
@@ -258,7 +269,12 @@
     },
     {
       "args" : [
-
+        {
+          "name" : "window",
+          "required" : false,
+          "summary" : "The id of the window to act on. The default is the focused window.",
+          "type" : "int"
+        }
       ],
       "group" : "window",
       "name" : "setfloating",
@@ -269,7 +285,12 @@
     },
     {
       "args" : [
-
+        {
+          "name" : "window",
+          "required" : false,
+          "summary" : "The id of the window to act on. The default is the focused window.",
+          "type" : "int"
+        }
       ],
       "group" : "window",
       "name" : "settiled",
@@ -285,6 +306,12 @@
           "required" : true,
           "summary" : "`exact W H`, the size in points. A tiled window keeps its size.",
           "type" : "string"
+        },
+        {
+          "name" : "window",
+          "required" : false,
+          "summary" : "The id of the window to act on. The default is the focused window.",
+          "type" : "int"
         }
       ],
       "group" : "window",
@@ -301,6 +328,12 @@
           "required" : true,
           "summary" : "`exact X Y`, the top-left corner in points from the top-left of the display's visible area. A tiled window stays in its tile.",
           "type" : "string"
+        },
+        {
+          "name" : "window",
+          "required" : false,
+          "summary" : "The id of the window to act on. The default is the focused window.",
+          "type" : "int"
         }
       ],
       "group" : "window",
@@ -312,7 +345,12 @@
     },
     {
       "args" : [
-
+        {
+          "name" : "window",
+          "required" : false,
+          "summary" : "The id of the window to act on. The default is the focused window.",
+          "type" : "int"
+        }
       ],
       "group" : "window",
       "name" : "centerwindow",
@@ -323,7 +361,12 @@
     },
     {
       "args" : [
-
+        {
+          "name" : "window",
+          "required" : false,
+          "summary" : "The id of the window to act on. The default is the focused window.",
+          "type" : "int"
+        }
       ],
       "group" : "window",
       "name" : "fullscreen",
@@ -345,7 +388,12 @@
     },
     {
       "args" : [
-
+        {
+          "name" : "window",
+          "required" : false,
+          "summary" : "The id of the window to act on. The default is the focused window.",
+          "type" : "int"
+        }
       ],
       "group" : "window",
       "name" : "minimize",
@@ -356,7 +404,12 @@
     },
     {
       "args" : [
-
+        {
+          "name" : "window",
+          "required" : false,
+          "summary" : "The id of the window to act on. The default is the focused window.",
+          "type" : "int"
+        }
       ],
       "group" : "window",
       "name" : "killactive",
@@ -565,6 +618,12 @@
           "required" : true,
           "summary" : "Same values as `workspace`",
           "type" : "string"
+        },
+        {
+          "name" : "window",
+          "required" : false,
+          "summary" : "The id of the window to act on. The default is the focused window.",
+          "type" : "int"
         }
       ],
       "group" : "workspaces",
@@ -581,6 +640,12 @@
           "required" : true,
           "summary" : "Same values as `workspace`",
           "type" : "string"
+        },
+        {
+          "name" : "window",
+          "required" : false,
+          "summary" : "The id of the window to act on. The default is the focused window.",
+          "type" : "int"
         }
       ],
       "group" : "workspaces",

@@ -1,8 +1,9 @@
 # SkyRose mods
 
 This branch (`skyrose`) is Per's CatWM `main` plus the commits SkyRose needs to embed CatWM as its window
-manager. Nothing here is pushed to noxaur/CatWM. Each mod is one commit whose title starts with
-`skyrose(Mn)`, so a rebase onto a new `main` replays them one by one. SkyRose's side of the guide is
+manager. Nothing here is pushed to noxaur/CatWM; the branch lives on Gabby's fork
+(https://github.com/ganya002/CatWM). Each mod is one commit whose title starts with `skyrose(Mn)`. New
+upstream versions are merged in (no rebase, because the branch is published and force-push is banned). SkyRose's side of the guide is
 `docs/catwm-modding.md` in the SkyRose repo.
 
 ## M1: parked workspaces (`workspaces.parked`)
@@ -21,3 +22,13 @@ opens on that display.
 
 Not kept across a restart: `stop` puts every parked window back, so after a restart all windows are on
 the shown workspace.
+
+## M2: per-window commands (`window` argument)
+
+SkyRose's app rules, CLI and panic act on a window they name, not the focused one, and they must not
+steal focus to do it. Every window command whose action already honoured `ActionContext.target` is marked
+with `targetingWindow()`, and its control command gains an optional `window` id. An unknown id fails with
+`failed` instead of silently acting on the focused window. A targeted command skips the focus deferral,
+because it does not depend on focus. `togglefloating`, `minimize` and `killactive` now read
+`context.window`, so a window rule using them also acts on the rule's window. Keybind and config
+argument lists are unchanged: `window` exists only on the control command.

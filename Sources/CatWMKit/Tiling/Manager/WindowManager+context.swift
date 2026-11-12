@@ -72,11 +72,6 @@ extension WindowManager {
         refresh()
     }
 
-    package func toggleFloating() {
-        guard let window = focusedWindow() else { return }
-        setFloating(!window.isFloating, for: window)
-    }
-
     package func toggleZoom(of target: Window? = nil) {
         guard let window = target ?? focusedWindow(), let screen = screen(of: window) ?? currentScreen() else { return }
         let current = TilingContext(window: window, screen: screen, state: state(for: screen), ids: tiled(on: screen))

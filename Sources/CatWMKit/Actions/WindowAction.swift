@@ -39,7 +39,14 @@ package struct WindowAction: Sendable {
     package var aliases: [String] = []
     package var argument: @Sendable (Invocation) -> String = { _ in "" }
     package var pickers: [ActionPicker] = []
+    package var takesWindow = false
     package let run: @MainActor @Sendable (ActionContext) -> Void
+
+    package func targetingWindow() -> Self {
+        var action = self
+        action.takesWindow = true
+        return action
+    }
 
     package func action(for picker: ActionPicker) -> Action {
         Action(title: picker.title, category: picker.category, dispatcher: name, args: picker.args,

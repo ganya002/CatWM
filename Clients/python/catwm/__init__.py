@@ -353,10 +353,12 @@ class CatWM:
         args["direction"] = direction
         self.call("movewindow", args)
 
-    def movewindowtomonitor(self, target: str) -> None:
+    def movewindowtomonitor(self, target: str, window: int | None = None) -> None:
         """Move the focused window to another display"""
         args: dict[str, Any] = {}
         args["target"] = target
+        if window is not None:
+            args["window"] = window
         self.call("movewindowtomonitor", args)
 
     def swapwindow(self, direction: Direction) -> None:
@@ -372,41 +374,55 @@ class CatWM:
             args["step"] = step
         self.call("swapnext", args)
 
-    def togglefloating(self) -> None:
+    def togglefloating(self, window: int | None = None) -> None:
         """Float or tile the focused window"""
         args: dict[str, Any] = {}
+        if window is not None:
+            args["window"] = window
         self.call("togglefloating", args)
 
-    def setfloating(self) -> None:
+    def setfloating(self, window: int | None = None) -> None:
         """Float the focused window"""
         args: dict[str, Any] = {}
+        if window is not None:
+            args["window"] = window
         self.call("setfloating", args)
 
-    def settiled(self) -> None:
+    def settiled(self, window: int | None = None) -> None:
         """Tile the focused window"""
         args: dict[str, Any] = {}
+        if window is not None:
+            args["window"] = window
         self.call("settiled", args)
 
-    def resizeactive(self, size: str) -> None:
+    def resizeactive(self, size: str, window: int | None = None) -> None:
         """Set the size of the focused floating window"""
         args: dict[str, Any] = {}
         args["size"] = size
+        if window is not None:
+            args["window"] = window
         self.call("resizeactive", args)
 
-    def moveactive(self, position: str) -> None:
+    def moveactive(self, position: str, window: int | None = None) -> None:
         """Move the focused floating window"""
         args: dict[str, Any] = {}
         args["position"] = position
+        if window is not None:
+            args["window"] = window
         self.call("moveactive", args)
 
-    def centerwindow(self) -> None:
+    def centerwindow(self, window: int | None = None) -> None:
         """Center the focused floating window on its display"""
         args: dict[str, Any] = {}
+        if window is not None:
+            args["window"] = window
         self.call("centerwindow", args)
 
-    def fullscreen(self) -> None:
+    def fullscreen(self, window: int | None = None) -> None:
         """Fill the screen with the focused window, inside the tiling"""
         args: dict[str, Any] = {}
+        if window is not None:
+            args["window"] = window
         self.call("fullscreen", args)
 
     def nativefullscreen(self) -> None:
@@ -414,14 +430,18 @@ class CatWM:
         args: dict[str, Any] = {}
         self.call("nativefullscreen", args)
 
-    def minimize(self) -> None:
+    def minimize(self, window: int | None = None) -> None:
         """Minimise the focused window"""
         args: dict[str, Any] = {}
+        if window is not None:
+            args["window"] = window
         self.call("minimize", args)
 
-    def killactive(self) -> None:
+    def killactive(self, window: int | None = None) -> None:
         """Close the focused window"""
         args: dict[str, Any] = {}
+        if window is not None:
+            args["window"] = window
         self.call("killactive", args)
 
     def moveintogroup(self, direction: Direction) -> None:
@@ -490,16 +510,20 @@ class CatWM:
         args["workspace"] = workspace
         self.call("workspace", args)
 
-    def movetoworkspace(self, workspace: str) -> None:
+    def movetoworkspace(self, workspace: str, window: int | None = None) -> None:
         """Move the focused window to a workspace and go there"""
         args: dict[str, Any] = {}
         args["workspace"] = workspace
+        if window is not None:
+            args["window"] = window
         self.call("movetoworkspace", args)
 
-    def movetoworkspacesilent(self, workspace: str) -> None:
+    def movetoworkspacesilent(self, workspace: str, window: int | None = None) -> None:
         """Move the focused window to a workspace and stay"""
         args: dict[str, Any] = {}
         args["workspace"] = workspace
+        if window is not None:
+            args["window"] = window
         self.call("movetoworkspacesilent", args)
 
     def sethomespace(self) -> None:

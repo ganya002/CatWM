@@ -94,13 +94,13 @@ extension WindowManager {
         dispatch(dispatcher, rawArg, inMode: surface.inMode)
     }
 
-    @MainActor package func dispatch(_ dispatcher: String, _ rawArg: String, inMode: Bool) {
+    @MainActor package func dispatch(_ dispatcher: String, _ rawArg: String, inMode: Bool, target: Window? = nil) {
         if let refusal = scopeRefusal(dispatcher) {
             Log.info(refusal)
             return
         }
         let arg = rawArg.trimmingCharacters(in: .whitespaces)
-        if deferFocusCommand(dispatcher, arg: arg, inMode: inMode) { return }
+        if target == nil, deferFocusCommand(dispatcher, arg: arg, inMode: inMode) { return }
         let timing = TilingTiming("command \(dispatcher)", windows: windows.count)
         defer { timing.finish() }
         defer { onDispatch?(dispatcher, arg, inMode) }
@@ -112,7 +112,7 @@ extension WindowManager {
             Log.info("unknown dispatcher \(dispatcher)")
             return
         }
-        action.run(ActionContext(manager: self, arg: arg))
+        action.run(ActionContext(manager: self, arg: arg, target: target))
     }
 
     package func moveWindowCommand(_ arg: String) {

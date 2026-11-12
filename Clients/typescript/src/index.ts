@@ -340,8 +340,8 @@ export class CatWM {
   }
 
   /** Move the focused window to another display */
-  async movewindowtomonitor(target: string): Promise<void> {
-    await this.call("movewindowtomonitor", { "target": target });
+  async movewindowtomonitor(target: string, window?: number): Promise<void> {
+    await this.call("movewindowtomonitor", { "target": target, "window": window });
   }
 
   /** Swap the focused window with its neighbour */
@@ -355,38 +355,38 @@ export class CatWM {
   }
 
   /** Float or tile the focused window */
-  async togglefloating(): Promise<void> {
-    await this.call("togglefloating");
+  async togglefloating(window?: number): Promise<void> {
+    await this.call("togglefloating", { "window": window });
   }
 
   /** Float the focused window */
-  async setfloating(): Promise<void> {
-    await this.call("setfloating");
+  async setfloating(window?: number): Promise<void> {
+    await this.call("setfloating", { "window": window });
   }
 
   /** Tile the focused window */
-  async settiled(): Promise<void> {
-    await this.call("settiled");
+  async settiled(window?: number): Promise<void> {
+    await this.call("settiled", { "window": window });
   }
 
   /** Set the size of the focused floating window */
-  async resizeactive(size: string): Promise<void> {
-    await this.call("resizeactive", { "size": size });
+  async resizeactive(size: string, window?: number): Promise<void> {
+    await this.call("resizeactive", { "size": size, "window": window });
   }
 
   /** Move the focused floating window */
-  async moveactive(position: string): Promise<void> {
-    await this.call("moveactive", { "position": position });
+  async moveactive(position: string, window?: number): Promise<void> {
+    await this.call("moveactive", { "position": position, "window": window });
   }
 
   /** Center the focused floating window on its display */
-  async centerwindow(): Promise<void> {
-    await this.call("centerwindow");
+  async centerwindow(window?: number): Promise<void> {
+    await this.call("centerwindow", { "window": window });
   }
 
   /** Fill the screen with the focused window, inside the tiling */
-  async fullscreen(): Promise<void> {
-    await this.call("fullscreen");
+  async fullscreen(window?: number): Promise<void> {
+    await this.call("fullscreen", { "window": window });
   }
 
   /** Give the focused window a macOS full screen Desktop */
@@ -395,13 +395,13 @@ export class CatWM {
   }
 
   /** Minimise the focused window */
-  async minimize(): Promise<void> {
-    await this.call("minimize");
+  async minimize(window?: number): Promise<void> {
+    await this.call("minimize", { "window": window });
   }
 
   /** Close the focused window */
-  async killactive(): Promise<void> {
-    await this.call("killactive");
+  async killactive(window?: number): Promise<void> {
+    await this.call("killactive", { "window": window });
   }
 
   /** Add the focused window to the tabs of its neighbour */
@@ -460,13 +460,13 @@ export class CatWM {
   }
 
   /** Move the focused window to a workspace and go there */
-  async movetoworkspace(workspace: string): Promise<void> {
-    await this.call("movetoworkspace", { "workspace": workspace });
+  async movetoworkspace(workspace: string, window?: number): Promise<void> {
+    await this.call("movetoworkspace", { "workspace": workspace, "window": window });
   }
 
   /** Move the focused window to a workspace and stay */
-  async movetoworkspacesilent(workspace: string): Promise<void> {
-    await this.call("movetoworkspacesilent", { "workspace": workspace });
+  async movetoworkspacesilent(workspace: string, window?: number): Promise<void> {
+    await this.call("movetoworkspacesilent", { "workspace": workspace, "window": window });
   }
 
   /** Make the current Desktop the home Desktop */

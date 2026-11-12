@@ -430,9 +430,10 @@ public final class CatWM: @unchecked Sendable {
     }
 
     /// Move the focused window to another display
-    public func movewindowtomonitor(target: String) throws {
+    public func movewindowtomonitor(target: String, window: Int? = nil) throws {
         var args: [String: Any] = [:]
         args["target"] = target
+        if let value = window { args["window"] = value }
         _ = try call("movewindowtomonitor", args)
     }
 
@@ -451,46 +452,53 @@ public final class CatWM: @unchecked Sendable {
     }
 
     /// Float or tile the focused window
-    public func togglefloating() throws {
-        let args: [String: Any] = [:]
+    public func togglefloating(window: Int? = nil) throws {
+        var args: [String: Any] = [:]
+        if let value = window { args["window"] = value }
         _ = try call("togglefloating", args)
     }
 
     /// Float the focused window
-    public func setfloating() throws {
-        let args: [String: Any] = [:]
+    public func setfloating(window: Int? = nil) throws {
+        var args: [String: Any] = [:]
+        if let value = window { args["window"] = value }
         _ = try call("setfloating", args)
     }
 
     /// Tile the focused window
-    public func settiled() throws {
-        let args: [String: Any] = [:]
+    public func settiled(window: Int? = nil) throws {
+        var args: [String: Any] = [:]
+        if let value = window { args["window"] = value }
         _ = try call("settiled", args)
     }
 
     /// Set the size of the focused floating window
-    public func resizeactive(size: String) throws {
+    public func resizeactive(size: String, window: Int? = nil) throws {
         var args: [String: Any] = [:]
         args["size"] = size
+        if let value = window { args["window"] = value }
         _ = try call("resizeactive", args)
     }
 
     /// Move the focused floating window
-    public func moveactive(position: String) throws {
+    public func moveactive(position: String, window: Int? = nil) throws {
         var args: [String: Any] = [:]
         args["position"] = position
+        if let value = window { args["window"] = value }
         _ = try call("moveactive", args)
     }
 
     /// Center the focused floating window on its display
-    public func centerwindow() throws {
-        let args: [String: Any] = [:]
+    public func centerwindow(window: Int? = nil) throws {
+        var args: [String: Any] = [:]
+        if let value = window { args["window"] = value }
         _ = try call("centerwindow", args)
     }
 
     /// Fill the screen with the focused window, inside the tiling
-    public func fullscreen() throws {
-        let args: [String: Any] = [:]
+    public func fullscreen(window: Int? = nil) throws {
+        var args: [String: Any] = [:]
+        if let value = window { args["window"] = value }
         _ = try call("fullscreen", args)
     }
 
@@ -501,14 +509,16 @@ public final class CatWM: @unchecked Sendable {
     }
 
     /// Minimise the focused window
-    public func minimize() throws {
-        let args: [String: Any] = [:]
+    public func minimize(window: Int? = nil) throws {
+        var args: [String: Any] = [:]
+        if let value = window { args["window"] = value }
         _ = try call("minimize", args)
     }
 
     /// Close the focused window
-    public func killactive() throws {
-        let args: [String: Any] = [:]
+    public func killactive(window: Int? = nil) throws {
+        var args: [String: Any] = [:]
+        if let value = window { args["window"] = value }
         _ = try call("killactive", args)
     }
 
@@ -587,16 +597,18 @@ public final class CatWM: @unchecked Sendable {
     }
 
     /// Move the focused window to a workspace and go there
-    public func movetoworkspace(workspace: String) throws {
+    public func movetoworkspace(workspace: String, window: Int? = nil) throws {
         var args: [String: Any] = [:]
         args["workspace"] = workspace
+        if let value = window { args["window"] = value }
         _ = try call("movetoworkspace", args)
     }
 
     /// Move the focused window to a workspace and stay
-    public func movetoworkspacesilent(workspace: String) throws {
+    public func movetoworkspacesilent(workspace: String, window: Int? = nil) throws {
         var args: [String: Any] = [:]
         args["workspace"] = workspace
+        if let value = window { args["window"] = value }
         _ = try call("movetoworkspacesilent", args)
     }
 
