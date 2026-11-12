@@ -37,7 +37,7 @@ import Testing
 
     @Test func theInstanceStaysWhileOnePidOfTheScopeLives() {
         let count = OSAllocatedUnfairLock(initialState: 0)
-        let lifetime = ScopeLifetime(pids: [20, 21], alive: { $0 == 21 }, ended: { count.withLock { $0 += 1 } })
+        let lifetime = ScopeLifetime(pids: [getpid(), 999_999], ended: { count.withLock { $0 += 1 } })
         lifetime.start()
         #expect(count.withLock { $0 } == 0)
         lifetime.stop()
@@ -49,7 +49,8 @@ import Testing
         defer {
             for owner in [first, second] {
                 try? owner.input.fileHandleForWriting.close()
-                owner.process.waitUntilExit()
+                var status: Int32 = 0
+                waitpid(owner.process.processIdentifier, &status, 0)
             }
         }
         let (ends, end) = AsyncStream.makeStream(of: Void.self)
